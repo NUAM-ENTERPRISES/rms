@@ -20,6 +20,7 @@ import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_STATUS,
   TRAINING_TYPE,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
@@ -2496,6 +2497,7 @@ export class CandidateProjectsService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
+        currentStatus: true,
         qualifications: {
           include: { qualification: true },
         },
@@ -2540,6 +2542,13 @@ export class CandidateProjectsService {
         age: true,
         experience: true,
       };
+
+      // Status Check (Hard) - Block assignment for RNR candidates
+      if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
+        hardReasons.push(
+          `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
+        );
+      }
 
       // Gender Check (Hard)
       if (
@@ -2644,7 +2653,7 @@ export class CandidateProjectsService {
       return {
         roleId: role.id,
         designation: role.designation,
-        isEligible: hardReasons.length === 0 && softReasons.length === 0,
+        isEligible: hardReasons.length === 0,
         flags,
         reasons: [...hardReasons, ...softReasons],
       };
@@ -2690,6 +2699,7 @@ export class CandidateProjectsService {
         id: { in: candidateIds },
       },
       include: {
+        currentStatus: true,
         // include work history so bulk eligibility mirrors single-candidate behavior
         workExperiences: true,
         preferredCountries: {
@@ -2716,6 +2726,13 @@ export class CandidateProjectsService {
           age: true,
           experience: true,
         };
+
+        // Status Check (Hard) - Block assignment for RNR candidates
+        if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
+          hardReasons.push(
+            `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
+          );
+        }
 
         // Gender Check (Hard)
         if (
@@ -2859,7 +2876,7 @@ export class CandidateProjectsService {
         return {
           roleId: role.id,
           designation: role.designation,
-          isEligible: hardReasons.length === 0 && softReasons.length === 0,
+          isEligible: hardReasons.length === 0,
           flags,
           reasons: [...hardReasons, ...softReasons],
         };

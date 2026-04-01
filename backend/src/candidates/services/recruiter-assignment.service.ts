@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
+import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
 import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { OutboxService } from '../../notifications/outbox.service';
 
@@ -199,6 +200,17 @@ export class RecruiterAssignmentService {
       createdByUserId,
     );
 
+    // Get current active recruiter before deactivating
+    const currentAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        isActive: true,
+      },
+      select: {
+        recruiterId: true,
+      },
+    });
+
     // Deactivate any existing active assignments
     await this.prisma.candidateRecruiterAssignment.updateMany({
       where: {
@@ -228,6 +240,7 @@ export class RecruiterAssignmentService {
       recruiter.id,
       createdByUserId,
       reason,
+      currentAssignment?.recruiterId,
     );
 
     this.logger.log(
@@ -239,6 +252,7 @@ export class RecruiterAssignmentService {
 
   /**
    * Assign CRE to candidate (for RNR status)
+   * Note: This does NOT deactivate the primary recruiter; it adds a CRE as a concurrent handler.
    */
   async assignCREToCandidate(
     candidateId: string,
@@ -251,39 +265,51 @@ export class RecruiterAssignmentService {
       cre.id,
     );
 
-    // Deactivate any existing active assignments
-    await this.prisma.candidateRecruiterAssignment.updateMany({
+    // Check if this CRE is already actively assigned to this candidate
+    const existingCREAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
       where: {
         candidateId,
+        recruiterId: cre.id,
         isActive: true,
-      },
-      data: {
-        isActive: false,
-        unassignedAt: new Date(),
-        unassignedBy: assignerUserId,
-      },
+      }
     });
 
-    // Create new CRE assignment
+    if (existingCREAssignment) {
+      this.logger.log(`CRE ${cre.name} is already assigned to candidate ${candidateId}`);
+      return cre;
+    }
+
+    // Create new CRE assignment WITHOUT deactivating others
     await this.prisma.candidateRecruiterAssignment.create({
       data: {
         candidateId,
         recruiterId: cre.id,
         assignedBy: assignerUserId,
         reason: reason || 'Automatic CRE assignment for RNR status',
+        assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
       },
     });
 
-    // Notify about assignment
+    // Notify about assignment - the current recruiter ID is still active, so we notify them
+    const currentRecruiter = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        isActive: true,
+        assignmentType: { notIn: [CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO, CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL] },
+      },
+      select: { recruiterId: true }
+    });
+
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       cre.id,
       assignerUserId,
       reason,
+      currentRecruiter?.recruiterId, 
     );
 
     this.logger.log(
-      `Assigned CRE ${cre.name} to candidate ${candidateId} for RNR handling`,
+      `Assigned CRE ${cre.name} as handler to candidate ${candidateId} (Primary Recruiter remains active)`,
     );
 
     return cre;
@@ -312,16 +338,16 @@ export class RecruiterAssignmentService {
   }
 
   /**
-   * Get all RNR candidates that need CRE assignment (3+ days in RNR status)
+   * Get all RNR candidates that need CRE assignment (1+ minute in RNR status for testing)
    */
   async getRNRCandidatesNeedingCREAssignment(): Promise<Array<{
     candidateId: string;
     candidateName: string;
-    daysInRNR: number;
+    minutesInRNR: number;
     currentRecruiterId?: string;
   }>> {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
 
     // First, resolve the RNR status record to get its ID
     const rnrStatus = await this.prisma.candidateStatus.findFirst({
@@ -342,7 +368,7 @@ export class RecruiterAssignmentService {
       where: {
         currentStatusId: rnrStatus.id,
         updatedAt: {
-          lte: threeDaysAgo,
+          lte: oneMinuteAgo,
         },
       },
       include: {
@@ -368,14 +394,14 @@ export class RecruiterAssignmentService {
     });
 
     return rnrCandidates.map((candidate) => {
-      const daysInRNR = Math.floor(
-        (Date.now() - candidate.updatedAt.getTime()) / (1000 * 60 * 60 * 24),
+      const minutesInRNR = Math.floor(
+        (Date.now() - candidate.updatedAt.getTime()) / (1000 * 60),
       );
 
       return {
         candidateId: candidate.id,
         candidateName: `${candidate.firstName} ${candidate.lastName}`,
-        daysInRNR,
+        minutesInRNR,
         currentRecruiterId: candidate.recruiterAssignments[0]?.recruiterId,
       };
     });
@@ -549,6 +575,10 @@ export class RecruiterAssignmentService {
       select: {
         id: true,
         currentStatusId: true,
+        recruiterAssignments: {
+          where: { isActive: true },
+          select: { assignmentType: true }
+        }
       },
     });
 
@@ -606,9 +636,19 @@ export class RecruiterAssignmentService {
 
     const countsMap = assignedCandidates.reduce(
       (acc, c) => {
+        const isHandledByCRE = c.recruiterAssignments.some(
+          (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
+        );
+
         acc.totalAssigned += 1;
+        if (isHandledByCRE) acc.handledByCRE += 1;
+
         if (c.currentStatusId === untouchedId) acc.untouched += 1;
-        if (c.currentStatusId === rnrId) acc.rnr += 1;
+        if (c.currentStatusId === rnrId) {
+          acc.rnr += 1;
+          if (isHandledByCRE) acc.rnrHandledByCRE += 1;
+        }
+
         if (c.currentStatusId === onHoldId) acc.onHold += 1;
         if (c.currentStatusId === interestedId) acc.interested += 1;
         if (c.currentStatusId === notInterestedId) acc.notInterested += 1;
@@ -620,8 +660,10 @@ export class RecruiterAssignmentService {
       },
       {
         totalAssigned: 0,
+        handledByCRE: 0,
         untouched: 0,
         rnr: 0,
+        rnrHandledByCRE: 0,
         onHold: 0,
         interested: 0,
         notInterested: 0,
@@ -654,9 +696,15 @@ export class RecruiterAssignmentService {
             statusName: true,
           },
         },
+        qualifications: {
+          include: {
+            qualification: true,
+          },
+        },
+        workExperiences: true,
+        // Include ALL active recruiter assignments to detect CRE handling and recruiter info
         recruiterAssignments: {
           where: {
-            recruiterId,
             isActive: true,
           },
           include: {
@@ -668,31 +716,57 @@ export class RecruiterAssignmentService {
               },
             },
           },
-          orderBy: {
-            assignedAt: 'desc',
-          },
-          take: 1,
         },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        workExperiences: true,
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
+    const formattedCandidates = candidates.map((candidate) => {
+      // Find the specific CRE assignment if it exists
+      const creAssignment = candidate.recruiterAssignments.find(
+        (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
+      );
+
+      // Check if candidate is handled by a CRE
+      const isHandledByCRE = !!creAssignment;
+
+      // Extract the specific recruiter assignment for the logged-in recruiter
+      const recruiterAssignment = candidate.recruiterAssignments.find(
+        (a) => a.recruiterId === recruiterId
+      );
+
+      // Check if this recruiter assignment was handed back from a CRE
+      const isCREReassigned = recruiterAssignment?.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
+
+      return {
+        ...candidate,
+        isHandledByCRE,
+        isCREReassigned,
+        creHandler: creAssignment ? {
+          id: creAssignment.recruiter.id,
+          name: creAssignment.recruiter.name,
+          email: creAssignment.recruiter.email,
+          assignedAt: creAssignment.assignedAt,
+          assignmentType: creAssignment.assignmentType,
+        } : null,
+        // Match the legacy expected format where recruiterAssignments contains only the primary one
+        // or just return the recruiter directly if the UI expects it
+        recruiter: recruiterAssignment?.recruiter || null,
+      };
+    });
+
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
-      data: candidates,
+      data: formattedCandidates,
       counts: {
         totalAssigned: countsMap.totalAssigned,
+        handledByCRE: countsMap.handledByCRE,
         untouched: countsMap.untouched,
         rnr: countsMap.rnr,
+        rnrHandledByCRE: countsMap.rnrHandledByCRE,
         onHold: countsMap.onHold,
         interested: countsMap.interested,
         notInterested: countsMap.notInterested,

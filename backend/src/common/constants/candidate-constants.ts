@@ -50,6 +50,14 @@ export const LICENSING_EXAMS = {
   NCLEX_RN: "nclex_rn",
 } as const;
 
+export const CANDIDATE_ASSIGNMENT_TYPE = {
+  MANUAL: "manual",
+  CRE_AUTO: "cre_auto",
+  CRE_MANUAL: "cre_manual",
+  CRE_REASSIGNED: "cre_reassigned",
+  CRE_CONVERTED: "cre_converted",
+} as const;
+
 export const COMMON_SKILLS = [
   "Communication",
   "Teamwork",

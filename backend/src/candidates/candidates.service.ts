@@ -38,6 +38,7 @@ import {
 import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
+  CANDIDATE_ASSIGNMENT_TYPE,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
@@ -652,17 +653,34 @@ export class CandidatesService {
       },
     });
 
-    // Get all candidates for counting
+    // Get all candidates for counting, INCLUDING their recruiter assignments to detect CRE handling
     const allCandidates = await this.prisma.candidate.findMany({
       where: baseWhere,
-      select: { id: true, currentStatusId: true },
+      select: { 
+        id: true, 
+        currentStatusId: true,
+        recruiterAssignments: {
+          where: { isActive: true },
+          select: { assignmentType: true }
+        }
+      },
     });
 
     const counts = allCandidates.reduce(
       (acc, c) => {
+        const isHandledByCRE = c.recruiterAssignments.some(
+          (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
+        );
+
         acc.total += 1;
+        if (isHandledByCRE) acc.handledByCRE += 1;
+
         if (c.currentStatusId === untouchedStatus?.id) acc.untouched += 1;
-        if (c.currentStatusId === rnrStatus?.id) acc.rnr += 1;
+        if (c.currentStatusId === rnrStatus?.id) {
+          acc.rnr += 1;
+          if (isHandledByCRE) acc.rnrHandledByCRE += 1;
+        }
+
         if (c.currentStatusId === onHoldStatus?.id) acc.onHold += 1;
         if (c.currentStatusId === interestedStatus?.id) acc.interested += 1;
         if (c.currentStatusId === notInterestedStatus?.id) acc.notInterested += 1;
@@ -674,8 +692,10 @@ export class CandidatesService {
       },
       {
         total: 0,
+        handledByCRE: 0,
         untouched: 0,
         rnr: 0,
+        rnrHandledByCRE: 0,
         onHold: 0,
         interested: 0,
         notInterested: 0,
@@ -740,8 +760,31 @@ export class CandidatesService {
 
     const candidatesWithCreator = candidates.map((candidate: any) => {
       const activeAssignment = candidate.recruiterAssignments?.[0];
+      
+      // Find the specific CRE assignment if it exists
+      const creAssignment = candidate.recruiterAssignments.find(
+        (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
+      );
+
+      // Check if candidate is handled by a CRE
+      const isHandledByCRE = !!creAssignment;
+
+      // Check if any active assignment is marked as CRE_REASSIGNED
+      const isCREReassigned = candidate.recruiterAssignments.some(
+        (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
+      );
+
       return {
         ...candidate,
+        isHandledByCRE,
+        isCREReassigned,
+        creHandler: creAssignment ? {
+          id: creAssignment.recruiter.id,
+          name: creAssignment.recruiter.name,
+          email: creAssignment.recruiter.email,
+          assignedAt: creAssignment.assignedAt,
+          assignmentType: creAssignment.assignmentType,
+        } : null,
         createdBy: activeAssignment?.assignedByUser || null,
         recruiter: activeAssignment?.recruiter || null,
       };
@@ -911,6 +954,19 @@ export class CandidatesService {
       const assignment = candidate.projects[0];
       const isNominated = !!assignment;
 
+      // Find the specific CRE assignment if it exists
+      const creAssignment = candidate.recruiterAssignments.find(
+        (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
+      );
+
+      // Check if candidate is handled by a CRE
+      const isHandledByCRE = !!creAssignment;
+
+      // Check if any active assignment is marked as CRE_REASSIGNED
+      const isCREReassigned = candidate.recruiterAssignments.some(
+        (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
+      );
+
       // Extract the fields we want to keep and exclude the projects array as requested by the user
       // No need for projects array in individual candidates since we have projectDetails for the specific project
       const { projects, ...candidateData } = candidate;
@@ -918,6 +974,15 @@ export class CandidatesService {
       return {
         ...candidateData,
         isNominated,
+        isHandledByCRE,
+        isCREReassigned,
+        creHandler: creAssignment ? {
+          id: creAssignment.recruiter.id,
+          name: creAssignment.recruiter.name,
+          email: creAssignment.recruiter.email,
+          assignedAt: creAssignment.assignedAt,
+          assignmentType: creAssignment.assignmentType,
+        } : null,
         projectSubStatus: assignment?.subStatus,
         projectMainStatus: assignment?.mainStatus,
         projectDetails: isNominated
@@ -1011,17 +1076,27 @@ export class CandidatesService {
     };
 
     if (normalizedStatusInput) {
-      const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
-      const statusId = Number(normalizedStatusInput);
-
-      if (!Number.isNaN(statusId)) {
-        where.currentStatusId = statusId;
+      if (normalizedStatusInput === 'interested') {
+        // Converted Response mode: now identified by assignmentType instead of status
+        where.recruiterAssignments.some.assignmentType = CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED;
       } else {
-        where.currentStatus = { statusName: { equals: normalizedStatus, mode: 'insensitive' } };
+        const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
+        const statusId = Number(normalizedStatusInput);
+
+        if (!Number.isNaN(statusId)) {
+          where.currentStatusId = statusId;
+        } else {
+          where.currentStatus = { statusName: { equals: normalizedStatus, mode: 'insensitive' } };
+        }
       }
     } else {
-      // Default CRE assigned listing should exclude already converted candidates
-      where.currentStatus = { statusName: { not: 'interested', mode: 'insensitive' } };
+      // Default CRE assigned listing: exclude converted and reassigned candidates
+      where.recruiterAssignments.some.assignmentType = {
+        notIn: [
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+        ],
+      };
     }
 
     // Add gender filter
@@ -1056,6 +1131,8 @@ export class CandidatesService {
           },
         },
         recruiterAssignments: {
+          where: { isActive: true },
+          orderBy: { assignedAt: 'desc' },
           include: {
             recruiter: {
               select: {
@@ -1100,7 +1177,7 @@ export class CandidatesService {
   }
 
   async getCREAssignedSummary(creUserId: string): Promise<{ total: number; roleCounters: any }> {
-    const candidates = await this.prisma.candidate.findMany({
+    const allAssigned = await this.prisma.candidate.findMany({
       where: {
         recruiterAssignments: {
           some: {
@@ -1113,6 +1190,15 @@ export class CandidatesService {
         currentStatus: {
           select: {
             statusName: true,
+          },
+        },
+        recruiterAssignments: {
+          select: {
+            assignmentType: true,
+          },
+          where: {
+            recruiterId: creUserId,
+            isActive: true,
           },
         },
       },
@@ -1128,16 +1214,28 @@ export class CandidatesService {
       other: 0,
     };
 
-    candidates.forEach((candidate) => {
+    allAssigned.forEach((candidate) => {
+      const assignmentType = candidate.recruiterAssignments[0]?.assignmentType;
+      
+      if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED || 
+          assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED) {
+        if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED) {
+          roleCounters.converted += 1;
+        }
+        return; // Don't count converted or reassigned in "Total Assigned" status-based buckets
+      }
+
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
-      if (status === 'interested') {
-        roleCounters.converted += 1;
-      } else if (status === 'rnr') {
+      if (status === 'rnr') {
         roleCounters.rnr += 1;
       } else if (status === 'on hold' || status === 'on_hold') {
         roleCounters.onHold += 1;
       } else if (status === 'untouched') {
         roleCounters.untouched += 1;
+      } else if (status === 'interested') {
+        // Legacy check for interested status
+        roleCounters.converted += 1;
+        return;
       } else {
         roleCounters.other += 1;
       }
@@ -1152,18 +1250,28 @@ export class CandidatesService {
     // Count reassigned candidates (CRE transferred to recruiter, now untouched)
     roleCounters.reassigned = await this.prisma.candidate.count({
       where: {
-        recruiterAssignments: {
-          some: {
-            assignedBy: creUserId,
-            assignmentType: 'cre_assigned',
-            isActive: true,
+        OR: [
+          {
+            recruiterAssignments: {
+              some: {
+                recruiterId: creUserId,
+                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+                isActive: true,
+              },
+            },
           },
-        },
+          {
+            recruiterAssignments: {
+              some: {
+                assignedBy: creUserId,
+                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+                isActive: true,
+              },
+            },
+          },
+        ],
         currentStatus: {
-          statusName: {
-            equals: CANDIDATE_STATUS.UNTOUCHED,
-            mode: 'insensitive',
-          },
+          statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
         },
       },
     });
@@ -1193,28 +1301,25 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
     }
 
-    const hasCREAssignment = candidate.recruiterAssignments?.some(
+    const creAssignment = candidate.recruiterAssignments?.find(
       (a: any) => a.recruiterId === userId && a.isActive,
     );
 
-    if (!hasCREAssignment) {
+    if (!creAssignment) {
       throw new ForbiddenException('CRE may only convert assigned candidates.');
     }
 
-    const interestedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'interested', mode: 'insensitive' } },
+    // Update assignment type to cre_converted instead of changing candidate status
+    await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: creAssignment.id },
+      data: {
+        assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+      },
     });
-
-    if (!interestedStatus) {
-      throw new NotFoundException('Interested candidate status not found');
-    }
-
-    const previousStatusId = candidate.currentStatusId;
 
     const updatedCandidate = await this.prisma.candidate.update({
       where: { id: candidateId },
       data: {
-        currentStatusId: interestedStatus.id,
         updatedAt: new Date(),
       },
       include: {
@@ -1232,28 +1337,6 @@ export class CandidatesService {
       },
     });
 
-    await this.prisma.candidateStatusHistory.create({
-      data: {
-        candidateId,
-        changedById: userId,
-        changedByName: (await this.prisma.user.findUnique({ where: { id: userId } }))?.name || 'CRE',
-        statusId: interestedStatus.id,
-        statusNameSnapshot: interestedStatus.statusName,
-        statusUpdatedAt: new Date(),
-        notificationCount: 0,
-      },
-    });
-
-    // If we are moving from RNR to Interested, cancel RNR reminders
-    if (previousStatusId) {
-      const rnrStatus = await this.prisma.candidateStatus.findFirst({
-        where: { statusName: { equals: 'rnr', mode: 'insensitive' } },
-      });
-      if (rnrStatus && previousStatusId === rnrStatus.id) {
-        await this.rnrRemindersService.cancelRNRReminders(candidateId);
-      }
-    }
-
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
@@ -1263,7 +1346,7 @@ export class CandidatesService {
     return updatedCandidate as any;
   }
 
-  async transferCREConvertedToRecruiter(candidateId: string, creUserId: string) {
+  async transferCREConvertedToRecruiter(candidateId: string, creUserId: string, notes?: string) {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
@@ -1289,33 +1372,41 @@ export class CandidatesService {
       );
     }
 
-    const currentStatus = (candidate.currentStatus?.statusName || '').toLowerCase();
-
-    if (currentStatus !== CANDIDATE_STATUS.INTERESTED) {
-      throw new BadRequestException(
-        'Only candidates marked as Interested can be transferred by CRE',
-      );
-    }
-
-    // Auto-assign a recruiter (load-balanced logic in recruiterAssignmentService)
-    const targetRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
-      candidateId,
-      creUserId,
-      'Transferred from CRE converted response',
+    // Find the PRIMARY recruiter (regular recruiter)
+    const primaryAssignment = candidate.recruiterAssignments?.find(
+      (a: any) => a.isActive && a.assignmentType !== CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO && a.assignmentType !== CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
     );
 
-    // Mark the assignment as CRE-originated
-    await this.prisma.candidateRecruiterAssignment.updateMany({
-      where: {
-        candidateId,
-        recruiterId: targetRecruiter.id,
-        isActive: true,
-        assignedBy: creUserId,
-      },
+    // Deactivate the CRE's assignment
+    await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: activeCREAssignment.id },
       data: {
-        assignmentType: 'cre_assigned',
+        isActive: false,
+        unassignedAt: new Date(),
+        unassignedBy: creUserId,
       },
     });
+
+    // Update the primary recruiter assignment to mark it as cre_reassigned
+    if (primaryAssignment) {
+      await this.prisma.candidateRecruiterAssignment.update({
+        where: { id: primaryAssignment.id },
+        data: {
+          assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+          assignedBy: creUserId,
+          reason: notes || 'Handed back from CRE converted response',
+        },
+      });
+    }
+
+    // Notify about handoff
+    await this.outboxService.publishCandidateRecruiterAssigned(
+      candidateId,
+      primaryAssignment?.recruiterId || creUserId, // Notify the primary recruiter (or self if none)
+      creUserId,
+      notes || 'Handed back from CRE converted response',
+      creUserId, // Previous was the CRE
+    );
 
     const untouchedStatus = await this.prisma.candidateStatus.findFirst({
       where: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
@@ -1360,14 +1451,29 @@ export class CandidatesService {
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
-      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from CRE to recruiter ${targetRecruiter.name}`,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from CRE to recruiter ${primaryAssignment?.recruiter?.name || 'Primary Recruiter'}`,
     });
+
+    // Notify the target recruiter that a CRE has transferred a candidate to them
+    if (primaryAssignment) {
+      await this.outboxService.publishRecruiterNotification(
+        primaryAssignment.recruiterId,
+        `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} has been transferred back to you by CRE ${(await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name || 'a team member'} after being converted from RNR.`,
+        'Candidate Transferred from CRE',
+        `/candidates/${candidateId}`,
+        {
+          candidateId,
+          creUserId,
+          transferType: 'cre_to_recruiter'
+        }
+      );
+    }
 
     return updatedCandidate;
   }
 
   async getCREReassignedCandidates(
-    creUserId: string,
+    recruiterId: string,
     query: {
       page?: number;
       limit?: number;
@@ -1378,14 +1484,29 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
 
     const where: any = {
-      recruiterAssignments: {
-        some: {
-          assignedBy: creUserId,
-          assignmentType: 'cre_assigned',
-          isActive: true,
+      OR: [
+        {
+          recruiterAssignments: {
+            some: {
+              recruiterId: recruiterId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
         },
+        {
+          recruiterAssignments: {
+            some: {
+              assignedBy: recruiterId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+      ],
+      currentStatus: {
+        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
       },
-      currentStatus: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
     };
 
     if (search) {
@@ -1763,6 +1884,25 @@ export class CandidatesService {
     });
     if (!candidate) {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Check if candidate is handled by CRE (Restricted for Recruiters)
+    const isHandledByCRE = await this.isHandledByCRE(candidateId);
+    if (isHandledByCRE) {
+      // Get user roles to check if they are exempt (Admin/CRE)
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { userRoles: { include: { role: true } } }
+      });
+      const isAdminOrCRE = user?.userRoles.some(ur => 
+        ['System Admin', 'CRE'].includes(ur.role.name)
+      );
+
+      if (!isAdminOrCRE) {
+        throw new ForbiddenException(
+          'Candidate is currently being handled by CRE and cannot be assigned to projects until handed back to recruiter.',
+        );
+      }
     }
 
     // Check if project exists
@@ -2317,6 +2457,25 @@ export class CandidatesService {
     });
     if (!candidate) {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    // Check if candidate is handled by CRE (Restricted for Recruiters)
+    const isHandledByCRE = await this.isHandledByCRE(candidateId);
+    if (isHandledByCRE) {
+      // Get user roles to check if they are exempt (Admin/CRE)
+      const user = await this.prisma.user.findUnique({
+        where: { id: nominatorId },
+        include: { userRoles: { include: { role: true } } }
+      });
+      const isAdminOrCRE = user?.userRoles.some(ur => 
+        ['System Admin', 'CRE'].includes(ur.role.name)
+      );
+
+      if (!isAdminOrCRE) {
+        throw new ForbiddenException(
+          'Candidate is currently being handled by CRE and cannot be nominated to projects until handed back to recruiter.',
+        );
+      }
     }
 
     // Validate project exists
@@ -3196,6 +3355,24 @@ export class CandidatesService {
       },
     });
     return mapping;
+  }
+
+  /**
+   * Check if a candidate is currently being handled by a CRE
+   * This means they have an active assignment with type CRE_AUTO or CRE_MANUAL
+   */
+  async isHandledByCRE(candidateId: string): Promise<boolean> {
+    const activeCREAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        isActive: true,
+        assignmentType: {
+          in: [CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO, CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL],
+        },
+      },
+    });
+
+    return !!activeCREAssignment;
   }
 
   /**

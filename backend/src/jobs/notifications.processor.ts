@@ -1019,15 +1019,16 @@ export class NotificationsProcessor extends WorkerHost {
     );
 
     try {
-      const { candidateId, recruiterId, assignedBy, reason } = payload as {
+      const { candidateId, recruiterId, assignedBy, reason, previousRecruiterId } = payload as {
         candidateId: string;
         recruiterId: string;
         assignedBy: string;
         reason?: string;
+        previousRecruiterId?: string;
       };
 
       // Load candidate and assigner details
-      const [candidate, assigner] = await Promise.all([
+      const [candidate, assigner, newRecruiter] = await Promise.all([
         this.prisma.candidate.findUnique({
           where: { id: candidateId },
           select: {
@@ -1037,36 +1038,87 @@ export class NotificationsProcessor extends WorkerHost {
           },
         }),
         this.prisma.user.findUnique({
-          where: { id: assignedBy },
+          where: { id: assignedBy === 'system' ? recruiterId : assignedBy },
           select: {
             id: true,
             name: true,
           },
         }),
+        this.prisma.user.findUnique({
+          where: { id: recruiterId },
+          select: {
+            id: true,
+            name: true,
+            userRoles: {
+              include: {
+                role: true,
+              },
+            },
+          },
+        }),
       ]);
 
-      if (!candidate || !assigner) {
-        this.logger.warn(
-          `Missing data for candidate recruiter assignment: candidate=${!!candidate}, assigner=${!!assigner}`,
-        );
+      if (!candidate) {
+        this.logger.warn(`Candidate ${candidateId} not found for assignment notification`);
         return;
       }
 
-      const idemKey = `${eventId}:${recruiterId}:candidate_transferred`;
+      const assignerName = assignedBy === 'system' ? 'System' : (assigner?.name || 'A team member');
+      const isCreAssignment = newRecruiter?.userRoles.some(
+        (ur) => ur.role.name.toUpperCase() === 'CRE',
+      );
 
+      // 1. Notify the NEW recruiter (CRE or Primary Recruiter)
+      const idemKeyNew = `${eventId}:${recruiterId}:candidate_transferred`;
       await this.notificationsService.createNotification({
         userId: recruiterId,
         type: 'candidate_transferred',
-        title: 'Candidate Transferred to You',
-        message: `${assigner.name} transferred candidate ${candidate.firstName} ${candidate.lastName} to you.${reason ? ` Reason: ${reason}` : ''}`,
+        title: isCreAssignment ? 'New RNR Candidate Assigned' : 'Candidate Ready from CRE',
+        message: isCreAssignment 
+          ? `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for RNR handling.`
+          : `${assignerName} processed candidate ${candidate.firstName} ${candidate.lastName} and it's now back in your list.${reason ? ` Notes: ${reason}` : ''}`,
         link: `/candidates/${candidateId}`,
-        meta: {
-          candidateId,
-          assignedBy,
-          reason,
-        },
-        idemKey,
+        meta: { candidateId, assignedBy, reason },
+        idemKey: idemKeyNew,
       });
+
+      // 2. Notify the PREVIOUS recruiter or Handler
+      // If moving TO CRE, notify primary with "In CRE Handling"
+      // If moving FROM CRE back, notify the CRE of successful handoff
+      if (previousRecruiterId && previousRecruiterId !== recruiterId) {
+        if (isCreAssignment) {
+          const idemKeyPrev = `${eventId}:${previousRecruiterId}:candidate_moved_to_cre`;
+          await this.notificationsService.createNotification({
+            userId: previousRecruiterId,
+            type: 'candidate_moved_to_cre',
+            title: 'Candidate in CRE Handling',
+            message: `Your candidate ${candidate.firstName} ${candidate.lastName} is now being handled by CRE ${newRecruiter?.name || 'team'} for RNR follow-up.`,
+            link: `/candidates/${candidateId}`,
+            meta: { candidateId, creId: recruiterId },
+            idemKey: idemKeyPrev,
+          });
+        } else {
+          // Check if previous was CRE 
+          const prevUser = await this.prisma.user.findUnique({
+            where: { id: previousRecruiterId },
+            include: { userRoles: { include: { role: true } } }
+          });
+          const wasPrevCre = prevUser?.userRoles.some(ur => ur.role.name.toUpperCase() === 'CRE');
+
+          if (wasPrevCre) {
+            const idemKeyPrev = `${eventId}:${previousRecruiterId}:candidate_transferred_back`;
+            await this.notificationsService.createNotification({
+              userId: previousRecruiterId,
+              type: 'candidate_transferred',
+              title: 'CRE Handoff Successful',
+              message: `Candidate ${candidate.firstName} ${candidate.lastName} has been successfully handed back to recruiter ${newRecruiter?.name || 'team'}.`,
+              link: `/candidates/${candidateId}`,
+              meta: { candidateId, recruiterId: recruiterId },
+              idemKey: idemKeyPrev,
+            });
+          }
+        }
+      }
 
       // Also publish a sync event for real-time UI updates
       await this.prisma.outboxEvent.create({
@@ -1075,13 +1127,13 @@ export class NotificationsProcessor extends WorkerHost {
           payload: {
             type: 'Candidate',
             candidateId,
-            message: `New candidate assigned: ${candidate.firstName} ${candidate.lastName}`,
+            message: `Candidate assignment updated: ${candidate.firstName} ${candidate.lastName}`,
           },
         },
       });
 
       this.logger.log(
-        `Candidate transferred notification created for recruiter ${recruiterId}`,
+        `Candidate assignment notifications created for candidate ${candidateId}`,
       );
     } catch (error) {
       this.logger.error(

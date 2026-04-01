@@ -549,10 +549,12 @@ export default function ProjectEligibleCandidatesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              disabled={candidate.isHandledByCRE}
+                              title={candidate.isHandledByCRE ? "Candidate is currently being handled by CRE" : "Nominate Candidate"}
                               onClick={() =>
                                 handleNominateCandidate(candidate.id)
                               }
-                              className="text-green-600 hover:text-green-700"
+                              className={candidate.isHandledByCRE ? "text-gray-400" : "text-green-600 hover:text-green-700"}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>

@@ -505,8 +505,10 @@ export default function CandidatesPage() {
         : serverCounts?.total) ??
       serverCounts?.totalAssigned ??
       totalCount,
+    handledByCRE: serverCounts?.handledByCRE ?? 0,
     untouched: serverCounts?.untouched ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
     rnr: serverCounts?.rnr ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    rnrHandledByCRE: serverCounts?.rnrHandledByCRE ?? 0,
     onHold: serverCounts?.onHold ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
     interested: serverCounts?.interested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
     qualified: serverCounts?.qualified ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
@@ -520,7 +522,7 @@ export default function CandidatesPage() {
     {
       label: "Assigned to Me",
       value: derivedCounts.totalAssigned,
-      subtitle: "Assigned candidates",
+      subtitle: derivedCounts.handledByCRE > 0 ? `${derivedCounts.handledByCRE} with CRE handler` : "Assigned candidates",
       icon: Users,
       statusFilter: "all",
       color: "from-blue-500 to-cyan-500",
@@ -536,7 +538,7 @@ export default function CandidatesPage() {
     {
       label: "Call Back (RNR)",
       value: derivedCounts.rnr,
-      subtitle: "Ring not responded",
+      subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with CRE handler` : "Ring not responded",
       icon: Phone,
       statusFilter: "rnr",
       color: "from-orange-500 to-red-500",
@@ -1446,6 +1448,8 @@ export default function CandidatesPage() {
                       // Determine active recruiter assignment
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
+                      const isHandledByCRE = candidate.isHandledByCRE;
+                      const isCREReassigned = candidate.isCREReassigned;
 
                       return (
                         <TableRow
@@ -1479,9 +1483,15 @@ export default function CandidatesPage() {
                                     {candidate.firstName} {candidate.lastName}
                                   </button>
 
-                                  {((candidate as any).recruiterAssignments || []).some((a: any) => a.assignmentType === 'cre_assigned') && (
-                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-700 border border-blue-200">
+                                  {isHandledByCRE && (
+                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
                                       CRE Assigned
+                                    </Badge>
+                                  )}
+
+                                  {isCREReassigned && (
+                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
+                                      CRE Reassigned
                                     </Badge>
                                   )}
                                 </div>

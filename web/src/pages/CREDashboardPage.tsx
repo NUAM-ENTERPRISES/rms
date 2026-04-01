@@ -25,6 +25,12 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -155,10 +161,10 @@ export default function CREDashboardPage() {
     }
   };
 
-  const handleConfirmTransfer = async () => {
+  const handleConfirmTransfer = async (notes?: string) => {
     if (!candidateToTransfer) return;
     try {
-      await transferCandidateToRecruiter(candidateToTransfer.id).unwrap();
+      await transferCandidateToRecruiter({ id: candidateToTransfer.id, notes }).unwrap();
       setIsTransferModalOpen(false);
       setCandidateToTransfer(null);
       setCurrentRecruiterForTransfer('');
@@ -170,8 +176,9 @@ export default function CREDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="space-y-6 p-6 max-w-7xl mx-auto">
+    <TooltipProvider>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="space-y-6 p-6 max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
@@ -350,7 +357,10 @@ export default function CREDashboardPage() {
                       <TableRow className="bg-gray-50/50 border-b border-gray-200">
                         <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
                         <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Assigned By</TableHead>
+                        {statusFilter === 'reassigned' && (
+                          <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Assigned By</TableHead>
+                        )}
+                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Reason</TableHead>
                         <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Status</TableHead>
                         <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Assigned At</TableHead>
                         <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">Contact</TableHead>
@@ -374,6 +384,7 @@ export default function CREDashboardPage() {
                           'System / Admin';
                         const statusName = candidate.currentStatus?.statusName || 'Unknown';
                         const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
+                        const assignmentReason = activeAssignment?.reason || '';
                         const phoneDigits = formatPhoneForLink(candidate);
                         const isCREAssigned = candidate.recruiterAssignments?.some((a: any) => a.assignmentType === 'cre_assigned');
 
@@ -420,8 +431,27 @@ export default function CREDashboardPage() {
                               </div>
                             </TableCell>
 
+                            {statusFilter === 'reassigned' && (
+                              <TableCell className="px-4 py-3">
+                                <div className="text-xs truncate">{assignedByName}</div>
+                              </TableCell>
+                            )}
+
                             <TableCell className="px-4 py-3">
-                              <div className="text-xs truncate">{assignedByName}</div>
+                              {assignmentReason ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="text-xs text-slate-600 truncate max-w-[150px] cursor-help">
+                                      {assignmentReason}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <p className="text-xs">{assignmentReason}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                <div className="text-xs text-slate-400">No reason</div>
+                              )}
                             </TableCell>
 
                             <TableCell className="px-4 py-3">
@@ -484,7 +514,7 @@ export default function CREDashboardPage() {
                                   <Eye className="h-4 w-4" />
                                 </Button>
 
-                                {statusName.toLowerCase() === 'interested' ? (
+                                {(statusName.toLowerCase() === 'interested' || statusFilter === 'interested') ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -496,9 +526,9 @@ export default function CREDashboardPage() {
                                       setIsTransferModalOpen(true);
                                     }}
                                   >
-                                    Transfer
+                                    Reassign
                                   </Button>
-                                ) : (
+                                ) : statusFilter !== 'reassigned' && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -611,5 +641,6 @@ export default function CREDashboardPage() {
         />
       </div>
     </div>
+    </TooltipProvider>
   );
 }

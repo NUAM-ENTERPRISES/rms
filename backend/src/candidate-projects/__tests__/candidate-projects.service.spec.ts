@@ -11,7 +11,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
   let prisma: any;
 
   const mockPrisma = {
-    candidate: { findUnique: jest.fn() },
+    candidate: { findUnique: jest.fn(), findMany: jest.fn() },
     project: { findUnique: jest.fn() },
     user: { findUnique: jest.fn(), findMany: jest.fn() },
     role: { findUnique: jest.fn() },
@@ -252,5 +252,54 @@ describe('CandidateProjectsService - sendForInterview', () => {
 
     expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
     expect((service as any).outboxService.publishCandidateSentForVerification).toHaveBeenCalledWith('map1', '');
+  });
+
+  it('checkBulkEligibility marks RNR candidate as not eligible across all roles', async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      rolesNeeded: [
+        {
+          id: 'r1',
+          designation: 'Emergency Staff Nurse',
+          genderRequirement: 'all',
+          minAge: 18,
+          maxAge: 70,
+          minExperience: 0,
+          maxExperience: null,
+          roleCatalogId: null,
+          minSalaryRange: null,
+          maxSalaryRange: null,
+          roleCatalog: null,
+        },
+      ],
+      licensingExam: null,
+      dataFlow: false,
+      eligibility: false,
+    });
+
+    (prisma.candidate.findMany as any).mockResolvedValue([
+      {
+        id: 'c1',
+        firstName: 'Brynne',
+        lastName: 'Moore',
+        dateOfBirth: '1990-01-01',
+        gender: 'female',
+        totalExperience: 1,
+        currentStatus: { statusName: 'RNR' },
+        workExperiences: [],
+        preferredCountries: [],
+      },
+    ]);
+
+    const result = await service.checkBulkEligibility({ projectId: 'p1', candidateIds: ['c1'] } as any);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].candidateId).toBe('c1');
+    expect(result[0].isEligible).toBe(false);
+    expect(result[0].roleEligibility[0].isEligible).toBe(false);
+    expect(result[0].roleEligibility[0].reasons).toContain(
+      'Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.',
+    );
   });
 });

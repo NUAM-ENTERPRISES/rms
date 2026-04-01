@@ -686,11 +686,17 @@ export class CandidatesController {
     description:
       'Transfer an interested candidate to a recruiter and set status to untouched',
   })
-  async transferToRecruiter(@Param('id') id: string, @Request() req) {
+  async transferToRecruiter(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req,
+  ) {
     const userId = req.user.id;
+    const notes = body?.notes;
     const candidate = await this.candidatesService.transferCREConvertedToRecruiter(
       id,
       userId,
+      notes,
     );
 
     return {

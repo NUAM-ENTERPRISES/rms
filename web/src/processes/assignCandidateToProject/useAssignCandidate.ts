@@ -45,6 +45,13 @@ export function useAssignCandidate() {
         throw new Error("Candidate not found");
       }
 
+      // Check if candidate is currently handled by CRE
+      if (candidate.isHandledByCRE) {
+        throw new Error(
+          "Candidate is currently being handled by CRE and cannot be assigned to projects until handed back to recruiter."
+        );
+      }
+
       const statusName = typeof candidate.currentStatus === 'string' 
         ? candidate.currentStatus 
         : candidate.currentStatus?.statusName;

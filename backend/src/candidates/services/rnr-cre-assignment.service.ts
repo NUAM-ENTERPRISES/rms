@@ -14,9 +14,9 @@ export class RnrCreAssignmentService {
   ) {}
 
   /**
-   * Run every hour to check for RNR candidates that need CRE assignment
+   * Run every minute to check for RNR candidates that need CRE assignment
    */
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleRnrCreAssignment() {
     this.logger.log('Starting RNR → CRE assignment check');
 
@@ -60,11 +60,11 @@ export class RnrCreAssignmentService {
           await this.recruiterAssignmentService.assignCREToCandidate(
             candidate.candidateId,
             'system', // System user ID for automatic assignments
-            `Automatic CRE assignment after ${candidate.daysInRNR} days in RNR status`,
+            `Automatic CRE assignment after ${candidate.minutesInRNR} minutes in RNR status`,
           );
 
           this.logger.log(
-            `Successfully assigned CRE to candidate ${candidate.candidateId} (${candidate.candidateName}) after ${candidate.daysInRNR} days in RNR`,
+            `Successfully assigned CRE to candidate ${candidate.candidateId} (${candidate.candidateName}) after ${candidate.minutesInRNR} minutes in RNR`,
           );
         } catch (error) {
           this.logger.error(
@@ -127,7 +127,7 @@ export class RnrCreAssignmentService {
           await this.recruiterAssignmentService.assignCREToCandidate(
             candidate.candidateId,
             'system',
-            `Manual CRE assignment after ${candidate.daysInRNR} days in RNR status`,
+            `Manual CRE assignment after ${candidate.minutesInRNR} minutes in RNR status`,
           );
 
           results.assigned++;
