@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
+declare const process: any;
+declare const require: any;
+declare const module: any;
+
 const prisma = new PrismaClient();
 
 export async function seedSystemConfig() {
@@ -9,7 +13,7 @@ export async function seedSystemConfig() {
   const rnrSettings = {
     totalDays: 3,
     remindersPerDay: 2,
-    delayBetweenReminders: 240, // minutes — default production: 240 (4 hours); set to 1 for quick local testing
+    delayBetweenReminders: 240, // minutes — production default (4 hours)
     officeHours: {
       start: '09:00',
       end: '18:00',

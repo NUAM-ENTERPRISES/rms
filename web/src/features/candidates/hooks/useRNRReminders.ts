@@ -61,10 +61,10 @@ export function useRNRReminders() {
       : typeof (user as any).role === "string" && (user as any).role.toLowerCase().includes("recruiter")
   ));
 
-  // Socket-first + light-polling fallback (5 minutes). Skip if not logged in or not recruiter.
+  // Socket-first operation, no periodic polling. Skip if not logged in or not recruiter.
   const queryArg = accessToken && isRecruiterUser ? {} : skipToken;
   const { data: remindersData, isLoading, refetch } = useGetMyRNRRemindersQuery(queryArg as any, {
-    pollingInterval: 300000, // 5 minutes
+    pollingInterval: 0, // disable auto polling for event-driven flow
     refetchOnMountOrArgChange: true,
     refetchOnReconnect: true,
     refetchOnFocus: false,

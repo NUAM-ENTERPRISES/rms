@@ -3,6 +3,7 @@ import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { Job, Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { SystemConfigService, RNRSettings } from '../system-config/system-config.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CANDIDATE_STATUS } from '../common/constants/statuses';
 
@@ -23,6 +24,7 @@ export class RnrReminderProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     @InjectQueue('rnr-reminders') private readonly rnrQueue: Queue,
     private readonly systemConfigService: SystemConfigService,
+    private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => RecruiterAssignmentService))
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {
@@ -480,24 +482,21 @@ export class RnrReminderProcessor extends WorkerHost {
   private async sendRNRNotification(reminder: any, dayNumber: number, reminderNumber: number): Promise<void> {
     const candidateName = `${reminder.candidate.firstName} ${reminder.candidate.lastName}`;
 
-    await this.prisma.notification.create({
-      data: {
-        userId: reminder.recruiterId,
-        type: 'RNR_REMINDER',
-        title: `Follow-up Required - RNR Candidate (Day ${dayNumber}, Reminder ${reminderNumber})`,
-        message: `Candidate ${candidateName} is still in RNR (Ring Not Response). Please try calling again. This is reminder ${reminderNumber} of 2 for day ${dayNumber}.`,
-        link: `/candidates/${reminder.candidateId}`,
-        status: 'unread',
-        idemKey: `rnr_reminder_${reminder.id}_${Date.now()}`,
-        meta: {
-          candidateId: reminder.candidateId,
-          candidateName: candidateName,
-          reminderType: 'RNR',
-          statusHistoryId: reminder.statusHistoryId,
-          dayNumber: dayNumber,
-          reminderNumber: reminderNumber,
-        },
+    await this.notificationsService.createNotification({
+      userId: reminder.recruiterId,
+      type: 'RNR_REMINDER',
+      title: `Follow-up Required - RNR Candidate (Day ${dayNumber}, Reminder ${reminderNumber})`,
+      message: `Candidate ${candidateName} is still in RNR (Ring Not Response). Please try calling again. This is reminder ${reminderNumber} of 2 for day ${dayNumber}.`,
+      link: `/candidates/${reminder.candidateId}`,
+      meta: {
+        candidateId: reminder.candidateId,
+        candidateName: candidateName,
+        reminderType: 'RNR',
+        statusHistoryId: reminder.statusHistoryId,
+        dayNumber: dayNumber,
+        reminderNumber: reminderNumber,
       },
+      idemKey: `rnr_reminder_${reminder.id}_${Date.now()}`,
     });
 
     this.logger.log(

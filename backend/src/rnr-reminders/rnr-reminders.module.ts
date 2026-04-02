@@ -7,12 +7,14 @@ import { RnrReminderProcessor } from '../jobs/rnr-reminder.processor';
 import { PrismaModule } from '../database/prisma.module';
 import { SystemConfigModule } from '../system-config/system-config.module';
 import { CandidatesModule } from '../candidates/candidates.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     PrismaModule,
     ConfigModule,
     SystemConfigModule, // Import SystemConfig for RNR settings
+    NotificationsModule, // Import notifications service for real-time event pushes
     forwardRef(() => CandidatesModule), // Import for RecruiterAssignmentService (avoid circular dependency)
     // Register BullMQ for RNR reminders
     BullModule.registerQueue({

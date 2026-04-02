@@ -138,6 +138,13 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         }
       }
 
+      // Dispatch a specific event for RNR reminders so the RNR modal opens immediately
+      if (notification.type === "RNR_REMINDER") {
+        window.dispatchEvent(new CustomEvent("rnr:reminder", {
+          detail: { reminder: { ...notification, candidate: notification.meta?.candidate } , show: true }
+        }));
+      }
+
       // Only show toast if it's NOT a verification notification (which triggers the bell animation)
       if (notification.type !== "candidate_sent_for_verification") {
         toast(notification.title || "New Notification", {
