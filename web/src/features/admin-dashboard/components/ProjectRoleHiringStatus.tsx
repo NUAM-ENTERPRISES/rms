@@ -14,17 +14,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import RoleHiringChart from "./RoleHiringChart";
 import { useGetProjectRoleHiringStatusQuery } from "../../admin/api/adminDashboardApi";
 
-type ProjectRole = {
-  role: string;
-  required: number;
-  filled: number;
-};
 
-type ProjectRoleHiringStatusProject = {
-  projectId: string;
-  projectName: string;
-  roles: ProjectRole[];
-};
 
 export default function ProjectRoleHiringStatus() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
