@@ -296,28 +296,39 @@ export class AdminDashboardService {
             currentProjectStatus: {
               select: { statusName: true },
             },
+            subStatus: {
+              select: { name: true },
+            },
           },
         });
 
         const assigned = candidateProjects.length;
-        const nominated = candidateProjects.filter((cp) =>
-          ['nominated', 'nominated_initial'].includes(
-            cp.currentProjectStatus?.statusName || '',
-          ),
-        ).length;
-        const documentsVerified = candidateProjects.filter((cp) =>
-          ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(
-            cp.currentProjectStatus?.statusName || '',
-          ),
-        ).length;
-        const interviewPassed = candidateProjects.filter((cp) =>
-          ['interview_passed', 'shortlisted', 'interview_selected'].includes(
-            cp.currentProjectStatus?.statusName || '',
-          ),
-        ).length;
-        const hired = candidateProjects.filter((cp) =>
-          ['hired', 'deployed'].includes(cp.currentProjectStatus?.statusName || ''),
-        ).length;
+
+        const getStatusKey = (cp: any) => {
+          const currentStatus = cp.currentProjectStatus?.statusName ?? '';
+          const subStatus = cp.subStatus?.name ?? '';
+          return { currentStatus, subStatus };
+        };
+
+        const nominated = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['nominated', 'nominated_initial'].includes(currentStatus) || ['nominated', 'nominated_initial'].includes(subStatus);
+        }).length;
+
+        const documentsVerified = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(currentStatus) || ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(subStatus);
+        }).length;
+
+        const interviewPassed = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['interview_passed', 'shortlisted', 'interview_selected'].includes(currentStatus) || ['interview_passed', 'shortlisted', 'interview_selected'].includes(subStatus);
+        }).length;
+
+        const hired = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['hired', 'deployed'].includes(currentStatus) || ['hired', 'deployed'].includes(subStatus);
+        }).length;
 
         return {
           id: recruiter.id,
