@@ -363,8 +363,8 @@ export class RecruiterAssignmentService {
     minutesInRNR: number;
     currentRecruiterId?: string;
   }>> {
-    const oneMinuteAgo = new Date();
-    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
     // First, resolve the RNR status record to get its ID
     const rnrStatus = await this.prisma.candidateStatus.findFirst({
@@ -385,7 +385,7 @@ export class RecruiterAssignmentService {
       where: {
         currentStatusId: rnrStatus.id,
         updatedAt: {
-          lte: oneMinuteAgo,
+          lte: threeDaysAgo,
         },
       },
       include: {
