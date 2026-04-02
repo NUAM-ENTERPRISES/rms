@@ -374,5 +374,101 @@ export class AdminDashboardService {
       message: 'Top recruiter stats retrieved successfully',
     };
   }
+
+  async getUpcomingInterviews(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{ success: boolean; data: import('./types').AdminDashboardUpcomingInterviewsData; message: string }> {
+    const now = new Date();
+    const where = {
+      scheduledTime: { gte: now },
+      candidateProjectMap: {
+        is: {
+          subStatus: {
+            is: {
+              name: 'interview_scheduled',
+            },
+          },
+        },
+      },
+    };
+
+    const total = await this.prisma.interview.count({ where });
+
+    const interviews = await this.prisma.interview.findMany({
+      where,
+      include: {
+        candidateProjectMap: {
+          include: {
+            candidate: {
+              select: { firstName: true, lastName: true },
+            },
+            project: {
+              select: { title: true },
+            },
+            roleNeeded: {
+              select: { designation: true },
+            },
+            recruiter: {
+              select: { name: true },
+            },
+            subStatus: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+      orderBy: { scheduledTime: 'asc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const projection = interviews.map((iv) => {
+      const scheduledTime = new Date(iv.scheduledTime);
+      const day = scheduledTime.toLocaleDateString('en-US', { weekday: 'short' });
+      const time = scheduledTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const map = iv.candidateProjectMap;
+
+      return {
+        day,
+        candidate: map?.candidate ? `${map.candidate.firstName} ${map.candidate.lastName}` : 'Unknown',
+        project: map?.project?.title ?? 'Unknown',
+        role: map?.roleNeeded?.designation ?? 'Unknown',
+        recruiter: map?.recruiter?.name ?? 'Unassigned',
+        time,
+        scheduledTime: iv.scheduledTime.toISOString(),
+        status: 'Scheduled' as import('./types').InterviewStatus,
+      };
+    });
+
+    const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const countByDay: Record<string, number> = dayKeys.reduce((acc, d) => ({ ...acc, [d]: 0 }), {});
+
+    projection.forEach((entry) => {
+      if (countByDay.hasOwnProperty(entry.day)) {
+        countByDay[entry.day] += 1;
+      }
+    });
+
+    const chartData: import('./types').InterviewChartEntry[] = dayKeys.map((d) => ({
+      day: d,
+      interviews: countByDay[d] ?? 0,
+    }));
+
+    return {
+      success: true,
+      data: {
+        chartData,
+        interviews: projection,
+        pagination: {
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+          page,
+          limit,
+        },
+      },
+      message: 'Upcoming interviews retrieved successfully',
+    };
+  }
 }
 

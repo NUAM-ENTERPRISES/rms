@@ -86,6 +86,39 @@ export interface ProjectRoleHiringStatusParams {
   limit?: number;
 }
 
+export type InterviewStatus = "Scheduled" | "Completed" | "Pending" | "Missed";
+
+export interface UpcomingInterviewEntry {
+  day: string;
+  candidate: string;
+  project: string;
+  role: string;
+  recruiter: string;
+  time: string;
+  status: InterviewStatus;
+  scheduledTime: string;
+}
+
+export interface InterviewChartEntry {
+  day: string;
+  interviews: number;
+}
+
+export interface AdminDashboardUpcomingInterviewsResponse {
+  success: boolean;
+  data: {
+    chartData: InterviewChartEntry[];
+    interviews: UpcomingInterviewEntry[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      page: number;
+      limit: number;
+    };
+  };
+  message: string;
+}
+
 export const adminDashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminDashboardStats: builder.query<AdminDashboardStatsResponse, void>({
@@ -114,13 +147,21 @@ export const adminDashboardApi = baseApi.injectEndpoints({
       }),
       providesTags: ["AdminDashboard"],
     }),
+    getUpcomingInterviews: builder.query<AdminDashboardUpcomingInterviewsResponse, { page?: number; limit?: number } | void>({
+      query: (params) => ({
+        url: "/admin/dashboard/upcoming-interviews",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: ["AdminDashboard"],
+    }),
     getTopRecruiterStats: builder.query<TopRecruiterStatsResponse, { year?: number; month?: number }>({
       query: (params) => ({
         url: "/admin/dashboard/top-recruiter-stats",
         method: "GET",
         params: {
-          ...(params.year && { year: params.year }),
-          ...(params.month && { month: params.month }),
+          ...(params?.year && { year: params.year }),
+          ...(params?.month && { month: params.month }),
         },
       }),
       providesTags: ["AdminDashboard"],
@@ -132,5 +173,6 @@ export const {
   useGetAdminDashboardStatsQuery,
   useGetHiringTrendQuery,
   useGetProjectRoleHiringStatusQuery,
+  useGetUpcomingInterviewsQuery,
   useGetTopRecruiterStatsQuery,
 } = adminDashboardApi;

@@ -8,9 +8,14 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { interviewChartData } from "../data/mockData";
+
+type InterviewChartEntry = {
+  day: string;
+  interviews: number;
+};
 
 type InterviewChartProps = {
+  chartData: InterviewChartEntry[];
   selectedDay: string | null;
   onSelectDay: (day: string | null) => void;
 };
@@ -20,6 +25,7 @@ const ACTIVE_FILL = "#4f46e5";
 const INACTIVE_FILL = "#c7d2fe";
 
 export default function InterviewChart({
+  chartData,
   selectedDay,
   onSelectDay,
 }: InterviewChartProps) {
@@ -34,7 +40,7 @@ export default function InterviewChart({
       </h3>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart
-          data={interviewChartData}
+          data={chartData}
           barSize={32}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -64,11 +70,11 @@ export default function InterviewChart({
             name="Interviews"
             style={{ cursor: "pointer" }}
             onClick={(_data: unknown, index: number) => {
-              const entry = interviewChartData[index];
+              const entry = chartData[index];
               if (entry) handleClick(entry);
             }}
           >
-            {interviewChartData.map((entry) => (
+            {chartData.map((entry) => (
               <Cell
                 key={entry.day}
                 fill={

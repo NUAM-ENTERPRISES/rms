@@ -193,7 +193,75 @@ export class AdminDashboardController {
       limit: limit ? parseInt(limit) : 10,
     });
   }
-
+  @Get('upcoming-interviews')
+  @Permissions('read:admin-dashboard')
+  @ApiOperation({
+    summary: 'Get upcoming interviews (interview_scheduled)',
+    description:
+      'Get interviews that are scheduled (subStatus=interview_scheduled) with time and candidate breakdown for the dashboard.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page' })
+  @ApiResponse({
+    status: 200,
+    description: 'Upcoming interviews retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            chartData: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  day: { type: 'string', example: 'Mon' },
+                  interviews: { type: 'number', example: 3 },
+                },
+              },
+            },
+            interviews: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  day: { type: 'string', example: 'Mon' },
+                  candidate: { type: 'string', example: 'Rahul Kumar' },
+                  project: { type: 'string', example: 'Aster Hospital' },
+                  role: { type: 'string', example: 'ICU Nurse' },
+                  recruiter: { type: 'string', example: 'John Mathew' },
+                  time: { type: 'string', example: '10:30 AM' },
+                  status: { type: 'string', example: 'Scheduled' },
+                  scheduledTime: { type: 'string', example: '2026-04-10T10:30:00.000Z' },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                total: { type: 'number', example: 15 },
+                totalPages: { type: 'number', example: 2 },
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 10 },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Upcoming interviews retrieved successfully' },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  async getUpcomingInterviews(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? Number(page) : 1;
+    const limitNum = limit ? Number(limit) : 10;
+    return this.adminDashboardService.getUpcomingInterviews(pageNum, limitNum);
+  }
   @Get('top-recruiter-stats')
   @Permissions('read:admin-dashboard')
   @ApiOperation({
