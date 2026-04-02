@@ -760,6 +760,8 @@ export const candidatesApi = baseApi.injectEndpoints({
         maxExperience?: number;
         minSalary?: number;
         maxSalary?: number;
+        minAge?: number;
+        maxAge?: number;
         visaType?: string;
         qualification?: string;
         heightMin?: number;
@@ -809,6 +811,8 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (params.maxExperience !== undefined) queryParams.append("maxExperience", params.maxExperience.toString());
         if (params.minSalary !== undefined) queryParams.append("minSalary", params.minSalary.toString());
         if (params.maxSalary !== undefined) queryParams.append("maxSalary", params.maxSalary.toString());
+        if (params.minAge !== undefined) queryParams.append("minAge", params.minAge.toString());
+        if (params.maxAge !== undefined) queryParams.append("maxAge", params.maxAge.toString());
         if (params.visaType) queryParams.append("visaType", params.visaType);
         if (params.qualification) queryParams.append("qualification", params.qualification);
         if (params.heightMin !== undefined) queryParams.append("heightMin", params.heightMin.toString());

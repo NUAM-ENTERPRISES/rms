@@ -3450,6 +3450,35 @@ export class CandidatesService {
   }
 
   /**
+   * Convert min/max age to dateOfBirth range for filtering.
+   */
+  private computeDateOfBirthRangeFromAge(
+    minAge?: number,
+    maxAge?: number,
+  ): { dateOfBirthFrom?: Date; dateOfBirthTo?: Date } {
+    if (minAge == null && maxAge == null) return {};
+
+    const now = new Date();
+    const range: { dateOfBirthFrom?: Date; dateOfBirthTo?: Date } = {};
+
+    if (maxAge !== undefined && maxAge !== null) {
+      const earliest = new Date(now);
+      earliest.setFullYear(now.getFullYear() - maxAge);
+      earliest.setHours(0, 0, 0, 0);
+      range.dateOfBirthFrom = earliest;
+    }
+
+    if (minAge !== undefined && minAge !== null) {
+      const latest = new Date(now);
+      latest.setFullYear(now.getFullYear() - minAge);
+      latest.setHours(23, 59, 59, 999);
+      range.dateOfBirthTo = latest;
+    }
+
+    return range;
+  }
+
+  /**
    * Get candidate overview for a specific recruiter or all (admin)
    */
   async getCandidateOverview(
@@ -3631,11 +3660,36 @@ export class CandidatesService {
       where.eligibility = query.eligibility;
     }
 
+    // Age filter is converted to dateOfBirth filter range
+    const ageDobRange = this.computeDateOfBirthRangeFromAge(query.minAge, query.maxAge);
+    if (ageDobRange.dateOfBirthFrom || ageDobRange.dateOfBirthTo) {
+      where.dateOfBirth = {};
+      if (ageDobRange.dateOfBirthFrom) {
+        where.dateOfBirth.gte = ageDobRange.dateOfBirthFrom;
+      }
+      if (ageDobRange.dateOfBirthTo) {
+        where.dateOfBirth.lte = ageDobRange.dateOfBirthTo;
+      }
+    }
+
     if (query.dateOfBirthFrom || query.dateOfBirthTo) {
-      const dobRange: any = {};
-      if (query.dateOfBirthFrom) dobRange.gte = new Date(query.dateOfBirthFrom);
-      if (query.dateOfBirthTo) dobRange.lte = new Date(query.dateOfBirthTo);
-      where.dateOfBirth = dobRange;
+      if (!where.dateOfBirth) {
+        where.dateOfBirth = {};
+      }
+      if (query.dateOfBirthFrom) {
+        const parsedFrom = new Date(query.dateOfBirthFrom);
+        where.dateOfBirth.gte = where.dateOfBirth.gte
+          ? new Date(Math.max(new Date(where.dateOfBirth.gte).getTime(), parsedFrom.getTime()))
+          : parsedFrom;
+      }
+      if (query.dateOfBirthTo) {
+        const parsedTo = new Date(query.dateOfBirthTo);
+        const toDate = new Date(parsedTo);
+        toDate.setHours(23, 59, 59, 999);
+        where.dateOfBirth.lte = where.dateOfBirth.lte
+          ? new Date(Math.min(new Date(where.dateOfBirth.lte).getTime(), toDate.getTime()))
+          : toDate;
+      }
     }
 
     if (query.workExperienceCompany || query.workExperienceTitle) {

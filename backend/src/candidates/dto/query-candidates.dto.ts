@@ -250,6 +250,28 @@ export class QueryCandidatesDto {
   roleCatalogId?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter by minimum age (years)',
+    example: 25,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minAge?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by maximum age (years)',
+    example: 35,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxAge?: number;
+
+  @ApiPropertyOptional({
     description: 'Filter by date of birth (from date)',
     example: '1980-01-01T00:00:00.000Z',
   })

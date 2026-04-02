@@ -112,6 +112,8 @@ export default function CandidateOverviewPage() {
     maxExperience: undefined as number | undefined,
     minSalary: undefined as number | undefined,
     maxSalary: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
     visaType: undefined as string | undefined,
     qualification: "",
     heightMin: undefined as number | undefined,
@@ -141,6 +143,8 @@ export default function CandidateOverviewPage() {
     filters.maxExperience !== undefined,
     filters.minSalary !== undefined,
     filters.maxSalary !== undefined,
+    filters.minAge !== undefined,
+    filters.maxAge !== undefined,
     !!filters.visaType,
     !!filters.qualification,
     !!filters.workExperienceCompany,
@@ -169,7 +173,7 @@ export default function CandidateOverviewPage() {
   const activeMainStage = filters.status === 'documentation' ? 'documents' : filters.status;
 
   // Main Query
-  const { data, isLoading, refetch } = useGetCandidateOverviewQuery({
+  const requestPayload = {
     ...filters,
     recruiterId: filters.recruiterId === "all" ? undefined : filters.recruiterId,
     gender: filters.gender === "all" ? undefined : filters.gender,
@@ -179,7 +183,11 @@ export default function CandidateOverviewPage() {
     mainStatus: filters.mainStatus,
     subStatus: filters.subStatus,
     processingStep: filters.processingStep,
-  });
+    minAge: filters.minAge,
+    maxAge: filters.maxAge,
+  };
+
+  const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
 
   const candidates = data?.data || [];
   const statsData = data?.stats || {
@@ -258,6 +266,8 @@ export default function CandidateOverviewPage() {
       maxExperience: undefined,
       minSalary: undefined,
       maxSalary: undefined,
+      minAge: undefined,
+      maxAge: undefined,
       visaType: undefined,
       qualification: "",
       heightMin: undefined,

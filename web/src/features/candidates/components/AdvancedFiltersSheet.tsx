@@ -13,18 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
   SlidersHorizontal, 
-  User, 
   Globe, 
   Building2, 
   Share2, 
-  CalendarDays, 
-  FilterX,
-  FileText,
-  LayoutGrid,
-  Zap
+  CalendarDays
 } from "lucide-react";
-import { UserSelect } from "./UserSelect";
-import { MultiCountrySelect, MultiSelect, DatePicker } from "@/components/molecules";
+import { MultiCountrySelect, MultiSelect, DatePicker, QualificationSelect, DepartmentSelect, JobTitleSelect } from "@/components/molecules";
 import {
   Select,
   SelectContent,
@@ -32,12 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  DropdownMenuSeparator 
-} from "@/components/ui/dropdown-menu";
-import { SECTOR_TYPES, VISA_TYPES, SKIN_TONES, SMARTNESS_LEVELS, LICENSING_EXAMS } from "@/constants/candidate-constants";
+import { SECTOR_TYPES, VISA_TYPES, SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { WORKFLOW_STATUS_MAPPING } from "../constants";
 
 interface CandidateFilters {
   search: string;
@@ -56,6 +46,27 @@ interface CandidateFilters {
   mainStatus?: string;
   subStatus?: string;
   processingStep?: string;
+  minExperience?: number;
+  maxExperience?: number;
+  minSalary?: number;
+  maxSalary?: number;
+  minAge?: number;
+  maxAge?: number;
+  visaType?: string;
+  qualification?: string;
+  departmentId?: string;
+  roleCatalogId?: string;
+  workExperienceCompany?: string;
+  heightMin?: number;
+  heightMax?: number;
+  weightMin?: number;
+  weightMax?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
 }
 
 interface AdvancedFiltersSheetProps {
@@ -226,9 +237,8 @@ export function AdvancedFiltersSheet({
                 <Select
                   value={localFilters.gender}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, gender: val, page: 1 }))}
-                  className="bg-white shadow-sm"
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
                     <SelectValue placeholder="All" />
                   </SelectTrigger>
                   <SelectContent>
@@ -286,42 +296,89 @@ export function AdvancedFiltersSheet({
                 </div>
               </div>
 
-              <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Visa Type</label>
-                <Input
-                  value={localFilters.visaType ?? ''}
-                  onChange={(e) => setLocalFilters(f => ({ ...f, visaType: e.target.value || undefined, page: 1 }))}
-                  placeholder="Type a visa" 
-                  className="h-8 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="text-[9px] font-bold uppercase text-gray-500">Qualification</label>
-                <Input
-                  value={localFilters.qualification ?? ''}
-                  onChange={(e) => setLocalFilters(f => ({ ...f, qualification: e.target.value, page: 1 }))}
-                  placeholder="e.g., BSc Nursing"
-                  className="h-8 text-xs"
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Experience Company</label>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Min Age (years)</label>
                   <Input
-                    value={localFilters.workExperienceCompany ?? ''}
-                    onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceCompany: e.target.value, page: 1 }))}
-                    placeholder="Company"
+                    type="number"
+                    min={0}
+                    value={localFilters.minAge ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, minAge: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
                     className="h-8 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Experience Title</label>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Max Age (years)</label>
                   <Input
-                    value={localFilters.workExperienceTitle ?? ''}
-                    onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceTitle: e.target.value, page: 1 }))}
-                    placeholder="Job title"
+                    type="number"
+                    min={0}
+                    value={localFilters.maxAge ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, maxAge: e.target.value ? Number(e.target.value) : undefined, page: 1 }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Visa Type</label>
+                <Select
+                  value={localFilters.visaType || "any"}
+                  onValueChange={(val) => setLocalFilters(f => ({ ...f, visaType: val === 'any' ? undefined : val, page: 1 }))}
+                >
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">All</SelectItem>
+                    {Object.entries(VISA_TYPES).map(([key, value]) => (
+                      <SelectItem key={value} value={value}>
+                        {key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-[9px] font-bold uppercase text-gray-500">Qualification</label>
+                <QualificationSelect
+                  value={localFilters.qualification}
+                  onValueChange={(val) => setLocalFilters(f => ({ ...f, qualification: val, page: 1 }))}
+                  placeholder="e.g., BSc Nursing"
+                  className="bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Department</label>
+                  <DepartmentSelect
+                    value={localFilters.departmentId}
+                    onValueChange={(val) => setLocalFilters(f => ({ ...f, departmentId: val, roleCatalogId: '', page: 1 }))}
+                    placeholder="Select Department"
+                    className="bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Job Title</label>
+                  <JobTitleSelect
+                    value={localFilters.roleCatalogId}
+                    onRoleChange={(role) => setLocalFilters(f => ({ ...f, roleCatalogId: role?.id || '', page: 1 }))}
+                    departmentId={localFilters.departmentId}
+                    disabled={!localFilters.departmentId}
+                    placeholder={localFilters.departmentId ? "Select Job Title" : "Select department first"}
+                    className="bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 mt-2">
+                <div>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Hospital/Company Name</label>
+                  <Input
+                    value={localFilters.workExperienceCompany ?? ''}
+                    onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceCompany: e.target.value, page: 1 }))}
+                    placeholder="Company"
                     className="h-8 text-xs"
                   />
                 </div>
@@ -378,9 +435,8 @@ export function AdvancedFiltersSheet({
                 <Select
                   value={localFilters.skinTone || "any"}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, skinTone: val === 'any' ? '' : val, page: 1 }))}
-                  className="bg-white shadow-sm"
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>
@@ -407,9 +463,8 @@ export function AdvancedFiltersSheet({
                 <Select
                   value={localFilters.smartness || "any"}
                   onValueChange={(val) => setLocalFilters(f => ({ ...f, smartness: val === 'any' ? '' : val, page: 1 }))}
-                  className="bg-white shadow-sm"
                 >
-                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200">
+                  <SelectTrigger className="h-8 text-xs rounded-lg border-gray-200 bg-white shadow-sm">
                     <SelectValue placeholder="Any" />
                   </SelectTrigger>
                   <SelectContent>

@@ -20,6 +20,7 @@ export { PDFViewer } from "./PDFViewer";
 export { ClientSelect } from "./ClientSelect";
 export { JobTitleSelect } from "./JobTitleSelect";
 export { DepartmentSelect } from "./DepartmentSelect";
+export { QualificationSelect } from "./QualificationSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";
 export { default as ReviewInterviewModal } from "./ReviewInterviewModal";

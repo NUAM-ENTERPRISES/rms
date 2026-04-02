@@ -160,19 +160,20 @@ export function JobTitleSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+              "w-full justify-between h-8 text-xs border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
               !value && "text-muted-foreground",
-              error && "border-red-500"
+              error && "border-red-500",
+              className
             )}
           >
-                {selectedRole || value ? (
+            {selectedRole || value ? (
               <div className="flex items-center gap-2 truncate">
-                <Briefcase className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                <Briefcase className="h-3 w-3 text-slate-400 flex-shrink-0" />
                 <span className="truncate">{selectedRole?.label || selectedRole?.name || value}</span>
                 {selectedRole?.category && (
                   <Badge
                     variant="outline"
-                    className="text-xs flex-shrink-0 bg-blue-100 text-blue-800"
+                    className="text-[10px] px-1 h-3.5 flex-shrink-0 bg-blue-100 text-blue-800"
                   >
                     {selectedRole.category}
                   </Badge>
@@ -181,10 +182,10 @@ export function JobTitleSelect({
             ) : (
               placeholder
             )}
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent className="w-[280px] p-0" align="start">
           <div className="flex flex-col max-h-[400px]">
             <div className="p-2 border-b bg-white sticky top-0 z-10">
               <Input

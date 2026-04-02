@@ -86,15 +86,16 @@ export function DepartmentSelect({
             aria-expanded={open}
             disabled={disabled}
             className={cn(
-              "w-full justify-between h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
+              "w-full justify-between h-8 text-xs border-slate-200 focus:border-blue-500 focus:ring-blue-500/20",
               !value && "text-muted-foreground",
-              error && "border-red-500"
+              error && "border-red-500",
+              className
             )}
           >
             {selected ? selected.label || selected.name : placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <PopoverContent className="w-[280px] p-0" align="start">
           <div className="flex flex-col max-h-[400px]">
             <div className="p-2 border-b bg-white sticky top-0 z-10">
               <Input

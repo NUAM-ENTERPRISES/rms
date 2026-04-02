@@ -245,6 +245,45 @@ describe('CandidatesService', () => {
       const expectedLte = new Date(new Date(dateFrom).getTime() + 24 * 60 * 60 * 1000 - 1);
       expect(callArg.where.createdAt.lte.toISOString()).toBe(expectedLte.toISOString());
     });
+
+    describe('getCandidateOverview', () => {
+      it('should convert minAge/maxAge to dateOfBirth filter', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany
+          .mockResolvedValueOnce([]) // allCandidates
+          .mockResolvedValueOnce([]); // candidates
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            dateFilter: 'all',
+            minAge: 25,
+            maxAge: 35,
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(prismaService.candidate.findMany).toHaveBeenCalled();
+
+        const firstFindCall = prismaService.candidate.findMany.mock.calls[0][0];
+        expect(firstFindCall.where.dateOfBirth).toBeDefined();
+        expect(firstFindCall.where.dateOfBirth.gte).toBeInstanceOf(Date);
+        expect(firstFindCall.where.dateOfBirth.lte).toBeInstanceOf(Date);
+
+        const now = new Date();
+        const expectedFrom = new Date(now);
+        expectedFrom.setFullYear(now.getFullYear() - 35);
+        expectedFrom.setHours(0, 0, 0, 0);
+
+        const expectedTo = new Date(now);
+        expectedTo.setFullYear(now.getFullYear() - 25);
+        expectedTo.setHours(23, 59, 59, 999);
+
+        expect(firstFindCall.where.dateOfBirth.gte.getTime()).toBe(expectedFrom.getTime());
+        expect(firstFindCall.where.dateOfBirth.lte.getTime()).toBe(expectedTo.getTime());
+      });
+    });
   });
 
   describe('findOne', () => {
