@@ -4,6 +4,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { AdminDashboardService } from './admin-dashboard.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -101,6 +102,96 @@ export class AdminDashboardController {
   @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
   async getHiringTrend() {
     return this.adminDashboardService.getHiringTrend();
+  }
+
+  @Get('project-role-hiring-status')
+  @Permissions('read:admin-dashboard')
+  @ApiOperation({
+    summary: 'Get project role hiring status',
+    description:
+      'Get project roles with required and filled counts aggregated by hired/deployed status with pagination and search',
+  })
+  @ApiQuery({
+    name: 'projectId',
+    required: false,
+    description: 'Optional project ID to filter by project',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by project name',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Project role hiring status retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        data: {
+          type: 'object',
+          properties: {
+            projectRoles: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  projectId: { type: 'string', example: 'proj-1' },
+                  projectName: { type: 'string', example: 'Aster Hospital' },
+                  roles: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        role: { type: 'string', example: 'ICU Nurse' },
+                        required: { type: 'number', example: 5 },
+                        filled: { type: 'number', example: 3 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                total: { type: 'number', example: 50 },
+                totalPages: { type: 'number', example: 5 },
+                page: { type: 'number', example: 1 },
+                limit: { type: 'number', example: 10 },
+              },
+            },
+          },
+        },
+        message: { type: 'string', example: 'Project role hiring status retrieved successfully' },
+      },
+    },
+  })
+  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
+  async getProjectRoleHiringStatus(
+    @Query('projectId') projectId?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.adminDashboardService.getProjectRoleHiringStatus({
+      projectId,
+      search,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 10,
+    });
   }
 
   @Get('top-recruiter-stats')

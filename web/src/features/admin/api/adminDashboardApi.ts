@@ -53,6 +53,39 @@ export interface TopRecruiterStatsResponse {
   message: string;
 }
 
+export interface ProjectRoleHiringStatusRole {
+  role: string;
+  required: number;
+  filled: number;
+}
+
+export interface ProjectRoleHiringStatusProject {
+  projectId: string;
+  projectName: string;
+  roles: ProjectRoleHiringStatusRole[];
+}
+
+export interface ProjectRoleHiringStatusResponse {
+  success: boolean;
+  data: {
+    projectRoles: ProjectRoleHiringStatusProject[];
+    pagination: {
+      total: number;
+      totalPages: number;
+      page: number;
+      limit: number;
+    };
+  };
+  message: string;
+}
+
+export interface ProjectRoleHiringStatusParams {
+  projectId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const adminDashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminDashboardStats: builder.query<AdminDashboardStatsResponse, void>({
@@ -70,6 +103,17 @@ export const adminDashboardApi = baseApi.injectEndpoints({
       providesTags: ["AdminDashboard"],
     }),
 
+    getProjectRoleHiringStatus: builder.query<
+      ProjectRoleHiringStatusResponse,
+      ProjectRoleHiringStatusParams | void
+    >({
+      query: (params) => ({
+        url: "/admin/dashboard/project-role-hiring-status",
+        method: "GET",
+        params: params || undefined,
+      }),
+      providesTags: ["AdminDashboard"],
+    }),
     getTopRecruiterStats: builder.query<TopRecruiterStatsResponse, { year?: number; month?: number }>({
       query: (params) => ({
         url: "/admin/dashboard/top-recruiter-stats",
@@ -87,5 +131,6 @@ export const adminDashboardApi = baseApi.injectEndpoints({
 export const {
   useGetAdminDashboardStatsQuery,
   useGetHiringTrendQuery,
+  useGetProjectRoleHiringStatusQuery,
   useGetTopRecruiterStatsQuery,
 } = adminDashboardApi;

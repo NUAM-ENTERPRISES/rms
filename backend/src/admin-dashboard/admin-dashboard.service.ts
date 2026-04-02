@@ -131,6 +131,110 @@ export class AdminDashboardService {
     };
   }
 
+  async getProjectRoleHiringStatus(
+    queryDto?: {
+      projectId?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    },
+  ): Promise<{
+    success: boolean;
+    data: {
+      projectRoles: Array<{
+        projectId: string;
+        projectName: string;
+        roles: Array<{ role: string; required: number; filled: number }>;
+      }>;
+      pagination: {
+        total: number;
+        totalPages: number;
+        page: number;
+        limit: number;
+      };
+    };
+    message: string;
+  }> {
+    const { projectId, search, page = 1, limit = 10 } = queryDto || {};
+    const skip = (page - 1) * limit;
+
+    const projectWhere: any = { status: 'active' };
+    if (projectId) {
+      projectWhere.id = projectId;
+    }
+    if (search) {
+      projectWhere.title = { contains: search, mode: 'insensitive' };
+    }
+
+    const [total, projects] = await Promise.all([
+      this.prisma.project.count({ where: projectWhere }),
+      this.prisma.project.findMany({
+        where: projectWhere,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          rolesNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              quantity: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const projectIds = projects.map((p) => p.id);
+
+    const filledStatuses = ['hired', 'deployed'];
+    const candidateProjects = await this.prisma.candidateProjects.findMany({
+      where: {
+        projectId: { in: projectIds },
+        roleNeededId: { not: null },
+        currentProjectStatus: {
+          statusName: { in: filledStatuses },
+        },
+      },
+      select: {
+        projectId: true,
+        roleNeededId: true,
+      },
+    });
+
+    const filledMap = new Map<string, number>();
+    candidateProjects.forEach((cp) => {
+      if (!cp.roleNeededId) return;
+      const key = `${cp.projectId}:${cp.roleNeededId}`;
+      filledMap.set(key, (filledMap.get(key) ?? 0) + 1);
+    });
+
+    const projectRoles = projects.map((project) => ({
+      projectId: project.id,
+      projectName: project.title,
+      roles: project.rolesNeeded.map((role) => ({
+        role: role.designation,
+        required: role.quantity,
+        filled: filledMap.get(`${project.id}:${role.id}`) ?? 0,
+      })),
+    }));
+
+    return {
+      success: true,
+      data: {
+        projectRoles,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          page,
+          limit,
+        },
+      },
+      message: 'Project role hiring status retrieved successfully',
+    };
+  }
+
   async getTopRecruiterStats(
     year?: number,
     month?: number,

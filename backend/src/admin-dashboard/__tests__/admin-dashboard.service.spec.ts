@@ -100,6 +100,94 @@ describe('AdminDashboardService', () => {
     expect(monthEntry?.placed).toBeGreaterThanOrEqual(1);
   });
 
+  it('should return project role hiring status for a specific project', async () => {
+    prismaService.project.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'proj-1',
+        title: 'Aster Hospital',
+        rolesNeeded: [
+          { id: 'role-1', designation: 'ICU Nurse', quantity: 5 },
+          { id: 'role-2', designation: 'Ward Nurse', quantity: 4 },
+        ],
+      },
+      {
+        id: 'proj-2',
+        title: 'MedCare Clinic',
+        rolesNeeded: [{ id: 'role-3', designation: 'Pharmacist', quantity: 2 }],
+      },
+    ]);
+
+    prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([
+      { projectId: 'proj-1', roleNeededId: 'role-1' },
+      { projectId: 'proj-1', roleNeededId: 'role-1' },
+      { projectId: 'proj-1', roleNeededId: 'role-2' },
+      { projectId: 'proj-2', roleNeededId: 'role-3' },
+      { projectId: 'proj-2', roleNeededId: 'role-3' },
+      { projectId: 'proj-2', roleNeededId: 'role-3' },
+    ]);
+
+    const result = await service.getProjectRoleHiringStatus();
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        projectRoles: [
+          {
+            projectId: 'proj-1',
+            projectName: 'Aster Hospital',
+            roles: [
+              { role: 'ICU Nurse', required: 5, filled: 2 },
+              { role: 'Ward Nurse', required: 4, filled: 1 },
+            ],
+          },
+          {
+            projectId: 'proj-2',
+            projectName: 'MedCare Clinic',
+            roles: [{ role: 'Pharmacist', required: 2, filled: 3 }],
+          },
+        ],
+      },
+      message: 'Project role hiring status retrieved successfully',
+    });
+
+    expect(prismaService.project.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaService.candidateProjects.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return project role hiring status filtered by projectId', async () => {
+    prismaService.project.findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'proj-1',
+        title: 'Aster Hospital',
+        rolesNeeded: [{ id: 'role-1', designation: 'ICU Nurse', quantity: 5 }],
+      },
+    ]);
+
+    prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([
+      { projectId: 'proj-1', roleNeededId: 'role-1' },
+      { projectId: 'proj-1', roleNeededId: 'role-1' },
+    ]);
+
+    const result = await service.getProjectRoleHiringStatus('proj-1');
+
+    expect(result.data.projectRoles).toHaveLength(1);
+    expect(result.data.projectRoles[0].roles[0]).toEqual({ role: 'ICU Nurse', required: 5, filled: 2 });
+    expect(prismaService.project.findMany).toHaveBeenCalledWith({
+      where: { status: 'active', id: 'proj-1' },
+      select: {
+        id: true,
+        title: true,
+        rolesNeeded: {
+          select: {
+            id: true,
+            designation: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+  });
+
   it('should return top recruiter stats (Emma wins) for selected period', async () => {
     prismaService.user.findMany = jest.fn().mockResolvedValue([
       {
