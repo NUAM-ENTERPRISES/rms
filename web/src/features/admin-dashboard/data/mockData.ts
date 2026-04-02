@@ -102,7 +102,7 @@ export type RecruiterActivity = {
 
 export const recruiterActivities: RecruiterActivity[] = [
   { activity: "Projects Assigned", value: 12 },
-  { activity: "Sent for Verification", value: 35 },
+  { activity: "Documents Verified", value: 35 },
   { activity: "Interviews Passed", value: 18 },
   { activity: "Candidates Hired", value: 7 },
 ];

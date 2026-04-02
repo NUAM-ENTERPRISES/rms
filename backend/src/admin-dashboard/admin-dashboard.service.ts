@@ -353,7 +353,7 @@ export class AdminDashboardService {
 
     const recruiterActivities = [
       { activity: 'Projects Assigned', value: top.assigned ?? 0 },
-      { activity: 'Sent for Verification', value: top.documentsVerified ?? 0 },
+      { activity: 'Documents Verified', value: top.documentsVerified ?? 0 },
       { activity: 'Interviews Passed', value: top.interviewPassed ?? 0 },
       { activity: 'Candidates Hired', value: top.hired ?? 0 },
     ];

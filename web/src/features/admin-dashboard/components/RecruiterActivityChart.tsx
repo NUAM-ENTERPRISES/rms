@@ -20,9 +20,9 @@ export default function RecruiterActivityChart() {
   const chartData = isLoading
     ? [
         { activity: "Projects Assigned", value: 0 },
-        { activity: "Sent for Verification", value: 0 },
+        { activity: "Documents Verified", value: 0 },
         { activity: "Interviews Passed", value: 0 },
-        { activity: "Candidates Hired", value: 0 },
+        { activity: "Candidates Deployed", value: 0 },
       ]
     : recruiterActivities;
 

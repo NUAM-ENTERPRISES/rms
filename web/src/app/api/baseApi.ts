@@ -33,6 +33,7 @@ export const baseApi = createApi({
     "ProjectCandidates",
     "DocumentVerification",
     "RecruiterAssignment",
+    "AdminDashboard",
     "StatusConfig",
     "RNRReminder",
     "HRDReminder",

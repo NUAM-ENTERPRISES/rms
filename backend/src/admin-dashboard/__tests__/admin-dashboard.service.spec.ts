@@ -258,7 +258,7 @@ describe('AdminDashboardService', () => {
         },
         recruiterActivities: [
           { activity: 'Projects Assigned', value: 40 },
-          { activity: 'Sent for Verification', value: 10 },
+          { activity: 'Documents Verified', value: 10 },
           { activity: 'Interviews Passed', value: 6 },
           { activity: 'Candidates Hired', value: 4 },
         ],
