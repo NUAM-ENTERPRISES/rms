@@ -34,6 +34,14 @@ export interface NavItem {
 
 export const navigationConfig: NavItem[] = [
   {
+    id: "admin-dashboard",
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: Home,
+    roles: ["CEO", "Director", "Manager"],
+    // Admin CRM Dashboard for leadership roles
+  },
+  {
     id: "dashboard",
     label: "Dashboard",
     path: "/",

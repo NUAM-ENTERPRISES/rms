@@ -17,6 +17,9 @@ import CandidateProjectDetailsPage from "@/features/candidates/views/CandidatePr
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
+const AdminDashboardPage = lazy(
+  () => import("@/features/admin-dashboard/views/AdminDashboardPage")
+);
 
 // Feature-based views
 const ProjectsPage = lazy(
@@ -288,13 +291,13 @@ function RoleBasedRedirect() {
     );
   }
 
-  // Only Manager, Director, and CEO can access dashboard
+  // Only Manager, Director, and CEO can access admin dashboard
   if (
     user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
   ) {
     return (
       <AppLayout>
-        <DashboardPage />
+        <AdminDashboardPage />
       </AppLayout>
     );
   }
@@ -362,7 +365,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute roles={["CEO", "Director", "Manager"]}>
                           <AppLayout>
-                            <DashboardPage />
+                            <AdminDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
