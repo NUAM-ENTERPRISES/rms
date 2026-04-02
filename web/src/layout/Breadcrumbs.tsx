@@ -33,6 +33,11 @@ export default function Breadcrumbs() {
       const segment = pathSegments[i];
       currentPath += `/${segment}`;
 
+      // avoid duplicate home/dashboard entry
+      if (currentPath === "/dashboard" && breadcrumbs.some((b) => b.path === "/dashboard")) {
+        continue;
+      }
+
       // Find matching nav item
       const navItem = flattenedNav.find((item) => item.path === currentPath);
 

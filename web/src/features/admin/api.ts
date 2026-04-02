@@ -259,7 +259,7 @@ export const usersApi = baseApi.injectEndpoints({
       }
     >({
       query: (params) => ({
-        url: "/recruiters/performance",
+        url: '/recruiters/performance',
         params: {
           recruiterId: params.recruiterId,
           ...(params.year && { year: params.year }),
@@ -269,10 +269,12 @@ export const usersApi = baseApi.injectEndpoints({
           ...(params.toDate && { toDate: params.toDate }),
         },
       }),
-      providesTags: ["User"],
+      providesTags: ['User'],
     }),
+
   }),
 });
+
 // Export hooks
 export const {
   useGetUsersQuery,

@@ -16,10 +16,11 @@ import {
   hiringTrendYearly,
   type HiringTrendEntry,
 } from "../data/mockData";
+import { useGetHiringTrendQuery } from "@/features/admin/api/adminDashboardApi";
 
 type Filter = "Daily" | "Monthly" | "Yearly";
 
-const datasets: Record<Filter, HiringTrendEntry[]> = {
+const localDatasets: Record<Filter, HiringTrendEntry[]> = {
   Daily: hiringTrendDaily,
   Monthly: hiringTrendMonthly,
   Yearly: hiringTrendYearly,
@@ -27,7 +28,29 @@ const datasets: Record<Filter, HiringTrendEntry[]> = {
 
 export default function HiringTrendChart() {
   const [filter, setFilter] = useState<Filter>("Monthly");
-  const data = datasets[filter];
+  const { data: trendResponse, isLoading } = useGetHiringTrendQuery();
+
+  const apiTrend = trendResponse?.data;
+
+  const resolveTrendData = (): HiringTrendEntry[] => {
+    if (!apiTrend || isLoading) {
+      return localDatasets[filter];
+    }
+
+    const source =
+      filter === "Daily"
+        ? apiTrend.daily
+        : filter === "Yearly"
+        ? apiTrend.yearly
+        : apiTrend.monthly;
+
+    return source.map((entry) => ({
+      month: entry.period,
+      hired: entry.placed,
+    } as unknown as HiringTrendEntry));
+  };
+
+  const data = resolveTrendData();
 
   return (
     <Card className="border-0 shadow-sm rounded-xl bg-white">

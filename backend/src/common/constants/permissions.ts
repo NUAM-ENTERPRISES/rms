@@ -94,6 +94,9 @@ export const PERMISSIONS = {
   WRITE_SETTINGS: 'write:settings',
   MANAGE_SETTINGS: 'manage:settings',
 
+  // Admin dashboard
+  READ_ADMIN_DASHBOARD: 'read:admin-dashboard',
+
   // System configuration (RNR / HRD) - admin only
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
@@ -180,5 +183,8 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.MANAGE_CRE,
     PERMISSIONS.ASSIGN_CRE,
     PERMISSIONS.HANDLE_RNR_CANDIDATES,
+  ],
+  ADMIN_DASHBOARD: [
+    PERMISSIONS.READ_ADMIN_DASHBOARD,
   ],
 } as const;

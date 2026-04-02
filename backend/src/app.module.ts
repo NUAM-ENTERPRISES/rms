@@ -44,6 +44,7 @@ import { CandidateProjectsModule } from './candidate-projects/candidate-projects
 import { ScreeningCoordinationModule } from './screening-coordination/screening-coordination.module';
 import { ProcessingModule } from './processing/processing.module';
 import { GoogleDriveModule } from './google-drive/google-drive.module';
+import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { GoogleDriveModule } from './google-drive/google-drive.module';
     ScreeningCoordinationModule,
     ProcessingModule,
     GoogleDriveModule,
+    AdminDashboardModule,
   ],
   controllers: [AppController],
   providers: [
