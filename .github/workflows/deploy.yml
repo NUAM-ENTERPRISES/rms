@@ -20,10 +20,8 @@ jobs:
 
       - name: Deploy to VM
         run: |
-          ssh -o StrictHostKeyChecking=no \
-              -o ServerAliveInterval=60 \
-              -o ServerAliveCountMax=10 \
-              ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
-                cd /var/www/rms/backend &&
-                nohup bash deploy.sh > deploy.log 2>&1 &
-              "
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
+            cd /var/www/rms/backend
+            git pull origin main
+            ./deploy.sh
+          "
