@@ -83,6 +83,8 @@ DELETE → 'delete'
 
 ### **3. Comprehensive Metadata**
 
+
+
 ```typescript
 {
   method: 'POST',
