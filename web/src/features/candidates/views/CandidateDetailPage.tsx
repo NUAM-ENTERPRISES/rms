@@ -14,8 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
   AlertTriangle,
   Target,
   Briefcase,
