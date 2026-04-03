@@ -11,7 +11,7 @@
 
 This document provides a comprehensive overview of the Affiniks RMS database schema, including all models, relationships, enums, indexes, and database structure. This document is updated whenever changes are made to the database schema.
 
----
+-----
 
 ## 🏗️ **Database Overview**
 
