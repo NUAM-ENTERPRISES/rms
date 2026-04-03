@@ -76,23 +76,33 @@ export default function CandidateProjectDetailsPage() {
     // Status icons mapping
     const getStatusIcon = (statusName?: string) => {
         const icons: Record<string, JSX.Element> = {
+            // Nominated
             nominated: <Users className="h-4 w-4" />,
-            pending_documents: <Upload className="h-4 w-4" />,
-            documents_submitted: <FileText className="h-4 w-4" />,
+            nominated_initial: <Users className="h-4 w-4" />,
+
+            // Documents
+            pending_documents: <Clock className="h-4 w-4" />,
+            documents_submitted: <Upload className="h-4 w-4" />,
             verification_in_progress: <Search className="h-4 w-4" />,
+            verification_in_progress_document: <Search className="h-4 w-4" />,
             documents_verified: <ShieldCheck className="h-4 w-4" />,
+            documents_re_submission_requested: <AlertCircle className="h-4 w-4" />,
+            submitted_to_client: <FileText className="h-4 w-4" />,
             approved: <ThumbsUp className="h-4 w-4" />,
 
             // Interview flow
+            shortlisted: <ThumbsUp className="h-4 w-4" />,
+            not_shortlisted: <XCircle className="h-4 w-4" />,
             interview_assigned: <Calendar className="h-4 w-4" />,
             interview_scheduled: <Calendar className="h-4 w-4" />,
             interview_rescheduled: <Calendar className="h-4 w-4" />,
             interview_completed: <MessageCircle className="h-4 w-4" />,
             interview_passed: <Award className="h-4 w-4" />,
             interview_failed: <XCircle className="h-4 w-4" />,
+            interview_backout: <PauseCircle className="h-4 w-4" />,
             interview_selected: <CheckCircle2 className="h-4 w-4" />,
 
-            // Screenings
+            // Screenings (formerly Mock Interview)
             screening_assigned: <Calendar className="h-4 w-4" />,
             screening_scheduled: <Calendar className="h-4 w-4" />,
             screening_completed: <MessageCircle className="h-4 w-4" />,
@@ -100,92 +110,139 @@ export default function CandidateProjectDetailsPage() {
             screening_failed: <XCircle className="h-4 w-4" />,
 
             // Training
-            training_assigned: <Users className="h-4 w-4" />,
-            training_in_progress: <ClipboardList className="h-4 w-4" />,
+            training_assigned: <ClipboardList className="h-4 w-4" />,
+            training_scheduled: <Calendar className="h-4 w-4" />,
+            training_in_progress: <Clock className="h-4 w-4" />,
             training_completed: <CheckCircle2 className="h-4 w-4" />,
             ready_for_reassessment: <Clock className="h-4 w-4" />,
 
-            // Final/other
+            // Processing
+            transfered_to_processing: <ClipboardList className="h-4 w-4" />,
+            processing_in_progress: <Clock className="h-4 w-4" />,
+            processing_completed: <CheckCircle2 className="h-4 w-4" />,
+            processing_failed: <XCircle className="h-4 w-4" />,
+            ready_for_final: <CheckCircle2 className="h-4 w-4" />,
+
+            // Final/Selection
             selected: <CheckCircle2 className="h-4 w-4" />,
             processing: <ClipboardList className="h-4 w-4" />,
             hired: <Luggage className="h-4 w-4" />,
+
+            // Rejected / Withdrawn / Misc
             rejected_documents: <XCircle className="h-4 w-4" />,
             rejected_interview: <XCircle className="h-4 w-4" />,
             rejected_selection: <XCircle className="h-4 w-4" />,
             withdrawn: <PauseCircle className="h-4 w-4" />,
-            on_hold: <Clock className="h-4 w-4" />
+            on_hold: <PauseCircle className="h-4 w-4" />
         };
-        return icons[statusName || ''] || <FileText className="h-4 w-4" />;
+        const key = statusName?.toLowerCase() || '';
+        return icons[key] || icons[key.replace(/\s+/g, '_')] || <FileText className="h-4 w-4" />;
     };
 
     // Status color mapping
     const getStatusColor = (statusName: string) => {
         const colors: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+            // Nominated
             nominated: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+            nominated_initial: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
+
+            // Documents
             pending_documents: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
             documents_submitted: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
             verification_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            verification_in_progress_document: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             documents_verified: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            documents_re_submission_requested: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            submitted_to_client: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
             approved: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
 
             // Interview flow
+            shortlisted: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            not_shortlisted: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             interview_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_rescheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
             interview_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             interview_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            interview_backout: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' },
             interview_selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
 
             // Screenings
-            screening_assigned: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            screening_scheduled: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-            screening_completed: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
+            screening_assigned: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
+            screening_scheduled: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
+            screening_completed: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' },
             screening_passed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             screening_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
 
             // Training
-            training_assigned: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            training_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            training_assigned: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+            training_scheduled: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
+            training_in_progress: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
             training_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             ready_for_reassessment: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' },
+
+            // Processing
+            transfered_to_processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            processing_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
+            processing_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            processing_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            ready_for_final: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+
+            // Final / selection
             selected: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
             processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-            hired: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
+            hired: { bg: 'bg-green-600', text: 'text-white', border: 'border-green-700', dot: 'bg-white' },
+
+            // Rejections / Withdrawn / Misc
             rejected_documents: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_interview: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             rejected_selection: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             withdrawn: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' },
             on_hold: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-500' }
         };
-        return colors[statusName] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
+        const key = statusName?.toLowerCase() || '';
+        return colors[key] || colors[key.replace(/\s+/g, '_')] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', dot: 'bg-gray-500' };
     };
 
     // Status label mapping
     const getStatusLabel = (statusName: string) => {
         const labels: Record<string, string> = {
             nominated: 'Nominated',
+            nominated_initial: 'Initial Nomination',
             pending_documents: 'Pending Documents',
             documents_submitted: 'Documents Submitted',
             verification_in_progress: 'Verification In Progress',
+            verification_in_progress_document: 'Verifying Documents',
             documents_verified: 'Documents Verified',
+            documents_re_submission_requested: 'Re-submission Requested',
+            submitted_to_client: 'Submitted to Client',
             approved: 'Approved',
+            shortlisted: 'Shortlisted',
+            not_shortlisted: 'Not Shortlisted',
             interview_assigned: 'Interview Assigned',
             interview_scheduled: 'Interview Scheduled',
             interview_rescheduled: 'Interview Rescheduled',
             interview_completed: 'Interview Completed',
             interview_passed: 'Interview Passed',
             interview_failed: 'Interview Failed',
+            interview_backout: 'Interview Backout',
             screening_assigned: 'Screening Assigned',
             screening_scheduled: 'Screening Scheduled',
             screening_completed: 'Screening Completed',
             screening_passed: 'Screening Passed',
             screening_failed: 'Screening Failed',
             training_assigned: 'Training Assigned',
+            training_scheduled: 'Training Scheduled',
             training_in_progress: 'Training In Progress',
             training_completed: 'Training Completed',
             ready_for_reassessment: 'Ready For Reassessment',
             interview_selected: 'Interview Selected',
+            transfered_to_processing: 'Transferred to Processing',
+            processing_in_progress: 'Processing In Progress',
+            processing_completed: 'Processing Completed',
+            processing_failed: 'Processing Failed',
+            ready_for_final: 'Ready For Final',
             selected: 'Selected',
             processing: 'Processing',
             hired: 'Hired',
@@ -195,7 +252,8 @@ export default function CandidateProjectDetailsPage() {
             withdrawn: 'Withdrawn',
             on_hold: 'On Hold'
         };
-        return labels[statusName] || statusName;
+        const key = statusName?.toLowerCase() || '';
+        return labels[key] || labels[key.replace(/\s+/g, '_')] || statusName;
     };
 
     // Format date
@@ -330,21 +388,26 @@ export default function CandidateProjectDetailsPage() {
                                 </div>
 
                                 {/* Current Status Display */}
-                                <div className={`${getStatusColor(latestProjectStatusName || '').bg} border-2 ${getStatusColor(latestProjectStatusName || '').border} rounded-xl p-4 mb-6`}>
+                                <div className={`${getStatusColor(latestProjectStatusName || '').bg} border-2 ${getStatusColor(latestProjectStatusName || '').border} rounded-xl p-5 mb-6 shadow-sm`}>
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-3 h-3 rounded-full ${getStatusColor(latestProjectStatusName || '').dot} animate-pulse`}></div>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-3 rounded-xl bg-white shadow-sm border ${getStatusColor(latestProjectStatusName || '').border}`}>
+                                                {getStatusIcon(latestProjectStatusName)}
+                                            </div>
                                             <div>
-                                                <p className="text-xs text-gray-600 font-medium uppercase tracking-wide">Current Status</p>
-                                                <p className={`${getStatusColor(latestProjectStatusName || '').text} font-bold text-lg mt-0.5`}>
-                                                    {latestDisplayLabel ? latestDisplayLabel : (latestProjectStatusName ? getStatusLabel(latestProjectStatusName) : 'N/A')}
-                                                </p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Current Pipeline Status</p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className={`${getStatusColor(latestProjectStatusName || '').text} font-black text-xl leading-none`}>
+                                                        {latestDisplayLabel ? latestDisplayLabel : (latestProjectStatusName ? getStatusLabel(latestProjectStatusName) : 'N/A')}
+                                                    </p>
+                                                    <div className={`w-2 h-2 rounded-full ${getStatusColor(latestProjectStatusName || '').dot} animate-pulse`}></div>
+                                                </div>
                                             </div>
                                         </div>
                                         {sortedHistory.length > 0 && (
-                                            <div className="text-right">
-                                                <p className="text-xs text-gray-500">Last Updated</p>
-                                                <p className="text-sm font-semibold text-gray-700 mt-0.5">
+                                            <div className="text-right bg-white/40 px-3 py-1.5 rounded-lg border border-white/50">
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Last Activity</p>
+                                                <p className="text-sm font-bold text-gray-700 mt-0.5 whitespace-nowrap">
                                                     {new Date(sortedHistory[0].statusChangedAt).toLocaleDateString('en-US', {
                                                         month: 'short',
                                                         day: 'numeric',
@@ -404,54 +467,70 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                 </div>
 
-                                                {/* Stage Indicators - Dynamic from API */}
-                                <div className="grid gap-2 mt-6" style={{ gridTemplateColumns: `repeat(${extendedData?.pipeline?.progressOrder?.length || 4}, minmax(0, 1fr))` }}>
-                                    {(extendedData?.pipeline?.progressOrder || []).map((stage: any) => {
+                                {/* Stage Indicators - Dynamic from API */}
+                                <div className="grid gap-2 mt-6" style={{ gridTemplateColumns: `repeat(${extendedData?.pipeline?.progressOrder?.length || 5}, minmax(0, 1fr))` }}>
+                                    {(extendedData?.pipeline?.progressOrder || [
+                                        { name: 'nominated', label: 'Nominated' },
+                                        { name: 'documents', label: 'Documents' },
+                                        { name: 'interview', label: 'Interview' },
+                                        { name: 'processing', label: 'Processing' },
+                                        { name: 'final', label: 'Final' }
+                                    ]).map((stage: any) => {
                                         const isActive = stage.isCurrent;
                                         const isPassed = stage.isCompleted;
-                                        
+
                                         // Icon mapping based on stage name
                                         const iconMap: Record<string, any> = {
                                             nominated: Users,
                                             documents: FileText,
                                             interview: MessageCircle,
                                             processing: ClipboardList,
-                                            final: CheckCircle2
+                                            final: CheckCircle2,
+                                            selection: Award
                                         };
                                         const StageIcon = iconMap[stage.name] || FileText;
+
+                                        // Use global getStatusColor for dynamic staging if is current
+                                        const stageColors = isActive
+                                            ? getStatusColor(latestProjectStatusName || stage.name)
+                                            : isPassed
+                                                ? { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' }
+                                                : { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-100', dot: 'bg-gray-200' };
 
                                         return (
                                             <div
                                                 key={stage.name}
-                                                className={`relative rounded-lg p-3 text-center transition-all duration-300 ${isActive
-                                                    ? `${getStatusColor(latestProjectStatusName || '').bg} border-2 ${getStatusColor(latestProjectStatusName || '').border} shadow-md scale-105`
+                                                className={`relative rounded-xl p-3 text-center transition-all duration-300 group ${isActive
+                                                    ? `${stageColors.bg} border-2 ${stageColors.border} shadow-md scale-105 z-10`
                                                     : isPassed
-                                                        ? 'bg-green-50 border-2 border-green-200'
-                                                        : 'bg-gray-50 border-2 border-gray-200'
+                                                        ? 'bg-green-50 border-2 border-green-100 hover:border-green-200'
+                                                        : 'bg-gray-50 border-2 border-transparent hover:border-gray-200'
                                                     }`}
                                             >
-                                                <div className={`mx-auto w-8 h-8 rounded-full flex items-center justify-center mb-1.5 ${isActive
-                                                    ? getStatusColor(latestProjectStatusName || '').dot + ' text-white'
+                                                <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2 transition-all duration-500 ${isActive
+                                                    ? `${stageColors.dot} text-white ring-4 ring-offset-2 ${stageColors.border.replace('border-', 'ring-')}`
                                                     : isPassed
                                                         ? 'bg-green-500 text-white'
-                                                        : 'bg-gray-300 text-gray-500'
+                                                        : 'bg-gray-200 text-gray-400'
                                                     }`}>
                                                     {isPassed && !isActive ? (
-                                                        <CheckCircle2 className="h-4 w-4" />
+                                                        <CheckCircle2 className="h-5 w-5" />
                                                     ) : (
-                                                        <StageIcon className="h-4 w-4" />
+                                                        <StageIcon className={`h-5 w-5 ${isActive ? 'animate-pulse' : ''}`} />
                                                     )}
                                                 </div>
-                                                <p className={`text-xs font-semibold ${isActive
-                                                    ? getStatusColor(latestProjectStatusName || '').text
+                                                <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-tight truncate ${isActive
+                                                    ? stageColors.text
                                                     : isPassed
                                                         ? 'text-green-700'
-                                                        : 'text-gray-500'
+                                                        : 'text-gray-400 font-medium'
                                                     }`}>
                                                     {stage.label}
                                                 </p>
+
+                                                {/* Connecting Line (except for last) */}
                                                 {isActive && (
-                                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+                                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white animate-ping"></div>
                                                 )}
                                             </div>
                                         );
@@ -529,100 +608,145 @@ export default function CandidateProjectDetailsPage() {
 
 
 
-                        {/* Pipeline Timeline */}
-
-                        <Card className="shadow-sm">
-                            <CardHeader>
-                                <CardTitle className="text-lg">Status History Timeline</CardTitle>
+                        {/* Status History Timeline */}
+                        <Card className="shadow-sm border-0 bg-gray-50/50 overflow-hidden">
+                            <CardHeader className="flex flex-row items-center justify-between pb-4 bg-white border-b">
+                                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                    <Clock className="h-5 w-5 text-blue-600" />
+                                    Journey Timeline
+                                </CardTitle>
+                                {sortedHistory.length > 0 && (
+                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-bold">
+                                        {sortedHistory.length} Milestones
+                                    </Badge>
+                                )}
                             </CardHeader>
-                            <CardContent className="p-6">
+                            <CardContent className="p-0">
                                 {sortedHistory.length === 0 ? (
-                                    <div className="text-center py-8">
-                                        <Clock className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                                        <p className="text-gray-600">No status history available</p>
+                                    <div className="text-center py-12 bg-white">
+                                        <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                                        <p className="text-gray-500 font-medium tracking-tight">No history recorded yet</p>
                                     </div>
                                 ) : (
-                                    <div className="relative">
-                                        {/* Timeline line */}
-                                        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                                    <div className="max-h-[600px] overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300 transition-colors">
+                                        <div className="relative">
+                                            {/* Vertical Timeline Line */}
+                                            <div className="absolute left-[23px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-blue-400 via-gray-200 to-transparent"></div>
 
-                                        {/* Timeline items */}
-                                        <div className="space-y-6">
-                                            {sortedHistory.map((item, index) => {
-                                                // get normalized key and human label
-                                                const statusKey = normalizeStatusNameUtil(item) || '';
-                                                const it: any = item;
-                                                // Choose a human friendly label when possible. Prefer API-provided labels, then normalize
-                                                const explicitLabel = it?.subStatus?.label || it?.mainStatus?.label;
-                                                let statusLabel = explicitLabel;
-                                                if (!statusLabel) {
-                                                    const normalized = normalizeStatusNameUtil(it) || it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName;
-                                                    statusLabel = normalized ? getStatusLabel(String(normalized)) : (it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName);
-                                                }
-                                                const colors = getStatusColor(statusKey);
-                                                const isFirst = index === 0;
-                                                return (
-                                                    <div key={item.id} className="relative pl-12">
-                                                        {/* Timeline dot */}
-                                                        <div className={`absolute left-3 top-1 w-6 h-6 rounded-full ${colors.dot} border-4 border-white shadow-md flex items-center justify-center`}>
-                                                            {isFirst && (
-                                                                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                                                            )}
-                                                        </div>
+                                            {/* Timeline entries */}
+                                            <div className="space-y-8">
+                                                {sortedHistory.map((item, index) => {
+                                                    const statusKey = normalizeStatusNameUtil(item) || '';
+                                                    const it: any = item;
+                                                    const explicitLabel = it?.subStatus?.label || it?.mainStatus?.label;
+                                                    let statusLabel = explicitLabel;
+                                                    if (!statusLabel) {
+                                                        const normalized = normalizeStatusNameUtil(it) || it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName;
+                                                        statusLabel = normalized ? getStatusLabel(String(normalized)) : (it?.subStatusSnapshot || it?.mainStatusSnapshot || it?.projectStatus?.statusName);
+                                                    }
+                                                    const colors = getStatusColor(statusKey);
+                                                    const isFirst = index === 0;
 
-                                                        {/* Content card */}
-                                                        <div className={`border-2 ${colors.border} ${colors.bg} rounded-lg p-4 transition-all hover:shadow-md ${isFirst ? 'shadow-md ring-2 ring-offset-2 ' + colors.dot.replace('bg-', 'ring-') : ''}`}>
-                                                            <div className="flex items-start justify-between mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`p-1.5 rounded-lg ${colors.bg} border ${colors.border}`}>
-                                                                        {getStatusIcon(statusKey)}
-                                                                    </div>
-                                                                    <div>
-                                                                        <h4 className={`font-semibold ${colors.text}`}>
-                                                                            {statusLabel ? statusLabel : (statusKey ? getStatusLabel(statusKey) : 'Unknown Status')}
-                                                                        </h4>
-                                                                        <p className="text-xs text-gray-500 mt-0.5">
-                                                                            {formatDate(item.statusChangedAt)}
-                                                                        </p>
-                                                                    </div>
+                                                    return (
+                                                        <div key={item.id} className="relative pl-14 group">
+                                                            {/* Status Icon Marker */}
+                                                            <div className={`absolute left-0 top-0 w-12 h-12 rounded-2xl ${isFirst ? colors.dot : 'bg-white border-2 border-gray-100 shadow-sm'} flex items-center justify-center z-10 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-md`}>
+                                                                <div className={isFirst ? 'text-white' : colors.text}>
+                                                                    {getStatusIcon(statusKey)}
                                                                 </div>
                                                                 {isFirst && (
-                                                                    <Badge variant="secondary" className="text-xs font-semibold">
-                                                                        Current
-                                                                    </Badge>
+                                                                    <div className="absolute inset-0 rounded-2xl bg-white animate-ping opacity-20"></div>
                                                                 )}
                                                             </div>
 
-                                                            {/* Changed by */}
-                                                            {(item as any).changedByName || item.changedBy && (
-                                                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                                                    <User className="h-3.5 w-3.5" />
-                                                                    <span>Changed by: <span className="font-medium">{(item as any).changedByName ?? item?.changedBy?.name}</span></span>
+                                                            {/* Card Content */}
+                                                            <div className={`relative transition-all duration-300 border-2 ${isFirst ? `${colors.border} ${colors.bg} shadow-md` : 'border-transparent bg-white shadow-sm hover:shadow-md hover:border-gray-200'} rounded-2xl p-5 overflow-hidden`}>
+                                                                {/* Index Indicator */}
+                                                                <div className="absolute right-4 top-2 text-4xl font-black text-gray-900/[0.03] select-none transition-opacity group-hover:opacity-10">
+                                                                    {String(sortedHistory.length - index).padStart(2, '0')}
                                                                 </div>
-                                                            )}
 
-                                                            {/* Reason */}
-                                                            {item.reason && (
-                                                                <div className="text-sm text-gray-700 mb-2">
-                                                                    <span className="font-medium">Reason:</span> {item.reason}
-                                                                </div>
-                                                            )}
+                                                                <div className="relative z-10">
+                                                                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                                                                        <h4 className={`font-black text-lg tracking-tight ${isFirst ? colors.text : 'text-gray-900'}`}>
+                                                                            {statusLabel ? statusLabel : (statusKey ? getStatusLabel(statusKey) : 'Unknown Status')}
+                                                                        </h4>
+                                                                        {isFirst && (
+                                                                            <Badge className={`${colors.dot} text-white border-0 px-2 py-0 text-[10px] uppercase font-black tracking-widest animate-pulse`}>
+                                                                                Active
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex items-center gap-3 text-xs font-bold text-gray-400 uppercase tracking-tighter mb-4">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Calendar className="h-3 w-3" />
+                                                                            {new Date(item.statusChangedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <Clock className="h-3 w-3" />
+                                                                            {new Date(item.statusChangedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                        </div>
+                                                                    </div>
 
-                                                            {/* Notes */}
-                                                            {item.notes && (
-                                                                <div className="text-sm text-gray-700 bg-white bg-opacity-50 rounded p-3 mt-2 border border-gray-200">
-                                                                    <span className="font-medium block mb-1">Notes:</span>
-                                                                    <p className="text-gray-600">{item.notes}</p>
+                                                                    <div className="space-y-3">
+                                                                        {/* Updated By Component */}
+                                                                        {(item as any).changedByName || (item as any).changedBy && (
+                                                                            <div className="flex items-center gap-2 bg-gray-50/80 p-1.5 pr-3 rounded-full w-fit border border-gray-100/50 shadow-sm backdrop-blur-sm">
+                                                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white shadow-sm ${colors.dot} text-white uppercase`}>
+                                                                                    {((item as any).changedByName || (item as any).changedBy?.name)?.charAt(0) || '?'}
+                                                                                </div>
+                                                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                                                                    Updated by <span className="text-gray-900 font-black">{(item as any).changedByName ?? (item as any)?.changedBy?.name}</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Feedbacks and Details */}
+                                                                        {(item.reason || item.notes) && (
+                                                                            <div className="grid gap-2.5">
+                                                                                {item.reason && (
+                                                                                    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-white/60 border border-gray-100 shadow-sm">
+                                                                                        <AlertCircle className="h-4 w-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                                                                                        <div className="text-[11px] leading-tight">
+                                                                                            <span className="font-black text-gray-400 uppercase tracking-widest text-[9px] block mb-1">Transition Reason</span>
+                                                                                            <p className="text-gray-700 font-bold uppercase">{item.reason}</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                {item.notes && (
+                                                                                    <div className="relative pl-4 overflow-hidden py-1">
+                                                                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${colors.dot} rounded-full opacity-40`}></div>
+                                                                                        <span className="font-black text-gray-400 uppercase tracking-[0.2em] text-[8px] block mb-1.5 flex items-center gap-1.5">
+                                                                                            <FileText className="h-3 w-3" /> Feedback & Notes
+                                                                                        </span>
+                                                                                        <p className="text-sm text-gray-600 leading-relaxed italic whitespace-pre-wrap">
+                                                                                            "{item.notes}"
+                                                                                        </p>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            )}
+
+                                                                {/* Interactive Bottom Accent */}
+                                                                <div className={`absolute bottom-0 left-0 right-0 h-1 ${colors.dot} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left opacity-30`}></div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 )}
                             </CardContent>
+                            <div className="p-4 bg-white border-t flex justify-center items-center gap-2">
+                                <div className="h-px bg-gray-100 flex-1"></div>
+                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em]">End of History</span>
+                                <div className="h-px bg-gray-100 flex-1"></div>
+                            </div>
                         </Card>
 
                     </div>
