@@ -12,3 +12,4 @@ export * from "./hrdRemindersApi";
 export * from "./dataFlowRemindersApi";
 export * from "./rnrRemindersApi";
 export * from "./metaApi";
+export * from "./recruiterAnalyticsApi";

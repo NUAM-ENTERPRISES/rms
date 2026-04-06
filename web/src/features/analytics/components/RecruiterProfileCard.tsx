@@ -8,7 +8,7 @@ interface RecruiterProfileCardProps {
     name: string;
     role: string;
     avatarUrl?: string;
-    placements: number;
+    hireCount: number;
     email?: string;
     phone?: string;
   };
@@ -69,7 +69,7 @@ export default function RecruiterProfileCard({
               variant="secondary"
               className="text-sm px-3 py-1 bg-indigo-50 text-indigo-700 border-indigo-100"
             >
-              {recruiter?.placements || 0} placements total
+              {recruiter?.hireCount || 0} hires total
             </Badge>
 
             <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">
