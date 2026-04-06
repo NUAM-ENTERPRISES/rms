@@ -1,3 +1,4 @@
+import { useAppSelector } from "@/app/hooks";
 import StatsCards from "../components/StatsCards";
 import HiringTrendChart from "../components/HiringTrendChart";
 import TopRecruiterCard from "../components/TopRecruiterCard";
@@ -6,11 +7,15 @@ import ProjectRoleHiringStatus from "../components/ProjectRoleHiringStatus";
 import UpcomingInterviews from "../components/UpcomingInterviews";
 
 export default function AdminDashboardPage() {
+  const { user } = useAppSelector((state) => state.auth);
+
   return (
     <div className="space-y-6 p-2">
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Dashboard</h1>
+      <div className="space-y-1">
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          Welcome back, {user?.name || "Admin"}! 👋
+        </h1>
         <p className="text-sm text-slate-500">
           Recruitment CRM overview at a glance
         </p>

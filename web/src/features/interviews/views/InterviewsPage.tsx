@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -262,6 +263,7 @@ const STATUS_BADGE: Record<
 
 export default function InterviewsPage() {
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
@@ -793,10 +795,9 @@ export default function InterviewsPage() {
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Calendar className="h-6 w-6 text-blue-600" />
-              <span>Interview Dashboard</span>
+          <div className="space-y-1">
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              Welcome back, {user?.name || "Recruiter"}! 👋
             </h1>
             <p className="text-slate-500 text-sm">
               Orchestrate every panel with clarity and track candidate progress

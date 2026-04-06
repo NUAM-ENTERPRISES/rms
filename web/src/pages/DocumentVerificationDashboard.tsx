@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import {
   Card,
@@ -152,6 +153,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function DocumentVerificationDashboard() {
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
@@ -235,11 +237,11 @@ export default function DocumentVerificationDashboard() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Document Verification Dashboard
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            Welcome back, {user?.name || "Admin"}! 👋
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 mt-1">
             Manage document verification for candidates across all projects
           </p>
         </div>

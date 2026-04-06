@@ -129,45 +129,18 @@ export const navigationConfig: NavItem[] = [
     ],
   },
   {
-    id: "candidate-analytics",
+    id: "analytics",
     label: "Analytics",
-    path: "/analytics/candidates",
+    path: "/analytics/recruiter",
     icon: BarChart3,
     roles: ["CEO", "Director", "Manager"],
-    badge: {
-      text: "Insights",
-      variant: "default",
-    },
     children: [
       {
-        id: "candidate-analytics-overview",
+        id: "recruiter-analytics",
         label: "Recruiter Analytics",
-        path: "/analytics/candidates",
-        icon: Users,
+        path: "/analytics/recruiter",
         roles: ["CEO", "Director", "Manager"],
       },
-      {
-        id: "candidate-analytics-time",
-        label: "Documents Analytics",
-        path: "/analytics/candidates/time",
-        icon: FileText,
-        roles: ["CEO", "Director", "Manager"],
-      },
-      {
-        id: "candidate-analytics-funnel",
-        label: "Interview Analytics",
-        path: "/analytics/candidates/funnel",
-        icon: BarChart3,
-        roles: ["CEO", "Director", "Manager"],
-      },
-      //   {
-      //   id: "candidate-analytics-time",
-      //   label: "Screening Analytics",
-      //   path: "/analytics/candidates/screening",
-      //   icon: Clock,
-      //   roles: ["CEO", "Director", "Manager"],
-      // },
-
     ],
   },
   {

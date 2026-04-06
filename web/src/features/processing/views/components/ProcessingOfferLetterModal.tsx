@@ -337,33 +337,34 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                           {formatFileSize(offerLetterDoc.fileSize)} • Uploaded {formatDate(offerLetterDoc.createdAt)}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
-                          <label htmlFor="offer-letter-received-date" className="font-semibold">Received Date:</label>
-                          <input
-                            id="offer-letter-received-date"
-                            type="date"
-                            className="border border-slate-300 rounded px-2 py-1 text-xs"
-                            value={offerLetterReceivedAt}
-                            onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
-                            disabled={!isReuploadMode}
-                            readOnly={!isReuploadMode}
-                          />
-                          {!hasOfferLetter || isReuploadMode ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={handleSaveReceivedDate}
-                              disabled={!offerLetterReceivedAt || isUpdatingReceivedDate}
-                            >
-                              {isUpdatingReceivedDate ? "Saving..." : "Save Date"}
-                            </Button>
-                          ) : null}
+                          <span className="font-semibold">Received Date:</span>
+                          {isVerified ? (
+                            <span className="px-2 py-1 bg-slate-100 rounded text-slate-700 font-medium">
+                              {offerLetterReceivedAt
+                                ? new Date(offerLetterReceivedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+                                : "—"}
+                            </span>
+                          ) : (
+                            <>
+                              <input
+                                id="offer-letter-received-date"
+                                type="date"
+                                className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                value={offerLetterReceivedAt}
+                                onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={handleSaveReceivedDate}
+                                disabled={!offerLetterReceivedAt || isUpdatingReceivedDate}
+                              >
+                                {isUpdatingReceivedDate ? "Saving..." : "Save Date"}
+                              </Button>
+                            </>
+                          )}
                         </div>
-                        {!isReuploadMode && hasOfferLetter && (
-                          <p className="text-[10px] text-slate-500 mt-1">
-                            Received date is taken from the uploaded offer letter details and cannot be edited here.
-                          </p>
-                        )}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -452,6 +453,19 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                     </Button>
                   </div>
                 )}
+                {/* Received Date – required for upload */}
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
+                  <label htmlFor="upload-offer-letter-received-date" className="font-semibold">
+                    Received Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="upload-offer-letter-received-date"
+                    type="date"
+                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    value={offerLetterReceivedAt}
+                    onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                  />
+                </div>
                 <div
                   className={cn(
                     "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer",
