@@ -408,9 +408,24 @@ export default function CandidateOverviewPage() {
     return digits || null;
   };
 
+  const displayedRecruiterName =
+    filters.recruiterId === currentUser?.id || filters.recruiterId === "all"
+      ? currentUser?.name
+      : usersData?.data?.users?.find((u: any) => u.id === filters.recruiterId)?.name;
+
   return (
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
+        {/* Welcome Header */}
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            Welcome back, {displayedRecruiterName || currentUser?.name || "Recruiter"}! 👋
+          </h1>
+          <p className="text-sm text-slate-500">
+            {Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
+          </p>
+        </div>
+
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
         {(filters.recruiterId !== "all") && (
           <RecruiterPerformanceChartWrapper 
