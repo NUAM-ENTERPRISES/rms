@@ -19,7 +19,7 @@ const STATUS_BADGE: Record<string, string> = {
   Future: "bg-sky-50 text-sky-700",
 };
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 export default function RecruiterCandidatesTable({
   selectedRecruiter,
