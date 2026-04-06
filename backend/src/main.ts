@@ -4,7 +4,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-const xss = require('xss-clean');
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -12,8 +11,6 @@ async function bootstrap() {
 
   // Security Middlewares
   app.use(helmet());
-  app.use(xss());
-
   // Trust proxy for IP-based rate limiting
   app.set('trust proxy', 1);
 
