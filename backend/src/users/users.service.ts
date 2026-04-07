@@ -329,6 +329,7 @@ export class UsersService {
   async changePassword(
     userId: string,
     changePasswordDto: ChangePasswordDto,
+    isAdminReset = false,
   ): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -338,21 +339,28 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    let isValid = false;
-    if (user.password.startsWith('$argon2')) {
-      isValid = await argon2.verify(
-        user.password,
-        changePasswordDto.currentPassword,
-      );
-    } else {
-      isValid = await bcrypt.compare(
-        changePasswordDto.currentPassword,
-        user.password,
-      );
-    }
+    // Skip current password verification for admin resets
+    if (!isAdminReset) {
+      if (!changePasswordDto.currentPassword) {
+        throw new UnauthorizedException('Current password is required');
+      }
 
-    if (!isValid) {
-      throw new UnauthorizedException('Current password is incorrect');
+      let isValid = false;
+      if (user.password.startsWith('$argon2')) {
+        isValid = await argon2.verify(
+          user.password,
+          changePasswordDto.currentPassword,
+        );
+      } else {
+        isValid = await bcrypt.compare(
+          changePasswordDto.currentPassword,
+          user.password,
+        );
+      }
+
+      if (!isValid) {
+        throw new UnauthorizedException('Current password is incorrect');
+      }
     }
 
     const hashedNewPassword = await argon2.hash(changePasswordDto.newPassword);
