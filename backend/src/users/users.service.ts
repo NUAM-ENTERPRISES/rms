@@ -55,7 +55,7 @@ export class UsersService {
     // Create user with role assignments in a transaction
     const user = await this.prisma.$transaction(async (tx) => {
       // Create the user
-      const newUser = await (tx as any).user.create({
+      const newUser = await tx.user.create({
         data: {
           email: createUserDto.email,
           name: createUserDto.name,
@@ -69,28 +69,33 @@ export class UsersService {
         },
       });
 
-      // Assign roles if provided
-      if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
-        // Verify all roles exist
-        const existingRoles = await tx.role.findMany({
-          where: { id: { in: createUserDto.roleIds } },
-        });
+      // Assign roles if provided and not empty
+      if (createUserDto.roleIds && Array.isArray(createUserDto.roleIds) && createUserDto.roleIds.length > 0) {
+        // Filter out any "no-role" or empty string values that might come from the frontend
+        const validRoleIds = createUserDto.roleIds.filter(id => id && id !== 'no-role');
+        
+        if (validRoleIds.length > 0) {
+          // Verify all roles exist
+          const existingRoles = await tx.role.findMany({
+            where: { id: { in: validRoleIds } },
+          });
 
-        if (existingRoles.length !== createUserDto.roleIds.length) {
-          throw new ConflictException('One or more roles not found');
+          if (existingRoles.length !== validRoleIds.length) {
+            throw new ConflictException('One or more roles not found');
+          }
+
+          // Create user role assignments
+          await tx.userRole.createMany({
+            data: validRoleIds.map((roleId) => ({
+              userId: newUser.id,
+              roleId,
+            })),
+          });
         }
-
-        // Create user role assignments
-        await tx.userRole.createMany({
-          data: createUserDto.roleIds.map((roleId) => ({
-            userId: newUser.id,
-            roleId,
-          })),
-        });
       }
 
       // Return user with roles
-      return await (tx as any).user.findUnique({
+      return await tx.user.findUnique({
         where: { id: newUser.id },
         include: {
           userRoles: {
@@ -108,7 +113,11 @@ export class UsersService {
       });
     });
 
-    const { password, ...userWithoutPassword } = user;
+    if (!user) {
+      throw new Error('User creation failed');
+    }
+
+    const { password: _, ...userWithoutPassword } = user as any;
 
     // Audit log the user creation
     if (createdByUserId) {

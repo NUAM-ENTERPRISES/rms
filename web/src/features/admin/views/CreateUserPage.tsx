@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Save, Mail, User, Lock, Phone, Calendar } from "lucide-react";
+import { X, Save, Mail, User, Lock, Phone, Calendar, Eye, EyeOff } from "lucide-react";
 import {
   CountryCodeSelect,
   RoleSelect,
@@ -35,6 +35,8 @@ export default function CreateUserPage() {
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const form = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
@@ -239,13 +241,26 @@ export default function CreateUserPage() {
                       name="password"
                       control={form.control}
                       render={({ field }) => (
-                        <Input
-                          {...field}
-                          id="password"
-                          type="password"
-                          placeholder="Minimum 8 characters with special chars"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Minimum 8 characters with special chars"
+                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       )}
                     />
                     {form.formState.errors.password && (
@@ -272,13 +287,26 @@ export default function CreateUserPage() {
                       name="confirmPassword"
                       control={form.control}
                       render={({ field }) => (
-                        <Input
-                          {...field}
-                          id="confirmPassword"
-                          type="password"
-                          placeholder="Confirm your password"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
+                        <div className="relative">
+                          <Input
+                            {...field}
+                            id="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            placeholder="Confirm your password"
+                            className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
                       )}
                     />
                     {form.formState.errors.confirmPassword && (

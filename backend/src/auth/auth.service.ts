@@ -45,6 +45,9 @@ export class AuthService {
     mobileNumber: string,
     password: string,
   ) {
+    console.log('AuthService.validateUser called for:', countryCode, mobileNumber);
+    console.log('Password provided:', password ? 'EXISTS' : 'MISSING');
+
     const user = await (this.prisma as any).user.findUnique({
       where: {
         countryCode_mobileNumber: {
@@ -71,6 +74,8 @@ export class AuthService {
     });
 
     if (user) {
+      console.log('User found in DB, comparing passwords...');
+      console.log('User password in DB starts with:', user.password.substring(0, 10));
       // Try Argon2 first, then bcrypt for backward compatibility
       let isValid = false;
 
@@ -78,21 +83,28 @@ export class AuthService {
       if (user.password.startsWith('$argon2')) {
         try {
           isValid = await argon2.verify(user.password, password);
+          console.log('Argon2 verification result:', isValid);
         } catch (error) {
+          console.error('Argon2 verify error:', error);
           isValid = false;
         }
       } else {
         try {
           isValid = await bcrypt.compare(password, user.password);
+          console.log('Bcrypt verification result:', isValid);
         } catch (bcryptError) {
+          console.error('Bcrypt compare error:', bcryptError);
           isValid = false;
         }
       }
 
+      console.log('Final password comparison result:', isValid);
       if (isValid) {
         const { password: _, ...result } = user;
         return result;
       }
+    } else {
+      console.log('User NOT found in DB for:', countryCode, mobileNumber);
     }
     return null;
   }

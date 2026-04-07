@@ -1,7 +1,7 @@
 // Load environment variables from .env when running ts-node scripts
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
@@ -1073,7 +1073,7 @@ async function main() {
   // Create bootstrap admin user (CEO)
   console.log('👑 Creating bootstrap admin user...');
   const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
-  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  const hashedPassword = await argon2.hash(adminPassword);
 
   // Find user by email or phone to avoid unique constraint issues (common in CI/CD environments)
   let adminUser = await prisma.user.findFirst({
@@ -1311,7 +1311,7 @@ async function main() {
   ];
 
   for (const userData of testUsers) {
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const hashedPassword = await argon2.hash(userData.password);
 
     // Find user by email or phone to avoid unique constraint issues
     let user = await prisma.user.findFirst({
