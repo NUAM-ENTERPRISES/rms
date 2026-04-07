@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Key, Eye, EyeOff, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,30 +17,38 @@ import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 
 // Password update schema
-const updatePasswordSchema = z
-  .object({
-    currentPassword: z.string().min(1, "Current password is required"),
-    newPassword: z
-      .string()
-      .min(8, "Password must be at least 8 characters long")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-        "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
-      ),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+const updatePasswordSchema = (requireCurrentPassword: boolean) =>
+  z
+    .object({
+      currentPassword: requireCurrentPassword
+        ? z.string().min(1, "Current password is required")
+        : z.string().optional(),
+      newPassword: z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .regex(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+        ),
+      confirmPassword: z.string().min(1, "Please confirm your password"),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"],
+    });
 
-type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
+type UpdatePasswordFormData = {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
 export interface UpdatePasswordDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdatePassword: (data: UpdatePasswordFormData) => Promise<void>;
   isLoading?: boolean;
+  isAdminReset?: boolean;
   className?: string;
 }
 
@@ -60,6 +67,7 @@ export function UpdatePasswordDialog({
   onClose,
   onUpdatePassword,
   isLoading = false,
+  isAdminReset = false,
   className,
 }: UpdatePasswordDialogProps) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -67,7 +75,7 @@ export function UpdatePasswordDialog({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<UpdatePasswordFormData>({
-    resolver: zodResolver(updatePasswordSchema),
+    resolver: zodResolver(updatePasswordSchema(!isAdminReset)) as any,
     mode: "onChange",
     defaultValues: {
       currentPassword: "",
@@ -102,12 +110,15 @@ export function UpdatePasswordDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-slate-600 mt-2">
-            Enter your current password and choose a new secure password.
+            {isAdminReset
+              ? "Set a new password for this user."
+              : "Enter your current password and choose a new secure password."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Current Password */}
+          {/* Current Password - hidden for admin reset */}
+          {!isAdminReset && (
           <div className="space-y-2">
             <Label
               htmlFor="currentPassword"
@@ -149,6 +160,7 @@ export function UpdatePasswordDialog({
               </p>
             )}
           </div>
+          )}
 
           {/* New Password */}
           <div className="space-y-2">

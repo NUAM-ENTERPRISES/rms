@@ -21,7 +21,7 @@ type Period = "weekly" | "monthly";
 const STAGE_CONFIG = [
   { key: "nominated", label: "Nominated", color: "#3b82f6" },
   { key: "documentVerified", label: "Document Verified", color: "#8b5cf6" },
-  { key: "submittedToClient", label: "Submitted", color: "#f97316" },
+  { key: "submittedToClient", label: "SubmittedToClient", color: "#f97316" },
   { key: "interviewPassed", label: "Interview Passed", color: "#eab308" },
   { key: "readyForProcessing", label: "Ready for Processing", color: "#22c55e" },
   { key: "hired", label: "Hired", color: "#15803d" },

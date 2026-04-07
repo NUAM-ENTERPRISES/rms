@@ -530,15 +530,18 @@ export class UsersController {
     @Body() changePasswordDto: ChangePasswordDto,
     @Request() req,
   ) {
-    // Users can only change their own password
     const currentUser = req.user;
-    if (currentUser.id !== id) {
+    const isAdmin = currentUser.permissions?.includes('manage:users');
+
+    // Non-admin users can only change their own password
+    if (currentUser.id !== id && !isAdmin) {
       throw new Error('You can only change your own password');
     }
 
     const result = await this.usersService.changePassword(
       id,
       changePasswordDto,
+      isAdmin && currentUser.id !== id,
     );
     return {
       success: true,
