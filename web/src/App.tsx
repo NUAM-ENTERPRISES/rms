@@ -302,7 +302,7 @@ function RoleBasedRedirect() {
   if (user?.roles.includes("Documentation Executive")) {
     return (
       <AppLayout>
-        <DocumentVerificationDashboard />
+        <DocumentVerificationPage />
       </AppLayout>
     );
   }
