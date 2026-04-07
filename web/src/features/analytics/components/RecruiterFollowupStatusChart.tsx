@@ -8,10 +8,16 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { Recruiter } from "../data/mockRecruiterData";
+
+interface FollowupStatusData {
+  status: string;
+  count: number;
+}
 
 interface RecruiterFollowupStatusChartProps {
-  selectedRecruiter: Recruiter;
+  data: FollowupStatusData[];
+  total: number;
+  isLoading?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -27,64 +33,22 @@ const STATUS_COLORS: Record<string, string> = {
   Deployed: "#14b8a6",
 };
 
-const mockStatusDataByRecruiter: Record<string, { status: string; count: number }[]> = {
-  "rec-1": [
-    { status: "Untouched", count: 35 },
-    { status: "Interested", count: 28 },
-    { status: "Not Interested", count: 12 },
-    { status: "Not Eligible", count: 6 },
-    { status: "Other Enquiry", count: 4 },
-    { status: "Future", count: 8 },
-    { status: "On Hold", count: 5 },
-    { status: "RNR", count: 10 },
-    { status: "Qualified", count: 14 },
-    { status: "Deployed", count: 7 },
-  ],
-  "rec-2": [
-    { status: "Untouched", count: 22 },
-    { status: "Interested", count: 31 },
-    { status: "Not Interested", count: 18 },
-    { status: "Not Eligible", count: 9 },
-    { status: "Other Enquiry", count: 7 },
-    { status: "Future", count: 5 },
-    { status: "On Hold", count: 3 },
-    { status: "RNR", count: 6 },
-    { status: "Qualified", count: 11 },
-    { status: "Deployed", count: 8 },
-  ],
-  "rec-3": [
-    { status: "Untouched", count: 40 },
-    { status: "Interested", count: 15 },
-    { status: "Not Interested", count: 10 },
-    { status: "Not Eligible", count: 4 },
-    { status: "Other Enquiry", count: 2 },
-    { status: "Future", count: 6 },
-    { status: "On Hold", count: 8 },
-    { status: "RNR", count: 3 },
-    { status: "Qualified", count: 7 },
-    { status: "Deployed", count: 5 },
-  ],
-  "rec-4": [
-    { status: "Untouched", count: 18 },
-    { status: "Interested", count: 34 },
-    { status: "Not Interested", count: 14 },
-    { status: "Not Eligible", count: 7 },
-    { status: "Other Enquiry", count: 5 },
-    { status: "Future", count: 10 },
-    { status: "On Hold", count: 4 },
-    { status: "RNR", count: 8 },
-    { status: "Qualified", count: 16 },
-    { status: "Deployed", count: 12 },
-  ],
-};
-
-const defaultData = mockStatusDataByRecruiter["rec-1"];
-
 export default function RecruiterFollowupStatusChart({
-  selectedRecruiter,
+  data,
+  total,
+  isLoading,
 }: RecruiterFollowupStatusChartProps) {
-  const data = mockStatusDataByRecruiter[selectedRecruiter.id] ?? defaultData;
-  const total = data.reduce((sum, d) => sum + d.count, 0);
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-5 w-64 bg-slate-200 rounded" />
+          <div className="h-3 w-48 bg-slate-200 rounded" />
+          <div className="h-[400px] bg-slate-100 rounded" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">

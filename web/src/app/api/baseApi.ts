@@ -54,6 +54,7 @@ export const baseApi = createApi({
     "CandidateProjectVerifications",
     "ForwardingHistory",
     "RecruiterDocuments",
+    "RecruiterAnalytics",
   ],
   endpoints: () => ({}),
 });

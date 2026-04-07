@@ -1,22 +1,62 @@
-import { useState } from "react";
-import { mockRecruiters, Recruiter } from "../data/mockRecruiterData";
-import RecruiterSelector from "../components/RecruiterSelector";
+import { useState, useEffect } from "react";
 import RecruiterProfileCard from "../components/RecruiterProfileCard";
 import RecruiterActivityBreakdownChart from "../components/RecruiterActivityBreakdownChart";
 import RecruiterFollowupStatusChart from "../components/RecruiterFollowupStatusChart";
 import RecruiterPerformanceStagesChart from "../components/RecruiterPerformanceStagesChart";
 import RecruiterCandidatesTable from "../components/RecruiterCandidatesTable";
+import { UserSelect } from "@/features/candidates/components/UserSelect";
+import { usersApi } from "@/features/admin/api";
+import {
+  useGetRecruiterActivityBreakdownQuery,
+  useGetRecruiterFollowupStatusQuery,
+} from "@/services/recruiterAnalyticsApi";
 
 export default function RecruiterAnalyticsPage() {
-  const [selected, setSelected] = useState<Recruiter>(mockRecruiters[0]);
+  const [selectedId, setSelectedId] = useState("");
 
-  const activityData = [
-    { activity: "Added", value: selected.stats.candidatesAdded },
-    { activity: "Submitted", value: selected.stats.submitted },
-    { activity: "Scheduled", value: selected.stats.interviewsScheduled },
-    { activity: "Passed", value: selected.stats.interviewsPassed },
-    { activity: "Hired", value: selected.stats.hired },
-  ];
+  // Fetch recruiters list — matches the query UserSelect fires (no search, page=1, limit=10)
+  // so RTK Query serves from cache with no extra network request
+  const { data: recruitersData } = usersApi.useGetUsersQuery({
+    roles: "Recruiter",
+    page: 1,
+    limit: 10,
+  });
+
+  const recruiters = recruitersData?.data?.users ?? [];
+
+  // Auto-select first recruiter on load
+  useEffect(() => {
+    const firstUser = recruiters[0];
+    if (firstUser && !selectedId) {
+      setSelectedId(firstUser.id);
+    }
+  }, [recruiters, selectedId]);
+
+  // Derive selected user from the already-fetched list — no extra /users/:id call needed
+  const selectedUser = recruiters.find((u) => u.id === selectedId) ?? null;
+
+  const selected = selectedUser
+    ? { id: selectedUser.id, name: selectedUser.name, email: selectedUser.email, avatarUrl: selectedUser.profileImage }
+    : null;
+
+  // Fetch activity breakdown for selected recruiter
+  const { data: activityRes, isLoading: activityLoading } =
+    useGetRecruiterActivityBreakdownQuery(
+      { recruiterId: selectedId },
+      { skip: !selectedId },
+    );
+
+  // Fetch follow-up status for selected recruiter
+  const { data: followupRes, isLoading: followupLoading } =
+    useGetRecruiterFollowupStatusQuery(
+      { recruiterId: selectedId },
+      { skip: !selectedId },
+    );
+
+  const activityData = activityRes?.data?.activityBreakdown ?? [];
+  const hireCount = activityRes?.data?.placements ?? 0;
+  const followupStatuses = followupRes?.data?.followupStatuses ?? [];
+  const followupTotal = followupRes?.data?.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -28,23 +68,43 @@ export default function RecruiterAnalyticsPage() {
             Performance overview for the selected recruiter
           </p>
         </div>
-        <RecruiterSelector
-          recruiters={mockRecruiters}
-          selected={selected}
-          onSelect={setSelected}
-        />
+        <div className="w-72">
+          <UserSelect
+            value={selectedId}
+            onChange={setSelectedId}
+            role="Recruiter"
+            placeholder="Select a recruiter..."
+          />
+        </div>
       </div>
 
       {/* Recruiter Details + Activity Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <RecruiterProfileCard recruiter={selected} />
+        <RecruiterProfileCard
+          recruiter={
+            selected
+              ? {
+                  name: selected.name,
+                  role: "Recruiter",
+                  email: selected.email,
+                  avatarUrl: selected.avatarUrl,
+                  hireCount,
+                }
+              : undefined
+          }
+          isLoading={activityLoading}
+        />
         <div className="lg:col-span-2">
-          <RecruiterActivityBreakdownChart data={activityData} />
+          <RecruiterActivityBreakdownChart data={activityData} isLoading={activityLoading} />
         </div>
       </div>
 
       {/* Follow-up Status Chart */}
-      <RecruiterFollowupStatusChart selectedRecruiter={selected} />
+      <RecruiterFollowupStatusChart
+        data={followupStatuses}
+        total={followupTotal}
+        isLoading={followupLoading}
+      />
 
       {/* Performance Stages Chart */}
       <RecruiterPerformanceStagesChart selectedRecruiter={selected} />
