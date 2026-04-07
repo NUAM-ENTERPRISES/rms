@@ -82,6 +82,22 @@ export class CreateUserDto {
   profileImage?: string;
 
   @ApiPropertyOptional({
+    description: 'User location (City, Country)',
+    example: 'New York, USA',
+  })
+  @IsOptional()
+  @IsString({ message: 'Location must be a string' })
+  location?: string;
+
+  @ApiPropertyOptional({
+    description: 'User timezone',
+    example: 'America/New_York',
+  })
+  @IsOptional()
+  @IsString({ message: 'Timezone must be a string' })
+  timezone?: string;
+
+  @ApiPropertyOptional({
     description: 'Array of role IDs to assign to the user',
     example: ['role123', 'role456'],
     type: [String],

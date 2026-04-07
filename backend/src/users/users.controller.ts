@@ -11,6 +11,9 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,8 +22,12 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
 } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
+import { UploadService } from '../upload/upload.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -33,7 +40,10 @@ import { UserWithRoles, PaginatedUsers } from './types';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   @Post()
   @Permissions('manage:users')
@@ -331,9 +341,22 @@ export class UsersController {
   }
 
   @Post('profile/upload-image')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
     summary: 'Upload profile image',
     description: 'Upload profile image for the current user.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 200,
@@ -342,15 +365,22 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async uploadProfileImage(
     @Request() req,
-    @Body() imageData: { profileImage: string },
+    @UploadedFile() file: Express.Multer.File,
   ) {
     const userId = req.user.id;
-    await this.usersService.update(userId, {
-      profileImage: imageData.profileImage,
-    });
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    const result = await this.uploadService.uploadProfileImage(
+      file,
+      'user',
+      userId,
+    );
+
     return {
       success: true,
-      data: { profileImage: imageData.profileImage },
+      data: { profileImage: result.fileUrl },
       message: 'Profile image uploaded successfully',
     };
   }
