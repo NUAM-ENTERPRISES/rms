@@ -1,12 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
-import { PrismaService } from '../../database/prisma.service';
-import * as bcrypt from 'bcrypt';
+import { AuthService } from '../auth.service';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
-  constructor(private prisma: PrismaService) {
+  constructor(private authService: AuthService) {
     // Note: passport-local only supports usernameField, so we pass countryCode+phone as one field
     // and parse it in the validate method
     super({ usernameField: 'mobileNumber', passReqToCallback: true });
@@ -24,43 +23,21 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
         throw new UnauthorizedException('Country code is required');
       }
 
-      const user = await (this.prisma as any).user.findUnique({
-        where: {
-          countryCode_mobileNumber: {
-            countryCode,
-            mobileNumber,
-          },
-        },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                include: {
-                  rolePermissions: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
+      const user = await this.authService.validateUser(
+        countryCode,
+        mobileNumber,
+        password,
+      );
 
       if (!user) {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-
-      if (isPasswordValid) {
-        const { password: _, ...result } = user;
-        return result;
-      } else {
-        throw new UnauthorizedException('Invalid credentials');
-      }
+      return user;
     } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid credentials');
     }
   }
