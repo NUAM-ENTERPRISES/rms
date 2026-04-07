@@ -79,8 +79,14 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
     if (socketRef.current?.connected) return;
 
-    // Using port 3000 as indicated by the active process check
-    const baseUrl = (import.meta.env.VITE_WS_URL || "http://localhost:3000").replace(/\/$/, "");
+    // Determine the base WebSocket URL based on environment and current location
+    const WS_BASE_URL =
+      import.meta.env.VITE_WS_URL ||
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+        ? "http://localhost:3000"
+        : window.location.origin);
+
+    const baseUrl = WS_BASE_URL.replace(/\/$/, "");
     const socketUrl = `${baseUrl}/notifications`;
     
     console.log("[Socket] Connecting to:", socketUrl);
@@ -91,7 +97,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       extraHeaders: {
         Authorization: `Bearer ${accessToken}`
       },
-      transports: ["polling", "websocket"],
+      transports: ["websocket", "polling"], // Use websocket first, then poll for compatibility
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
