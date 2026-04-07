@@ -423,7 +423,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-8 space-y-4">
+              {/* <div className="mt-8 space-y-4">
                 <div className="text-center">
                   <Button
                     variant="link"
@@ -448,7 +448,7 @@ export default function LoginPage() {
                 >
                   Request access to system
                 </Button>
-              </div>
+              </div> */}
               {/* Footer */}
               <div className="text-center mt-8">
                 <p className="text-xs text-slate-500">
