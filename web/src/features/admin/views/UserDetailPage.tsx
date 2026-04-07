@@ -108,7 +108,7 @@ export default function UserDetailPage() {
         ...(data.currentPassword ? { currentPassword: data.currentPassword } : {}),
         newPassword: data.newPassword,
       }).unwrap();
-      toast.success("Password updated successfully");
+      toast.success(`Password updated successfully for ${user?.name || "user"}`);
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to update password");
       throw error; // Re-throw to prevent dialog from closing
