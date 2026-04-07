@@ -59,8 +59,6 @@ const profileSchema = {
   mobileNumber: "",
   countryCode: "",
   dateOfBirth: "",
-  location: "",
-  timezone: "",
 };
 
 export default function ProfilePage() {
@@ -94,8 +92,6 @@ export default function ProfilePage() {
       mobileNumber: userData.mobileNumber,
       countryCode: userData.countryCode,
       dateOfBirth: userData.dateOfBirth,
-      location: userData.location,
-      timezone: userData.timezone,
     });
   };
 
@@ -112,6 +108,21 @@ export default function ProfilePage() {
   const handleCancel = () => {
     setIsEditing(false);
     form.reset();
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await uploadProfileImage(formData).unwrap();
+      toast.success("Profile image updated successfully");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to upload image");
+    }
   };
 
   const handlePasswordChange = async (data: any) => {
@@ -271,13 +282,24 @@ export default function ProfilePage() {
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
-                    <Button
-                      size="sm"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0"
-                      variant="secondary"
+                    <Label
+                      htmlFor="profile-image-upload"
+                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-secondary flex items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors shadow-sm border border-slate-200"
                     >
-                      <Camera className="h-4 w-4" />
-                    </Button>
+                      {isUploading ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </Label>
+                    <Input
+                      id="profile-image-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={isUploading}
+                    />
                   </div>
                   <div>
                     <h2 className="text-xl font-semibold text-slate-900">
@@ -390,36 +412,6 @@ export default function ProfilePage() {
                           <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
                             <Calendar className="h-4 w-4 text-slate-400" />
                             <span>{formatDate(userData.dateOfBirth)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
-                        {isEditing ? (
-                          <Input
-                            id="location"
-                            {...form.register("location")}
-                            placeholder="City, State"
-                          />
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <MapPin className="h-4 w-4 text-slate-400" />
-                            <span>{userData.location}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="timezone">Timezone</Label>
-                        {isEditing ? (
-                          <Input
-                            id="timezone"
-                            {...form.register("timezone")}
-                            placeholder="America/New_York"
-                          />
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Globe className="h-4 w-4 text-slate-400" />
-                            <span>{userData.timezone}</span>
                           </div>
                         )}
                       </div>
