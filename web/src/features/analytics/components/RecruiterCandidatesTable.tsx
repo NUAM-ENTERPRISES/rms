@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useGetRecruiterCandidatesQuery } from "@/services/recruiterAnalyticsApi";
 import { useDebounce } from "@/hooks/useDebounce";
+import { ImageViewer } from "@/components/molecules";
 
 interface RecruiterCandidatesTableProps {
   selectedRecruiter: { id: string; name: string } | null;
@@ -103,17 +104,14 @@ export default function RecruiterCandidatesTable({
                 >
                   <td className="py-3 px-3 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      {c.profileImage ? (
-                        <img
-                          src={c.profileImage}
-                          alt={c.fullName}
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
-                          {c.fullName.charAt(0)}
-                        </div>
-                      )}
+                      <ImageViewer
+                        title={c.fullName}
+                        src={c.profileImage || null}
+                        fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                        className="h-8 w-8 rounded-full"
+                        ariaLabel={`View full image for ${c.fullName}`}
+                        enableHoverPreview={true}
+                      />
                       <span className="font-medium text-gray-900">{c.fullName}</span>
                     </div>
                   </td>
