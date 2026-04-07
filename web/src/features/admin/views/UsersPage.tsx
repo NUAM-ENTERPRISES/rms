@@ -6,13 +6,13 @@ import {
   Users as UsersIcon,
   Mail,
   Phone,
-  Calendar,
-  Shield,
   Download,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DeleteConfirmationDialog } from "@/components/ui";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
@@ -167,95 +174,82 @@ export default function UsersPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="w-full mx-auto space-y-6">
-        {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    filters.search ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      filters.search ? "scale-110" : "scale-100"
-                    }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search users by name or email..."
-                  value={filters.search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    filters.search ? "ring-2 ring-blue-500/20" : ""
-                  }`}
-                />
+      <div className="w-full mx-auto space-y-5">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-xl lg:text-2xl font-bold text-slate-900 flex items-center gap-2.5">
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <UsersIcon className="h-5 w-5 text-blue-600" />
               </div>
-
-              {/* Action Buttons Row */}
-              <div className="flex flex-col lg:flex-row gap-4">
-                {/* Add New User Button */}
-                {canManageUsers && (
+              User Management
+            </h1>
+            <p className="text-sm text-slate-500 mt-1 ml-11">
+              {pagination?.total
+                ? `${pagination.total} total user${pagination.total !== 1 ? "s" : ""}`
+                : "Manage system users and their roles"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
-                    onClick={() => navigate("/admin/users/create")}
-                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 text-slate-600 hover:text-slate-800 gap-2"
                   >
-                    <Plus className="h-3 w-3" />
-                    Create New User
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
                   </Button>
-                )}
+                </TooltipTrigger>
+                <TooltipContent>Export users list</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            {canManageUsers && (
+              <Button
+                onClick={() => navigate("/admin/users/create")}
+                size="sm"
+                className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add User
+              </Button>
+            )}
+          </div>
+        </div>
 
-                {/* Export Button */}
-                <Button
-                  variant="outline"
-                  className="h-10 px-3 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 transition-all duration-300 rounded-lg shadow-sm hover:shadow-md gap-2 text-sm"
-                >
-                  <Download className="h-3 w-3" />
-                  Export
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Search by name or email..."
+            value={filters.search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-300 focus:ring-blue-200 rounded-lg"
+          />
+        </div>
 
         {/* Users Table Card */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-              <UsersIcon className="h-5 w-5 text-blue-600" />
-              Users
-            </CardTitle>
-            <CardDescription>
-              {pagination?.total
-                ? `Showing ${users.length} of ${pagination.total} users`
-                : "Manage system users and their roles"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-slate-200 overflow-hidden">
+        <Card className="border border-slate-200 shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-hidden">
               <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead className="font-semibold text-slate-700">
+                <TableHeader>
+                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider pl-6">
                       User
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden md:table-cell">
                       Contact
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider">
                       Roles
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700">
-                      Created
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden lg:table-cell">
+                      Joined
                     </TableHead>
-                    <TableHead className="font-semibold text-slate-700 text-right">
-                      Actions
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider text-right pr-6 w-[60px]">
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -263,51 +257,54 @@ export default function UsersPage() {
                   {users.map((user) => (
                     <TableRow
                       key={user.id}
-                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
                       onClick={() => navigate(`/admin/users/${user.id}`)}
                     >
-                      <TableCell>
+                      <TableCell className="pl-6 py-3">
                         <div className="flex items-center gap-3">
-                          {user.profileImage ? (
-                            <img
-                              src={user.profileImage}
-                              alt={user.name}
-                              className="w-10 h-10 rounded-full object-cover border-2 border-blue-100"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-medium text-slate-800">
+                          <Avatar className="h-9 w-9 border border-slate-200">
+                            {user.profileImage ? (
+                              <AvatarImage
+                                src={user.profileImage}
+                                alt={user.name}
+                              />
+                            ) : null}
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white text-xs font-semibold">
+                              {user.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="font-medium text-slate-800 text-sm truncate group-hover:text-blue-700 transition-colors">
                               {user.name}
                             </div>
-                            <div className="text-sm text-slate-500">
+                            <div className="text-xs text-slate-400 truncate md:hidden">
                               {user.email}
                             </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {user.email && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Mail className="h-3 w-3 text-slate-400" />
-                              <span className="truncate max-w-[200px]">
-                                {user.email}
-                              </span>
-                            </div>
-                          )}
-                          {user.phone && (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <Phone className="h-3 w-3 text-slate-400" />
-                              {user.phone}
+                      <TableCell className="py-3 hidden md:table-cell">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                            <Mail className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate max-w-[220px]">
+                              {user.email}
+                            </span>
+                          </div>
+                          {user.mobileNumber && (
+                            <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                              <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                              {user.mobileNumber}
                             </div>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-3">
                         <div className="flex flex-wrap gap-1">
                           {user.userRoles
                             .filter(
@@ -321,27 +318,25 @@ export default function UsersPage() {
                                 variant={getRoleBadgeVariantLocal(
                                   userRole.role.name
                                 )}
-                                className="text-xs"
+                                className="text-[11px] font-medium px-2 py-0.5"
                               >
-                                <Shield className="h-3 w-3 mr-1" />
                                 {userRole.role.name}
                               </Badge>
                             ))}
                           {user.userRoles.length === 0 && (
-                            <Badge variant="outline" className="text-xs">
+                            <span className="text-xs text-slate-400 italic">
                               No roles
-                            </Badge>
+                            </span>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Calendar className="h-3 w-3 text-slate-400" />
+                      <TableCell className="py-3 hidden lg:table-cell">
+                        <span className="text-sm text-slate-500">
                           {formatDate(user.createdAt)}
-                        </div>
+                        </span>
                       </TableCell>
                       <TableCell
-                        className="text-right"
+                        className="text-right pr-6 py-3"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <DropdownMenu>
@@ -349,12 +344,12 @@ export default function UsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                          <DropdownMenuContent align="end" className="w-44">
                             <DropdownMenuItem
                               onClick={() =>
                                 navigate(`/admin/users/${user.id}`)
@@ -378,7 +373,7 @@ export default function UsersPage() {
                                   onClick={() =>
                                     handleDeleteUserClick(user.id, user.name)
                                   }
-                                  className="text-red-600"
+                                  className="text-red-600 focus:text-red-600"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete User
@@ -396,42 +391,57 @@ export default function UsersPage() {
 
             {/* Empty State */}
             {users.length === 0 && (
-              <div className="pt-12 pb-12 text-center">
-                <UsersIcon className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-600 mb-2">
+              <div className="py-16 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-slate-100 mb-4">
+                  <UsersIcon className="h-7 w-7 text-slate-400" />
+                </div>
+                <h3 className="text-base font-semibold text-slate-700 mb-1">
                   No users found
                 </h3>
-                <p className="text-slate-500 mb-6">
+                <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">
                   {filters.search
-                    ? "Try adjusting your search criteria."
-                    : "Get started by creating your first user."}
+                    ? "No users match your search. Try a different keyword."
+                    : "Get started by adding your first user to the system."}
                 </p>
                 {!filters.search && canManageUsers && (
                   <Button
                     onClick={() => navigate("/admin/users/create")}
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Create Your First User
+                    Add First User
                   </Button>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Pagination */}
-        {pagination && pagination.totalPages > 1 && (
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-slate-600">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
-                <div className="flex gap-2">
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
+                <p className="text-sm text-slate-500">
+                  Showing{" "}
+                  <span className="font-medium text-slate-700">
+                    {(pagination.page - 1) * filters.limit + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium text-slate-700">
+                    {Math.min(
+                      pagination.page * filters.limit,
+                      pagination.total
+                    )}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium text-slate-700">
+                    {pagination.total}
+                  </span>{" "}
+                  users
+                </p>
+                <div className="flex items-center gap-1">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8 w-8 p-0"
                     onClick={() =>
                       setFilters((prev) => ({
                         ...prev,
@@ -440,11 +450,48 @@ export default function UsersPage() {
                     }
                     disabled={pagination.page <= 1}
                   >
-                    Previous
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
+                  {Array.from(
+                    { length: Math.min(5, pagination.totalPages) },
+                    (_, i) => {
+                      let pageNum: number;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.page <= 3) {
+                        pageNum = i + 1;
+                      } else if (
+                        pagination.page >= pagination.totalPages - 2
+                      ) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.page - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={
+                            pagination.page === pageNum ? "default" : "outline"
+                          }
+                          size="sm"
+                          className={`h-8 w-8 p-0 text-xs ${
+                            pagination.page === pageNum
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            setFilters((prev) => ({ ...prev, page: pageNum }))
+                          }
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    }
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
+                    className="h-8 w-8 p-0"
                     onClick={() =>
                       setFilters((prev) => ({
                         ...prev,
@@ -453,13 +500,13 @@ export default function UsersPage() {
                     }
                     disabled={pagination.page >= pagination.totalPages}
                   >
-                    Next
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Delete Confirmation Dialog */}

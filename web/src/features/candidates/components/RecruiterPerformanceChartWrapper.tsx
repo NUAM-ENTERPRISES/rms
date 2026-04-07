@@ -79,7 +79,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
   recruiterName,
 }) => {
   const currentYear = new Date().getFullYear();
-  const [timeFilter, setTimeFilter] = React.useState<"year" | "month" | "today" | "custom">("year");
+  const [timeFilter, setTimeFilter] = React.useState<"year" | "month" | "today" | "custom">("month");
   const [selectedMonth, setSelectedMonth] = React.useState<number>(new Date().getMonth() + 1);
   const [customRange, setCustomRange] = React.useState<{ from?: string; to?: string }>({});
 
@@ -103,10 +103,21 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
   const { chartData, totals, funnelData } = useMemo(() => {
     if (!data?.data) return { chartData: [], totals: {} as Record<string, number>, funnelData: [] };
 
-    const rows = data.data.map((item: any) => ({
-      ...item,
-      monthLabel: `${item.month.substring(0, 3)} '${item.year.toString().slice(-2)}`,
-    }));
+    const rows = data.data.map((item: any) => {
+      let label = item.month.substring(0, 3);
+      if (timeFilter === "year") {
+        label = `${item.month.substring(0, 3)} '${item.year.toString().slice(-2)}`;
+      } else if (timeFilter === "month") {
+        label = `Week ${item.week || item.month.substring(0, 3)}`;
+      } else if (timeFilter === "custom") {
+        label = item.date ? new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : item.month;
+      }
+      
+      return {
+        ...item,
+        monthLabel: label,
+      };
+    });
 
     const t: Record<string, number> = {};
     for (const m of METRICS) {
@@ -186,7 +197,7 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                   Performance Overview
                 </CardTitle>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {recruiterName || "Recruiter"} &bull; {timeFilter === "year" ? currentYear : timeFilter === "month" ? `Month ${selectedMonth}, ${currentYear}` : timeFilter === "today" ? "Today" : "Custom Range"}
+                  {recruiterName || "Recruiter"} &bull; {timeFilter === "year" ? currentYear : timeFilter === "month" ? `${new Date(currentYear, selectedMonth - 1).toLocaleString('default', { month: 'long' })}, ${currentYear}` : timeFilter === "today" ? "Today" : "Custom Range"}
                 </p>
               </div>
             </div>
@@ -197,22 +208,28 @@ export const RecruiterPerformanceChartWrapper: React.FC<RecruiterPerformanceChar
                   <SelectValue placeholder="Time range" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="year">Year</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="year">This Year</SelectItem>
                   <SelectItem value="custom">Custom Range</SelectItem>
                 </SelectContent>
               </Select>
 
               {timeFilter === "month" && (
-                <input
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="w-20 h-9 px-2 border border-gray-200 rounded-lg text-sm"
-                />
+                <Select
+                  value={selectedMonth.toString()}
+                  onValueChange={(v) => setSelectedMonth(Number(v))}
+                >
+                  <SelectTrigger className="w-32 h-9 bg-gray-50 border-gray-200 rounded-lg text-sm">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               {timeFilter === "custom" && (
