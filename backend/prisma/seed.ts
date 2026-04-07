@@ -1072,7 +1072,7 @@ async function main() {
 
   // Create bootstrap admin user (CEO)
   console.log('👑 Creating bootstrap admin user...');
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'admin123';
+  const adminPassword = 'admin123';
   const hashedPassword = await argon2.hash(adminPassword);
 
   // Find user by email or phone to avoid unique constraint issues (common in CI/CD environments)
