@@ -170,12 +170,12 @@ export const usersApi = baseApi.injectEndpoints({
     // Update user password
     updateUserPassword: builder.mutation<
       { success: boolean; data: { message: string }; message: string },
-      { id: string; currentPassword: string; newPassword: string }
+      { id: string; currentPassword?: string; newPassword: string }
     >({
       query: ({ id, currentPassword, newPassword }) => ({
         url: `/users/${id}/change-password`,
         method: "POST",
-        body: { currentPassword, newPassword },
+        body: { ...(currentPassword ? { currentPassword } : {}), newPassword },
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }],
     }),

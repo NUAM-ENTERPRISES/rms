@@ -239,16 +239,16 @@ export default function UserDetailPage() {
   };
 
   const handleUpdatePassword = async (data: {
-    currentPassword: string;
+    currentPassword?: string;
     newPassword: string;
   }) => {
     try {
       await updatePassword({
         id: id!,
-        currentPassword: data.currentPassword,
+        ...(data.currentPassword ? { currentPassword: data.currentPassword } : {}),
         newPassword: data.newPassword,
       }).unwrap();
-      toast.success("Password updated successfully");
+      toast.success(`Password updated successfully for ${user?.name || "user"}`);
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to update password");
       throw error; // Re-throw to prevent dialog from closing
@@ -651,6 +651,7 @@ export default function UserDetailPage() {
         onClose={handleUpdatePasswordClose}
         onUpdatePassword={handleUpdatePassword}
         isLoading={isUpdatingPassword}
+        isAdminReset={true}
       />
     </div>
   );
