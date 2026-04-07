@@ -14,29 +14,29 @@ import {
 export default function RecruiterAnalyticsPage() {
   const [selectedId, setSelectedId] = useState("");
 
-  // Fetch first page of recruiters to auto-select the first one
+  // Fetch recruiters list — matches the query UserSelect fires (no search, page=1, limit=10)
+  // so RTK Query serves from cache with no extra network request
   const { data: recruitersData } = usersApi.useGetUsersQuery({
     roles: "Recruiter",
     page: 1,
-    limit: 1,
+    limit: 10,
   });
+
+  const recruiters = recruitersData?.data?.users ?? [];
 
   // Auto-select first recruiter on load
   useEffect(() => {
-    const firstUser = recruitersData?.data?.users?.[0];
+    const firstUser = recruiters[0];
     if (firstUser && !selectedId) {
       setSelectedId(firstUser.id);
     }
-  }, [recruitersData, selectedId]);
+  }, [recruiters, selectedId]);
 
-  // Fetch selected user details for profile card and downstream components
-  const { data: userRes } = usersApi.useGetUserQuery(selectedId, {
-    skip: !selectedId,
-  });
-  const selectedUser = userRes?.data;
+  // Derive selected user from the already-fetched list — no extra /users/:id call needed
+  const selectedUser = recruiters.find((u) => u.id === selectedId) ?? null;
 
   const selected = selectedUser
-    ? { id: selectedUser.id, name: selectedUser.name, email: selectedUser.email }
+    ? { id: selectedUser.id, name: selectedUser.name, email: selectedUser.email, avatarUrl: selectedUser.profileImage }
     : null;
 
   // Fetch activity breakdown for selected recruiter
@@ -87,6 +87,7 @@ export default function RecruiterAnalyticsPage() {
                   name: selected.name,
                   role: "Recruiter",
                   email: selected.email,
+                  avatarUrl: selected.avatarUrl,
                   hireCount,
                 }
               : undefined

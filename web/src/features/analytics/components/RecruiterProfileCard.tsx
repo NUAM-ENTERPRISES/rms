@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Award } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ImageViewer } from "@/components/molecules";
 
 interface RecruiterProfileCardProps {
   recruiter?: {
@@ -39,15 +39,14 @@ export default function RecruiterProfileCard({
         ) : (
           <>
             <div className="relative">
-              <Avatar className="h-20 w-20">
-                {recruiter?.avatarUrl ? (
-                  <AvatarImage src={recruiter.avatarUrl} alt={recruiter.name} />
-                ) : (
-                  <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
-                    {initials}
-                  </AvatarFallback>
-                )}
-              </Avatar>
+              <ImageViewer
+                title={recruiter?.name || "Recruiter"}
+                src={recruiter?.avatarUrl || null}
+                fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                className="h-20 w-20 rounded-full"
+                ariaLabel={`View profile image for ${recruiter?.name || "Recruiter"}`}
+                enableHoverPreview={true}
+              />
               <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white rounded-full p-1">
                 <Award className="h-4 w-4" />
               </div>

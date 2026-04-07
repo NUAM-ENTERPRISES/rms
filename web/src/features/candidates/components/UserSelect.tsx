@@ -43,11 +43,12 @@ export function UserSelect({
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);
-  const limit = 20;
+  const limit = 10;
 
   // Query users based on role, search and pagination
+  // Only include search when non-empty so the cache key matches other callers
   const { data, isLoading, isFetching } = usersApi.useGetUsersQuery({
-    search: debouncedSearch,
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
     roles: role,
     page,
     limit,
