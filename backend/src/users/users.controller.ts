@@ -530,10 +530,17 @@ export class UsersController {
     @Body() changePasswordDto: ChangePasswordDto,
     @Request() req,
   ) {
-    // Users can only change their own password
     const currentUser = req.user;
-    if (currentUser.id !== id) {
-      throw new Error('You can only change your own password');
+    const isSelf = currentUser.id === id;
+    const isAdmin = currentUser.permissions?.includes('manage:users') ||
+      currentUser.roles?.some((r: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(r));
+
+    // Non-admin users can only change their own password and must provide currentPassword
+    if (!isSelf && !isAdmin) {
+      throw new Error('Insufficient permissions to change this user\'s password');
+    }
+    if (isSelf && !changePasswordDto.currentPassword) {
+      throw new Error('Current password is required when changing your own password');
     }
 
     const result = await this.usersService.changePassword(
