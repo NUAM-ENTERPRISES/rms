@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Key, Eye, EyeOff, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 // Password update schema
 const updatePasswordSchema = z
   .object({
+    currentPassword: z.string().min(1, "Current password is required"),
     newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters long")
@@ -38,7 +40,7 @@ type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 export interface UpdatePasswordDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpdatePassword: (data: { newPassword: string }) => Promise<void>;
+  onUpdatePassword: (data: UpdatePasswordFormData) => Promise<void>;
   isLoading?: boolean;
   className?: string;
 }
@@ -60,6 +62,7 @@ export function UpdatePasswordDialog({
   isLoading = false,
   className,
 }: UpdatePasswordDialogProps) {
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -67,6 +70,7 @@ export function UpdatePasswordDialog({
     resolver: zodResolver(updatePasswordSchema),
     mode: "onChange",
     defaultValues: {
+      currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     },
@@ -98,11 +102,54 @@ export function UpdatePasswordDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-slate-600 mt-2">
-            Set a new secure password for this user.
+            Enter your current password and choose a new secure password.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Current Password */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="currentPassword"
+              className="text-sm font-medium text-slate-700"
+            >
+              Current Password
+            </Label>
+            <div className="relative">
+              <Controller
+                name="currentPassword"
+                control={form.control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 pr-10"
+                  />
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-11 px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+              >
+                {showCurrentPassword ? (
+                  <EyeOff className="h-4 w-4 text-slate-400" />
+                ) : (
+                  <Eye className="h-4 w-4 text-slate-400" />
+                )}
+              </Button>
+            </div>
+            {form.formState.errors.currentPassword && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.currentPassword.message}
+              </p>
+            )}
+          </div>
+
           {/* New Password */}
           <div className="space-y-2">
             <Label

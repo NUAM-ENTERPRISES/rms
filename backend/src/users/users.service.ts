@@ -338,25 +338,21 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    // If currentPassword is provided, verify it (self-change flow)
-    // If not provided, this is an admin reset — skip verification
-    if (changePasswordDto.currentPassword) {
-      let isValid = false;
-      if (user.password.startsWith('$argon2')) {
-        isValid = await argon2.verify(
-          user.password,
-          changePasswordDto.currentPassword,
-        );
-      } else {
-        isValid = await bcrypt.compare(
-          changePasswordDto.currentPassword,
-          user.password,
-        );
-      }
+    let isValid = false;
+    if (user.password.startsWith('$argon2')) {
+      isValid = await argon2.verify(
+        user.password,
+        changePasswordDto.currentPassword,
+      );
+    } else {
+      isValid = await bcrypt.compare(
+        changePasswordDto.currentPassword,
+        user.password,
+      );
+    }
 
-      if (!isValid) {
-        throw new UnauthorizedException('Current password is incorrect');
-      }
+    if (!isValid) {
+      throw new UnauthorizedException('Current password is incorrect');
     }
 
     const hashedNewPassword = await argon2.hash(changePasswordDto.newPassword);
