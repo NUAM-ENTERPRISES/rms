@@ -3,6 +3,7 @@
 ## What Was Created:
 
 ### 1. **CRE Role**
+
 - **Role Name:** `CRE` (Candidate Relationship Executive)
 - **Role ID:** `cmhx748te0000q4nb2dohxfej`
 - **Description:** Handles escalated RNR candidates
