@@ -21,10 +21,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.VM_SSH_KEY }}
 
-      - name: Deploy to VM
+      - name: Deploy Backend Only
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
-            cd /var/www/rms/backend
-            git pull origin main
+            cd /var/www/rms
+
+            if [ ! -d .git ]; then
+              git init
+              git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+              git config core.sparseCheckout true
+              echo backend/ >> .git/info/sparse-checkout
+              git pull origin main
+            else
+              git pull origin main
+            fi
+
+            cd backend
             ./deploy.sh
           "
