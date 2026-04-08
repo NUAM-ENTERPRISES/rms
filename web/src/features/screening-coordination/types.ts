@@ -501,6 +501,8 @@ export interface QueryTrainingAssignmentsRequest {
   priority?: string;
   status?: string;
   assignedDate?: string;
+  page?: number;
+  limit?: number;
 }
 
 // ==================== API RESPONSE TYPES ====================

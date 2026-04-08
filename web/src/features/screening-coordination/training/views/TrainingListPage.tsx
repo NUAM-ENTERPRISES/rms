@@ -16,6 +16,8 @@ import {
   ClipboardCheck,
   Users,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -82,7 +84,10 @@ export default function TrainingListPage() {
 
   // Removed session dialog/state: sessions are not editable from this view
 
-  const { data, isLoading, error, refetch } = useGetTrainingAssignmentsQuery();
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
+
+  const { data, isLoading, error, refetch } = useGetTrainingAssignmentsQuery({ page, limit: LIMIT });
   const [completeTraining, { isLoading: isCompleting }] =
     useCompleteTrainingMutation();
   const [updateScreeningDecision, { isLoading: isUpdatingDecision }] =
@@ -90,7 +95,8 @@ export default function TrainingListPage() {
   const [createTrainingAssignment, { isLoading: isCreatingTraining }] =
     useCreateTrainingAssignmentMutation();
 
-  const trainings = data?.data || [];
+  const trainings = data?.data?.items || [];
+  const pagination = data?.data?.pagination;
 
   // Filter trainings
   const filteredTrainings = useMemo(() => {
@@ -733,6 +739,29 @@ export default function TrainingListPage() {
         </div>
       )}
     </ScrollArea>
+
+    {/* Pagination Controls */}
+    {pagination && pagination.totalPages > 1 && (
+      <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page <= 1}
+          className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4 text-slate-600" />
+        </button>
+        <span className="text-xs text-slate-500 font-medium">
+          {page} / {pagination.totalPages}
+        </span>
+        <button
+          onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+          disabled={page >= pagination.totalPages}
+          className="p-1.5 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight className="h-4 w-4 text-slate-600" />
+        </button>
+      </div>
+    )}
   </div>
 
   {/* Right Panel - Training Details */}

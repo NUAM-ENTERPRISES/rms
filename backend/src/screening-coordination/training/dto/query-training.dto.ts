@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TRAINING_STATUS } from '../../../common/constants/statuses';
 
 export class QueryTrainingAssignmentsDto {
@@ -27,4 +28,18 @@ export class QueryTrainingAssignmentsDto {
   @IsOptional()
   @IsEnum(TRAINING_STATUS)
   status?: string;
+
+  @ApiProperty({ description: 'Page number (1-based)', required: false, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({ description: 'Items per page', required: false, default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number = 10;
 }

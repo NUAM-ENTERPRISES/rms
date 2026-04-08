@@ -195,42 +195,51 @@ export class TrainingService {
     // i.e., trainingType === 'basic' AND screeningId IS NULL should not be returned by default
     where.NOT = { trainingType: 'basic', screeningId: null };
 
-    const items = await this.prisma.trainingAssignment.findMany({
-      where,
-      include: {
-        screening: {
-          select: {
-            id: true,
-            conductedAt: true,
-            decision: true,
-            overallRating: true,
-            remarks: true,
-            areasOfImprovement: true,
-          },
-        },
-        candidateProjectMap: {
-          include: {
-            candidate: {
-              select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
+    const page = Math.max(1, query.page ?? 1);
+    const limit = Math.max(1, query.limit ?? 10);
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await Promise.all([
+      this.prisma.trainingAssignment.count({ where }),
+      this.prisma.trainingAssignment.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          screening: {
+            select: {
+              id: true,
+              conductedAt: true,
+              decision: true,
+              overallRating: true,
+              remarks: true,
+              areasOfImprovement: true,
             },
-              // Include full project details for basic assignments per request
-              project: {
-                include: {
-                  client: true,
-                  country: true,
-                  creator: { select: { id: true, name: true, email: true } },
-                  team: true,
-                },
+          },
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: { id: true, firstName: true, lastName: true, email: true, countryCode: true, mobileNumber: true },
               },
-            roleNeeded: true,
+                // Include full project details for basic assignments per request
+                project: {
+                  include: {
+                    client: true,
+                    country: true,
+                    creator: { select: { id: true, name: true, email: true } },
+                    team: true,
+                  },
+                },
+              roleNeeded: true,
+            },
+          },
+          trainingSessions: {
+            orderBy: { sessionDate: 'desc' },
           },
         },
-        trainingSessions: {
-          orderBy: { sessionDate: 'desc' },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     // Add combined phone to candidate contact and batch fetch assigner users and attach their info to assignments
     const itemsWithCandidateContact = items.map((it) => ({
@@ -272,11 +281,21 @@ export class TrainingService {
       });
     });
 
-    return itemsWithCandidateContact.map((it: any) => ({
+    const paginatedItems = itemsWithCandidateContact.map((it: any) => ({
       ...it,
       assignedBy: usersById[it.assignedBy] ?? it.assignedBy,
       trainer: it.trainerId ? usersById[it.trainerId] ?? { id: it.trainerId } : null,
     }));
+
+    return {
+      items: paginatedItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**

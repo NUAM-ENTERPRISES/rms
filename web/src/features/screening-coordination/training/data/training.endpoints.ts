@@ -22,7 +22,7 @@ export const trainingApi = baseApi.injectEndpoints({
 
     // Get all training assignments
     getTrainingAssignments: builder.query<
-      ApiResponse<TrainingAssignment[]>,
+      PaginatedResponse<TrainingAssignment>,
       QueryTrainingAssignmentsRequest | void
     >({
       query: (params) => ({
@@ -30,9 +30,9 @@ export const trainingApi = baseApi.injectEndpoints({
         params: params ?? undefined,
       }),
       providesTags: (result) =>
-        result?.data && Array.isArray(result.data)
+        result?.data?.items && Array.isArray(result.data.items)
           ? [
-              ...result.data.map(({ id }) => ({
+              ...result.data.items.map(({ id }) => ({
                 type: "Training" as const,
                 id,
               })),
