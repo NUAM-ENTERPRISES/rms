@@ -507,7 +507,7 @@ export default function ProfilePage() {
                       Manage your account security and privacy
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  {/* <CardContent className="space-y-4">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                         <div className="flex items-center space-x-3">
@@ -541,7 +541,7 @@ export default function ProfilePage() {
                         <Button variant="outline">Enable</Button>
                       </div>
                     </div>
-                  </CardContent>
+                  </CardContent> */}
                 </Card>
               </TabsContent>
             </Tabs>
