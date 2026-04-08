@@ -28,8 +28,9 @@ import {
 } from "@/components/ui/form";
 import { DatePicker } from "@/components/molecules";
 import { Input } from "@/components/ui/input";
-import { MapPin, Video, PhoneCall, Save } from "lucide-react";
+import { MapPin, Video, PhoneCall, Save, Calendar, Clock, User, FileText, Plane, Home } from "lucide-react";
 import { useGetInterviewQuery, useUpdateInterviewMutation } from "../api";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 const editInterviewSchema = z
@@ -38,8 +39,13 @@ const editInterviewSchema = z
       message: "Please select a date and time",
     }),
     mode: z.enum(["video", "phone", "in-person"]),
+    type: z.string().min(1, "Interview type is required"),
+    duration: z.coerce.number().min(5).max(480).optional(),
+    interviewer: z.string().min(2, "Interviewer name is required").optional(),
     notes: z.string().optional(),
     meetingLink: z.string().optional(),
+    accommodation: z.boolean().default(false),
+    airTicket: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     // Meeting link is optional. If provided, validate it's a proper URL.
@@ -79,8 +85,13 @@ export default function EditInterviewDialog({
     defaultValues: {
       scheduledTime: undefined,
       mode: "video",
+      type: "first_round",
+      duration: 30,
+      interviewer: "",
       notes: "",
       meetingLink: "",
+      accommodation: false,
+      airTicket: "none",
     },
   });
 
@@ -93,8 +104,13 @@ export default function EditInterviewDialog({
       form.reset({
         scheduledTime: scheduledDate,
         mode: (interview.mode as "video" | "phone" | "in-person") || "video",
+        type: interview.type || "first_round",
+        duration: interview.duration || 30,
+        interviewer: interview.interviewer || "",
         notes: interview.notes || "",
         meetingLink: interview.meetingLink || "",
+        accommodation: !!interview.accommodation,
+        airTicket: interview.airTicket || "none",
       });
     }
   }, [interviewData, form]);
@@ -106,16 +122,21 @@ export default function EditInterviewDialog({
     }
 
     try {
-      const interviewData = {
+      const interviewUpdateData = {
         scheduledTime: data.scheduledTime.toISOString(),
         mode: data.mode,
+        type: data.type,
+        duration: data.duration,
+        interviewer: data.interviewer,
         notes: data.notes,
         meetingLink: data.meetingLink?.trim() || undefined,
+        accommodation: data.accommodation,
+        airTicket: data.airTicket,
       };
 
       await updateInterview({
         id: interviewId,
-        data: interviewData as any,
+        data: interviewUpdateData as any,
       }).unwrap();
       toast.success("Interview updated successfully");
       onOpenChange(false);
@@ -152,63 +173,169 @@ export default function EditInterviewDialog({
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-6"
           >
-            {/* Date and Time */}
-            <FormField
-              control={form.control}
-              name="scheduledTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date & Time *</FormLabel>
-                  <FormControl>
-                    <DatePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder="Select interview date and time"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Mode */}
-            <FormField
-              control={form.control}
-              name="mode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Interview Mode *</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Date and Time */}
+              <FormField
+                control={form.control}
+                name="scheduledTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-500" />
+                      Date & Time *
+                    </FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select interview mode" />
-                      </SelectTrigger>
+                      <DatePicker
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select interview date and time"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="video">
-                        <div className="flex items-center gap-2">
-                          <Video className="h-4 w-4 text-blue-600" />
-                          Video Call
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="phone">
-                        <div className="flex items-center gap-2">
-                          <PhoneCall className="h-4 w-4 text-green-600" />
-                          Phone Call
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="in-person">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-purple-600" />
-                          In-Person
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Interview Type */}
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2 text-slate-700">
+                      <FileText className="h-4 w-4 text-slate-500" />
+                      Interview Type *
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="first_round">First Round</SelectItem>
+                        <SelectItem value="technical">Technical</SelectItem>
+                        <SelectItem value="final">Final Round</SelectItem>
+                        <SelectItem value="hr">HR Round</SelectItem>
+                        <SelectItem value="client">Client Interview</SelectItem>
+                        <SelectItem value="medical">Medical Check</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Mode */}
+              <FormField
+                control={form.control}
+                name="mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Video className="h-4 w-4 text-slate-500" />
+                      Interview Mode *
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select interview mode" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="video">
+                          <div className="flex items-center gap-2">
+                            <Video className="h-4 w-4 text-blue-600" />
+                            Video Call
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="phone">
+                          <div className="flex items-center gap-2">
+                            <PhoneCall className="h-4 w-4 text-green-600" />
+                            Phone Call
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="in-person">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-purple-600" />
+                            In-Person
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Duration */}
+              <FormField
+                control={form.control}
+                name="duration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2 text-slate-700">
+                      <Clock className="h-4 w-4 text-slate-500" />
+                      Duration (minutes)
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="30"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Interviewer */}
+              <FormField
+                control={form.control}
+                name="interviewer"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2 text-slate-700">
+                      <User className="h-4 w-4 text-slate-500" />
+                      Interviewer Name
+                    </FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter interviewer name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Air Ticket */}
+              <FormField
+                control={form.control}
+                name="airTicket"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2 text-slate-700">
+                      <Plane className="h-4 w-4 text-slate-500" />
+                      Air Ticket Assistance
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select ticket type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Not Requested</SelectItem>
+                        <SelectItem value="one-way">One-Way</SelectItem>
+                        <SelectItem value="round-trip">Round Trip</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Meeting Link - only for video mode (optional) */}
             {form.watch("mode") === "video" && (
@@ -226,6 +353,28 @@ export default function EditInterviewDialog({
                 )}
               />
             )}
+
+            {/* Accommodation */}
+            <FormField
+              control={form.control}
+              name="accommodation"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 border rounded-md border-slate-200">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="flex items-center gap-2 cursor-pointer text-slate-700">
+                      <Home className="h-4 w-4 text-emerald-500" />
+                      Accommodation Required
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
 
             {/* Notes */}
             <FormField
