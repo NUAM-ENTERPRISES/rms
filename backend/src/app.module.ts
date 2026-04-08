@@ -52,8 +52,11 @@ import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analyt
   imports: [
     ThrottlerModule.forRoot([
       {
-        ttl: 60000,
-        limit: 100,
+        // prod
+        // ttl: 60000,
+        // limit: 100,
+        ttl: 60,
+        limit: 1000000000, // Increased for load testing
       },
     ]),
     ConfigModule.forRoot({
