@@ -92,6 +92,34 @@ export const navigationConfig: NavItem[] = [
     disabled: true, // temporary hide for Interview Coordinator panel as requested
   },
   {
+    id: "projects",
+    label: "Projects",
+    icon: Building2,
+    roles: [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter",
+      "Documentation Executive",
+      "Processing Executive",
+      "System Admin",
+      "Interview Coordinator",
+      // "Screening Trainer",
+    ],
+    children: [
+      {
+        id: "projects-overview",
+        label: "Overview",
+        path: "/projects/overview",
+      },
+      {
+        id: "projects-management",
+        label: "Management",
+        path: "/projects",
+      },
+    ],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
@@ -315,34 +343,6 @@ export const navigationConfig: NavItem[] = [
         // icon: Settings,
         permissions: ["read:system_config"],
         roles: ["CEO", "Director", "Manager", "System Admin"],
-      },
-    ],
-  },
-  {
-    id: "projects",
-    label: "Projects",
-    icon: Building2,
-    roles: [
-      "CEO",
-      "Director",
-      "Manager",
-      "Recruiter",
-      "Documentation Executive",
-      "Processing Executive",
-      "System Admin",
-      "Interview Coordinator",
-      // "Screening Trainer",
-    ],
-    children: [
-      {
-        id: "projects-overview",
-        label: "Overview",
-        path: "/projects/overview",
-      },
-      {
-        id: "projects-management",
-        label: "Management",
-        path: "/projects",
       },
     ],
   },

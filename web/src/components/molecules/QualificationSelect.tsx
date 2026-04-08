@@ -84,6 +84,11 @@ export function QualificationSelect({
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  e.nativeEvent.stopImmediatePropagation();
+                }}
+                autoFocus
                 className="pl-7 h-8 text-xs"
               />
             </div>

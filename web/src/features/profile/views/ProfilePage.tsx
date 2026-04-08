@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   Card,
@@ -12,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,19 +29,12 @@ import {
   Calendar,
   Shield,
   Key,
-  Globe,
-  MapPin,
-  Briefcase,
-  Award,
   Edit,
   Save,
   X,
   Camera,
-  Eye,
-  EyeOff,
   Bell,
 } from "lucide-react";
-import { useAppSelector } from "@/app/hooks";
 import { format } from "date-fns";
 import {
   useGetProfileQuery,
@@ -62,11 +53,9 @@ const profileSchema = {
 };
 
 export default function ProfilePage() {
-  const { user } = useAppSelector((state) => state.auth);
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showProfileImage, setShowProfileImage] = useState(true);
 
   // API calls
   const { data: profileData, isLoading, error } = useGetProfileQuery();
@@ -85,6 +74,7 @@ export default function ProfilePage() {
   });
 
   const handleEdit = () => {
+    if (!userData) return;
     setIsEditing(true);
     form.reset({
       name: userData.name,
@@ -114,15 +104,18 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      await uploadProfileImage(formData).unwrap();
-      toast.success("Profile image updated successfully");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to upload image");
-    }
+    // Convert to base64 for API
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      const base64String = reader.result as string;
+      try {
+        await uploadProfileImage({ profileImage: base64String }).unwrap();
+        toast.success("Profile image updated successfully");
+      } catch (error: any) {
+        toast.error(error?.data?.message || "Failed to upload image");
+      }
+    };
   };
 
   const handlePasswordChange = async (data: any) => {
@@ -145,12 +138,21 @@ export default function ProfilePage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "MMM dd, yyyy");
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Not provided";
+    try {
+      return format(new Date(dateString), "MMM dd, yyyy");
+    } catch {
+      return "Invalid date";
+    }
   };
 
   const formatDateTime = (dateString: string) => {
-    return format(new Date(dateString), "MMM dd, yyyy 'at' h:mm a");
+    try {
+      return format(new Date(dateString), "MMM dd, yyyy 'at' h:mm a");
+    } catch {
+      return "Invalid date";
+    }
   };
 
   // Loading state
@@ -505,7 +507,7 @@ export default function ProfilePage() {
                       Manage your account security and privacy
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  {/* <CardContent className="space-y-4">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                         <div className="flex items-center space-x-3">
@@ -539,7 +541,7 @@ export default function ProfilePage() {
                         <Button variant="outline">Enable</Button>
                       </div>
                     </div>
-                  </CardContent>
+                  </CardContent> */}
                 </Card>
               </TabsContent>
             </Tabs>

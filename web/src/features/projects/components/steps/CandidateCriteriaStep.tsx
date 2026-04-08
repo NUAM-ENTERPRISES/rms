@@ -81,23 +81,40 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
   const watchedRoles = watch("rolesNeeded");
   
   // State for bulk update tool
-  const [bulkCriteria, setBulkCriteria] = useState({
-    minExperience: undefined as number | undefined,
-    maxExperience: undefined as number | undefined,
-    shiftType: undefined as "day" | "night" | "rotating" | "flexible" | undefined,
-    genderRequirement: "all" as "all" | "female" | "male" | "other",
-    minAge: undefined as number | undefined,
-    maxAge: undefined as number | undefined,
+  const [bulkCriteria, setBulkCriteria] = useState<{
+    minExperience?: number;
+    maxExperience?: number;
+    shiftType?: "day" | "night" | "rotating" | "flexible";
+    genderRequirement: "all" | "female" | "male" | "other";
+    minAge?: number;
+    maxAge?: number;
+    accommodation: boolean;
+    food: boolean;
+    transport: boolean;
+    requiredSkills: string[];
+    requiredCertifications: string;
+    candidateStates: string[];
+    candidateReligions: string[];
+    educationRequirementsList: EducationRequirement[];
+    minSalaryRange?: number;
+    maxSalaryRange?: number;
+  }>({
+    minExperience: undefined,
+    maxExperience: undefined,
+    shiftType: undefined,
+    genderRequirement: "all",
+    minAge: undefined,
+    maxAge: undefined,
     accommodation: false,
     food: false,
     transport: false,
-    requiredSkills: [] as string[],
+    requiredSkills: [],
     requiredCertifications: "",
-    candidateStates: [] as string[],
-    candidateReligions: [] as string[],
-    educationRequirementsList: [] as EducationRequirement[],
-    minSalaryRange: undefined as number | undefined,
-    maxSalaryRange: undefined as number | undefined,
+    candidateStates: [],
+    candidateReligions: [],
+    educationRequirementsList: [],
+    minSalaryRange: undefined,
+    maxSalaryRange: undefined,
   });
 
   const [bulkSelectedSkills, setBulkSelectedSkills] = useState<CommonSkill[]>([]);
@@ -169,16 +186,24 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               <div className="flex gap-1.5">
                 <Input
                   type="number"
+                  min={0}
                   placeholder="Min"
-                  value={bulkCriteria.minExperience || ""}
-                  onChange={(e) => setBulkCriteria(p => ({...p, minExperience: parseInt(e.target.value) || undefined}))}
+                  value={bulkCriteria.minExperience ?? ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setBulkCriteria(p => ({...p, minExperience: isNaN(val) ? undefined : Math.max(0, val)}))
+                  }}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
                 <Input
                   type="number"
+                  min={0}
                   placeholder="Max"
-                  value={bulkCriteria.maxExperience || ""}
-                  onChange={(e) => setBulkCriteria(p => ({...p, maxExperience: parseInt(e.target.value) || undefined}))}
+                  value={bulkCriteria.maxExperience ?? ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setBulkCriteria(p => ({...p, maxExperience: isNaN(val) ? undefined : Math.max(0, val)}))
+                  }}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
               </div>
@@ -231,16 +256,24 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               <div className="flex gap-1.5">
                 <Input
                   type="number"
+                  
                   placeholder="Min"
-                  value={bulkCriteria.minSalaryRange || ""}
-                  onChange={(e) => setBulkCriteria(p => ({...p, minSalaryRange: parseInt(e.target.value) || undefined}))}
+                  value={bulkCriteria.minSalaryRange ?? ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setBulkCriteria(p => ({...p, minSalaryRange: isNaN(val) ? undefined : Math.max(0, val)}))
+                  }}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
                 <Input
                   type="number"
+                  
                   placeholder="Max"
-                  value={bulkCriteria.maxSalaryRange || ""}
-                  onChange={(e) => setBulkCriteria(p => ({...p, maxSalaryRange: parseInt(e.target.value) || undefined}))}
+                  value={bulkCriteria.maxSalaryRange ?? ""}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setBulkCriteria(p => ({...p, maxSalaryRange: isNaN(val) ? undefined : Math.max(0, val)}))
+                  }}
                   className="bg-white border-slate-200 h-8 rounded-lg text-xs"
                 />
               </div>
@@ -462,7 +495,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     min={0}
                     placeholder="18"
                     value={bulkCriteria.minAge ?? ""}
-                    onChange={(e) => setBulkCriteria(p => ({...p, minAge: e.target.value === "" ? undefined : parseInt(e.target.value)}))}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setBulkCriteria(p => ({...p, minAge: isNaN(val) ? undefined : Math.max(0, val)}))
+                    }}
                     className="bg-white border-slate-200 h-8 rounded-lg text-xs w-20"
                   />
                 </div>
@@ -473,7 +509,10 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                     min={0}
                     placeholder="35"
                     value={bulkCriteria.maxAge ?? ""}
-                    onChange={(e) => setBulkCriteria(p => ({...p, maxAge: e.target.value === "" ? undefined : parseInt(e.target.value)}))}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setBulkCriteria(p => ({...p, maxAge: isNaN(val) ? undefined : Math.max(0, val)}))
+                    }}
                     className="bg-white border-slate-200 h-8 rounded-lg text-xs w-20"
                   />
                 </div>

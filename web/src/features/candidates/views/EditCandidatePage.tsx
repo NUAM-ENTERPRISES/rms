@@ -37,7 +37,7 @@ import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES, LICENSING_EXAMS, SKIN_TONES, 
 // ==================== VALIDATION SCHEMA ====================
 
 const updateCandidateSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  name: z.string().min(1, "Name is required").max(100),
   countryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
     .string()

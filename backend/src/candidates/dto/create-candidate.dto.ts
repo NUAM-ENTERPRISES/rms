@@ -28,7 +28,7 @@ export class CreateCandidateDto {
   @ApiProperty({
     description: 'Candidate first name',
     example: 'John',
-    minLength: 2,
+    minLength: 1,
   })
   @IsString()
   firstName: string;
@@ -36,7 +36,7 @@ export class CreateCandidateDto {
   @ApiProperty({
     description: 'Candidate last name',
     example: 'Doe',
-    minLength: 2,
+    minLength: 1,
   })
   @IsString()
   lastName: string;
