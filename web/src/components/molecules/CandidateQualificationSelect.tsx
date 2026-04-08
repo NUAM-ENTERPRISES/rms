@@ -281,6 +281,11 @@ export default function CandidateQualificationSelect({
                     placeholder="Search qualifications..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
+                    }}
+                    autoFocus
                     className="pl-8 h-8"
                   />
                 </div>

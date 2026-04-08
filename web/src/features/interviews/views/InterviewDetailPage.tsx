@@ -10,6 +10,7 @@ import { Loader2, ArrowLeft, Calendar, User, Briefcase, Edit3, CheckCircle2, Map
 import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
+import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 import { ImageViewer } from "@/components/molecules";
@@ -32,6 +33,7 @@ export default function InterviewDetailPage() {
 
   const { data, isLoading, error } = useGetInterviewQuery(id ?? "", { skip: !id });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isCompleteOpen, setIsCompleteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyLimit, setHistoryLimit] = useState(10);
@@ -83,8 +85,9 @@ export default function InterviewDetailPage() {
   const handleReviewSubmit = async (updates: any[]) => {
     try {
       await updateBulkInterviewStatus({ updates }).unwrap();
-      toast.success(`${updates.length} interview(s) reviewed successfully`);
+      toast.success(`${updates.length} interview(s) updated successfully`);
       setIsReviewOpen(false);
+      setIsCompleteOpen(false);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
     }
@@ -128,7 +131,6 @@ export default function InterviewDetailPage() {
 
         <div className="flex items-center gap-3">
           <Button
-            variant="outline"
             size="sm"
             onClick={() => setIsEditOpen(true)}
             className="border-zinc-300"
@@ -137,14 +139,25 @@ export default function InterviewDetailPage() {
             Edit
           </Button>
 
-          <Button
-            size="sm"
-            onClick={() => setIsReviewOpen(true)}
-            className="bg-black hover:bg-zinc-800 text-white"
-          >
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Review Outcome
-          </Button>
+          {selected.outcome === "completed" ? (
+            <Button
+              size="sm"
+              onClick={() => setIsReviewOpen(true)}
+              className="bg-black hover:bg-zinc-800 text-white shadow-md hover:shadow-lg transition-all"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Review Outcome
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsCompleteOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md transition-all"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Complete Interview
+            </Button>
+          )}
         </div>
       </div>
 
@@ -344,6 +357,13 @@ export default function InterviewDetailPage() {
   <ReviewInterviewModal
     isOpen={isReviewOpen}
     onClose={() => setIsReviewOpen(false)}
+    interview={selected}
+    onSubmit={handleReviewSubmit}
+  />
+
+  <CompleteInterviewModal
+    isOpen={isCompleteOpen}
+    onClose={() => setIsCompleteOpen(false)}
     interview={selected}
     onSubmit={handleReviewSubmit}
   />

@@ -15,7 +15,9 @@ import {
   MapPin,
   Heart,
   Ruler,
+  Pencil,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
@@ -28,9 +30,14 @@ import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 interface PreviewStepProps {
   watch: UseFormWatch<ProjectFormData>;
   initialCountryData?: { code: string; name: string };
+  onEditStep?: (stepIndex: number) => void;
 }
 
-export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryData }) => {
+export const PreviewStep: React.FC<PreviewStepProps> = ({ 
+  watch, 
+  initialCountryData,
+  onEditStep 
+}) => {
   const formData = watch();
   const { data: selectedClientData } = useGetClientQuery(
     formData.clientId || "",
@@ -85,11 +92,22 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
     <div className="space-y-6">
       {/* Project Overview */}
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
             <Building2 className="h-5 w-5 text-blue-600" />
             Project Overview
           </CardTitle>
+          {onEditStep && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditStep(0)}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8 gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">Edit</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -232,13 +250,54 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
         </CardContent>
       </Card>
 
-      {/* Roles Summary */}
+      {/* Project Requirements (Step 2) */}
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+            <Target className="h-5 w-5 text-emerald-600" />
+            Project Requirements
+          </CardTitle>
+          {onEditStep && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditStep(1)}
+              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">Edit</span>
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {formData.rolesNeeded.map((role, idx) => (
+              <Badge key={idx} variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-100 px-3 py-1">
+                {role.quantity} × {role.designation}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Candidate Requirements (Step 3) */}
+      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
             <Target className="h-5 w-5 text-purple-600" />
-            Roles Required ({formData.rolesNeeded.length})
+            Candidate Requirements ({formData.rolesNeeded.length})
           </CardTitle>
+          {onEditStep && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onEditStep(2)}
+              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 h-8 gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">Edit</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {formData.rolesNeeded.map((role, index) => (
@@ -479,11 +538,22 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({ watch, initialCountryD
       {formData.documentRequirements &&
         formData.documentRequirements.length > 0 && (
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
                 <FileText className="h-5 w-5 text-orange-600" />
                 Document Requirements ({formData.documentRequirements.length})
               </CardTitle>
+              {onEditStep && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEditStep(3)}
+                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-8 gap-1.5"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span className="text-xs font-semibold">Edit</span>
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

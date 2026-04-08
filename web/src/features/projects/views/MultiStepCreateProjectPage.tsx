@@ -427,7 +427,7 @@ export default function MultiStepCreateProjectPage() {
       case 3:
         return <DocumentRequirementsStep {...stepProps} />;
       case 4:
-        return <PreviewStep watch={watch} />;
+        return <PreviewStep watch={watch} onEditStep={goToStep} />;
       default:
         return null;
     }

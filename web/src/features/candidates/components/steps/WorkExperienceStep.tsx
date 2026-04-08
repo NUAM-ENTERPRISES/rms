@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Star, X } from "lucide-react";
+import { Briefcase, Plus, Star, X, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 
@@ -34,6 +34,8 @@ interface WorkExperienceStepProps {
   setWorkExperiences: (experiences: WorkExperience[]) => void;
   newWorkExperience: Omit<WorkExperience, "id">;
   setNewWorkExperience: React.Dispatch<React.SetStateAction<Omit<WorkExperience, "id">>>;
+  editingExperienceId: string | null;
+  setEditingExperienceId: (id: string | null) => void;
   newSkill: string;
   setNewSkill: React.Dispatch<React.SetStateAction<string>>;
 }
@@ -43,6 +45,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   setWorkExperiences,
   newWorkExperience,
   setNewWorkExperience,
+  editingExperienceId,
+  setEditingExperienceId,
   newSkill,
   setNewSkill,
 }) => {
@@ -52,13 +56,26 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       newWorkExperience.jobTitle &&
       newWorkExperience.startDate
     ) {
-      const newId = `work-exp-${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-      setWorkExperiences([
-        ...workExperiences,
-        { ...newWorkExperience, id: newId },
-      ]);
+      if (editingExperienceId) {
+        setWorkExperiences(
+          workExperiences.map((exp) =>
+            exp.id === editingExperienceId
+              ? { ...newWorkExperience, id: editingExperienceId }
+              : exp
+          )
+        );
+        setEditingExperienceId(null);
+        toast.success("Work experience updated successfully.");
+      } else {
+        const newId = `work-exp-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+        setWorkExperiences([
+          ...workExperiences,
+          { ...newWorkExperience, id: newId },
+        ]);
+        toast.success("Work experience added successfully.");
+      }
       setNewWorkExperience({
         companyName: "",
         departmentId: undefined,
@@ -83,6 +100,37 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
   const removeWorkExperience = (id: string) => {
     setWorkExperiences(workExperiences.filter((exp) => exp.id !== id));
+    if (editingExperienceId === id) {
+      setEditingExperienceId(null);
+      setNewWorkExperience({
+        companyName: "",
+        departmentId: undefined,
+        roleCatalogId: "",
+        jobTitle: "",
+        startDate: "",
+        endDate: "",
+        isCurrent: false,
+        description: "",
+        salary: undefined,
+        location: "",
+        skills: [],
+        achievements: "",
+      });
+    }
+  };
+
+  const editWorkExperience = (id: string) => {
+    const experienceToEdit = workExperiences.find((exp) => exp.id === id);
+    if (experienceToEdit) {
+      const { id: _, ...expData } = experienceToEdit;
+      setNewWorkExperience(expData);
+      setEditingExperienceId(id);
+      // Optional: scroll to the form
+      const formElement = document.getElementById("work-experience-form");
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: "smooth" });
+      }
+    }
   };
 
   const addSkillToNewExperience = () => {
@@ -175,10 +223,23 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                       variant="outline"
                       size="sm"
                       onClick={() =>
+                        editWorkExperience(experience.id)
+                      }
+                      className="text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50"
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
                         removeWorkExperience(experience.id)
                       }
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
+                      <X className="h-4 w-4 mr-1" />
                       Remove
                     </Button>
                   </div>
@@ -189,13 +250,44 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         )}
 
         {/* Add New Work Experience Form */}
-        <div className="border border-slate-200 rounded-lg p-6 bg-slate-50">
+        <div id="work-experience-form" className="border border-slate-200 rounded-lg p-6 bg-slate-50 relative transition-all duration-300">
+          {editingExperienceId && (
+            <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-300">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                <Pencil className="h-3 w-3" />
+                Editing Mode
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingExperienceId(null);
+                    setNewWorkExperience({
+                      companyName: "",
+                      departmentId: undefined,
+                      roleCatalogId: "",
+                      jobTitle: "",
+                      startDate: "",
+                      endDate: "",
+                      isCurrent: false,
+                      description: "",
+                      salary: undefined,
+                      location: "",
+                      skills: [],
+                      achievements: "",
+                    });
+                  }}
+                  className="ml-1 hover:text-blue-900"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-slate-800">
-              Add New Work Experience (Optional)
+              {editingExperienceId ? "Edit Work Experience" : "Add New Work Experience (Optional)"}
             </h4>
             <p className="text-sm text-slate-500 italic">
-              You can skip this step and add experience later
+              {editingExperienceId ? "Modify your work experience details below" : "You can skip this step and add experience later"}
             </p>
           </div>
 
@@ -434,15 +526,43 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
             )}
           </div>
 
-          {/* Add Button */}
-          <div className="flex justify-end mt-4">
+          {/* Add/Update Button */}
+          <div className="flex justify-end mt-4 gap-2">
+            {editingExperienceId && (
+              <Button
+                type="button"
+                onClick={() => {
+                  setEditingExperienceId(null);
+                  setNewWorkExperience({
+                    companyName: "",
+                    departmentId: undefined,
+                    roleCatalogId: "",
+                    jobTitle: "",
+                    startDate: "",
+                    endDate: "",
+                    isCurrent: false,
+                    description: "",
+                    salary: undefined,
+                    location: "",
+                    skills: [],
+                    achievements: "",
+                  });
+                }}
+                variant="outline"
+                className="border-slate-300 text-slate-600"
+              >
+                Cancel
+              </Button>
+            )}
             <Button
               type="button"
               onClick={addWorkExperience}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className={editingExperienceId 
+                ? "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800" 
+                : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Work Experience
+              <Pencil className="h-4 w-4 mr-2" />
+              {editingExperienceId ? "Update Experience" : "Add Work Experience"}
             </Button>
           </div>
         </div>

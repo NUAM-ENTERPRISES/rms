@@ -23,6 +23,7 @@ import { useCreateCandidateMutation } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import CandidatePreview from "../components/CandidatePreview";
 import { useCan } from "@/hooks/useCan";
+import { usePermissions } from "@/hooks/usePermissions";
 import type { CandidateQualification } from "@/components/molecules/CandidateQualificationSelect";
 import CandidateCreationStepper from "../components/CandidateCreationStepper";
 import {
@@ -39,11 +40,11 @@ import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 const createCandidateSchema = z.object({
   firstName: z
     .string()
-    .min(2, "First name must be at least 2 characters")
+    .min(1, "First name is required")
     .max(50),
   lastName: z
     .string()
-    .min(2, "Last name must be at least 2 characters")
+    .min(1, "Last name is required")
     .max(50),
   countryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
@@ -76,13 +77,6 @@ const createCandidateSchema = z.object({
   dataFlow: z.boolean().optional().default(false),
   eligibility: z.boolean().optional().default(false),
 
-  // Referral Fields
-  referralCompanyName: z.string().optional(),
-  referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
-  referralCountryCode: z.string().optional(),
-  referralPhone: z.string().optional(),
-  referralDescription: z.string().optional(),
-
   // Educational Qualifications (legacy fields for backward compatibility)
   highestEducation: z.string().max(100).optional(),
   university: z.string().max(200).optional(),
@@ -103,15 +97,6 @@ const createCandidateSchema = z.object({
       })
     )
     .optional(),
-}).superRefine((data, ctx) => {
-  // Make referralCompanyName required when source is 'referral'
-  if (data.source === "referral" && (!data.referralCompanyName || data.referralCompanyName.trim() === "")) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Referral company name is required when source is referral",
-      path: ["referralCompanyName"],
-    });
-  }
 });
 
 type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;
@@ -168,6 +153,9 @@ const STEPS = [
 export default function CreateCandidatePage() {
   const navigate = useNavigate();
   const canManageCandidates = useCan("manage:candidates");
+  const { hasRole } = usePermissions();
+  const isRecruiter = hasRole("Recruiter");
+  const isCRE = hasRole("CRE");
 
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
@@ -196,6 +184,7 @@ export default function CreateCandidatePage() {
     achievements: "",
   });
   const [newSkill, setNewSkill] = useState("");
+  const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
@@ -210,7 +199,7 @@ export default function CreateCandidatePage() {
       countryCode: "+91",
       mobileNumber: "",
       email: "",
-      source: "manual" as const,
+      source: (isCRE ? "direct_enquiry" : isRecruiter ? "referral" : "manual") as any,
       gender: "" as any,
       dateOfBirth: "",
       // physical information defaults
@@ -222,11 +211,6 @@ export default function CreateCandidatePage() {
       licensingExam: "",
       dataFlow: false,
       eligibility: false,
-      referralCompanyName: "",
-      referralEmail: "",
-      referralCountryCode: "+91",
-      referralPhone: "",
-      referralDescription: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -550,6 +534,8 @@ export default function CreateCandidatePage() {
             setWorkExperiences={setWorkExperiences}
             newWorkExperience={newWorkExperience}
             setNewWorkExperience={setNewWorkExperience}
+            editingExperienceId={editingExperienceId}
+            setEditingExperienceId={setEditingExperienceId}
             newSkill={newSkill}
             setNewSkill={setNewSkill}
           />
