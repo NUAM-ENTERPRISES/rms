@@ -7,6 +7,7 @@ This document describes the implementation of the Nominated Candidates API endpo
 
 ## API Endpoint
 
+
 ### GET `/api/v1/projects/:id/nominated-candidates`
 
 Retrieves all candidates added to a specific project with match scores and filtering options.
