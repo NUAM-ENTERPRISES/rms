@@ -13,7 +13,7 @@ export const options = {
   },
 };
 
-const BASE_URL = "http://localhost:3000"; 
+const BASE_URL = "https://rms-affiniks.nuamenterprises.com"; 
 // change to production later
 
 export function setup() {
