@@ -1,36 +1,33 @@
-import http from 'k6/http';
-import { check, sleep, group } from 'k6';
+import http from "k6/http";
+import { check, sleep, group } from "k6";
 
 export const options = {
-stages: [
-  { duration: '30s', target: 50 },
-  { duration: '1m', target: 150 },
-  { duration: '1m', target: 200 },
-  { duration: '30s', target: 0 },
-],
+  stages: [
+    { duration: "30s", target: 50 },
+    { duration: "1m", target: 150 },
+    { duration: "1m", target: 200 },
+    { duration: "30s", target: 0 },
+  ],
   thresholds: {
-    http_req_duration: ['p(95)<600'],
+    http_req_duration: ["p(95)<600"],
   },
 };
 
-export function setup() {
-  const baseUrl = "http://localhost:3000";
+const BASE_URL = "http://localhost:3000"; 
+// change to production later
 
+export function setup() {
   const loginPayload = JSON.stringify({
     countryCode: "+91",
     mobileNumber: "9876543222",
-    password: "sysadmin123"
+    password: "sysadmin123",
   });
 
   const params = {
     headers: { "Content-Type": "application/json" },
   };
 
-  const res = http.post(
-    baseUrl + "/api/v1/auth/login",
-    loginPayload,
-    params
-  );
+  const res = http.post(`${BASE_URL}/api/v1/auth/login`, loginPayload, params);
 
   const body = JSON.parse(res.body);
 
@@ -39,39 +36,38 @@ export function setup() {
   }
 
   return {
-    baseUrl,
     token: body.data.accessToken,
   };
 }
 
 export default function (data) {
-
   const params = {
     headers: {
-      Authorization: "Bearer " + data.token,
+      Authorization: `Bearer ${data.token}`,
     },
   };
 
   group("Candidates Overview API", () => {
     const res = http.get(
-      data.baseUrl +
-      "/api/v1/candidates/overview?page=1&limit=10&status=all&dateFilter=all",
+      `${BASE_URL}/api/v1/candidates/overview?page=1&limit=10&status=all&dateFilter=all`,
       params
     );
 
     check(res, {
-      "overview status 200": (r) => r.status === 200,
+      "overview status is 200": (r) => r.status === 200,
+      "overview latency < 600ms": (r) => r.timings.duration < 600,
     });
   });
 
   group("Candidates List API", () => {
     const res = http.get(
-      data.baseUrl + "/api/v1/candidates?page=1&limit=10",
+      `${BASE_URL}/api/v1/candidates?page=1&limit=10`,
       params
     );
 
     check(res, {
-      "candidates list status 200": (r) => r.status === 200,
+      "candidates status is 200": (r) => r.status === 200,
+      "candidates latency < 600ms": (r) => r.timings.duration < 600,
     });
   });
 
