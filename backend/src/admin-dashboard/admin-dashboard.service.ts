@@ -282,91 +282,69 @@ export class AdminDashboardService {
       },
     });
 
-    // Fetch relevant history records in the period
-    const statusHistory = await this.prisma.candidateProjectStatusHistory.findMany({
-      where: {
-        statusChangedAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
-      },
-      select: {
-        candidateProjectMap: {
-          select: {
-            recruiterId: true,
-            id: true,
+    const recruiterSummary = await Promise.all(
+      recruiters.map(async (recruiter) => {
+        const candidateProjects = await this.prisma.candidateProjects.findMany({
+          where: {
+            recruiterId: recruiter.id,
+            assignedAt: {
+              gte: periodStart,
+              lte: periodEnd,
+            },
           },
-        },
-        mainStatusSnapshot: true,
-        subStatusSnapshot: true,
-      },
-    });
+          include: {
+            currentProjectStatus: {
+              select: { statusName: true },
+            },
+            subStatus: {
+              select: { name: true },
+            },
+          },
+        });
 
-    // Fetch assignments in the period (for "Projects Assigned" metric)
-    const assignmentsInPeriod = await this.prisma.candidateProjects.findMany({
-      where: {
-        assignedAt: {
-          gte: periodStart,
-          lte: periodEnd,
-        },
-      },
-      select: {
-        recruiterId: true,
-      },
-    });
+        const assigned = candidateProjects.length;
 
-    const recruiterSummary = recruiters.map((recruiter) => {
-      const recruiterHistory = statusHistory.filter(
-        (h) => h.candidateProjectMap?.recruiterId === recruiter.id,
-      );
+        const getStatusKey = (cp: any) => {
+          const currentStatus = cp.currentProjectStatus?.statusName ?? '';
+          const subStatus = cp.subStatus?.name ?? '';
+          return { currentStatus, subStatus };
+        };
 
-      const assigned = assignmentsInPeriod.filter(
-        (a) => a.recruiterId === recruiter.id,
-      ).length;
+        const nominated = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['nominated', 'nominated_initial'].includes(currentStatus) || ['nominated', 'nominated_initial'].includes(subStatus);
+        }).length;
 
-      // Unique candidate-project mappings that reached these statuses in the period
-      const countUniqueByStatus = (history: typeof statusHistory, statuses: string[]) => {
-        const uniqueIds = new Set(
-          history
-            .filter(
-              (h) =>
-                statuses.includes(h.mainStatusSnapshot || '') ||
-                statuses.includes(h.subStatusSnapshot || ''),
-            )
-            .map((h) => h.candidateProjectMap?.id),
-        );
-        return uniqueIds.size;
-      };
+        const documentsVerified = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(currentStatus) || ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(subStatus);
+        }).length;
 
-      const nominated = countUniqueByStatus(recruiterHistory, ['nominated', 'nominated_initial']);
-      const documentsVerified = countUniqueByStatus(recruiterHistory, [
-        'documents_verified',
-        'verified_documents',
-        'submitted_to_client',
-      ]);
-      const interviewPassed = countUniqueByStatus(recruiterHistory, [
-        'interview_passed',
-        'shortlisted',
-        'interview_selected',
-      ]);
-      const hired = countUniqueByStatus(recruiterHistory, ['hired', 'deployed']);
+        const interviewPassed = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['interview_passed', 'shortlisted', 'interview_selected'].includes(currentStatus) || ['interview_passed', 'shortlisted', 'interview_selected'].includes(subStatus);
+        }).length;
 
-      return {
-        id: recruiter.id,
-        name: recruiter.name,
-        email: recruiter.email,
-        phone: recruiter.mobileNumber
-          ? `${recruiter.countryCode}${recruiter.mobileNumber}`
-          : undefined,
-        role: 'Affinks Recruiter',
-        avatarUrl: recruiter.profileImage || undefined,
-        assigned,
-        nominated,
-        documentsVerified,
-        interviewPassed,
-        hired,
-      };
-    });
+        const hired = candidateProjects.filter((cp) => {
+          const { currentStatus, subStatus } = getStatusKey(cp);
+          return ['hired', 'deployed'].includes(currentStatus) || ['hired', 'deployed'].includes(subStatus);
+        }).length;
+
+        return {
+          id: recruiter.id,
+          name: recruiter.name,
+          email: recruiter.email,
+          phone: recruiter.mobileNumber ? `${recruiter.countryCode}${recruiter.mobileNumber}` : undefined,
+          role: 'Affinks Recruiter', // This can be enhanced to fetch actual role if needed
+          avatarUrl: recruiter.profileImage || undefined,
+          assigned,
+          nominated,
+          documentsVerified,
+          interviewPassed,
+          hired,
+        };
+      }),
+    );
 
     const sorted = recruiterSummary.sort((a, b) => {
       if (a.hired !== b.hired) return b.hired - a.hired;
