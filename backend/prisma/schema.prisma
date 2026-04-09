@@ -378,6 +378,9 @@ model Candidate {
   @@index([teamId])
   @@index([currentStatusId])
   @@index([countryCode, mobileNumber])
+  @@index([createdAt])
+  @@index([source])
+  @@index([gender])
   @@map("candidates")
 }
 
@@ -493,6 +496,7 @@ model CandidateProjects {
   @@index([subStatusId])
   @@index([recruiterId])
   @@index([projectId, roleNeededId])
+  @@index([candidateId, projectId])
   @@map("candidate_projects")
 }
 
@@ -1372,6 +1376,8 @@ model CandidateRecruiterAssignment {
   @@index([createdBy])
   @@index([isActive])
   @@index([assignmentType])
+  @@index([recruiterId, isActive])
+  @@index([candidateId, isActive])
   @@map("candidate_recruiter_assignments")
 }
 

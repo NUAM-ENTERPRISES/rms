@@ -293,7 +293,7 @@ export class CandidatesService {
                   parsedSkills = typeof exp.skills === 'string'
                     ? JSON.parse(exp.skills)
                     : exp.skills;
-                } catch (error) {
+                } catch (error: any) {
                   this.logger.warn(`Failed to parse skills for work experience: ${error.message}`);
                   parsedSkills = [];
                 }
@@ -624,89 +624,81 @@ export class CandidatesService {
       if (toDt) baseWhere.createdAt.lte = toDt;
     }
 
-    // Get all status IDs
-    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'untouched', mode: 'insensitive' } },
-    });
-    const rnrStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'rnr', mode: 'insensitive' } },
-    });
-    const onHoldStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'on_hold', mode: 'insensitive' } },
-    });
-    const interestedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'interested', mode: 'insensitive' } },
-    });
-    const notInterestedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'not_interested', mode: 'insensitive' } },
-    });
-    const otherEnquiryStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'other_enquiry', mode: 'insensitive' } },
-    });
-    const qualifiedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'qualified', mode: 'insensitive' } },
-    });
-    const futureStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: 'future', mode: 'insensitive' } },
-    });
-    const deployedStatus = await this.prisma.candidateStatus.findFirst({
+    // Get all candidate status records in one query
+    const statuses = await this.prisma.candidateStatus.findMany({
       where: {
-        statusName: { equals: CANDIDATE_STATUS.DEPLOYED, mode: 'insensitive' },
-      },
+        statusName: {
+          in: [
+            'untouched', 'rnr', 'on_hold', 'interested', 'not_interested',
+            'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
+          ],
+          mode: 'insensitive'
+        }
+      }
     });
 
-    // Get all candidates for counting, INCLUDING their recruiter assignments to detect CRE handling
-    const allCandidates = await this.prisma.candidate.findMany({
-      where: baseWhere,
-      select: { 
-        id: true, 
-        currentStatusId: true,
-        recruiterAssignments: {
-          where: { isActive: true },
-          select: { assignmentType: true }
+    const getStatusId = (name: string) => statuses.find(s => s.statusName.toLowerCase() === name.toLowerCase())?.id;
+    
+    const untouchedId = getStatusId('untouched');
+    const rnrId = getStatusId('rnr');
+    const onHoldId = getStatusId('on_hold');
+    const interestedId = getStatusId('interested');
+    const notInterestedId = getStatusId('not_interested');
+    const otherEnquiryId = getStatusId('other_enquiry');
+    const qualifiedId = getStatusId('qualified');
+    const futureId = getStatusId('future');
+    const deployedId = getStatusId(CANDIDATE_STATUS.DEPLOYED);
+
+    // Optimized counting using groupBy and count
+    const [statusCounts, totalCount, creCount, rnrCreCount] = await Promise.all([
+      this.prisma.candidate.groupBy({
+        by: ['currentStatusId'],
+        where: baseWhere,
+        _count: { _all: true },
+      }),
+      this.prisma.candidate.count({ where: baseWhere }),
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhere,
+          recruiterAssignments: {
+            some: {
+              isActive: true,
+              assignmentType: { in: [CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO, CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL] }
+            }
+          }
         }
-      },
-    });
-
-    const counts = allCandidates.reduce(
-      (acc, c) => {
-        const isHandledByCRE = c.recruiterAssignments.some(
-          (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
-        );
-
-        acc.total += 1;
-        if (isHandledByCRE) acc.handledByCRE += 1;
-
-        if (c.currentStatusId === untouchedStatus?.id) acc.untouched += 1;
-        if (c.currentStatusId === rnrStatus?.id) {
-          acc.rnr += 1;
-          if (isHandledByCRE) acc.rnrHandledByCRE += 1;
+      }),
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhere,
+          currentStatusId: rnrId,
+          recruiterAssignments: {
+            some: {
+              isActive: true,
+              assignmentType: { in: [CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO, CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL] }
+            }
+          }
         }
+      })
+    ]);
 
-        if (c.currentStatusId === onHoldStatus?.id) acc.onHold += 1;
-        if (c.currentStatusId === interestedStatus?.id) acc.interested += 1;
-        if (c.currentStatusId === notInterestedStatus?.id) acc.notInterested += 1;
-        if (c.currentStatusId === otherEnquiryStatus?.id) acc.otherEnquiry += 1;
-        if (c.currentStatusId === qualifiedStatus?.id) acc.qualified += 1;
-        if (c.currentStatusId === futureStatus?.id) acc.future += 1;
-        if (c.currentStatusId === deployedStatus?.id) acc.working += 1;
-        return acc;
-      },
-      {
-        total: 0,
-        handledByCRE: 0,
-        untouched: 0,
-        rnr: 0,
-        rnrHandledByCRE: 0,
-        onHold: 0,
-        interested: 0,
-        notInterested: 0,
-        otherEnquiry: 0,
-        qualified: 0,
-        future: 0,
-        working: 0,
-      },
-    );
+    const getCountForStatus = (statusId?: number) => 
+      statusId ? (statusCounts.find(c => c.currentStatusId === statusId)?._count._all || 0) : 0;
+
+    const counts = {
+      total: totalCount,
+      handledByCRE: creCount,
+      untouched: getCountForStatus(untouchedId),
+      rnr: getCountForStatus(rnrId),
+      rnrHandledByCRE: rnrCreCount,
+      onHold: getCountForStatus(onHoldId),
+      interested: getCountForStatus(interestedId),
+      notInterested: getCountForStatus(notInterestedId),
+      otherEnquiry: getCountForStatus(otherEnquiryId),
+      qualified: getCountForStatus(qualifiedId),
+      future: getCountForStatus(futureId),
+      working: getCountForStatus(deployedId),
+    };
 
     // Get candidates with relations
     const candidates = await this.prisma.candidate.findMany({
@@ -721,12 +713,19 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        team: true,
+        team: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         recruiterAssignments: {
           where: {
             isActive: true,
           },
-          include: {
+          select: {
+            id: true,
+            assignmentType: true,
             recruiter: {
               select: {
                 id: true,
@@ -734,40 +733,35 @@ export class CandidatesService {
                 email: true,
               },
             },
-            assignedByUser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            createdByUser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            assignedAt: 'desc',
-          },
+          }
         },
-        // Include role catalog for each work experience
+        projects: {
+          take: 5,
+          select: {
+            id: true,
+            projectId: true,
+            project: {
+              select: {
+                id: true,
+                title: true,
+              }
+            }
+          }
+        },
         workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+          take: 1,
+          orderBy: { startDate: 'desc' },
+          select: {
+            id: true,
+            jobTitle: true,
+            companyName: true,
+          }
+        }
       },
     });
 
     const candidatesWithCreator = candidates.map((candidate: any) => {
+      // Find the specific active assignment
       const activeAssignment = candidate.recruiterAssignments?.[0];
       
       // Find the specific CRE assignment if it exists
@@ -791,10 +785,7 @@ export class CandidatesService {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,
           email: creAssignment.recruiter.email,
-          assignedAt: creAssignment.assignedAt,
-          assignmentType: creAssignment.assignmentType,
         } : null,
-        createdBy: activeAssignment?.createdByUser || activeAssignment?.assignedByUser || null,
         recruiter: activeAssignment?.recruiter || null,
       };
     });
@@ -2158,7 +2149,7 @@ export class CandidatesService {
       });
 
       return eligibilityResult.isEligible;
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Error checking eligibility for candidate ${candidate.id} and role ${role.id}:`,
         error.stack,
@@ -3881,184 +3872,186 @@ export class CandidatesService {
       delete baseWhereForCounts.projects;
     }
 
-    const countOptions = (extraWhere: any = {}) => ({
-      where: { ...baseWhereForCounts, ...extraWhere },
-    });
+    // Optimized summary counts using Promise.all
+    const [
+      tableTotalCount,
+      totalCandidatesCount,
+      positiveCandidates,
+      negativeCandidates,
+      registeredCandidates,
+      documentationCandidates,
+      interviewCandidates,
+      processingCandidates,
+      deployedCandidatesCount,
+      interviewAssignedCandidates,
+      docReceivedCandidates,
+      medicalCandidates,
+      visaCandidates
+    ] = await Promise.all([
+      // 1. Total (Filtered for table)
+      this.prisma.candidate.count({ where }),
 
-    // 1. Total Candidates (filtered by recruiter, date, AND active status/search for table paging)
-    const tableTotalCount = await this.prisma.candidate.count({ where });
+      // 2. Total Summary (Filtered for context)
+      this.prisma.candidate.count({ where: baseWhereForCounts }),
 
-    // 1. Total Summary Count (already filtered by recruiter and date)
-    const totalCandidatesCount = await this.prisma.candidate.count({ where: baseWhereForCounts });
-
-    // 2. Positive Candidates ('Interested', 'Future', 'On Hold' AND NOT nominated)
-    const positiveCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold'] } },
-        projects: { none: {} },
-      },
-    });
-
-    // 3. Negative Candidates ('Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible' AND NOT nominated)
-    const negativeCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        currentStatus: {
-          statusName: {
-            in: [
-              'Not Interested',
-              'Other Enquiry',
-              'RNR',
-              'Not Eligible',
-            ],
-          },
+      // 3. Positive ('Interested', 'Future', 'On Hold' AND NOT nominated)
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold'] } },
+          projects: { none: {} },
         },
-        projects: { none: {} },
-      },
-    });
+      }),
 
-    // 4. Registered Candidates (unique count)
-    // Formerly nominated
-    const registeredSubQuery = {
-      ...baseWhereForCounts,
-      projects: {
-        some: {},
-      },
-    };
-    const registeredCandidates = await this.prisma.candidate.count({ where: registeredSubQuery });
-
-    // 5. Documentation (Count only candidates whose project main status is 'documents')
-    const documentationCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            mainStatus: { name: 'documents' },
+      // 4. Negative ('Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible' AND NOT nominated)
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          currentStatus: {
+            statusName: {
+              in: [
+                'Not Interested',
+                'Other Enquiry',
+                'RNR',
+                'Not Eligible',
+              ],
+            },
           },
+          projects: { none: {} },
         },
-      },
-    });
+      }),
 
-    // 6. Interview (Count only candidates whose project main status is 'interview')
-    const interviewCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            mainStatus: { name: 'interview' },
-          },
+      // 5. Registered / Nominated
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: { some: {} },
         },
-      },
-    });
+      }),
 
-    // 7. Processing (Count only candidates whose project main status is 'processing')
-    const processingCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            mainStatus: { name: 'processing' },
-          },
+      // 6. Documentation
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: { some: { mainStatus: { name: 'documents' } } },
         },
-      },
-    });
+      }),
 
-    // 8. Deployed
-    const deployedCandidatesCount = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        OR: [
-          { currentStatus: { statusName: 'Deployed' } },
-          { projects: { some: { subStatus: { name: 'hired' } } } },
-        ],
-      },
-    });
+      // 7. Interview
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: { some: { mainStatus: { name: 'interview' } } },
+        },
+      }),
 
-    // Deprecated/Support for existing tiles if needed (or we can remove them if front end is updated)
-    const interviewAssignedCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
-            projectStatusHistory: {
-              some: {
-                subStatus: {
-                  name: {
-                    in: [
-                      'interview_assigned',
-                      'interview_scheduled',
-                      'interview_rescheduled',
-                      'interview_completed',
-                      'interview_passed',
-                      'shortlisted',
-                    ],
+      // 8. Processing
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: { some: { mainStatus: { name: 'processing' } } },
+        },
+      }),
+
+      // 9. Deployed
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          OR: [
+            { currentStatus: { statusName: 'Deployed' } },
+            { projects: { some: { subStatus: { name: 'hired' } } } },
+          ],
+        },
+      }),
+
+      // 10. Interview Assigned
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: {
+            some: {
+              ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+              projectStatusHistory: {
+                some: {
+                  subStatus: {
+                    name: {
+                      in: [
+                        'interview_assigned',
+                        'interview_scheduled',
+                        'interview_rescheduled',
+                        'interview_completed',
+                        'interview_passed',
+                        'shortlisted',
+                      ],
+                    },
                   },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
 
-    const docReceivedCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'document_received' },
-                  status: 'completed',
+      // 11. Documents Received
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: {
+            some: {
+              ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+              processing: {
+                processingSteps: {
+                  some: {
+                    template: { key: 'document_received' },
+                    status: 'completed',
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
 
-    const medicalCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'medical' },
-                  status: 'completed',
+      // 12. Medical
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: {
+            some: {
+              ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+              processing: {
+                processingSteps: {
+                  some: {
+                    template: { key: 'medical' },
+                    status: 'completed',
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
 
-    const visaCandidates = await this.prisma.candidate.count({
-      where: {
-        ...baseWhereForCounts,
-        projects: {
-          some: {
-            ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'visa' },
-                  status: 'completed',
+      // 13. Visa
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: {
+            some: {
+              ...(targetRecruiterId ? { recruiterId: targetRecruiterId } : {}),
+              processing: {
+                processingSteps: {
+                  some: {
+                    template: { key: 'visa' },
+                    status: 'completed',
+                  },
                 },
               },
             },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     // Pagination for the table
     const page = query.page || 1;
