@@ -344,6 +344,61 @@ export class UploadService {
   }
 
   /**
+   * Upload profile image from base64 string
+   */
+  async uploadProfileImageBase64(
+    base64String: string,
+    entityType: 'user' | 'candidate',
+    entityId: string,
+  ): Promise<UploadResult> {
+    const allowedMimeTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/gif',
+    ];
+
+    // Extract MIME type and data from base64 string
+    // Format: "data:image/jpeg;base64,/9j/4QAYRXhp..."
+    const matches = base64String.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      throw new BadRequestException('Invalid base64 image string');
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`,
+      );
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileSize = buffer.length;
+
+    // Check file size (5MB max)
+    const maxSizeMB = 5;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    if (fileSize > maxSizeBytes) {
+      throw new BadRequestException(
+        `File size exceeds maximum of ${maxSizeMB}MB`,
+      );
+    }
+
+    // Mock a Multer.File object to reuse uploadFile logic
+    const mockFile = {
+      buffer,
+      mimetype: mimeType,
+      originalname: `profile-${entityId}.${mimeType.split('/')[1]}`,
+      size: fileSize,
+    } as Express.Multer.File;
+
+    return this.uploadProfileImage(mockFile, entityType, entityId);
+  }
+
+  /**
    * Upload document (PDFs and images, max 10MB)
    */
   async uploadDocument(

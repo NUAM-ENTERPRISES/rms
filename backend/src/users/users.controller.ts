@@ -26,6 +26,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Multer } from 'multer';
 import { UsersService } from './users.service';
 import { UploadService } from '../upload/upload.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -344,9 +345,9 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
     summary: 'Upload profile image',
-    description: 'Upload profile image for the current user.',
+    description: 'Upload profile image for the current user. Supports both multipart/form-data and base64 JSON.',
   })
-  @ApiConsumes('multipart/form-data')
+  @ApiConsumes('multipart/form-data', 'application/json')
   @ApiBody({
     schema: {
       type: 'object',
@@ -354,6 +355,12 @@ export class UsersController {
         file: {
           type: 'string',
           format: 'binary',
+          description: 'Binary file payload (for multipart/form-data)',
+        },
+        profileImage: {
+          type: 'string',
+          description: 'Base64 image string (for application/json)',
+          example: 'data:image/jpeg;base64,...',
         },
       },
     },
@@ -366,17 +373,31 @@ export class UsersController {
   async uploadProfileImage(
     @Request() req,
     @UploadedFile() file: Express.Multer.File,
+    @Body('profileImage') profileImage?: string,
   ) {
     const userId = req.user.id;
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
+    
+    // Check if we have a multipart file or a base64 string
+    if (!file && !profileImage) {
+      throw new BadRequestException('No file or image string uploaded');
     }
 
-    const result = await this.uploadService.uploadProfileImage(
-      file,
-      'user',
-      userId,
-    );
+    let result;
+    if (file) {
+      // Handle standard multipart file upload
+      result = await this.uploadService.uploadProfileImage(
+        file,
+        'user',
+        userId,
+      );
+    } else if (profileImage) {
+      // Handle base64 string upload
+      result = await this.uploadService.uploadProfileImageBase64(
+        profileImage,
+        'user',
+        userId,
+      );
+    }
 
     return {
       success: true,
