@@ -212,11 +212,11 @@ export class SystemConfigService {
   }
 
   /**
-   * Get default RNR settings
+   * Get default RNR settings (TESTING: 0-day escalation)
    */
   private getDefaultRNRSettings(): RNRSettings {
     return {
-      totalDays: 3,
+      totalDays: 0, // Testing: 0 days instead of 3
       remindersPerDay: 2,
       delayBetweenReminders: 1, // minutes (TESTING: 1 min, PROD: 240 min = 4 hours)
       officeHours: {
@@ -226,7 +226,7 @@ export class SystemConfigService {
       },
       creAssignment: {
         enabled: true,
-        afterDays: 3,
+        afterDays: 0, // Testing: 0 days instead of 3
         assignmentStrategy: 'round_robin', // round_robin, least_loaded, manual
         creRoleId: null, // Will be set after role creation
         creTeamId: null, // Will be set after team creation
