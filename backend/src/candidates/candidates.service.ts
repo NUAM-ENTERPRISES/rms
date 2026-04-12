@@ -380,33 +380,26 @@ export class CandidatesService {
     //   console.error('Auto-allocation failed for candidate:', candidate.id, error);
     // }
 
-    const shouldSkipRoundRobinSources = ['referral', 'hospital_visit'];
-    if (shouldSkipRoundRobinSources.includes(candidate.source)) {
+    // Assign recruiter to candidate
+    // If creator is a recruiter, they will be assigned directly
+    // Otherwise, round-robin assignment (least workload) will be used
+    try {
       this.logger.log(
-        `Skipping auto recruiter assignment for candidate ${candidate.id} due to source '${candidate.source}' (non-round robin source)`,
+        `Starting recruiter assignment for candidate ${candidate.id}, created by user ${userId}`,
       );
-    } else {
-      // Assign recruiter to candidate
-      // If creator is a recruiter, they will be assigned directly
-      // Otherwise, round-robin assignment (least workload) will be used
-      try {
-        this.logger.log(
-          `Starting recruiter assignment for candidate ${candidate.id}, created by user ${userId}`,
-        );
-        const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
-          candidate.id,
-          userId,
-        );
-        this.logger.log(
-          `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
-        );
-      } catch (error) {
-        // Log error but don't fail candidate creation
-        this.logger.error(
-          `❌ Failed to assign recruiter to candidate ${candidate.id}:`,
-          error,
-        );
-      }
+      const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
+        candidate.id,
+        userId,
+      );
+      this.logger.log(
+        `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,
+      );
+    } catch (error) {
+      // Log error but don't fail candidate creation
+      this.logger.error(
+        `❌ Failed to assign recruiter to candidate ${candidate.id}:`,
+        error,
+      );
     }
 
     // Notify about candidate creation for real-time UI
@@ -4155,6 +4148,19 @@ export class CandidatesService {
           },
           orderBy: { createdAt: 'asc' },
         },
+        statusHistories: {
+          include: {
+            changedBy: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+          orderBy: { statusUpdatedAt: 'asc' },
+          take: 1,
+        },
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4164,6 +4170,7 @@ export class CandidatesService {
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
+      const firstStatusChange = (c as any).statusHistories?.[0]; // Use status history as a reliable creator source
       const latestProject = c.projects?.[0] as any;
       
       // Destructure to remove projects array from the final response object
@@ -4172,7 +4179,11 @@ export class CandidatesService {
       return {
         ...candidateRest,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy: firstAssignment?.createdByUser || firstAssignment?.assignedByUser || null,
+        createdBy: 
+          firstStatusChange?.changedBy || 
+          firstAssignment?.createdByUser || 
+          firstAssignment?.assignedByUser || 
+          null,
         projectDetails: latestProject
           ? {
               id: latestProject.id,
