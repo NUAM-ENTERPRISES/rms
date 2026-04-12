@@ -51,13 +51,15 @@ export class RecruiterAssignmentService {
       throw new Error(`User with ID ${createdByUserId} not found`);
     }
 
-    // Check if creator has the Recruiter role by ID
+    // Check if creator has the Recruiter role (case-insensitive)
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
     );
 
     const isRecruiter = creator.userRoles.some(
-      (ur) => ur.roleId === recruiterRoleId,
+      (ur) => 
+        ur.roleId === recruiterRoleId || 
+        ur.role?.name?.toLowerCase() === ROLE_NAMES.RECRUITER.toLowerCase()
     );
 
     const userRoleNames = creator.userRoles
@@ -65,14 +67,14 @@ export class RecruiterAssignmentService {
       .join(', ');
 
     this.logger.log(
-      `Candidate ${candidateId} created by ${creator.name} (${
+      `Candidate ${candidateId} assignment check: Created by ${creator.name} (${
         creator.email
-      }). User roles: ${userRoleNames || 'NONE FOUND'}`,
+      }). Roles: ${userRoleNames || 'NONE FOUND'}`,
     );
 
     if (isRecruiter) {
       this.logger.log(
-        `✅ Creator ${creator.name} is a Recruiter - assigning candidate directly to them (skipping round-robin)`,
+        `✅ Creator ${creator.name} is a Recruiter - strictly assigning candidate directly to them (skipping round-robin)`,
       );
       return {
         id: creator.id,
@@ -84,9 +86,9 @@ export class RecruiterAssignmentService {
       };
     }
 
-    // If not a recruiter, find the best recruiter using workload-based round-robin assignment
+    // If not a recruiter, use workload-based round-robin assignment (no source check)
     this.logger.log(
-      `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment based on least workload`,
+      `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment`,
     );
     const bestRecruiter = await this.getRecruiterWithLeastWorkload();
     return {
