@@ -10,6 +10,27 @@ import { AssignRoleDto } from './dto/assign-role.dto';
 export class RolesService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Find role ID by name (case-insensitive)
+   */
+  async findIdByName(name: string): Promise<string> {
+    const role = await this.prisma.role.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!role) {
+      throw new NotFoundException(`Role with name "${name}" not found`);
+    }
+
+    return role.id;
+  }
+
   async findAll() {
     const roles = await this.prisma.role.findMany({
       include: {

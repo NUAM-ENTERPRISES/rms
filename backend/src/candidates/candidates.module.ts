@@ -14,9 +14,16 @@ import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 import { RnrRemindersModule } from '../rnr-reminders/rnr-reminders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { RolesModule } from '../roles/roles.module';
 
 @Module({
-  imports: [PrismaModule, WorkExperienceModule, RnrRemindersModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    WorkExperienceModule,
+    RnrRemindersModule,
+    NotificationsModule,
+    RolesModule,
+  ],
   controllers: [
     CandidatesController,
     CandidateQualificationController,
