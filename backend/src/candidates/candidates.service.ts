@@ -396,7 +396,6 @@ export class CandidatesService {
         const assignedRecruiter = await this.recruiterAssignmentService.assignRecruiterToCandidate(
           candidate.id,
           userId,
-          'Automatic assignment on candidate creation',
         );
         this.logger.log(
           `✅ Successfully assigned recruiter ${assignedRecruiter.name} (${assignedRecruiter.email}) to candidate ${candidate.id}`,

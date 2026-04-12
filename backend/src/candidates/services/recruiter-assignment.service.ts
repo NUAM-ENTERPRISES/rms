@@ -4,6 +4,8 @@ import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
 import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { OutboxService } from '../../notifications/outbox.service';
+import { RolesService } from '../../roles/roles.service';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 export interface RecruiterInfo {
   id: string;
@@ -21,6 +23,7 @@ export class RecruiterAssignmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
+    private readonly rolesService: RolesService,
   ) { }
 
   /**
@@ -48,13 +51,23 @@ export class RecruiterAssignmentService {
       throw new Error(`User with ID ${createdByUserId} not found`);
     }
 
-    // Check if creator has the Recruiter role (case-insensitive check)
-    const isRecruiter = creator.userRoles.some(
-      (userRole) => userRole.role.name.toLowerCase() === 'recruiter',
+    // Check if creator has the Recruiter role by ID
+    const recruiterRoleId = await this.rolesService.findIdByName(
+      ROLE_NAMES.RECRUITER,
     );
 
+    const isRecruiter = creator.userRoles.some(
+      (ur) => ur.roleId === recruiterRoleId,
+    );
+
+    const userRoleNames = creator.userRoles
+      .map((ur) => ur.role?.name || 'Unknown')
+      .join(', ');
+
     this.logger.log(
-      `Candidate ${candidateId} created by ${creator.name} (${creator.email}). User roles: ${creator.userRoles.map((ur) => ur.role.name).join(', ')}`,
+      `Candidate ${candidateId} created by ${creator.name} (${
+        creator.email
+      }). User roles: ${userRoleNames || 'NONE FOUND'}`,
     );
 
     if (isRecruiter) {
@@ -86,17 +99,16 @@ export class RecruiterAssignmentService {
    * Get recruiter with the least number of active candidates
    */
   async getRecruiterWithLeastWorkload(): Promise<RecruiterInfo> {
+    const recruiterRoleId = await this.rolesService.findIdByName(
+      ROLE_NAMES.RECRUITER,
+    );
+
     // Get all recruiters with their active candidate count
     const recruiters = await this.prisma.user.findMany({
       where: {
         userRoles: {
           some: {
-            role: {
-              name: {
-                equals: 'Recruiter',
-                mode: 'insensitive',
-              },
-            },
+            roleId: recruiterRoleId,
           },
         },
       },
@@ -142,17 +154,14 @@ export class RecruiterAssignmentService {
    * Get CRE (Customer Relationship Executive) with the least workload
    */
   async getCREWithLeastWorkload(): Promise<RecruiterInfo> {
+    const creRoleId = await this.rolesService.findIdByName(ROLE_NAMES.CRE);
+
     // Get all CREs with their active RNR candidate count
     const cres = await this.prisma.user.findMany({
       where: {
         userRoles: {
           some: {
-            role: {
-              name: {
-                equals: 'CRE',
-                mode: 'insensitive',
-              },
-            },
+            roleId: creRoleId,
           },
         },
       },
@@ -236,7 +245,11 @@ export class RecruiterAssignmentService {
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
         createdBy: createdByUserId,
-        reason: reason || 'Automatic assignment on candidate creation',
+        reason:
+          reason ||
+          (recruiter.isRoundRobin
+            ? 'Automatic round-robin assignment on candidate creation'
+            : 'Direct recruiter-to-candidate assignment (Creator is Recruiter)'),
       },
     });
 
@@ -252,7 +265,9 @@ export class RecruiterAssignmentService {
     );
 
     this.logger.log(
-      `Assigned recruiter ${recruiter.name} to candidate ${candidateId}`,
+      `Assigned recruiter ${recruiter.name} to candidate ${candidateId} (Strategy: ${
+        recruiter.isRoundRobin ? 'Round-Robin' : 'Direct Assignment'
+      })`,
     );
 
     return recruiter;
