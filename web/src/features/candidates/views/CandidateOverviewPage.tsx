@@ -427,7 +427,7 @@ export default function CandidateOverviewPage() {
         </div>
 
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
-        {(filters.recruiterId !== "all") && (
+        {/* {(filters.recruiterId !== "all") && (
           <RecruiterPerformanceChartWrapper 
             recruiterId={filters.recruiterId}
             recruiterName={
@@ -436,7 +436,7 @@ export default function CandidateOverviewPage() {
                 : usersData?.data?.users?.find(u => u.id === filters.recruiterId)?.name
             }
           />
-        )}
+        )} */}
 
         {/* Dashboard Tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 gap-2">
