@@ -18,12 +18,14 @@ import {
   Plus,
   Briefcase,
   Edit,
+  Trash2,
   MapPin,
   Trophy,
   Sparkles,
   ClipboardCheck,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import { getAge } from "@/utils/getAge";
 import { Candidate, CandidateQualification, WorkExperience } from "../../api";
 import { CandidateResumeList } from "@/components/molecules";
@@ -40,6 +42,8 @@ interface CandidateOverviewProps {
   onEditPersonalInfo?: () => void;
   onEditPhysicalInfo?: () => void;
   onEditLicensing?: () => void;
+  onDeleteWorkExperience?: (id: string) => void;
+  onDeleteQualification?: (id: string) => void;
 }
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
@@ -51,6 +55,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   onEditPersonalInfo,
   onEditPhysicalInfo,
   onEditLicensing,
+  onDeleteWorkExperience,
+  onDeleteQualification,
 }) => {
   const age = getAge(candidate.dateOfBirth);
 
@@ -137,26 +143,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         candidate.workExperiences &&
                         candidate.workExperiences.length > 0
                       ) {
-                        let totalMonths = 0;
-                        candidate.workExperiences.forEach((exp) => {
-                          const startDate = new Date(exp.startDate);
-                          const endDate = exp.isCurrent
-                            ? new Date()
-                            : new Date(exp.endDate || new Date());
-                          const months =
-                            (endDate.getFullYear() -
-                              startDate.getFullYear()) *
-                              12 +
-                            (endDate.getMonth() - startDate.getMonth());
-                          totalMonths += months;
-                        });
-                        const years = Math.floor(totalMonths / 12);
-                        const months = totalMonths % 12;
-                        return years > 0
-                          ? `${years} years ${
-                              months > 0 ? `${months} months` : ""
-                            }`
-                          : `${months} months`;
+                        const { years, months } = DateUtils.calculateTotalExperience(candidate.workExperiences);
+                        return DateUtils.formatDuration(years, months);
                       }
                       return (
                         candidate.totalExperience ||
@@ -525,63 +513,88 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     {candidate.qualifications &&
                     candidate.qualifications.length > 0 ? (
                       <div className="space-y-4">
+                        <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
                         {candidate.qualifications.map((qual) => (
                           <div
                             key={qual.id}
-                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-blue-300 hover:bg-blue-50/30"
+                            className="group relative ml-8 bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-100/20"
                           >
+                            {/* Timeline dot */}
+                            <div className="absolute -left-[27px] top-6 w-3 h-3 rounded-full border-2 border-blue-500 bg-white z-10 group-hover:bg-blue-500 transition-colors" />
+
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-bold text-slate-900 line-clamp-1">
-                                  {qual.qualification.name}
-                                </h4>
-                                <p className="text-xs text-slate-600 font-medium line-clamp-1">
-                                  {qual.university ||
-                                    "University not specified"}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-slate-900">
+                                    {qual.qualification.name}
+                                  </h4>
+                                  {qual.isCompleted ? (
+                                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] h-4 px-1.5 shadow-none">
+                                      Completed
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] h-4 px-1.5 shadow-none">
+                                      Ongoing
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-blue-700 font-semibold mt-0.5">
+                                  {qual.university || "University not specified"}
                                 </p>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
                                 {canWriteCandidates && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() =>
-                                      openEditModal("qualification", qual)
-                                    }
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-all"
-                                  >
-                                    <Edit className="h-3 w-3" />
-                                  </Button>
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        openEditModal("qualification", qual)
+                                      }
+                                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+                                    {onDeleteQualification && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => onDeleteQualification(qual.id)}
+                                        className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-red-500 hover:text-red-600 hover:bg-red-50"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center justify-between mt-3">
-                              <div className="flex gap-3 text-[10px] text-slate-500 font-medium">
-                                {qual.graduationYear && (
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />{" "}
-                                    {qual.graduationYear}
-                                  </span>
-                                )}
-                                {qual.gpa && (
-                                  <span className="flex items-center gap-1">
-                                    <Trophy className="h-3 w-3" /> GPA:{" "}
-                                    {qual.gpa}
-                                  </span>
-                                )}
-                              </div>
-                              {qual.isCompleted ? (
-                                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] h-4 px-1.5 shadow-none">
-                                  Completed
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] h-4 px-1.5 shadow-none">
-                                  Ongoing
-                                </Badge>
+
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-slate-500 font-medium">
+                              {qual.graduationYear && (
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                  <Calendar className="h-3 w-3 text-slate-400" />
+                                  Class of {qual.graduationYear}
+                                </span>
+                              )}
+                              {qual.gpa && (
+                                <span className="flex items-center gap-1.5 text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full">
+                                  <Trophy className="h-3 w-3" />
+                                  GPA: {qual.gpa}
+                                </span>
                               )}
                             </div>
+
+                            {qual.notes && (
+                              <div className="mt-3 pt-3 border-t border-slate-50">
+                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed italic">
+                                  "{qual.notes}"
+                                </p>
+                              </div>
+                            )}
                           </div>
                         ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
@@ -615,14 +628,42 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     {candidate.workExperiences &&
                     candidate.workExperiences.length > 0 ? (
                       <div className="space-y-4">
-                        {candidate.workExperiences.map((exp) => (
+                        {/* Total Experience Summary */}
+                        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-emerald-100 p-2 rounded-lg">
+                              <Briefcase className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Experience</p>
+                              <p className="text-xl font-bold text-slate-900">
+                                {(() => {
+                                  const { years, months } = DateUtils.calculateTotalExperience(candidate.workExperiences);
+                                  return DateUtils.formatDuration(years, months);
+                                })()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Positions</p>
+                             <p className="text-xl font-bold text-slate-700">{candidate.workExperiences.length}</p>
+                          </div>
+                        </div>
+
+                        <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
+                        {candidate.workExperiences.map((exp) => {
+                          const duration = DateUtils.calculateDuration(exp.startDate, exp.endDate, exp.isCurrent);
+                          return (
                           <div
                             key={exp.id}
-                            className="group relative bg-slate-50/50 border border-slate-200 rounded-lg p-4 transition-all hover:border-emerald-300 hover:bg-emerald-50/30"
+                            className="group relative ml-8 bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-emerald-300 hover:shadow-md hover:shadow-emerald-100/20"
                           >
+                            {/* Timeline dot */}
+                            <div className="absolute -left-[27px] top-6 w-3 h-3 rounded-full border-2 border-emerald-500 bg-white z-10 group-hover:bg-emerald-500 transition-colors" />
+                            
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <h4 className="font-bold text-slate-900">
                                     {exp.jobTitle}
                                   </h4>
@@ -631,27 +672,42 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                       Current
                                     </Badge>
                                   )}
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium border-slate-200 text-slate-500">
+                                    {DateUtils.formatDuration(duration.years, duration.months)}
+                                  </Badge>
                                 </div>
-                                <p className="text-sm text-emerald-700 font-semibold">
+                                <p className="text-sm text-emerald-700 font-semibold mt-0.5">
                                   {exp.companyName || "N/A"}
                                 </p>
                               </div>
                               {canWriteCandidates && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() =>
-                                    openEditModal("workExperience", exp)
-                                  }
-                                  className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all"
-                                >
-                                  <Edit className="h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() =>
+                                      openEditModal("workExperience", exp)
+                                    }
+                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {onDeleteWorkExperience && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => onDeleteWorkExperience(exp.id)}
+                                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-red-500 hover:text-red-600 hover:bg-red-50"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                            <div className="flex gap-4 mt-2 text-[11px] text-slate-500 font-medium">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-slate-500 font-medium">
+                              <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                <Calendar className="h-3 w-3 text-slate-400" />
                                 {formatDate(exp.startDate)} –{" "}
                                 {exp.isCurrent
                                   ? "Present"
@@ -660,24 +716,28 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   : "Ongoing"}
                               </span>
                               {exp.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" /> {exp.location}
+                                <span className="flex items-center gap-1.5">
+                                  <MapPin className="h-3 w-3 text-slate-400" /> {exp.location}
                                 </span>
                               )}
                               {exp.salary && (
-                                <span className="flex items-center gap-1 text-emerald-600">
-                                  <IndianRupee className="h-3 w-3" />
+                                <span className="flex items-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
+                                  <IndianRupee className="h-2.5 w-2.5" />
                                   {formatCurrency(exp.salary)}
                                 </span>
                               )}
                             </div>
                             {exp.description && (
-                              <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed">
-                                {exp.description}
-                              </p>
+                              <div className="mt-3 pt-3 border-t border-slate-50">
+                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed italic">
+                                  "{exp.description}"
+                                </p>
+                              </div>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">

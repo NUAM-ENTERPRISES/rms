@@ -29,10 +29,12 @@ import {
   useGetCandidateByIdQuery,
   useGetCandidateProjectsQuery,
   useGetDocumentsQuery,
+  useDeleteWorkExperienceMutation,
+  useDeleteCandidateQualificationMutation,
 } from "@/features/candidates";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
-import { ImageViewer } from "@/components/molecules";
+import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
 import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
@@ -76,6 +78,11 @@ export default function CandidateDetailPage() {
     CandidateQualification | WorkExperience | undefined
   >();
 
+  // Delete confirmation state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [deleteItemType, setDeleteItemType] = useState<"qualification" | "workExperience" | null>(null);
+
   // Status update modal state
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
@@ -96,6 +103,10 @@ export default function CandidateDetailPage() {
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
   const canManageCandidates = useCan("write:candidates");
+
+  // Mutations
+  const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
+  const [deleteQualification, { isLoading: isDeletingQual }] = useDeleteCandidateQualificationMutation();
 
   // Fetch candidate data from API
   const {
@@ -145,6 +156,32 @@ export default function CandidateDetailPage() {
     setModalType(type);
     setEditData(data);
     setIsModalOpen(true);
+  };
+
+  const openDeleteConfirm = (id: string, type: "qualification" | "workExperience") => {
+    setDeleteItemId(id);
+    setDeleteItemType(type);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteItemId || !deleteItemType) return;
+
+    try {
+      if (deleteItemType === "workExperience") {
+        await deleteWorkExperience(deleteItemId).unwrap();
+        toast.success("Work experience deleted successfully");
+      } else {
+        await deleteQualification(deleteItemId).unwrap();
+        toast.success("Educational qualification deleted successfully");
+      }
+      setIsDeleteConfirmOpen(false);
+      setDeleteItemId(null);
+      setDeleteItemType(null);
+    } catch (error) {
+      toast.error(`Failed to delete ${deleteItemType === "workExperience" ? "work experience" : "educational qualification"}`);
+      console.error("Delete error:", error);
+    }
   };
 
   const closeModal = () => {
@@ -221,7 +258,8 @@ export default function CandidateDetailPage() {
 
   // isOnHold: check candidate status directly (instant, no waiting on pipeline)
   const isOnHold =
-    !!candidate?.currentStatus?.statusName?.toLowerCase().includes("hold");
+    !!candidate?.currentStatus?.statusName?.toLowerCase().includes("hold") ||
+    candidate?.currentStatus?.statusName?.toLowerCase() === "backout";
 
   const isFuture =
     candidate?.currentStatus?.statusName?.toLowerCase() === "future";
@@ -231,7 +269,8 @@ export default function CandidateDetailPage() {
     (step: any) =>
       step.isCurrentStatus &&
       (step.statusName?.toLowerCase().includes("hold") ||
-        step.statusName?.toLowerCase() === "onhold")
+        step.statusName?.toLowerCase() === "onhold" ||
+        step.statusName?.toLowerCase() === "backout")
   );
 
   const stats = [
@@ -495,12 +534,24 @@ export default function CandidateDetailPage() {
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
             openEditModal={openEditModal}
+            onDeleteWorkExperience={(id) => openDeleteConfirm(id, "workExperience")}
+            onDeleteQualification={(id) => openDeleteConfirm(id, "qualification")}
             onEditJobPreferences={() => setIsJobPreferenceModalOpen(true)}
             onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
           />
         </TabsContent>
+
+        <DeleteConfirmationDialog
+          isOpen={isDeleteConfirmOpen}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={handleDeleteConfirm}
+          title={deleteItemType === "workExperience" ? "Work Experience" : "Educational Qualification"}
+          itemType={deleteItemType === "workExperience" ? "work experience entry" : "qualification entry"}
+          isLoading={isDeletingExp || isDeletingQual}
+          description={`Are you sure you want to delete this ${deleteItemType === "workExperience" ? "work experience" : "educational qualification"}? This action cannot be undone.`}
+        />
 
         {/* Projects Tab - Optimized with independent API call */}
         <TabsContent value="projects" className="space-y-6">

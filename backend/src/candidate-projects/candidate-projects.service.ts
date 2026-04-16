@@ -2586,27 +2586,37 @@ export class CandidateProjectsService {
       if (role.minExperience !== null && candidateExp < role.minExperience) {
         flags.experience = false;
         hardReasons.push(
-          `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
+          `Experience mismatch: This candidate has ${candidateExp} years of total experience, which is less than the required minimum of ${role.minExperience} years.`,
         );
       }
       if (role.maxExperience !== null && candidateExp > role.maxExperience) {
         flags.experience = false;
         hardReasons.push(
-          `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
+          `Experience mismatch: This candidate has ${candidateExp} years of total experience, which exceeds the allowed maximum of ${role.maxExperience} years for this role.`,
         );
       }
 
-      // Specific Role Match Check (Hard)
+      // Specific Role Match Check (Hard & Soft)
       if (role.roleCatalogId) {
-        const hasSpecificExperience = candidate.workExperiences?.some(
-          (we) => we.roleCatalogId === role.roleCatalogId,
+        // Calculate years of experience specifically for this role
+        const specificExp = this.calculateExperienceFromWorkHistory(
+          candidate.workExperiences || [],
+          role.roleCatalogId,
         );
-        if (!hasSpecificExperience) {
+
+        if (specificExp === 0) {
           flags.experience = false;
           hardReasons.push(
-            `Experience mismatch: Candidate has no recorded experience as ${
+            `Experience mismatch: Candidate has no recorded work history as ${
               role.roleCatalog?.label || role.designation
             }.`,
+          );
+        } else if (role.minExperience !== null && specificExp < role.minExperience) {
+          // If candidate has some experience but not enough for the specific role
+          softReasons.push(
+            `Experience Warning: The candidate has ${candidateExp} years total experience, but only ${specificExp} years specifically as ${
+              role.roleCatalog?.label || role.designation
+            }. Note that this role requires ${role.minExperience} years of experience in this specific position.`,
           );
         }
       }
@@ -2770,7 +2780,7 @@ export class CandidateProjectsService {
         if (role.minExperience !== null && candidateExp < role.minExperience) {
           flags.experience = false;
           hardReasons.push(
-            `Experience mismatch: Candidate has ${candidateExp} years, but role requires minimum ${role.minExperience} years.`,
+            `Experience mismatch: This candidate has ${candidateExp} years of total experience, which is less than the required minimum of ${role.minExperience} years.`,
           );
         }
 
@@ -2781,20 +2791,30 @@ export class CandidateProjectsService {
         ) {
           flags.experience = false;
           hardReasons.push(
-            `Experience mismatch: Candidate has ${candidateExp} years, but role exceeds maximum ${role.maxExperience} years.`,
+            `Experience mismatch: This candidate has ${candidateExp} years of total experience, which exceeds the allowed maximum of ${role.maxExperience} years for this role.`,
           );
         }
 
-        // --- NEW: Specific Role Match Check (Hard) ---
+        // --- NEW: Specific Role Match Check (Hard & Soft) ---
         if (role.roleCatalogId) {
-          const hasSpecificExperience = candidate.workExperiences?.some(
-            (we) => we.roleCatalogId === role.roleCatalogId,
+          // Calculate years of experience specifically for this role
+          const specificExp = this.calculateExperienceFromWorkHistory(
+            candidate.workExperiences || [],
+            role.roleCatalogId,
           );
-          if (!hasSpecificExperience) {
+
+          if (specificExp === 0) {
             hardReasons.push(
-              `Experience mismatch: Candidate has no recorded experience as ${
+              `Experience mismatch: Candidate has no recorded work history as ${
                 role.roleCatalog?.label || role.designation
               }.`,
+            );
+          } else if (role.minExperience !== null && specificExp < role.minExperience) {
+            // If candidate has some experience but not enough for the specific role
+            softReasons.push(
+              `Experience Warning: The candidate has ${candidateExp} years total experience, but only ${specificExp} years specifically as ${
+                role.roleCatalog?.label || role.designation
+              }. Note that this role requires ${role.minExperience} years of experience in this specific position.`,
             );
           }
         }
@@ -2911,10 +2931,18 @@ export class CandidateProjectsService {
    * Calculate total experience (years) from an array of workExperiences.
    * Matches logic used in other services (average month length = 30.44 days).
    */
-  private calculateExperienceFromWorkHistory(workExperiences: any[]): number {
+  private calculateExperienceFromWorkHistory(
+    workExperiences: any[],
+    roleCatalogId?: string,
+  ): number {
     let totalMonths = 0;
 
     workExperiences.forEach((exp) => {
+      // If roleCatalogId is provided, only sum experience matching that role
+      if (roleCatalogId && exp.roleCatalogId !== roleCatalogId) {
+        return;
+      }
+
       const start = new Date(exp.startDate);
       const end = exp.endDate ? new Date(exp.endDate) : new Date();
 

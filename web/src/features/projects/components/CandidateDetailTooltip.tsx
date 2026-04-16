@@ -489,60 +489,74 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 <span className="text-slate-700 font-medium">{workExpDuration}</span>
               </div>
 
-              {experienceYearsNumeric !== null && (
-                <div className="text-[11px] flex items-center gap-2">
-                  <span className="text-slate-500">Years:</span>
-                  <span className="text-slate-700 font-medium">{experienceYearsNumeric} {Number(experienceYearsNumeric) === 1 ? 'year' : 'years'}</span>
-                </div>
-              )}
-
-              {/* Work history details (show up to 3 recent entries) with per-entry duration */}
-              {Array.isArray(c.workExperiences || (candidate as any).workExperiences) && (c.workExperiences || (candidate as any).workExperiences).length > 0 && (
-                <div className="pt-2 space-y-2">
-                  <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
-                  <div className="space-y-2 text-[11px]">
+              {/* Work history details (show up to 3 recent entries) with timeline style */}
+              {(c.workExperiences || (candidate as any).workExperiences) && (c.workExperiences || (candidate as any).workExperiences).length > 0 && (
+                <div className="pt-3 space-y-3">
+                  <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Professional Timeline</h5>
+                  <div className="relative pl-3 space-y-5 before:absolute before:inset-0 before:left-[5px] before:w-[1.5px] before:bg-gradient-to-b before:from-blue-200 before:via-slate-100 before:to-transparent">
                     {(c.workExperiences || (candidate as any).workExperiences).slice(0, 3).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;
                       const end = we.endDate || we.end_date;
                       const period = formatWorkPeriod(start, end);
                       const duration = formatDuration(start, end);
 
-                      // Robust display fallbacks for heterogeneous API shapes:
-                      // - prefer explicit jobTitle/companyName
-                      // - then try nested roleCatalog.label / roleCatalog.shortName
-                      // - then fall back to c.matchScore.roleName or nominatedRole
                       const roleCatalogFromExp = we.roleCatalog || we.role_catalog;
                       const roleCatalogIdFromExp = we.roleCatalogId || we.role_catalog_id || we.roleCatalog?.id || we.role_catalog?.id;
 
-                      // try to resolve a role label from the experience, or from the candidate's matchScore
                       let roleLabel: string | undefined = undefined;
                       if (roleCatalogFromExp?.label) roleLabel = roleCatalogFromExp.label;
+                      else if (roleCatalogFromExp?.name) roleLabel = roleCatalogFromExp.name.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
                       else if (roleCatalogFromExp?.shortName) roleLabel = roleCatalogFromExp.shortName;
-                      else if (roleCatalogIdFromExp && (c as any).matchScore && typeof (c as any).matchScore === 'object' && (c as any).matchScore.roleCatalog && (c as any).matchScore.roleCatalog.id === roleCatalogIdFromExp) {
+                      else if (roleCatalogIdFromExp && (c as any).matchScore && typeof (c as any).matchScore === "object" && (c as any).matchScore.roleCatalog && (c as any).matchScore.roleCatalog.id === roleCatalogIdFromExp) {
                         roleLabel = (c as any).matchScore.roleCatalog.label || (c as any).matchScore.roleName;
                       }
 
-                      const jobTitle = we.jobTitle || we.job_title || roleLabel || (c as any).matchScore?.roleName || c.nominatedRole?.designation || (candidate as any).nominatedRole?.designation || "-";
-                      const company =
-                        we.companyName ||
-                        we.company_name ||
-                        we.company ||
-                        we.employer ||
-                        c.currentEmployer ||
-                        (candidate as any).currentEmployer ||
-                        "Unknown";
+                      const projectFallback = idx === 0 
+                        ? (c as any).matchScore?.roleName || c.nominatedRole?.designation || (candidate as any).nominatedRole?.designation 
+                        : undefined;
 
-                      // show roleCatalog shortName as compact secondary if available
-                      const roleShort = roleCatalogFromExp?.shortName || (c as any).matchScore?.roleCatalog?.shortName || (candidate as any).matchScore?.roleCatalog?.shortName || undefined;
+                      const jobTitle = we.jobTitle || we.job_title || roleLabel || projectFallback || "-";
+                      const company = we.companyName || we.company_name || we.company || we.employer || c.currentEmployer || (candidate as any).currentEmployer || "Unknown";
+
+                      const rawRoleShort = roleCatalogFromExp?.shortName || (c as any).matchScore?.roleCatalog?.shortName || (candidate as any).matchScore?.roleCatalog?.shortName || undefined;
+                      const roleShort = (rawRoleShort && rawRoleShort.toLowerCase() !== jobTitle.toLowerCase()) ? rawRoleShort : undefined;
 
                       return (
-                        <div key={idx} className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate text-black">{jobTitle}</div>
-                            <div className="text-[11px] text-black truncate">{company}{we.location ? ` • ${we.location}` : ""}{roleShort ? ` • ${roleShort}` : ""}</div>
-                          </div>
-                          <div className="text-[11px] text-black whitespace-nowrap">
-                            {period}{duration ? ` • ${duration}` : ""}
+                        <div key={idx} className="relative group">
+                          {/* Timeline Dot */}
+                          <div className={`absolute -left-[11px] top-1.5 w-2 h-2 rounded-full border-2 border-white shadow-sm transition-transform duration-200 group-hover:scale-125 ${idx === 0 ? 'bg-blue-500 ring-2 ring-blue-100' : 'bg-slate-300'}`} />
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="text-[12px] font-bold text-slate-900 leading-tight">
+                                {jobTitle}
+                              </div>
+                              <div className="text-[9px] font-medium text-slate-400 whitespace-nowrap pt-0.5">
+                                {period}
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+                              <span className="font-semibold text-blue-600 truncate max-w-[140px]">
+                                {company}
+                              </span>
+                              {duration && (
+                                <span className="text-slate-400 flex items-center gap-1 before:content-['•'] before:text-slate-300">
+                                  {duration}
+                                </span>
+                              )}
+                              {roleShort && (
+                                <span className="bg-slate-100 text-slate-500 px-1 rounded-[3px] text-[9px] font-medium transition-colors group-hover:bg-blue-50 group-hover:text-blue-600">
+                                  {roleShort}
+                                </span>
+                              )}
+                            </div>
+
+                            {we.location && (
+                              <div className="text-[9px] text-slate-400 italic">
+                                {we.location}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
