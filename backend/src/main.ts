@@ -6,9 +6,20 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { RedisIoAdapter } from './adapters/redis-io.adapter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const redisPassword = process.env.REDIS_PASSWORD;
+
+  console.log(`[RedisIoAdapter] using Redis URL: ${redisUrl}`);
+  if (redisPassword) {
+    console.log('[RedisIoAdapter] using Redis password from environment');
+  }
+
+  app.useWebSocketAdapter(new RedisIoAdapter(app, redisUrl, redisPassword));
 
   // Security Middlewares
   app.use(helmet());

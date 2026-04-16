@@ -29,8 +29,15 @@ export class NotificationsService {
 
       if (existingNotification) {
         this.logger.debug(
-          `Notification with idemKey ${dto.idemKey} already exists, skipping creation`,
+          `Notification with idemKey ${dto.idemKey} already exists, re-emitting event`,
         );
+
+        await this.notificationsGateway.emitToUser(
+          dto.userId,
+          'notification:new',
+          this.mapToResponseDto(existingNotification),
+        );
+
         return this.mapToResponseDto(existingNotification);
       }
 
@@ -74,12 +81,15 @@ export class NotificationsService {
       );
 
       return this.mapToResponseDto(notification);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown error'));
+
       this.logger.error(
-        `Failed to create notification: ${error.message}`,
-        error.stack,
+        `Failed to create notification: ${err.message}`,
+        err.stack,
       );
-      throw error;
+      throw err;
     }
   }
 

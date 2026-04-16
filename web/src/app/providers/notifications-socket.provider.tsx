@@ -99,9 +99,11 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       },
       transports: ["websocket", "polling"], // Use websocket first, then poll for compatibility
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
-      forceNew: true
+      reconnectionDelayMax: 5000,
+      forceNew: true,
+      autoConnect: true,
     });
 
     socketRef.current = socket;
@@ -111,7 +113,19 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     });
 
     socket.on("connect_error", (error) => {
-      console.error("[Socket] CONNECTION ERROR:", error.message);
+      console.error("[Socket] CONNECTION ERROR:", error?.message || error);
+    });
+
+    socket.on("reconnect_attempt", (attempt) => {
+      console.log(`[Socket] RECONNECT ATTEMPT ${attempt}`);
+    });
+
+    socket.on("reconnect_error", (error) => {
+      console.warn("[Socket] RECONNECT ERROR:", error?.message || error);
+    });
+
+    socket.on("reconnect_failed", () => {
+      console.error("[Socket] RECONNECT FAILED, connection is down");
     });
 
     socket.on("disconnect", (reason) => {
