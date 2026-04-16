@@ -40,19 +40,8 @@ const personalInfoSchema = z.object({
   source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
-  referralCompanyName: z.string().optional(),
-  referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
-  referralCountryCode: z.string().optional(),
-  referralPhone: z.string().optional(),
-  referralDescription: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.source === "referral" && (!data.referralCompanyName || data.referralCompanyName.trim() === "")) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Referral company name is required when source is referral",
-      path: ["referralCompanyName"],
-    });
-  }
+}).superRefine((_data, _ctx) => {
+  // No referral-specific validation required here.
 });
 
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
@@ -71,11 +60,6 @@ interface UpdatePersonalInfoModalProps {
     source: string;
     gender?: string;
     dateOfBirth?: string | null;
-    referralCompanyName?: string | null;
-    referralEmail?: string | null;
-    referralCountryCode?: string | null;
-    referralPhone?: string | null;
-    referralDescription?: string | null;
   };
 }
 
@@ -107,11 +91,6 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
-      referralCompanyName: initialData.referralCompanyName || "",
-      referralEmail: initialData.referralEmail || "",
-      referralCountryCode: initialData.referralCountryCode || "+91",
-      referralPhone: initialData.referralPhone || "",
-      referralDescription: initialData.referralDescription || "",
     },
   });
 
@@ -129,11 +108,6 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
         dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
-        referralCompanyName: initialData.referralCompanyName || "",
-        referralEmail: initialData.referralEmail || "",
-        referralCountryCode: initialData.referralCountryCode || "+91",
-        referralPhone: initialData.referralPhone || "",
-        referralDescription: initialData.referralDescription || "",
       });
     }
   }, [isOpen, initialData, reset]);
@@ -155,27 +129,6 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         payload.email = data.email;
       } else {
         payload.email = null;
-      }
-
-      // Handle referral fields
-      if (data.source === "referral") {
-        payload.referralCompanyName = data.referralCompanyName || null;
-        payload.referralDescription = data.referralDescription || null;
-        payload.referralCountryCode = data.referralCountryCode || null;
-        payload.referralPhone = data.referralPhone || null;
-        
-        if (data.referralEmail && data.referralEmail.trim()) {
-          payload.referralEmail = data.referralEmail;
-        } else {
-          payload.referralEmail = null;
-        }
-      } else {
-        // Clear referral fields if not a referral anymore
-        payload.referralCompanyName = null;
-        payload.referralEmail = null;
-        payload.referralDescription = null;
-        payload.referralPhone = null;
-        payload.referralCountryCode = null;
       }
 
       await updateCandidate({
@@ -418,7 +371,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     <SelectContent>
                       <SelectItem value="meta">Meta</SelectItem>
                       <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
+
                       <SelectItem value="paid_ads">Paid Ads</SelectItem>
                       <SelectItem value="agents">Agents</SelectItem>
                       <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
@@ -435,110 +388,6 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             <div className="md:col-span-2">
               <Separator className="my-2" />
             </div>
-
-            {/* Referral Fields */}
-            {source === "referral" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="referralCompanyName" className="text-slate-700 font-medium line-clamp-1">
-                    Referral Company Name *
-                  </Label>
-                  <Controller
-                    name="referralCompanyName"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="referralCompanyName"
-                        placeholder="Global Staffing Solutions"
-                        disabled={isLoading}
-                        className="h-11 bg-white border-slate-200"
-                      />
-                    )}
-                  />
-                  {errors.referralCompanyName && (
-                    <p className="text-sm text-red-600">{errors.referralCompanyName.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="referralEmail" className="text-slate-700 font-medium">
-                    Referral Email
-                  </Label>
-                  <Controller
-                    name="referralEmail"
-                    control={control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        id="referralEmail"
-                        type="email"
-                        placeholder="referrals@globalstaffing.com"
-                        disabled={isLoading}
-                        className="h-11 bg-white border-slate-200"
-                      />
-                    )}
-                  />
-                  {errors.referralEmail && (
-                    <p className="text-sm text-red-600">{errors.referralEmail.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-slate-700 font-medium">Referral Phone</Label>
-                  <div className="flex gap-2">
-                    <div className="w-32 flex-shrink-0">
-                      <Controller
-                        name="referralCountryCode"
-                        control={control}
-                        render={({ field }) => (
-                          <CountryCodeSelect
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            placeholder="Code"
-                            disabled={isLoading}
-                          />
-                        )}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <Controller
-                        name="referralPhone"
-                        control={control}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            id="referralPhone"
-                            placeholder="9876543210"
-                            disabled={isLoading}
-                            className="h-11 bg-white border-slate-200"
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2 space-y-2">
-                  <Label htmlFor="referralDescription" className="text-slate-700 font-medium">
-                    Referral Description
-                  </Label>
-                  <Controller
-                    name="referralDescription"
-                    control={control}
-                    render={({ field }) => (
-                      <Textarea
-                        {...field}
-                        id="referralDescription"
-                        placeholder="Additional details about the referral..."
-                        disabled={isLoading}
-                        className="bg-white border-slate-200 min-h-[100px]"
-                      />
-                    )}
-                  />
-                </div>
-              </>
-            )}
           </div>
         </div>
 
