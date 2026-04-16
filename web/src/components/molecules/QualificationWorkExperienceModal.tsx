@@ -240,13 +240,11 @@ export default function QualificationWorkExperienceModal({
           id: (editData as CandidateQualification).id,
           ...data,
         }).unwrap();
-        toast.success("Qualification updated successfully");
       } else {
         await createQualification({
           candidateId,
           ...data,
         }).unwrap();
-        toast.success("Qualification added successfully");
       }
       onSuccess?.();
       onClose();
@@ -261,11 +259,13 @@ export default function QualificationWorkExperienceModal({
       const payload = {
         ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
-        // Handle endDate - convert to ISO string if not empty, otherwise undefined
+        // Handle endDate - if current position is selected, omit endDate completely.
         endDate:
-          dataWithoutDepartmentId.endDate && dataWithoutDepartmentId.endDate.trim() !== ""
-            ? new Date(dataWithoutDepartmentId.endDate).toISOString()
-            : undefined,
+          dataWithoutDepartmentId.isCurrent ||
+          !dataWithoutDepartmentId.endDate ||
+          dataWithoutDepartmentId.endDate.trim() === ""
+            ? undefined
+            : new Date(dataWithoutDepartmentId.endDate).toISOString(),
         // Handle salary - only include if it's a valid number
         salary:
           dataWithoutDepartmentId.salary !== undefined && dataWithoutDepartmentId.salary !== null
@@ -278,13 +278,11 @@ export default function QualificationWorkExperienceModal({
           id: (editData as WorkExperience).id,
           ...payload,
         }).unwrap();
-        toast.success("Work experience updated successfully");
       } else {
         await createWorkExperience({
           candidateId,
           ...payload,
         }).unwrap();
-        toast.success("Work experience added successfully");
       }
       onSuccess?.();
       onClose();
@@ -655,9 +653,13 @@ export default function QualificationWorkExperienceModal({
                 <Checkbox
                   id="isCurrent"
                   checked={workExperienceForm.watch("isCurrent")}
-                  onCheckedChange={(checked) =>
-                    workExperienceForm.setValue("isCurrent", !!checked)
-                  }
+                  onCheckedChange={(checked) => {
+                    const isCurrent = !!checked;
+                    workExperienceForm.setValue("isCurrent", isCurrent);
+                    if (isCurrent) {
+                      workExperienceForm.setValue("endDate", "");
+                    }
+                  }}
                 />
                 <Label htmlFor="isCurrent">This is my current position</Label>
               </div>

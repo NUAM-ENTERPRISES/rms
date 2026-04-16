@@ -26,3 +26,5 @@ export type { CandidateQualification } from "./CandidateQualificationSelect";
 export { default as ReviewInterviewModal } from "./ReviewInterviewModal";
 export { ProjectRoleFilter } from "./ProjectRoleFilter";
 export type { ProjectRoleFilterValue, ProjectRoleFilterProps } from "./ProjectRoleFilter";
+export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
+export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";

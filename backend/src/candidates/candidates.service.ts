@@ -747,6 +747,14 @@ export class CandidatesService {
             id: true,
             jobTitle: true,
             companyName: true,
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true,
+              },
+            },
           }
         }
       },

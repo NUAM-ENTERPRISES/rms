@@ -80,7 +80,7 @@ export function DeleteConfirmationDialog({
           </div>
         </DialogHeader>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-3 sm:gap-3 mt-4">
           <Button
             variant="outline"
             onClick={onClose}

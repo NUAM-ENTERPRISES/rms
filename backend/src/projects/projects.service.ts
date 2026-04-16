@@ -1465,6 +1465,14 @@ export class ProjectsService {
                 location: true,
                 skills: true,
                 achievements: true,
+                roleCatalog: {
+                  select: {
+                    id: true,
+                    name: true,
+                    label: true,
+                    shortName: true,
+                  },
+                },
               },
             },
             currentStatus: {
@@ -1871,6 +1879,11 @@ export class ProjectsService {
             expectedMaxSalary: true,
             sectorType: true,
             visaType: true,
+            workExperiences: {
+              include: {
+                roleCatalog: true,
+              },
+            },
             // assignedTo field removed - recruiter info now in CandidateProjectMap
           },
         },
@@ -2319,6 +2332,16 @@ export class ProjectsService {
             startDate: true,
             endDate: true,
             isCurrent: true,
+            jobTitle: true,
+            companyName: true,
+            roleCatalog: {
+              select: {
+                id: true,
+                name: true,
+                label: true,
+                shortName: true,
+              },
+            },
           },
         },
         preferredCountries: true,
@@ -2922,6 +2945,11 @@ export class ProjectsService {
             expectedMaxSalary: true,
             sectorType: true,
             visaType: true,
+            workExperiences: {
+              include: {
+                roleCatalog: true,
+              },
+            },
           },
         },
         project: {
