@@ -4,7 +4,9 @@ import {
   FetchArgs,
   FetchBaseQueryError,
 } from "@reduxjs/toolkit/query/react";
+import { Platform } from "react-native";
 import type { RootState } from "@/store/store";
+import { User } from "@/features/auth/authTypes";
 import { 
   setCredentials, 
   clearCredentials, 
@@ -18,19 +20,21 @@ interface RefreshResponse {
   data: {
     accessToken: string;
     refreshToken: string;
-    user: {
-      id: string;
-      email: string;
-      name: string;
-      roles: string[];
-      permissions: string[];
-    };
+    user: User;
   };
   message: string;
 }
 
+// Use 10.0.2.2 for Android emulator to access host's localhost
+const getBaseUrl = () => {
+  if (process.env.API_URL) return process.env.API_URL;
+  return Platform.OS === 'android' 
+    ? "http://10.0.2.2:3000/api/v1" 
+    : "http://localhost:3000/api/v1";
+};
+
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.API_URL || "http://localhost:3000/api/v1",
+  baseUrl: getBaseUrl(),
   credentials: "include", // only if your backend uses httpOnly cookies
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.accessToken;
