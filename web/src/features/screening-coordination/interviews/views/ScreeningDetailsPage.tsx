@@ -48,6 +48,7 @@ import { AssignToTrainerDialog } from "../../training/components/AssignToTrainer
 import { ConfirmationDialog } from "@/components/ui";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditScreeningDialog from "../components/EditScreeningDialog";
+import { FaWhatsapp } from "react-icons/fa";
 
 export default function ScreeningDetailsPage() {
   const { id } = useParams<{ id: string }>();
