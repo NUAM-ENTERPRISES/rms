@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS } from '../../constants/colors';
+import { COLORS } from '../../../constants/colors';
 
-const CEODashboard: React.FC = () => {
+const TeamHeadDashboard: React.FC = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>CEO Dashboard</Text>
-      <Text style={styles.subtitle}>Executive overview and analytics</Text>
+      <Text style={styles.title}>Team Head Dashboard</Text>
+      <Text style={styles.subtitle}>Team leadership and coordination</Text>
     </View>
   );
 };
@@ -32,4 +32,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CEODashboard;
+export default TeamHeadDashboard;

@@ -6,7 +6,7 @@ import {
   View,
 } from 'react-native';
 import CustomText from './CustomText';
-import { COLORS } from '../constants/colors';
+import { COLORS } from '../../constants/colors';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';

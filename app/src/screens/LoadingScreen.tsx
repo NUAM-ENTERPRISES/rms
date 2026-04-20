@@ -7,7 +7,7 @@ import {
   Image 
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import CustomText from '../components/CustomText';
+import CustomText from '../components/ui/CustomText';
 import { COLORS } from '../constants/colors';
 
 const LoadingScreen: React.FC = () => {

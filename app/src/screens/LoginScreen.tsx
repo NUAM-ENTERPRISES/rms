@@ -15,14 +15,14 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import CustomText from '@/components/CustomText';
+import CustomText from '@/components/ui/CustomText';
 import { COLORS } from '@/constants/colors';
 import { RootStackParamList } from '@/types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import CustomButton from '@/components/CustomButton';
+import CustomButton from '@/components/ui/CustomButton';
 import { useLoginMutation } from '@/features/auth/authApi';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import CountryPicker from '@/components/CountryPicker';
+import CountryPicker from '@/components/ui/CountryPicker';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -238,7 +238,9 @@ const LoginScreen = () => {
             const result = await login(loginData).unwrap();
 
             if (result?.success) {
-                navigation.replace('Home');
+                // Note: AuthNavigator will switch to RoleBasedNavigator
+                // when isAuthenticated is updated in Redux.
+                console.log('✅ Login successful');
             } else {
                 setErrors({ ...errors, root: result?.message || 'Login failed. Please try again.' });
             }
@@ -262,7 +264,9 @@ const LoginScreen = () => {
             const identifier = otpPhone;
             console.log('Verifying OTP:', { type: otpInputType, identifier, otp });
 
-            navigation.replace('Home');
+            // Note: AuthNavigator will switch to RoleBasedNavigator
+            // when isAuthenticated is updated in Redux.
+            console.log('✅ OTP Verification successful');
         } catch (error) {
             setErrors({ ...errors, root: 'Invalid OTP. Please try again.' });
         } finally {

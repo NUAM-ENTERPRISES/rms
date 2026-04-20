@@ -7,11 +7,12 @@ if (__DEV__) {
 
     let instance = Reactotron.configure({
       name: 'RMS App',
-      host: '10.0.2.2', // Standard Android emulator loopback
+      host: '192.168.1.2', // 👈 your Mac IP
+      // host: '10.0.2.2', // Standard Android emulator loopback
       port: 9090,
     }).useReactNative({
       asyncStorage: true,
-      networking: { 
+      networking: {
         ignoreUrls: /symbolicate|generate_204/,
       },
     });
@@ -27,9 +28,9 @@ if (__DEV__) {
     }
 
     reactotron = instance.connect();
-    
+
     if (reactotron) {
-      console.log('🔌 Reactotron initialized on 10.0.2.2:9090');
+      console.log('🔌 Reactotron initialized on 192.168.1.2:9090');
       reactotron.clear?.();
     }
   } catch (error) {
