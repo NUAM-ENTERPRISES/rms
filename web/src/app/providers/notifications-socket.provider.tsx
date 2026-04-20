@@ -2,8 +2,10 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { baseApi } from "@/app/api/baseApi";
+import { authApi } from "@/services/authApi";
 import { notificationsApi } from "@/features/notifications/data/notifications.endpoints";
 import { setMuted } from "@/features/notifications/notificationSettingsSlice";
+import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
 import { toast } from "sonner";
 import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
@@ -31,6 +33,20 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   const mutedRef = useRef<boolean>(muted);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const unlockedRef = useRef(false);
+  const refreshInProgressRef = useRef(false);
+
+  const updateSocketAuthToken = (token: string) => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    if (socket.auth && typeof socket.auth === "object") {
+      socket.auth.token = token;
+    }
+
+    if (socket.io?.opts?.auth && typeof socket.io.opts.auth === "object") {
+      socket.io.opts.auth.token = token;
+    }
+  };
 
   // keep ref up to date without restarting socket listener
   useEffect(() => {
@@ -77,6 +93,8 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       return;
     }
 
+    updateSocketAuthToken(accessToken);
+
     if (socketRef.current?.connected) return;
 
     // Determine the base WebSocket URL based on environment and current location
@@ -93,10 +111,6 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
     const socket = io(socketUrl, {
       auth: { token: accessToken },
-      query: { token: accessToken },
-      extraHeaders: {
-        Authorization: `Bearer ${accessToken}`
-      },
       transports: ["websocket", "polling"], // Use websocket first, then poll for compatibility
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -112,11 +126,57 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       console.log("[Socket] CONNECTED SUCCESS (Port 3000):", socket.id);
     });
 
-    socket.on("connect_error", (error) => {
-      console.error("[Socket] CONNECTION ERROR:", error?.message || error);
+    socket.on("connect_error", async (error) => {
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message || error?.data?.message || "Unknown socket error";
+
+      console.error("[Socket] CONNECTION ERROR:", errorMessage);
+
+      if (errorMessage.includes("jwt expired") && !refreshInProgressRef.current) {
+        refreshInProgressRef.current = true;
+        try {
+          console.log("[Socket] Access token expired, refreshing before reconnect...");
+          const refreshResponse = await dispatch(
+            authApi.endpoints.refresh.initiate()
+          ).unwrap();
+
+          const newAccessToken = refreshResponse.data.accessToken;
+          const newRefreshToken = refreshResponse.data.refreshToken;
+          const newUser = refreshResponse.data.user;
+
+          if (newAccessToken && newUser) {
+            dispatch(
+              setCredentials({
+                user: newUser,
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+              })
+            );
+
+            updateSocketAuthToken(newAccessToken);
+            socket.connect();
+            console.log("[Socket] Reconnected with refreshed token");
+            return;
+          }
+        } catch (refreshError) {
+          console.error(
+            "[Socket] Token refresh failed during reconnect:",
+            refreshError,
+          );
+        } finally {
+          refreshInProgressRef.current = false;
+        }
+
+        dispatch(clearCredentials());
+        socket.disconnect();
+        socketRef.current = null;
+      }
     });
 
     socket.on("reconnect_attempt", (attempt) => {
+      updateSocketAuthToken(accessToken);
       console.log(`[Socket] RECONNECT ATTEMPT ${attempt}`);
     });
 
