@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { ImageViewer, DatePicker } from "@/components/molecules";
+import { StatusTile } from "@/components/molecules/StatusTile";
 import { parseISO, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -76,6 +77,7 @@ import { toast } from "sonner";
 export default function CandidatesPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
@@ -802,6 +804,10 @@ export default function CandidatesPage() {
   const handleTileClick = (status?: string) => {
     setFilters((prev) => ({ ...prev, status: status ?? "all", page: 1 }));
 
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     // Force a refetch after state update completes to ensure the network call runs
     setTimeout(() => {
       if (isRecruiter && !isManager) {
@@ -1320,37 +1326,21 @@ export default function CandidatesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
               >
-                <Card
+                <StatusTile
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={Icon}
+                  bgGradient={colors.bg}
+                  iconBg={colors.iconBg}
+                  textColor={colors.text}
+                  active={isActive}
                   onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
-                  onKeyDown={(e) => {
-                    if (isInteractive && (e.key === "Enter" || e.key === " ")) {
-                      handleTileClick(stat.statusFilter);
-                    }
-                  }}
-                  role={isInteractive ? "button" : undefined}
-                  tabIndex={isInteractive ? 0 : undefined}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 ${isInteractive ? "cursor-pointer hover:shadow-sm transform hover:-translate-y-0.5" : ""} ${isActive ? "ring-2 ring-blue-500/30" : ""}`}
-                >
-                  <CardContent className="pt-1 pb-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5">
-                          {stat.label}
-                        </p>
-                        <h3 className={`text-lg font-semibold ${colors.text}`}>
-                          {stat.value}
-                        </h3>
-                        <p className="text-[9px] text-slate-500 mt-0.5">
-                          {stat.subtitle}
-                        </p>
-                      </div>
-
-                      <div className={`p-0.5 ${colors.iconBg} rounded-full`}>
-                        <Icon className={`h-3 w-3 ${colors.text}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  scrollTargetRef={tableRef}
+                  scrollOnClick={isInteractive}
+                  ariaLabel={`Filter candidates by ${stat.label}`}
+                  className="h-full backdrop-blur-sm transition-all duration-200"
+                />
               </motion.div>
             );
           })}
@@ -1374,7 +1364,7 @@ export default function CandidatesPage() {
 
           <CardContent>
             {/* Premium Table Container */}
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               {/* Beautiful Header */}
               <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
                 <div className="flex items-center gap-4">

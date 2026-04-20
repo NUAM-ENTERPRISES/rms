@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { motion } from "framer-motion";
 import { useCan } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
+import { StatusTile } from "@/components/molecules/StatusTile";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
@@ -269,6 +270,7 @@ export default function InterviewsPage() {
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
   const limit = 10;
 
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
@@ -277,6 +279,12 @@ export default function InterviewsPage() {
   });
 
   const projectId = projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId;
+
+  const handleTileClick = (filterKey: string) => {
+    setActiveFilter(filterKey);
+    setPage(1);
+    window.requestAnimationFrame(() => tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
   const roleCatalogId = projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId;
 
   // Date filter state
@@ -831,33 +839,21 @@ export default function InterviewsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: i * 0.05 }}
               >
-                <Card
-                  onClick={() => {
-                    setActiveFilter(tile.key);
-                    setPage(1);
-                  }}
-                  className={`h-full border-0 shadow-sm bg-gradient-to-br ${
-                    tile.bgGradient
-                  } backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5 ${
-                    isActive ? "ring-2 ring-indigo-500/30 shadow-md scale-[1.02]" : ""
-                  }`}
-                >
-                  <CardContent className="py-2.5 px-3 h-full flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 mb-0.5 truncate uppercase tracking-wider">
-                          {tile.label}
-                        </p>
-                        <h3 className={`text-xl font-extrabold tracking-tight ${tile.textColor}`}>
-                          {tile.key === "passRate" ? `${Number(countValue).toFixed(1)}%` : countValue}
-                        </h3>
-                      </div>
-                      <div className={`p-1.5 rounded-lg shrink-0 shadow-sm ${tile.iconBg}`}>
-                        <Icon className={`h-4 w-4 ${tile.textColor}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatusTile
+                  label={tile.label}
+                  value={countValue}
+                  subtitle={tile.subtitle}
+                  icon={Icon}
+                  bgGradient={tile.bgGradient}
+                  iconBg={tile.iconBg}
+                  textColor={tile.textColor}
+                  active={isActive}
+                  onClick={() => handleTileClick(tile.key)}
+                  scrollTargetRef={tableRef}
+                  scrollOnClick
+                  ariaLabel={`Filter interviews by ${tile.label}`}
+                  className="h-full"
+                />
               </motion.div>
             );
           })}
@@ -1030,7 +1026,7 @@ export default function InterviewsPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div ref={tableRef} className="border border-gray-200 bg-white shadow-sm overflow-hidden">
               <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2 shadow-lg shadow-blue-500/20">

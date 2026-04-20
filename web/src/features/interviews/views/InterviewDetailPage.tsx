@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ArrowLeft, Calendar, User, Briefcase, Edit3, CheckCircle2, MapPin, Building2, Mail, Phone } from "lucide-react";
+import { 
+  Loader2, ArrowLeft, Calendar, User, Briefcase, Edit3, 
+  CheckCircle2, MapPin, Building2, Mail, Phone, ExternalLink,
+  Clock, Layers, Info
+} from "lucide-react";
 import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
@@ -19,11 +23,11 @@ import { FaWhatsapp } from "react-icons/fa";
 
 const getOutcomeBadgeClass = (outcome?: string) => {
   switch (outcome?.toLowerCase()) {
-    case "passed": return "bg-emerald-600 text-white";
-    case "failed": return "bg-red-600 text-white";
-    case "completed": return "bg-blue-600 text-white";
-    case "backout": return "bg-amber-600 text-white";
-    default: return "bg-zinc-700 text-white";
+    case "passed": return "bg-emerald-500/10 text-emerald-600 border-emerald-200";
+    case "failed": return "bg-rose-500/10 text-rose-600 border-rose-200";
+    case "completed": return "bg-blue-500/10 text-blue-600 border-blue-200";
+    case "backout": return "bg-amber-500/10 text-amber-600 border-amber-200";
+    default: return "bg-zinc-100 text-zinc-600 border-zinc-200";
   }
 };
 
@@ -51,8 +55,8 @@ export default function InterviewDetailPage() {
 
   if (!id) {
     return (
-      <div className="p-6 bg-zinc-50 min-h-screen">
-        <Alert variant="destructive">
+      <div className="p-6 bg-zinc-50/50 min-h-screen flex items-center justify-center">
+        <Alert variant="destructive" className="max-w-md">
           <AlertDescription>No interview id provided in the URL.</AlertDescription>
         </Alert>
       </div>
@@ -61,16 +65,19 @@ export default function InterviewDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-zinc-900" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-zinc-900" />
+          <p className="text-zinc-500 font-medium animate-pulse">Loading experience...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !data?.data) {
     return (
-      <div className="p-6 bg-zinc-50 min-h-screen">
-        <Alert variant="destructive">
+      <div className="p-6 bg-zinc-50 min-h-screen flex items-center justify-center">
+        <Alert variant="destructive" className="max-w-md">
           <AlertDescription>Interview details could not be loaded.</AlertDescription>
         </Alert>
       </div>
@@ -94,287 +101,323 @@ export default function InterviewDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950">
-  {/* Top Bar - No side padding */}
-  <div className="border-b bg-white sticky top-0 z-50 shadow-sm">
-    <div className="w-full px-6 py-4 flex items-center justify-between">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => navigate(-1)}
-        className="text-zinc-600 hover:text-black"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back
-      </Button>
-
-      {selected.outcome && (
-        <Badge className={cn("px-5 py-1.5 text-sm font-semibold", getOutcomeBadgeClass(selected.outcome))}>
-          {selected.outcome.toUpperCase()}
-        </Badge>
-      )}
-    </div>
-  </div>
-
-  <ScrollArea className="h-[calc(100vh-65px)]">
-    <div className="w-full px-6 py-8 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-semibold text-black">Interview Details</h1>
-          <p className="text-zinc-600 mt-1.5 flex items-center gap-2 text-sm">
-            <Calendar className="h-4 w-4" />
-            {selected.scheduledTime
-              ? format(new Date(selected.scheduledTime), "EEEE, dd MMM yyyy • h:mm a")
-              : "Not scheduled"}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-[#F9FAFB] text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white">
+      {/* Top Navigation Bar */}
+      <div className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <Button
+            variant="ghost"
             size="sm"
-            onClick={() => setIsEditOpen(true)}
-            className="border-zinc-300"
+            onClick={() => navigate(-1)}
+            className="group text-zinc-500 hover:text-black transition-colors"
           >
-            <Edit3 className="h-4 w-4 mr-2" />
-            Edit
+            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" /> 
+            Back to Dashboard
           </Button>
 
-          {selected.outcome === "completed" ? (
-            <Button
-              size="sm"
-              onClick={() => setIsReviewOpen(true)}
-              className="bg-black hover:bg-zinc-800 text-white shadow-md hover:shadow-lg transition-all"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Review Outcome
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              onClick={() => setIsCompleteOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow-md transition-all"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Complete Interview
-            </Button>
-          )}
+          <div className="flex items-center gap-4">
+             {selected.outcome && (
+              <Badge variant="outline" className={cn("px-4 py-1 rounded-full text-xs font-bold tracking-tight uppercase", getOutcomeBadgeClass(selected.outcome))}>
+                {selected.outcome}
+              </Badge>
+            )}
+            <div className="h-4 w-px bg-zinc-200 mx-2 hidden sm:block" />
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest hidden sm:block">ID: {id.slice(-6)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Candidate Card - Colorful */}
-        <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2 text-white uppercase tracking-wider">
-              <User className="h-4 w-4" />
-              CANDIDATE PROFILE
-            </h3>
-          </div>
-          <CardContent className="p-6">
-            <div className="flex items-start gap-5">
-              <ImageViewer
-                src={candidate?.profileImage || null}
-                title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
-                className="h-20 w-20 rounded-2xl border-4 border-white shadow-lg"
-              />
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-black">
-                  {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
-                </h3>
-                <div className="mt-5 space-y-3 text-sm text-zinc-700">
-                  {candidate?.email && (
-                    <div className="flex items-center gap-3">
-                      <Mail className="h-4 w-4 text-zinc-500" />
-                      {candidate.email}
-                    </div>
-                  )}
-                  {candidate?.mobileNumber && (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-4 w-4 text-zinc-500" />
-                        {candidate.mobileNumber}
-                      </div>
-                      <button
-                        onClick={() => window.open(`https://wa.me/${candidate.mobileNumber.replace(/\D/g, "")}`, "_blank")}
-                        className="text-emerald-600 hover:text-emerald-700"
-                      >
-                        <FaWhatsapp className="h-5 w-5" />
-                      </button>
-                    </div>
-                  )}
-                  {candidate?.totalExperience !== undefined && (
-                    <div className="flex items-center gap-3">
-                      <Briefcase className="h-4 w-4 text-zinc-500" />
-                      {candidate.totalExperience} years experience
-                    </div>
-                  )}
-                </div>
+      <ScrollArea className="h-[calc(100vh-73px)]">
+        <div className="max-w-[1400px] mx-auto px-6 py-10 space-y-10">
+          
+          {/* Hero Section */}
+          <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-4 border-b border-zinc-200">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                 <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Interview Management</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Project & Role Card - Colorful */}
-        <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-4">
-            <h3 className="text-sm font-semibold flex items-center gap-2 text-white uppercase tracking-wider">
-              <Building2 className="h-4 w-4" />
-              PROJECT & ROLE
-            </h3>
-          </div>
-          <CardContent className="p-6">
-            <div className="space-y-5 text-sm">
-              <div>
-                <p className="text-zinc-500 text-xs">PROJECT</p>
-                <p className="font-medium mt-1 text-black">
-                  {project?.title || "Unknown"}
-                  {project?.countryCode && (
-                    <Badge variant="outline" className="ml-3 text-xs">
-                      <MapPin className="h-3 w-3 mr-1" />{project.countryCode}
-                    </Badge>
-                  )}
+              <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl">
+                Session <span className="text-zinc-400 font-light">Details</span>
+              </h1>
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-zinc-500">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-zinc-400" />
+                  {selected.scheduledTime
+                    ? format(new Date(selected.scheduledTime), "EEEE, dd MMM yyyy")
+                    : "Unscheduled"}
+                </p>
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <Clock className="h-4 w-4 text-zinc-400" />
+                  {selected.scheduledTime ? format(new Date(selected.scheduledTime), "h:mm a") : "Time TBD"}
                 </p>
               </div>
-              <div>
-                <p className="text-zinc-500 text-xs">ROLE</p>
-                <p className="font-medium mt-1 text-black">{role?.designation || "Unknown"}</p>
-              </div>
-              {project?.client && (
-                <div className="pt-4 border-t border-zinc-100">
-                  <p className="text-zinc-500 text-xs">CLIENT</p>
-                  <p className="font-medium mt-1 text-black">{project.client.name}</p>
-                </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => setIsEditOpen(true)}
+                className="bg-white hover:bg-zinc-50 border-zinc-200 rounded-xl px-6"
+              >
+                <Edit3 className="h-4 w-4 mr-2 text-zinc-500" />
+                Edit Details
+              </Button>
+
+              {selected.outcome === "completed" ? (
+                <Button
+                  size="lg"
+                  onClick={() => setIsReviewOpen(true)}
+                  className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl px-8 shadow-xl shadow-zinc-200 transition-all active:scale-95"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Review Outcome
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  onClick={() => setIsCompleteOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 shadow-xl shadow-emerald-100 transition-all active:scale-95"
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Finish Interview
+                </Button>
               )}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </section>
 
-      {/* Interview Information - Colorful */}
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-4">
-          <h3 className="text-sm font-semibold text-white uppercase tracking-wider">INTERVIEW INFORMATION</h3>
-        </div>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 text-sm">
-            <div>
-              <p className="text-zinc-500 text-xs">TYPE</p>
-              <p className="font-medium mt-1 capitalize">{selected.type || "—"}</p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">MODE</p>
-              <p className="font-medium mt-1 capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">DURATION</p>
-              <p className="font-medium mt-1">{selected.duration ? `${selected.duration} min` : "—"}</p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">OUTCOME</p>
-              <div className="mt-1">
-                <Badge className={cn("text-xs px-4 py-1", getOutcomeBadgeClass(selected.outcome))}>
-                  {selected.outcome ? selected.outcome.toUpperCase() : "PENDING"}
-                </Badge>
+          {/* Core Info Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Candidate Card */}
+            <Card className="lg:col-span-2 border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden group">
+              <CardContent className="p-0">
+                <div className="flex flex-col md:flex-row items-stretch min-h-[240px]">
+                  <div className="w-full md:w-64 bg-zinc-50 p-8 flex flex-col items-center justify-center border-r border-zinc-100">
+                    <ImageViewer
+                      src={candidate?.profileImage || null}
+                      title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
+                      className="h-32 w-32 rounded-3xl object-cover ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="mt-6 flex flex-col items-center">
+                      <Badge variant="secondary" className="bg-white text-zinc-500 border-zinc-100 text-[10px] uppercase font-bold tracking-widest mb-1">Experience</Badge>
+                      <p className="text-lg font-bold text-zinc-900">{candidate?.totalExperience ?? 0} Years</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex-1 p-8">
+                     <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-sm font-bold text-blue-600 uppercase tracking-[0.2em] mb-1">Candidate Profile</h3>
+                          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
+                            {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unnamed Candidate"}
+                          </h2>
+                        </div>
+                        {candidate?.mobileNumber && (
+                           <button
+                            onClick={() => window.open(`https://wa.me/${candidate.mobileNumber.replace(/\D/g, "")}`, "_blank")}
+                            className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm"
+                          >
+                            <FaWhatsapp className="h-6 w-6" />
+                          </button>
+                        )}
+                     </div>
+
+                     <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-1 group/item">
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Email Address</p>
+                          <div className="flex items-center gap-2 text-zinc-700">
+                            <Mail className="h-4 w-4 text-zinc-300" />
+                            <span className="font-medium truncate">{candidate?.email || "No email provided"}</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Contact Number</p>
+                          <div className="flex items-center gap-2 text-zinc-700">
+                            <Phone className="h-4 w-4 text-zinc-300" />
+                            <span className="font-medium">{candidate?.mobileNumber || "No number provided"}</span>
+                          </div>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Project Details Card */}
+            <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-6 opacity-10">
+                <Building2 className="h-24 w-24" />
               </div>
-            </div>
+              <CardContent className="p-8">
+                <h3 className="text-sm font-bold text-purple-600 uppercase tracking-[0.2em] mb-6">Assignment</h3>
+                
+                <div className="space-y-8">
+                  <div>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-2">Project Name</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xl font-bold text-zinc-900 tracking-tight">{project?.title || "Internal Development"}</p>
+                      {project?.countryCode && (
+                        <Badge variant="outline" className="rounded-md bg-zinc-50 border-zinc-200">
+                          <MapPin className="h-3 w-3 mr-1" />{project.countryCode}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
 
-            <div>
-              <p className="text-zinc-500 text-xs">AIR TICKET</p>
-              <p className="font-medium mt-1 capitalize">{selected.airTicket || "Not requested"}</p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">ACCOMMODATION</p>
-              <p className="font-medium mt-1">{selected.accommodation ? "Yes" : "No"}</p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">SCHEDULED</p>
-              <p className="font-medium mt-1">
-                {selected.scheduledTime ? format(new Date(selected.scheduledTime), "dd MMM, h:mm a") : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-zinc-500 text-xs">INTERVIEWER</p>
-              <p className="font-medium mt-1 text-black">{selected.interviewer || selected.interviewerEmail || "Unknown"}</p>
-            </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Target Role</p>
+                    <div className="inline-flex items-center px-3 py-1 bg-zinc-900 text-white rounded-lg text-sm font-medium">
+                      <Briefcase className="h-3.5 w-3.5 mr-2" />
+                      {role?.designation || "Senior Specialist"}
+                    </div>
+                  </div>
+
+                  {project?.client && (
+                    <div className="pt-6 border-t border-zinc-100">
+                      <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Client Entity</p>
+                      <p className="text-sm font-semibold text-zinc-600">{project.client.name}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Meeting Link with WhatsApp Button */}
-          {selected.meetingLink && (
-            <div className="mt-8 pt-8 border-t border-zinc-100">
-              <p className="text-zinc-500 text-xs mb-3">MEETING LINK</p>
-              <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <a
-                  href={selected.meetingLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline break-all text-sm flex-1"
-                >
-                  {selected.meetingLink}
-                </a>
-                {candidate?.mobileNumber && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 rounded-xl"
-                    onClick={() => {
-                      const phone = candidate.mobileNumber.replace(/\D/g, "");
-                      const message = `Hi ${candidate.firstName}, here is the meeting link: ${selected.meetingLink}`;
-                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
-                    }}
-                  >
-                    <FaWhatsapp className="h-4 w-4" />
-                    WhatsApp
-                  </Button>
-                )}
+          {/* Interview Details Data Grid */}
+          <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden">
+            <div className="border-b border-zinc-50 px-8 py-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-zinc-900 rounded-xl text-white">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-bold tracking-tight">Technical Specification</h3>
               </div>
+              <Badge className="bg-zinc-100 text-zinc-600 border-0 hover:bg-zinc-200 transition-colors uppercase tracking-widest text-[9px] font-bold">Standard Protocol</Badge>
             </div>
-          )}
+            
+            <CardContent className="p-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-12">
+                <DataField label="Interview Type" value={selected.type} icon={Info} capitalize />
+                <DataField label="Mode" value={selected.mode?.replace("_", " ")} icon={ExternalLink} capitalize />
+                <DataField label="Estimated Duration" value={selected.duration ? `${selected.duration} Minutes` : "N/A"} icon={Clock} />
+                <div>
+                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Outcome Status</p>
+                   <Badge className={cn("text-[11px] px-4 py-1 border rounded-full font-bold uppercase", getOutcomeBadgeClass(selected.outcome))}>
+                    {selected.outcome || "Pending"}
+                  </Badge>
+                </div>
+                
+                <DataField label="Air Ticket" value={selected.airTicket || "Not Required"} />
+                <DataField label="Accommodation" value={selected.accommodation ? "Provided" : "Not Provided"} />
+                <DataField label="Reporting Time" value={selected.scheduledTime ? format(new Date(selected.scheduledTime), "dd MMM, hh:mm a") : "—"} />
+                <DataField label="Assigned Lead" value={selected.interviewer || selected.interviewerEmail || "TBD"} />
+              </div>
 
-          {selected.notes && (
-            <div className="mt-8 pt-8 border-t border-zinc-100">
-              <p className="text-zinc-500 text-xs mb-2">NOTES</p>
-              <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">{selected.notes}</p>
+              {/* Meeting Link */}
+              {selected.meetingLink && (
+                <div className="mt-12 group">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Virtual Access Link</p>
+                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-50 p-3 pl-5 rounded-2xl border border-zinc-100 transition-all group-hover:border-blue-100 group-hover:bg-blue-50/30">
+                    <div className="flex-1 min-w-0">
+                       <a
+                        href={selected.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 font-medium hover:underline break-all text-sm flex items-center gap-2"
+                      >
+                        {selected.meetingLink}
+                      </a>
+                    </div>
+                    {candidate?.mobileNumber && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="bg-white border-zinc-200 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl shadow-sm w-full sm:w-auto"
+                        onClick={() => {
+                          const phone = candidate.mobileNumber.replace(/\D/g, "");
+                          const message = `Hi ${candidate.firstName}, please join your interview here: ${selected.meetingLink}`;
+                          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+                        }}
+                      >
+                        <FaWhatsapp className="h-4 w-4 mr-2" />
+                        Share to WhatsApp
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes Section */}
+              {selected.notes && (
+                <div className="mt-12 bg-amber-50/50 p-8 rounded-3xl border border-amber-100/50">
+                  <p className="text-[10px] font-bold text-amber-700/60 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Edit3 className="h-3 w-3" /> Technical Notes & Briefing
+                  </p>
+                  <p className="text-[15px] text-zinc-700 whitespace-pre-wrap leading-relaxed font-medium italic">
+                    "{selected.notes}"
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* History Section */}
+          <div className="pt-6">
+            <h3 className="text-2xl font-bold tracking-tight mb-6">Activity Log</h3>
+            <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border-0">
+              <InterviewHistory
+                items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
+                isLoading={isHistoryLoading}
+                pagination={historyResp?.data?.pagination ?? null}
+                onPageChange={(p) => setHistoryPage(p)}
+                onLimitChange={(l) => {
+                  setHistoryLimit(l);
+                  setHistoryPage(1);
+                }}
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </ScrollArea>
 
-      {/* History Section */}
-      <InterviewHistory
-        items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
-        isLoading={isHistoryLoading}
-        pagination={historyResp?.data?.pagination ?? null}
-        onPageChange={(p) => setHistoryPage(p)}
-        onLimitChange={(l) => {
-          setHistoryLimit(l);
-          setHistoryPage(1);
-        }}
+      {/* Modals */}
+      <ReviewInterviewModal
+        isOpen={isReviewOpen}
+        onClose={() => setIsReviewOpen(false)}
+        interview={selected}
+        onSubmit={handleReviewSubmit}
       />
+      <CompleteInterviewModal
+        isOpen={isCompleteOpen}
+        onClose={() => setIsCompleteOpen(false)}
+        interview={selected}
+        onSubmit={handleReviewSubmit}
+      />
+      {selected && (
+        <EditInterviewDialog
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          interviewId={selected.id}
+        />
+      )}
     </div>
-  </ScrollArea>
+  );
+}
 
-  <ReviewInterviewModal
-    isOpen={isReviewOpen}
-    onClose={() => setIsReviewOpen(false)}
-    interview={selected}
-    onSubmit={handleReviewSubmit}
-  />
-
-  <CompleteInterviewModal
-    isOpen={isCompleteOpen}
-    onClose={() => setIsCompleteOpen(false)}
-    interview={selected}
-    onSubmit={handleReviewSubmit}
-  />
-
-  {selected && (
-    <EditInterviewDialog
-      open={isEditOpen}
-      onOpenChange={setIsEditOpen}
-      interviewId={selected.id}
-    />
-  )}
-</div>
+/** * Reusable component for data fields to keep the grid clean 
+ */
+function DataField({ label, value, icon: Icon, capitalize = false }: { label: string, value?: string, icon?: any, capitalize?: boolean }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{label}</p>
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="h-3.5 w-3.5 text-zinc-300" />}
+        <p className={cn("text-[15px] font-semibold text-zinc-900", capitalize && "capitalize")}>
+          {value || "—"}
+        </p>
+      </div>
+    </div>
   );
 }
