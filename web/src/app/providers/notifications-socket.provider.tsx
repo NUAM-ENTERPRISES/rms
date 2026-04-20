@@ -124,6 +124,20 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
     socket.on("connect", () => {
       console.log("[Socket] CONNECTED SUCCESS (Port 3000):", socket.id);
+      
+      // Force refresh on initial connection or reconnection to sync state from database
+      window.dispatchEvent(new CustomEvent("notifications:refresh"));
+
+      // Trigger global data refresh on login/reconnect
+      dispatch(baseApi.util.invalidateTags([
+        "Candidate",
+        "Project",
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterAssignment",
+        "Processing",
+        "Screening"
+      ]));
     });
 
     socket.on("connect_error", async (error) => {

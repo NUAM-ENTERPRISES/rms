@@ -26,9 +26,11 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
 
   const tags: Array<any> = [
     "Candidate", // Match top-level string tag
+    "Project",
     { type: "VerificationCandidates" },
     { type: "DocumentStats" },
-    { type: "RecruiterDocuments" }
+    { type: "RecruiterDocuments" },
+    { type: "DocumentVerification" }
   ];
 
   if (notification.meta?.projectId) {
@@ -37,8 +39,7 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
 
   if (candidateId) {
     tags.push({ type: "DocumentVerification", id: candidateId });
-  } else {
-    tags.push({ type: "DocumentVerification" });
+    tags.push({ type: "Candidate", id: candidateId });
   }
 
   dispatch(invalidateTags(tags));

@@ -15,6 +15,10 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
   console.log(`[Socket] Handling processing notification: ${notification.type}`);
 
   dispatch(invalidateTags([
+    "Candidate",
+    "Processing",
+    "ProcessingSummary",
+    "ProcessingDetails",
     { type: "ProcessingSummary", id: "LIST" },
     { type: "Processing", id: "LIST" }
   ]));

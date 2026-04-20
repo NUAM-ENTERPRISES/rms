@@ -81,6 +81,10 @@ export const notificationsApi = baseApi.injectEndpoints({
     getBadge: builder.query<ApiResponse<NotificationBadgeDto>, void>({
       query: () => "/notifications/badge",
       providesTags: ["NotificationBadge"],
+      extraOptions: {
+        refetchOnFocus: true,
+        refetchOnReconnect: true,
+      },
     }),
 
     // Mark notification as read
