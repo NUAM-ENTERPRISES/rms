@@ -323,7 +323,7 @@ export default function ConductScreeningPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+    <div className="container py-8 space-y-6">
       {/* Header */}
       <div className="relative">
   {/* Premium Header with Aurora Glow */}
