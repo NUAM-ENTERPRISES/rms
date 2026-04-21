@@ -7,6 +7,8 @@ import { loadStoredTokens } from '../features/auth/authSlice';
 // Import screens
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import RoleBasedNavigator from './RoleBasedNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -86,6 +88,16 @@ const AuthNavigator = () => {
             gestureEnabled: false, // Prevent swipe back to splash
             animationTypeForReplace: 'push' // Smooth transition
           }}
+        />
+        <Stack.Screen 
+          name="ForgotPassword" 
+          component={ForgotPasswordScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen 
+          name="ResetPassword" 
+          component={ResetPasswordScreen}
+          options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>
     );

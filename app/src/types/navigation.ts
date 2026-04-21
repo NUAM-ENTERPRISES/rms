@@ -1,6 +1,8 @@
 export type RootStackParamList = {
     Splash: undefined;
     Login: undefined;
+    ForgotPassword: { phone?: string; countryCode?: string } | undefined;
+    ResetPassword: { phone: string; countryCode: string };
     Home: undefined;
     Details: undefined;
 };

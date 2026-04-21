@@ -281,7 +281,7 @@ const LoginScreen = () => {
     };
 
     const handleForgotPassword = () => {
-        Alert.alert('Forgot Password', 'Password reset feature coming soon!');
+        navigation.navigate('ForgotPassword');
     };
 
     // const handleRequestAccess = () => {

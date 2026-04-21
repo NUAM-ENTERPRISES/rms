@@ -7,6 +7,10 @@ import {
     LogoutResponse,
     RefreshResponse,
     UserProfileResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 } from "./authTypes";
 
 /**
@@ -73,6 +77,24 @@ export const authApi = createApi({
             }),
         }),
 
+        // ------------------ FORGOT PASSWORD ------------------
+        forgotPassword: builder.mutation<ForgotPasswordResponse, ForgotPasswordRequest>({
+            query: (payload) => ({
+                url: "/auth/forgot-password-whatsapp",
+                method: "POST",
+                body: payload,
+            }),
+        }),
+
+        // ------------------ RESET PASSWORD ------------------
+        resetPassword: builder.mutation<ResetPasswordResponse, ResetPasswordRequest>({
+            query: (payload) => ({
+                url: "/auth/reset-password",
+                method: "POST",
+                body: payload,
+            }),
+        }),
+
         // ---------------------- USER PROFILE--------------------------
         me: builder.query<UserProfileResponse, void>({
             query: () => ({
@@ -90,4 +112,6 @@ export const {
     useLogoutMutation,
     useRefreshTokenMutation,
     useMeQuery,
+    useForgotPasswordMutation,
+    useResetPasswordMutation,
 } = authApi;

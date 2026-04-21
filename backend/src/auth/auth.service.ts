@@ -15,6 +15,8 @@ import { randomBytes, Verify } from 'crypto';
 import { SendLoginOtpDto } from './dto/send-login-otp.dto';
 import { OtpService } from 'src/otp/otp.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
@@ -347,6 +349,101 @@ export class AuthService {
       refresh,
     };
 
+  }
+
+  async sendForgotPasswordOtp(dto: ForgotPasswordWhatsappDto) {
+    const { countryCode, mobileNumber } = dto;
+
+    // 1. Verify user exists
+    const user = await (this.prisma as any).user.findUnique({
+      where: {
+        countryCode_mobileNumber: {
+          countryCode,
+          mobileNumber,
+        },
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User with this mobile number does not exist');
+    }
+
+    // 2. Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedOtp = await argon2.hash(otp);
+
+    // 3. Save hashed OTP and expiry (10 min)
+    await (this.prisma as any).user.update({
+      where: { id: user.id },
+      data: {
+        otp: hashedOtp,
+        otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+
+    // 4. Send OTP via WhatsApp
+    const whatsappSent = await this.otpService.sendWhatsappOtp(
+      countryCode,
+      mobileNumber,
+      otp,
+    );
+
+    if (!whatsappSent) {
+      throw new BadRequestException('Failed to send OTP via WhatsApp');
+    }
+
+    return { success: true, message: 'OTP sent successfully' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { countryCode, mobileNumber, otp, newPassword } = dto;
+
+    // 1. Find user
+    const user = await (this.prisma as any).user.findUnique({
+      where: {
+        countryCode_mobileNumber: {
+          countryCode,
+          mobileNumber,
+        },
+      },
+    });
+
+    if (!user || !user.otp || !user.otpExpiresAt) {
+      throw new BadRequestException('Invalid request or user not found');
+    }
+
+    // 2. Check expiry
+    if (user.otpExpiresAt < new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    // 3. Verify OTP
+    const isOtpValid = await argon2.verify(user.otp, otp);
+    if (!isOtpValid) {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    // 4. Update password and clear OTP
+    const hashedPassword = await argon2.hash(newPassword);
+
+    await (this.prisma as any).user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        otp: null,
+        otpExpiresAt: null,
+        userVersion: { increment: 1 },
+      },
+    });
+
+    // 5. Log audit action
+    await this.auditService.logAuthAction('password_change', user.id, {
+      action: 'password_reset',
+      source: 'mobile_forgot_password',
+      timestamp: new Date(),
+    });
+
+    return { success: true, message: 'Password has been reset successfully' };
   }
 
 

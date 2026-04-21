@@ -134,9 +134,10 @@ export interface ForgotPasswordResponse {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
-  password: string;
-  confirmPassword: string;
+  countryCode: string;
+  mobileNumber: string;
+  otp: string;
+  newPassword: string;
 }
 
 export interface ResetPasswordResponse {
