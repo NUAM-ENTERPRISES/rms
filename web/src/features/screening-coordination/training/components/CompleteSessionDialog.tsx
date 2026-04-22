@@ -31,13 +31,17 @@ import { toast } from "sonner";
 import { useCompleteSessionMutation } from "../data";
 import { TrainingSession, TRAINING_PERFORMANCE } from "../../types";
 
+const performanceRatings = [
+  TRAINING_PERFORMANCE.EXCELLENT,
+  TRAINING_PERFORMANCE.GOOD,
+  TRAINING_PERFORMANCE.FAIR,
+  TRAINING_PERFORMANCE.POOR,
+] as const;
+
 const completeSessionSchema = z.object({
-  performanceRating: z.enum(
-    ["excellent", "good", "satisfactory", "needs_improvement"],
-    {
-      required_error: "Performance rating is required",
-    }
-  ),
+  performanceRating: z.enum(performanceRatings, {
+    error: "Performance rating is required",
+  }),
   notes: z.string().optional(),
   feedback: z.string().optional(),
 });
@@ -125,13 +129,11 @@ export function CompleteSessionDialog({
                       <SelectItem value={TRAINING_PERFORMANCE.GOOD}>
                         Good
                       </SelectItem>
-                      <SelectItem value={TRAINING_PERFORMANCE.SATISFACTORY}>
-                        Satisfactory
+                      <SelectItem value={TRAINING_PERFORMANCE.FAIR}>
+                        Fair
                       </SelectItem>
-                      <SelectItem
-                        value={TRAINING_PERFORMANCE.NEEDS_IMPROVEMENT}
-                      >
-                        Needs Improvement
+                      <SelectItem value={TRAINING_PERFORMANCE.POOR}>
+                        Poor
                       </SelectItem>
                     </SelectContent>
                   </Select>

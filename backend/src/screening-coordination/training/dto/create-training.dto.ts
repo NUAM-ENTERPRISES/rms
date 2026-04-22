@@ -1,13 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
-  IsEnum,
   IsOptional,
   IsDateString,
   IsArray,
+  IsEnum,
 } from 'class-validator';
 import {
-  TRAINING_TYPE,
   TRAINING_PRIORITY,
 } from '../../../common/constants/statuses';
 
@@ -34,14 +33,6 @@ export class CreateTrainingAssignmentDto {
   })
   @IsString()
   assignedBy: string;
-
-  @ApiProperty({
-    description: 'Type of training',
-    enum: TRAINING_TYPE,
-    example: 'interview_skills',
-  })
-  @IsEnum(TRAINING_TYPE)
-  trainingType: string;
 
   @ApiProperty({
     description: 'Areas that need improvement',

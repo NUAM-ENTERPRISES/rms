@@ -37,7 +37,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useBulkCompleteSessionsMutation } from "../data/training.endpoints";
-import { TrainingAssignment } from "../../types";
+import { TrainingAssignment, TRAINING_PERFORMANCE } from "../../types";
 
 interface ConductTrainingState {
   assignments: TrainingAssignment[];
@@ -59,8 +59,8 @@ export default function ConductTrainingPage() {
       const session = a.sessions?.[0] || { id: `new-${a.id}` };
       initial[a.id] = {
         sessionId: session.id,
-        rating: "", // Changed from 0 to empty string for validation
         remarks: "",
+        performanceRating: TRAINING_PERFORMANCE.FAIR,
       };
     });
     return initial;
@@ -76,20 +76,12 @@ export default function ConductTrainingPage() {
     }));
   };
 
-  const isFormInvalid = Object.values(formData).some(
-    (data) => data.rating === "" || data.rating === undefined || data.rating === null || data.rating < 0 || data.rating > 100
-  );
+  const isFormInvalid = false; // All fields are optional now
 
   const handleSubmit = async () => {
-    if (isFormInvalid) {
-      toast.error("Please provide a performance rating between 0 and 100 for all candidates");
-      return;
-    }
-
     try {
       const payload = Object.entries(formData).map(([_, data]) => ({
         sessionId: data.sessionId,
-        performanceRating: Number(data.rating),
         sessionNotes: data.remarks || undefined,
       }));
 
@@ -128,30 +120,20 @@ export default function ConductTrainingPage() {
           <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-sm">
             <div className="text-sm font-medium text-slate-600">Bulk Apply:</div>
             <Input
-              type="number"
-              min="0"
-              max="100"
-              placeholder="Rating"
-              className="w-24 h-9"
-              id="bulk-rating"
-            />
-            <Input
               placeholder="Common Remarks"
-              className="w-64 h-9"
+              className="w-full h-9"
               id="bulk-remarks"
             />
             <Button
               variant="outline"
               size="sm"
-              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 shrink-0"
               onClick={() => {
-                const r = (document.getElementById("bulk-rating") as HTMLInputElement).value;
                 const m = (document.getElementById("bulk-remarks") as HTMLInputElement).value;
                 const updated = { ...formData };
                 assignments.forEach((a) => {
                   updated[a.id] = {
                     ...updated[a.id],
-                    ...(r ? { rating: r } : {}),
                     ...(m ? { remarks: m } : {}),
                   };
                 });
@@ -175,6 +157,7 @@ export default function ConductTrainingPage() {
             <Card key={assignment.id} className="overflow-hidden border-indigo-100 shadow-sm transition-all hover:shadow-md">
               <CardHeader className="bg-slate-50/50 py-4 border-b">
                 <div className="flex items-center justify-between">
+                  {/* ... existing code for card header ... */}
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
                       {candidate?.firstName?.[0]}{candidate?.lastName?.[0]}
@@ -194,35 +177,16 @@ export default function ConductTrainingPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Rating & Performance */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                       <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Star className="w-3.5 h-3.5" /> Performance Rating (0-100) <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="Enter score (0-100)"
-                        value={data.rating}
-                        onChange={(e) => handleInputChange(assignment.id, "rating", e.target.value)}
-                        className="h-10"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Remarks */}
+                <div className="grid gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <MessageSquare className="w-3.5 h-3.5" /> Training Remarks & Observations (Optional)
+                      <MessageSquare className="w-3.5 h-3.5" /> Training Remarks & Observations
                     </label>
                     <Textarea
                       placeholder="Enter detailed observations about the candidate's performance during this session..."
-                      value={data.remarks}
+                      value={data?.remarks}
                       onChange={(e) => handleInputChange(assignment.id, "remarks", e.target.value)}
-                      className="min-h-[100px] resize-none"
+                      className="min-h-[120px] resize-none"
                     />
                   </div>
                 </div>
@@ -252,11 +216,6 @@ export default function ConductTrainingPage() {
                 </Button>
               </div>
             </TooltipTrigger>
-            {isFormInvalid && (
-              <TooltipContent className="bg-red-50 text-red-600 border-red-100">
-                <p>Please fill performance rating (0-100) for all candidates</p>
-              </TooltipContent>
-            )}
           </Tooltip>
         </TooltipProvider>
       </div>

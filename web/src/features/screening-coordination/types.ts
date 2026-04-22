@@ -95,6 +95,9 @@ export interface Screening {
   notes?: string;
   strengths?: string;
   areasOfImprovement?: string;
+  goodLooking?: number;
+  fairness?: number;
+  languageProficiency?: string;
   createdAt: string;
   updatedAt: string;
   candidateProjectMap?: {

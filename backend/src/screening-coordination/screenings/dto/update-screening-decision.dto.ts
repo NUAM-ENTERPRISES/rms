@@ -23,6 +23,28 @@ export class UpdateScreeningDecisionDto {
   @IsString()
   remarks?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  strengths?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  overallRating?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  goodLooking?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  fairness?: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  languageProficiency?: string;
+
   @ApiProperty({
     description: 'Training type when decision is needs_training',
     enum: TRAINING_TYPE,

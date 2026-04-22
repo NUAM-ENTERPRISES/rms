@@ -467,11 +467,7 @@ export class ScreeningsService {
               mobileNumber: true,
             },
           },
-          trainingAssignments: {
-            include: {
-              trainingSessions: true,
-            },
-          },
+          trainingAssignments: true,
         },
         orderBy: { [sortBy as string]: sortOrder },
         skip,
@@ -882,11 +878,7 @@ export class ScreeningsService {
         checklistItems: {
           orderBy: { category: 'asc' },
         },
-        trainingAssignments: {
-          include: {
-            trainingSessions: true,
-          },
-        },
+        trainingAssignments: true,
       },
     });
 
@@ -1128,12 +1120,17 @@ export class ScreeningsService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      // Update screening decision and optional remarks
+      // Update screening decision and optional remarks/assessment fields
       const screeningUpdate = await tx.screening.update({
         where: { id },
         data: {
           decision: dto.decision,
           remarks: dto.remarks ?? existing.remarks,
+          strengths: dto.strengths ?? existing.strengths,
+          overallRating: dto.overallRating ?? (existing as any).overallRating,
+          goodLooking: dto.goodLooking ?? existing.goodLooking,
+          fairness: dto.fairness ?? existing.fairness,
+          languageProficiency: dto.languageProficiency ?? existing.languageProficiency,
         },
       });
 
@@ -1142,7 +1139,7 @@ export class ScreeningsService {
       if (dto.decision === SCREENING_DECISION.APPROVED) {
         statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.SCREENING_PASSED } };
       } else if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
-        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.SCREENING_FAILED } };
+        statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING } };
       } else if (dto.decision === SCREENING_DECISION.REJECTED) {
         statusUpdate.subStatus = { connect: { name: CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW } };
       } else if (dto.decision === SCREENING_DECISION.ON_HOLD) {
@@ -1182,6 +1179,40 @@ export class ScreeningsService {
       return screeningUpdate;
     });
 
+    // If decision is NEEDS_TRAINING, automatically create a training assignment
+    if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+      try {
+        const candidateProjectMapId = existing.candidateProjectMap?.id ?? existing.candidateProjectMapId;
+
+        // Check if there's already an active (non-completed) training assignment
+        const activeTraining = await this.prisma.screeningTraining.findFirst({
+          where: {
+            candidateProjectMapId,
+            status: { not: TRAINING_STATUS.COMPLETED },
+          },
+        });
+
+        if (!activeTraining) {
+          await this.trainingService.createAssignment({
+            candidateProjectMapId,
+            screeningId: id,
+            assignedBy: userId,
+            trainerId: userId, // Default trainer to the one who updated the decision
+            focusAreas: dto.focusAreas || [],
+            priority: dto.priority || 'medium',
+            targetCompletionDate: dto.targetCompletionDate,
+            notes: dto.trainingNotes,
+          });
+          this.logger.log(`Automatically created training assignment for screening ${id} after NEEDS_TRAINING decision`);
+        } else {
+          this.logger.log(`Skipped automatic training creation: Active training assignment already exists for CPM ${candidateProjectMapId}`);
+        }
+      } catch (error: any) {
+        this.logger.error(`Failed to automatically create training assignment for screening ${id}: ${error.message}`);
+        // We don't throw here to avoid failing the whole transaction since decision was already updated
+      }
+    }
+
     // If the new decision is approved, trigger verification workflow as complete() does
     const finalResult = await this.findOne(id);
     const cpm = finalResult.candidateProjectMap;
@@ -1200,51 +1231,6 @@ export class ScreeningsService {
           this.logger.log(`Published CandidateApprovedForClientInterview event for candidate ${cpm.candidateId}`);
         } catch (error: any) {
           this.logger.error(`Failed to publish approved event: ${error.message}`);
-        }
-      }
-    } else if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
-      if (!dto.trainingType) {
-        throw new BadRequestException('trainingType is required for needs_training decision');
-      }
-      if (!dto.focusAreas || dto.focusAreas.length === 0) {
-        throw new BadRequestException('At least one focus area is required for needs_training decision');
-      }
-
-      if (cpm && userId) {
-        try {
-          const existingTraining = await this.prisma.trainingAssignment.findFirst({
-            where: {
-              candidateProjectMapId: cpm.id,
-              screeningId: id,
-            },
-            orderBy: { createdAt: 'desc' },
-          });
-
-          const hasActiveTraining = existingTraining &&
-            existingTraining.status !== TRAINING_STATUS.COMPLETED &&
-            existingTraining.status !== TRAINING_STATUS.CANCELLED;
-
-          if (hasActiveTraining) {
-            this.logger.log(`Active training already exists for candidate ${cpm.candidateId} and screening ${id}. Skipping creation.`);
-          } else {
-            await this.trainingService.createAssignment({
-              candidateProjectMapId: cpm.id,
-              screeningId: id,
-              assignedBy: userId,
-              trainerId: userId,
-              trainingType: dto.trainingType,
-              focusAreas: dto.focusAreas,
-              priority: dto.priority || TRAINING_PRIORITY.MEDIUM,
-              targetCompletionDate: dto.targetCompletionDate,
-              notes:
-                dto.trainingNotes ||
-                dto.remarks ||
-                'Auto-created training assignment after needs_training decision',
-            } as any);
-            this.logger.log(`Auto-created training assignment for candidate ${cpm.candidateId} after needs_training decision`);
-          }
-        } catch (error: any) {
-          this.logger.error(`Failed to create training assignment on needs_training decision: ${error.message}`);
         }
       }
     } else if (dto.decision === SCREENING_DECISION.REJECTED) {
@@ -1400,7 +1386,7 @@ export class ScreeningsService {
       } else if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
         statusUpdate.subStatus = {
           connect: {
-            name: CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+            name: CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING,
           },
         };
       } else if (dto.decision === SCREENING_DECISION.REJECTED) {
@@ -1453,6 +1439,39 @@ export class ScreeningsService {
 
       return updated;
     });
+
+    // If decision is NEEDS_TRAINING, automatically create a training assignment
+    if (dto.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+      try {
+        const candidateProjectMapId = existing.candidateProjectMapId;
+
+        // Check if there's already an active (non-completed) training assignment
+        const activeTraining = await this.prisma.screeningTraining.findFirst({
+          where: {
+            candidateProjectMapId,
+            status: { not: TRAINING_STATUS.COMPLETED },
+          },
+        });
+
+        if (!activeTraining) {
+          await this.trainingService.createAssignment({
+            candidateProjectMapId,
+            screeningId: id,
+            assignedBy: userId,
+            trainerId: userId, // Default trainer to the one who completed the screening
+            focusAreas: dto.focusAreas || [],
+            priority: dto.priority || 'medium',
+            targetCompletionDate: dto.targetCompletionDate,
+            notes: dto.trainingNotes,
+          });
+          this.logger.log(`Automatically created training assignment for screening ${id} after completion with NEEDS_TRAINING`);
+        } else {
+          this.logger.log(`Skipped automatic training creation: Active training assignment already exists for CPM ${candidateProjectMapId}`);
+        }
+      } catch (error: any) {
+        this.logger.error(`Failed to automatically create training assignment after complete() screening ${id}: ${error.message}`);
+      }
+    }
 
     // Fetch complete result with relations
     const finalResult = await this.findOne(id);
@@ -1562,6 +1581,7 @@ export class ScreeningsService {
       completed,
       approved,
       needsTraining,
+      trainingAssigned,
       trainingScheduled,
       trainingCompleted,
       rejected,
@@ -1599,6 +1619,13 @@ export class ScreeningsService {
         where: {
           coordinatorId,
           decision: SCREENING_DECISION.NEEDS_TRAINING,
+          candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING } },
+        },
+      }),
+      this.prisma.screening.count({
+        where: {
+          coordinatorId,
+          decision: SCREENING_DECISION.NEEDS_TRAINING,
           candidateProjectMap: { subStatus: { name: CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED } },
         },
       }),
@@ -1631,6 +1658,7 @@ export class ScreeningsService {
       byDecision: {
         approved,
         needsTraining,
+        trainingAssigned,
         trainingScheduled,
         trainingCompleted,
         rejected,
