@@ -209,7 +209,7 @@ export default function CandidatesPage() {
 
 
   // Filter and paginate candidates
-  const { filteredCandidates, paginatedCandidates, totalCount } =
+  const { filteredCandidates, paginatedCandidates } =
     useMemo(() => {
       // Ensure candidates is an array
       if (!Array.isArray(candidates)) {
@@ -217,7 +217,6 @@ export default function CandidatesPage() {
         return {
           filteredCandidates: [],
           paginatedCandidates: [],
-          totalCount: 0,
         };
       }
 
@@ -290,9 +289,23 @@ export default function CandidatesPage() {
       return {
         filteredCandidates: filtered,
         paginatedCandidates: paginated,
-        totalCount: filtered.length,
       };
     }, [candidates, filters]);
+
+  const pagination =
+    isRecruiter && !isManager
+      ? recruiterCandidatesData?.pagination
+      : allCandidatesData?.pagination;
+  const hasServerPagination = Boolean(
+    pagination &&
+      (pagination.totalPages !== undefined ||
+        pagination.totalCount !== undefined ||
+        pagination.total !== undefined)
+  );
+  const pageItems = hasServerPagination ? candidates : paginatedCandidates;
+  const totalCount =
+    pagination?.totalCount ?? pagination?.total ?? filteredCandidates.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / filters.limit));
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -1355,8 +1368,7 @@ export default function CandidatesPage() {
                   {getTableTitle()}
                 </CardTitle>
                 <CardDescription>
-                  {getTableSubtitle()} • {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
-                  candidates found
+                  {getTableSubtitle()} • {totalCount} candidates found
                 </CardDescription>
               </div>
             </div>
@@ -1378,8 +1390,7 @@ export default function CandidatesPage() {
                       {getTableTitle()}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1 font-medium">
-                      {getTableSubtitle()} — {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
-                      candidate{filteredCandidates?.length !== 1 ? "s" : ""} in
+                      {getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""} in
                       total
                     </p>
                   </div>
@@ -1429,8 +1440,8 @@ export default function CandidatesPage() {
                 </TableHeader>
 
                 <TableBody>
-                  {Array.isArray(paginatedCandidates) &&
-                    paginatedCandidates.map((candidate) => {
+                  {Array.isArray(pageItems) &&
+                    pageItems.map((candidate) => {
                       const statusName = candidate.currentStatus?.statusName ?? "";
                       const statusInfo = getStatusInfo(statusName);
                       const StatusIcon = statusInfo.icon;
@@ -1702,8 +1713,7 @@ export default function CandidatesPage() {
               </Table>
 
               {/* Empty State - Your Original */}
-              {Array.isArray(filteredCandidates) &&
-                filteredCandidates.length === 0 && (
+              {pageItems.length === 0 && totalCount === 0 && (
                   <div className="text-center py-12">
                     <UserCheck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-600 mb-2">
@@ -1733,8 +1743,7 @@ export default function CandidatesPage() {
             </div>
 
             {/* Pagination - Your Original */}
-            {Array.isArray(filteredCandidates) &&
-              filteredCandidates.length > 0 && (
+            {totalCount > 0 && (
                 <Card className="mt-4 border-0 shadow-lg bg-white/90">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
@@ -1760,14 +1769,8 @@ export default function CandidatesPage() {
                         </Button>
 
                         <div className="flex items-center gap-1">
-                          {Array.from(
-                            { length: Math.ceil(totalCount / filters.limit) },
-                            (_, i) => i + 1
-                          )
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
                             .filter((pageNum) => {
-                              const totalPages = Math.ceil(
-                                totalCount / filters.limit
-                              );
                               return (
                                 pageNum === 1 ||
                                 pageNum === totalPages ||
@@ -1821,16 +1824,10 @@ export default function CandidatesPage() {
                           onClick={() =>
                             setFilters((prev) => ({
                               ...prev,
-                              page: Math.min(
-                                Math.ceil(totalCount / filters.limit),
-                                prev.page + 1
-                              ),
+                              page: Math.min(totalPages, prev.page + 1),
                             }))
                           }
-                          disabled={
-                            filters.page >=
-                            Math.ceil(totalCount / filters.limit)
-                          }
+                          disabled={filters.page >= totalPages}
                           className="h-9 px-3"
                         >
                           Next

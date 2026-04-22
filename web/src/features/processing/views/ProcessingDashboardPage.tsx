@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ImageViewer, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { 
   Users, 
   XCircle, 
@@ -229,13 +230,10 @@ const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> 
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-<div className="space-y-1">
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Welcome back, {user?.name || "Admin"}! 👋
-              </h1>
-              <p className="text-slate-600 font-medium">Monitor and manage candidate processing workflows</p>
-            </div>
+        <TypedHeader 
+          userName={user?.name || "Admin"} 
+          subtitle="Monitor and manage candidate processing workflows"
+        />
           
           {(statusFilter || stepFilter) && (
             <Badge variant="outline" className="h-8 gap-2 bg-violet-50 text-violet-700 border-violet-200 self-start md:self-center">
@@ -249,7 +247,6 @@ const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> 
               />
             </Badge>
           )}
-        </header>
 
         <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
           {processingTiles.map((tile) => {

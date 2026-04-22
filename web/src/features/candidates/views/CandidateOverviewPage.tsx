@@ -56,6 +56,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { RecruiterPerformanceChartWrapper } from "../components/RecruiterPerformanceChartWrapper";
 import { ImageViewer, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
@@ -418,14 +419,10 @@ export default function CandidateOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
-        <div className="space-y-1">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Welcome back, {displayedRecruiterName || currentUser?.name || "Recruiter"}! 👋
-          </h1>
-          <p className="text-sm text-slate-500">
-            {Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
-          </p>
-        </div>
+        <TypedHeader 
+          userName={displayedRecruiterName || currentUser?.name || "Recruiter"} 
+          subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
+        />
 
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
         {/* {(filters.recruiterId !== "all") && (

@@ -29,6 +29,7 @@ import { motion } from "framer-motion";
 import { useCan } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import { StatusTile } from "@/components/molecules/StatusTile";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
@@ -802,28 +803,10 @@ export default function InterviewsPage() {
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Welcome back, {user?.name || "Recruiter"}! 👋
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Orchestrate every panel with clarity and track candidate progress
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetch();
-              refetchStats();
-            }}
-            className="bg-white"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
+        <TypedHeader 
+          userName={user?.name || "Recruiter"} 
+          subtitle="Orchestrate every panel with clarity and track candidate progress"
+        />
 
         {/* ── Status Tiles ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -1089,6 +1072,9 @@ export default function InterviewsPage() {
                               <>
                                 <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Sent to Client</TableHead>
                                 <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Screening Details</TableHead>
+                                {activeFilter === "shortlisted" && (
+                                  <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Reason</TableHead>
+                                )}
                                 {activeFilter === "shortlistRejected" && (
                                   <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Rejection Reason</TableHead>
                                 )}
@@ -1190,10 +1176,31 @@ export default function InterviewsPage() {
                                   enableHoverPreview={false}
                                 />
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold text-slate-900 truncate">
-                                    {candidate?.firstName} {candidate?.lastName}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email}</p>
+                                  {[
+                                    "interviewScheduled",
+                                    "interviewCompleted",
+                                    "interviewPassed",
+                                    "interviewRejected",
+                                    "interviewBackout",
+                                  ].includes(activeFilter) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (item.id) {
+                                          navigate(`/interviews/detail/${item.id}`);
+                                        }
+                                      }}
+                                      className="text-sm font-bold text-slate-900 truncate text-left transition-colors hover:text-blue-600"
+                                    >
+                                      {candidate?.firstName} {candidate?.lastName}
+                                    </button>
+                                  ) : (
+                                    <p className="text-sm font-bold text-slate-900 truncate">
+                                      {candidate?.firstName} {candidate?.lastName}
+                                    </p>
+                                  )}
+                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email || "—"}</p>
+                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.mobileNumber || "—"}</p>
                                 </div>
                               </div>
                             </TableCell>
@@ -1330,6 +1337,13 @@ export default function InterviewsPage() {
                                         )}
                                       </div>
                                     </TableCell>
+                                    {activeFilter === "shortlisted" && (
+                                      <TableCell className="px-4 py-3">
+                                        <p className="text-[11px] text-slate-700 truncate">
+                                          {candidateProjectMap?.notes || '—'}
+                                        </p>
+                                      </TableCell>
+                                    )}
                                     {activeFilter === "shortlistRejected" && (
                                       <TableCell className="px-4 py-3">
                                         <p className="text-[11px] text-slate-700 truncate">

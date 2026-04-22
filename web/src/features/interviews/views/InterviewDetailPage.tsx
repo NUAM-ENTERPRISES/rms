@@ -6,43 +6,88 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Loader2, ArrowLeft, Calendar, User, Briefcase, Edit3, 
-  CheckCircle2, MapPin, Building2, Mail, Phone, ExternalLink,
-  Clock, Layers, Info
+import {
+  Loader2,
+  ChevronLeft,
+  Calendar,
+  User,
+  Briefcase,
+  Edit3,
+  CheckCircle2,
+  MapPin,
+  Building2,
+  Mail,
+  Phone,
+  Clock,
+  Link2,
+  FileText,
+  Activity,
+  Target,
+  AlertCircle,
 } from "lucide-react";
 import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
-import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 import { ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
 import { FaWhatsapp } from "react-icons/fa";
 
-const getOutcomeBadgeClass = (outcome?: string) => {
+const getOutcomeConfig = (outcome?: string) => {
   switch (outcome?.toLowerCase()) {
-    case "passed": return "bg-emerald-500/10 text-emerald-600 border-emerald-200";
-    case "failed": return "bg-rose-500/10 text-rose-600 border-rose-200";
-    case "completed": return "bg-blue-500/10 text-blue-600 border-blue-200";
-    case "backout": return "bg-amber-500/10 text-amber-600 border-amber-200";
-    default: return "bg-zinc-100 text-zinc-600 border-zinc-200";
+    case "passed":
+      return {
+        label: "Passed",
+        variant: "default" as const,
+        bgClass: "bg-emerald-600 text-white",
+        dotClass: "bg-emerald-500",
+        icon: CheckCircle2,
+      };
+    case "failed":
+      return {
+        label: "Failed",
+        variant: "destructive" as const,
+        bgClass: "bg-red-600 text-white",
+        dotClass: "bg-red-500",
+        icon: AlertCircle,
+      };
+    case "completed":
+      return {
+        label: "Completed",
+        variant: "default" as const,
+        bgClass: "bg-blue-600 text-white",
+        dotClass: "bg-blue-500",
+        icon: CheckCircle2,
+      };
+    case "backout":
+      return {
+        label: "Backout",
+        variant: "secondary" as const,
+        bgClass: "bg-amber-600 text-white",
+        dotClass: "bg-amber-500",
+        icon: AlertCircle,
+      };
+    default:
+      return {
+        label: "Pending",
+        variant: "secondary" as const,
+        bgClass: "bg-zinc-700 text-white",
+        dotClass: "bg-slate-400",
+        icon: Clock,
+      };
   }
 };
 
 export default function InterviewDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const { data, isLoading, error } = useGetInterviewQuery(id ?? "", { skip: !id });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [isCompleteOpen, setIsCompleteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyLimit, setHistoryLimit] = useState(10);
   const [updateBulkInterviewStatus] = useUpdateBulkInterviewStatusMutation();
-
   const interview = data?.data;
   const { data: historyResp, isLoading: isHistoryLoading } = useGetInterviewHistoryQuery(
     { id: interview?.id ?? "", page: historyPage, limit: historyLimit },
@@ -55,8 +100,9 @@ export default function InterviewDetailPage() {
 
   if (!id) {
     return (
-      <div className="p-6 bg-zinc-50/50 min-h-screen flex items-center justify-center">
-        <Alert variant="destructive" className="max-w-md">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>No interview id provided in the URL.</AlertDescription>
         </Alert>
       </div>
@@ -65,10 +111,9 @@ export default function InterviewDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-12 w-12 animate-spin text-zinc-900" />
-          <p className="text-zinc-500 font-medium animate-pulse">Loading experience...</p>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -76,8 +121,9 @@ export default function InterviewDetailPage() {
 
   if (error || !data?.data) {
     return (
-      <div className="p-6 bg-zinc-50 min-h-screen flex items-center justify-center">
-        <Alert variant="destructive" className="max-w-md">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
           <AlertDescription>Interview details could not be loaded.</AlertDescription>
         </Alert>
       </div>
@@ -89,298 +135,438 @@ export default function InterviewDetailPage() {
   const project = interview?.project || interview?.candidateProjectMap?.project;
   const role = interview?.roleNeeded || interview?.candidateProjectMap?.roleNeeded;
 
-  const handleReviewSubmit = async (updates: any[]) => {
+  const outcomeConfig = getOutcomeConfig(selected.outcome);
+  const OutcomeIcon = outcomeConfig.icon;
+
+  const handleReviewSubmit = async (updates: { id: string; interviewStatus: any; subStatus?: string; reason?: string }[]) => {
     try {
       await updateBulkInterviewStatus({ updates }).unwrap();
       toast.success(`${updates.length} interview(s) updated successfully`);
       setIsReviewOpen(false);
-      setIsCompleteOpen(false);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-zinc-900 font-sans selection:bg-zinc-900 selection:text-white">
-      {/* Top Navigation Bar */}
-      <div className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(-1)}
-            className="group text-zinc-500 hover:text-black transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" /> 
-            Back to Dashboard
-          </Button>
+    <div className="min-h-screen bg-slate-50/50 pb-12">
+      {/* Sticky Header */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-50 rounded-xl">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* Left: Candidate Profile */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="h-8 w-8 rounded-full hover:bg-slate-100 shrink-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
 
-          <div className="flex items-center gap-4">
-             {selected.outcome && (
-              <Badge variant="outline" className={cn("px-4 py-1 rounded-full text-xs font-bold tracking-tight uppercase", getOutcomeBadgeClass(selected.outcome))}>
-                {selected.outcome}
-              </Badge>
-            )}
-            <div className="h-4 w-px bg-zinc-200 mx-2 hidden sm:block" />
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest hidden sm:block">ID: {id.slice(-6)}</span>
-          </div>
-        </div>
-      </div>
-
-      <ScrollArea className="h-[calc(100vh-73px)]">
-        <div className="max-w-[1400px] mx-auto px-6 py-10 space-y-10">
-          
-          {/* Hero Section */}
-          <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pb-4 border-b border-zinc-200">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                 <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                 <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">Interview Management</span>
+              <div className="relative shrink-0">
+                <ImageViewer
+                  src={candidate?.profileImage || null}
+                  title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
+                  className="h-14 w-14 rounded-xl shadow-sm border border-slate-200 object-cover"
+                />
+                <div
+                  className={cn(
+                    "absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-white shadow-sm flex items-center justify-center",
+                    outcomeConfig.dotClass
+                  )}
+                >
+                  <OutcomeIcon className="h-2.5 w-2.5 text-white" />
+                </div>
               </div>
-              <h1 className="text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl">
-                Session <span className="text-zinc-400 font-light">Details</span>
-              </h1>
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-zinc-500">
-                <p className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4 text-zinc-400" />
-                  {selected.scheduledTime
-                    ? format(new Date(selected.scheduledTime), "EEEE, dd MMM yyyy")
-                    : "Unscheduled"}
-                </p>
-                <p className="flex items-center gap-2 text-sm font-medium">
-                  <Clock className="h-4 w-4 text-zinc-400" />
-                  {selected.scheduledTime ? format(new Date(selected.scheduledTime), "h:mm a") : "Time TBD"}
-                </p>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-xl font-bold tracking-tight text-slate-900 truncate">
+                    {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
+                  </h1>
+                  <Badge
+                    className={cn("rounded-full px-2 py-0 h-5 text-[9px] uppercase font-bold tracking-wider", outcomeConfig.bgClass)}
+                  >
+                    {outcomeConfig.label}
+                  </Badge>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <div className="flex items-center gap-3">
+                    {candidate?.email && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                        <Mail className="h-3 w-3 text-indigo-400" />
+                        {candidate.email}
+                      </div>
+                    )}
+                    {candidate?.mobileNumber && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                        <Phone className="h-3 w-3 text-indigo-400" />
+                        {candidate.mobileNumber}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="hidden sm:block h-3 w-px bg-slate-200" />
+
+                  <div className="flex items-center gap-3">
+                    {(candidate as any)?.totalExperience !== undefined && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                        <Briefcase className="h-3 w-3 text-amber-400" />
+                        {(candidate as any).totalExperience}y Exp
+                      </div>
+                    )}
+                    {(candidate as any)?.gender && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                        <User className="h-3 w-3 text-blue-400" />
+                        <span className="capitalize">{(candidate as any).gender}</span>
+                      </div>
+                    )}
+                    {selected.scheduledTime && (
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
+                        <Calendar className="h-3 w-3 text-rose-400" />
+                        {format(new Date(selected.scheduledTime), "dd MMM yyyy")}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => setIsEditOpen(true)}
-                className="bg-white hover:bg-zinc-50 border-zinc-200 rounded-xl px-6"
-              >
-                <Edit3 className="h-4 w-4 mr-2 text-zinc-500" />
-                Edit Details
-              </Button>
+            {/* Right: Meta + Action */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100">
+                <div className="min-w-[100px]">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Project</p>
+                  <p className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{project?.title || "N/A"}</p>
+                </div>
+                <div className="h-6 w-px bg-slate-200" />
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Role</p>
+                  <p className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{role?.designation || "N/A"}</p>
+                </div>
+                <div className="h-6 w-px bg-slate-200" />
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Type</p>
+                  <p className="text-[11px] font-bold text-slate-700 capitalize">{selected.type || "N/A"}</p>
+                </div>
+              </div>
 
-              {selected.outcome === "completed" ? (
+              {selected.outcome === "completed" ||
+              selected.outcome === "passed" ||
+              selected.outcome === "failed" ||
+              selected.outcome === "backout" ? (
                 <Button
-                  size="lg"
+                  size="sm"
                   onClick={() => setIsReviewOpen(true)}
-                  className="bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl px-8 shadow-xl shadow-zinc-200 transition-all active:scale-95"
+                  className="h-9 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm px-4 text-xs font-semibold"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  <Target className="h-3.5 w-3.5 mr-2" />
                   Review Outcome
                 </Button>
               ) : (
                 <Button
-                  size="lg"
-                  onClick={() => setIsCompleteOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-8 shadow-xl shadow-emerald-100 transition-all active:scale-95"
+                  size="sm"
+                  onClick={() => setIsReviewOpen(true)}
+                  className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm px-4 text-xs font-semibold"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Finish Interview
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                  Complete Interview
                 </Button>
               )}
             </div>
-          </section>
+          </div>
+        </div>
+      </div>
 
-          {/* Core Info Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Candidate Card */}
-            <Card className="lg:col-span-2 border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden group">
-              <CardContent className="p-0">
-                <div className="flex flex-col md:flex-row items-stretch min-h-[240px]">
-                  <div className="w-full md:w-64 bg-zinc-50 p-8 flex flex-col items-center justify-center border-r border-zinc-100">
-                    <ImageViewer
-                      src={candidate?.profileImage || null}
-                      title={candidate ? `${candidate.firstName} ${candidate.lastName}` : "Candidate"}
-                      className="h-32 w-32 rounded-3xl object-cover ring-4 ring-white shadow-2xl transition-transform duration-500 group-hover:scale-105"
-                    />
-                    <div className="mt-6 flex flex-col items-center">
-                      <Badge variant="secondary" className="bg-white text-zinc-500 border-zinc-100 text-[10px] uppercase font-bold tracking-widest mb-1">Experience</Badge>
-                      <p className="text-lg font-bold text-zinc-900">{candidate?.totalExperience ?? 0} Years</p>
-                    </div>
+      {/* Body */}
+      <div className="container py-6 space-y-6">
+
+        {/* Interview & Candidate Details Card */}
+        <Card className="border-indigo-100 shadow-sm overflow-hidden rounded-xl bg-white">
+          <div className="bg-gradient-to-r from-indigo-50/80 to-transparent px-5 py-4 border-b border-indigo-100">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 rounded-xl">
+                  <Building2 className="h-5 w-5 text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Interview & Candidate Details</h3>
+                  <p className="text-xs text-slate-500 font-medium">Scheduling, role, project, and candidate information</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsEditOpen(true)}
+                className="h-8 text-xs font-semibold border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                <Edit3 className="h-3.5 w-3.5 mr-1.5" />
+                Edit Interview
+              </Button>
+            </div>
+          </div>
+
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-12">
+              {/* Left Column */}
+              <div className="md:col-span-4 border-r border-slate-100 flex flex-col">
+                {/* Candidate Info */}
+                <div className="p-5 border-b border-slate-100 bg-slate-50/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User className="h-4 w-4 text-indigo-500" />
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Candidate Info</h4>
                   </div>
-                  
-                  <div className="flex-1 p-8">
-                     <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-sm font-bold text-blue-600 uppercase tracking-[0.2em] mb-1">Candidate Profile</h3>
-                          <h2 className="text-3xl font-bold text-zinc-900 tracking-tight">
-                            {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unnamed Candidate"}
-                          </h2>
+                  <div className="space-y-3">
+                    {candidate?.email && (
+                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                          <Mail className="h-3.5 w-3.5 text-indigo-500" />
                         </div>
-                        {candidate?.mobileNumber && (
-                           <button
-                            onClick={() => window.open(`https://wa.me/${candidate.mobileNumber.replace(/\D/g, "")}`, "_blank")}
-                            className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm"
-                          >
-                            <FaWhatsapp className="h-6 w-6" />
-                          </button>
-                        )}
-                     </div>
-
-                     <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div className="space-y-1 group/item">
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Email Address</p>
-                          <div className="flex items-center gap-2 text-zinc-700">
-                            <Mail className="h-4 w-4 text-zinc-300" />
-                            <span className="font-medium truncate">{candidate?.email || "No email provided"}</span>
+                        <a href={`mailto:${candidate.email}`} className="hover:underline truncate text-[12px]">
+                          {candidate.email}
+                        </a>
+                      </div>
+                    )}
+                    {candidate?.mobileNumber && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                          <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                            <Phone className="h-3.5 w-3.5 text-indigo-500" />
                           </div>
+                          <span className="text-[12px]">{candidate.mobileNumber}</span>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase">Contact Number</p>
-                          <div className="flex items-center gap-2 text-zinc-700">
-                            <Phone className="h-4 w-4 text-zinc-300" />
-                            <span className="font-medium">{candidate?.mobileNumber || "No number provided"}</span>
-                          </div>
+                        <button
+                          onClick={() =>
+                            candidate.mobileNumber &&
+                            window.open(`https://wa.me/${candidate.mobileNumber.replace(/\D/g, "")}`, "_blank")
+                          }
+                          className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 px-2.5 py-1 rounded-lg text-[10px] font-bold"
+                        >
+                          <FaWhatsapp className="h-3.5 w-3.5" />
+                          Chat
+                        </button>
+                      </div>
+                    )}
+                    {(candidate as any)?.totalExperience !== undefined && (
+                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                          <Briefcase className="h-3.5 w-3.5 text-amber-500" />
                         </div>
-                     </div>
+                        <span className="text-[12px]">{(candidate as any).totalExperience} yrs experience</span>
+                      </div>
+                    )}
+                    {(candidate as any)?.highestEducation && (
+                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="h-7 w-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                          <Building2 className="h-3.5 w-3.5 text-blue-500" />
+                        </div>
+                        <span className="text-[12px] line-clamp-1">{(candidate as any).highestEducation}</span>
+                      </div>
+                    )}
+                    {(candidate as any)?.gender && (
+                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="h-7 w-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                          <User className="h-3.5 w-3.5 text-slate-500" />
+                        </div>
+                        <span className="text-[12px] capitalize">{(candidate as any).gender}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Project Details Card */}
-            <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-6 opacity-10">
-                <Building2 className="h-24 w-24" />
-              </div>
-              <CardContent className="p-8">
-                <h3 className="text-sm font-bold text-purple-600 uppercase tracking-[0.2em] mb-6">Assignment</h3>
-                
-                <div className="space-y-8">
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-2">Project Name</p>
-                    <div className="flex items-center gap-3">
-                      <p className="text-xl font-bold text-zinc-900 tracking-tight">{project?.title || "Internal Development"}</p>
-                      {project?.countryCode && (
-                        <Badge variant="outline" className="rounded-md bg-zinc-50 border-zinc-200">
-                          <MapPin className="h-3 w-3 mr-1" />{project.countryCode}
+                {/* Schedule Details */}
+                <div className="p-5 bg-slate-50/30 flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="h-4 w-4 text-indigo-500" />
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Schedule Details</h4>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Mode</p>
+                        <p className="text-[12px] font-bold text-slate-700 capitalize">{selected.mode?.replace("_", " ") || "—"}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Duration</p>
+                        <p className="text-[12px] font-bold text-slate-700">{selected.duration ? `${selected.duration} min` : "—"}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Air Ticket</p>
+                        <p className="text-[12px] font-bold text-slate-700 capitalize">{selected.airTicket || "No"}</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                        <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider mb-1">Accommodation</p>
+                        <p className="text-[12px] font-bold text-slate-700">{selected.accommodation ? "Yes" : "No"}</p>
+                      </div>
+                    </div>
+
+                    {selected.scheduledTime && (
+                      <div className="bg-indigo-50/50 border border-indigo-100 rounded-lg p-3 flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                        <span className="text-[11px] font-bold text-indigo-700">
+                          {format(new Date(selected.scheduledTime), "EEE, dd MMM yyyy • hh:mm a")}
+                        </span>
+                      </div>
+                    )}
+
+                    {selected.outcome && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase text-slate-400">Outcome:</span>
+                        <Badge className={cn("text-[9px] px-2 py-0 h-4 uppercase font-bold", outcomeConfig.bgClass)}>
+                          {selected.outcome}
                         </Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="md:col-span-8 p-6 space-y-6 bg-white">
+                {/* Project & Role */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-indigo-500" />
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Project & Role</h4>
+                    </div>
+                    {(project as any)?.countryCode && (
+                      <Badge variant="outline" className="text-[9px] px-2 h-4">
+                        <MapPin className="h-2.5 w-2.5 mr-1" /> {(project as any).countryCode}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Project</p>
+                      <p className="text-sm font-bold text-slate-800">{project?.title || "Unknown Project"}</p>
+                      {(project as any)?.deadline && (
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          Deadline: {format(new Date((project as any).deadline), "dd MMM yyyy")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Role</p>
+                      <p className="text-sm font-bold text-slate-800">{role?.designation || "Unknown Role"}</p>
+                      {(role as any)?.minExperience !== undefined && (role as any)?.maxExperience !== undefined && (
+                        <p className="text-[10px] text-slate-500 mt-1">
+                          {(role as any).minExperience}–{(role as any).maxExperience} yrs exp required
+                        </p>
                       )}
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Target Role</p>
-                    <div className="inline-flex items-center px-3 py-1 bg-zinc-900 text-white rounded-lg text-sm font-medium">
-                      <Briefcase className="h-3.5 w-3.5 mr-2" />
-                      {role?.designation || "Senior Specialist"}
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Screening</p>
+                      <p className="text-[11px] font-bold text-slate-700">
+                        {(project as any)?.requiredScreening ? "Required" : "No"}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Resume</p>
+                      <p className="text-[11px] font-bold text-slate-700">
+                        {(project as any)?.resumeEditable ? "Editable" : "Locked"}
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase text-slate-400 mb-1 tracking-wider">Grooming</p>
+                      <p className="text-[11px] font-bold text-slate-700 capitalize">
+                        {((project as any)?.groomingRequired || "not_specified").replace(/_/g, " ")}
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  {project?.client && (
-                    <div className="pt-6 border-t border-zinc-100">
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Client Entity</p>
-                      <p className="text-sm font-semibold text-zinc-600">{project.client.name}</p>
+                {/* Meeting Link */}
+                {selected.meetingLink && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <Link2 className="h-4 w-4 text-indigo-500" />
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Meeting Link</h4>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Interview Details Data Grid */}
-          <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white rounded-3xl overflow-hidden">
-            <div className="border-b border-zinc-50 px-8 py-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-zinc-900 rounded-xl text-white">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold tracking-tight">Technical Specification</h3>
-              </div>
-              <Badge className="bg-zinc-100 text-zinc-600 border-0 hover:bg-zinc-200 transition-colors uppercase tracking-widest text-[9px] font-bold">Standard Protocol</Badge>
-            </div>
-            
-            <CardContent className="p-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-12">
-                <DataField label="Interview Type" value={selected.type} icon={Info} capitalize />
-                <DataField label="Mode" value={selected.mode?.replace("_", " ")} icon={ExternalLink} capitalize />
-                <DataField label="Estimated Duration" value={selected.duration ? `${selected.duration} Minutes` : "N/A"} icon={Clock} />
-                <div>
-                   <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Outcome Status</p>
-                   <Badge className={cn("text-[11px] px-4 py-1 border rounded-full font-bold uppercase", getOutcomeBadgeClass(selected.outcome))}>
-                    {selected.outcome || "Pending"}
-                  </Badge>
-                </div>
-                
-                <DataField label="Air Ticket" value={selected.airTicket || "Not Required"} />
-                <DataField label="Accommodation" value={selected.accommodation ? "Provided" : "Not Provided"} />
-                <DataField label="Reporting Time" value={selected.scheduledTime ? format(new Date(selected.scheduledTime), "dd MMM, hh:mm a") : "—"} />
-                <DataField label="Assigned Lead" value={selected.interviewer || selected.interviewerEmail || "TBD"} />
-              </div>
-
-              {/* Meeting Link */}
-              {selected.meetingLink && (
-                <div className="mt-12 group">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Virtual Access Link</p>
-                  <div className="flex flex-col sm:flex-row items-center gap-4 bg-zinc-50 p-3 pl-5 rounded-2xl border border-zinc-100 transition-all group-hover:border-blue-100 group-hover:bg-blue-50/30">
-                    <div className="flex-1 min-w-0">
-                       <a
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-slate-50 border border-slate-100 p-4 rounded-xl shadow-sm">
+                      <a
                         href={selected.meetingLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 font-medium hover:underline break-all text-sm flex items-center gap-2"
+                        className="flex-1 text-indigo-600 hover:text-indigo-700 text-[12px] break-all"
                       >
                         {selected.meetingLink}
                       </a>
+                      {candidate?.mobileNumber && (
+                        <Button
+                          onClick={() => {
+                            const mobile = candidate.mobileNumber;
+                            if (!mobile) return;
+                            const phone = mobile.replace(/\D/g, "");
+                            const message = `Hi ${candidate?.firstName}, here is the meeting link: ${selected.meetingLink}`;
+                            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+                          }}
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2 h-8 text-xs shrink-0"
+                        >
+                          <FaWhatsapp className="h-3.5 w-3.5" />
+                          WhatsApp
+                        </Button>
+                      )}
                     </div>
-                    {candidate?.mobileNumber && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="bg-white border-zinc-200 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl shadow-sm w-full sm:w-auto"
-                        onClick={() => {
-                          const phone = candidate.mobileNumber.replace(/\D/g, "");
-                          const message = `Hi ${candidate.firstName}, please join your interview here: ${selected.meetingLink}`;
-                          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
-                        }}
-                      >
-                        <FaWhatsapp className="h-4 w-4 mr-2" />
-                        Share to WhatsApp
-                      </Button>
-                    )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Notes Section */}
-              {selected.notes && (
-                <div className="mt-12 bg-amber-50/50 p-8 rounded-3xl border border-amber-100/50">
-                  <p className="text-[10px] font-bold text-amber-700/60 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Edit3 className="h-3 w-3" /> Technical Notes & Briefing
-                  </p>
-                  <p className="text-[15px] text-zinc-700 whitespace-pre-wrap leading-relaxed font-medium italic">
-                    "{selected.notes}"
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {/* Notes */}
+                {selected.notes && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <FileText className="h-4 w-4 text-indigo-500" />
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Notes</h4>
+                    </div>
+                    <div className="text-sm text-slate-700 bg-slate-50 border border-slate-100 p-4 rounded-xl leading-relaxed shadow-sm whitespace-pre-wrap min-h-[80px]">
+                      {selected.notes}
+                    </div>
+                  </div>
+                )}
 
-          {/* History Section */}
-          <div className="pt-6">
-            <h3 className="text-2xl font-bold tracking-tight mb-6">Activity Log</h3>
-            <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden border-0">
-              <InterviewHistory
-                items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
-                isLoading={isHistoryLoading}
-                pagination={historyResp?.data?.pagination ?? null}
-                onPageChange={(p) => setHistoryPage(p)}
-                onLimitChange={(l) => {
-                  setHistoryLimit(l);
-                  setHistoryPage(1);
-                }}
-              />
+                {/* Empty state */}
+                {!selected.meetingLink && !selected.notes && (
+                  <div className="flex flex-col items-center justify-center text-center py-12 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-200">
+                    <Activity className="h-10 w-10 text-slate-200 mb-3" />
+                    <p className="text-sm font-bold text-slate-400">No additional details</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      No meeting link or notes have been recorded for this interview.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Interview History */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-lg font-bold text-slate-800">Complete Interview History</h3>
+            <p className="text-xs text-slate-500">Timeline of all interactions and status changes</p>
+          </div>
+          <div className="p-6">
+            <InterviewHistory
+              items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
+              isLoading={isHistoryLoading}
+              pagination={historyResp?.data?.pagination ?? null}
+              onPageChange={(p) => setHistoryPage(p)}
+              onLimitChange={(l) => {
+                setHistoryLimit(l);
+                setHistoryPage(1);
+              }}
+            />
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Modals */}
       <ReviewInterviewModal
@@ -389,12 +575,7 @@ export default function InterviewDetailPage() {
         interview={selected}
         onSubmit={handleReviewSubmit}
       />
-      <CompleteInterviewModal
-        isOpen={isCompleteOpen}
-        onClose={() => setIsCompleteOpen(false)}
-        interview={selected}
-        onSubmit={handleReviewSubmit}
-      />
+
       {selected && (
         <EditInterviewDialog
           open={isEditOpen}
@@ -402,22 +583,6 @@ export default function InterviewDetailPage() {
           interviewId={selected.id}
         />
       )}
-    </div>
-  );
-}
-
-/** * Reusable component for data fields to keep the grid clean 
- */
-function DataField({ label, value, icon: Icon, capitalize = false }: { label: string, value?: string, icon?: any, capitalize?: boolean }) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{label}</p>
-      <div className="flex items-center gap-2">
-        {Icon && <Icon className="h-3.5 w-3.5 text-zinc-300" />}
-        <p className={cn("text-[15px] font-semibold text-zinc-900", capitalize && "capitalize")}>
-          {value || "—"}
-        </p>
-      </div>
     </div>
   );
 }

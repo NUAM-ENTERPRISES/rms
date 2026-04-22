@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -39,12 +39,13 @@ export default function CompleteInterviewModal({ isOpen, onClose, interview, onS
   }, [isOpen]);
 
   const handleConfirm = async () => {
+    const trimmedReason = reason.trim();
     const updates = items.map((it) => {
       return {
         id: it.id,
         interviewStatus: "completed",
         subStatus: "interview_completed",
-        reason: reason || undefined,
+        reason: trimmedReason || undefined,
       };
     });
 
