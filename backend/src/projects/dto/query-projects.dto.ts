@@ -28,6 +28,22 @@ export class QueryProjectsDto {
   status?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter by priority',
+    enum: ['low', 'medium', 'high', 'urgent'],
+  })
+  @IsOptional()
+  @IsEnum(['low', 'medium', 'high', 'urgent'])
+  priority?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter projects with urgent deadlines',
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  isUrgent?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Filter by client ID',
     example: 'client123',
   })

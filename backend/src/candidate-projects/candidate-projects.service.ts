@@ -1041,7 +1041,16 @@ export class CandidateProjectsService {
       search, 
       startDate, 
       endDate, 
-      period 
+      period,
+      gender,
+      countries,
+      visaTypes,
+      sectors,
+      qualification,
+      minExp,
+      maxExp,
+      minAge,
+      maxAge,
     } = queryDto;
     
     const skip = (page - 1) * limit;
@@ -1050,6 +1059,80 @@ export class CandidateProjectsService {
     // 1. Build Base Where Clause
     // -------------------------------
     const where: any = { projectId };
+
+    // Advanced Filters Integration
+    if (gender) {
+      where.candidate = { ...where.candidate, gender };
+    }
+
+    if (countries) {
+      const countryList = countries.split(',').filter(Boolean);
+      if (countryList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          candidateCountries: {
+            some: {
+              countryId: { in: countryList }
+            }
+          }
+        };
+      }
+    }
+
+    if (visaTypes) {
+      const visaList = visaTypes.split(',').filter(Boolean);
+      if (visaList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          visaType: { in: visaList }
+        };
+      }
+    }
+
+    if (sectors) {
+      const sectorList = sectors.split(',').filter(Boolean);
+      if (sectorList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          sectorType: { in: sectorList }
+        };
+      }
+    }
+
+    if (qualification) {
+      where.candidate = {
+        ...where.candidate,
+        qualifications: {
+          contains: qualification,
+          mode: 'insensitive'
+        }
+      };
+    }
+
+    if (minExp !== undefined || maxExp !== undefined) {
+      where.candidate = {
+        ...where.candidate,
+        experienceYears: {
+          ...(minExp !== undefined && { gte: minExp }),
+          ...(maxExp !== undefined && { lte: maxExp }),
+        }
+      };
+    }
+
+    if (minAge !== undefined || maxAge !== undefined) {
+      const now = new Date();
+      where.candidate = {
+        ...where.candidate,
+        dateOfBirth: {
+          ...(maxAge !== undefined && { 
+            gte: new Date(now.getFullYear() - maxAge - 1, now.getMonth(), now.getDate()) 
+          }),
+          ...(minAge !== undefined && { 
+            lte: new Date(now.getFullYear() - minAge, now.getMonth(), now.getDate()) 
+          }),
+        }
+      };
+    }
 
     if (roleCatalogId) {
       where.roleNeeded = { roleCatalogId };

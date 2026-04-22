@@ -560,14 +560,6 @@ export default function CandidatesPage() {
       color: "from-lime-400 to-green-500",
     },
     {
-      label: "Qualified",
-      value: derivedCounts.qualified,
-      subtitle: "Passed screening",
-      icon: CheckCircle,
-      statusFilter: "qualified",
-      color: "from-emerald-600 to-teal-400",
-    },
-    {
       label: "Future",
       value: derivedCounts.future,
       subtitle: "Follow up later",
@@ -655,14 +647,6 @@ export default function CandidatesPage() {
         icon: UserCheck,
         statusFilter: "interested",
         color: "from-lime-400 to-green-500",
-      },
-      {
-        label: "Qualified",
-        value: qualifiedCount,
-        subtitle: "Passed screening",
-        icon: CheckCircle,
-        statusFilter: "qualified",
-        color: "from-emerald-600 to-teal-400",
       },
       {
         label: "Future",
@@ -753,14 +737,6 @@ export default function CandidatesPage() {
           icon: UserCheck,
           statusFilter: "interested",
           color: "from-lime-400 to-green-500",
-        },
-        {
-          label: "Qualified",
-          value: qualifiedCount,
-          subtitle: "Passed screening",
-          icon: CheckCircle,
-          statusFilter: "qualified",
-          color: "from-emerald-600 to-teal-400",
         },
         {
           label: "Future",

@@ -7,9 +7,16 @@ import { motion } from "framer-motion";
 interface ProjectStatsProps {
   stats: ProjectStatsType;
   className?: string;
+  onSelect?: (filters: { status?: string; isUrgent?: boolean; priority?: string }) => void;
+  activeFilter?: { status?: string; isUrgent?: boolean; priority?: string };
 }
 
-export default function ProjectStats({ stats, className }: ProjectStatsProps) {
+export default function ProjectStats({ 
+  stats, 
+  className, 
+  onSelect,
+  activeFilter 
+}: ProjectStatsProps) {
   const statsData = [
     {
       label: "Total Projects",
@@ -20,6 +27,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-blue-50 to-blue-100/50",
       iconBg: "bg-blue-200/40",
       textColor: "text-blue-600",
+      filter: {},
     },
     {
       label: "Active Projects",
@@ -30,6 +38,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-emerald-50 to-emerald-100/50",
       iconBg: "bg-emerald-200/40",
       textColor: "text-emerald-600",
+      filter: { status: "active" },
     },
     {
       label: "Completed",
@@ -40,6 +49,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-purple-50 to-purple-100/50",
       iconBg: "bg-purple-200/40",
       textColor: "text-purple-600",
+      filter: { status: "completed" },
     },
     {
       label: "Urgent Deadlines",
@@ -50,6 +60,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-orange-50 to-orange-100/50",
       iconBg: "bg-orange-200/40",
       textColor: "text-orange-600",
+      filter: { isUrgent: true },
     },
   ];
 
@@ -58,6 +69,9 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat, i) => {
           const Icon = stat.icon;
+          const isActive = activeFilter && 
+            Object.keys(stat.filter).length === Object.keys(activeFilter).length &&
+            Object.entries(stat.filter).every(([key, value]) => activeFilter[key as keyof typeof activeFilter] === value);
 
           return (
             <motion.div
@@ -67,10 +81,13 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
               transition={{ duration: 0.5, delay: i * 0.08 }}
             >
               <Card
+                onClick={() => onSelect?.(stat.filter)}
                 className={cn(
                   "relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br",
                   stat.lightBg,
-                  "hover:shadow-md transition-all duration-300 group cursor-default"
+                  "hover:shadow-md transition-all duration-300 group cursor-pointer",
+                  isActive && "ring-2 ring-blue-500 ring-offset-2",
+                  onSelect && "active:scale-95"
                 )}
               >
                 <CardContent className="px-3 py-3">

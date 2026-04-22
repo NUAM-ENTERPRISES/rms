@@ -57,4 +57,53 @@ export class ProjectOverviewQueryDto {
   @IsOptional()
   @IsEnum(DatePeriod)
   period?: DatePeriod;
+
+  @ApiPropertyOptional({ description: 'Filter by gender' })
+  @IsOptional()
+  @IsString()
+  gender?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by country preferences' })
+  @IsOptional()
+  @IsString()
+  countries?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by visa types' })
+  @IsOptional()
+  @IsString()
+  visaTypes?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by sectors' })
+  @IsOptional()
+  @IsString()
+  sectors?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by qualification' })
+  @IsOptional()
+  @IsString()
+  qualification?: string;
+
+  @ApiPropertyOptional({ description: 'Minimum years of experience' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  minExp?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum years of experience' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  maxExp?: number;
+
+  @ApiPropertyOptional({ description: 'Minimum age' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  minAge?: number;
+
+  @ApiPropertyOptional({ description: 'Maximum age' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  maxAge?: number;
 }
