@@ -7,7 +7,7 @@ interface TypedHeaderProps {
   className?: string;
 }
 
-export default function CompactNextLevelHeader({
+export default function TypedHeader({
   userName = "Recruiter",
   subtitle = "Orchestrate every panel with clarity and track candidate progress.",
   className = "",
@@ -49,11 +49,11 @@ export default function CompactNextLevelHeader({
 
   return (
     <div className={cn(
-      "group relative overflow-hidden rounded-xl border border-slate-200/40 bg-white/40 p-[1px] transition-all duration-500",
+      "relative overflow-hidden rounded-xl border border-slate-200/40 bg-white/40 p-[1px] transition-all duration-500",
       className
     )}>
-      {/* Subtle Border Beam Hover Effect */}
-      <div className="absolute inset-0 z-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+      {/* Subtle Border Beam Effect */}
+      <div className="absolute inset-0 z-0 opacity-100">
         <div className="absolute inset-[-150%] animate-[spin_6s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0_340deg,#6366f1_360deg)]" />
       </div>
 
