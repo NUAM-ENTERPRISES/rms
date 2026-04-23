@@ -2,8 +2,16 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { History, Clock } from "lucide-react";
+import { History, Clock, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -229,42 +237,83 @@ export default function InterviewHistory({
 
           {/* Pagination controls (shown when server provides pagination) */}
           {pagination ? (
-            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/5">
-              <div className="text-xs text-muted-foreground">
-                Showing <span className="font-medium">{list.length}</span> of <span className="font-medium">{pagination.total}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <label className="text-muted-foreground">Per page</label>
-                  <select
-                    value={pagination.limit}
-                    onChange={(e) => onLimitChange && onLimitChange(Number(e.target.value))}
-                    className="text-xs bg-transparent border rounded px-2 py-1"
+            <div className="flex items-center justify-between px-6 py-4 border-t bg-slate-50/50">
+              <div className="flex items-center gap-6">
+                <div className="text-xs text-slate-500 font-medium">
+                  Showing <span className="text-slate-900 font-bold">{list.length}</span> of <span className="text-slate-900 font-bold">{pagination.total}</span> entries
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Rows:</span>
+                  <Select
+                    value={String(pagination.limit)}
+                    onValueChange={(val) => onLimitChange?.(Number(val))}
                     disabled={isLoading}
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                  </select>
+                    <SelectTrigger className="h-7 w-[65px] text-xs font-bold border-slate-200 bg-white">
+                      <SelectValue placeholder={pagination.limit} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 10, 20, 50].map((pageSize) => (
+                        <SelectItem key={pageSize} value={String(pageSize)} className="text-xs">
+                          {pageSize}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onPageChange && onPageChange(Math.max(1, (pagination.page || 1) - 1))}
-                    className="px-2 py-1 rounded border text-xs"
+              <div className="flex items-center gap-4">
+                <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                  Page <span className="text-slate-900 font-bold">{pagination.page}</span> of <span className="text-slate-900 font-bold">{pagination.totalPages}</span>
+                </div>
+                
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40 transition-all shadow-sm"
+                    onClick={() => onPageChange?.(Math.max(1, (pagination.page || 1) - 1))}
                     disabled={isLoading || (pagination.page || 1) <= 1}
                   >
-                    Prev
-                  </button>
-                  <div className="text-xs text-muted-foreground">Page <span className="font-medium">{pagination.page}</span> of <span className="font-medium">{pagination.totalPages}</span></div>
-                  <button
-                    onClick={() => onPageChange && onPageChange(Math.min(pagination.totalPages, (pagination.page || 1) + 1))}
-                    className="px-2 py-1 rounded border text-xs"
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(pagination.totalPages, 3) }, (_, i) => {
+                      const pageNum = i + 1;
+                      // Simple logic for first 3 pages as an example
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={pagination.page === pageNum ? "default" : "outline"}
+                          size="icon"
+                          className={cn(
+                            "h-8 w-8 rounded-lg text-xs font-bold transition-all shadow-sm",
+                            pagination.page === pageNum 
+                              ? "bg-indigo-600 hover:bg-indigo-700 text-white border-transparent" 
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600"
+                          )}
+                          onClick={() => onPageChange?.(pageNum)}
+                          disabled={isLoading}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    {pagination.totalPages > 3 && <span className="px-1 text-slate-400">...</span>}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 rounded-lg border-slate-200 bg-white hover:bg-slate-50 hover:text-indigo-600 disabled:opacity-40 transition-all shadow-sm"
+                    onClick={() => onPageChange?.(Math.min(pagination.totalPages, (pagination.page || 1) + 1))}
                     disabled={isLoading || (pagination.page || 1) >= pagination.totalPages}
                   >
-                    Next
-                  </button>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>

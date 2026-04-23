@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
+  Star,
 } from "lucide-react";
 import {
   Dialog,
@@ -50,6 +51,7 @@ import {
   SCREENING_DECISION, 
   TRAINING_PRIORITY, 
   TRAINING_STATUS,
+  TRAINING_TYPE,
   TrainingAssignment 
 } from "@/features/screening-coordination/types";
 import { useUpdateScreeningDecisionMutation } from "../data/interviews.endpoints";
@@ -63,9 +65,9 @@ const updateScreeningTrainingSchema = z.object({
   goodLooking: z.coerce.number().min(1).max(5),
   fairness: z.coerce.number().min(1).max(5),
   languageProficiency: z.string(),
-  // Training fields (conditional)
+  trainingType: z.nativeEnum(TRAINING_TYPE).optional(),
   focusAreas: z.array(z.string()).optional(),
-  priority: z.string().optional(),
+  priority: z.nativeEnum(TRAINING_PRIORITY).optional(),
   targetCompletionDate: z.string().optional(),
   trainingNotes: z.string().optional(),
 });
@@ -84,6 +86,7 @@ export function UpdateScreeningTrainingModal({
   screening,
 }: UpdateScreeningTrainingModalProps) {
   const [step, setStep] = useState(1);
+  const [focusAreaInput, setFocusAreaInput] = useState("");
   const [updateDecision, { isLoading: isUpdating }] = useUpdateScreeningDecisionMutation();
 
   // Get existing training assignments from the screening object if provided
@@ -108,6 +111,7 @@ export function UpdateScreeningTrainingModal({
       goodLooking: 3,
       fairness: 3,
       languageProficiency: "Basic Interface",
+      trainingType: TRAINING_TYPE.TECHNICAL,
       focusAreas: [] as string[],
       priority: TRAINING_PRIORITY.MEDIUM,
       targetCompletionDate: "",
@@ -117,7 +121,7 @@ export function UpdateScreeningTrainingModal({
 
   const { watch, setValue, reset, trigger } = form;
   const decisionValue = watch("decision");
-  const focusAreas = watch("focusAreas") || [];
+  const focusAreas = (watch("focusAreas") as string[]) || [];
 
   useEffect(() => {
     if (screening && open) {
@@ -130,6 +134,7 @@ export function UpdateScreeningTrainingModal({
         goodLooking: screening.goodLooking || 3,
         fairness: screening.fairness || 3,
         languageProficiency: screening.languageProficiency || "Basic Interface",
+        trainingType: TRAINING_TYPE.TECHNICAL,
         focusAreas: [],
         priority: TRAINING_PRIORITY.MEDIUM,
         targetCompletionDate: "",
@@ -151,6 +156,7 @@ export function UpdateScreeningTrainingModal({
       };
 
       if (values.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+        payload.trainingType = values.trainingType;
         payload.focusAreas = values.focusAreas;
         payload.priority = values.priority;
         payload.targetCompletionDate = values.targetCompletionDate || undefined;
@@ -165,7 +171,8 @@ export function UpdateScreeningTrainingModal({
       toast.success("Screening decision updated successfully");
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to update screening decision");
+      const errorMessage = error?.data?.message || error?.message || "Failed to update screening decision";
+      toast.error(errorMessage);
     }
   };
 
@@ -190,14 +197,14 @@ export function UpdateScreeningTrainingModal({
   const addFocusArea = (area: string) => {
     const trimmed = area.trim();
     if (trimmed && !focusAreas.includes(trimmed)) {
-      setValue("focusAreas", [...focusAreas, trimmed]);
+      setValue("focusAreas", [...focusAreas, trimmed] as string[]);
     }
   };
 
   const removeFocusArea = (area: string) => {
     setValue(
       "focusAreas",
-      focusAreas.filter((a) => a !== area)
+      focusAreas.filter((a) => a !== area) as string[]
     );
   };
 
@@ -314,7 +321,7 @@ export function UpdateScreeningTrainingModal({
                                   min="0"
                                   max="100"
                                   {...field}
-                                  value={(field.value as number) || 0}
+                                  value={(field.value as any) ?? ""}
                                   className="h-10 rounded-xl border-slate-200 bg-slate-50 text-sm font-semibold"
                                   placeholder="Enter rating (0-100)"
                                 />
@@ -324,30 +331,40 @@ export function UpdateScreeningTrainingModal({
                           )}
                         />
 
-                        <div className="grid grid-cols-2 gap-5 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <div className="grid grid-cols-2 gap-5 bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50">
                           <FormField
                             control={form.control}
                             name="goodLooking"
                             render={({ field }) => (
                               <FormItem>
-                                <div className="flex justify-between items-center mb-2">
+                                <div className="flex justify-between items-center mb-3">
                                   <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Appearance</FormLabel>
-                                  <span className="text-sm font-black text-indigo-600">{(field.value as number)}<span className="text-[9px] text-slate-400">/5</span></span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-black text-indigo-600">{(field.value as number)}</span>
+                                    <div className="flex gap-0.5">
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <Star
+                                          key={s}
+                                          className={cn("w-2.5 h-2.5", s <= (field.value as number) ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200")}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
                                 <FormControl>
-                                  <div className="relative">
-                                    <Input
+                                  <div className="relative pt-1">
+                                    <input
                                       type="range"
                                       min="1"
                                       max="5"
                                       step="1"
                                       value={(field.value as number)}
                                       onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      className="accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
                                     />
-                                    <div className="flex justify-between mt-1.5 px-0.5">
-                                      {[1, 2, 3, 4, 5].map((val) => (
-                                        <span key={val} className={cn("text-[9px] font-bold", (field.value as number) === val ? "text-indigo-600" : "text-slate-300")}>{val}</span>
+                                    <div className="flex justify-between mt-2 px-0.5">
+                                      {["Poor", "Fair", "Good", "Great", "Elite"].map((label, val) => (
+                                        <span key={val} className={cn("text-[8px] font-bold uppercase tracking-tighter", (field.value as number) === val + 1 ? "text-indigo-600" : "text-slate-300")}>{label}</span>
                                       ))}
                                     </div>
                                   </div>
@@ -362,24 +379,34 @@ export function UpdateScreeningTrainingModal({
                             name="fairness"
                             render={({ field }) => (
                               <FormItem>
-                                <div className="flex justify-between items-center mb-2">
+                                <div className="flex justify-between items-center mb-3">
                                   <FormLabel className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Fairness</FormLabel>
-                                  <span className="text-sm font-black text-indigo-600">{(field.value as number)}<span className="text-[9px] text-slate-400">/5</span></span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-black text-indigo-600">{(field.value as number)}</span>
+                                    <div className="flex gap-0.5">
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <CheckCircle2
+                                          key={s}
+                                          className={cn("w-2.5 h-2.5", s <= (field.value as number) ? "text-emerald-500" : "text-slate-200")}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
                                 </div>
                                 <FormControl>
-                                  <div className="relative">
-                                    <Input
+                                  <div className="relative pt-1">
+                                    <input
                                       type="range"
                                       min="1"
                                       max="5"
                                       step="1"
                                       value={(field.value as number)}
                                       onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                      className="accent-indigo-600 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600 hover:accent-indigo-700 transition-all"
                                     />
-                                    <div className="flex justify-between mt-1.5 px-0.5">
-                                      {[1, 2, 3, 4, 5].map((val) => (
-                                        <span key={val} className={cn("text-[9px] font-bold", (field.value as number) === val ? "text-indigo-600" : "text-slate-300")}>{val}</span>
+                                    <div className="flex justify-between mt-2 px-0.5">
+                                      {["Low", "Basic", "Avg", "High", "Full"].map((label, val) => (
+                                        <span key={val} className={cn("text-[8px] font-bold uppercase tracking-tighter", (field.value as number) === val + 1 ? "text-indigo-600" : "text-slate-300")}>{label}</span>
                                       ))}
                                     </div>
                                   </div>
@@ -403,10 +430,12 @@ export function UpdateScreeningTrainingModal({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent className="rounded-xl">
+                                  <SelectItem value="Poor" className="text-sm">Poor</SelectItem>
                                   <SelectItem value="Basic Interface" className="text-sm">Basic Interface</SelectItem>
-                                  <SelectItem value="Conversational" className="text-sm">Conversational</SelectItem>
+                                  <SelectItem value="Basic" className="text-sm">Basic</SelectItem>
+                                  <SelectItem value="Intermediate" className="text-sm">Intermediate</SelectItem>
                                   <SelectItem value="Fluent" className="text-sm">Fluent</SelectItem>
-                                  <SelectItem value="Native" className="text-sm">Native</SelectItem>
+                                  <SelectItem value="Excellent" className="text-sm">Excellent</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormMessage />
@@ -583,10 +612,35 @@ export function UpdateScreeningTrainingModal({
                         <div className="space-y-6">
                           <FormField
                             control={form.control}
+                            name="trainingType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Training Category</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="h-11 rounded-xl">
+                                      <SelectValue placeholder="Select training type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent className="rounded-xl">
+                                    {Object.entries(TRAINING_TYPE).map(([_, value]) => (
+                                      <SelectItem key={value as string} value={value as string} className="capitalize">
+                                        {(value as string).replace("_", " ")}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
                             name="priority"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Priority</FormLabel>
+                                <FormLabel className="text-xs font-bold text-slate-600 uppercase tracking-wider">Priority Level</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value}>
                                   <FormControl>
                                     <SelectTrigger className="h-11 rounded-xl">
@@ -594,9 +648,9 @@ export function UpdateScreeningTrainingModal({
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent className="rounded-xl">
-                                    <SelectItem value={TRAINING_PRIORITY.LOW}>Low</SelectItem>
-                                    <SelectItem value={TRAINING_PRIORITY.MEDIUM}>Medium</SelectItem>
-                                    <SelectItem value={TRAINING_PRIORITY.HIGH}>High</SelectItem>
+                                    <SelectItem value={TRAINING_PRIORITY.LOW} className="text-slate-600">Low Priority</SelectItem>
+                                    <SelectItem value={TRAINING_PRIORITY.MEDIUM} className="text-blue-600">Medium Priority</SelectItem>
+                                    <SelectItem value={TRAINING_PRIORITY.HIGH} className="text-red-600">High Priority</SelectItem>
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -631,14 +685,15 @@ export function UpdateScreeningTrainingModal({
                             <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Focus Areas</Label>
                             <div className="flex gap-2">
                               <Input
-                                id="focusAreaInput"
+                                value={focusAreaInput}
+                                onChange={(e) => setFocusAreaInput(e.target.value)}
                                 placeholder="Add specific improvement area..."
                                 className="h-11 rounded-xl border-slate-200"
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
-                                    addFocusArea(e.currentTarget.value);
-                                    e.currentTarget.value = "";
+                                    addFocusArea(focusAreaInput);
+                                    setFocusAreaInput("");
                                   }
                                 }}
                               />
@@ -647,9 +702,8 @@ export function UpdateScreeningTrainingModal({
                                 variant="secondary"
                                 className="h-11 px-6 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                                 onClick={() => {
-                                  const input = document.getElementById("focusAreaInput") as HTMLInputElement;
-                                  addFocusArea(input.value);
-                                  input.value = "";
+                                  addFocusArea(focusAreaInput);
+                                  setFocusAreaInput("");
                                 }}
                               >
                                 Add

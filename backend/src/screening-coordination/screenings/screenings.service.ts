@@ -511,6 +511,13 @@ export class ScreeningsService {
       });
     });
 
+    // Ensure trainingAssignments in each screening item is sorted latest first
+    enrichedItems.forEach((screening) => {
+      if (Array.isArray(screening.trainingAssignments)) {
+        screening.trainingAssignments.sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
+      }
+    });
+
     return {
       success: true,
       data: {
@@ -940,6 +947,8 @@ export class ScreeningsService {
         ta.trainingAttempt = idx + 1;
         ta.trainingAttemptTotal = ordered.length;
       });
+      // Sort latest first for return
+      augmented.trainingAssignments.sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime());
     }
 
     return {

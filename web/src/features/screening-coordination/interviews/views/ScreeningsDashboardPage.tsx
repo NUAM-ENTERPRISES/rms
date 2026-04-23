@@ -701,7 +701,7 @@ export default function ScreeningsDashboardPage() {
                     )}
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
-                    {(activeTile === "training_assigned" || activeTile === "training_scheduled") && (
+                    {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempt</TableHead>
                     )}
                     {activeTile === "scheduled" ? (
@@ -723,6 +723,8 @@ export default function ScreeningsDashboardPage() {
                         ? "Scheduled"
                         : activeTile === "training_assigned"
                         ? "Assigned At"
+                        : activeTile === "training_completed"
+                        ? "Completed At"
                         : "Scheduled"}
                     </TableHead>
                     {(activeTile !== "training_scheduled") && (
@@ -748,13 +750,16 @@ export default function ScreeningsDashboardPage() {
                         ? `${trainingAssignment.trainingAttemptTotal}${trainingAssignment.trainingAttemptCurrent ? ` (Current: ${trainingAssignment.trainingAttemptCurrent})` : ""}`
                         : null;
 
+                      const isTrainingTile =
+                        activeTile === "training_assigned" ||
+                        activeTile === "training_scheduled" ||
+                        activeTile === "training_completed";
+
                       const targetScreeningsUrl = activeTile === "scheduled"
                         ? `/screenings/${item.id}/conduct`
-                        : ["training_assigned", "training_scheduled", "training_completed"].includes(activeTile)
-                        ? "/screenings/training"
-                        : ["passed", "on_hold"].includes(activeTile)
-                        ? "/screenings/list"
-                        : "/screenings";
+                        : isTrainingTile
+                        ? `/screenings/${item.id}?scrollTo=training`
+                        : `/screenings/${item.id}`;
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
@@ -818,7 +823,7 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
                             </div>
                           </TableCell>
-                          {(activeTile === "training_assigned" || activeTile === "training_scheduled") && (
+                          {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                             <TableCell className="px-4 py-2">
                               {attemptText ? (
                                 <Badge className="text-[10px] font-semibold uppercase px-2 py-1 bg-amber-100 text-amber-700 border-amber-200">
@@ -904,6 +909,12 @@ export default function ScreeningsDashboardPage() {
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
                             ) : activeTile === "training_assigned" ? (
                               item.trainingAssignedAt ? format(new Date(item.trainingAssignedAt), "dd MMM, HH:mm") : "-"
+                            ) : activeTile === "training_completed" ? (
+                              trainingAssignment?.completedAt
+                                ? format(new Date(trainingAssignment.completedAt), "dd MMM, HH:mm")
+                                : item.scheduledTime
+                                ? format(new Date(item.scheduledTime), "dd MMM, HH:mm")
+                                : "-"
                             ) : (
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
                             )}
