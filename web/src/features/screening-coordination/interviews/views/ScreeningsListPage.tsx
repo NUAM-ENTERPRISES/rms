@@ -546,6 +546,11 @@ export default function ScreeningsListPage() {
       return;
     }
 
+    if ((selectedInterviewForTraining.trainingAssignments?.length ?? 0) > 0) {
+      toast.error("This screening already has a training assignment.");
+      return;
+    }
+
     try {
       await createTrainingAssignment({
         candidateProjectMapId:

@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, AlertCircle } from "lucide-react";
-import { TRAINING_TYPE, TRAINING_PRIORITY, SCREENING_DECISION } from "@/features/screening-coordination/types";
+import { TRAINING_PRIORITY, SCREENING_DECISION } from "@/features/screening-coordination/types";
 import {
   Tooltip,
   TooltipContent,
@@ -46,11 +46,20 @@ const completeInterviewSchema = z.object({
   remarks: z.string().optional(),
   strengths: z.string().optional(),
   areasOfImprovement: z.string().optional(),
-  trainingType: z.string().optional(),
   focusAreas: z.array(z.string()).optional(),
   priority: z.enum(Object.values(TRAINING_PRIORITY) as [string, ...string[]]).optional(),
   targetCompletionDate: z.string().optional(),
   trainingNotes: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.decision === SCREENING_DECISION.NEEDS_TRAINING) {
+    if (!data.focusAreas || data.focusAreas.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["focusAreas"],
+        message: "Please add at least one focus area for training",
+      });
+    }
+  }
 });
 
 export type CompleteInterviewFormValues = z.infer<typeof completeInterviewSchema>;
@@ -94,7 +103,6 @@ export function CompleteScreeningDialog({
       remarks: "",
       strengths: "",
       areasOfImprovement: "",
-      trainingType: TRAINING_TYPE.TECHNICAL,
       focusAreas: [],
       priority: TRAINING_PRIORITY.MEDIUM,
       targetCompletionDate: "",
@@ -118,7 +126,6 @@ export function CompleteScreeningDialog({
         remarks: "",
         strengths: "",
         areasOfImprovement: "",
-        trainingType: TRAINING_TYPE.TECHNICAL,
         focusAreas: [],
         priority: TRAINING_PRIORITY.MEDIUM,
         targetCompletionDate: "",
@@ -156,7 +163,8 @@ export function CompleteScreeningDialog({
   const isFormValid =
     !!currentDecision &&
     !isNaN(ratingValue) &&
-    ratingValue > 0;
+    ratingValue > 0 &&
+    (currentDecision !== SCREENING_DECISION.NEEDS_TRAINING || (focusAreas && focusAreas.length > 0));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -300,34 +308,6 @@ export function CompleteScreeningDialog({
             {currentDecision === SCREENING_DECISION.NEEDS_TRAINING && (
               <div className="space-y-4 p-4 border border-rose-100 rounded-lg bg-rose-50">
                 <p className="text-sm font-semibold text-rose-700">Training Assignment Details</p>
-
-                <FormField
-                  control={form.control}
-                  name="trainingType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Training Type</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(value)}
-                        value={field.value}
-                        disabled={isLoading}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select training type..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={TRAINING_TYPE.INTERVIEW_SKILLS}>Interview Skills</SelectItem>
-                          <SelectItem value={TRAINING_TYPE.TECHNICAL}>Technical</SelectItem>
-                          <SelectItem value={TRAINING_TYPE.COMMUNICATION}>Communication</SelectItem>
-                          <SelectItem value={TRAINING_TYPE.ROLE_SPECIFIC}>Role Specific</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}

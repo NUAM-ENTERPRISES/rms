@@ -21,9 +21,9 @@ import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-quer
 import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
-  TRAINING_TYPE,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
+  TRAINING_STATUS,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
 } from '../common/constants';
@@ -2272,15 +2272,14 @@ export class CandidateProjectsService {
 
       // If this is a training assignment, create a training record and interview history entry
       if (type === 'training_assigned') {
-        // Create training assignment
-        await tx.trainingAssignment.create({
+        // Create training record for basic training without a linked screening
+        await tx.screeningTraining.create({
           data: {
             candidateProjectMapId: assignment.id,
             assignedBy: userId,
-            trainingType: TRAINING_TYPE.BASIC as any,
             focusAreas: [],
             priority: TRAINING_PRIORITY.MEDIUM as any,
-            status: TRAINING_EVENT.BASIC_ASSIGNED as any,
+            status: TRAINING_STATUS.ASSIGNED as any,
             assignedAt: new Date(),
             notes: notes || 'basic training assigned',
           },

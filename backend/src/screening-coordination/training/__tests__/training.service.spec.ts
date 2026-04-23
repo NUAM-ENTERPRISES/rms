@@ -12,12 +12,13 @@ describe('TrainingService', () => {
     candidateProjects: { findUnique: jest.fn(), update: jest.fn() },
     user: { findUnique: jest.fn(), findMany: jest.fn() },
     screening: { findUnique: jest.fn() },
-    trainingAssignment: {
+    screeningTraining: {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+      count: jest.fn(),
       delete: jest.fn(),
     },
     trainingSession: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
@@ -51,7 +52,7 @@ describe('TrainingService', () => {
     const mockCandidateProjectsService = (service as any).candidateProjectsService as any;
     mockCandidateProjectsService.sendForInterview = jest.fn().mockResolvedValue(mockCandidateProject);
 
-    (prisma.trainingAssignment.updateMany as any).mockResolvedValue({ count: 1 });
+    (prisma.screeningTraining.updateMany as any).mockResolvedValue({ count: 1 });
     (prisma.candidateProjects.findUnique as any).mockResolvedValue(mockCandidateProject);
     (prisma.interviewStatusHistory.findMany as any).mockResolvedValue([{ id: 'hist1', interviewType: 'screening', status: 'assigned' }]);
 
@@ -63,9 +64,9 @@ describe('TrainingService', () => {
     const res: any = await service.sendForInterview(dto, 'u1');
 
     expect(mockCandidateProjectsService.sendForInterview).toHaveBeenCalledWith(dto, 'u1');
-    expect(prisma.trainingAssignment.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+    expect(prisma.screeningTraining.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ candidateProjectMapId: 'map1' }),
-      data: { status: 'screening_assigned' },
+      data: { status: 'assigned' },
     }));
     expect(res.id).toBe('map1');
     expect(res.history).toBeDefined();
@@ -81,7 +82,7 @@ describe('TrainingService', () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'Assigner' });
 
     const tx = {
-      trainingAssignment: { create: jest.fn().mockResolvedValue({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } }) },
+      screeningTraining: { create: jest.fn().mockResolvedValue({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } }) },
       candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1' }) },
       candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
       interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'ih1' }) },
@@ -91,10 +92,10 @@ describe('TrainingService', () => {
     prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
 
     // Ensure after create we fetch assignment (the create returns the created object via tx)
-    (prisma.trainingAssignment.findUnique as any).mockResolvedValueOnce({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } });
+    (prisma.screeningTraining.findUnique as any).mockResolvedValueOnce({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } });
 
     const res = await service.createAssignment(dto);
-    expect(tx.trainingAssignment.create).toHaveBeenCalled();
+    expect(tx.screeningTraining.create).toHaveBeenCalled();
     expect(res).toBeDefined();
     expect(res.candidateProjectMap).toBeDefined();
     expect(res.candidateProjectMap.candidate).toBeDefined();
@@ -105,37 +106,39 @@ describe('TrainingService', () => {
   });
 
   it('findAllAssignments includes assignedBy object', async () => {
-    (prisma.trainingAssignment.findMany as any).mockResolvedValue([
+    (prisma.screeningTraining.findMany as any).mockResolvedValue([
       { id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } },
     ]);
+    (prisma.screeningTraining.count as any).mockResolvedValue(1);
     (prisma.user.findMany as any).mockResolvedValue([
       { id: 'u1', name: 'Assigner', email: 'a@x' },
     ]);
 
     const res: any = await (service as any).findAllAssignments({} as any);
 
-    expect(prisma.trainingAssignment.findMany).toHaveBeenCalled();
-    expect(res[0].assignedBy).toBeDefined();
-    expect(res[0].assignedBy.name).toBe('Assigner');
-    expect(res[0].candidateProjectMap.candidate!.email).toBe('john@example.com');
-    expect(res[0].candidateProjectMap.candidate!.phone).toBe('+91 9876543210');
+    expect(prisma.screeningTraining.findMany).toHaveBeenCalled();
+    expect(res.items[0].assignedBy).toBeDefined();
+    expect(res.items[0].assignedBy.name).toBe('Assigner');
+    expect(res.items[0].candidateProjectMap.candidate!.email).toBe('john@example.com');
+    expect(res.items[0].candidateProjectMap.candidate!.phone).toBe('+91 9876543210');
   });
 
   it('findAllAssignments excludes basic training without screening by default', async () => {
-    (prisma.trainingAssignment.findMany as any).mockResolvedValue([]);
+    (prisma.screeningTraining.findMany as any).mockResolvedValue([]);
+    (prisma.screeningTraining.count as any).mockResolvedValue(0);
 
     await (service as any).findAllAssignments({} as any);
 
-    expect(prisma.trainingAssignment.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ NOT: { trainingType: 'basic', screeningId: null } }) }));
+    expect(prisma.screeningTraining.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ NOT: { screeningId: null } }) }));
   });
 
   it('findOneAssignment includes assignedBy object', async () => {
-    (prisma.trainingAssignment.findUnique as any).mockResolvedValue({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } });
+    (prisma.screeningTraining.findUnique as any).mockResolvedValue({ id: 'ta1', assignedBy: 'u1', candidateProjectMap: { candidate: { firstName: 'John', lastName: 'Doe', email: 'john@example.com', countryCode: '+91', mobileNumber: '9876543210' } } });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'Assigner', email: 'a@x' });
 
     const res: any = await (service as any).findOneAssignment('ta1');
 
-    expect(prisma.trainingAssignment.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' } }));
+    expect(prisma.screeningTraining.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' } }));
     expect(res.assignedBy).toBeDefined();
     expect(res.assignedBy.name).toBe('Assigner');
     expect(res.candidateProjectMap.candidate!.email).toBe('john@example.com');
@@ -154,7 +157,7 @@ describe('TrainingService', () => {
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'Trainer' });
 
     const tx = {
-      trainingAssignment: { update: jest.fn().mockResolvedValue({ ...assignment, status: 'completed' }) },
+      screeningTraining: { update: jest.fn().mockResolvedValue({ ...assignment, status: 'completed' }) },
       candidateProjects: { update: jest.fn().mockResolvedValue({ id: 'map1' }) },
       candidateProjectStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'hist1' }) },
       interviewStatusHistory: { create: jest.fn().mockResolvedValue({ id: 'ih1' }) },
@@ -164,7 +167,7 @@ describe('TrainingService', () => {
 
     const result = await service.completeTraining('ta1', { notes: 'done', improvementNotes: 'good' } as any, 'u1');
 
-    expect(tx.trainingAssignment.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' } }));
+    expect(tx.screeningTraining.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' } }));
     expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'map1' } }));
     expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
     expect(tx.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ interviewType: 'screening', status: 'training_completed' }) }));
@@ -172,7 +175,7 @@ describe('TrainingService', () => {
   });
 
   it('bulkCompleteSessions marks assignment completed and creates history records', async () => {
-    const dto = { sessions: [{ sessionId: 's1', performanceRating: 5, notes: 'Completed' }] } as any;
+    const dto = { sessions: [{ sessionId: 'ta1', performanceRating: 5, notes: 'Completed' }] } as any;
 
     const assignment = { id: 'ta1', candidateProjectMapId: 'map1', status: 'scheduled' } as any;
 
@@ -182,7 +185,7 @@ describe('TrainingService', () => {
         update: jest.fn().mockResolvedValue({ id: 's1', trainingAssignmentId: 'ta1', completedAt: new Date() }),
         create: jest.fn(),
       },
-      trainingAssignment: {
+      screeningTraining: {
         findUnique: jest.fn().mockResolvedValue(assignment),
         update: jest.fn().mockResolvedValue({ ...assignment, status: 'completed' }),
       },
@@ -203,12 +206,12 @@ describe('TrainingService', () => {
       },
     } as any;
 
-    (prisma.trainingSession.findUnique as any).mockResolvedValue({ trainingAssignmentId: 'ta1' });
+    (prisma.screeningTraining.findUnique as any).mockResolvedValue(assignment);
     prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
 
     const result = await service.bulkCompleteSessions(dto, 'u1');
 
-    expect(tx.trainingAssignment.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' }, data: expect.objectContaining({ status: 'completed' }) }));
+    expect(tx.screeningTraining.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'ta1' }, data: expect.objectContaining({ status: 'completed' }) }));
     expect(tx.candidateProjects.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'map1' }, data: expect.objectContaining({ subStatus: expect.any(Object) }) }));
     expect(tx.candidateProjectStatusHistory.create).toHaveBeenCalled();
     expect(tx.interviewStatusHistory.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ interviewType: 'training', status: 'training_completed' }) }));
