@@ -62,6 +62,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
+import { UpdateScreeningTrainingModal } from "../components/UpdateScreeningTrainingModal";
 import { motion } from "framer-motion";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
@@ -72,7 +73,7 @@ import ScheduleTrainingModal from "@/features/screening-coordination/training/co
 type TileKey =
   | "assigned"
   | "scheduled"
-  | "retraining"
+  | "training_assigned"
   | "training_scheduled"
   | "training_completed"
   | "passed"
@@ -116,15 +117,15 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     textColor: "text-indigo-600",
   },
   {
-    key: "retraining",
+    key: "training_assigned",
     label: "Training Assigned",
-    icon: Users,
-    value: stats?.byDecision?.needsTraining ?? 0,
-    hint: "Candidate assigned to training",
-    gradient: "from-yellow-400 to-amber-500",
-    bgGradient: "from-yellow-50 to-amber-100/50",
-    iconBg: "bg-yellow-200/40",
-    textColor: "text-amber-600",
+    icon: Calendar,
+    value: stats?.byDecision?.trainingAssigned ?? 0,
+    hint: "Candidates with training already assigned",
+    gradient: "from-blue-500 to-cyan-500",
+    bgGradient: "from-blue-50 to-cyan-100/50",
+    iconBg: "bg-blue-200/40",
+    textColor: "text-blue-600",
   },
   {
     key: "training_scheduled",
@@ -222,6 +223,7 @@ export default function ScreeningsDashboardPage() {
   });
 
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [isUpdateTrainingModalOpen, setIsUpdateTrainingModalOpen] = useState(false);
   const [decisionScreeningItem, setDecisionScreeningItem] = useState<any | null>(null);
   const [decisionValue, setDecisionValue] = useState<SCREENING_DECISION | null>(null);
   const [decisionRemarks, setDecisionRemarks] = useState("");
@@ -338,7 +340,7 @@ export default function ScreeningsDashboardPage() {
 
   const activeDecisionParam = useMemo(() => {
     switch (activeTile) {
-      case "retraining":
+      case "training_assigned":
         return SCREENING_DECISION.NEEDS_TRAINING;
       case "training_scheduled":
         return SCREENING_DECISION.NEEDS_TRAINING; // Both use NEEDS_TRAINING decision, filtered by status below
@@ -363,7 +365,7 @@ export default function ScreeningsDashboardPage() {
         ? "training_completed"
         : activeTile === "training_scheduled"
         ? "training_scheduled"
-        : activeTile === "retraining"
+        : activeTile === "training_assigned"
         ? "training_assigned"
         : undefined,
       sortBy: "createdAt",
@@ -432,6 +434,12 @@ export default function ScreeningsDashboardPage() {
         decision: item.decision,
         conductedAt: item.conductedAt,
         overallRating: item.overallRating,
+        goodLooking: item.goodLooking,
+        fairness: item.fairness,
+        languageProficiency: item.languageProficiency,
+        strengths: item.strengths,
+        remarks: item.remarks,
+        trainingAssignments: item.trainingAssignments,
         trainingAssignment,
       };
     });
@@ -607,20 +615,21 @@ export default function ScreeningsDashboardPage() {
                       </Button>
                     </motion.div>
                   )}
-                  {activeTile === "retraining" && selectedIds.length > 0 && (
+                  {activeTile === "training_assigned" && selectedIds.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                     >
                       <Button
                         size="sm"
-                        className="bg-amber-600 hover:bg-amber-700 text-white shadow-md animate-in fade-in slide-in-from-right-2 mr-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md animate-in fade-in slide-in-from-right-2 mr-2"
                         onClick={() => {
                           const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
-                          // Map screening items to training assignments if possible
-                          // Normally, retraining tile shows screenings with needs_training decision
-                          // These already have training assignments created via the completeScreening API
-                          setSelectedAssignmentsForTraining(selected.map((s: any) => s.trainingAssignment).filter(Boolean));
+                          setSelectedAssignmentsForTraining(
+                            selected
+                              .map((s: any) => s.trainingAssignment)
+                              .filter(Boolean)
+                          );
                           setIsScheduleTrainingOpen(true);
                         }}
                       >
@@ -664,7 +673,7 @@ export default function ScreeningsDashboardPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
+                    {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
                       <TableHead className="w-[40px] px-4">
                         <Checkbox
                           checked={tableItems.length > 0 && selectedIds.length === tableItems.length}
@@ -680,7 +689,7 @@ export default function ScreeningsDashboardPage() {
                     )}
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
-                    {(activeTile === "retraining" || activeTile === "training_scheduled") && (
+                    {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempt</TableHead>
                     )}
                     {activeTile === "scheduled" ? (
@@ -688,7 +697,7 @@ export default function ScreeningsDashboardPage() {
                     ) : activeTile !== "assigned" && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Decision</TableHead>
                     )}
-                    {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                    {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                       <>
                         <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Conducted At</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Overall Rating</TableHead>
@@ -700,11 +709,13 @@ export default function ScreeningsDashboardPage() {
                         ? "Assigned At"
                         : activeTile === "scheduled"
                         ? "Scheduled"
-                        : activeTile === "retraining"
+                        : activeTile === "training_assigned"
                         ? "Assigned At"
+                        : activeTile === "training_completed"
+                        ? "Completed At"
                         : "Scheduled"}
                     </TableHead>
-                    {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                    {(activeTile !== "training_scheduled") && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     )}
                     <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600 w-24">Actions</TableHead>
@@ -727,19 +738,20 @@ export default function ScreeningsDashboardPage() {
                         ? `${trainingAssignment.trainingAttemptTotal}${trainingAssignment.trainingAttemptCurrent ? ` (Current: ${trainingAssignment.trainingAttemptCurrent})` : ""}`
                         : null;
 
+                      const isTrainingTile =
+                        activeTile === "training_assigned" ||
+                        activeTile === "training_scheduled" ||
+                        activeTile === "training_completed";
+
                       const targetScreeningsUrl = activeTile === "scheduled"
                         ? `/screenings/${item.id}/conduct`
-                        : activeTile === "retraining"
-                        ? "/screenings/training" // navigate to the training listing page
-                        : ["training_scheduled", "training_completed"].includes(activeTile)
-                        ? "/screenings/training"
-                        : ["passed", "on_hold"].includes(activeTile)
-                        ? "/screenings/list"
-                        : "/screenings";
+                        : isTrainingTile
+                        ? `/screenings/${item.id}?scrollTo=training`
+                        : `/screenings/${item.id}`;
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
-                          {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
+                          {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
                             <TableCell className="px-4 py-2">
                               <Checkbox
                                 checked={selectedIds.includes(item.id)}
@@ -799,7 +811,7 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
                             </div>
                           </TableCell>
-                          {(activeTile === "retraining" || activeTile === "training_scheduled") && (
+                          {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                             <TableCell className="px-4 py-2">
                               {attemptText ? (
                                 <Badge className="text-[10px] font-semibold uppercase px-2 py-1 bg-amber-100 text-amber-700 border-amber-200">
@@ -834,7 +846,7 @@ export default function ScreeningsDashboardPage() {
                                 >
                                   {decision}
                                 </Badge>
-                                {activeTile === "training_completed" && item.decision === "needs_training" && (
+                                {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
                                   <div className="relative group flex items-center">
                                     <div className="w-5 h-5 flex items-center justify-center rounded-full bg-white border border-red-400 text-red-600 font-extrabold animate-pulse cursor-help">
                                       !
@@ -848,7 +860,7 @@ export default function ScreeningsDashboardPage() {
                               </div>
                             </TableCell>
                           )}
-                          {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                          {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                             <>
                               <TableCell className="px-4 py-2 text-[11px] text-gray-600">
                                 {item.conductedAt ? format(new Date(item.conductedAt), "dd MMM, HH:mm") : "-"}
@@ -883,13 +895,19 @@ export default function ScreeningsDashboardPage() {
                               item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
                             ) : activeTile === "scheduled" ? (
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
-                            ) : activeTile === "retraining" ? (
+                            ) : activeTile === "training_assigned" ? (
                               item.trainingAssignedAt ? format(new Date(item.trainingAssignedAt), "dd MMM, HH:mm") : "-"
+                            ) : activeTile === "training_completed" ? (
+                              trainingAssignment?.completedAt
+                                ? format(new Date(trainingAssignment.completedAt), "dd MMM, HH:mm")
+                                : item.scheduledTime
+                                ? format(new Date(item.scheduledTime), "dd MMM, HH:mm")
+                                : "-"
                             ) : (
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
                             )}
                           </TableCell>
-                          {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                          {(activeTile !== "training_scheduled") && (
                             <TableCell className="px-4 py-2">
                               <div className="flex items-center gap-1.5">
                                 <UserCheck className="h-3.5 w-3.5 text-gray-400" />
@@ -898,28 +916,29 @@ export default function ScreeningsDashboardPage() {
                             </TableCell>
                           )}
                           <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2 w-24">
-                            {activeTile === "retraining" && (
+                            {activeTile === "training_assigned" && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+                                className="h-8 w-8 p-0 text-blue-700 border-blue-200 hover:bg-blue-50"
                                 onClick={() => {
                                   if (item.trainingAssignment) {
-                                    setSelectedAssignmentsForTraining([item.trainingAssignment]);
+                                    setSelectedAssignmentsForTraining([{ ...item.trainingAssignment }]);
                                     setIsScheduleTrainingOpen(true);
                                   } else {
                                     toast.error("No training assignment found for this candidate");
                                   }
                                 }}
+                                title="Schedule Training"
                               >
-                                <Calendar className="h-3.5 w-3.5 mr-1" />
+                                <Calendar className="h-4 w-4" />
                               </Button>
                             )}
                             {activeTile === "training_scheduled" && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                className="h-8 w-8 p-0 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
                                 onClick={() => {
                                   if (item.trainingAssignment) {
                                     navigate("/screening-coordination/training/conduct", { 
@@ -938,20 +957,23 @@ export default function ScreeningsDashboardPage() {
                                     toast.error("No training assignment found for this candidate");
                                   }
                                 }}
+                                title="Conduct Training"
                               >
-                                <Users className="h-3.5 w-3.5 mr-1" />
-                                Conduct Training
+                                <Users className="h-4 w-4" />
                               </Button>
                             )}
                             {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0"
-                                onClick={() => openDecisionModal(item)}
-                                title="Edit decision"
+                                variant="outline"
+                                className="h-8 w-8 p-0 text-amber-700 border-amber-200 hover:bg-amber-50"
+                                onClick={() => {
+                                  setDecisionScreeningItem(item);
+                                  setIsUpdateTrainingModalOpen(true);
+                                }}
+                                title="Update Decision"
                               >
-                                <Pencil className="h-3.5 w-3.5 text-amber-600" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             )}
                             {activeTile === "assigned" ? (
@@ -1244,38 +1266,75 @@ export default function ScreeningsDashboardPage() {
           onConfirm={handleUpdateDecision}
         />
 
+        <UpdateScreeningTrainingModal
+          open={isUpdateTrainingModalOpen}
+          onOpenChange={setIsUpdateTrainingModalOpen}
+          screening={decisionScreeningItem}
+        />
+
         <AssignToTrainerDialog
           open={assignToTrainerOpen}
           onOpenChange={setAssignToTrainerOpen}
           candidateName={
-            selectedInterviewForTraining?.candidateProjectMap?.candidate
+            selectedIds.length > 1
+              ? `${selectedIds.length} candidates`
+              : selectedInterviewForTraining?.candidateProjectMap?.candidate
               ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
               : undefined
           }
           onSubmit={async (formData: any) => {
-            if (!selectedInterviewForTraining) return;
             if (!user?.id) {
               return;
             }
+
+            const targets = selectedIds.length > 0
+              ? tableItems.filter((it: any) => selectedIds.includes(it.id))
+              : selectedInterviewForTraining
+              ? [selectedInterviewForTraining]
+              : [];
+
+            if (targets.length === 0) return;
+
+            const targetsWithoutAssignment = targets.filter(
+              (target: any) => !target.trainingAssignments || target.trainingAssignments.length === 0,
+            );
+
+            if (targetsWithoutAssignment.length === 0) {
+              toast.error("Selected candidate(s) already have a training assignment for this screening.");
+              return;
+            }
+
+            const skippedCount = targets.length - targetsWithoutAssignment.length;
+
             try {
-              await createTrainingAssignment({
-                candidateProjectMapId: selectedInterviewForTraining?.candidateProjectMap?.id,
-                screeningId: selectedInterviewForTraining.id,
-                assignedBy: user.id,
-                trainingType: formData.trainingType,
-                focusAreas: formData.focusAreas,
-                priority: formData.priority,
-                targetCompletionDate: formData.targetCompletionDate || undefined,
-                notes: formData.notes,
-              }).unwrap();
+              for (const target of targetsWithoutAssignment) {
+                await createTrainingAssignment({
+                  candidateProjectMapId: target?.candidateProjectMap?.id,
+                  screeningId: target.id,
+                  assignedBy: user.id,
+                  trainingType: formData.trainingType,
+                  focusAreas: formData.focusAreas,
+                  priority: formData.priority,
+                  targetCompletionDate: formData.targetCompletionDate || undefined,
+                  notes: formData.notes,
+                }).unwrap();
+              }
 
               setAssignToTrainerOpen(false);
               setSelectedInterviewForTraining(null);
+              setSelectedIds([]);
               refetchAssigned();
               refetchUpcoming();
               refetchStats();
+              if (skippedCount > 0) {
+                toast.success(
+                  `Assigned training to ${targetsWithoutAssignment.length} candidate${targetsWithoutAssignment.length === 1 ? '' : 's'}. ${skippedCount} already had an assignment and were skipped.`,
+                );
+              } else {
+                toast.success(`Assigned training to ${targetsWithoutAssignment.length} candidate${targetsWithoutAssignment.length === 1 ? '' : 's'}`);
+              }
             } catch (err: any) {
-              // preserve current behavior with toast
+              toast.error(err?.data?.message || "Failed to assign training");
             }
           }}
           isLoading={isCreatingTraining}
