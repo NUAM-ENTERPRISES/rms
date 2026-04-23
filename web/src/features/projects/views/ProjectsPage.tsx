@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ import {
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
   const { user } = useAppSelector((state) => state.auth);
@@ -134,11 +135,11 @@ export default function ProjectsPage() {
           statsData?.data &&
           canReadProjects &&
           !isProcessingExecutive && (
-            <ProjectStats stats={statsData.data} className="px-0" />
+            <ProjectStats stats={statsData.data} tableRef={tableRef} className="px-0" />
           )}
 
         {canReadProjects && (
-          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div ref={tableRef} className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
             <div className="p-5">
               <ProjectFilters
                 filters={filters}

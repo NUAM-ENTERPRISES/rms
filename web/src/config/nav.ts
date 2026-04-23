@@ -256,7 +256,7 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer", "Documentation Executive"],
+    hiddenForRoles: ["Screening Trainer", "Documentation Executive", "Interview Coordinator"],
     children: [
       {
         id: "screenings-dashboard",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { ImageViewer } from "@/components/molecules";
+import { ImageViewer, StatusTile } from "@/components/molecules";
 import {
     Users,
     XCircle,
@@ -46,6 +46,18 @@ import { useGetProjectsQuery } from "@/services/projectsApi";
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const tableRef = useRef<HTMLDivElement>(null);
+
+    const handleTileClick = (tile: any) => {
+        if (tile.type === "step") {
+            setStatusFilter("all");
+            setStepFilter((prev) => (prev === tile.key ? null : tile.key));
+        } else {
+            setStepFilter(null);
+            setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
+        }
+        setPage(1);
+    };
 
     // Local UI state (same as production page)
     const [search, setSearch] = useState("");
@@ -242,32 +254,21 @@ export default function ProcessingAdminDashboardPage() {
                             const Icon = isStepTile ? ClipboardList : tile.icon;
 
                             return (
-                                <Card
+                                <StatusTile
                                     key={`${tile.type}-${tile.label}`}
-                                    onClick={() => {
-                                        if (isStepTile) {
-                                            setStatusFilter('all');
-                                            setStepFilter(stepFilter === tile.key ? null : tile.key);
-                                        } else {
-                                            setStepFilter(null);
-                                            setStatusFilter(statusFilter === tile.status ? 'all' : tile.status);
-                                        }
-                                    }}
-                                    className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
-                                >
-                                    <CardContent className="pt-1 pb-1">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-slate-600 mb-0.5">{tile.label}</p>
-                                                <h3 className={`text-xl font-semibold ${colors.text}`}>{value}</h3>
-                                                {'subtitle' in tile && <p className="text-xs text-slate-500 mt-0.5">{tile.subtitle}</p>}
-                                            </div>
-                                            <div className={`p-1 ${colors.iconBg} rounded-full`}>
-                                                <Icon className={`h-4 w-4 ${colors.text}`} />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                    label={tile.label}
+                                    value={value}
+                                    icon={Icon}
+                                    bgGradient={colors.bg}
+                                    iconBg={colors.iconBg}
+                                    textColor={colors.text}
+                                    active={isActive}
+                                    onClick={() => handleTileClick(tile)}
+                                    scrollTargetRef={tableRef}
+                                    scrollOnClick={true}
+                                    className="h-full"
+                                    ariaLabel={`Filter processing by ${tile.label}`}
+                                />
                             );
                         })}
                     </div>
@@ -347,7 +348,7 @@ export default function ProcessingAdminDashboardPage() {
                         </CardHeader>
 
                         <CardContent className="p-0">
-                            <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
+                            <div ref={tableRef} className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-slate-50/80 hover:bg-slate-50">

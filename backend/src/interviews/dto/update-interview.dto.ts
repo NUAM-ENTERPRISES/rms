@@ -19,7 +19,7 @@ export class UpdateInterviewDto {
   @IsOptional()
   scheduledTime?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Interview duration in minutes',
     example: 60,
     required: false,
@@ -28,17 +28,25 @@ export class UpdateInterviewDto {
   @IsOptional()
   duration?: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Interview type',
     example: 'technical',
-    enum: ['technical', 'hr', 'managerial', 'final'],
     required: false,
   })
-  @IsEnum(['technical', 'hr', 'managerial', 'final'])
+  @IsString()
   @IsOptional()
   type?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
+    description: 'Interviewer name',
+    example: 'John Doe',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  interviewer?: string;
+
+  @ApiPropertyOptional({
     description: 'Interview mode',
     example: 'video',
     enum: ['video', 'phone', 'in-person'],

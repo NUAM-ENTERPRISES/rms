@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, Search, ChevronLeft, ChevronRight, Calendar, CalendarDays, Phone, Mail, ArrowRight } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
 import { TransferCandidateModal } from "@/components/molecules/TransferCandidateModal";
 import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery, useGetCREReassignedCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
@@ -180,27 +181,10 @@ export default function CREDashboardPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="space-y-6 p-6 max-w-7xl mx-auto">
         {/* Welcome Section */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Welcome back, {user?.name || "CRE"}! 👋
-          </h1>
-          <p className="text-sm text-slate-500">
-            Role(s): {Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}
-          </p>
-          <p className="text-lg text-slate-600">
-            {statusFilter === undefined
-              ? "Showing all assigned candidates"
-              : statusFilter === 'interested'
-              ? "Showing Converted Responses candidates"
-              : statusFilter === 'reassigned'
-              ? "Showing Reassigned candidates"
-              : statusFilter === 'on_hold'
-              ? "Showing On Hold candidates"
-              : statusFilter === 'untouched'
-              ? "Showing Untouched candidates"
-              : "Showing selected filter candidates"}
-          </p>
-        </div>
+        <TypedHeader 
+          userName={user?.name || "CRE"} 
+          subtitle={`Roles: ${Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}`}
+        />
 
         {/* Replaced stat cards with an updated CandidatePage-style card row */}
         <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">

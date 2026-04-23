@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardCheck,
@@ -63,7 +63,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { motion } from "framer-motion";
-import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
+import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
@@ -195,8 +195,14 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
 
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
   const coordinatorId = (user?.id as string) || "";
+
+  const handleTileClick = (tile: TileConfig) => {
+    setActiveTile(tile.key);
+    setCurrentPage(1);
+  };
 
   const [activeTile, setActiveTile] = useState<TileKey>("assigned");
   const [currentPage, setCurrentPage] = useState(1);
@@ -502,7 +508,6 @@ export default function ScreeningsDashboardPage() {
         {/* ── Status Tiles ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {allStats.map((tile, i) => {
-            const Icon = tile.icon;
             const isActive = activeTile === tile.key;
 
             return (
@@ -512,35 +517,20 @@ export default function ScreeningsDashboardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
               >
-                <Card
-                  onClick={() => setActiveTile(tile.key)}
-                  role="button"
-                  tabIndex={0}
-                  className={cn(
-                    "h-full border-0 shadow-sm bg-gradient-to-br backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5",
-                    tile.bgGradient,
-                    isActive ? "ring-2 ring-indigo-500/30 shadow-md scale-[1.02]" : ""
-                  )}
-                >
-                  <CardContent className="py-2 px-2.5 h-full flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 mb-0.5 truncate uppercase tracking-wider">
-                          {tile.label}
-                        </p>
-                        <h3 className={cn("text-xl font-extrabold tracking-tight", tile.textColor)}>
-                          {tile.value}
-                        </h3>
-                      </div>
-                      <div className={cn("p-1.5 rounded-lg shrink-0 shadow-sm", tile.iconBg)}>
-                        <Icon className={cn("h-4 w-4", tile.textColor)} />
-                      </div>
-                    </div>
-                    <p className="mt-1 text-[9px] text-slate-500 font-medium line-clamp-1 italic">
-                      {tile.hint}
-                    </p>
-                  </CardContent>
-                </Card>
+                <StatusTile
+                  label={tile.label}
+                  value={tile.value}
+                  icon={tile.icon}
+                  bgGradient={tile.bgGradient}
+                  iconBg={tile.iconBg}
+                  textColor={tile.textColor}
+                  active={isActive}
+                  onClick={() => handleTileClick(tile)}
+                  scrollTargetRef={tableRef}
+                  scrollOnClick={true}
+                  className="h-full"
+                  ariaLabel={`Filter screenings by ${tile.label}`}
+                />
               </motion.div>
             );
           })}
@@ -590,7 +580,7 @@ export default function ScreeningsDashboardPage() {
           </CardHeader>
 
           <CardContent className="p-0">
-            <div className="border border-gray-200 bg-white">
+            <div ref={tableRef} className="border border-gray-200 bg-white">
               <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2 shadow-lg shadow-purple-500/20">

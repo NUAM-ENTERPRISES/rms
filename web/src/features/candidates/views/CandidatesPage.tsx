@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { ImageViewer, DatePicker } from "@/components/molecules";
+import { StatusTile } from "@/components/molecules/StatusTile";
 import { parseISO, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -76,6 +77,7 @@ import { toast } from "sonner";
 export default function CandidatesPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
@@ -207,7 +209,7 @@ export default function CandidatesPage() {
 
 
   // Filter and paginate candidates
-  const { filteredCandidates, paginatedCandidates, totalCount } =
+  const { filteredCandidates, paginatedCandidates } =
     useMemo(() => {
       // Ensure candidates is an array
       if (!Array.isArray(candidates)) {
@@ -215,7 +217,6 @@ export default function CandidatesPage() {
         return {
           filteredCandidates: [],
           paginatedCandidates: [],
-          totalCount: 0,
         };
       }
 
@@ -288,9 +289,23 @@ export default function CandidatesPage() {
       return {
         filteredCandidates: filtered,
         paginatedCandidates: paginated,
-        totalCount: filtered.length,
       };
     }, [candidates, filters]);
+
+  const pagination =
+    isRecruiter && !isManager
+      ? recruiterCandidatesData?.pagination
+      : allCandidatesData?.pagination;
+  const hasServerPagination = Boolean(
+    pagination &&
+      (pagination.totalPages !== undefined ||
+        pagination.totalCount !== undefined ||
+        pagination.total !== undefined)
+  );
+  const pageItems = hasServerPagination ? candidates : paginatedCandidates;
+  const totalCount =
+    pagination?.totalCount ?? pagination?.total ?? filteredCandidates.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / filters.limit));
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -801,6 +816,10 @@ export default function CandidatesPage() {
   // Handler for clicking statistic tiles (applies a status filter)
   const handleTileClick = (status?: string) => {
     setFilters((prev) => ({ ...prev, status: status ?? "all", page: 1 }));
+
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     // Force a refetch after state update completes to ensure the network call runs
     setTimeout(() => {
@@ -1320,37 +1339,21 @@ export default function CandidatesPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
               >
-                <Card
+                <StatusTile
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={Icon}
+                  bgGradient={colors.bg}
+                  iconBg={colors.iconBg}
+                  textColor={colors.text}
+                  active={isActive}
                   onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
-                  onKeyDown={(e) => {
-                    if (isInteractive && (e.key === "Enter" || e.key === " ")) {
-                      handleTileClick(stat.statusFilter);
-                    }
-                  }}
-                  role={isInteractive ? "button" : undefined}
-                  tabIndex={isInteractive ? 0 : undefined}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 ${isInteractive ? "cursor-pointer hover:shadow-sm transform hover:-translate-y-0.5" : ""} ${isActive ? "ring-2 ring-blue-500/30" : ""}`}
-                >
-                  <CardContent className="pt-1 pb-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5">
-                          {stat.label}
-                        </p>
-                        <h3 className={`text-lg font-semibold ${colors.text}`}>
-                          {stat.value}
-                        </h3>
-                        <p className="text-[9px] text-slate-500 mt-0.5">
-                          {stat.subtitle}
-                        </p>
-                      </div>
-
-                      <div className={`p-0.5 ${colors.iconBg} rounded-full`}>
-                        <Icon className={`h-3 w-3 ${colors.text}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  scrollTargetRef={tableRef}
+                  scrollOnClick={isInteractive}
+                  ariaLabel={`Filter candidates by ${stat.label}`}
+                  className="h-full backdrop-blur-sm transition-all duration-200"
+                />
               </motion.div>
             );
           })}
@@ -1365,8 +1368,7 @@ export default function CandidatesPage() {
                   {getTableTitle()}
                 </CardTitle>
                 <CardDescription>
-                  {getTableSubtitle()} • {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
-                  candidates found
+                  {getTableSubtitle()} • {totalCount} candidates found
                 </CardDescription>
               </div>
             </div>
@@ -1374,7 +1376,7 @@ export default function CandidatesPage() {
 
           <CardContent>
             {/* Premium Table Container */}
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               {/* Beautiful Header */}
               <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
                 <div className="flex items-center gap-4">
@@ -1388,8 +1390,7 @@ export default function CandidatesPage() {
                       {getTableTitle()}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1 font-medium">
-                      {getTableSubtitle()} — {Array.isArray(filteredCandidates) ? filteredCandidates.length : 0}{" "}
-                      candidate{filteredCandidates?.length !== 1 ? "s" : ""} in
+                      {getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""} in
                       total
                     </p>
                   </div>
@@ -1439,8 +1440,8 @@ export default function CandidatesPage() {
                 </TableHeader>
 
                 <TableBody>
-                  {Array.isArray(paginatedCandidates) &&
-                    paginatedCandidates.map((candidate) => {
+                  {Array.isArray(pageItems) &&
+                    pageItems.map((candidate) => {
                       const statusName = candidate.currentStatus?.statusName ?? "";
                       const statusInfo = getStatusInfo(statusName);
                       const StatusIcon = statusInfo.icon;
@@ -1712,8 +1713,7 @@ export default function CandidatesPage() {
               </Table>
 
               {/* Empty State - Your Original */}
-              {Array.isArray(filteredCandidates) &&
-                filteredCandidates.length === 0 && (
+              {pageItems.length === 0 && totalCount === 0 && (
                   <div className="text-center py-12">
                     <UserCheck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-slate-600 mb-2">
@@ -1743,8 +1743,7 @@ export default function CandidatesPage() {
             </div>
 
             {/* Pagination - Your Original */}
-            {Array.isArray(filteredCandidates) &&
-              filteredCandidates.length > 0 && (
+            {totalCount > 0 && (
                 <Card className="mt-4 border-0 shadow-lg bg-white/90">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
@@ -1770,14 +1769,8 @@ export default function CandidatesPage() {
                         </Button>
 
                         <div className="flex items-center gap-1">
-                          {Array.from(
-                            { length: Math.ceil(totalCount / filters.limit) },
-                            (_, i) => i + 1
-                          )
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
                             .filter((pageNum) => {
-                              const totalPages = Math.ceil(
-                                totalCount / filters.limit
-                              );
                               return (
                                 pageNum === 1 ||
                                 pageNum === totalPages ||
@@ -1831,16 +1824,10 @@ export default function CandidatesPage() {
                           onClick={() =>
                             setFilters((prev) => ({
                               ...prev,
-                              page: Math.min(
-                                Math.ceil(totalCount / filters.limit),
-                                prev.page + 1
-                              ),
+                              page: Math.min(totalPages, prev.page + 1),
                             }))
                           }
-                          disabled={
-                            filters.page >=
-                            Math.ceil(totalCount / filters.limit)
-                          }
+                          disabled={filters.page >= totalPages}
                           className="h-9 px-3"
                         >
                           Next

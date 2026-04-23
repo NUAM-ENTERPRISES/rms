@@ -3,13 +3,15 @@ import { ProjectStats as ProjectStatsType } from "@/features/projects";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { StatusTile } from "../molecules/StatusTile";
 
 interface ProjectStatsProps {
   stats: ProjectStatsType;
   className?: string;
+  tableRef?: React.RefObject<HTMLDivElement>;
 }
 
-export default function ProjectStats({ stats, className }: ProjectStatsProps) {
+export default function ProjectStats({ stats, className, tableRef }: ProjectStatsProps) {
   const statsData = [
     {
       label: "Total Projects",
@@ -20,6 +22,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-blue-50 to-blue-100/50",
       iconBg: "bg-blue-200/40",
       textColor: "text-blue-600",
+      statusFilter: undefined,
     },
     {
       label: "Active Projects",
@@ -30,6 +33,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-emerald-50 to-emerald-100/50",
       iconBg: "bg-emerald-200/40",
       textColor: "text-emerald-600",
+      statusFilter: "ACTIVE",
     },
     {
       label: "Completed",
@@ -40,6 +44,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-purple-50 to-purple-100/50",
       iconBg: "bg-purple-200/40",
       textColor: "text-purple-600",
+      statusFilter: "COMPLETED",
     },
     {
       label: "Urgent Deadlines",
@@ -50,6 +55,7 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
       lightBg: "from-orange-50 to-orange-100/50",
       iconBg: "bg-orange-200/40",
       textColor: "text-orange-600",
+      statusFilter: undefined,
     },
   ];
 
@@ -57,8 +63,6 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat, i) => {
-          const Icon = stat.icon;
-
           return (
             <motion.div
               key={stat.label}
@@ -66,38 +70,18 @@ export default function ProjectStats({ stats, className }: ProjectStatsProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
             >
-              <Card
-                className={cn(
-                  "relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br",
-                  stat.lightBg,
-                  "hover:shadow-md transition-all duration-300 group cursor-default"
-                )}
-              >
-                <CardContent className="px-3 py-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
-                        {stat.label}
-                      </p>
-                      <h3
-                        className={cn(
-                          "text-xl font-bold leading-tight",
-                          stat.textColor
-                        )}
-                      >
-                        {stat.value}
-                      </h3>
-                      <p className="text-[10px] text-slate-500 mt-1">
-                        {stat.subtitle}
-                      </p>
-                    </div>
-
-                    <div className={cn("p-2 rounded-xl", stat.iconBg)}>
-                      <Icon className={cn("h-4 w-4", stat.textColor)} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <StatusTile
+                label={stat.label}
+                value={stat.value}
+                subtitle={stat.subtitle}
+                icon={stat.icon}
+                bgGradient={stat.lightBg}
+                iconBg={stat.iconBg}
+                textColor={stat.textColor}
+                scrollTargetRef={tableRef}
+                scrollOnClick={true}
+                className="h-full"
+              />
             </motion.div>
           );
         })}
