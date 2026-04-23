@@ -1568,17 +1568,28 @@ export class InterviewsService {
    * - Backwards-compatible: when `query` is omitted the full array is returned
    */
   async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
-    // Ensure interview exists
-    const interview = await this.prisma.interview.findUnique({ where: { id: interviewId } });
+    // Ensure interview exists and get the associated candidate project map if any
+    const interview = await this.prisma.interview.findUnique({
+      where: { id: interviewId },
+      select: { id: true, candidateProjectMapId: true },
+    });
     if (!interview) {
       throw new NotFoundException('Interview not found');
+    }
+
+    const historyWhere: any = {
+      interviewType: 'client',
+      OR: [{ interviewId }],
+    };
+    if (interview.candidateProjectMapId) {
+      historyWhere.OR.push({ candidateProjectMapId: interview.candidateProjectMapId });
     }
 
     // If caller did not request pagination, return full history array (preserve existing behavior)
     const wantsPagination = !!(query && (query.page !== undefined || query.limit !== undefined));
     if (!wantsPagination) {
       const histories = await this.prisma.interviewStatusHistory.findMany({
-        where: { interviewId, interviewType: 'client' },
+        where: historyWhere,
         orderBy: { statusAt: 'desc' },
         include: {
           changedBy: {
@@ -1594,9 +1605,9 @@ export class InterviewsService {
     const skip = (page - 1) * limit;
 
     const [total, items] = await Promise.all([
-      this.prisma.interviewStatusHistory.count({ where: { interviewId, interviewType: 'client' } }),
+      this.prisma.interviewStatusHistory.count({ where: historyWhere }),
       this.prisma.interviewStatusHistory.findMany({
-        where: { interviewId, interviewType: 'client' },
+        where: historyWhere,
         orderBy: { statusAt: 'desc' },
         skip,
         take: limit,
