@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { format, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import {
   ClipboardCheck,
   Loader2,
@@ -115,6 +116,11 @@ export default function ScreeningDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const currentUser = useAppSelector((state) => state.auth.user);
+
+  const canWriteScreenings = useCan("write:screenings");
+  const canConductScreenings = useCan("conduct:screenings");
+  const canAssignTraining = useCan("assign:training");
+  const canWriteTraining = useCan("write:training");
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
@@ -266,7 +272,7 @@ export default function ScreeningDetailsPage() {
               ? getDecisionBadge(selectedInterview.decision)
               : getStatusBadge(selectedInterview.status)}
 
-            {!selectedInterview.conductedAt && (
+            {!selectedInterview.conductedAt && canConductScreenings && (
               <Button
                 size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm h-8 text-xs"
@@ -285,7 +291,7 @@ export default function ScreeningDetailsPage() {
               <Clock className="h-3.5 w-3.5" /> History
             </Button>
 
-            {!hasActiveTraining && (
+            {!hasActiveTraining && canWriteScreenings && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline" className="h-8 text-xs font-semibold border-slate-200 text-slate-600 gap-1.5 px-3">
@@ -773,7 +779,7 @@ export default function ScreeningDetailsPage() {
                             <Badge className={cn("text-[10px] border-0 capitalize", getPriorityColor(ta.priority || ""))}>
                               {ta.priority}
                             </Badge>
-                            {ta.status === "assigned" && (
+                            {ta.status === "assigned" && canWriteTraining && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -793,7 +799,7 @@ export default function ScreeningDetailsPage() {
                                 </TooltipContent>
                               </Tooltip>
                             )}
-                            {ta.status === "scheduled" && (
+                            {ta.status === "scheduled" && (canWriteTraining || canConductScreenings) && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button

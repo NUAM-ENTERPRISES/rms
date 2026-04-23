@@ -53,7 +53,6 @@ const roles = [
       'read:screenings',
       'read:interview_templates',
       'read:training',
-      'manage:training',
     ],
   },
   {
@@ -74,6 +73,9 @@ const roles = [
       'read:documents',
       'transfer:candidates',
       'transfer_back:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -98,6 +100,9 @@ const roles = [
       'approve:candidates',
       'reject:candidates',
       'shortlist:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -116,6 +121,8 @@ const roles = [
       'read:projects',
       'read:interviews',
       'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -136,6 +143,9 @@ const roles = [
       'verify:documents',
       'manage:documents',
       'request:resubmission',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -153,16 +163,8 @@ const roles = [
       'manage:interviews',
       'schedule:interviews',
       'read:screenings',
-      'write:screenings',
-      'manage:screenings',
-      'conduct:screenings',
       'read:interview_templates',
-      'write:interview_templates',
-      'manage:interview_templates',
       'read:training',
-      'write:training',
-      'manage:training',
-      'assign:training',
       'read:documents',
     ],
   },
@@ -243,9 +245,19 @@ const allPermissions = [
   'read:processing',
   'write:processing',
   'manage:processing',
+  'transfer:processing',
 
   // Recruiter management
   'manage:recruiters',
+  'read:recruiters',
+  'write:recruiters',
+
+  // CRE (Customer Relationship Executive) management
+  'read:cre',
+  'write:cre',
+  'manage:cre',
+  'assign:cre',
+  'handle:rnr_candidates',
 
   // Role management
   'read:roles',
@@ -285,6 +297,8 @@ const allPermissions = [
   'read:settings',
   'write:settings',
   'manage:settings',
+  // Admin dashboard
+  'read:admin-dashboard',
   // System config (RNR/HRD) - admin only
   'read:system_config',
   'manage:system_config',
