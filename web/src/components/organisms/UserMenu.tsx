@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { clearCredentials } from "@/features/auth/authSlice";
 import { authApi } from "@/services/authApi";
+import { baseApi } from "@/app/api/baseApi";
 import { User, Settings, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,11 +31,13 @@ export default function UserMenu() {
     try {
       await dispatch(authApi.endpoints.logout.initiate()).unwrap();
       dispatch(clearCredentials());
+      dispatch(baseApi.util.resetApiState());
       toast.success("Logged out successfully");
       navigate("/login");
     } catch (error) {
       // Even if logout API fails, clear local state
       dispatch(clearCredentials());
+      dispatch(baseApi.util.resetApiState());
       toast.success("Logged out successfully");
       navigate("/login");
     }

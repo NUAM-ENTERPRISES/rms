@@ -337,6 +337,13 @@ export const navigationConfig: NavItem[] = [
         roles: ["CEO", "Director", "Manager", "System Admin"],
       },
       {
+        id: "admin-sessions",
+        label: "Session Monitoring",
+        path: "/admin/sessions",
+        permissions: ["read:users"],
+        roles: ["CEO", "Director", "Manager", "System Admin"],
+      },
+      {
         id: "admin-system-settings",
         label: "System Settings",
         path: "/admin/system-settings",

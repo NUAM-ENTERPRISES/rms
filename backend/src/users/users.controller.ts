@@ -280,6 +280,24 @@ export class UsersController {
     };
   }
 
+  @Get('profile/sessions')
+  @ApiOperation({
+    summary: 'Get current user login sessions',
+    description: 'Retrieve recent login sessions for the current user.',
+  })
+  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getSessions(@Request() req) {
+    const userId = req.user.id;
+    const currentSessionId = req.user.sid ?? undefined;
+    const sessions = await this.usersService.getUserSessions(userId, currentSessionId);
+    return {
+      success: true,
+      data: sessions,
+      message: 'Sessions retrieved successfully',
+    };
+  }
+
   @Put('profile')
   @ApiOperation({
     summary: 'Update current user profile',
@@ -404,6 +422,41 @@ export class UsersController {
       data: { profileImage: result.fileUrl },
       message: 'Profile image uploaded successfully',
     };
+  }
+
+  @Get('sessions/admin')
+  @Permissions('read:users')
+  @ApiOperation({
+    summary: 'Admin — all user sessions with role filter',
+    description: 'CEO / Director / Manager can monitor all login sessions, optionally filtered by role.',
+  })
+  @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, CRE)' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search by user name or email' })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter active/inactive sessions' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getAdminSessions(
+    @Query('role') role?: string,
+    @Query('search') search?: string,
+    @Query('isActive') isActiveRaw?: string,
+    @Query('page') pageRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const isActive =
+      isActiveRaw === 'true' ? true : isActiveRaw === 'false' ? false : undefined;
+    const page = pageRaw ? parseInt(pageRaw, 10) : 1;
+    const limit = limitRaw ? Math.min(parseInt(limitRaw, 10), 100) : 30;
+
+    const result = await this.usersService.getAdminSessions({
+      role: role || undefined,
+      search: search || undefined,
+      isActive,
+      page,
+      limit,
+    });
+    return { success: true, ...result, message: 'Sessions retrieved successfully' };
   }
 
   @Get(':id')

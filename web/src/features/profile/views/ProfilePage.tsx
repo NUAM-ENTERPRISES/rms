@@ -42,6 +42,7 @@ import {
   useChangePasswordMutation,
   useDeleteAccountMutation,
   useUploadProfileImageMutation,
+  useGetSessionsQuery,
 } from "@/features/profile/api";
 
 const profileSchema = {
@@ -59,6 +60,7 @@ export default function ProfilePage() {
 
   // API calls
   const { data: profileData, isLoading, error } = useGetProfileQuery();
+  const { data: sessionsData, isLoading: isLoadingSessions } = useGetSessionsQuery();
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
   const [changePassword, { isLoading: isChangingPassword }] =
     useChangePasswordMutation();
@@ -560,117 +562,118 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
-                      Device
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
-                      Location
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
-                      IP Address
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
-                      Login Time
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-slate-700">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <span className="text-blue-600 text-sm">💻</span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900">
-                            Chrome on Windows
-                          </div>
-                          <div className="text-sm text-slate-500">
-                            Current Session
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">New York, NY</td>
-                    <td className="py-3 px-4 text-slate-600">192.168.1.100</td>
-                    <td className="py-3 px-4 text-slate-600">
-                      {format(new Date(), "MMM dd, yyyy 'at' h:mm a")}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge
-                        variant="default"
-                        className="bg-green-100 text-green-800"
-                      >
-                        Active
-                      </Badge>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-600 text-sm">📱</span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900">
-                            Safari on iPhone
-                          </div>
-                          <div className="text-sm text-slate-500">
-                            Mobile Device
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">New York, NY</td>
-                    <td className="py-3 px-4 text-slate-600">192.168.1.101</td>
-                    <td className="py-3 px-4 text-slate-600">
-                      {format(
-                        new Date(Date.now() - 2 * 60 * 60 * 1000),
-                        "MMM dd, yyyy 'at' h:mm a"
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-100">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                          <span className="text-gray-600 text-sm">💻</span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-900">
-                            Firefox on Mac
-                          </div>
-                          <div className="text-sm text-slate-500">Desktop</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">
-                      San Francisco, CA
-                    </td>
-                    <td className="py-3 px-4 text-slate-600">10.0.0.50</td>
-                    <td className="py-3 px-4 text-slate-600">
-                      {format(
-                        new Date(Date.now() - 24 * 60 * 60 * 1000),
-                        "MMM dd, yyyy 'at' h:mm a"
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="secondary">Inactive</Badge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {isLoadingSessions ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">
+                        Device
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">
+                        IP Address
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">
+                        Login Time
+                      </th>
+                      <th className="text-left py-3 px-4 font-medium text-slate-700">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sessionsData?.data?.length ? (
+                      sessionsData.data.map((session) => {
+                        const isMobile = session.deviceType === "mobile";
+                        const isTablet = session.deviceType === "tablet";
+                        const deviceIcon = isMobile ? "📱" : isTablet ? "📱" : "💻";
+                        const deviceLabel = isMobile
+                          ? "Mobile Device"
+                          : isTablet
+                          ? "Tablet"
+                          : "Desktop";
+                        const deviceName =
+                          session.browser && session.os
+                            ? `${session.browser} on ${session.os}`
+                            : session.userAgent?.slice(0, 40) || "Unknown Device";
+
+                        return (
+                          <tr
+                            key={session.id}
+                            className="border-b border-slate-100"
+                          >
+                            <td className="py-3 px-4">
+                              <div className="flex items-center space-x-2">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                    session.isCurrent
+                                      ? "bg-blue-100"
+                                      : "bg-gray-100"
+                                  }`}
+                                >
+                                  <span
+                                    className={`text-sm ${
+                                      session.isCurrent
+                                        ? "text-blue-600"
+                                        : "text-gray-600"
+                                    }`}
+                                  >
+                                    {deviceIcon}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-slate-900">
+                                    {deviceName}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    {session.isCurrent
+                                      ? "Current Session"
+                                      : deviceLabel}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-slate-600">
+                              {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1"
+                                ? "localhost"
+                                : session.ipAddress || "—"}
+                            </td>
+                            <td className="py-3 px-4 text-slate-600">
+                              {formatDateTime(session.loginAt)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {session.isActive ? (
+                                <Badge
+                                  variant="default"
+                                  className="bg-green-100 text-green-800"
+                                >
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Inactive</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="py-8 text-center text-slate-500"
+                        >
+                          No login sessions found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="mt-4 p-4 bg-slate-50 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
@@ -682,7 +685,11 @@ export default function ProfilePage() {
                     password immediately.
                   </p>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPasswordDialog(true)}
+                >
                   <Key className="h-4 w-4 mr-2" />
                   Change Password
                 </Button>

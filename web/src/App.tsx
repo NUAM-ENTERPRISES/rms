@@ -229,6 +229,9 @@ const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
 const SystemSettingsPage = lazy(
   () => import("@/features/admin/views/SystemSettingsPage")
 );
+const SessionsMonitoringPage = lazy(
+  () => import("@/features/admin/views/SessionsMonitoringPage")
+);
 
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
@@ -1175,6 +1178,22 @@ function App() {
                                 Application settings page
                               </p>
                             </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/sessions"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "System Admin"]}
+                          permissions={["read:users"]}
+                        >
+                          <AppLayout>
+                            <SessionsMonitoringPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

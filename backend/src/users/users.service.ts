@@ -549,6 +549,107 @@ export class UsersService {
     return profile;
   }
 
+  async getUserSessions(userId: string, currentSessionId?: string) {
+    const sessions = await (this.prisma as any).userSession.findMany({
+      where: { userId },
+      orderBy: { loginAt: 'desc' },
+      take: 20,
+    });
+
+    return sessions.map((s: any) => ({
+      id: s.id,
+      ipAddress: s.ipAddress,
+      userAgent: s.userAgent,
+      browser: s.browser,
+      os: s.os,
+      deviceType: s.deviceType,
+      loginAt: s.loginAt,
+      isActive: s.isActive,
+      isCurrent: currentSessionId ? s.id === currentSessionId : false,
+    }));
+  }
+
+  async getAdminSessions(query: {
+    role?: string;
+    search?: string;
+    isActive?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const { role, search, isActive, page = 1, limit = 30 } = query;
+    const skip = (page - 1) * limit;
+
+    // Build the where clause for sessions
+    const sessionWhere: any = {};
+    if (typeof isActive === 'boolean') {
+      sessionWhere.isActive = isActive;
+    }
+
+    // Build the where clause for the user relation
+    const userWhere: any = {};
+    if (search) {
+      userWhere.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (role) {
+      userWhere.userRoles = {
+        some: { role: { name: { equals: role, mode: 'insensitive' } } },
+      };
+    }
+
+    if (Object.keys(userWhere).length > 0) {
+      sessionWhere.user = userWhere;
+    }
+
+    const [sessions, total] = await Promise.all([
+      (this.prisma as any).userSession.findMany({
+        where: sessionWhere,
+        orderBy: { loginAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              userRoles: {
+                select: {
+                  role: { select: { name: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+      (this.prisma as any).userSession.count({ where: sessionWhere }),
+    ]);
+
+    const data = sessions.map((s: any) => ({
+      id: s.id,
+      userId: s.userId,
+      userName: s.user?.name ?? null,
+      userEmail: s.user?.email ?? null,
+      roles: (s.user?.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean),
+      ipAddress: s.ipAddress,
+      browser: s.browser,
+      os: s.os,
+      deviceType: s.deviceType,
+      loginAt: s.loginAt,
+      isActive: s.isActive,
+    }));
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   private async getUserStats(userId: string) {
     // Get candidates assigned to this user (if they're a recruiter)
     const candidatesManaged = await this.prisma.candidateProjects.count({

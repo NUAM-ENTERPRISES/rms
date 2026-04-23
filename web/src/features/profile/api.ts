@@ -31,6 +31,18 @@ export interface UserProfile {
   };
 }
 
+export interface LoginSession {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  browser: string | null;
+  os: string | null;
+  deviceType: string | null;
+  loginAt: string;
+  isActive: boolean;
+  isCurrent: boolean;
+}
+
 export interface UpdateProfileRequest {
   name?: string;
   email?: string;
@@ -52,6 +64,11 @@ export const profileApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProfile: builder.query<{ success: boolean; data: UserProfile }, void>({
       query: () => "/users/profile",
+      providesTags: ["User"],
+    }),
+
+    getSessions: builder.query<{ success: boolean; data: LoginSession[] }, void>({
+      query: () => "/users/profile/sessions",
       providesTags: ["User"],
     }),
 
@@ -104,6 +121,7 @@ export const profileApi = baseApi.injectEndpoints({
 
 export const {
   useGetProfileQuery,
+  useGetSessionsQuery,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useDeleteAccountMutation,

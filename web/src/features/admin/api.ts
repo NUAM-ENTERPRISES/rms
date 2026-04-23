@@ -56,6 +56,28 @@ export interface UpdateUserRequest {
   roleIds?: string[]; // Array of role IDs as expected by backend
 }
 
+export interface AdminSession {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  roles: string[];
+  ipAddress: string | null;
+  browser: string | null;
+  os: string | null;
+  deviceType: string | null;
+  loginAt: string;
+  isActive: boolean;
+}
+
+export interface AdminSessionsQuery {
+  role?: string;
+  search?: string;
+  isActive?: boolean;
+  page?: number;
+  limit?: number;
+}
+
 export interface QueryUsersRequest {
   search?: string;
   page?: number;
@@ -272,6 +294,34 @@ export const usersApi = baseApi.injectEndpoints({
       providesTags: ['User'],
     }),
 
+    // Admin: all user sessions with role/search/active filter
+    getAdminSessions: builder.query<
+      {
+        success: boolean;
+        data: AdminSession[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+        message: string;
+      },
+      AdminSessionsQuery | void
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params) {
+          if (params.role) searchParams.set('role', params.role);
+          if (params.search) searchParams.set('search', params.search);
+          if (typeof params.isActive === 'boolean')
+            searchParams.set('isActive', String(params.isActive));
+          if (params.page) searchParams.set('page', String(params.page));
+          if (params.limit) searchParams.set('limit', String(params.limit));
+        }
+        return { url: `/users/sessions/admin?${searchParams.toString()}`, method: 'GET' };
+      },
+      providesTags: ['User'],
+    }),
+
   }),
 });
 
@@ -287,6 +337,7 @@ export const {
   useUpdateUserPasswordMutation,
   useGetRecruiterStatsQuery,
   useGetRecruiterPerformanceQuery,
+  useGetAdminSessionsQuery,
 } = usersApi;
 
 // Export roles API

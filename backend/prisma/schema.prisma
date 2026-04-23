@@ -23,6 +23,24 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+model UserSession {
+  id             String   @id @default(cuid())
+  userId         String
+  refreshTokenId String?
+  ipAddress      String?
+  userAgent      String?
+  browser        String?
+  os             String?
+  deviceType     String?
+  loginAt        DateTime @default(now())
+  isActive       Boolean  @default(true)
+  user           User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([refreshTokenId])
+  @@map("user_sessions")
+}
+
 model User {
   id                               String                         @id @default(cuid())
   email                            String                         @unique
@@ -40,6 +58,7 @@ model User {
   notifications                    Notification[]
   createdProjects                  Project[]                      @relation("ProjectCreator")
   refreshTokens                    RefreshToken[]
+  sessions                         UserSession[]
   transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
   transferRequestsRequested        TeamTransferRequest[]          @relation("TransferRequester")
   transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
