@@ -64,6 +64,7 @@ import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { motion } from "framer-motion";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
@@ -495,14 +496,11 @@ export default function ScreeningsDashboardPage() {
       <div className="w-full max-w-full mx-auto space-y-3 mt-1 px-3">
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Welcome back, {user?.name || "Coordinator"}! 👋
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Overview of training screening assignments, scheduling, decisions, and performance.
-            </p>
-          </div>
+          <TypedHeader
+            userName={user?.name || "Coordinator"}
+            subtitle="Overview of training screening assignments, scheduling, decisions, and performance."
+            className="w-full"
+          />
         </div>
 
         {/* ── Status Tiles ── */}
