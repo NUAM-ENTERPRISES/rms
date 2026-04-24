@@ -35,12 +35,15 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { DatePicker, ProjectRoleFilter, ImageViewer, StatusTile } from "@/components/molecules";
+// import { DatePicker, ProjectRoleFilter, ImageViewer } from "@/components/molecules";
+import { SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
 import { useGetProjectsQuery } from "@/services/projectsApi";
 import { useDebounce } from "@/hooks/useDebounce";
-
+import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
+import { useAppSelector } from "@/app/hooks";
 
 
 // -------------------------------------------------------------------
@@ -68,7 +71,7 @@ const TILES: TileDef[] = [
   },
   {
     key: "nominated",
-    label: "Nominated",
+    label: "Registered",
     icon: Send,
     gradient: "from-indigo-500 to-blue-500",
     bgGradient: "from-indigo-50 to-blue-100/50",
@@ -175,6 +178,50 @@ export default function ProjectCandidatesOverviewPage() {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
+  // Advanced Filters
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    countryPreferences: [] as string[],
+    gender: "all",
+    visaTypes: [] as string[],
+    sectorTypes: [] as string[],
+    qualification: "",
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
+  });
+
+  const user = useAppSelector((state) => state.auth.user);
+  const isManagerOrAdmin = useMemo(() => 
+    user?.roles?.some(r => ["CEO", "Director", "Manager", "Team Head", "System Admin"].includes(r)) || false,
+    [user]
+  );
+  const isRecruiter = useMemo(() => 
+    user?.roles?.includes("Recruiter") || false,
+    [user]
+  );
+
+  const handleResetFilters = () => {
+    setAdvancedFilters({
+      countryPreferences: [],
+      gender: "all",
+      visaTypes: [],
+      sectorTypes: [],
+      qualification: "",
+      minExperience: undefined,
+      maxExperience: undefined,
+      minAge: undefined,
+      maxAge: undefined,
+    });
+    setSearch("");
+    setDateRange("all");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setActiveFilter("all");
+    setPage(1);
+  };
+
   // Auto-select the first project on initial load handled by ProjectRoleFilter via defaultProject prop
   const { data: projectsData, isLoading: isLoadingProjects } = useGetProjectsQuery({ limit: 10, page: 1 });
   const allProjects = useMemo(() => projectsData?.data?.projects || [], [projectsData]);
@@ -191,6 +238,15 @@ export default function ProjectCandidatesOverviewPage() {
       period: dateRange !== "all" && dateRange !== "custom" ? dateRange : undefined,
       startDate: dateRange === "custom" && dateFrom ? format(dateFrom, "yyyy-MM-dd") : undefined,
       endDate: dateRange === "custom" && dateTo ? format(dateTo, "yyyy-MM-dd") : undefined,
+      gender: advancedFilters.gender !== "all" ? advancedFilters.gender : undefined,
+      countries: advancedFilters.countryPreferences.length > 0 ? advancedFilters.countryPreferences.join(",") : undefined,
+      visaTypes: advancedFilters.visaTypes.length > 0 ? advancedFilters.visaTypes.join(",") : undefined,
+      sectors: advancedFilters.sectorTypes.length > 0 ? advancedFilters.sectorTypes.join(",") : undefined,
+      qualification: advancedFilters.qualification || undefined,
+      minExp: advancedFilters.minExperience,
+      maxExp: advancedFilters.maxExperience,
+      minAge: advancedFilters.minAge,
+      maxAge: advancedFilters.maxAge,
       page,
       limit,
     },
@@ -353,6 +409,19 @@ export default function ProjectCandidatesOverviewPage() {
                     </button>
                   );
                 })}
+
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAdvancedFiltersOpen(true)}
+                  className={`flex items-center gap-2 h-9 px-4 rounded-full border transition-all duration-300 ${
+                    isAdvancedFiltersOpen 
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm" 
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                  }`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="text-xs font-medium">Filter</span>
+                </Button>
               </div>
 
               {dateRange === "custom" && (
@@ -690,6 +759,38 @@ export default function ProjectCandidatesOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AdvancedFiltersSheet
+        isOpen={isAdvancedFiltersOpen}
+        onOpenChange={setIsAdvancedFiltersOpen}
+        filters={{
+          ...advancedFilters,
+          search,
+          page,
+          limit,
+          dateFilter: dateRange,
+          dateFrom,
+          dateTo,
+          sectorTypes: advancedFilters.sectorTypes,
+          facilityPreferences: [],
+          sources: [],
+          status: "all",
+        }}
+        setFilters={(update) => {
+          setAdvancedFilters((prev) => ({
+            ...prev,
+            ...update,
+          }));
+          if (update.search !== undefined) setSearch(update.search);
+          if (update.dateFilter !== undefined) setDateRange(update.dateFilter);
+          if (update.dateFrom !== undefined) setDateFrom(update.dateFrom);
+          if (update.dateTo !== undefined) setDateTo(update.dateTo);
+          setPage(1);
+        }}
+        isManagerOrAdmin={isManagerOrAdmin}
+        isRecruiter={isRecruiter}
+        handleResetFilters={handleResetFilters}
+      />
     </div>
   );
 }

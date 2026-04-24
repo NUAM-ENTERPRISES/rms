@@ -22,7 +22,6 @@ import {
   ProjectWithRelations,
   PaginatedProjects,
   ProjectStats,
-  RecruiterAnalytics,
 } from './types';
 import {
   CANDIDATE_PROJECT_STATUS,
@@ -393,6 +392,8 @@ export class ProjectsService {
     const {
       search,
       status,
+      priority,
+      isUrgent,
       clientId,
       teamId,
       createdBy,
@@ -416,6 +417,22 @@ export class ProjectsService {
 
     if (status) {
       where.status = status;
+    }
+
+    if (priority) {
+      where.priority = priority;
+    }
+
+    if (isUrgent) {
+      const now = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(now.getDate() + 7);
+      
+      where.deadline = {
+        gte: now,
+        lte: nextWeek,
+      };
+      where.status = 'active';
     }
 
     if (clientId) {
@@ -2000,200 +2017,6 @@ export class ProjectsService {
       projectsByStatus,
       projectsByClient,
       upcomingDeadlines,
-    };
-  }
-
-  async getRecruiterAnalytics(
-    recruiterId: string,
-    roles: string[] = [],
-  ): Promise<RecruiterAnalytics> {
-    if (!roles?.includes('Recruiter')) {
-      throw new ForbiddenException(
-        'Recruiter analytics are only available to Recruiter role',
-      );
-    }
-
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
-    const upcomingWindow = new Date(now);
-    upcomingWindow.setDate(upcomingWindow.getDate() + 14);
-    const terminalProjectStatuses = [
-      CANDIDATE_PROJECT_STATUS.HIRED,
-      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
-      CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW,
-      CANDIDATE_PROJECT_STATUS.REJECTED_SELECTION,
-      CANDIDATE_PROJECT_STATUS.WITHDRAWN,
-    ];
-    const excludedProjectStatuses = ['completed', 'cancelled', 'archived'];
-    const untouchedCandidateWhere = {
-      currentStatus: {
-        statusName: CANDIDATE_STATUS.UNTOUCHED,
-      },
-      recruiterAssignments: {
-        some: {
-          recruiterId,
-          isActive: true,
-        },
-      },
-    };
-
-    const urgentProjectRecord = await this.prisma.project.findFirst({
-      where: {
-        priority: { in: ['high', 'urgent'] },
-        deadline: { not: null, gte: now },
-        status: {
-          notIn: excludedProjectStatuses,
-        },
-      },
-      orderBy: { deadline: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        deadline: true,
-        priority: true,
-        client: { select: { name: true } },
-      },
-    });
-
-    const overdueProjectRecords = await this.prisma.project.findMany({
-      where: {
-        deadline: { not: null, lt: startOfToday },
-        status: {
-          notIn: excludedProjectStatuses,
-        },
-      },
-      orderBy: { deadline: 'asc' },
-      take: 6,
-      select: {
-        id: true,
-        title: true,
-        deadline: true,
-        client: { select: { name: true } },
-      },
-    });
-
-    const [
-      hiredOrSelectedCount,
-      activeCandidateCount,
-      upcomingInterviewsCount,
-      assignedProjects,
-      untouchedCandidatesCount,
-      untouchedCandidateRows,
-    ] = await this.prisma.$transaction([
-      this.prisma.candidateProjects.count({
-        where: {
-          recruiterId,
-          currentProjectStatus: {
-            statusName: { in: ['selected', 'hired'] },
-          },
-        },
-      }),
-      this.prisma.candidateProjects.count({
-        where: {
-          recruiterId,
-          currentProjectStatus: {
-            statusName: { notIn: ['selected', 'hired'] },
-          },
-        },
-      }),
-      this.prisma.interview.count({
-        where: {
-          candidateProjectMap: { recruiterId },
-          scheduledTime: {
-            gte: now,
-            lte: upcomingWindow,
-          },
-        },
-      }),
-      this.prisma.candidateProjects.groupBy({
-        by: ['projectId'],
-        where: { recruiterId },
-        orderBy: {
-          projectId: 'asc',
-        },
-      }),
-      this.prisma.candidate.count({
-        where: untouchedCandidateWhere,
-      }),
-      this.prisma.candidate.findMany({
-        where: untouchedCandidateWhere,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          countryCode: true,
-          currentRole: true,
-          projects: {
-            where: { recruiterId },
-            select: {
-              project: {
-                select: {
-                  id: true,
-                  title: true,
-                },
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-        take: 6,
-      }),
-    ]);
-
-    const urgentProject = urgentProjectRecord
-      ? {
-          id: urgentProjectRecord.id,
-          title: urgentProjectRecord.title,
-          priority: urgentProjectRecord.priority,
-          deadline: urgentProjectRecord.deadline,
-          clientName: urgentProjectRecord.client?.name ?? null,
-          daysUntilDeadline: urgentProjectRecord.deadline
-            ? Math.max(
-                0,
-                Math.ceil(
-                  (urgentProjectRecord.deadline.getTime() - now.getTime()) /
-                    (1000 * 60 * 60 * 24),
-                ),
-              )
-            : null,
-        }
-      : null;
-
-    return {
-      urgentProject,
-      overdueProjects: overdueProjectRecords.map((project) => ({
-        id: project.id,
-        title: project.title,
-        clientName: project.client?.name ?? null,
-        overdueDays: project.deadline
-          ? Math.max(
-              1,
-              Math.ceil(
-                (now.getTime() - project.deadline.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              ),
-            )
-          : null,
-      })),
-      hiredOrSelectedCount,
-      activeCandidateCount,
-      upcomingInterviewsCount,
-      assignedProjectCount: assignedProjects.length,
-      untouchedCandidatesCount,
-      untouchedCandidates: untouchedCandidateRows.map((candidate) => {
-        const latestProject = candidate.projects?.[0]?.project;
-        return {
-          id: candidate.id,
-          name: `${candidate.firstName} ${candidate.lastName}`.trim(),
-          countryCode: candidate.countryCode ?? null,
-          currentRole: candidate.currentRole ?? null,
-          assignedProjectId: latestProject?.id ?? null,
-          assignedProjectTitle: latestProject?.title ?? null,
-        };
-      }),
     };
   }
 

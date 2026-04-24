@@ -8,10 +8,16 @@ import { StatusTile } from "../molecules/StatusTile";
 interface ProjectStatsProps {
   stats: ProjectStatsType;
   className?: string;
-  tableRef?: React.RefObject<HTMLDivElement>;
+  onSelect?: (filters: { status?: string; isUrgent?: boolean; priority?: string }) => void;
+  activeFilter?: { status?: string; isUrgent?: boolean; priority?: string };
 }
 
-export default function ProjectStats({ stats, className, tableRef }: ProjectStatsProps) {
+export default function ProjectStats({ 
+  stats, 
+  className, 
+  onSelect,
+  activeFilter 
+}: ProjectStatsProps) {
   const statsData = [
     {
       label: "Total Projects",
@@ -22,7 +28,7 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
       lightBg: "from-blue-50 to-blue-100/50",
       iconBg: "bg-blue-200/40",
       textColor: "text-blue-600",
-      statusFilter: undefined,
+      filter: {},
     },
     {
       label: "Active Projects",
@@ -33,7 +39,7 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
       lightBg: "from-emerald-50 to-emerald-100/50",
       iconBg: "bg-emerald-200/40",
       textColor: "text-emerald-600",
-      statusFilter: "ACTIVE",
+      filter: { status: "active" },
     },
     {
       label: "Completed",
@@ -44,7 +50,7 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
       lightBg: "from-purple-50 to-purple-100/50",
       iconBg: "bg-purple-200/40",
       textColor: "text-purple-600",
-      statusFilter: "COMPLETED",
+      filter: { status: "completed" },
     },
     {
       label: "Urgent Deadlines",
@@ -55,7 +61,7 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
       lightBg: "from-orange-50 to-orange-100/50",
       iconBg: "bg-orange-200/40",
       textColor: "text-orange-600",
-      statusFilter: undefined,
+      filter: { isUrgent: true },
     },
   ];
 
@@ -63,6 +69,11 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
     <div className={cn("space-y-4", className)}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         {statsData.map((stat, i) => {
+          const Icon = stat.icon;
+          const isActive = activeFilter && 
+            Object.keys(stat.filter).length === Object.keys(activeFilter).length &&
+            Object.entries(stat.filter).every(([key, value]) => activeFilter[key as keyof typeof activeFilter] === value);
+
           return (
             <motion.div
               key={stat.label}
@@ -70,18 +81,41 @@ export default function ProjectStats({ stats, className, tableRef }: ProjectStat
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
             >
-              <StatusTile
-                label={stat.label}
-                value={stat.value}
-                subtitle={stat.subtitle}
-                icon={stat.icon}
-                bgGradient={stat.lightBg}
-                iconBg={stat.iconBg}
-                textColor={stat.textColor}
-                scrollTargetRef={tableRef}
-                scrollOnClick={true}
-                className="h-full"
-              />
+              <Card
+                onClick={() => onSelect?.(stat.filter)}
+                className={cn(
+                  "relative overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br",
+                  stat.lightBg,
+                  "hover:shadow-md transition-all duration-300 group cursor-pointer",
+                  isActive && "ring-2 ring-blue-500 ring-offset-2",
+                  onSelect && "active:scale-95"
+                )}
+              >
+                <CardContent className="px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500">
+                        {stat.label}
+                      </p>
+                      <h3
+                        className={cn(
+                          "text-xl font-bold leading-tight",
+                          stat.textColor
+                        )}
+                      >
+                        {stat.value}
+                      </h3>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        {stat.subtitle}
+                      </p>
+                    </div>
+
+                    <div className={cn("p-2 rounded-xl", stat.iconBg)}>
+                      <Icon className={cn("h-4 w-4", stat.textColor)} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           );
         })}

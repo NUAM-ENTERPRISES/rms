@@ -22,7 +22,6 @@ import {
   ChevronRight,
   CheckCircle,
   XCircle,
-  Filter,
   RotateCcw,
   ChevronDown,
 } from "lucide-react";
@@ -187,6 +186,7 @@ const RecruiterDocsPage: React.FC = () => {
             onClick={() => {
               setStatusFilter("pending_documents");
               setShowScreeningOnly(false);
+              setPage(1);
             }}
           >
             <CardContent className="pt-6">
@@ -254,6 +254,7 @@ const RecruiterDocsPage: React.FC = () => {
             onClick={() => {
               setStatusFilter("documents_verified");
               setShowScreeningOnly(false);
+              setPage(1);
             }}
           >
             <CardContent className="pt-6">
@@ -287,6 +288,7 @@ const RecruiterDocsPage: React.FC = () => {
             onClick={() => {
               setStatusFilter("rejected_documents");
               setShowScreeningOnly(false);
+              setPage(1);
             }}
           >
             <CardContent className="pt-6">

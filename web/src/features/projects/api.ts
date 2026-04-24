@@ -239,6 +239,8 @@ export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
 export interface QueryProjectsRequest {
   search?: string;
   status?: "active" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
+  isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
   countryCode?: string;
@@ -272,36 +274,6 @@ export interface ProjectStats {
     [clientId: string]: number;
   };
   upcomingDeadlines: Project[];
-}
-
-export interface RecruiterAnalytics {
-  urgentProject: {
-    id: string;
-    title: string;
-    priority: string;
-    deadline: string | null;
-    clientName: string | null;
-    daysUntilDeadline: number | null;
-  } | null;
-  overdueProjects: {
-    id: string;
-    title: string;
-    clientName: string | null;
-    overdueDays: number | null;
-  }[];
-  untouchedCandidatesCount: number;
-  untouchedCandidates: {
-    id: string;
-    name: string;
-    countryCode: string | null;
-    currentRole: string | null;
-    assignedProjectId: string | null;
-    assignedProjectTitle: string | null;
-  }[];
-  hiredOrSelectedCount: number;
-  activeCandidateCount: number;
-  upcomingInterviewsCount: number;
-  assignedProjectCount: number;
 }
 
 // Eligible Candidate with match score
@@ -351,12 +323,6 @@ export const projectsApi = baseApi.injectEndpoints({
       query: () => "/projects/stats",
       providesTags: ["ProjectStats"],
     }),
-
-    getRecruiterAnalytics: builder.query<ApiResponse<RecruiterAnalytics>, void>(
-      {
-        query: () => "/projects/recruiter/analytics",
-      }
-    ),
 
     // Get eligible candidates for a project
     getEligibleCandidates: builder.query<
@@ -835,7 +801,6 @@ export const {
   useGetProjectsQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
-  useGetRecruiterAnalyticsQuery,
   useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
