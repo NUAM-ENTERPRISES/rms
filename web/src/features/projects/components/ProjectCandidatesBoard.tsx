@@ -954,8 +954,8 @@ const ProjectCandidatesBoard = ({
   }> = [
     {
       id: "nominated",
-      title: "Nominated",
-      subtitle: "Currently linked to this project",
+      title: "Registered",
+      subtitle: "Currently cv registered to this project",
       count: sanitizedNominated.length,
       content: renderNominatedColumn(),
       ariaLabel: "Nominated candidates column",
