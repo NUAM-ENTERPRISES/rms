@@ -256,7 +256,7 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer", "Documentation Executive", "Interview Coordinator"],
+    hiddenForRoles: ["Screening Trainer", "Documentation Executive", "Interview Coordinator", "Recruiter", "CRE", "Processing Executive"],
     children: [
       {
         id: "screenings-dashboard",
@@ -264,18 +264,18 @@ export const navigationConfig: NavItem[] = [
         path: "/screenings",
         permissions: ["read:screenings"],
       },
-      {
-        id: "screenings-list",
-        label: "My Screenings",
-        path: "/screenings/list",
-        permissions: ["read:screenings"],
-      },
-      {
-        id: "screenings-training",
-        label: "Screening Training",
-        path: "/screenings/training",
-        permissions: ["read:training"],
-      },
+      // {
+      //   id: "screenings-list",
+      //   label: "My Screenings",
+      //   path: "/screenings/list",
+      //   permissions: ["read:screenings"],
+      // },
+      // {
+      //   id: "screenings-training",
+      //   label: "Screening Training",
+      //   path: "/screenings/training",
+      //   permissions: ["read:training"],
+      // },
       {
         id: "screenings-templates",
         label: "Templates",
