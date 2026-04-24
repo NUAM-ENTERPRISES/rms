@@ -31,7 +31,6 @@ import {
   ProjectWithRelations,
   PaginatedProjects,
   ProjectStats,
-  RecruiterAnalytics,
 } from './types';
 
 @ApiTags('Projects')
@@ -360,33 +359,6 @@ export class ProjectsController {
       success: true,
       data: stats,
       message: 'Project statistics retrieved successfully',
-    };
-  }
-
-  @Get('recruiter/analytics')
-  @Permissions('read:projects')
-  @ApiOperation({
-    summary: 'Get recruiter-focused analytics snapshot',
-    description:
-      'Returns urgent projects and pipeline insights scoped to the authenticated recruiter.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Recruiter analytics retrieved successfully',
-  })
-  async getRecruiterAnalytics(@Request() req): Promise<{
-    success: boolean;
-    data: RecruiterAnalytics;
-    message: string;
-  }> {
-    const analytics = await this.projectsService.getRecruiterAnalytics(
-      req.user.id,
-      req.user.roles ?? [],
-    );
-    return {
-      success: true,
-      data: analytics,
-      message: 'Recruiter analytics retrieved successfully',
     };
   }
 

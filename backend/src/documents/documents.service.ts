@@ -2766,7 +2766,9 @@ export class DocumentsService {
       throw new BadRequestException('Recruiter ID is required');
     }
 
-    const skip = (page - 1) * limit;
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+    const skip = (pageNumber - 1) * limitNumber;
 
     // Build where clause
     let pendingStatusCondition: any = {
@@ -2923,7 +2925,7 @@ export class DocumentsService {
         },
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: Number(limit),
+        take: limitNumber,
       }),
       this.prisma.candidateProjects.count({ where }),
       this.prisma.candidateProjects.count({
@@ -3059,10 +3061,10 @@ export class DocumentsService {
     return {
       items,
       pagination: {
-        page,
-        limit: Number(limit),
+        page: pageNumber,
+        limit: limitNumber,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: limitNumber > 0 ? Math.ceil(total / limitNumber) : 1,
       },
       counts: {
         pending: total,
@@ -3093,7 +3095,9 @@ export class DocumentsService {
       throw new BadRequestException('Recruiter ID is required');
     }
 
-    const skip = (page - 1) * limit;
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+    const skip = (pageNumber - 1) * limitNumber;
 
     // 1. Define the base where clauses for counts (filtered by recruiter but NOT search)
     const pendingWhereBase: any = {
@@ -3306,7 +3310,7 @@ export class DocumentsService {
         },
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: Number(limit),
+        take: limitNumber,
       }),
       this.prisma.candidateProjects.count({ where: activeWhere }),
       this.prisma.candidateProjects.count({ where: pendingWhereBase }),
@@ -3388,10 +3392,10 @@ export class DocumentsService {
     return {
       items,
       pagination: {
-        page,
-        limit: Number(limit),
+        page: pageNumber,
+        limit: limitNumber,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: limitNumber > 0 ? Math.ceil(total / limitNumber) : 1,
       },
       counts: {
         pending: pendingCount,

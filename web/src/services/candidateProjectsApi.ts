@@ -10,6 +10,15 @@ export interface ProjectOverviewParams {
   endDate?: string;
   page?: number;
   limit?: number;
+  gender?: string;
+  countries?: string;
+  visaTypes?: string;
+  sectors?: string;
+  qualification?: string;
+  minExp?: number;
+  maxExp?: number;
+  minAge?: number;
+  maxAge?: number;
 }
 
 export interface ProjectOverviewResponse {
