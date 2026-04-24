@@ -71,9 +71,9 @@ export default function ProjectGrid({
         {projects.map((project) => (
           <div
             key={project.id}
-            className="group transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl"
+            className="group transition-all duration-300 hover:-translate-y-2"
           >
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md group-hover:shadow-xl transition-shadow">
+            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md transition-shadow">
               <ProjectCard project={project} onView={onView} />
             </div>
           </div>
