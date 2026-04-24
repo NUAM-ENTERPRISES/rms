@@ -28,14 +28,11 @@ import {
   CheckCircle,
   Send,
   UserCheck,
-  CalendarDays,
-  ArrowRight,
   Phone,
   Mail,
   AlertTriangle,
 } from "lucide-react";
-import { DatePicker, ProjectRoleFilter, ImageViewer, StatusTile } from "@/components/molecules";
-// import { DatePicker, ProjectRoleFilter, ImageViewer } from "@/components/molecules";
+import { ProjectRoleFilter, ImageViewer, StatusTile } from "@/components/molecules";
 import { SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -370,46 +367,8 @@ export default function ProjectCandidatesOverviewPage() {
               </div>
             </div>
 
-            {/* ── Date Filter Section ── */}
             <div className="border-t border-gray-100 pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 mr-1">
-                  <CalendarDays className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-gray-700">Date Added</span>
-                </div>
-
-                {[
-                  { key: "all", label: "All" },
-                  { key: "today", label: "Today" },
-                  { key: "yesterday", label: "Yesterday" },
-                  { key: "this_week", label: "This week" },
-                  { key: "last_week", label: "Last week" },
-                  { key: "this_month", label: "This month" },
-                  { key: "custom", label: "Custom" },
-                ].map((preset) => {
-                  const isActive = dateRange === preset.key;
-                  return (
-                    <button
-                      key={preset.key}
-                      onClick={() => {
-                        setDateRange(preset.key);
-                        if (preset.key !== "custom") {
-                          setDateFrom(undefined);
-                          setDateTo(undefined);
-                        }
-                        setPage(1);
-                      }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                        isActive
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setIsAdvancedFiltersOpen(true)}
@@ -423,45 +382,6 @@ export default function ProjectCandidatesOverviewPage() {
                   <span className="text-xs font-medium">Filter</span>
                 </Button>
               </div>
-
-              {dateRange === "custom" && (
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 border-blue-300 bg-blue-50/50`}>
-                    <span className="text-xs font-medium text-gray-500 min-w-[32px]">From</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={dateFrom}
-                        showTime={false}
-                        onChange={(d) => {
-                          const newFrom = d as Date | undefined;
-                          setDateFrom(newFrom);
-                          setPage(1);
-                        }}
-                        placeholder="Start date"
-                        compact
-                      />
-                    </div>
-
-                    <ArrowRight className="h-3.5 w-3.5 text-gray-400 mx-1" />
-
-                    <span className="text-xs font-medium text-gray-500 min-w-[20px]">To</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={dateTo}
-                        showTime={false}
-                        onChange={(d) => {
-                          const newTo = d as Date | undefined;
-                          setDateTo(newTo);
-                          setPage(1);
-                        }}
-                        placeholder="End date"
-                        compact
-                        disabled={!dateFrom}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
