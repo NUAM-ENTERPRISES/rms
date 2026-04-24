@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Import screens
-import CEODashboard from '../../screens/roles/CEODashboard';
+import { CEODashboard } from '../../screens/roles';
 import InterviewsScreen from '../../screens/shared/InterviewsScreen';
 import CandidatesScreen from '../../screens/shared/CandidatesScreen';
 import ProfileScreen from '../../screens/shared/ProfileScreen';

@@ -160,6 +160,12 @@ export class NotificationsGateway
   }
 
   private extractTokenFromSocket(client: Socket): string | null {
+    // Try to get token from the Socket.IO auth payload first
+    const authToken = client.handshake.auth?.token as string;
+    if (authToken) {
+      return authToken;
+    }
+
     // Try to get token from Authorization header
     const authHeader = client.handshake.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {

@@ -15,6 +15,7 @@ import { useUserProfile } from '../../hooks/useUserProfile';
 import { useLogoutMutation } from '../../features/auth/authApi';
 import { COLORS } from '../../constants/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import ConfirmationModal from '../../components/ui/modals/ConfirmationModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ const statusBarHeight = Platform.select({
 const ProfileScreen: React.FC = () => {
   const { user } = useUserProfile();
   const [logout] = useLogoutMutation();
+  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   // Mock user data with more details for demonstration
   const mockUser = user || {
@@ -43,25 +45,19 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout().unwrap();
-            } catch (error) {
-              console.error('Logout failed:', error);
-              Alert.alert('Error', 'Failed to logout. Please try again.');
-            }
-          }
-        }
-      ]
-    );
+    console.log('Logout confirmed');
+    setShowLogoutModal(false);
+    try {
+      await logout().unwrap();
+    } catch (error) {
+      console.error('Logout failed:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
+  };
+
+  const handleLogoutPress = () => {
+    console.log('Logout button pressed');
+    setShowLogoutModal(true);
   };
 
   const handleEditProfile = () => {
@@ -208,7 +204,7 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.logoutContainer}>
           <TouchableOpacity 
             style={styles.logoutButton} 
-            onPress={handleLogout}
+            onPress={handleLogoutPress}
             activeOpacity={0.8}
           >
             <Icon name="logout" size={20} color={COLORS.white} />
@@ -216,6 +212,19 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ConfirmationModal
+        visible={showLogoutModal}
+        title="Logout"
+        message="Are you sure you want to logout? You will need to sign in again."
+        confirmLabel="Logout"
+        iconName="logout-variant"
+        onConfirm={handleLogout}
+        onCancel={() => {
+          console.log('Modal cancel triggered');
+          setShowLogoutModal(false);
+        }}
+      />
     </SafeAreaView>
   );
 };

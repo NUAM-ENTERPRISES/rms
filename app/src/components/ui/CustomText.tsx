@@ -1,8 +1,8 @@
 // src/components/CustomText.tsx
 import React from 'react';
 import { Text, TextProps } from 'react-native';
-import { TYPOGRAPHY } from '../constants/typography';
-import { COLORS } from '../constants/colors';
+import { TYPOGRAPHY } from '../../constants/typography';
+import { COLORS } from '../../constants/colors';
 
 type ColorKey = keyof typeof COLORS;
 

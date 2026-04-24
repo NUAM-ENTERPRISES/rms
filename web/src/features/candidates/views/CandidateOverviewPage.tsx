@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -55,7 +55,8 @@ import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { RecruiterPerformanceChartWrapper } from "../components/RecruiterPerformanceChartWrapper";
-import { ImageViewer } from "@/components/molecules";
+import { ImageViewer, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
@@ -63,6 +64,7 @@ import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   const isManagerOrAdmin = currentUser?.roles?.some((role) =>
@@ -417,14 +419,10 @@ export default function CandidateOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
-        <div className="space-y-1">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Welcome back, {displayedRecruiterName || currentUser?.name || "Recruiter"}! 👋
-          </h1>
-          <p className="text-sm text-slate-500">
-            {Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
-          </p>
-        </div>
+        <TypedHeader 
+          userName={displayedRecruiterName || currentUser?.name || "Recruiter"} 
+          subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
+        />
 
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
         {/* {(filters.recruiterId !== "all") && (
@@ -457,23 +455,20 @@ export default function CandidateOverviewPage() {
 
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <Card
+                <StatusTile
+                  label={stat.label}
+                  value={stat.value}
+                  subtitle={stat.subtitle}
+                  icon={stat.icon}
+                  bgGradient={colors.bg}
+                  iconBg={colors.iconBg}
+                  textColor={colors.text}
+                  active={isActive}
                   onClick={() => handleTileClick(stat.statusFilter)}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} cursor-pointer transition-all hover:shadow-md transform hover:-translate-y-0.5 ${isActive ? "ring-2 ring-blue-500/30" : ""}`}
-                >
-                  <CardContent className="pt-2 pb-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5 leading-tight">{stat.label}</p>
-                        <h3 className={`text-lg font-semibold ${colors.text}`}>{isLoading ? "..." : stat.value}</h3>
-                        <p className="text-[9px] text-slate-500 mt-0.5 leading-tight">{stat.subtitle}</p>
-                      </div>
-                      <div className={`p-1 ${colors.iconBg} rounded-full`}>
-                        <stat.icon className={`h-4 w-4 ${colors.text}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  scrollTargetRef={tableRef}
+                  scrollOnClick={true}
+                  className="h-full"
+                />
               </motion.div>
             );
           })}
@@ -483,7 +478,7 @@ export default function CandidateOverviewPage() {
         <Card className="border-0 shadow-lg bg-white/90">
           <CardContent className="pt-0 pb-0">
             {/* Premium Table Container */}
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
               {/* Table Header with Search and Actions */}
               <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
                 <div className="flex flex-col gap-4">

@@ -110,8 +110,18 @@ export const authSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(loadStoredTokens.rejected, (state) => {
-        state.isLoading = false;
         state.status = "anonymous";
+        state.isLoading = false;
+      })
+      // Clear stored tokens
+      .addCase(clearStoredTokens.fulfilled, (state) => {
+        state.user = null;
+        state.accessToken = null;
+        state.refreshToken = null;
+        state.userVersion = undefined;
+        state.isAuthenticated = false;
+        state.status = "anonymous";
+        state.isLoading = false;
       })
       // Store tokens securely
       .addCase(storeTokensSecurely.fulfilled, (state, action) => {
@@ -127,26 +137,39 @@ export const authSlice = createSlice({
       // Update access token
       .addCase(updateStoredAccessToken.fulfilled, (state, action) => {
         state.accessToken = action.payload;
-      })
-      // Clear stored tokens
-      .addCase(clearStoredTokens.fulfilled, (state) => {
-        state.user = null;
-        state.accessToken = null;
-        state.refreshToken = null;
-        state.userVersion = undefined;
-        state.isAuthenticated = false;
-        state.status = "anonymous";
-        state.isLoading = false;
       });
   },
 });
 
-export const {
-  setCredentials,
-  setAccessToken,
-  clearCredentials,
-  setLoading,
-  setStatus,
-} = authSlice.actions;
+// Role hierarchy constants for priority mapping
+export const ROLE_PRIORITY = [
+  "CEO",
+  "Director",
+  "Manager",
+  "Team Head",
+  "Team Lead",
+  "Recruiter",
+  "Documentation Executive",
+  "Processing Executive",
+  "CRE",
+] as const;
 
+/**
+ * Selector to get the primary role based on hierarchy
+ */
+export const selectPrimaryRole = (state: { auth: AuthState }) => {
+  const userRoles = state.auth.user?.roles;
+  if (!userRoles || userRoles.length === 0) return null;
+
+  // Find the highest priority role user has
+  for (const role of ROLE_PRIORITY) {
+    if (userRoles.includes(role)) {
+      return role;
+    }
+  }
+
+  return userRoles[0]; // Fallback to first role if none match hierarchy
+};
+
+export const { setCredentials, setAccessToken, clearCredentials, setLoading, setStatus } = authSlice.actions;
 export default authSlice.reducer;

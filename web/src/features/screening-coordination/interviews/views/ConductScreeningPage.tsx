@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Calendar, Clock, MapPin, User, CheckCircle2, Circle, Loader2, Link, Search, ChevronLeft, ChevronRight, FileText, Edit2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Screening, ScreeningTemplate } from "../../types";
+import { TRAINING_PRIORITY } from "../../types";
 import {
   useGetTemplatesByRoleQuery,
   useGetTemplatesQuery,
@@ -237,20 +238,23 @@ export default function ConductScreeningPage() {
       await completeScreening({ id: routeId, data: payload }).unwrap();
 
       if (formData.decision === "needs_training" && interview?.candidateProjectMap?.id && user?.id) {
-        try {
-          await createTrainingAssignment({
-            candidateProjectMapId: interview.candidateProjectMap.id,
-            screeningId: routeId,
-            assignedBy: user.id,
-            trainingType: formData.trainingType || TRAINING_TYPE.INTERVIEW_SKILLS,
-            focusAreas: formData.focusAreas || [],
-            priority: formData.priority || TRAINING_PRIORITY.MEDIUM,
-            targetCompletionDate: formData.targetCompletionDate || undefined,
-            notes: formData.trainingNotes || formData.remarks || "",
-          }).unwrap();
-          toast.success("Training assignment created");
-        } catch (trainingError: any) {
-          toast.error(trainingError?.data?.message || "Failed to create training assignment");
+        if (interview.trainingAssignment) {
+          toast.info("A training assignment already exists for this screening.");
+        } else {
+          try {
+            await createTrainingAssignment({
+              candidateProjectMapId: interview.candidateProjectMap.id,
+              screeningId: routeId,
+              assignedBy: user.id,
+              focusAreas: formData.focusAreas || [],
+              priority: formData.priority || TRAINING_PRIORITY.MEDIUM,
+              targetCompletionDate: formData.targetCompletionDate || undefined,
+              notes: formData.trainingNotes || formData.remarks || "",
+            }).unwrap();
+            toast.success("Training assignment created");
+          } catch (trainingError: any) {
+            toast.error(trainingError?.data?.message || "Failed to create training assignment");
+          }
         }
       }
 
@@ -323,7 +327,7 @@ export default function ConductScreeningPage() {
 
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+    <div className="container py-8 space-y-6">
       {/* Header */}
       <div className="relative">
   {/* Premium Header with Aurora Glow */}

@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { ClipboardCheck, User, Briefcase, Check, X as XIcon, ChevronRight, AlertCircle, Info, UserMinus } from "lucide-react";
+import { ClipboardCheck, Briefcase, Check, X as XIcon, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ImageViewer } from "./ImageViewer";
 
@@ -53,7 +52,7 @@ const statusMeta: Record<Outcome, { label: string; note: string; badgeClass: str
 
 export default function ReviewInterviewModal({ isOpen, onClose, interview, onSubmit }: ReviewInterviewModalProps) {
   const [idToStatus, setIdToStatus] = useState<Record<string, Outcome>>({});
-  const [reason, setReason] = useState<string>("");
+  const [itemReasons, setItemReasons] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Normalize interview data to an array
@@ -78,7 +77,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
         }
       });
       setIdToStatus(initial);
-      setReason("");
+      setItemReasons({});
     }
   }, [isOpen, items]);
 
@@ -93,16 +92,19 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
   const handleConfirm = async () => {
     const updates = items.map((it) => {
       const status = idToStatus[it.id] || "passed";
+      const individualReason = itemReasons[it.id];
       const mappedSubStatus = 
         status === "passed" ? "interview_passed" : 
         status === "failed" ? "interview_failed" : 
         "interview_backout";
       
+      const combinedReason = individualReason;
+      
       return {
         id: it.id,
         interviewStatus: status,
         subStatus: mappedSubStatus,
-        reason: reason || undefined,
+        reason: combinedReason || undefined,
       };
     });
 
@@ -185,7 +187,7 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Candidates List
               </div>
-              {items.map((it, idx) => {
+              {items.map((it) => {
                 const cand = it.candidateProjectMap?.candidate || it.candidate;
                 const role = it.candidateProjectMap?.roleNeeded || it.roleNeeded;
                 const currentStatus = idToStatus[it.id];
@@ -228,31 +230,20 @@ export default function ReviewInterviewModal({ isOpen, onClose, interview, onSub
                         ))}
                       </div>
                     </div>
+                    {/* Individual Notes Field */}
+                    <div className="mt-2 pl-3">
+                      <Textarea
+                        placeholder={`Notes for ${cand?.firstName || "this candidate"}...`}
+                        className="text-xs min-h-[60px] bg-slate-50/50 focus:bg-white transition-colors border-dashed"
+                        value={itemReasons[it.id] || ""}
+                        onChange={(e) => setItemReasons(prev => ({ ...prev, [it.id]: e.target.value }))}
+                      />
+                    </div>
                   </div>
                 );
               })}
             </div>
           </ScrollArea>
-
-          <div className="p-6 pt-0 border-t bg-slate-50/50 dark:bg-slate-900/30">
-            <div className="pt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  Overall Remarks (shared for all)
-                </label>
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Info className="h-3 w-3" />
-                  Optional
-                </div>
-              </div>
-              <Textarea
-                className="min-h-[100px] text-sm resize-none bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus:ring-indigo-500"
-                placeholder="Add final feedback, reasons for success/rejection, or any other notes..."
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-            </div>
-          </div>
         </div>
 
         <DialogFooter className="p-6 pt-4 border-t gap-3 flex-row items-center justify-end">

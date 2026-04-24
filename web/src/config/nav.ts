@@ -227,7 +227,7 @@ export const navigationConfig: NavItem[] = [
     roles: ["Screening Trainer"],
     permissions: ["read:screenings"],
   },
-  {
+  /* {
     id: "screenings-list-top",
     label: "My Screenings",
     path: "/screenings/list",
@@ -242,7 +242,7 @@ export const navigationConfig: NavItem[] = [
     icon: ClipboardCheck,
     roles: ["Screening Trainer"],
     permissions: ["read:training"],
-  },
+  }, */
   {
     id: "screenings-templates-top",
     label: "Templates",
@@ -256,7 +256,7 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer", "Documentation Executive"],
+    hiddenForRoles: ["Screening Trainer", "Documentation Executive", "Interview Coordinator"],
     children: [
       {
         id: "screenings-dashboard",

@@ -51,7 +51,9 @@ export async function seedCandidateProjectWorkflow() {
     { name: "screening_scheduled", label: "Screening Scheduled", order: 11, main: "interview" },
     { name: "screening_completed", label: "Screening Completed", order: 12, main: "interview" },
     { name: "screening_passed", label: "Screening Passed", order: 13, main: "interview" },
-    { name: "screening_failed", label: "Screening Failed", order: 14, main: "interview" },
+    { name: "screening_needs_training", label: "Screening Needs Training", order: 14.5, main: "interview" },
+    { name: "screening_on_hold", label: "Screening On Hold", order: 14.75, main: "interview" },
+    { name: "screening_failed", label: "Screening Failed", order: 15, main: "interview" },
 
 
     // TRAINING (interview categories)

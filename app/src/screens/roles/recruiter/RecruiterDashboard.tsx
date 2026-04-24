@@ -9,9 +9,10 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
-import { useUserProfile } from '../../hooks/useUserProfile';
-import { COLORS } from '../../constants/colors';
+import { useUserProfile } from '../../../hooks/useUserProfile';
+import { COLORS } from '../../../constants/colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import StatCard from '../shared/StatCard';
 
 // Sample data - replace with actual API calls
 const MOCK_DATA = {
@@ -100,18 +101,6 @@ const RecruiterDashboard: React.FC = () => {
     }
   };
 
-  const renderStatCard = (title: string, value: number, icon: string, color: string) => (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
-      <View style={styles.statContent}>
-        <View style={styles.statTextContainer}>
-          <Text style={styles.statValue}>{value}</Text>
-          <Text style={styles.statTitle}>{title}</Text>
-        </View>
-        <Icon name={icon} size={32} color={color} />
-      </View>
-    </View>
-  );
-
   const renderCandidateItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={styles.candidateCard}>
       <View style={styles.candidateHeader}>
@@ -177,10 +166,10 @@ const RecruiterDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       <View style={styles.statsContainer}>
-        {renderStatCard('Total Candidates', MOCK_DATA.stats.totalCandidates, 'account-group', COLORS.primary)}
-        {renderStatCard('Pending Docs', MOCK_DATA.stats.pendingDocuments, 'file-clock', COLORS.warning)}
-        {renderStatCard('Interviews', MOCK_DATA.stats.interviewsScheduled, 'calendar-clock', COLORS.info)}
-        {renderStatCard('Approved', MOCK_DATA.stats.approvedCandidates, 'check-circle', COLORS.success)}
+        <StatCard title="Total Candidates" value={MOCK_DATA.stats.totalCandidates} icon="account-group" color={COLORS.primary} />
+        <StatCard title="Pending Docs" value={MOCK_DATA.stats.pendingDocuments} icon="file-clock" color={COLORS.warning} />
+        <StatCard title="Interviews" value={MOCK_DATA.stats.interviewsScheduled} icon="calendar-clock" color={COLORS.info} />
+        <StatCard title="Approved" value={MOCK_DATA.stats.approvedCandidates} icon="check-circle" color={COLORS.success} />
       </View>
 
       {/* Quick Actions */}
@@ -302,37 +291,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 16,
     gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statTextContainer: {
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.dark,
-  },
-  statTitle: {
-    fontSize: 14,
-    color: COLORS.gray,
-    marginTop: 4,
   },
   section: {
     backgroundColor: COLORS.white,

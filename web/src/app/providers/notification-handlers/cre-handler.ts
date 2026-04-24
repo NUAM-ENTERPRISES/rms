@@ -28,7 +28,11 @@ export const handleCRENotifications = ({ notification, dispatch, invalidateTags 
     console.log(`[CRE Notification] Handling ${notification.type}`);
     
     // Invalidate candidate list and details to show new assignments/changes
-    dispatch(invalidateTags([{ type: "Candidate" }]));
+    dispatch(invalidateTags([
+      "Candidate",
+      "RecruiterAssignment",
+      { type: "Candidate", id: "LIST" }
+    ]));
     
     // Show a specific toast if needed (though the provider usually handles this)
     if (notification.type === "CRE_ASSIGNMENT") {

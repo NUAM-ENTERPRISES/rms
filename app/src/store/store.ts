@@ -6,6 +6,19 @@ import authReducer from "@/features/auth/authSlice";
 import projectReducer from "@/features/project/projectSlice";
 import notificationSettingsReducer from "@/features/notifications/notificationSettingsSlice"; // new slice for mute state
 
+const reactotronEnhancer = (() => {
+  if (__DEV__) {
+    try {
+      const configModule = require("../../ReactotronConfig");
+      const reactotron = configModule?.default || configModule;
+      return reactotron?.createEnhancer?.();
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+})();
+
 export const store = configureStore({
   reducer: {
     auth: authReducer,
@@ -15,9 +28,18 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer, // inject authApi reducer
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware()
-      .concat(baseApi.middleware) // add RTK Query middleware
-      .concat(authApi.middleware), // add auth API middleware
+    getDefaultMiddleware({
+      serializableCheck: false,
+    })
+      .concat(baseApi.middleware)
+      .concat(authApi.middleware),
+  enhancers: (getDefaultEnhancers) => {
+    const enhancers = getDefaultEnhancers();
+    if (reactotronEnhancer) {
+      return enhancers.concat(reactotronEnhancer);
+    }
+    return enhancers;
+  },
 });
 
 // optional: enables automatic refetchOnFocus/refetchOnReconnect for queries

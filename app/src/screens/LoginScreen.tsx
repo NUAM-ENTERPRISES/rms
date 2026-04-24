@@ -15,14 +15,14 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import CustomText from '@/components/CustomText';
+import CustomText from '@/components/ui/CustomText';
 import { COLORS } from '@/constants/colors';
 import { RootStackParamList } from '@/types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import CustomButton from '@/components/CustomButton';
+import CustomButton from '@/components/ui/CustomButton';
 import { useLoginMutation } from '@/features/auth/authApi';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import CountryPicker from '@/components/CountryPicker';
+import CountryPicker from '@/components/ui/CountryPicker';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -61,6 +61,7 @@ const LoginScreen = () => {
 
     // Password login states
     const [selectedCountry, setSelectedCountry] = useState<{ name: string; code: string; dial_code: string; flag?: string } | null>({ name: 'India', code: 'IN', dial_code: '+91', flag: '🇮🇳' });
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
@@ -145,10 +146,10 @@ const LoginScreen = () => {
         const newErrors = { phone: '', password: '', otp: '', root: '' };
         let isValid = true;
 
-        if (!otpPhone) {
+        if (!phoneNumber) {
             newErrors.phone = 'Phone number is required';
             isValid = false;
-        } else if (!/^[6-9]\d{9}$/.test(otpPhone)) {
+        } else if (!/^[6-9]\d{9}$/.test(phoneNumber)) {
             newErrors.phone = 'Please enter a valid 10-digit phone number';
             isValid = false;
         }
@@ -225,15 +226,27 @@ const LoginScreen = () => {
     const handlePasswordLogin = async () => {
         if (!validatePasswordForm()) return;
         setIsLoading(true);
+        setErrors({ phone: '', password: '', otp: '', root: '' });
+
         try {
             const loginData = {
                 countryCode: selectedCountry?.dial_code || '+91',
-                mobileNumber: otpPhone,
+                mobileNumber: phoneNumber,
                 password: password,
             };
+
             const result = await login(loginData).unwrap();
+
+            if (result?.success) {
+                // Note: AuthNavigator will switch to RoleBasedNavigator
+                // when isAuthenticated is updated in Redux.
+                console.log('✅ Login successful');
+            } else {
+                setErrors({ ...errors, root: result?.message || 'Login failed. Please try again.' });
+            }
         } catch (error: any) {
-            const errorMessage = error?.data?.message ||
+            const errorMessage =
+                error?.data?.message ||
                 error?.message ||
                 'Invalid phone number or password';
             setErrors({ ...errors, root: errorMessage });
@@ -251,7 +264,9 @@ const LoginScreen = () => {
             const identifier = otpPhone;
             console.log('Verifying OTP:', { type: otpInputType, identifier, otp });
 
-            navigation.replace('Home');
+            // Note: AuthNavigator will switch to RoleBasedNavigator
+            // when isAuthenticated is updated in Redux.
+            console.log('✅ OTP Verification successful');
         } catch (error) {
             setErrors({ ...errors, root: 'Invalid OTP. Please try again.' });
         } finally {
@@ -266,12 +281,12 @@ const LoginScreen = () => {
     };
 
     const handleForgotPassword = () => {
-        Alert.alert('Forgot Password', 'Password reset feature coming soon!');
+        navigation.navigate('ForgotPassword');
     };
 
-    const handleRequestAccess = () => {
-        Alert.alert('Request Access', 'Access request feature coming soon!');
-    };
+    // const handleRequestAccess = () => {
+    //     Alert.alert('Request Access', 'Access request feature coming soon!');
+    // };
 
     const switchLoginMethod = (method: LoginMethod) => {
         setLoginMethod(method);
@@ -398,7 +413,7 @@ const LoginScreen = () => {
                             </View>
 
                             {/* Enhanced Login Method Toggle */}
-                            <View style={styles.tabContainer}>
+                            {/* <View style={styles.tabContainer}>
                                 <TouchableOpacity
                                     style={[
                                         styles.tab,
@@ -444,7 +459,7 @@ const LoginScreen = () => {
                                         OTP
                                     </CustomText>
                                 </TouchableOpacity>
-                            </View>
+                            </View> */}
 
                             {/* Password Login Form */}
                             {loginMethod === 'password' && (
@@ -474,10 +489,10 @@ const LoginScreen = () => {
                                                 style={styles.textInput}
                                                 placeholder="e.g. 9876543210"
                                                 placeholderTextColor="#94a3b8"
-                                                value={otpPhone}
+                                                value={phoneNumber}
                                                 onChangeText={(text) => {
                                                     const formatted = formatPhoneNumber(text);
-                                                    setOtpPhone(formatted);
+                                                    setPhoneNumber(formatted);
                                                     setErrors({ ...errors, phone: '' });
                                                 }}
                                                 keyboardType="phone-pad"
@@ -565,7 +580,7 @@ const LoginScreen = () => {
                             )}
 
                             {/* OTP Login Form */}
-                            {loginMethod === 'otp' && (
+                            {/* {loginMethod === 'otp' && (
                                 <View style={styles.form}>
                                     {!otpSent ? (
                                         <>
@@ -665,10 +680,10 @@ const LoginScreen = () => {
                                         </>
                                     )}
                                 </View>
-                            )}
+                            )} */}
 
                             {/* Additional Options */}
-                            <View style={styles.additionalOptions}>
+                            {/* <View style={styles.additionalOptions}>
                                 <View style={styles.divider}>
                                     <View style={styles.dividerLine} />
                                     <CustomText style={styles.dividerText}>or</CustomText>
@@ -685,7 +700,7 @@ const LoginScreen = () => {
                                         Request access to system
                                     </CustomText>
                                 </TouchableOpacity>
-                            </View>
+                            </View> */}
 
                             {/* Footer */}
                             <View style={styles.footer}>
@@ -753,39 +768,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     singleCard: {
-        width: '100%',
-        maxWidth: isTablet ? scaleWidth(600) : scaleWidth(480),
+        width: '95%',
+        maxWidth: isTablet ? 520 : 440,
         backgroundColor: 'rgba(255, 255, 255, 0.98)',
-        borderRadius: scaleWidth(28),
-        paddingHorizontal: isSmallDevice ? scaleWidth(24) : scaleWidth(32),
-        paddingVertical: isSmallDevice ? scaleHeight(32) : scaleHeight(40),
+        borderRadius: moderateScale(24),
+        paddingHorizontal: moderateScale(24),
+        paddingVertical: moderateScale(32),
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: scaleHeight(20)
+            height: 10
         },
-        shadowOpacity: 0.3,
-        shadowRadius: scaleWidth(35),
-        elevation: 20,
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+        alignSelf: 'center',
     },
     logoSection: {
-        paddingVertical: scaleHeight(20),
+        paddingVertical: moderateScale(16),
         alignItems: 'center',
-        marginBottom: scaleHeight(28),
-        backgroundColor: COLORS.logoBackground,
-        borderRadius: scaleWidth(20),
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(8)
-        },
-        shadowOpacity: 0.15,
-        shadowRadius: scaleWidth(12),
-        elevation: 8,
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        marginBottom: moderateScale(20),
+        backgroundColor: COLORS.logoBackground || 'transparent',
+        borderRadius: moderateScale(16),
         overflow: 'hidden',
         position: 'relative',
     },
@@ -795,290 +801,136 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        width: SCREEN_WIDTH * 0.25,
-        backgroundColor: 'rgba(255, 255, 255, 0.12)',
-        transform: [{ skewX: '-20deg' }],
+        width: SCREEN_WIDTH * 0.4,
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        transform: [{ skewX: '-25deg' }],
     },
     logo: {
-        height: isTablet ? scaleHeight(90) : scaleHeight(70),
-        width: isTablet ? scaleWidth(220) : scaleWidth(170),
-        maxWidth: '80%',
+        height: isTablet ? 80 : 60,
+        width: isTablet ? 200 : 150,
+        maxWidth: '90%',
     },
     cardHeader: {
         alignItems: 'center',
-        marginBottom: scaleHeight(28),
+        marginBottom: moderateScale(24),
     },
     welcomeText: {
-        fontSize: moderateScale(30),
-        fontWeight: '800',
-        color: '#0f172a',
-        marginBottom: scaleHeight(10),
+        fontSize: moderateScale(26),
+        fontWeight: 'bold',
+        color: '#1e293b',
+        marginBottom: moderateScale(6),
         textAlign: 'center',
-        textShadowColor: 'rgba(0, 0, 0, 0.08)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 3,
-        letterSpacing: 0.8,
+        letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: moderateScale(16),
-        color: '#475569',
-        textAlign: 'center',
-        lineHeight: moderateScale(22),
-        fontWeight: '500',
-    },
-    tabContainer: {
-        flexDirection: 'row',
-        backgroundColor: 'rgba(241, 245, 249, 0.8)',
-        borderRadius: scaleWidth(18),
-        padding: scaleWidth(6),
-        marginBottom: scaleHeight(28),
-        borderWidth: 1.5,
-        borderColor: 'rgba(203, 213, 225, 0.5)',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(2)
-        },
-        shadowOpacity: 0.08,
-        shadowRadius: scaleWidth(4),
-        elevation: 3,
-    },
-    tab: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: scaleHeight(14),
-        borderRadius: scaleWidth(12),
-        gap: scaleWidth(8),
-    },
-    activeTab: {
-        backgroundColor: '#ffffff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: scaleHeight(4) },
-        shadowOpacity: 0.12,
-        shadowRadius: scaleWidth(8),
-        elevation: 6,
-        borderWidth: 1.5,
-        borderColor: 'rgba(102, 126, 234, 0.2)',
-    },
-    tabText: {
-        fontSize: moderateScale(15),
+        fontSize: moderateScale(14),
         color: '#64748b',
-        fontWeight: '600',
-    },
-    activeTabText: {
-        color: COLORS.primary,
-        fontWeight: '700',
+        textAlign: 'center',
+        lineHeight: moderateScale(20),
+        fontWeight: '400',
     },
     form: {
-        gap: scaleHeight(24),
+        width: '100%',
+        minHeight: moderateScale(380),
+        justifyContent: 'space-between',
+        paddingVertical: moderateScale(12),
     },
     inputGroup: {
-        gap: scaleHeight(10),
+        marginBottom: moderateScale(20),
+        width: '100%',
     },
     label: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(13),
         fontWeight: '600',
-        color: '#334155',
-        letterSpacing: 0.3,
+        color: '#475569',
+        marginBottom: moderateScale(6),
+        marginLeft: moderateScale(4),
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderWidth: 2,
+        backgroundColor: '#f8fafc',
+        borderWidth: 1.5,
         borderColor: '#e2e8f0',
-        borderRadius: scaleWidth(16),
-        height: isTablet ? scaleHeight(60) : scaleHeight(54),
-        paddingHorizontal: scaleWidth(16),
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(2)
-        },
-        shadowOpacity: 0.06,
-        shadowRadius: scaleWidth(6),
-        elevation: 3,
+        borderRadius: moderateScale(12),
+        height: moderateScale(54),
+        paddingRight: moderateScale(12),
+        width: '100%',
+        overflow: 'hidden',
     },
     inputError: {
-        borderColor: '#dc2626',
+        borderColor: '#ef4444',
         backgroundColor: '#fef2f2',
     },
     phonePrefix: {
-        paddingRight: scaleWidth(8),
+        height: '100%',
+        paddingLeft: moderateScale(12),
+        paddingRight: moderateScale(8),
         borderRightWidth: 1,
         borderRightColor: '#cbd5e1',
-        marginRight: scaleWidth(8),
+        justifyContent: 'center',
+        alignItems: 'center',
+        minWidth: moderateScale(70),
     },
     leftIcon: {
-        marginRight: scaleWidth(10),
+        marginLeft: moderateScale(12),
+        marginRight: moderateScale(8),
     },
     textInput: {
         flex: 1,
-        fontSize: moderateScale(16),
+        height: '100%',
+        fontSize: moderateScale(15),
         color: '#1e293b',
-        paddingVertical: scaleHeight(12),
-        paddingHorizontal: scaleWidth(4),
+        paddingVertical: 0,
         fontWeight: '500',
+        paddingLeft: moderateScale(4),
     },
     eyeButton: {
-        padding: scaleWidth(6),
-        marginLeft: scaleWidth(8),
+        padding: moderateScale(4),
     },
     errorText: {
-        fontSize: moderateScale(13),
-        color: '#dc2626',
-        marginTop: scaleHeight(4),
+        fontSize: moderateScale(12),
+        color: '#ef4444',
+        marginTop: moderateScale(4),
+        marginLeft: moderateScale(4),
         fontWeight: '500',
     },
     errorAlert: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: scaleWidth(8),
         backgroundColor: '#fef2f2',
-        borderWidth: 1.5,
+        borderWidth: 1,
         borderColor: '#fecaca',
-        borderRadius: scaleWidth(14),
-        padding: scaleWidth(14),
-        shadowColor: '#dc2626',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(2)
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: scaleWidth(4),
-        elevation: 2,
+        borderRadius: moderateScale(10),
+        padding: moderateScale(12),
+        marginBottom: moderateScale(16),
     },
     errorAlertText: {
         flex: 1,
-        fontSize: moderateScale(14),
-        color: '#991b1b',
-        fontWeight: '500',
-    },
-    otpInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: scaleWidth(8),
-        paddingHorizontal: scaleWidth(12),
-        paddingVertical: scaleHeight(10),
-        backgroundColor: 'rgba(241, 245, 249, 0.6)',
-        borderRadius: scaleWidth(12),
-    },
-    otpInfoText: {
         fontSize: moderateScale(13),
-        color: '#64748b',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    otpSentContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: scaleWidth(6),
-        marginTop: scaleHeight(6),
-    },
-    otpSentText: {
-        flex: 1,
-        fontSize: moderateScale(13),
-        color: '#059669',
-        fontWeight: '500',
-    },
-    resendContainer: {
-        alignItems: 'center',
-    },
-    countdownContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: scaleWidth(6),
-        paddingHorizontal: scaleWidth(16),
-        paddingVertical: scaleHeight(10),
-        backgroundColor: 'rgba(241, 245, 249, 0.6)',
-        borderRadius: scaleWidth(12),
-    },
-    resendButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: scaleWidth(6),
-        paddingHorizontal: scaleWidth(16),
-        paddingVertical: scaleHeight(10),
-    },
-    resendText: {
-        fontSize: moderateScale(14),
-        color: COLORS.primary,
-        textAlign: 'center',
-        fontWeight: '600',
-    },
-    countdownText: {
-        fontSize: moderateScale(14),
-        color: '#64748b',
-        textAlign: 'center',
-        fontWeight: '500',
-    },
-    additionalOptions: {
-        marginTop: scaleHeight(32),
-        gap: scaleHeight(16),
+        color: '#b91c1c',
+        marginLeft: moderateScale(8),
     },
     forgotPasswordText: {
-        fontSize: moderateScale(14),
+        fontSize: moderateScale(13),
         color: COLORS.primary,
-        textAlign: 'center',
+        textAlign: 'right',
         fontWeight: '600',
-    },
-    divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: scaleHeight(8),
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#cbd5e1',
-    },
-    dividerText: {
-        marginHorizontal: scaleWidth(12),
-        fontSize: moderateScale(14),
-        color: '#64748b',
-        fontWeight: '500',
-    },
-    requestAccessButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: scaleWidth(8),
-        borderWidth: 2,
-        borderColor: '#e2e8f0',
-        backgroundColor: '#ffffff',
-        borderRadius: scaleWidth(16),
-        height: isTablet ? scaleHeight(56) : scaleHeight(52),
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: scaleHeight(4)
-        },
-        shadowOpacity: 0.08,
-        shadowRadius: scaleWidth(8),
-        elevation: 4,
-    },
-    requestAccessText: {
-        fontSize: moderateScale(16),
-        color: '#334155',
-        fontWeight: '600',
+        marginTop: moderateScale(10),
     },
     footer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: scaleWidth(6),
-        marginTop: scaleHeight(32),
-        paddingTop: scaleHeight(24),
+        marginTop: moderateScale(24),
+        paddingTop: moderateScale(20),
         borderTopWidth: 1,
-        borderTopColor: '#e2e8f0',
+        borderTopColor: '#f1f5f9',
     },
     footerText: {
-        fontSize: moderateScale(12),
-        color: '#64748b',
-        textAlign: 'center',
+        fontSize: moderateScale(11),
+        color: '#94a3b8',
+        marginLeft: moderateScale(6),
         fontWeight: '500',
     },
 });

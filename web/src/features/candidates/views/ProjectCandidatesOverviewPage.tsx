@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -34,7 +34,7 @@ import {
   Mail,
   AlertTriangle,
 } from "lucide-react";
-import { DatePicker, ProjectRoleFilter, ImageViewer } from "@/components/molecules";
+import { DatePicker, ProjectRoleFilter, ImageViewer, StatusTile } from "@/components/molecules";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
@@ -150,6 +150,7 @@ const STATUS_BADGE: Record<
 // -------------------------------------------------------------------
 export default function ProjectCandidatesOverviewPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState("all");
@@ -157,6 +158,11 @@ export default function ProjectCandidatesOverviewPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const debouncedSearch = useDebounce(search, 500);
+
+  const handleTileClick = (tileKey: string) => {
+    setActiveFilter(tileKey);
+    setPage(1);
+  };
 
   // Project and Role state
   const [projectRole, setProjectRole] = useState({
@@ -404,39 +410,20 @@ export default function ProjectCandidatesOverviewPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
               >
-                <Card
-                  onClick={() => {
-                    setActiveFilter(tile.key);
-                    setPage(1);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setActiveFilter(tile.key);
-                      setPage(1);
-                    }
-                  }}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${tile.bgGradient} backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5 ${
-                    isActive ? "ring-2 ring-blue-500/30 shadow-md" : ""
-                  }`}
-                >
-                  <CardContent className="pt-2 pb-2 px-3">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5 truncate">
-                          {tile.label}
-                        </p>
-                        <h3 className={`text-lg font-bold ${tile.textColor}`}>
-                          {counts[tile.key] ?? 0}
-                        </h3>
-                      </div>
-                      <div className={`p-1.5 ${tile.iconBg} rounded-full shrink-0`}>
-                        <Icon className={`h-3.5 w-3.5 ${tile.textColor}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <StatusTile
+                  label={tile.label}
+                  value={counts[tile.key] ?? 0}
+                  icon={Icon}
+                  bgGradient={tile.bgGradient}
+                  iconBg={tile.iconBg}
+                  textColor={tile.textColor}
+                  active={isActive}
+                  onClick={() => handleTileClick(tile.key)}
+                  scrollTargetRef={tableRef}
+                  scrollOnClick={true}
+                  className="h-full"
+                  ariaLabel={`Filter candidates by ${tile.label}`}
+                />
               </motion.div>
             );
           })}
@@ -458,7 +445,7 @@ export default function ProjectCandidatesOverviewPage() {
           </CardHeader>
 
           <CardContent>
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
+            <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
               {isError ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <AlertTriangle className="h-12 w-12 text-red-500" />

@@ -487,7 +487,7 @@ model CandidateProjects {
 
   // Screening & Training Relations
   screenings          Screening[]
-  trainingAssignments TrainingAssignment[]
+  trainingAssignments ScreeningTraining[]
   processing          ProcessingCandidate?
 
   @@unique([candidateId, projectId, roleNeededId])
@@ -612,7 +612,7 @@ model Screening {
   candidateProjectMap   CandidateProjects        @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   template              ScreeningTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
   checklistItems        ScreeningChecklistItem[]
-  trainingAssignments   TrainingAssignment[]
+  trainingAssignments   ScreeningTraining[]
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
   @@index([candidateProjectMapId])
@@ -734,8 +734,8 @@ model InterviewStatusHistory {
   @@map("interview_status_history")
 }
 
-/// Training/Screening assignments for candidates who need improvement
-model TrainingAssignment {
+/// Screening training records for candidates who need improvement
+model ScreeningTraining {
   id                    String  @id @default(cuid())
   candidateProjectMapId String
   screeningId           String? // Which screening triggered this
@@ -743,10 +743,16 @@ model TrainingAssignment {
   trainerId             String? // Trainer user ID conducting this training
 
   // Training details
-  trainingType String // interview_skills, technical, communication, role_specific
   focusAreas   String[] // Areas to improve
   priority     String   @default("medium") // high, medium, low
-  status       String   @default("assigned") // assigned, in_progress, completed, cancelled
+  status       String   @default("assigned") // assigned, scheduled, in_progress, passed, failed, retraining, cancelled
+  attemptNumber Int     @default(1)
+
+  // Schedule / session metadata
+  scheduledTime DateTime?
+  duration      Int?
+  meetingLink   String?
+  sessionType   String?
 
   // Dates
   assignedAt           DateTime  @default(now())
@@ -764,45 +770,12 @@ model TrainingAssignment {
   // Relations
   candidateProjectMap CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   screening           Screening?        @relation(fields: [screeningId], references: [id], onDelete: SetNull)
-  trainingSessions    TrainingSession[]
 
   @@index([candidateProjectMapId])
   @@index([screeningId])
   @@index([assignedBy])
   @@index([status])
   @@map("training_assignments")
-}
-
-/// Individual training sessions within a training assignment
-model TrainingSession {
-  id                   String @id @default(cuid())
-  trainingAssignmentId String
-
-  // Session details
-  sessionDate       DateTime
-  sessionType       String   @default("video") // video, phone, in_person
-  duration          Int      @default(60) // in minutes
-  topicsCovered     Json?    @db.Json // Array of topics
-  plannedActivities String?  @db.Text
-  trainer           String? // Who conducted the session
-  meetingLink       String? // Session meeting URL (zoom, google meet, etc.)
-
-  // Completion & Assessment
-  completedAt       DateTime?
-  performanceRating String? // excellent, good, satisfactory, needs_improvement
-  notes             String?   @db.Text
-  feedback          String?   @db.Text // Feedback for candidate
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  trainingAssignment TrainingAssignment @relation(fields: [trainingAssignmentId], references: [id], onDelete: Cascade)
-
-  @@index([trainingAssignmentId])
-  @@index([sessionDate])
-  @@index([completedAt])
-  @@map("training_sessions")
 }
 
 model Notification {

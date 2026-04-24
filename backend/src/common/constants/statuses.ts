@@ -34,6 +34,8 @@ export const CANDIDATE_PROJECT_STATUS = {
   SCREENING_COMPLETED: 'screening_completed',
   SCREENING_PASSED: 'screening_passed',
   SCREENING_FAILED: 'screening_failed',
+  SCREENING_NEEDS_TRAINING: 'screening_needs_training',
+  SCREENING_ON_HOLD: 'screening_on_hold',
 
   // === Training/Screening Stage ===
   TRAINING_ASSIGNED: 'training_assigned',
@@ -115,8 +117,18 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   ],
   [CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED]: [
     CANDIDATE_PROJECT_STATUS.SCREENING_PASSED,
-    CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+    CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING,
+    CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD,
     CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Reschedule
+  ],
+  [CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD]: [
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+    CANDIDATE_PROJECT_STATUS.APPROVED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
   [CANDIDATE_PROJECT_STATUS.SCREENING_PASSED]: [
     CANDIDATE_PROJECT_STATUS.APPROVED, // Proceed to approval
@@ -363,6 +375,9 @@ export const TRAINING_STATUS = {
   ASSIGNED: 'assigned',
   SCHEDULED: 'scheduled',
   IN_PROGRESS: 'in_progress',
+  PASSED: 'passed',
+  FAILED: 'failed',
+  RETRAINING: 'retraining',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;
@@ -658,7 +673,9 @@ export function getStatusStage(status: CandidateProjectStatus): string {
     screening_scheduled: 'screening',
     screening_completed: 'screening',
     screening_passed: 'screening',
+    screening_needs_training: 'screening',
     screening_failed: 'screening',
+    screening_on_hold: 'on_hold',
     // Training Stage
     training_assigned: 'training',
     training_in_progress: 'training',

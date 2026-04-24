@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import { DatePicker } from "@/components/molecules";
 import { Input } from "@/components/ui/input";
-import { MapPin, Video, PhoneCall, Save, Calendar, Clock, User, FileText, Plane, Home } from "lucide-react";
+import { MapPin, Video, PhoneCall, Save, Calendar, Clock, FileText, Plane, Home } from "lucide-react";
 import { useGetInterviewQuery, useUpdateInterviewMutation } from "../api";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -39,13 +39,13 @@ const editInterviewSchema = z
       message: "Please select a date and time",
     }),
     mode: z.enum(["video", "phone", "in-person"]),
-    type: z.string().min(1, "Interview type is required"),
+    accommodation: z.boolean(),
+    type: z.string().optional(),
     duration: z.coerce.number().min(5).max(480).optional(),
-    interviewer: z.string().min(2, "Interviewer name is required").optional(),
+    interviewer: z.string().optional(),
     notes: z.string().optional(),
     meetingLink: z.string().optional(),
-    accommodation: z.boolean().default(false),
-    airTicket: z.string().optional(),
+    airTicket: z.enum(["none", "up-and-down", "up-only", "down-only"]).optional(),
   })
   .superRefine((data, ctx) => {
     // Meeting link is optional. If provided, validate it's a proper URL.
@@ -81,11 +81,11 @@ export default function EditInterviewDialog({
     useUpdateInterviewMutation();
 
   const form = useForm<EditInterviewForm>({
-    resolver: zodResolver(editInterviewSchema),
+    resolver: zodResolver(editInterviewSchema) as any,
     defaultValues: {
       scheduledTime: undefined,
       mode: "video",
-      type: "first_round",
+      type: undefined,
       duration: 30,
       interviewer: "",
       notes: "",
@@ -104,13 +104,13 @@ export default function EditInterviewDialog({
       form.reset({
         scheduledTime: scheduledDate,
         mode: (interview.mode as "video" | "phone" | "in-person") || "video",
-        type: interview.type || "first_round",
+        type: interview.type || undefined,
         duration: interview.duration || 30,
         interviewer: interview.interviewer || "",
         notes: interview.notes || "",
         meetingLink: interview.meetingLink || "",
         accommodation: !!interview.accommodation,
-        airTicket: interview.airTicket || "none",
+        airTicket: (interview.airTicket as any) || "none",
       });
     }
   }, [interviewData, form]);
@@ -122,6 +122,9 @@ export default function EditInterviewDialog({
     }
 
     try {
+      const airTicketUp = data.airTicket === 'up-only' || data.airTicket === 'up-and-down';
+      const airTicketDown = data.airTicket === 'down-only' || data.airTicket === 'up-and-down';
+
       const interviewUpdateData = {
         scheduledTime: data.scheduledTime.toISOString(),
         mode: data.mode,
@@ -131,7 +134,9 @@ export default function EditInterviewDialog({
         notes: data.notes,
         meetingLink: data.meetingLink?.trim() || undefined,
         accommodation: data.accommodation,
-        airTicket: data.airTicket,
+        airTicket: data.airTicket === 'none' ? undefined : data.airTicket,
+        airTicketUp,
+        airTicketDown,
       };
 
       await updateInterview({
@@ -204,15 +209,16 @@ export default function EditInterviewDialog({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-slate-700">
                       <FileText className="h-4 w-4 text-slate-500" />
-                      Interview Type *
+                      Interview Type
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(val) => field.onChange(val === 'none' ? undefined : val)} value={field.value ?? 'none'}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder="Select type (optional)" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="none">Not Specified</SelectItem>
                         <SelectItem value="first_round">First Round</SelectItem>
                         <SelectItem value="technical">Technical</SelectItem>
                         <SelectItem value="final">Final Round</SelectItem>
@@ -291,24 +297,6 @@ export default function EditInterviewDialog({
                 )}
               />
 
-              {/* Interviewer */}
-              <FormField
-                control={form.control}
-                name="interviewer"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2 text-slate-700">
-                      <User className="h-4 w-4 text-slate-500" />
-                      Interviewer Name
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter interviewer name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               {/* Air Ticket */}
               <FormField
                 control={form.control}
@@ -317,18 +305,19 @@ export default function EditInterviewDialog({
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-slate-700">
                       <Plane className="h-4 w-4 text-slate-500" />
-                      Air Ticket Assistance
+                      Air Ticket
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select ticket type" />
+                          <SelectValue placeholder="Select air ticket type" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Not Requested</SelectItem>
-                        <SelectItem value="one-way">One-Way</SelectItem>
-                        <SelectItem value="round-trip">Round Trip</SelectItem>
+                        <SelectItem value="up-and-down">Up and Down</SelectItem>
+                        <SelectItem value="up-only">Up Only</SelectItem>
+                        <SelectItem value="down-only">Down Only</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

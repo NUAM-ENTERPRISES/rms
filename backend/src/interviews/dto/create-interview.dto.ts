@@ -50,17 +50,25 @@ export class CreateInterviewDto {
   @IsOptional()
   duration?: number = 60;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Interview type',
     example: 'technical',
-    enum: ['technical', 'hr', 'managerial', 'final'],
     default: 'technical',
   })
-  @IsEnum(['technical', 'hr', 'managerial', 'final'])
+  @IsString()
   @IsOptional()
-  type?: string = 'technical';
+  type?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
+    description: 'Interviewer name',
+    example: 'John Doe',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  interviewer?: string;
+
+  @ApiPropertyOptional({
     description: 'Interview mode',
     example: 'video',
     enum: ['video', 'phone', 'in-person'],

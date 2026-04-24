@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useCallback, useMemo } from "react";
+import { Suspense, lazy, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,12 +51,14 @@ import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
-import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
+import { ProjectRoleFilter, type ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
 
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const canReadDocuments = useCan("read:documents");
   const user = useAppSelector((s) => s.auth.user);
   // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
@@ -388,75 +390,80 @@ export default function DocumentVerificationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-[98%] mx-auto space-y-4">
         {/* Compact Header */}
-        <div className="flex items-center justify-between bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-4">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
-              Document Verification
-            </h1>
-            <p className="mt-1 text-sm text-gray-500">
-              <span className="font-semibold text-gray-900">{totalCandidates}</span> candidates &bull; Review and verify candidate documents
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => refetch()}
-              className="text-slate-600 hover:text-slate-900"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <TypedHeader 
+          userName={user?.name || "Verifier"} 
+          subtitle="Review and verify candidate documents with enterprise-grade precision"
+        />
 
         {/* Dashboard Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
           {/* Total Candidates Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-            <Suspense fallback={<div className="h-28" />}>
-              <PendingCandidatesTile
-                count={statusCounts.verification_in_progress_document}
-                active={statusFilter === "verification_in_progress_document"}
-                onClick={() => {
-                  setStatusFilter("verification_in_progress_document");
-                  setCurrentPage(1);
-                }}
-              />
-            </Suspense>
+            <StatusTile
+              label="Pending Candidates"
+              value={statusCounts.verification_in_progress_document}
+              subtitle="For verification"
+              icon={User}
+              bgGradient="from-blue-50 to-blue-100/50"
+              iconBg="bg-blue-200/40"
+              textColor="text-blue-600"
+              active={statusFilter === "verification_in_progress_document"}
+              onClick={() => {
+                setStatusFilter("verification_in_progress_document");
+                setCurrentPage(1);
+              }}
+              scrollTargetRef={tableRef}
+              scrollOnClick={true}
+              className="h-full"
+            />
           </motion.div>
 
           {/* Verified Documents Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-            <Suspense fallback={<div className="h-28" />}>
-              <VerifiedDocumentsTile
-                count={statusCounts.documents_verified}
-                active={statusFilter === "documents_verified"}
-                onClick={() => {
-                  setStatusFilter("documents_verified");
-                  setCurrentPage(1);
-                }}
-              />
-            </Suspense>
+            <StatusTile
+              label="Verified Documents"
+              value={statusCounts.documents_verified}
+              subtitle="Approved"
+              icon={Building2}
+              bgGradient="from-emerald-50 to-emerald-100/50"
+              iconBg="bg-emerald-200/40"
+              textColor="text-emerald-700"
+              active={statusFilter === "documents_verified"}
+              onClick={() => {
+                setStatusFilter("documents_verified");
+                setCurrentPage(1);
+              }}
+              scrollTargetRef={tableRef}
+              scrollOnClick={true}
+              className="h-full"
+            />
           </motion.div>
 
           {/* Rejected Documents Card */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <Suspense fallback={<div className="h-28" />}>
-              <RejectedDocumentsTile
-                count={statusCounts.rejected_documents}
-                active={statusFilter === "rejected_documents"}
-                onClick={() => {
-                  setStatusFilter("rejected_documents");
-                  setCurrentPage(1);
-                }}
-              />
-            </Suspense>
+            <StatusTile
+              label="Rejected Documents"
+              value={statusCounts.rejected_documents}
+              subtitle="Need attention"
+              icon={XCircle}
+              bgGradient="from-red-50 to-red-100/50"
+              iconBg="bg-red-200/40"
+              textColor="text-red-700"
+              active={statusFilter === "rejected_documents"}
+              onClick={() => {
+                setStatusFilter("rejected_documents");
+                setCurrentPage(1);
+              }}
+              scrollTargetRef={tableRef}
+              scrollOnClick={true}
+              className="h-full"
+            />
           </motion.div>
         </div>
 
         {/* Compact Filters */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
+        <div ref={tableRef} className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="w-full md:w-1/3">
               <div className="relative">

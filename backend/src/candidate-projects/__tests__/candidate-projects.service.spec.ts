@@ -20,7 +20,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     candidateProjects: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
     candidateProjectStatusHistory: { findFirst: jest.fn(), create: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
-    trainingAssignment: { create: jest.fn() },
+    screeningTraining: { create: jest.fn() },
     candidateRecruiterAssignment: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   } as any;
@@ -61,7 +61,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       },
       candidateProjectStatusHistory: { create: jest.fn() },
       interviewStatusHistory: { create: jest.fn() },
-      trainingAssignment: { create: jest.fn() },
+      screeningTraining: { create: jest.fn() },
     } as any;
 
     prisma.candidateProjects.findFirst.mockResolvedValue(existing);
@@ -91,7 +91,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       },
       candidateProjectStatusHistory: { create: jest.fn() },
       interviewStatusHistory: { create: jest.fn() },
-      trainingAssignment: { create: jest.fn() },
+      screeningTraining: { create: jest.fn() },
     } as any;
 
     prisma.candidateProjects.findFirst.mockResolvedValue(existing);

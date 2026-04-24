@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { useGetAllProcessingCandidatesQuery } from "@/features/processing/data/processing.endpoints";
@@ -23,7 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ImageViewer } from "@/components/molecules";
+import { ImageViewer, StatusTile } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { 
   Users, 
   XCircle, 
@@ -48,6 +49,7 @@ import {
 
 export default function ProcessingDashboardPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
   
   // Filter States
@@ -228,13 +230,10 @@ const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> 
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-<div className="space-y-1">
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Welcome back, {user?.name || "Admin"}! 👋
-              </h1>
-              <p className="text-slate-600 font-medium">Monitor and manage candidate processing workflows</p>
-            </div>
+        <TypedHeader 
+          userName={user?.name || "Admin"} 
+          subtitle="Monitor and manage candidate processing workflows"
+        />
           
           {(statusFilter || stepFilter) && (
             <Badge variant="outline" className="h-8 gap-2 bg-violet-50 text-violet-700 border-violet-200 self-start md:self-center">
@@ -248,19 +247,25 @@ const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> 
               />
             </Badge>
           )}
-        </header>
 
         <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
             const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
-            const colors = isStepTile ? gradientMap[tile.gradient] : { bg: tile.gradient, iconBg: tile.iconBg, text: tile.color };
+            const colors = isStepTile ? (gradientMap[tile.gradient] || { bg: tile.gradient, iconBg: "bg-blue-200/40", text: "text-blue-600" }) : { bg: tile.gradient, iconBg: tile.iconBg, text: tile.color };
             const Icon = isStepTile ? ClipboardList : tile.icon;
 
             return (
-              <Card
+              <StatusTile
                 key={`${tile.type}-${tile.label}`}
+                label={tile.label}
+                value={value}
+                icon={Icon}
+                bgGradient={colors.bg}
+                iconBg={colors.iconBg}
+                textColor={colors.text}
+                active={isActive}
                 onClick={() => {
                   if (isStepTile) {
                     setStatusFilter('all');
@@ -270,28 +275,17 @@ const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> 
                     setStatusFilter(statusFilter === tile.status ? null : tile.status);
                   }
                 }}
-                className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
-              >
-                <CardContent className="pt-1 pb-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-0.5">{tile.label}</p>
-                      <h3 className={`text-xl font-semibold ${colors.text}`}>{value}</h3>
-                      {'subtitle' in tile && <p className="text-xs text-slate-500 mt-0.5">{tile.subtitle}</p>}
-                    </div>
-                    <div className={`p-1 ${colors.iconBg} rounded-full`}>
-                      <Icon className={`h-4 w-4 ${colors.text}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                scrollTargetRef={tableRef}
+                scrollOnClick={true}
+                className="h-full"
+              />
             );
           })}
         </div>
 
         {/* Filters & Table */}
         <Card className="border-0 shadow-xl overflow-hidden bg-white">
-          <CardHeader className="border-b border-slate-100 bg-white pb-6">
+          <CardHeader ref={tableRef} className="border-b border-slate-100 bg-white pb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 p-2.5 shadow-lg">

@@ -10,7 +10,12 @@ export const useUserProfile = () => {
 
   // Helper function to check if user has a specific permission
   const hasPermission = (permission: string): boolean => {
-    return user?.permissions?.includes(permission) || false;
+    return (
+      user?.permissions?.includes(permission) ||
+      user?.permissions?.includes("*") ||
+      user?.permissions?.includes("manage:all") ||
+      false
+    );
   };
 
   // Helper function to check if user has a specific role
@@ -20,12 +25,25 @@ export const useUserProfile = () => {
 
   // Helper function to check if user has any of the specified roles
   const hasAnyRole = (roles: string[]): boolean => {
-    return roles.some(role => user?.roles?.includes(role)) || false;
+    return roles.some((role) => user?.roles?.includes(role)) || false;
+  };
+
+  // Helper function to check if user has any of the specified permissions
+  const hasAnyPermission = (permissions: string[]): boolean => {
+    return (
+      user?.permissions?.includes("*") ||
+      user?.permissions?.includes("manage:all") ||
+      permissions.some((permission) => user?.permissions?.includes(permission)) ||
+      false
+    );
   };
 
   // Helper function to check if user has all of the specified permissions
   const hasAllPermissions = (permissions: string[]): boolean => {
-    return permissions.every(permission => user?.permissions?.includes(permission)) || false;
+    if (user?.permissions?.includes("*") || user?.permissions?.includes("manage:all")) {
+      return true;
+    }
+    return permissions.every((permission) => user?.permissions?.includes(permission)) || false;
   };
 
   return {

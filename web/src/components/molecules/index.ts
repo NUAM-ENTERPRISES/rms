@@ -28,3 +28,5 @@ export { ProjectRoleFilter } from "./ProjectRoleFilter";
 export type { ProjectRoleFilterValue, ProjectRoleFilterProps } from "./ProjectRoleFilter";
 export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";
+// Tile used across dashboards
+export { StatusTile } from "./StatusTile";

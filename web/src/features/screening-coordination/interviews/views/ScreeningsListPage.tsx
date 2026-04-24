@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
+import { useCan } from "@/hooks/useCan";
 import {
   ClipboardCheck,
   Search,
@@ -72,6 +73,11 @@ export default function ScreeningsListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const currentUser = useAppSelector((state) => state.auth.user);
+
+  const canWriteScreenings = useCan("write:screenings");
+  const canConductScreenings = useCan("conduct:screenings");
+  const canAssignTraining = useCan("assign:training");
+  const canWriteTraining = useCan("write:training");
 
   const [filters, setFilters] = useState({
     search: "",
@@ -546,6 +552,11 @@ export default function ScreeningsListPage() {
       return;
     }
 
+    if ((selectedInterviewForTraining.trainingAssignments?.length ?? 0) > 0) {
+      toast.error("This screening already has a training assignment.");
+      return;
+    }
+
     try {
       await createTrainingAssignment({
         candidateProjectMapId:
@@ -939,7 +950,7 @@ export default function ScreeningsListPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-            {!selectedInterview.conductedAt && (
+            {!selectedInterview.conductedAt && canConductScreenings && (
               <Button
                 size="sm"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm"
@@ -952,7 +963,7 @@ export default function ScreeningsListPage() {
 
             {([SCREENING_DECISION.ON_HOLD, SCREENING_DECISION.NEEDS_TRAINING] as string[]).includes(
               selectedInterview.decision || ""
-            ) && (
+            ) && canWriteScreenings && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -1035,7 +1046,7 @@ export default function ScreeningsListPage() {
                     ) : (
                       <>
                         {/* If there are no uploaded documents, allow notifying the recruiter to upload them */}
-                        {!selectedInterview.candidateProjectMap?.documentVerifications?.length && (
+                        {!selectedInterview.candidateProjectMap?.documentVerifications?.length && canWriteScreenings && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span>
@@ -1257,14 +1268,16 @@ export default function ScreeningsListPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-medium text-slate-700">Interview Details</h3>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
-                onClick={() => setIsEditDialogOpen(true)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              {canWriteScreenings && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() => setIsEditDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
               <div>

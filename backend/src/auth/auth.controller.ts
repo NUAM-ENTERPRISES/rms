@@ -27,6 +27,8 @@ import { send } from 'process';
 import { SendLoginOtpDto } from './dto/send-login-otp.dto';
 import { tryCatch } from 'bullmq';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -488,6 +490,30 @@ export class AuthController {
   async mobileLogout(@Body('refreshToken') refreshToken: string) {
     await this.authService.revokeFamilyByToken(refreshToken);
     return { success: true, message: 'Logged out' };
+  }
+
+  @Post('forgot-password-whatsapp')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Send forgot password WhatsApp OTP',
+    description: 'Send a password reset OTP via WhatsApp.',
+  })
+  @ApiBody({ type: ForgotPasswordWhatsappDto })
+  async forgotPasswordWhatsapp(@Body() dto: ForgotPasswordWhatsappDto) {
+    return await this.authService.sendForgotPasswordOtp(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Public()
+  @ApiOperation({
+    summary: 'Reset password with OTP',
+    description: 'Verify OTP and update user password.',
+  })
+  @ApiBody({ type: ResetPasswordDto })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return await this.authService.resetPassword(dto);
   }
 
   @Get('me')

@@ -10,7 +10,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import CustomText from '../components/CustomText';
+import CustomText from '../components/ui/CustomText';
 import { COLORS } from '../constants/colors';
 import { RootStackParamList } from '../types/navigation';
 
