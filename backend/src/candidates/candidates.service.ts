@@ -431,17 +431,39 @@ export class CandidatesService {
       dateFrom,
       dateTo,
       roleCatalogId,
+      agentId,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      roles = [],
     } = query;
+
+    const isAdminOrManager = roles.some((role) =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Team Head',
+        'Team Lead',
+        'Admin',
+        'SuperAdmin',
+        'System Admin',
+      ].includes(role),
+    );
 
     // Handle status alias - status is an alias for currentStatus
     const effectiveStatus = currentStatus || status;
 
     // Build where clause
     const where: any = {};
+
+    // 1. Leadership Check for Agent Source
+    if (!isAdminOrManager) {
+      where.NOT = {
+        source: 'agent',
+      };
+    }
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();
@@ -484,6 +506,10 @@ export class CandidatesService {
 
     if (source) {
       where.source = source;
+    }
+
+    if (agentId) {
+      where.agentId = agentId;
     }
 
     if (gender) {
@@ -831,7 +857,15 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Role-based filtering
+    // 1. Leadership Check for Agent Source
+    // Only leadership can see candidates sourced from agents
+    if (!isAdminOrManager) {
+      where.NOT = {
+        source: 'agent',
+      };
+    }
+
+    // 2. Role-based filtering
     if (isRecruiter && !isAdminOrManager) {
       where.recruiterAssignments = {
         some: {
@@ -3613,6 +3647,10 @@ export class CandidatesService {
       where.expectedMinSalary = {};
       if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
       if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
+    }
+
+    if (query.agentId) {
+      where.agentId = query.agentId;
     }
 
     if (query.heightMin !== undefined || query.heightMax !== undefined) {

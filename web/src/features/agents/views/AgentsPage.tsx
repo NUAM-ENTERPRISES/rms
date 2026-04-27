@@ -1,0 +1,481 @@
+import React, { useState, useRef } from "react";
+import { 
+  Plus, 
+  Search, 
+  Handshake, 
+  Building2, 
+  Mail, 
+  Phone, 
+  Users, 
+  Edit2, 
+  Trash2, 
+  MoreVertical,
+  LayoutGrid
+} from "lucide-react";
+import { 
+  useGetAgentsQuery, 
+  useDeleteAgentMutation, 
+  useCreateAgentMutation, 
+  useUpdateAgentMutation 
+} from "../api";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { StatusTile } from "@/components/molecules";
+import { AGENT_TYPES } from "@/constants/agent-types";
+import { useCan } from "@/hooks/useCan";
+
+export default function AgentsPage() {
+  const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const canWrite = useCan("write:agents");
+  const canEdit = useCan("edit:agents");
+  const canDelete = useCan("delete:agents");
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAgent, setEditingAgent] = useState<any>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates">("all");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    mobileNumber: "",
+    companyName: "",
+    agentType: "",
+  });
+
+  const { data: agentsData, isLoading } = useGetAgentsQuery();
+  const [createAgent] = useCreateAgentMutation();
+  const [updateAgent] = useUpdateAgentMutation();
+  const [deleteAgent] = useDeleteAgentMutation();
+
+  const agents = agentsData?.data || [];
+  
+  const filteredAgents = agents.filter(agent => {
+    const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (activeFilter === "active") {
+      return matchesSearch && agent.isActive !== false;
+    }
+    if (activeFilter === "with-candidates") {
+      return matchesSearch && (agent._count?.candidates || 0) > 0;
+    }
+    return matchesSearch;
+  });
+
+  const totalCandidates = agents.reduce((acc, curr) => acc + (curr._count?.candidates || 0), 0);
+
+  const statTiles = [
+    { 
+      label: "Total Agents", 
+      value: agents.length, 
+      icon: Handshake, 
+      statusFilter: "all", 
+      color: "from-blue-500 to-cyan-500",
+      subtitle: "Registered partners" 
+    },
+    { 
+      label: "Total Candidates", 
+      value: totalCandidates, 
+      icon: Users, 
+      statusFilter: "with-candidates", 
+      color: "from-indigo-500 to-violet-500",
+      subtitle: "Referral volume" 
+    },
+    { 
+      label: "Active Agents", 
+      value: agents.filter(a => a.isActive !== false).length, 
+      icon: LayoutGrid, 
+      statusFilter: "active", 
+      color: "from-purple-500 to-pink-500",
+      subtitle: "Currently sourcing" 
+    },
+  ];
+
+  const handleOpenModal = (agent?: any) => {
+    if (agent) {
+      setEditingAgent(agent);
+      setFormData({
+        name: agent.name,
+        email: agent.email || "",
+        mobileNumber: agent.mobileNumber || "",
+        companyName: agent.companyName || "",
+        agentType: agent.agentType || "",
+      });
+    } else {
+      setEditingAgent(null);
+      setFormData({
+        name: "",
+        email: "",
+        mobileNumber: "",
+        companyName: "",
+        agentType: "",
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingAgent) {
+        await updateAgent({ id: editingAgent.id, body: formData }).unwrap();
+        toast.success("Agent updated successfully");
+      } else {
+        await createAgent(formData).unwrap();
+        toast.success("Agent created successfully");
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      toast.error("Failed to save agent");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this agent?")) {
+      try {
+        await deleteAgent(id).unwrap();
+        toast.success("Agent deleted successfully");
+      } catch (error) {
+        toast.error("Failed to delete agent");
+      }
+    }
+  };
+
+  return (
+    <div className="py-2 space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Agents</h1>
+          <p className="text-slate-500 mt-1">Manage external partner agents and agencies.</p>
+        </div>
+       
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {statTiles.map((stat, i) => {
+          const colors = {
+            "from-blue-500 to-cyan-500": { bg: "from-blue-50 to-blue-100/50", iconBg: "bg-blue-200/40", text: "text-blue-600" },
+            "from-indigo-500 to-violet-500": { bg: "from-indigo-50 to-violet-100/50", iconBg: "bg-indigo-200/40", text: "text-indigo-700" },
+            "from-purple-500 to-pink-500": { bg: "from-purple-50 to-purple-100/50", iconBg: "bg-purple-200/40", text: "text-purple-600" },
+          }[stat.color] || { bg: "from-slate-50 to-slate-100/50", iconBg: "bg-slate-200/40", text: "text-slate-600" };
+
+          const isActive = activeFilter === stat.statusFilter;
+
+          return (
+            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <StatusTile
+                label={stat.label}
+                value={stat.value}
+                subtitle={stat.subtitle}
+                icon={stat.icon}
+                bgGradient={colors.bg}
+                iconBg={colors.iconBg}
+                textColor={colors.text}
+                active={isActive}
+                onClick={() => setActiveFilter(stat.statusFilter as any)}
+                scrollTargetRef={tableRef}
+                scrollOnClick={true}
+                className="h-full"
+              />
+            </motion.div>
+          );
+        })}
+      </div>
+
+      <Card className="border-0 shadow-lg bg-white/90">
+        <CardContent className="pt-0 pb-0">
+          <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
+                    <Handshake className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      {activeFilter === "all" ? "All Agents" : activeFilter === "active" ? "Active Agents" : "Productive Agents"}
+                    </h4>
+                    <p className="text-sm text-gray-600 font-medium">
+                      {filteredAgents.length} agent{filteredAgents.length !== 1 ? "s" : ""} found
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {canWrite && (
+                      <Button 
+                        onClick={() => handleOpenModal()} 
+                        className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
+                      >
+                        <Plus className="h-4 w-4" /> Add Agent
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 max-w-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <Input
+                      placeholder="Search agents..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9 h-9 text-sm border-gray-200 bg-white focus:ring-2 focus:ring-blue-500/20 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader className="sticky">
+                <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Agent Details</TableHead>
+                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Company</TableHead>
+                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Contact</TableHead>
+                  <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Candidates</TableHead>
+                  <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredAgents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-64 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="bg-slate-50 p-4 rounded-full border border-slate-100 shadow-inner">
+                          <Search className="h-8 w-8 text-slate-300" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-slate-900 font-semibold">{isLoading ? "Loading agents..." : "No agents found"}</p>
+                          <p className="text-slate-500 text-sm">Try adjusting your search or filters.</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredAgents.map((agent) => (
+                    <TableRow key={agent.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
+                      <TableCell className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
+                            {agent.name.charAt(0)}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{agent.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                                Added {new Date(agent.createdAt).toLocaleDateString()}
+                              </span>
+                              {agent.agentType && (
+                                <Badge variant="outline" className="text-[9px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-100">
+                                  {agent.agentType}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-slate-100 p-1.5 rounded-md">
+                            <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                          </div>
+                          <span className="font-medium text-sm text-gray-700">{agent.companyName || "Personal"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="flex flex-col items-center gap-1">
+                          {agent.email && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600">
+                              <Mail className="h-3 w-3 text-slate-400" />
+                              {agent.email}
+                            </div>
+                          )}
+                          {agent.mobileNumber && (
+                            <div className="flex items-center gap-2 text-xs text-slate-600">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              <span className="font-medium">{agent.mobileNumber}</span>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-full gap-2 border border-transparent hover:border-blue-100"
+                          onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
+                        >
+                          <Users className="h-4 w-4" />
+                          {agent._count?.candidates || 0}
+                        </Button>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
+                              <MoreVertical className="h-4 w-4 text-gray-500" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuLabel>Agent Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {canEdit && (
+                              <DropdownMenuItem onClick={() => handleOpenModal(agent)} className="cursor-pointer">
+                                <Edit2 className="h-4 w-4 mr-2 text-slate-500" />
+                                Edit details
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
+                              className="text-blue-600 focus:text-blue-600 cursor-pointer"
+                            >
+                              <Handshake className="h-4 w-4 mr-2" />
+                              View candidates
+                            </DropdownMenuItem>
+                            {canDelete && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-red-600 focus:text-red-600 cursor-pointer"
+                                  onClick={() => handleDelete(agent.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete agent
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingAgent ? "Edit Agent" : "Add New Agent"}</DialogTitle>
+            <DialogDescription>
+              {editingAgent 
+                ? "Update the partner agent's information." 
+                : "Create a new agent profile for candidate sourcing."}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Agent Name *</Label>
+              <Input
+                id="name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Full name of agent"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Agency/Company Name</Label>
+              <Input
+                id="companyName"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                placeholder="e.g. Ace Recruitment Ltd"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="agentType">Agent Type</Label>
+              <Select 
+                value={formData.agentType} 
+                onValueChange={(value) => setFormData({ ...formData, agentType: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGENT_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="agent@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobileNumber">Mobile Number</Label>
+              <Input
+                id="mobileNumber"
+                value={formData.mobileNumber}
+                onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                placeholder="+91 9876543210"
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                {editingAgent ? "Update Agent" : "Create Agent"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

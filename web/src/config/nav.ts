@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   BookOpen,
   BarChart3,
+  UserSquare2,
 } from "lucide-react";
 
 export interface NavItem {
@@ -178,6 +179,13 @@ export const navigationConfig: NavItem[] = [
     icon: Briefcase,
     permissions: ["read:clients"],
     // Hidden from Recruiter, Documentation Executive, and CRE roles
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    path: "/agents",
+    icon: UserSquare2,
+    permissions: ["read:agents"],
   },
   {
     id: "teams",

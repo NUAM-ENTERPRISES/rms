@@ -53,6 +53,7 @@ const roles = [
       'read:screenings',
       'read:interview_templates',
       'read:training',
+      'read:agents',
     ],
   },
   {
@@ -76,6 +77,7 @@ const roles = [
       'read:screenings',
       'read:interview_templates',
       'read:training',
+      'read:agents',
     ],
   },
   {
@@ -263,6 +265,12 @@ const allPermissions = [
   'read:roles',
   'write:roles',
   'manage:roles',
+
+  // Agent management
+  'read:agents',
+  'write:agents',
+  'edit:agents',
+  'delete:agents',
 
   // Client management
   'read:clients',

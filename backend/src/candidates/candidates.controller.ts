@@ -338,7 +338,12 @@ export class CandidatesController {
     name: 'source',
     required: false,
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
+  })
+  @ApiQuery({
+    name: 'agentId',
+    required: false,
+    description: 'Filter by specific agent ID',
   })
   @ApiQuery({
     name: 'teamId',
@@ -442,13 +447,20 @@ export class CandidatesController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryCandidatesDto): Promise<{
+  async findAll(
+    @Query() query: QueryCandidatesDto,
+    @Request() req: any,
+  ): Promise<{
     success: boolean;
     data: PaginatedCandidates;
     message: string;
   }> {
     // log incoming query for troubleshooting date filtering
     this.logger.log(`GET /candidates query => ${JSON.stringify(query)}`);
+
+    // Add roles to query for leadership filtering in service
+    const roles = req.user?.roles || [];
+    query.roles = roles;
 
     const result = await this.candidatesService.findAll(query);
     return {

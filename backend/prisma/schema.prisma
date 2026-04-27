@@ -305,6 +305,8 @@ model Candidate {
   id                   String                         @id @default(cuid())
   email                String?
   source               String                         @default("manual")
+  agentId              String?
+  agent                Agent?                         @relation("AgentToCandidate", fields: [agentId], references: [id])
   dateOfBirth          DateTime?
   gender               Gender?
   currentStatusId      Int?
@@ -380,8 +382,26 @@ model Candidate {
   @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@index([source])
+  @@index([agentId])
   @@index([gender])
   @@map("candidates")
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  name         String
+  email        String?     @unique
+  mobileNumber String?
+  companyName  String?
+  agentType    String?
+  profileImage String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  candidates   Candidate[] @relation("AgentToCandidate")
+
+  @@map("agents")
 }
 
 model CandidatePreferredCountry {

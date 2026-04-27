@@ -23,9 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CountryCodeSelect } from "@/components/molecules";
-import { SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
+import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES } from "@/constants/candidate-constants";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
-import { User, Phone, Mail, Calendar, Ruler, Weight, Sparkles, Languages, Brain } from "lucide-react";
+import { User, Phone, Mail, Calendar, Ruler, Weight, Sparkles, Building2 } from "lucide-react";
+import { baseApi } from "@/app/api/baseApi";
+
+// Simple hook to fetch agents
+const useAgents = () => {
+  const { data, isLoading } = baseApi.useGetAgentsQuery();
+  return { agents: data?.data || [], isLoading };
+};
 
 type CreateCandidateFormData = {
   firstName: string;
@@ -33,7 +40,8 @@ type CreateCandidateFormData = {
   countryCode: string;
   mobileNumber: string;
   email?: string;
-  source: "manual" | "meta" | "referral";
+  source: string;
+  agentId?: string;
   gender: "MALE" | "FEMALE" | "OTHER";
   dateOfBirth?: string;
   referralCompanyName?: string;
@@ -65,6 +73,8 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
     control,
     name: "source",
   });
+
+  const { agents, isLoading: isLoadingAgents } = useAgents();
 
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -298,13 +308,11 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="meta">Meta</SelectItem>
-                      <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
-                      <SelectItem value="referral">Referral</SelectItem>
-                      <SelectItem value="paid_ads">Paid Ads</SelectItem>
-                      <SelectItem value="agents">Agents</SelectItem>
-                      <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
-                      <SelectItem value="expo_event">Expo / Event</SelectItem>
+                      {CANDIDATE_SOURCES.map((src) => (
+                        <SelectItem key={src.id} value={src.id}>
+                          {src.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
@@ -315,6 +323,48 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 </p>
               )}
             </div>
+
+            {/* Conditional Agent Selection */}
+            {source === "agent" && (
+              <div className="space-y-2">
+                <Label className="text-slate-700 font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-slate-500" />
+                  Select Agent *
+                </Label>
+                <Controller
+                  name="agentId"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isLoadingAgents}
+                    >
+                      <SelectTrigger className="h-11 bg-white border-slate-200">
+                        <SelectValue placeholder={isLoadingAgents ? "Loading agents..." : "Select an agent"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.map((agent: any) => (
+                          <SelectItem key={agent.id} value={agent.id}>
+                            {agent.name} {agent.companyName ? `(${agent.companyName})` : ""}
+                          </SelectItem>
+                        ))}
+                        {agents.length === 0 && !isLoadingAgents && (
+                          <div className="p-2 text-sm text-slate-500 text-center">
+                            No agents found
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.agentId && (
+                  <p className="text-sm text-red-600">
+                    {errors.agentId.message as string}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Physical Information subsection */}
             <div className="col-span-full">

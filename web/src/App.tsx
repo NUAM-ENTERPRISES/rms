@@ -99,6 +99,8 @@ const EditClientPage = lazy(
   () => import("@/features/clients/views/EditClientPage")
 );
 
+const AgentsPage = lazy(() => import("@/features/agents/views/AgentsPage"));
+
 const InterviewsPage = lazy(
   () => import("@/features/interviews/views/InterviewsPage")
 );
@@ -1139,6 +1141,19 @@ function App() {
                         <ProtectedRoute>
                           <AppLayout>
                             <ProjectEligibleCandidatesPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/agents"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:agents"]}>
+                          <AppLayout>
+                            <AgentsPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
