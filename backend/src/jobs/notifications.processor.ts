@@ -75,6 +75,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleRecruiterNotification(job);
         case 'DocumentationNotification':
           return await this.handleDocumentationNotification(job);
+        case 'RoleNotification':
+          return await this.handleRoleNotification(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -2188,6 +2190,61 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process documentation notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleRoleNotification(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing role notification event: ${eventId}`);
+
+    try {
+      const { roleName, message, title, link, meta } = payload as any;
+
+      // Find all users with this role
+      const users = await this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: roleName,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (users.length === 0) {
+        this.logger.warn(`No users found with role ${roleName}`);
+        return;
+      }
+
+      // Create notifications for each user
+      for (const user of users) {
+        const idemKey = `${eventId}:${user.id}:role_notification`;
+
+        await this.notificationsService.createNotification({
+          userId: user.id,
+          type: 'role_notification',
+          title: (title as string) || 'Notification',
+          message: message as string,
+          link: typeof link === 'string' ? link : undefined,
+          meta: meta || undefined,
+          idemKey,
+        });
+      }
+
+      this.logger.log(
+        `Role notification created for ${users.length} users with role ${roleName}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to process role notification: ${error.message}`,
         error.stack,
       );
       throw error;

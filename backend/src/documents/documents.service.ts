@@ -34,6 +34,7 @@ import {
   DOCUMENT_TYPE_META,
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
+  ROLE_NAMES,
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
@@ -748,6 +749,22 @@ export class DocumentsService {
           },
         );
       }
+
+      // 5. Trigger Interview Coordinator Notification
+      await this.outboxService.publishRoleNotification(
+        ROLE_NAMES.INTERVIEW_COORDINATOR,
+        `Candidate ${cpm.candidate.firstName} ${cpm.candidate.lastName} is waiting for client revision. Reason: ${reason}`,
+        'Client Revision Requested',
+        `/interviews/shortlist-pending`, // Link to the list where coordinator can see this candidate
+        {
+          candidateId: cpm.candidate.id,
+          projectId: cpm.project.id,
+          candidateProjectMapId: candidateProjectMapId,
+          reason: reason,
+          candidateName: `${cpm.candidate.firstName} ${cpm.candidate.lastName}`,
+          syncTags: ['Interview'], // Specify which tags frontend should invalidate
+        },
+      );
 
       return updatedCpm;
     });
