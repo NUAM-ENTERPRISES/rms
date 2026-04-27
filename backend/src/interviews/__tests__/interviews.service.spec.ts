@@ -107,7 +107,7 @@ describe('InterviewsService - client decision flows', () => {
       'rec-1',
       expect.stringContaining('Jane Doe'),
       expect.stringContaining('Client decision'),
-      expect.stringContaining('/shortlisting/'),
+      expect.stringContaining('/candidates/cand-1'),
       expect.objectContaining({ candidateProjectMapId: 'cpm-1', candidateId: 'cand-1', projectId: 'proj-1', decision: 'shortlisted' }),
     );
 

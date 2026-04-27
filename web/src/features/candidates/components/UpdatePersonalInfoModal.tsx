@@ -371,7 +371,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     <SelectContent>
                       <SelectItem value="meta">Meta</SelectItem>
                       <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
-
+                      <SelectItem value="referral">Referral</SelectItem>
                       <SelectItem value="paid_ads">Paid Ads</SelectItem>
                       <SelectItem value="agents">Agents</SelectItem>
                       <SelectItem value="hospital_visit">Hospital Visit</SelectItem>

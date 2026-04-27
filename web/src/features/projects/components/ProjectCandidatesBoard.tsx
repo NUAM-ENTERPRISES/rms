@@ -70,6 +70,10 @@ interface ProjectCandidatesBoardProps {
   onSendForScreening?: (candidateId: string, candidateName: string) => void;
   onBulkAssign?: (candidateIds: string[]) => void;
   onBulkSendForScreening?: (candidateIds: string[]) => void;
+  nominatedPage?: number;
+  nominatedTotal?: number;
+  nominatedTotalPages?: number;
+  onNominatedPageChange?: (page: number) => void;
   requiredScreening?: boolean;
   hideContactInfo?: boolean; // eslint-disable-line @typescript-eslint/no-unused-vars -- passed through to CandidateCard
 }
@@ -316,6 +320,10 @@ const ProjectCandidatesBoard = ({
   onSendForScreening,
   onBulkAssign,
   onBulkSendForScreening,
+  nominatedPage,
+  nominatedTotal,
+  nominatedTotalPages,
+  onNominatedPageChange,
   requiredScreening = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
@@ -324,6 +332,13 @@ const ProjectCandidatesBoard = ({
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
   const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
+  const [internalNominatedPage, setInternalNominatedPage] = useState(1);
+  const [eligiblePage, setEligiblePage] = useState(1);
+  const [allPage, setAllPage] = useState(1);
+  const PAGE_SIZE = 10;
+
+  const effectiveNominatedPage = nominatedPage ?? internalNominatedPage;
+  const handleNominatedPageChange = onNominatedPageChange ?? setInternalNominatedPage;
 
   const handleDragStart = (e: React.DragEvent, candidateId: string) => {
     e.dataTransfer.setData("candidateId", candidateId);
@@ -362,7 +377,8 @@ const ProjectCandidatesBoard = ({
       projectId,
       search: searchTerm || undefined,
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
-      limit: 10,
+      page: eligiblePage,
+      limit: PAGE_SIZE,
     }, { 
       refetchOnFocus: false,
       refetchOnMountOrArgChange: false
@@ -372,11 +388,12 @@ const ProjectCandidatesBoard = ({
     projectId,
     search: searchTerm || undefined,
     roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
-    limit: 10,
+    page: allPage,
+    limit: PAGE_SIZE,
   }, { 
-    refetchOnFocus: false,
-    refetchOnMountOrArgChange: false
-  });
+      refetchOnFocus: false,
+      refetchOnMountOrArgChange: false
+    });
 
   const eligibleCandidates: CandidateRecord[] = Array.isArray(
     eligibleResponse?.data
@@ -388,9 +405,15 @@ const ProjectCandidatesBoard = ({
       []
     : [];
 
+  const eligiblePagination =
+    (eligibleResponse?.data as any)?.pagination ||
+    (eligibleResponse?.data as any)?.data?.pagination;
+
   const allCandidates: CandidateRecord[] = (
     consolidatedCandidatesQuery.data?.data?.candidates || []
   ) as CandidateRecord[];
+
+  const allPagination = consolidatedCandidatesQuery.data?.data?.pagination;
 
   // Trigger bulk eligibility check when candidates are loaded
   const allCandidateIds = useMemo(() => {
@@ -443,12 +466,6 @@ const ProjectCandidatesBoard = ({
   const managerAssignments: ProjectAssignment[] = [];
   const assignedToProjectIds = useMemo(() => new Set<string>(), []);
 
-  const PAGE_SIZE = 10;
-
-  const [nominatedPage, setNominatedPage] = useState(1);
-  const [eligiblePage, setEligiblePage] = useState(1);
-  const [allPage, setAllPage] = useState(1);
-
   const sanitizedNominated = useMemo(
     () =>
       nominatedCandidates.map((candidate: CandidateRecord) =>
@@ -459,10 +476,13 @@ const ProjectCandidatesBoard = ({
 
   // Reset pagination when search term or role filter changes
   useEffect(() => {
-    setNominatedPage(1);
+    setInternalNominatedPage(1);
     setEligiblePage(1);
     setAllPage(1);
-  }, [searchTerm, selectedRole]);
+    if (onNominatedPageChange) {
+      onNominatedPageChange(1);
+    }
+  }, [searchTerm, selectedRole, onNominatedPageChange]);
 
 
   const filteredEligible = useMemo(
@@ -484,6 +504,23 @@ const ProjectCandidatesBoard = ({
     [allCandidates, searchTerm]
   );
 
+  const eligibleTotal = eligiblePagination?.total ?? filteredEligible.length;
+  const eligibleTotalPages = Math.max(
+    1,
+    eligiblePagination?.totalPages ?? Math.ceil(eligibleTotal / PAGE_SIZE)
+  );
+  const eligiblePageItems = eligiblePagination
+    ? filteredEligible
+    : filteredEligible.slice((eligiblePage - 1) * PAGE_SIZE, eligiblePage * PAGE_SIZE);
+
+  const allTotal = allPagination?.total ?? filteredAllCandidates.length;
+  const allTotalPages = Math.max(
+    1,
+    allPagination?.totalPages ?? Math.ceil(allTotal / PAGE_SIZE)
+  );
+  const allPageItems = allPagination
+    ? filteredAllCandidates
+    : filteredAllCandidates.slice((allPage - 1) * PAGE_SIZE, allPage * PAGE_SIZE);
 
   // Compute bulk-selectable eligible candidates (those not already assigned and eligible)
   // Used for the select-all toolbar in the column header
@@ -579,11 +616,12 @@ const ProjectCandidatesBoard = ({
       return <EmptyColumnState message="No nominated candidates" icon={Trophy} />;
     }
 
-    const totalNominated = sanitizedNominated.length;
-    const nominatedTotalPages = Math.max(1, Math.ceil(totalNominated / PAGE_SIZE));
+    const totalNominated = nominatedTotal ?? sanitizedNominated.length;
+    const effectiveNominatedTotalPages =
+      nominatedTotalPages ?? Math.max(1, Math.ceil(totalNominated / PAGE_SIZE));
     const nominatedSlice = sanitizedNominated.slice(
-      (nominatedPage - 1) * PAGE_SIZE,
-      nominatedPage * PAGE_SIZE
+      (effectiveNominatedPage - 1) * PAGE_SIZE,
+      effectiveNominatedPage * PAGE_SIZE
     );
 
     const items = nominatedSlice.map((candidate) => {
@@ -696,13 +734,13 @@ const ProjectCandidatesBoard = ({
           );
         })}
 
-        {nominatedTotalPages > 1 && (
+        {effectiveNominatedTotalPages > 1 && (
           <PaginationControls
-            page={nominatedPage}
-            totalPages={nominatedTotalPages}
+            page={effectiveNominatedPage}
+            totalPages={effectiveNominatedTotalPages}
             total={totalNominated}
             pageSize={PAGE_SIZE}
-            onPageChange={setNominatedPage}
+            onPageChange={handleNominatedPageChange}
           />
         )}
       </div>
@@ -724,11 +762,8 @@ const ProjectCandidatesBoard = ({
       return <EmptyColumnState message="No eligible candidates" icon={ShieldCheck} />;
     }
 
-    const totalEligible = filteredEligible.length;
-    const eligibleTotalPages = Math.max(1, Math.ceil(totalEligible / PAGE_SIZE));
-    const eligibleSlice = filteredEligible.slice((eligiblePage - 1) * PAGE_SIZE, eligiblePage * PAGE_SIZE);
-
-    const eligibleItems = eligibleSlice.map((candidate) => {
+    const totalEligible = eligibleTotal;
+    const eligibleItems = eligiblePageItems.map((candidate) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
@@ -844,11 +879,7 @@ const ProjectCandidatesBoard = ({
       return <EmptyColumnState message="No candidates available" icon={Users2} />;
     }
 
-    const totalAll = filteredAllCandidates.length;
-    const allTotalPages = Math.max(1, Math.ceil(totalAll / PAGE_SIZE));
-    const allSlice = filteredAllCandidates.slice((allPage - 1) * PAGE_SIZE, allPage * PAGE_SIZE);
-
-    const allItems = allSlice.map((candidate) => {
+    const allItems = allPageItems.map((candidate) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
@@ -930,7 +961,7 @@ const ProjectCandidatesBoard = ({
           <PaginationControls
             page={allPage}
             totalPages={allTotalPages}
-            total={totalAll}
+            total={allTotal}
             pageSize={PAGE_SIZE}
             onPageChange={setAllPage}
           />
@@ -956,7 +987,7 @@ const ProjectCandidatesBoard = ({
       id: "nominated",
       title: "Registered",
       subtitle: "Currently cv registered to this project",
-      count: sanitizedNominated.length,
+      count: nominatedTotal ?? sanitizedNominated.length,
       content: renderNominatedColumn(),
       ariaLabel: "Nominated candidates column",
       icon: Trophy,
@@ -992,7 +1023,7 @@ const ProjectCandidatesBoard = ({
       id: "eligible",
       title: "Eligible",
       subtitle: "Matches project requirements",
-      count: filteredEligible.length,
+      count: eligibleTotal,
       content: renderEligibleColumn(),
       ariaLabel: "Eligible candidates column",
       icon: ShieldCheck,
@@ -1035,7 +1066,7 @@ const ProjectCandidatesBoard = ({
         isRecruiter && !isManager
           ? "Candidates assigned to you"
           : "Entire candidate pool",
-      count: filteredAllCandidates.length,
+      count: allTotal,
       content: renderAllCandidatesColumn(),
       ariaLabel:
         isRecruiter && !isManager

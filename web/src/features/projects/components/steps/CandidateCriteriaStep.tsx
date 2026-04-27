@@ -52,6 +52,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RoleCriteriaModal } from "../RoleCriteriaModal";
 import { COMMON_SKILLS} from "@/constants/candidate-constants";
 
+type CommonSkill = (typeof COMMON_SKILLS)[number];
+
 // Card background colors - rotating light colors (matching RequirementCriteriaStep)
 const CARD_BG_COLORS = [
   "bg-blue-50/40",
@@ -131,24 +133,53 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
   const handleBulkApply = () => {
     if (watchedRoles.length === 0) return;
 
-    const updatedRoles = watchedRoles.map(role => ({
+    if (bulkCriteria.maxExperience != null && bulkCriteria.minExperience == null) {
+      toast.error("Please enter minimum experience before setting a maximum value.");
+      return;
+    }
+
+    if (bulkCriteria.maxSalaryRange != null && bulkCriteria.minSalaryRange == null) {
+      toast.error("Please enter minimum salary before setting a maximum value.");
+      return;
+    }
+
+    const updatedRoles = watchedRoles.map((role) => ({
       ...role,
-      minExperience: bulkCriteria.minExperience,
-      maxExperience: bulkCriteria.maxExperience,
-      shiftType: bulkCriteria.shiftType,
+      minExperience:
+        bulkCriteria.minExperience != null ? bulkCriteria.minExperience : role.minExperience,
+      maxExperience:
+        bulkCriteria.maxExperience != null ? bulkCriteria.maxExperience : role.maxExperience,
+      shiftType: bulkCriteria.shiftType ?? role.shiftType,
       genderRequirement: bulkCriteria.genderRequirement,
-      minAge: bulkCriteria.minAge,
-      maxAge: bulkCriteria.maxAge,
+      minAge: bulkCriteria.minAge != null ? bulkCriteria.minAge : role.minAge,
+      maxAge: bulkCriteria.maxAge != null ? bulkCriteria.maxAge : role.maxAge,
       accommodation: bulkCriteria.accommodation,
       food: bulkCriteria.food,
       transport: bulkCriteria.transport,
-      requiredSkills: [...bulkCriteria.requiredSkills],
-      requiredCertifications: bulkCriteria.requiredCertifications,
-      candidateStates: [...bulkCriteria.candidateStates],
-      candidateReligions: [...bulkCriteria.candidateReligions],
-      educationRequirementsList: [...bulkCriteria.educationRequirementsList],
-      minSalaryRange: bulkCriteria.minSalaryRange,
-      maxSalaryRange: bulkCriteria.maxSalaryRange,
+      requiredSkills:
+        bulkCriteria.requiredSkills.length > 0
+          ? [...bulkCriteria.requiredSkills]
+          : role.requiredSkills,
+      requiredCertifications:
+        bulkCriteria.requiredCertifications !== ""
+          ? bulkCriteria.requiredCertifications
+          : role.requiredCertifications,
+      candidateStates:
+        bulkCriteria.candidateStates.length > 0
+          ? [...bulkCriteria.candidateStates]
+          : role.candidateStates,
+      candidateReligions:
+        bulkCriteria.candidateReligions.length > 0
+          ? [...bulkCriteria.candidateReligions]
+          : role.candidateReligions,
+      educationRequirementsList:
+        bulkCriteria.educationRequirementsList.length > 0
+          ? [...bulkCriteria.educationRequirementsList]
+          : role.educationRequirementsList,
+      minSalaryRange:
+        bulkCriteria.minSalaryRange != null ? bulkCriteria.minSalaryRange : role.minSalaryRange,
+      maxSalaryRange:
+        bulkCriteria.maxSalaryRange != null ? bulkCriteria.maxSalaryRange : role.maxSalaryRange,
     }));
 
     setValue("rolesNeeded", updatedRoles);
@@ -181,7 +212,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Experience */}
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                <User className="h-3 w-3" /> Experience (Min-Max)
+                <User className="h-3 w-3" /> Experience (Min)
               </Label>
               <div className="flex gap-1.5">
                 <Input
@@ -198,7 +229,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                 <Input
                   type="number"
                   min={0}
-                  placeholder="Max"
+                  placeholder="Max (optional)"
                   value={bulkCriteria.maxExperience ?? ""}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -248,7 +279,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
             {/* Salary Range */}
             <div className="space-y-1.5">
               <Label className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                <Award className="h-3 w-3" /> Salary (Min-Max)
+                <Award className="h-3 w-3" /> Salary (Min)
                 <span className="text-[10px] text-slate-400">
                   {`(${getCountryCurrency(watch("countryCode"))})`}
                 </span>
@@ -256,7 +287,6 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
               <div className="flex gap-1.5">
                 <Input
                   type="number"
-                  
                   placeholder="Min"
                   value={bulkCriteria.minSalaryRange ?? ""}
                   onChange={(e) => {
@@ -267,8 +297,7 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
                 />
                 <Input
                   type="number"
-                  
-                  placeholder="Max"
+                  placeholder="Max (optional)"
                   value={bulkCriteria.maxSalaryRange ?? ""}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
@@ -576,10 +605,12 @@ export const CandidateCriteriaStep: React.FC<CandidateCriteriaStepProps> = ({
 
               // Local (UI-only) validation required for Candidate Criteria step & modal
               const localValidationMessages: string[] = [];
-              if (role.minExperience == null || role.maxExperience == null) {
-                localValidationMessages.push("Provide both minimum and maximum experience");
-              } else if ((role.minExperience as number) > (role.maxExperience as number)) {
-                localValidationMessages.push("Minimum experience must be less than or equal to maximum experience");
+              if (role.minExperience != null || role.maxExperience != null) {
+                if (role.minExperience == null && role.maxExperience != null) {
+                  localValidationMessages.push("Minimum experience is required");
+                } else if (role.minExperience != null && role.maxExperience != null && (role.minExperience as number) > (role.maxExperience as number)) {
+                  localValidationMessages.push("Minimum experience must be less than or equal to maximum experience");
+                }
               }
               if (role.minAge == null || role.maxAge == null) {
                 localValidationMessages.push("Provide both minimum and maximum age");

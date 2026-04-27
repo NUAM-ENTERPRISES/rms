@@ -476,7 +476,7 @@ export default function MyInterviewsListPage() {
         <div className="flex-1 overflow-hidden">
           {selected ? (
             <ScrollArea className="h-full">
-              <div className="p-6 space-y-5 max-w-4xl">
+              <div className="p-6 space-y-5 max-w-full">
 
                 {/* Detail Header */}
                 <div className="flex items-center justify-between">

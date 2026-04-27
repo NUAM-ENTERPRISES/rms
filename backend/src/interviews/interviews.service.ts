@@ -1238,7 +1238,9 @@ export class InterviewsService {
         ? `Client shortlisted ${candidateName} for ${projectTitle}`
         : `Client did not shortlist ${candidateName} for ${projectTitle}`;
 
-      const link = `/interviews?candidateProjectMapId=${result.id}`;
+      const link = result.candidate?.id
+        ? `/candidates/${result.candidate.id}`
+        : `/interviews?candidateProjectMapId=${result.id}`;
 
       // best-effort publish (async) — don't block return on failure
       try {

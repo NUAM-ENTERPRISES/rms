@@ -14,6 +14,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { LogoutSuccess } from "@/components/organisms/LogoutSuccess";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -23,21 +25,29 @@ export default function UserMenu() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const [isOpen, setIsOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
 
   if (!user) return null;
 
   const handleLogout = async () => {
     try {
       await dispatch(authApi.endpoints.logout.initiate()).unwrap();
+    } catch {
+      // Ignore logout API errors and clear local state anyway.
+    } finally {
       dispatch(clearCredentials());
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } catch (error) {
-      // Even if logout API fails, clear local state
-      dispatch(clearCredentials());
-      toast.success("Logged out successfully");
       navigate("/login");
     }
+  };
+
+  const handleConfirmLogout = () => {
+    setIsLogoutDialogOpen(false);
+    setShowLogoutSuccess(true);
+
+    window.setTimeout(() => {
+      handleLogout();
+    }, 700);
   };
 
   const handleProfile = () => {
@@ -174,7 +184,10 @@ export default function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-gray-200" />
         <DropdownMenuItem
-          onClick={handleLogout}
+          onClick={() => {
+            setIsOpen(false);
+            setIsLogoutDialogOpen(true);
+          }}
           className={cn(
             "flex items-center gap-2 px-3 py-2 text-sm",
             "text-red-600 hover:text-red-700",
@@ -187,6 +200,17 @@ export default function UserMenu() {
           <span>Logout</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
+      <ConfirmDialog
+        open={isLogoutDialogOpen}
+        onOpenChange={setIsLogoutDialogOpen}
+        onConfirm={handleConfirmLogout}
+        title="Confirm Logout"
+        description="Are you sure you want to sign out? You will need to log in again to continue using the application."
+        confirmText="Logout"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+      <LogoutSuccess isVisible={showLogoutSuccess} />
     </DropdownMenu>
   );
 }
