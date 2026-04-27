@@ -626,6 +626,18 @@ export const documentsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments"],
     }),
 
+    requestClientReupload: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { candidateProjectMapId: string; reason: string }
+    >({
+      query: (data) => ({
+        url: `/documents/request-client-reupload`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Document", "DocumentSummary", "CandidateProjectStatus"],
+    }),
+
     reuploadDocument: builder.mutation<
       { success: boolean; data: Document; message: string },
       { documentId: string } & ReuploadDocumentRequest
@@ -971,4 +983,5 @@ export const {
   useGetForwardingHistoryQuery,
   useForwardToClientMutation,
   useBulkForwardToClientMutation,
+  useRequestClientReuploadMutation,
 } = documentsApi;

@@ -58,6 +58,7 @@ interface SendToClientModalProps {
   clientData?: any;
   documents: any[];
   candidateName: string;
+  onSuccess?: () => void;
 }
 
 export function SendToClientModal({
@@ -69,6 +70,7 @@ export function SendToClientModal({
   clientData,
   documents,
   candidateName,
+  onSuccess,
 }: SendToClientModalProps) {
   const [email, setEmail] = useState("");
   const [cc, setCc] = useState<string[]>([]);
@@ -277,6 +279,7 @@ export function SendToClientModal({
       await forwardToClient(payload).unwrap();
 
       toast.success("Mail sent successfully and queued. Please wait for 3 minutes.");
+      onSuccess?.();
       onOpenChange(false);
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to forward documents to client");

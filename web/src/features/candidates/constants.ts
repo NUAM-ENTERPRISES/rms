@@ -6,6 +6,7 @@ export const WORKFLOW_STATUS_MAPPING = {
       { name: "documents_submitted", label: "Submitted" },
       { name: "verification_in_progress_document", label: "Verifying" },
       { name: "documents_verified", label: "Verified" },
+      { name: "client_revision_requested", label: "Client Revision Requested" },
       { name: "documents_re_submission_requested", label: "Re-submission Requested" },
       { name: "rejected_documents", label: "Rejected" },
       { name: "submitted_to_client", label: "Submitted to Client" },

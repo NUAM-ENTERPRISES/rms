@@ -17,6 +17,7 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
+import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
@@ -661,6 +662,95 @@ export class DocumentsService {
     );
 
     return verification;
+  }
+
+  /**
+   * Request document re-upload after a client has requested revisions
+   */
+  async requestClientReupload(
+    dto: RequestClientReuploadDto,
+    requesterId: string,
+  ): Promise<any> {
+    const { candidateProjectMapId, reason } = dto;
+
+    // 1. Validate candidateProjectMap exists
+    const cpm = (await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        project: {
+          select: {
+            id: true,
+          },
+        },
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    })) as any;
+
+    if (!cpm) {
+      throw new NotFoundException(`Candidate project mapping with ID ${candidateProjectMapId} not found`);
+    }
+
+    // Use recruiterId from CandidateProject mapping instead of candidate if it exists there
+    const recruiterIdNotification = cpm.recruiterId;
+
+    // 2. Locate statuses
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findFirst({
+      where: { name: 'documents' },
+    });
+    const subStatus = await this.prisma.candidateProjectSubStatus.findFirst({
+      where: { name: 'client_revision_requested' },
+    });
+
+    if (!mainStatus || !subStatus) {
+      throw new BadRequestException('Required statuses (documents/client_revision_requested) not found in database.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Update CPM status
+      const updatedCpm = await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Record History in CandidateProjectStatusHistory
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId,
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          changedById: requesterId,
+          reason: `Client revision requested: ${reason}`,
+          notes: `Client revision requested: ${reason}`,
+        },
+      });
+
+      // 4. Trigger Recruiter Notification (via Outbox)
+      if (recruiterIdNotification) {
+        await this.outboxService.publishRecruiterNotification(
+          recruiterIdNotification,
+          `Client requested document revision for ${cpm.candidate.firstName} ${cpm.candidate.lastName}: ${reason}`,
+          'Client Revision Requested',
+          `/recruiter-docs/${cpm.project.id}/${cpm.candidate.id}`,
+          {
+            candidateId: cpm.candidate.id,
+            candidateProjectMapId: candidateProjectMapId,
+            reason: reason,
+          },
+        );
+      }
+
+      return updatedCpm;
+    });
   }
 
   /**

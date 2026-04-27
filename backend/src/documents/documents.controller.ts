@@ -29,6 +29,7 @@ import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
+import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload-offer-letter.dto';
@@ -695,6 +696,31 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Resubmission request sent successfully',
+    };
+  }
+
+  @Post('request-client-reupload')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Request document re-upload after client feedback',
+    description: 'Moves candidate to client_revision_requested status and notifies recruiter.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Client revision request processed successfully',
+  })
+  async requestClientReupload(
+    @Body() dto: RequestClientReuploadDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.requestClientReupload(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Client revision requested successfully',
     };
   }
 

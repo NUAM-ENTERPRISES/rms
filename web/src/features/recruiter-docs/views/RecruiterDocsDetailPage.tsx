@@ -489,7 +489,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       setVerificationNotes("");
       setSelectedRoleNeededId(undefined);
       setIsRoleEditable(true);
-      refetchRequirements();
+      // Data will refresh automatically via Socket.io/Tag Invalidation
     } catch (error: unknown) {
       const err = error as { data?: { message?: string } };
       toast.error(err?.data?.message || "Failed to send candidate for verification");
@@ -564,7 +564,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
           <div className="flex items-center gap-2">
             {isVerificationSent ? (
               <>
-                {summary && summary.totalVerified === summary.totalRequired && summary.totalRequired > 0 ? (
+                {candidateProject?.subStatus?.name === "client_revision_requested" ? (
+                  <Badge className="bg-orange-500 text-white border-orange-600 px-3 py-1.5 text-sm font-semibold">
+                    <RefreshCw className="mr-1.5 h-4 w-4 animate-spin-slow" />
+                    Client Revision Requested
+                  </Badge>
+                ) : summary && summary.totalVerified === summary.totalRequired && summary.totalRequired > 0 ? (
                   <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1.5 text-sm font-semibold">
                     <CheckCircle2 className="mr-1.5 h-4 w-4" />
                     Documents Verified

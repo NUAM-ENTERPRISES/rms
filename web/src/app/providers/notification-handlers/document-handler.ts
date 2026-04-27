@@ -11,7 +11,8 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "recruiter_notification",
     "candidate_documents_verified",
     "candidate_documents_rejected",
-    "candidate_sent_for_verification"
+    "candidate_sent_for_verification",
+    "client_revision_requested"
   ];
 
   if (!documentNotificationTypes.includes(notification.type)) return false;
@@ -22,6 +23,14 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     notification.data?.candidateId || 
     notification.candidateId || 
     notification.meta?.candidateId || 
+    notification.data?.candidateProject?.candidateId || 
+    undefined;
+
+  const projectId = 
+    notification.data?.projectId || 
+    notification.projectId || 
+    notification.meta?.projectId || 
+    notification.data?.candidateProject?.projectId ||
     undefined;
 
   const tags: Array<any> = [
@@ -33,8 +42,8 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     { type: "DocumentVerification" }
   ];
 
-  if (notification.meta?.projectId) {
-    tags.push({ type: "Project", id: notification.meta.projectId });
+  if (projectId) {
+    tags.push({ type: "Project", id: projectId });
   }
 
   if (candidateId) {

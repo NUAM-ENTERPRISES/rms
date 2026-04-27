@@ -32,6 +32,7 @@ export async function seedCandidateProjectWorkflow() {
     { name: "documents_submitted", label: "Documents Submitted", order: 2, main: "documents" },
     { name: "verification_in_progress_document", label: "Verification In Progress", order: 3, main: "documents" },
     { name: "documents_verified", label: "Verified Documents", order: 4, main: "documents" },
+    { name: "client_revision_requested", label: "Client Revision Requested", order: 4.5, main: "documents" },
     { name: "documents_re_submission_requested", label: "Document Re-Submission Requested", order: 5, main: "documents" },
     { name: "rejected_documents", label: "Rejected Documents", order: 6, main: "documents" },
     { name: "submitted_to_client", label: "Submitted to Client", order: 7, main: "documents" },
