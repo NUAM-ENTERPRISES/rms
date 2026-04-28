@@ -31,7 +31,7 @@ export class CreateCandidateDto {
     minLength: 1,
   })
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @ApiProperty({
     description: 'Candidate last name',
@@ -39,7 +39,7 @@ export class CreateCandidateDto {
     minLength: 1,
   })
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @ApiProperty({
     description: 'Country calling code',
@@ -49,7 +49,7 @@ export class CreateCandidateDto {
   @Matches(/^\+[1-9]\d{0,3}$/, {
     message: 'Please provide a valid country code (e.g., +91, +1, +44)',
   })
-  countryCode: string;
+  countryCode!: string;
 
   @ApiProperty({
     description:
@@ -60,7 +60,7 @@ export class CreateCandidateDto {
   @Matches(/^\d{6,15}$/, {
     message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  mobileNumber: string;
+  mobileNumber!: string;
 
   @ApiPropertyOptional({
     description: 'Email address',
@@ -471,7 +471,7 @@ export class CandidateQualificationDto {
     example: 'qual123',
   })
   @IsString()
-  qualificationId: string;
+  qualificationId!: string;
 
   @ApiPropertyOptional({
     description: 'University/Institution name',
@@ -531,7 +531,7 @@ export class CandidateWorkExperienceDto {
     minLength: 2,
   })
   @IsString()
-  companyName: string;
+  companyName!: string;
 
   @ApiProperty({
     description: 'Job title/position',
@@ -539,14 +539,14 @@ export class CandidateWorkExperienceDto {
     minLength: 2,
   })
   @IsString()
-  jobTitle: string;
+  jobTitle!: string;
 
   @ApiProperty({
     description: 'Start date of employment',
     example: '2020-01-15T00:00:00.000Z',
   })
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @ApiPropertyOptional({
     description: 'End date of employment (leave empty if current)',
