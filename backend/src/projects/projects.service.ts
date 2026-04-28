@@ -1393,7 +1393,13 @@ export class ProjectsService {
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter) {
+    const isClientCoordinator =
+      userRoles.includes('Client Coordinator') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter || isClientCoordinator) {
       whereClause.AND = whereClause.AND || [];
       whereClause.AND.push({
         OR: [
@@ -2075,14 +2081,20 @@ export class ProjectsService {
       },
     };
 
-    // Recruiter specific filter
+    // Recruiter / Client Coordinator: only eligible pool = own assignments
     const isRecruiter =
       userRoles.includes('Recruiter') &&
       !userRoles.includes('Manager') &&
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter) {
+    const isClientCoordinator =
+      userRoles.includes('Client Coordinator') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter || isClientCoordinator) {
       whereClause.recruiterAssignments = {
         some: {
           recruiterId: userId,

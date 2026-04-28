@@ -11,6 +11,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -32,12 +33,14 @@ describe('ProjectsService', () => {
     },
     candidate: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     candidateProjects: {
       findUnique: jest.fn(),
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      count: jest.fn(),
     },
     roleNeeded: {
       create: jest.fn(),
@@ -78,6 +81,10 @@ describe('ProjectsService', () => {
         {
           provide: require('../../qualifications/qualifications.service').QualificationsService,
           useValue: { validateQualificationIds: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() },
         },
       ],
     }).compile();
@@ -262,8 +269,20 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
         id: 'proj-1',
+        licensingExam: null,
+        eligibility: false,
         rolesNeeded: [
-          { id: 'r1', designation: 'Any', roleCatalogId: 'role-1', minExperience: null, maxExperience: null, genderRequirement: 'all', educationRequirementsList: [] },
+          {
+            id: 'r1',
+            designation: 'Any',
+            roleCatalogId: 'role-1',
+            minAge: 18,
+            maxAge: 65,
+            minExperience: null,
+            maxExperience: null,
+            genderRequirement: 'all',
+            educationRequirementsList: [],
+          },
         ],
       } as any;
 
@@ -271,7 +290,12 @@ describe('ProjectsService', () => {
         id: 'c1',
         firstName: 'Alice',
         lastName: 'Qualified',
+        dateOfBirth: '1995-06-01',
+        gender: 'female',
         totalExperience: 3,
+        workExperiences: [
+          { roleCatalogId: 'role-1', startDate: '2020-01-01', endDate: '2024-01-01' },
+        ],
         qualifications: [
           { id: 'cq1', qualification: { id: 'qual-bsc', name: 'Bachelor of Science', shortName: 'BSc', field: 'Computer Science' }, university: 'XYZ University' },
         ],
@@ -308,6 +332,57 @@ describe('ProjectsService', () => {
             }),
           }),
         }),
+      );
+    });
+
+    it('getEligibleCandidates applies recruiterAssignments filter for Client Coordinator', async () => {
+      const project = {
+        id: 'proj-1',
+        rolesNeeded: [
+          {
+            id: 'r1',
+            designation: 'Any',
+            roleCatalogId: 'role-1',
+            minExperience: null,
+            maxExperience: null,
+            genderRequirement: 'all',
+            educationRequirementsList: [],
+          },
+        ],
+      } as any;
+
+      prismaService.project.findUnique.mockResolvedValue(project);
+      prismaService.candidate.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.getEligibleCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+
+      expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            recruiterAssignments: {
+              some: { recruiterId: 'cc-user', isActive: true },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('getNominatedCandidates scopes to user for Client Coordinator', async () => {
+      const project = { id: 'proj-1', rolesNeeded: [] } as any;
+      prismaService.project.findUnique.mockResolvedValue(project);
+      prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
+      prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.getNominatedCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+
+      const findWhere = (prismaService.candidateProjects.findMany as jest.Mock).mock.calls[0][0]?.where;
+      expect(findWhere.projectId).toBe('proj-1');
+      expect(findWhere.AND).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            OR: expect.arrayContaining([{ recruiterId: 'cc-user' }]),
+          }),
+        ]),
       );
     });
   });

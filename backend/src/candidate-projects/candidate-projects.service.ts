@@ -1145,8 +1145,10 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
-    // Role-based filtering: recruiter only sees their assigned candidates
+    // Role-based filtering: recruiters and Client Coordinators only see candidates
+    // assigned to them on the project row (aligned with recruiter pipeline / agent CC flow).
     const isRecruiter = userRoles.includes('Recruiter');
+    const isClientCoordinator = userRoles.includes('Client Coordinator');
     const isSpecialistOrManagement = userRoles.some(r =>
       [
         'CEO',
@@ -1162,7 +1164,10 @@ export class CandidateProjectsService {
       ].includes(r),
     );
 
-    if (isRecruiter && !isSpecialistOrManagement) {
+    const scopeToOwnAssignments =
+      (isRecruiter || isClientCoordinator) && !isSpecialistOrManagement;
+
+    if (scopeToOwnAssignments) {
       where.recruiterId = userId;
       baseWhereForCounts.recruiterId = userId;
     }

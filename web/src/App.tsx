@@ -403,7 +403,11 @@ function App() {
                     path="/recruiter-docs"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsPage />
                           </AppLayout>
@@ -416,7 +420,11 @@ function App() {
                     path="/recruiter-docs/:projectId"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
                           </AppLayout>
@@ -430,7 +438,11 @@ function App() {
                     path="/recruiter-docs/:projectId/:candidateId"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
                           </AppLayout>

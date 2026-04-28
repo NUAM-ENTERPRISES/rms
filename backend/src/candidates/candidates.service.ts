@@ -860,7 +860,7 @@ export class CandidatesService {
 
   /**
    * Get consolidated candidates for project detail view
-   * Admin/Manager sees all, Recruiter sees their assigned only
+   * Admin/Manager-style roles see all; Recruiter and Client Coordinator see active recruiter assignments only.
    * Includes nomination status for a specific project
    */
   async getConsolidatedCandidates(
@@ -872,6 +872,7 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
 
     const isRecruiter = roles.includes('Recruiter');
+    const isClientCoordinator = roles.includes('Client Coordinator');
     const isAdminOrManager = roles.some((role) =>
       [
         'CEO',
@@ -894,8 +895,8 @@ export class CandidatesService {
       };
     }
 
-    // 2. Role-based filtering
-    if (isRecruiter && !isAdminOrManager) {
+    // 2. Role-based filtering (recruiters and client coordinators see assigned candidates only)
+    if ((isRecruiter || isClientCoordinator) && !isAdminOrManager) {
       where.recruiterAssignments = {
         some: {
           recruiterId: userId,

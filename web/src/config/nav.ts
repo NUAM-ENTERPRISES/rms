@@ -131,7 +131,7 @@ export const navigationConfig: NavItem[] = [
         id: "recruiter-docs",
         label: "Documents Collection",
         path: "/recruiter-docs",
-        roles: ["Recruiter", "System Admin"],
+        roles: ["Recruiter", "System Admin", "Client Coordinator"],
       },
     ],
   },

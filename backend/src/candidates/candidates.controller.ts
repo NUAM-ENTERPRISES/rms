@@ -165,7 +165,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get consolidated candidates for project detail view',
     description:
-      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters, with nomination info for the specified project.',
+      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters and Client Coordinators, with nomination info for the specified project.',
   })
   async getConsolidatedCandidates(
     @Query() query: ConsolidatedCandidateQueryDto,

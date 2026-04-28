@@ -320,6 +320,9 @@ const ProjectCandidatesBoard = ({
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
+  const isClientCoordinator = user?.roles?.includes("Client Coordinator") ?? false;
+  /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
+  const canUseRecruiterPipelineActions = isRecruiter || isClientCoordinator;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
@@ -340,7 +343,7 @@ const ProjectCandidatesBoard = ({
     const candidateId = e.dataTransfer.getData("candidateId");
     
     // Only handle drop to "nominated" column
-    if (columnId === "nominated" && candidateId && isRecruiter) {
+    if (columnId === "nominated" && candidateId && canUseRecruiterPipelineActions) {
       // Find candidate in eligible or all candidates
       const candidate = [...eligibleCandidates, ...allCandidates].find(
         (c) => (c.candidateId || c.id) === candidateId
@@ -488,7 +491,7 @@ const ProjectCandidatesBoard = ({
   // Compute bulk-selectable eligible candidates (those not already assigned and eligible)
   // Used for the select-all toolbar in the column header
   const selectableEligibleCandidates = useMemo(() => {
-    if (!isRecruiter) return [];
+    if (!canUseRecruiterPipelineActions) return [];
     return filteredEligible
       .map((candidate) => {
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
@@ -498,7 +501,7 @@ const ProjectCandidatesBoard = ({
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
-  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap]);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions]);
 
   const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
     selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
@@ -650,7 +653,7 @@ const ProjectCandidatesBoard = ({
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
-              isRecruiter={isRecruiter}
+              isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
@@ -774,7 +777,7 @@ const ProjectCandidatesBoard = ({
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
                 candidate={candidateWithProject}
                 projectId={projectId}
-                isRecruiter={isRecruiter}
+                isRecruiter={canUseRecruiterPipelineActions}
                 hideContactInfo={hideContactInfo}
                 searchTerm={searchTerm}
                 onView={() => onViewCandidate(assignmentInfo.candidateId)}
@@ -891,7 +894,7 @@ const ProjectCandidatesBoard = ({
               key={`all-${assignmentInfo.candidateId}`}
               candidate={candidateWithProject}
               projectId={projectId}
-              isRecruiter={isRecruiter}
+              isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
@@ -1030,15 +1033,15 @@ const ProjectCandidatesBoard = ({
     },
     {
       id: "all",
-      title: isRecruiter && !isManager ? "My Candidates" : "All Candidates",
+      title: canUseRecruiterPipelineActions && !isManager ? "My Candidates" : "All Candidates",
       subtitle:
-        isRecruiter && !isManager
+        canUseRecruiterPipelineActions && !isManager
           ? "Candidates assigned to you"
           : "Entire candidate pool",
       count: filteredAllCandidates.length,
       content: renderAllCandidatesColumn(),
       ariaLabel:
-        isRecruiter && !isManager
+        canUseRecruiterPipelineActions && !isManager
           ? "My candidates column"
           : "All candidates column",
       icon: Users2,
