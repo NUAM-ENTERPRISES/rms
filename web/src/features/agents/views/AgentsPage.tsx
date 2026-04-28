@@ -1,20 +1,17 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import { 
-  Plus, 
-  Search, 
-  Handshake, 
-  Building2, 
-  Mail, 
-  Phone, 
-  Users, 
+import { useState, useRef, useEffect, useMemo } from "react";
+import {
+  Plus,
+  Search,
+  Handshake,
+  Building2,
+  Mail,
+  Phone,
+  Users,
   UserPlus,
   LayoutGrid,
-  Eye
+  Eye,
 } from "lucide-react";
-import { 
-  useGetAgentsQuery, 
-  useCreateAgentMutation, 
-} from "../api";
+import { useGetAgentsQuery } from "../api";
 import {
   Card,
   CardContent,
@@ -29,28 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { StatusTile } from "@/components/molecules";
-import { AGENT_TYPES } from "@/constants/agent-types";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks";
 import {
@@ -60,6 +40,7 @@ import {
 import { TransferCandidateDialog } from "@/features/candidates/components/TransferCandidateDialog";
 import { useAppSelector } from "@/app/hooks";
 import { ClientCoordinatorCandidateTableRows } from "../components/ClientCoordinatorCandidateTableRows";
+import { CreateAgentDialog } from "../components/CreateAgentDialog";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
@@ -112,14 +93,6 @@ export default function AgentsPage() {
       },
       { skip: !isClientCoordinator || activeFilter !== "with-candidates" },
     );
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    mobileNumber: "",
-    companyName: "",
-    agentType: "",
-  });
-
   /** When the main agent table is skipped (CC on Total Candidates view), still need page-1 totals for tiles — limit 10 only (matches list page size). */
   const agentsListSkipped =
     isClientCoordinator && activeFilter === "with-candidates";
@@ -143,8 +116,6 @@ export default function AgentsPage() {
     },
     { skip: agentsListSkipped },
   );
-
-  const [createAgent] = useCreateAgentMutation();
 
   const agents = agentsPaged?.data ?? [];
 
@@ -254,28 +225,6 @@ export default function AgentsPage() {
     },
   ];
 
-  const handleOpenModal = () => {
-    setFormData({
-      name: "",
-      email: "",
-      mobileNumber: "",
-      companyName: "",
-      agentType: "",
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await createAgent(formData).unwrap();
-      toast.success("Agent created successfully");
-      setIsModalOpen(false);
-    } catch (error) {
-      toast.error("Failed to save agent");
-    }
-  };
-
   const coordinatorCandidates =
     coordinatorCandidatesPayload?.data ?? [];
   const coordinatorPagination = coordinatorCandidatesPayload?.pagination;
@@ -374,7 +323,7 @@ export default function AgentsPage() {
                     ) ? (
                       <Button
                         type="button"
-                        onClick={handleOpenModal}
+                        onClick={() => setIsModalOpen(true)}
                         className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
                       >
                         <Plus className="h-4 w-4" /> Add Agent
@@ -685,80 +634,7 @@ export default function AgentsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Add New Agent</DialogTitle>
-            <DialogDescription>
-              Create a new agent profile for candidate sourcing.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Agent Name *</Label>
-              <Input
-                id="name"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Full name of agent"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Agency/Company Name</Label>
-              <Input
-                id="companyName"
-                value={formData.companyName}
-                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                placeholder="e.g. Ace Recruitment Ltd"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="agentType">Agent Type</Label>
-              <Select 
-                value={formData.agentType} 
-                onValueChange={(value) => setFormData({ ...formData, agentType: value })}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="agent@example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobileNumber">Mobile Number</Label>
-              <Input
-                id="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
-                placeholder="+91 9876543210"
-              />
-            </div>
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                Create Agent
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <CreateAgentDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
 
       {transferDialog.isOpen ? (
         <TransferCandidateDialog

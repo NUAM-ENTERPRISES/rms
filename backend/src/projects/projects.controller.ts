@@ -24,12 +24,14 @@ import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import {
   ProjectWithRelations,
   PaginatedProjects,
+  PaginatedProjectPicker,
   ProjectStats,
 } from './types';
 
@@ -359,6 +361,103 @@ export class ProjectsController {
       success: true,
       data: stats,
       message: 'Project statistics retrieved successfully',
+    };
+  }
+
+  @Get('picker')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'List projects (minimal fields for pickers)',
+    description:
+      'Returns id, title, status, deadline, and client name/type only—suitable for link dialogs and dropdowns without loading full project relations.',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'Filter by status (default: active)',
+    enum: ['active', 'completed', 'cancelled'],
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filter by project title (partial, case-insensitive)',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (max 100)',
+    example: 10,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Minimal project list retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string' },
+        data: {
+          type: 'object',
+          properties: {
+            projects: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  title: { type: 'string' },
+                  status: { type: 'string' },
+                  deadline: {
+                    type: 'string',
+                    format: 'date-time',
+                    nullable: true,
+                  },
+                  client: {
+                    type: 'object',
+                    nullable: true,
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      type: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'number' },
+                limit: { type: 'number' },
+                total: { type: 'number' },
+                totalPages: { type: 'number' },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient permissions',
+  })
+  async findPicker(@Query() query: QueryProjectPickerDto): Promise<{
+    success: boolean;
+    data: PaginatedProjectPicker;
+    message: string;
+  }> {
+    const data = await this.projectsService.findPickerList(query);
+    return {
+      success: true,
+      data,
+      message: 'Projects retrieved successfully',
     };
   }
 

@@ -13,6 +13,7 @@ export interface Agent {
   updatedAt: string;
   _count?: {
     candidates: number;
+    agentProjects?: number;
   };
 }
 
@@ -74,6 +75,37 @@ export interface AgentsListResponse {
   meta: AgentsListMeta;
 }
 
+export interface AgentProjectRow {
+  id: string;
+  agentId: string;
+  projectId: string;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  project: {
+    id: string;
+    title: string;
+    status: string;
+    client: { id: string; name: string; type: string } | null;
+  };
+}
+
+export interface AgentProjectsListResponse {
+  success: boolean;
+  message: string;
+  data: AgentProjectRow[];
+}
+
+export interface LinkAgentProjectsPayload {
+  links: Array<{ projectId: string; notes?: string }>;
+}
+
+/** POST /agents body — core agent fields plus optional initial project links */
+export type CreateAgentRequest = Partial<Agent> & {
+  projectLinks?: Array<{ projectId: string; notes?: string }>;
+};
+
 export const agentsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAgents: builder.query<AgentsListResponse, GetAgentsParams | void>({
@@ -113,7 +145,7 @@ export const agentsApi = baseApi.injectEndpoints({
       query: (id) => `/agents/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Agent", id }],
     }),
-    createAgent: builder.mutation<{ success: boolean; data: Agent }, Partial<Agent>>({
+    createAgent: builder.mutation<{ success: boolean; data: Agent }, CreateAgentRequest>({
       query: (body) => ({
         url: "/agents",
         method: "POST",
@@ -151,6 +183,42 @@ export const agentsApi = baseApi.injectEndpoints({
       },
       providesTags: (_result, _error, { id }) => [{ type: "Agent", id }],
     }),
+    getAgentProjects: builder.query<AgentProjectsListResponse, string>({
+      query: (id) => `/agents/${id}/projects`,
+      providesTags: (_result, _error, id) => [{ type: "Agent", id }],
+    }),
+    linkAgentProjects: builder.mutation<
+      AgentProjectsListResponse,
+      { agentId: string; body: LinkAgentProjectsPayload }
+    >({
+      query: ({ agentId, body }) => ({
+        url: `/agents/${agentId}/projects`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { agentId }) => [{ type: "Agent", id: agentId }],
+    }),
+    unlinkAgentProject: builder.mutation<
+      { success: boolean; message: string },
+      { agentId: string; projectId: string }
+    >({
+      query: ({ agentId, projectId }) => ({
+        url: `/agents/${agentId}/projects/${projectId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { agentId }) => [{ type: "Agent", id: agentId }],
+    }),
+    updateAgentProject: builder.mutation<
+      { success: boolean; message: string; data: AgentProjectRow },
+      { agentId: string; projectId: string; body: { notes?: string; isActive?: boolean } }
+    >({
+      query: ({ agentId, projectId, body }) => ({
+        url: `/agents/${agentId}/projects/${projectId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { agentId }) => [{ type: "Agent", id: agentId }],
+    }),
   }),
 });
 
@@ -161,4 +229,8 @@ export const {
   useUpdateAgentMutation,
   useDeleteAgentMutation,
   useGetAgentCandidatesQuery,
+  useGetAgentProjectsQuery,
+  useLinkAgentProjectsMutation,
+  useUnlinkAgentProjectMutation,
+  useUpdateAgentProjectMutation,
 } = agentsApi;

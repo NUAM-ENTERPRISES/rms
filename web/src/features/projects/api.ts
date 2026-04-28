@@ -260,6 +260,36 @@ export interface PaginatedProjectsResponse {
   };
 }
 
+/** Minimal project row from GET /projects/picker (link dialogs, pickers). */
+export interface ProjectPickerItem {
+  id: string;
+  title: string;
+  status: string;
+  deadline: string | null;
+  client: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface PaginatedProjectPickerResponse {
+  projects: ProjectPickerItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface QueryProjectPickerRequest {
+  status?: "active" | "completed" | "cancelled";
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 export interface ProjectStats {
   totalProjects: number;
   activeProjects: number;
@@ -299,6 +329,27 @@ export const projectsApi = baseApi.injectEndpoints({
       query: (params) => ({
         url: "/projects",
         params,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.projects.map(({ id }) => ({
+                type: "Project" as const,
+                id,
+              })),
+              { type: "Project", id: "LIST" },
+            ]
+          : [{ type: "Project", id: "LIST" }],
+    }),
+
+    /** Minimal project list for pickers (no roles, documents, candidates). */
+    getProjectsPicker: builder.query<
+      ApiResponse<PaginatedProjectPickerResponse>,
+      QueryProjectPickerRequest | void
+    >({
+      query: (params) => ({
+        url: "/projects/picker",
+        params: params ?? {},
       }),
       providesTags: (result) =>
         result
@@ -799,6 +850,7 @@ export const projectsApi = baseApi.injectEndpoints({
 
 export const {
   useGetProjectsQuery,
+  useGetProjectsPickerQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
   useGetEligibleCandidatesQuery,

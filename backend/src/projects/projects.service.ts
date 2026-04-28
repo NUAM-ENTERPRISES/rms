@@ -17,10 +17,12 @@ import {
 } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import {
   ProjectWithRelations,
   PaginatedProjects,
+  PaginatedProjectPicker,
   ProjectStats,
 } from './types';
 import {
@@ -537,6 +539,69 @@ export class ProjectsService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Lightweight project list for pickers (id, title, status, deadline, client only).
+   */
+  async findPickerList(query: QueryProjectPickerDto): Promise<PaginatedProjectPicker> {
+    const {
+      search,
+      status = 'active',
+      page: pageRaw,
+      limit: limitRaw,
+    } = query;
+    const page = pageRaw ?? 1;
+    const limit = limitRaw ?? 10;
+
+    const where: Record<string, unknown> = {};
+    if (status) {
+      where.status = status;
+    }
+    if (search?.trim()) {
+      where.title = { contains: search.trim(), mode: 'insensitive' };
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await this.prisma.project.count({ where });
+
+    const rows = await this.prisma.project.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { title: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        deadline: true,
+        client: {
+          select: { id: true, name: true, type: true },
+        },
+      },
+    });
+
+    return {
+      projects: rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        deadline: p.deadline ? p.deadline.toISOString() : null,
+        client: p.client
+          ? {
+              id: p.client.id,
+              name: p.client.name,
+              type: p.client.type,
+            }
+          : null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 0,
       },
     };
   }

@@ -8,6 +8,7 @@ import {
   AgentDetailsHero,
   AgentDetailsStats,
   AgentDetailsCandidatesSection,
+  AgentLinkedProjectsSection,
   AgentEditAgentDialog,
 } from "../components/agent-details";
 
@@ -17,6 +18,7 @@ export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canEditAgent = useCan("edit:agents");
+  const canCreateCandidate = useCan("write:candidates");
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -67,24 +69,42 @@ export default function AgentDetailsPage() {
 
       <AgentDetailsStats agent={agent} totalCount={totalCount} />
 
-      <AgentDetailsCandidatesSection
-        search={search}
-        onSearchChange={(value) => {
-          setSearch(value);
-          setPage(1);
-        }}
-        onClearSearch={() => setSearch("")}
-        hasActiveSearch={hasActiveSearch}
-        totalCount={totalCount}
-        candidates={candidates}
-        isLoading={isCandidatesLoading}
-        isFetching={isCandidatesFetching}
-        page={page}
-        totalPages={totalPages}
-        pageSize={LIMIT}
-        onPageChange={setPage}
-        onViewCandidate={(candidateId) => navigate(`/candidates/${candidateId}`)}
-      />
+      <div className="px-6 pb-8 pt-2 sm:pt-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Left: Candidates table (takes 2 cols on lg) */}
+          <div className="lg:col-span-2">
+            <AgentDetailsCandidatesSection
+              search={search}
+              onSearchChange={(value) => {
+                setSearch(value);
+                setPage(1);
+              }}
+              onClearSearch={() => setSearch("")}
+              hasActiveSearch={hasActiveSearch}
+              totalCount={totalCount}
+              candidates={candidates}
+              isLoading={isCandidatesLoading}
+              isFetching={isCandidatesFetching}
+              page={page}
+              totalPages={totalPages}
+              pageSize={LIMIT}
+              onPageChange={setPage}
+              onViewCandidate={(candidateId) =>
+                navigate(`/candidates/${candidateId}`)
+              }
+              canAddCandidate={canCreateCandidate}
+              onAddCandidate={() =>
+                navigate(`/candidates/create?agentId=${id}`)
+              }
+            />
+          </div>
+
+          {/* Right: Linked Projects (1 col on lg) */}
+          <div className="lg:col-span-1">
+            {id ? <AgentLinkedProjectsSection agentId={id} /> : null}
+          </div>
+        </div>
+      </div>
 
       {id ? (
         <AgentEditAgentDialog

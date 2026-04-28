@@ -5,6 +5,7 @@ import {
   FieldErrors,
   useWatch,
 } from "react-hook-form";
+import type { CreateCandidateFormData } from "@/features/candidates/createCandidateFormSchema";
 import {
   Card,
   CardContent,
@@ -13,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -37,23 +37,6 @@ import {
   Languages,
   Brain,
 } from "lucide-react";
-type CreateCandidateFormData = {
-  firstName: string;
-  lastName: string;
-  countryCode: string;
-  mobileNumber: string;
-  email?: string;
-  source: string;
-  agentId?: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
-  dateOfBirth?: string;
-  referralCompanyName?: string;
-  referralEmail?: string;
-  referralCountryCode?: string;
-  referralPhone?: string;
-  referralDescription?: string;
-  [key: string]: any;
-};
 
 interface PersonalInformationStepProps {
   control: Control<CreateCandidateFormData>;
@@ -69,7 +52,7 @@ interface PersonalInformationStepProps {
 export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = ({
   control,
   errors,
-  selectedImage,
+  selectedImage: _selectedImage,
   setSelectedImage,
   uploadingImage,
   isLoading,
@@ -79,7 +62,6 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
     control,
     name: "source",
   });
-
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
       <CardHeader>

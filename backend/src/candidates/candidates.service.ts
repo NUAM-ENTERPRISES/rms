@@ -12,6 +12,7 @@ import { CandidateMatchingService } from '../candidate-matching/candidate-matchi
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
@@ -112,6 +113,72 @@ export class CandidatesService {
 
     // Convert to years (rounded to 1 decimal place)
     return Math.round((totalMonths / 12) * 10) / 10;
+  }
+
+  /**
+   * Shared nomination logic for nominate API (and similar flows).
+   */
+  private async createProjectNominationForWorkflow(
+    db: Prisma.TransactionClient,
+    candidateId: string,
+    link: { projectId: string; roleNeededId?: string; notes?: string },
+  ) {
+    if (link.roleNeededId) {
+      const role = await db.roleNeeded.findFirst({
+        where: { id: link.roleNeededId, projectId: link.projectId },
+        select: { id: true },
+      });
+      if (!role) {
+        throw new NotFoundException(
+          `Role-needed ${link.roleNeededId} not found on project ${link.projectId}`,
+        );
+      }
+    }
+
+    const project = await db.project.findUnique({
+      where: { id: link.projectId },
+      include: { documentRequirements: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${link.projectId} not found`);
+    }
+
+    const existingNomination = await db.candidateProjects.findFirst({
+      where: {
+        candidateId,
+        projectId: link.projectId,
+        roleNeededId: link.roleNeededId ?? null,
+      },
+    });
+    if (existingNomination) {
+      throw new ConflictException(
+        `Candidate ${candidateId} is already nominated for this project${link.roleNeededId ? ' and role slot' : ''}`,
+      );
+    }
+
+    const nomination = await db.candidateProjects.create({
+      data: {
+        candidateId,
+        projectId: link.projectId,
+        roleNeededId: link.roleNeededId,
+        currentProjectStatusId: 1,
+        notes: link.notes,
+      },
+    });
+
+    if (project.documentRequirements.length > 0) {
+      const pendingDocsStatus = await db.candidateProjectStatus.findFirst({
+        where: { statusName: 'pending_documents' },
+      });
+      if (pendingDocsStatus) {
+        await db.candidateProjects.update({
+          where: { id: nomination.id },
+          data: { currentProjectStatusId: pendingDocsStatus.id },
+        });
+      }
+    }
+
+    return nomination;
   }
 
   async create(
@@ -247,147 +314,155 @@ export class CandidatesService {
 
     const user = creatingUser;
 
-    // Create candidate with qualifications
-    const candidate = await this.prisma.candidate.create({
-      data: {
-        firstName: createCandidateDto.firstName,
-        lastName: createCandidateDto.lastName,
-        countryCode: createCandidateDto.countryCode,
-        mobileNumber: createCandidateDto.mobileNumber,
-        email: createCandidateDto.email,
-        profileImage: createCandidateDto.profileImage,
-        source: resolvedSource,
-        agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
-        referralCompanyName: createCandidateDto.referralCompanyName,
-        referralCountryCode: createCandidateDto.referralCountryCode,
-        referralEmail: createCandidateDto.referralEmail,
-        referralPhone: createCandidateDto.referralPhone,
-        referralDescription: createCandidateDto.referralDescription,
-        // set dateOfBirth value to either parsed date or null (optional field)
-        dateOfBirth: createCandidateDto.dateOfBirth ? new Date(createCandidateDto.dateOfBirth) : null,
-        gender: createCandidateDto.gender,
-        currentStatusId: defaultStatusId,
-        totalExperience: totalExperience,
-        currentSalary: createCandidateDto.currentSalary,
-        currentEmployer: createCandidateDto.currentEmployer,
-        currentRole: createCandidateDto.currentRole,
-        expectedMinSalary: createCandidateDto.expectedMinSalary,
-        expectedMaxSalary: createCandidateDto.expectedMaxSalary,
-        sectorType: createCandidateDto.sectorType,
-        visaType: createCandidateDto.visaType,
-        height: createCandidateDto.height,
-        weight: createCandidateDto.weight,
-        skinTone: createCandidateDto.skinTone,
-        languageProficiency: createCandidateDto.languageProficiency,
-        smartness: createCandidateDto.smartness,
-        licensingExam: createCandidateDto.licensingExam,
-        dataFlow: createCandidateDto.dataFlow ?? null,
-        eligibility: createCandidateDto.eligibility ?? null,
-        highestEducation: createCandidateDto.highestEducation,
-        university: createCandidateDto.university,
-        graduationYear: createCandidateDto.graduationYear,
-        gpa: createCandidateDto.gpa,
-        onHoldDuration: createCandidateDto.onHoldDuration,
-        onHoldUntil: createCandidateDto.onHoldUntil ? new Date(createCandidateDto.onHoldUntil) : null,
-        // Legacy fields for backward compatibility
-        experience: totalExperience,
-        skills: createCandidateDto.skills
-          ? JSON.parse(createCandidateDto.skills)
-          : [],
-        // Note: assignedTo field has been removed - all assignments tracked via CandidateProjects
-        teamId: createCandidateDto.teamId,
-        // Handle multiple preferred countries
-        preferredCountries: createCandidateDto.preferredCountries
-          ? {
-            create: createCandidateDto.preferredCountries.map((code) => ({
-              country: { connect: { code } },
-            })),
-          }
-          : undefined,
-        // Handle multiple facility preferences
-        facilityPreferences: createCandidateDto.facilityPreferences
-          ? {
-            create: createCandidateDto.facilityPreferences.map((facilityType) => ({
-              facilityType,
-            })),
-          }
-          : undefined,
-        // Handle multiple qualifications
-        qualifications: createCandidateDto.qualifications
-          ? {
-            create: createCandidateDto.qualifications.map((qual) => ({
-              qualificationId: qual.qualificationId,
-              university: qual.university,
-              graduationYear: qual.graduationYear,
-              gpa: qual.gpa,
-              isCompleted: qual.isCompleted ?? true,
-              notes: qual.notes,
-            })),
-          }
-          : undefined,
-        // Handle work experiences
-        workExperiences: createCandidateDto.workExperiences
-          ? {
-            create: createCandidateDto.workExperiences.map((exp) => {
-              // Handle skills - it might be a JSON string or already parsed
-              let parsedSkills = [];
-              if (exp.skills) {
-                try {
-                  parsedSkills = typeof exp.skills === 'string'
-                    ? JSON.parse(exp.skills)
-                    : exp.skills;
-                } catch (error: any) {
-                  this.logger.warn(`Failed to parse skills for work experience: ${error.message}`);
-                  parsedSkills = [];
-                }
-              }
-
-              return {
-                roleCatalogId: exp.roleCatalogId,
-                companyName: exp.companyName,
-                jobTitle: exp.jobTitle,
-                startDate: new Date(exp.startDate),
-                endDate: exp.endDate ? new Date(exp.endDate) : null,
-                isCurrent: exp.isCurrent ?? false,
-                description: exp.description,
-                salary: exp.salary,
-                location: exp.location,
-                skills: parsedSkills,
-                achievements: exp.achievements,
-              };
-            }),
-          }
-          : undefined,
+    const candidateInclude = {
+      team: true,
+      workExperiences: {
+        include: {
+          roleCatalog: true,
+        },
       },
-      include: {
-        // recruiter relation removed - now accessed via projects
-        team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
+      qualifications: {
+        include: {
+          qualification: true,
         },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
+      },
+      projects: {
+        include: {
+          project: {
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
                 },
               },
             },
           },
         },
       },
+    } as const;
+
+    const candidate = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidate.create({
+        data: {
+          firstName: createCandidateDto.firstName,
+          lastName: createCandidateDto.lastName,
+          countryCode: createCandidateDto.countryCode,
+          mobileNumber: createCandidateDto.mobileNumber,
+          email: createCandidateDto.email,
+          profileImage: createCandidateDto.profileImage,
+          source: resolvedSource,
+          agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
+          referralCompanyName: createCandidateDto.referralCompanyName,
+          referralCountryCode: createCandidateDto.referralCountryCode,
+          referralEmail: createCandidateDto.referralEmail,
+          referralPhone: createCandidateDto.referralPhone,
+          referralDescription: createCandidateDto.referralDescription,
+          dateOfBirth: createCandidateDto.dateOfBirth
+            ? new Date(createCandidateDto.dateOfBirth)
+            : null,
+          gender: createCandidateDto.gender,
+          currentStatusId: defaultStatusId,
+          totalExperience: totalExperience,
+          currentSalary: createCandidateDto.currentSalary,
+          currentEmployer: createCandidateDto.currentEmployer,
+          currentRole: createCandidateDto.currentRole,
+          expectedMinSalary: createCandidateDto.expectedMinSalary,
+          expectedMaxSalary: createCandidateDto.expectedMaxSalary,
+          sectorType: createCandidateDto.sectorType,
+          visaType: createCandidateDto.visaType,
+          height: createCandidateDto.height,
+          weight: createCandidateDto.weight,
+          skinTone: createCandidateDto.skinTone,
+          languageProficiency: createCandidateDto.languageProficiency,
+          smartness: createCandidateDto.smartness,
+          licensingExam: createCandidateDto.licensingExam,
+          dataFlow: createCandidateDto.dataFlow ?? null,
+          eligibility: createCandidateDto.eligibility ?? null,
+          highestEducation: createCandidateDto.highestEducation,
+          university: createCandidateDto.university,
+          graduationYear: createCandidateDto.graduationYear,
+          gpa: createCandidateDto.gpa,
+          onHoldDuration: createCandidateDto.onHoldDuration,
+          onHoldUntil: createCandidateDto.onHoldUntil
+            ? new Date(createCandidateDto.onHoldUntil)
+            : null,
+          experience: totalExperience,
+          skills: createCandidateDto.skills
+            ? JSON.parse(createCandidateDto.skills)
+            : [],
+          teamId: createCandidateDto.teamId,
+          preferredCountries: createCandidateDto.preferredCountries
+            ? {
+                create: createCandidateDto.preferredCountries.map((code) => ({
+                  country: { connect: { code } },
+                })),
+              }
+            : undefined,
+          facilityPreferences: createCandidateDto.facilityPreferences
+            ? {
+                create: createCandidateDto.facilityPreferences.map(
+                  (facilityType) => ({
+                    facilityType,
+                  }),
+                ),
+              }
+            : undefined,
+          qualifications: createCandidateDto.qualifications
+            ? {
+                create: createCandidateDto.qualifications.map((qual) => ({
+                  qualificationId: qual.qualificationId,
+                  university: qual.university,
+                  graduationYear: qual.graduationYear,
+                  gpa: qual.gpa,
+                  isCompleted: qual.isCompleted ?? true,
+                  notes: qual.notes,
+                })),
+              }
+            : undefined,
+          workExperiences: createCandidateDto.workExperiences
+            ? {
+                create: createCandidateDto.workExperiences.map((exp) => {
+                  let parsedSkills = [];
+                  if (exp.skills) {
+                    try {
+                      parsedSkills =
+                        typeof exp.skills === 'string'
+                          ? JSON.parse(exp.skills)
+                          : exp.skills;
+                    } catch (error: any) {
+                      this.logger.warn(
+                        `Failed to parse skills for work experience: ${error.message}`,
+                      );
+                      parsedSkills = [];
+                    }
+                  }
+
+                  return {
+                    roleCatalogId: exp.roleCatalogId,
+                    companyName: exp.companyName,
+                    jobTitle: exp.jobTitle,
+                    startDate: new Date(exp.startDate),
+                    endDate: exp.endDate ? new Date(exp.endDate) : null,
+                    isCurrent: exp.isCurrent ?? false,
+                    description: exp.description,
+                    salary: exp.salary,
+                    location: exp.location,
+                    skills: parsedSkills,
+                    achievements: exp.achievements,
+                  };
+                }),
+              }
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      return tx.candidate.findUniqueOrThrow({
+        where: { id: created.id },
+        include: candidateInclude,
+      });
     });
 
     // Create initial status history entry
@@ -2567,40 +2642,18 @@ export class CandidatesService {
       }
     }
 
-    // Validate project exists
-    const project = await this.prisma.project.findUnique({
-      where: { id: nominateDto.projectId },
-      include: {
-        documentRequirements: true,
-      },
-    });
-    if (!project) {
-      throw new NotFoundException(
-        `Project with ID ${nominateDto.projectId} not found`,
-      );
-    }
-
-    // Check if already nominated
-    const existingNomination = await this.prisma.candidateProjects.findFirst({
-      where: {
-        candidateId,
+    const prismaTx = this.prisma as unknown as Prisma.TransactionClient;
+    const nominationRow = await this.createProjectNominationForWorkflow(
+      prismaTx,
+      candidateId,
+      {
         projectId: nominateDto.projectId,
-      },
-    });
-    if (existingNomination) {
-      throw new ConflictException(
-        `Candidate ${candidateId} is already nominated for project ${nominateDto.projectId}`,
-      );
-    }
-
-    // Create nomination
-    const nomination = await this.prisma.candidateProjects.create({
-      data: {
-        candidateId,
-        projectId: nominateDto.projectId,
-        currentProjectStatusId: 1, // NOMINATED status
         notes: nominateDto.notes,
       },
+    );
+
+    const nomination = await this.prisma.candidateProjects.findUniqueOrThrow({
+      where: { id: nominationRow.id },
       include: {
         candidate: {
           select: {
@@ -2626,21 +2679,6 @@ export class CandidatesService {
         },
       },
     });
-
-    // Auto-transition to pending_documents if project has document requirements
-    if (project.documentRequirements.length > 0) {
-      const pendingDocsStatus = await this.prisma.candidateProjectStatus.findFirst({
-        where: { statusName: 'pending_documents' },
-      });
-      if (pendingDocsStatus) {
-        await this.prisma.candidateProjects.update({
-          where: { id: nomination.id },
-          data: {
-            currentProjectStatusId: pendingDocsStatus.id,
-          },
-        });
-      }
-    }
 
     return nomination;
   }

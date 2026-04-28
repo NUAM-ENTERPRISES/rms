@@ -44,6 +44,18 @@ model Candidate {
 }
 ```
 
+### `AgentProject` junction (agent’s client projects)
+
+**Clients** own **`Project`** rows (`Project.clientId`). **Agents** are separate entities. The **`AgentProject`** table stores master data: *which client projects an external agent is engaged on* (briefing, contract, or supply channel). It does **not** include `candidateId`; candidates are tied to projects via **`CandidateProjects`** after nomination.
+
+- **Table**: `agent_projects` (`AgentProject` in Prisma).
+- **Fields**: `agentId`, `projectId`, optional `notes`, `isActive`, timestamps; unique on `(agentId, projectId)`.
+- **API** (NestJS, under `AgentsController`): `GET /agents/:id/projects`, `POST /agents/:id/projects` (body `{ links: [{ projectId, notes? }] }`), `PATCH /agents/:id/projects/:projectId`, `DELETE /agents/:id/projects/:projectId`. Permissions align with `read:agents` / `edit:agents`.
+
+### Nominations after create
+
+**Candidate create** does not accept project nominations; coordinators nominate via the existing **`nominateCandidate`** (or equivalent) flow after the candidate exists. **`AgentProject`** still constrains which projects an agent is engaged on for other workflows (for example, agent detail **Client projects**).
+
 ## 3. Source Normalization (Constants)
 
 Sources are managed via a central constant to ensure consistency across the application.
@@ -103,6 +115,7 @@ if (!leadershipRoles.includes(userRole)) {
 1. **Source** is always **`agent`** for this role (the API enforces this in `CandidatesService.create`, and the create form defaults to Agent with the source control locked).
 2. **`agentId` is required** — the candidate must be linked to a row in the `Agent` table.
 3. On success, the row is stored with `source: 'agent'` and `agentId` set.
+4. **Nominations** are done after create using the nominate endpoint (not in the create payload).
 
 ### Primary recruiter assignment (no round-robin)
 When a candidate is created with **`source: 'agent'`**, automatic recruiter assignment **does not** use round-robin. The **creating user** becomes the primary assignee in `candidate_recruiter_assignments` (`recruiterId` = creator). This keeps “my” agent-sourced pipeline with the coordinator who registered the candidate.
@@ -124,9 +137,12 @@ Users who are not Recruiters and create candidates with **non-agent** sources (e
 2. If **Agent** is selected, a **Select Agent** control appears; **`agentId`** is submitted with the create payload.
 3. **Submission**: The candidate is saved with `source: "agent"` and `agentId` (when applicable).
 
+### Agent detail
+- **Client projects** section: list linked projects, **Link projects** dialog (active projects not yet linked), and remove link (requires `edit:agents`).
+
 ## 7. Implementation Phases
 
-1. **DB**: Apply Prisma migration and generate client.
-2. **BE**: Create `AgentModule` (CRUD) and update `CandidatesService` visibility filters.
-3. **FE**: Build `Agents` feature folder and update `PersonalInformationStep` form logic.
+1. **DB**: Apply Prisma migration and generate client (including `AgentProject`).
+2. **BE**: Create `AgentModule` (CRUD), agent–project link endpoints, and update `CandidatesService` visibility filters and create/nominate workflow.
+3. **FE**: Build `Agents` feature folder, agent detail **Client projects** UI, and wire agent selection on candidate create where required.
 4. **Migration**: Run a script to convert existing string sources to the new normalized IDs if necessary (e.g. `agents` → `agent` where present in data).

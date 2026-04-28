@@ -4,6 +4,7 @@ import {
   Controller,
   FieldErrors,
 } from "react-hook-form";
+import type { CreateCandidateFormData } from "@/features/candidates/createCandidateFormSchema";
 import {
   Card,
   CardContent,
@@ -24,15 +25,6 @@ import { Separator } from "@/components/ui/separator";
 import { Briefcase } from "lucide-react";
 import { MultiCountrySelect, MultiSelect } from "@/components/molecules";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
-
-type CreateCandidateFormData = {
-  expectedSalary?: number;
-  sectorType?: string;
-  visaType?: string;
-  preferredCountries?: string[];
-  facilityPreferences?: string[];
-  [key: string]: any;
-};
 
 interface JobPreferenceStepProps {
   control: Control<CreateCandidateFormData>;

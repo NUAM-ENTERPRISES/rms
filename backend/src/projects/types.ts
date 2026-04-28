@@ -58,6 +58,29 @@ export interface PaginatedProjects {
   };
 }
 
+/** Minimal project row for pickers / link dialogs (no roles, documents, etc.). */
+export interface ProjectPickerItem {
+  id: string;
+  title: string;
+  status: string;
+  deadline: string | null;
+  client: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface PaginatedProjectPicker {
+  projects: ProjectPickerItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface ProjectStats {
   totalProjects: number;
   activeProjects: number;

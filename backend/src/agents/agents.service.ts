@@ -1,18 +1,69 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
 import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
+import { LinkAgentProjectsDto } from './dto/link-agent-projects.dto';
+import { UpdateAgentProjectDto } from './dto/update-agent-project.dto';
 
 @Injectable()
 export class AgentsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createAgentDto: CreateAgentDto) {
-    const agent = await this.prisma.agent.create({
-      data: createAgentDto,
+    const { projectLinks, ...agentData } = createAgentDto;
+
+    const agent = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.agent.create({
+        data: agentData,
+      });
+
+      if (projectLinks && projectLinks.length > 0) {
+        const merged = new Map<string, string | undefined>();
+        for (const item of projectLinks) {
+          merged.set(item.projectId, item.notes);
+        }
+        const projectIds = [...merged.keys()];
+
+        const projects = await tx.project.findMany({
+          where: { id: { in: projectIds } },
+          select: { id: true },
+        });
+        const found = new Set(projects.map((p) => p.id));
+        const missing = projectIds.filter((id) => !found.has(id));
+        if (missing.length > 0) {
+          throw new BadRequestException(
+            `Project(s) not found: ${missing.join(', ')}`,
+          );
+        }
+
+        for (const projectId of projectIds) {
+          await tx.agentProject.upsert({
+            where: {
+              agentId_projectId: { agentId: created.id, projectId },
+            },
+            create: {
+              agentId: created.id,
+              projectId,
+              notes: merged.get(projectId),
+              isActive: true,
+            },
+            update: {
+              notes: merged.get(projectId),
+              isActive: true,
+            },
+          });
+        }
+      }
+
+      return created;
     });
+
     return {
       success: true,
       message: 'Agent created successfully',
@@ -72,7 +123,7 @@ export class AgentsService {
       where: { id },
       include: {
         _count: {
-          select: { candidates: true },
+          select: { candidates: true, agentProjects: true },
         },
       },
     });
@@ -192,5 +243,143 @@ export class AgentsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getAgentProjects(agentId: string) {
+    const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      throw new NotFoundException(`Agent with ID ${agentId} not found`);
+    }
+
+    const rows = await this.prisma.agentProject.findMany({
+      where: { agentId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            client: { select: { id: true, name: true, type: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Agent projects retrieved successfully',
+      data: rows,
+    };
+  }
+
+  async linkAgentProjects(agentId: string, dto: LinkAgentProjectsDto) {
+    const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      throw new NotFoundException(`Agent with ID ${agentId} not found`);
+    }
+
+    const merged = new Map<string, string | undefined>();
+    for (const item of dto.links) {
+      merged.set(item.projectId, item.notes);
+    }
+    const projectIds = [...merged.keys()];
+
+    const projects = await this.prisma.project.findMany({
+      where: { id: { in: projectIds } },
+      select: { id: true },
+    });
+    const found = new Set(projects.map((p) => p.id));
+    const missing = projectIds.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Project(s) not found: ${missing.join(', ')}`,
+      );
+    }
+
+    await this.prisma.$transaction(
+      projectIds.map((projectId) =>
+        this.prisma.agentProject.upsert({
+          where: {
+            agentId_projectId: { agentId, projectId },
+          },
+          create: {
+            agentId,
+            projectId,
+            notes: merged.get(projectId),
+            isActive: true,
+          },
+          update: {
+            notes: merged.get(projectId),
+            isActive: true,
+          },
+        }),
+      ),
+    );
+
+    return this.getAgentProjects(agentId);
+  }
+
+  async unlinkAgentProject(agentId: string, projectId: string) {
+    const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      throw new NotFoundException(`Agent with ID ${agentId} not found`);
+    }
+
+    const result = await this.prisma.agentProject.deleteMany({
+      where: { agentId, projectId },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException(
+        `No link found between agent ${agentId} and project ${projectId}`,
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Agent project link removed successfully',
+    };
+  }
+
+  async updateAgentProject(
+    agentId: string,
+    projectId: string,
+    dto: UpdateAgentProjectDto,
+  ) {
+    const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
+    if (!agent) {
+      throw new NotFoundException(`Agent with ID ${agentId} not found`);
+    }
+
+    try {
+      const updated = await this.prisma.agentProject.update({
+        where: {
+          agentId_projectId: { agentId, projectId },
+        },
+        data: {
+          ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+          ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              client: { select: { id: true, name: true, type: true } },
+            },
+          },
+        },
+      });
+      return {
+        success: true,
+        message: 'Agent project updated successfully',
+        data: updated,
+      };
+    } catch {
+      throw new NotFoundException(
+        `No link found between agent ${agentId} and project ${projectId}`,
+      );
+    }
   }
 }

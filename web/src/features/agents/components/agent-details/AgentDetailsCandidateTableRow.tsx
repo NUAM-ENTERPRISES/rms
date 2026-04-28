@@ -51,28 +51,6 @@ export function AgentDetailsCandidateTableRow({
 
       <TableCell className="px-5 py-4">
         <div className="flex items-center gap-2">
-          {phoneDigits && (
-            <>
-              <button
-                type="button"
-                onClick={() => window.open(`https://wa.me/${phoneDigits}`, "_blank")}
-                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
-                title="WhatsApp"
-              >
-                <FaWhatsapp className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = `tel:${phoneDigits}`;
-                }}
-                className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                title="Call"
-              >
-                <Phone className="h-3.5 w-3.5" />
-              </button>
-            </>
-          )}
           <span className="text-xs text-slate-600 ml-1">
             {candidate.countryCode} {candidate.mobileNumber}
           </span>

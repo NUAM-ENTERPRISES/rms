@@ -1,4 +1,4 @@
-import { Search, Users, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Users, X, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ type AgentDetailsCandidatesSectionProps = {
   pageSize: number;
   onPageChange: (page: number) => void;
   onViewCandidate: (candidateId: string) => void;
+  canAddCandidate?: boolean;
+  onAddCandidate?: () => void;
 };
 
 export function AgentDetailsCandidatesSection({
@@ -41,15 +43,16 @@ export function AgentDetailsCandidatesSection({
   pageSize,
   onPageChange,
   onViewCandidate,
+  canAddCandidate,
+  onAddCandidate,
 }: AgentDetailsCandidatesSectionProps) {
   return (
-    <div className="px-6 py-6">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-      >
-        <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 }}
+    >
+      <Card className="border-0 shadow-lg rounded-2xl overflow-hidden h-full">
           <div className="bg-white border-b border-slate-100 px-5 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -64,25 +67,38 @@ export function AgentDetailsCandidatesSection({
                 </div>
               </div>
 
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                  placeholder="Search by name, email..."
-                  value={search}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="h-10 pl-10 pr-8 w-full bg-slate-50 border-slate-200 focus:bg-white rounded-xl"
-                  aria-label="Search candidates"
-                />
-                {search && (
-                  <button
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-56">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    placeholder="Search by name, email..."
+                    value={search}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="h-10 pl-10 pr-8 w-full bg-slate-50 border-slate-200 focus:bg-white rounded-xl"
+                    aria-label="Search candidates"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={onClearSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {canAddCandidate && onAddCandidate ? (
+                  <Button
                     type="button"
-                    onClick={onClearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    aria-label="Clear search"
+                    size="sm"
+                    onClick={onAddCandidate}
+                    className="gap-2 shrink-0"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+                    <UserPlus className="h-4 w-4" aria-hidden />
+                    <span className="hidden sm:inline">Add Candidate</span>
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -247,7 +263,6 @@ export function AgentDetailsCandidatesSection({
             )}
           </CardContent>
         </Card>
-      </motion.div>
-    </div>
+    </motion.div>
   );
 }

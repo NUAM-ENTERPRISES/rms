@@ -265,6 +265,67 @@ describe('ProjectsService', () => {
     });
   });
 
+  describe('findPickerList', () => {
+    it('should return minimal project rows with pagination', async () => {
+      const deadline = new Date('2026-12-01T00:00:00.000Z');
+      const slim = [
+        {
+          id: 'p1',
+          title: 'Alpha',
+          status: 'active',
+          deadline,
+          client: { id: 'c1', name: 'Client A', type: 'HEALTHCARE_ORGANIZATION' },
+        },
+      ];
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(slim as any);
+
+      const result = await service.findPickerList({ page: 1, limit: 10 });
+
+      expect(result.pagination).toEqual({
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      });
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0]).toEqual({
+        id: 'p1',
+        title: 'Alpha',
+        status: 'active',
+        deadline: deadline.toISOString(),
+        client: { id: 'c1', name: 'Client A', type: 'HEALTHCARE_ORGANIZATION' },
+      });
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            id: true,
+            title: true,
+            status: true,
+            deadline: true,
+            client: { select: { id: true, name: true, type: true } },
+          }),
+        }),
+      );
+    });
+
+    it('should filter by title search and default status active', async () => {
+      prismaService.project.count.mockResolvedValue(0);
+      prismaService.project.findMany.mockResolvedValue([]);
+
+      await service.findPickerList({ search: '  nursing  ' });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'active',
+            title: { contains: 'nursing', mode: 'insensitive' },
+          },
+        }),
+      );
+    });
+  });
+
   describe('getEligibleCandidates & getNominatedCandidates - qualification search', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
