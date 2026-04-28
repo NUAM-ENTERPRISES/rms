@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   useGetAgentProjectsQuery,
   useLinkAgentProjectsMutation,
@@ -60,6 +61,11 @@ export function AgentLinkedProjectsSection({
   >({});
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  /** Project pending removal from linked list (confirmation modal) */
+  const [unlinkTarget, setUnlinkTarget] = useState<{
+    projectId: string;
+    projectTitle: string;
+  } | null>(null);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -500,7 +506,12 @@ export function AgentLinkedProjectsSection({
                     size="icon"
                     className="h-8 w-8 shrink-0 text-slate-400 hover:text-destructive hover:bg-destructive/10"
                     disabled={isUnlinking}
-                    onClick={() => void handleUnlink(row.projectId)}
+                    onClick={() =>
+                      setUnlinkTarget({
+                        projectId: row.projectId,
+                        projectTitle: row.project.title,
+                      })
+                    }
                     aria-label={`Remove ${row.project.title}`}
                   >
                     <Trash2 className="h-4 w-4" aria-hidden />
@@ -511,6 +522,27 @@ export function AgentLinkedProjectsSection({
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={unlinkTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setUnlinkTarget(null);
+        }}
+        onConfirm={() => {
+          if (unlinkTarget) {
+            void handleUnlink(unlinkTarget.projectId);
+          }
+        }}
+        title="Remove linked project?"
+        description={
+          unlinkTarget
+            ? `This will unlink "${unlinkTarget.projectTitle}" from this agent. You can link it again later.`
+            : ""
+        }
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </section>
   );
 }
