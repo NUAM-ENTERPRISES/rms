@@ -58,6 +58,20 @@ export const CANDIDATE_ASSIGNMENT_TYPE = {
   CRE_CONVERTED: "cre_converted",
 } as const;
 
+/** Normalize legacy DB value `agents` to canonical `agent`. */
+export function normalizeCandidateSource(
+  source: string | null | undefined,
+): string | undefined {
+  if (!source) return undefined;
+  return source === 'agents' ? 'agent' : source;
+}
+
+export function isAgentCandidateSource(
+  source: string | null | undefined,
+): boolean {
+  return normalizeCandidateSource(source) === 'agent';
+}
+
 export const CANDIDATE_SOURCES = [
   { id: 'manual', value: 'manual', label: 'Manual' },
   { id: 'meta', value: 'meta', label: 'Meta' },

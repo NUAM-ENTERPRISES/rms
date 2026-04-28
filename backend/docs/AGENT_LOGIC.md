@@ -50,6 +50,8 @@ Sources are managed via a central constant to ensure consistency across the appl
 
 **Path**: `backend/src/common/constants/candidate-constants.ts` & `web/src/constants/candidate-constants.ts`
 
+The canonical value for agent-originated pipeline is **`agent`** (not `agents`). Helpers `normalizeCandidateSource` and `isAgentCandidateSource` in the backend constants file treat legacy `agents` as `agent` where needed.
+
 ```typescript
 export const CANDIDATE_SOURCES = [
   { id: 'manual', value: 'manual', label: 'Manual' },
@@ -93,20 +95,38 @@ if (!leadershipRoles.includes(userRole)) {
 
 **Implementation note:** The runtime allowlist lives in `canSeeAgentSourcedCandidates` (`backend/src/candidates/candidate-visibility.ts`) and includes leadership-style roles plus **`Client Coordinator`**.
 
-## 5. UI/UX Workflow
+## 5. Client Coordinator Pipeline
 
-### Agents Page (Admins/Managers Only)
-- A new sidebar item "Agents" leads to a management dashboard.
-- Admins can create, edit, or deactivate Agents.
+**Client Coordinators** manage external agents and candidates that enter through the agent channel.
 
-### Candidate Creation
-1. **Source Dropdown**: Fetches labels from the `CANDIDATE_SOURCES` constant.
-2. **Conditional Agent Selection**: If "Agent" is selected as the source, a "Select Agent" searchable dropdown appears (fetching data from the `Agent` table).
-3. **Submission**: The candidate is saved with `source: "agent"` and the specific `agentId`.
+### Creating candidates
+1. **Source** is always **`agent`** for this role (the API enforces this in `CandidatesService.create`, and the create form defaults to Agent with the source control locked).
+2. **`agentId` is required** — the candidate must be linked to a row in the `Agent` table.
+3. On success, the row is stored with `source: 'agent'` and `agentId` set.
 
-## 6. Implementation Phases
+### Primary recruiter assignment (no round-robin)
+When a candidate is created with **`source: 'agent'`**, automatic recruiter assignment **does not** use round-robin. The **creating user** becomes the primary assignee in `candidate_recruiter_assignments` (`recruiterId` = creator). This keeps “my” agent-sourced pipeline with the coordinator who registered the candidate.
+
+Implementation: `RecruiterAssignmentService.getBestRecruiterForAssignment` checks candidate `source` after the “creator is Recruiter” rule. See `backend/RECRUITER_ASSIGNMENT_LOGIC.md` and `backend/src/candidates/services/recruiter-assignment.service.ts`.
+
+### Other sources
+Users who are not Recruiters and create candidates with **non-agent** sources (e.g. `manual`, `meta`) still get **round-robin** assignment to a Recruiter by workload. Meta lead flows continue to use `source: 'meta'` and are unchanged by the agent-source rule.
+
+## 6. UI/UX Workflow
+
+### Agents page
+- Users with **Agent** permissions use the Agents area to manage partner records.
+- **Total Candidates (Client Coordinator):** On the dashboard at `/agents`, the **Total Candidates** tile for a **Client Coordinator** shows the count of candidates **assigned to the logged-in user** with **`source: 'agent'`**, using the recruiter “my candidates” summary (assignment-based), not the sum of per-agent `_count.candidates` on each `Agent` row.
+- For other roles on the same page, **Total Candidates** may still reflect aggregate candidate volume linked to Agent rows (`Candidate.agentId`), as before.
+
+### Candidate creation (general)
+1. **Source** is chosen from `CANDIDATE_SOURCES`.
+2. If **Agent** is selected, a **Select Agent** control appears; **`agentId`** is submitted with the create payload.
+3. **Submission**: The candidate is saved with `source: "agent"` and `agentId` (when applicable).
+
+## 7. Implementation Phases
 
 1. **DB**: Apply Prisma migration and generate client.
 2. **BE**: Create `AgentModule` (CRUD) and update `CandidatesService` visibility filters.
 3. **FE**: Build `Agents` feature folder and update `PersonalInformationStep` form logic.
-4. **Migration**: Run a script to convert existing string sources to the new normalized IDs if necessary.
+4. **Migration**: Run a script to convert existing string sources to the new normalized IDs if necessary (e.g. `agents` → `agent` where present in data).

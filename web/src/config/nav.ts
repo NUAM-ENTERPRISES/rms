@@ -150,9 +150,9 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "System Admin",
       "CRE",
-      "Client Coordinator",
       // "Screening Trainer",
     ],
+    hiddenForRoles: ["Client Coordinator"],
     children: [
       {
         id: "candidate-overview",
@@ -196,6 +196,8 @@ export const navigationConfig: NavItem[] = [
     path: "/agents",
     icon: UserSquare2,
     permissions: ["read:agents"],
+    // Client Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
+    hiddenForRoles: ["Client Coordinator"],
   },
   {
     id: "teams",

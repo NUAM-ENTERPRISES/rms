@@ -437,6 +437,8 @@ export interface CreateCandidateRequest {
   }>;
   skills?: string;
   teamId?: string;
+  /** Required when source is agent */
+  agentId?: string;
 }
 
 export interface UpdateCandidateRequest {

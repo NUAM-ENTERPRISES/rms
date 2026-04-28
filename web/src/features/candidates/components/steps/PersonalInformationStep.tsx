@@ -22,18 +22,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CountryCodeSelect } from "@/components/molecules";
+import { CountryCodeSelect, SelectAgent } from "@/components/molecules";
 import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES } from "@/constants/candidate-constants";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
-import { User, Phone, Mail, Calendar, Ruler, Weight, Sparkles, Building2 } from "lucide-react";
-import { baseApi } from "@/app/api/baseApi";
-
-// Simple hook to fetch agents
-const useAgents = () => {
-  const { data, isLoading } = baseApi.useGetAgentsQuery();
-  return { agents: data?.data || [], isLoading };
-};
-
+import {
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  Ruler,
+  Weight,
+  Sparkles,
+  Building2,
+  Languages,
+  Brain,
+} from "lucide-react";
 type CreateCandidateFormData = {
   firstName: string;
   lastName: string;
@@ -59,6 +62,8 @@ interface PersonalInformationStepProps {
   setSelectedImage: (image: File | null) => void;
   uploadingImage: boolean;
   isLoading: boolean;
+  /** Client Coordinator pipeline: source is always agent */
+  lockSourceToAgent?: boolean;
 }
 
 export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = ({
@@ -68,13 +73,12 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   setSelectedImage,
   uploadingImage,
   isLoading,
+  lockSourceToAgent = false,
 }) => {
   const source = useWatch({
     control,
     name: "source",
   });
-
-  const { agents, isLoading: isLoadingAgents } = useAgents();
 
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -303,6 +307,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
+                    disabled={lockSourceToAgent}
                   >
                     <SelectTrigger className="h-11 bg-white border-slate-200">
                       <SelectValue placeholder="Select source" />
@@ -325,7 +330,7 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
             </div>
 
             {/* Conditional Agent Selection */}
-            {source === "agent" && (
+            {(source === "agent" || lockSourceToAgent) && (
               <div className="space-y-2">
                 <Label className="text-slate-700 font-medium flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-slate-500" />
@@ -335,34 +340,16 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                   name="agentId"
                   control={control}
                   render={({ field }) => (
-                    <Select
+                    <SelectAgent
                       value={field.value}
                       onValueChange={field.onChange}
-                      disabled={isLoadingAgents}
-                    >
-                      <SelectTrigger className="h-11 bg-white border-slate-200">
-                        <SelectValue placeholder={isLoadingAgents ? "Loading agents..." : "Select an agent"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {agents.map((agent: any) => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            {agent.name} {agent.companyName ? `(${agent.companyName})` : ""}
-                          </SelectItem>
-                        ))}
-                        {agents.length === 0 && !isLoadingAgents && (
-                          <div className="p-2 text-sm text-slate-500 text-center">
-                            No agents found
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select an agent"
+                      error={errors.agentId?.message as string | undefined}
+                      activeOnly
+                      pageSize={10}
+                    />
                   )}
                 />
-                {errors.agentId && (
-                  <p className="text-sm text-red-600">
-                    {errors.agentId.message as string}
-                  </p>
-                )}
               </div>
             )}
 

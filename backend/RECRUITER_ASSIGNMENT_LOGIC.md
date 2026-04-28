@@ -14,7 +14,11 @@ When a candidate is created, the system automatically assigns a recruiter using 
    - ❌ **No round-robin assignment happens**
    - This ensures recruiters own the candidates they create
 
-2. **If the creator is NOT a Recruiter (e.g., Manager, Team Head, Admin):**
+2. **If the candidate’s `source` is `agent` (after normalizing legacy `agents` to `agent`) and the creator is not already handled by rule 1:**
+   - ✅ The candidate is assigned **directly to the creating user** (e.g. **Client Coordinator** agent pipeline)
+   - ❌ **No round-robin assignment** for agent-sourced creates
+
+3. **If the creator is NOT a Recruiter and the source is not `agent` (e.g., Manager, Team Head, Admin creating a manual candidate):**
    - ✅ The system uses **round-robin assignment** based on workload
    - ✅ The recruiter with the **least number of active candidates** is assigned
    - This ensures fair workload distribution
@@ -56,6 +60,9 @@ const recruiter = await this.getBestRecruiterForAssignment(
 // Step 4: Inside getBestRecruiterForAssignment()
 if (isRecruiter) {
   // Return the creator as the recruiter
+  return { id: creator.id, name: creator.name, email: creator.email };
+} else if (candidate.source is agent) {
+  // Agent-sourced: assign to creator (Client Coordinator / agent pipeline)
   return { id: creator.id, name: creator.name, email: creator.email };
 } else {
   // Use round-robin (least workload)

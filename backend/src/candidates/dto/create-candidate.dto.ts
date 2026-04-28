@@ -82,12 +82,29 @@ export class CreateCandidateDto {
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event'],
     default: 'manual',
   })
   @IsOptional()
-  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'])
+  @IsEnum([
+    'manual',
+    'meta',
+    'direct_enquiry',
+    'referral',
+    'paid_ads',
+    'agent',
+    'hospital_visit',
+    'expo_event',
+  ])
   source?: string = 'manual';
+
+  @ApiPropertyOptional({
+    description: 'Linked Agent row when source is agent',
+    example: 'clxxxxxxxx',
+  })
+  @IsOptional()
+  @IsString()
+  agentId?: string;
 
   @ApiPropertyOptional({
     description: 'Referral company name (only if source is referral)',

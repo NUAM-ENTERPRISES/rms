@@ -33,7 +33,16 @@ import {
   WorkExperienceStep,
   ChecklistStep,
 } from "../components/steps";
-import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
+import {
+  SECTOR_TYPES,
+  VISA_TYPES,
+  CANDIDATE_SOURCES,
+} from "@/constants/candidate-constants";
+
+const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
+  string,
+  ...string[],
+];
 
 // ==================== VALIDATION SCHEMA ====================
 
@@ -52,7 +61,8 @@ const createCandidateSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
+  source: z.enum(CANDIDATE_SOURCE_IDS),
+  agentId: z.string().optional(),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional(),
   expectedSalary: z.preprocess(
@@ -97,7 +107,19 @@ const createCandidateSchema = z.object({
       })
     )
     .optional(),
-});
+})
+  .superRefine((data, ctx) => {
+    if (
+      data.source === "agent" &&
+      (!data.agentId || !String(data.agentId).trim())
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select an agent",
+        path: ["agentId"],
+      });
+    }
+  });
 
 type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;
 
@@ -152,10 +174,12 @@ const STEPS = [
 
 export default function CreateCandidatePage() {
   const navigate = useNavigate();
-  const canManageCandidates = useCan("manage:candidates");
+  const canCreateCandidate =
+    useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruiter");
   const isCRE = hasRole("CRE");
+  const isClientCoordinator = hasRole("Client Coordinator");
 
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
@@ -199,7 +223,14 @@ export default function CreateCandidatePage() {
       countryCode: "+91",
       mobileNumber: "",
       email: "",
-      source: (isCRE ? "direct_enquiry" : isRecruiter ? "referral" : "manual") as any,
+      source: (isCRE
+        ? "direct_enquiry"
+        : isRecruiter
+          ? "referral"
+          : isClientCoordinator
+            ? "agent"
+            : "manual") as any,
+      agentId: "",
       gender: "" as any,
       dateOfBirth: "",
       // physical information defaults
@@ -224,7 +255,7 @@ export default function CreateCandidatePage() {
   });
 
   // Permission check
-  if (!canManageCandidates) {
+  if (!canCreateCandidate) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <Card className="w-full max-w-md mx-4">
@@ -253,6 +284,7 @@ export default function CreateCandidatePage() {
       "countryCode",
       "mobileNumber",
       "source",
+      "agentId",
       "gender",
       "referralCompanyName",
       "referralEmail",
@@ -348,6 +380,10 @@ export default function CreateCandidatePage() {
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {
         payload.email = data.email;
+      }
+
+      if (data.source === "agent" && data.agentId?.trim()) {
+        payload.agentId = data.agentId.trim();
       }
 
       // Referral fields
@@ -510,6 +546,7 @@ export default function CreateCandidatePage() {
             setSelectedImage={setSelectedImage}
             uploadingImage={uploadingImage}
             isLoading={isLoading}
+            lockSourceToAgent={isClientCoordinator}
           />
         );
       case 2:

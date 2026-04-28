@@ -42,7 +42,9 @@ import {
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
+  normalizeCandidateSource,
 } from '../common/constants';
+import { ROLE_NAMES } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 
 @Injectable()
@@ -193,6 +195,49 @@ export class CandidatesService {
 
     this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
 
+    const creatingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        userRoles: {
+          include: {
+            role: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const isClientCoordinator = creatingUser?.userRoles.some(
+      (ur) =>
+        ur.role?.name?.toLowerCase() ===
+        ROLE_NAMES.CLIENT_COORDINATOR.toLowerCase(),
+    );
+
+    let resolvedSource =
+      normalizeCandidateSource(createCandidateDto.source) ?? 'manual';
+    if (isClientCoordinator) {
+      resolvedSource = 'agent';
+    }
+
+    let resolvedAgentId = createCandidateDto.agentId ?? undefined;
+    if (resolvedSource === 'agent') {
+      if (!resolvedAgentId) {
+        throw new BadRequestException(
+          'agentId is required when source is agent',
+        );
+      }
+      const agentRecord = await this.prisma.agent.findUnique({
+        where: { id: resolvedAgentId },
+        select: { id: true },
+      });
+      if (!agentRecord) {
+        throw new NotFoundException(
+          `Agent with ID ${resolvedAgentId} not found`,
+        );
+      }
+    }
+
     // Get the default status info for history tracking
     const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
@@ -200,11 +245,7 @@ export class CandidatesService {
       select: { statusName: true },
     });
 
-    // Get user info for status history
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, email: true },
-    });
+    const user = creatingUser;
 
     // Create candidate with qualifications
     const candidate = await this.prisma.candidate.create({
@@ -215,7 +256,8 @@ export class CandidatesService {
         mobileNumber: createCandidateDto.mobileNumber,
         email: createCandidateDto.email,
         profileImage: createCandidateDto.profileImage,
-        source: createCandidateDto.source || 'manual',
+        source: resolvedSource,
+        agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
         referralCompanyName: createCandidateDto.referralCompanyName,
         referralCountryCode: createCandidateDto.referralCountryCode,
         referralEmail: createCandidateDto.referralEmail,

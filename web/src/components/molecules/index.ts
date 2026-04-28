@@ -18,6 +18,8 @@ export { default as QualificationWorkExperienceModal } from "./QualificationWork
 export { CandidateResumeList } from "./CandidateResumeList";
 export { PDFViewer } from "./PDFViewer";
 export { ClientSelect } from "./ClientSelect";
+export { SelectAgent } from "./SelectAgent";
+export type { SelectAgentProps } from "./SelectAgent";
 export { JobTitleSelect } from "./JobTitleSelect";
 export { DepartmentSelect } from "./DepartmentSelect";
 export { QualificationSelect } from "./QualificationSelect";

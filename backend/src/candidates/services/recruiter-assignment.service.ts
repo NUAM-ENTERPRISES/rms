@@ -6,6 +6,9 @@ import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
+
+export type DirectAssignmentKind = 'recruiter' | 'agent_source';
 
 export interface RecruiterInfo {
   id: string;
@@ -29,12 +32,18 @@ export class RecruiterAssignmentService {
   /**
    * Get the best recruiter to assign to a candidate based on user role and workload
    * If the creator is a recruiter, assign the candidate to them directly
+   * If the candidate source is agent, assign to the creator (Client Coordinator pipeline; no round-robin)
    * Otherwise, use round-robin (least workload) assignment
    */
   async getBestRecruiterForAssignment(
     candidateId: string,
     createdByUserId: string,
-  ): Promise<RecruiterInfo & { isRoundRobin: boolean }> {
+  ): Promise<
+    RecruiterInfo & {
+      isRoundRobin: boolean;
+      directAssignmentKind?: DirectAssignmentKind;
+    }
+  > {
     // Get the user who created the candidate with their roles
     const creator = await this.prisma.user.findUnique({
       where: { id: createdByUserId },
@@ -83,10 +92,31 @@ export class RecruiterAssignmentService {
         mobileNumber: creator.mobileNumber,
         countryCode: creator.countryCode,
         isRoundRobin: false,
+        directAssignmentKind: 'recruiter',
       };
     }
 
-    // If not a recruiter, use workload-based round-robin assignment (no source check)
+    const candidateRow = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { source: true },
+    });
+    const source = candidateRow?.source;
+    if (isAgentCandidateSource(source)) {
+      this.logger.log(
+        `✅ Candidate ${candidateId} is agent-sourced — assigning directly to creator ${creator.name} (skipping round-robin)`,
+      );
+      return {
+        id: creator.id,
+        name: creator.name,
+        email: creator.email,
+        mobileNumber: creator.mobileNumber,
+        countryCode: creator.countryCode,
+        isRoundRobin: false,
+        directAssignmentKind: 'agent_source',
+      };
+    }
+
+    // If not a recruiter and not agent-sourced, use workload-based round-robin assignment
     this.logger.log(
       `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment`,
     );
@@ -216,6 +246,14 @@ export class RecruiterAssignmentService {
       createdByUserId,
     );
 
+    const defaultAssignmentReason =
+      reason ||
+      (recruiter.isRoundRobin
+        ? 'Automatic round-robin assignment on candidate creation'
+        : recruiter.directAssignmentKind === 'agent_source'
+          ? 'Direct assignment: agent-sourced candidate assigned to creator'
+          : 'Direct recruiter-to-candidate assignment (Creator is Recruiter)');
+
     // Get current active recruiter before deactivating
     const currentAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
       where: {
@@ -247,11 +285,7 @@ export class RecruiterAssignmentService {
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
         createdBy: createdByUserId,
-        reason:
-          reason ||
-          (recruiter.isRoundRobin
-            ? 'Automatic round-robin assignment on candidate creation'
-            : 'Direct recruiter-to-candidate assignment (Creator is Recruiter)'),
+        reason: defaultAssignmentReason,
       },
     });
 
@@ -260,7 +294,7 @@ export class RecruiterAssignmentService {
       candidateId,
       recruiter.id,
       createdByUserId,
-      reason,
+      defaultAssignmentReason,
       currentAssignment?.recruiterId,
       createdByUserId,
       recruiter.isRoundRobin,
@@ -718,6 +752,12 @@ export class RecruiterAssignmentService {
       skip,
       take: limit,
       include: {
+        agent: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         team: {
           select: {
             id: true,

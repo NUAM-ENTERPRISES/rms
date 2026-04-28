@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { 
   Plus, 
   Search, 
@@ -7,6 +7,7 @@ import {
   Mail, 
   Phone, 
   Users, 
+  UserPlus,
   Edit2, 
   Trash2, 
   MoreVertical,
@@ -62,20 +63,70 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { StatusTile } from "@/components/molecules";
 import { AGENT_TYPES } from "@/constants/agent-types";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
+import { useDebounce } from "@/hooks";
+import {
+  useGetRecruiterMyCandidatesQuery,
+  useTransferCandidateMutation,
+} from "@/features/candidates/api";
+import { TransferCandidateDialog } from "@/features/candidates/components/TransferCandidateDialog";
+import { useAppSelector } from "@/app/hooks";
+import { ClientCoordinatorCandidateTableRows } from "../components/ClientCoordinatorCandidateTableRows";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
+  const { user } = useAppSelector((state) => state.auth);
   
   const canWrite = useCan("write:agents");
   const canEdit = useCan("edit:agents");
   const canDelete = useCan("delete:agents");
+  /** Create API uses write:candidates; CreateCandidatePage also checks manage:candidates */
+  const canCreateCandidate =
+    useCan("write:candidates") || useCan("manage:candidates");
+  const canWriteCandidates = useCan("write:candidates");
+  const canTransferCandidates = user?.roles?.some((role) =>
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
+  );
+  const isClientCoordinator = useHasRole("Client Coordinator");
+
+  const [transferDialog, setTransferDialog] = useState<{
+    isOpen: boolean;
+    candidateId?: string;
+    candidateName?: string;
+    currentRecruiter?: { id: string; name?: string; email?: string } | null;
+  }>({ isOpen: false });
+  const [transferCandidateMutation, { isLoading: isTransferring }] =
+    useTransferCandidateMutation();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 350);
+  const [agentListPage, setAgentListPage] = useState(1);
+  const agentPageSize = 10;
+
+  const [candidateListPage, setCandidateListPage] = useState(1);
+  const candidatePageSize = 10;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates">("all");
+
+  /** CC: my-candidates (agent source) tile uses counts.totalAssigned from API */
+  const { data: coordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(
+    { page: 1, limit: 1, source: "agent" },
+    { skip: !isClientCoordinator },
+  );
+
+  const { data: coordinatorCandidatesPayload, isLoading: coordinatorCandidatesLoading } =
+    useGetRecruiterMyCandidatesQuery(
+      {
+        page: candidateListPage,
+        limit: candidatePageSize,
+        source: "agent",
+        search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
+      },
+      { skip: !isClientCoordinator || activeFilter !== "with-candidates" },
+    );
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -84,33 +135,117 @@ export default function AgentsPage() {
     agentType: "",
   });
 
-  const { data: agentsData, isLoading } = useGetAgentsQuery();
+  /** When the main agent table is skipped (CC on Total Candidates view), still need page-1 totals for tiles — limit 10 only (matches list page size). */
+  const agentsListSkipped =
+    isClientCoordinator && activeFilter === "with-candidates";
+  const { data: agentsForTilesWhenSkipped } = useGetAgentsQuery(
+    { page: 1, limit: agentPageSize },
+    { skip: !agentsListSkipped },
+  );
+
+  /** Non-CC: sum candidate counts across many agents */
+  const { data: agentsForStatSum } = useGetAgentsQuery(
+    { page: 1, limit: 500 },
+    { skip: isClientCoordinator },
+  );
+
+  const { data: agentsPaged, isLoading: agentsLoading } = useGetAgentsQuery(
+    {
+      page: agentListPage,
+      limit: agentPageSize,
+      search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
+      isActive: activeFilter === "active" ? true : undefined,
+    },
+    { skip: agentsListSkipped },
+  );
+
   const [createAgent] = useCreateAgentMutation();
   const [updateAgent] = useUpdateAgentMutation();
   const [deleteAgent] = useDeleteAgentMutation();
 
-  const agents = agentsData?.data || [];
-  
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agent.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      agent.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (activeFilter === "active") {
-      return matchesSearch && agent.isActive !== false;
-    }
+  const agents = agentsPaged?.data ?? [];
+
+  const filteredAgents = agents.filter((agent) => {
     if (activeFilter === "with-candidates") {
-      return matchesSearch && (agent._count?.candidates || 0) > 0;
+      return (agent._count?.candidates || 0) > 0;
     }
-    return matchesSearch;
+    return true;
   });
 
-  const totalCandidates = agents.reduce((acc, curr) => acc + (curr._count?.candidates || 0), 0);
+  const totalCandidatesFromAgentRows = useMemo(
+    () =>
+      (agentsForStatSum?.data ?? []).reduce(
+        (acc, curr) => acc + (curr._count?.candidates || 0),
+        0,
+      ),
+    [agentsForStatSum],
+  );
+
+  const totalCandidates = isClientCoordinator
+    ? (coordinatorCountsPayload?.counts?.totalAssigned ?? 0)
+    : totalCandidatesFromAgentRows;
+
+  const totalAgentsCount =
+    agentsPaged?.meta?.total ??
+    agentsForTilesWhenSkipped?.meta?.total ??
+    0;
+
+  /** No separate GET /agents?isActive=true on load — use table meta when Active filter is on; else derive from stat batch (non-CC) or current page rows (CC). */
+  const activeAgentsCount = useMemo(() => {
+    if (activeFilter === "active") {
+      return agentsPaged?.meta?.total ?? 0;
+    }
+    if (!isClientCoordinator) {
+      return (agentsForStatSum?.data ?? []).filter(
+        (a) => a.isActive !== false,
+      ).length;
+    }
+    return (
+      agentsPaged?.data ??
+      agentsForTilesWhenSkipped?.data ??
+      []
+    ).filter((a) => a.isActive !== false).length;
+  }, [
+    activeFilter,
+    agentsPaged?.meta?.total,
+    agentsPaged?.data,
+    agentsForTilesWhenSkipped?.data,
+    agentsForStatSum?.data,
+    isClientCoordinator,
+  ]);
+
+  useEffect(() => {
+    setAgentListPage(1);
+  }, [activeFilter, debouncedSearch]);
+
+  useEffect(() => {
+    setCandidateListPage(1);
+  }, [debouncedSearch, activeFilter]);
+
+  const handleTransferConfirm = async (data: {
+    targetRecruiterId: string;
+    reason: string;
+  }) => {
+    if (!transferDialog.candidateId) return;
+    try {
+      await transferCandidateMutation({
+        candidateId: transferDialog.candidateId,
+        targetRecruiterId: data.targetRecruiterId,
+        reason: data.reason,
+      }).unwrap();
+      setTransferDialog({ isOpen: false });
+      toast.success("Candidate transferred");
+    } catch {
+      toast.error("Failed to transfer candidate");
+    }
+  };
+
+  const isCandidatePipelineFilter = activeFilter === "with-candidates";
 
   const statTiles = [
     { 
       label: "Total Agents", 
-      value: agents.length, 
+      value: totalAgentsCount, 
       icon: Handshake, 
       statusFilter: "all", 
       color: "from-blue-500 to-cyan-500",
@@ -122,11 +257,13 @@ export default function AgentsPage() {
       icon: Users, 
       statusFilter: "with-candidates", 
       color: "from-indigo-500 to-violet-500",
-      subtitle: "Referral volume" 
+      subtitle: isClientCoordinator
+        ? "Total assigned (agent-sourced my-candidates)"
+        : "Referral volume",
     },
     { 
       label: "Active Agents", 
-      value: agents.filter(a => a.isActive !== false).length, 
+      value: activeAgentsCount, 
       icon: LayoutGrid, 
       statusFilter: "active", 
       color: "from-purple-500 to-pink-500",
@@ -184,6 +321,12 @@ export default function AgentsPage() {
     }
   };
 
+  const coordinatorCandidates =
+    coordinatorCandidatesPayload?.data ?? [];
+  const coordinatorPagination = coordinatorCandidatesPayload?.pagination;
+  const showCcCandidateTable =
+    isClientCoordinator && isCandidatePipelineFilter;
+
   return (
     <div className="py-2 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -232,25 +375,56 @@ export default function AgentsPage() {
               <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-4">
                   <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
-                    <Handshake className="h-6 w-6 text-white" />
+                    {isCandidatePipelineFilter && isClientCoordinator ? (
+                      <Users className="h-6 w-6 text-white" aria-hidden />
+                    ) : (
+                      <Handshake className="h-6 w-6 text-white" aria-hidden />
+                    )}
                   </div>
                   <div className="flex-1">
                     <h4 className="text-lg font-semibold text-gray-900">
-                      {activeFilter === "all" ? "All Agents" : activeFilter === "active" ? "Active Agents" : "Productive Agents"}
+                      {activeFilter === "all"
+                        ? "All Agents"
+                        : activeFilter === "active"
+                          ? "Active Agents"
+                          : isClientCoordinator
+                            ? "Your candidates"
+                            : "Agents with candidates"}
                     </h4>
                     <p className="text-sm text-gray-600 font-medium">
-                      {filteredAgents.length} agent{filteredAgents.length !== 1 ? "s" : ""} found
+                      {showCcCandidateTable
+                        ? `${coordinatorPagination?.totalCount ?? 0} candidate${
+                            (coordinatorPagination?.totalCount ?? 0) !== 1
+                              ? "s"
+                              : ""
+                          } (assigned total: ${totalCandidates})`
+                        : `${filteredAgents.length} agent${
+                            filteredAgents.length !== 1 ? "s" : ""
+                          } on this page`}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {canWrite && (
-                      <Button 
-                        onClick={() => handleOpenModal()} 
+                    {activeFilter === "with-candidates" && canCreateCandidate ? (
+                      <Button
+                        type="button"
+                        onClick={() => navigate("/candidates/create")}
+                        className="h-9 px-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-md rounded-lg gap-2 text-sm"
+                      >
+                        <UserPlus className="h-4 w-4" /> Add Candidate
+                      </Button>
+                    ) : null}
+                    {canWrite &&
+                    !(
+                      activeFilter === "with-candidates" && canCreateCandidate
+                    ) ? (
+                      <Button
+                        type="button"
+                        onClick={() => handleOpenModal()}
                         className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
                       >
                         <Plus className="h-4 w-4" /> Add Agent
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -260,7 +434,11 @@ export default function AgentsPage() {
                       <Search className="h-4 w-4 text-gray-400" />
                     </div>
                     <Input
-                      placeholder="Search agents..."
+                      placeholder={
+                        showCcCandidateTable
+                          ? "Search candidates..."
+                          : "Search agents..."
+                      }
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-9 h-9 text-sm border-gray-200 bg-white focus:ring-2 focus:ring-blue-500/20 rounded-lg"
@@ -270,132 +448,310 @@ export default function AgentsPage() {
               </div>
             </div>
 
-            <Table>
-              <TableHeader className="sticky">
-                <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Agent Details</TableHead>
-                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Company</TableHead>
-                  <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Contact</TableHead>
-                  <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Candidates</TableHead>
-                  <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAgents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-64 text-center">
-                      <div className="flex flex-col items-center justify-center space-y-3">
-                        <div className="bg-slate-50 p-4 rounded-full border border-slate-100 shadow-inner">
-                          <Search className="h-8 w-8 text-slate-300" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-slate-900 font-semibold">{isLoading ? "Loading agents..." : "No agents found"}</p>
-                          <p className="text-slate-500 text-sm">Try adjusting your search or filters.</p>
-                        </div>
+            {showCcCandidateTable ? (
+              <>
+                <Table>
+                  <TableHeader className="sticky">
+                    <TableRow className="border-b border-gray-200 bg-gray-50/50">
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Candidate
+                      </TableHead>
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Created By
+                      </TableHead>
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Agent
+                      </TableHead>
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Created
+                      </TableHead>
+                      <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Contact
+                      </TableHead>
+                      <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <ClientCoordinatorCandidateTableRows
+                      candidates={coordinatorCandidates}
+                      isLoading={coordinatorCandidatesLoading}
+                      canWriteCandidates={canWriteCandidates}
+                      canTransferCandidates={!!canTransferCandidates}
+                      onTransfer={(candidate, recruiter) =>
+                        setTransferDialog({
+                          isOpen: true,
+                          candidateId: candidate.id,
+                          candidateName: `${candidate.firstName} ${candidate.lastName}`,
+                          currentRecruiter: recruiter,
+                        })
+                      }
+                    />
+                  </TableBody>
+                </Table>
+                {coordinatorPagination &&
+                  coordinatorPagination.totalCount > 0 && (
+                    <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-slate-500">
+                        Showing{" "}
+                        <span className="font-semibold">
+                          {(candidateListPage - 1) * candidatePageSize + 1}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-semibold">
+                          {Math.min(
+                            candidateListPage * candidatePageSize,
+                            coordinatorPagination.totalCount,
+                          )}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-semibold">
+                          {coordinatorPagination.totalCount}
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-3"
+                          disabled={
+                            coordinatorCandidatesLoading ||
+                            candidateListPage <= 1
+                          }
+                          onClick={() =>
+                            setCandidateListPage((p) => Math.max(1, p - 1))
+                          }
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs tabular-nums text-slate-600">
+                          Page {candidateListPage} of{" "}
+                          {coordinatorPagination.totalPages}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-3"
+                          disabled={
+                            coordinatorCandidatesLoading ||
+                            candidateListPage >=
+                              coordinatorPagination.totalPages
+                          }
+                          onClick={() =>
+                            setCandidateListPage((p) =>
+                              Math.min(
+                                coordinatorPagination.totalPages,
+                                p + 1,
+                              ),
+                            )
+                          }
+                        >
+                          Next
+                        </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAgents.map((agent) => (
-                    <TableRow key={agent.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
-                      <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                            {agent.name.charAt(0)}
+                    </div>
+                  )}
+              </>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader className="sticky">
+                    <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Agent Details</TableHead>
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Company</TableHead>
+                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Contact</TableHead>
+                      <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Candidates</TableHead>
+                      <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAgents.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-64 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-3">
+                            <div className="bg-slate-50 p-4 rounded-full border border-slate-100 shadow-inner">
+                              <Search className="h-8 w-8 text-slate-300" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-slate-900 font-semibold">
+                                {agentsLoading
+                                  ? "Loading..."
+                                  : isCandidatePipelineFilter
+                                    ? "No candidates found"
+                                    : "No agents found"}
+                              </p>
+                              <p className="text-slate-500 text-sm">
+                                {isCandidatePipelineFilter
+                                  ? isClientCoordinator
+                                    ? "You have no agent-sourced assignments yet, or none match your search."
+                                    : "No agents currently have linked candidates, or none match your search."
+                                  : "Try adjusting your search or filters."}
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{agent.name}</span>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredAgents.map((agent) => (
+                        <TableRow key={agent.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
+                                {agent.name.charAt(0)}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{agent.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                                    Added {new Date(agent.createdAt).toLocaleDateString()}
+                                  </span>
+                                  {agent.agentType && (
+                                    <Badge variant="outline" className="text-[9px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-100">
+                                      {agent.agentType}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-gray-500 flex items-center gap-1">
-                                Added {new Date(agent.createdAt).toLocaleDateString()}
-                              </span>
-                              {agent.agentType && (
-                                <Badge variant="outline" className="text-[9px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-100">
-                                  {agent.agentType}
-                                </Badge>
+                              <div className="bg-slate-100 p-1.5 rounded-md">
+                                <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                              </div>
+                              <span className="font-medium text-sm text-gray-700">{agent.companyName || "Personal"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex flex-col items-center gap-1">
+                              {agent.email && (
+                                <div className="flex items-center gap-2 text-xs text-slate-600">
+                                  <Mail className="h-3 w-3 text-slate-400" />
+                                  {agent.email}
+                                </div>
+                              )}
+                              {agent.mobileNumber && (
+                                <div className="flex items-center gap-2 text-xs text-slate-600">
+                                  <Phone className="h-3 w-3 text-slate-400" />
+                                  <span className="font-medium">{agent.mobileNumber}</span>
+                                </div>
                               )}
                             </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="bg-slate-100 p-1.5 rounded-md">
-                            <Building2 className="h-3.5 w-3.5 text-slate-500" />
-                          </div>
-                          <span className="font-medium text-sm text-gray-700">{agent.companyName || "Personal"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <div className="flex flex-col items-center gap-1">
-                          {agent.email && (
-                            <div className="flex items-center gap-2 text-xs text-slate-600">
-                              <Mail className="h-3 w-3 text-slate-400" />
-                              {agent.email}
-                            </div>
-                          )}
-                          {agent.mobileNumber && (
-                            <div className="flex items-center gap-2 text-xs text-slate-600">
-                              <Phone className="h-3 w-3 text-slate-400" />
-                              <span className="font-medium">{agent.mobileNumber}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-full gap-2 border border-transparent hover:border-blue-100"
-                          onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
-                        >
-                          <Users className="h-4 w-4" />
-                          {agent._count?.candidates || 0}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
-                              <MoreVertical className="h-4 w-4 text-gray-500" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>Agent Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {canEdit && (
-                              <DropdownMenuItem onClick={() => handleOpenModal(agent)} className="cursor-pointer">
-                                <Edit2 className="h-4 w-4 mr-2 text-slate-500" />
-                                Edit details
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-full gap-2 border border-transparent hover:border-blue-100"
                               onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
-                              className="text-blue-600 focus:text-blue-600 cursor-pointer"
                             >
-                              <Handshake className="h-4 w-4 mr-2" />
-                              View candidates
-                            </DropdownMenuItem>
-                            {canDelete && (
-                              <>
+                              <Users className="h-4 w-4" />
+                              {agent._count?.candidates || 0}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
+                                  <MoreVertical className="h-4 w-4 text-gray-500" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Agent Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
+                                {canEdit && (
+                                  <DropdownMenuItem onClick={() => handleOpenModal(agent)} className="cursor-pointer">
+                                    <Edit2 className="h-4 w-4 mr-2 text-slate-500" />
+                                    Edit details
+                                  </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem 
-                                  className="text-red-600 focus:text-red-600 cursor-pointer"
-                                  onClick={() => handleDelete(agent.id)}
+                                  onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
+                                  className="text-blue-600 focus:text-blue-600 cursor-pointer"
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete agent
+                                  <Handshake className="h-4 w-4 mr-2" />
+                                  View candidates
                                 </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                                {canDelete && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem 
+                                      className="text-red-600 focus:text-red-600 cursor-pointer"
+                                      onClick={() => handleDelete(agent.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Delete agent
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                {agentsPaged?.meta &&
+                  agentsPaged.meta.total > 0 &&
+                  (agentsPaged.meta.totalPages ?? 0) > 1 && (
+                    <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-slate-500">
+                        Showing{" "}
+                        <span className="font-semibold">
+                          {(agentListPage - 1) * agentPageSize + 1}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-semibold">
+                          {Math.min(
+                            agentListPage * agentPageSize,
+                            agentsPaged.meta.total,
+                          )}
+                        </span>{" "}
+                        of <span className="font-semibold">{agentsPaged.meta.total}</span>{" "}
+                        agents
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-3"
+                          disabled={agentsLoading || agentListPage <= 1}
+                          onClick={() =>
+                            setAgentListPage((p) => Math.max(1, p - 1))
+                          }
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-xs tabular-nums text-slate-600">
+                          Page {agentListPage} of {agentsPaged.meta.totalPages}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-3"
+                          disabled={
+                            agentsLoading ||
+                            agentListPage >= agentsPaged.meta.totalPages
+                          }
+                          onClick={() =>
+                            setAgentListPage((p) =>
+                              Math.min(agentsPaged.meta.totalPages, p + 1),
+                            )
+                          }
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -476,6 +832,19 @@ export default function AgentsPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {transferDialog.isOpen ? (
+        <TransferCandidateDialog
+          open={transferDialog.isOpen}
+          onOpenChange={(open) =>
+            setTransferDialog((prev) => ({ ...prev, isOpen: open }))
+          }
+          candidateName={transferDialog.candidateName || "Candidate"}
+          currentRecruiter={transferDialog.currentRecruiter}
+          onConfirm={handleTransferConfirm}
+          isLoading={isTransferring}
+        />
+      ) : null}
     </div>
   );
 }

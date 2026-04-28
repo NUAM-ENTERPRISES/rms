@@ -27,6 +27,15 @@ import { CountryCodeSelect, ProfileImageUpload } from "@/components/molecules";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
+import { CANDIDATE_SOURCES } from "@/constants/candidate-constants";
+
+const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
+  string,
+  ...string[],
+];
+
+const normalizeLegacySource = (source: string) =>
+  source === "agents" ? "agent" : source;
 
 const personalInfoSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters").max(50),
@@ -37,7 +46,7 @@ const personalInfoSchema = z.object({
     .min(10, "Mobile number must be at least 10 characters")
     .max(15, "Mobile number must not exceed 15 characters"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
+  source: z.enum(CANDIDATE_SOURCE_IDS),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
 }).superRefine((_data, _ctx) => {
@@ -88,7 +97,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       countryCode: initialData.countryCode || "+91",
       mobileNumber: initialData.mobileNumber || "",
       email: initialData.email || "",
-      source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
+      source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
     },
@@ -105,7 +114,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         countryCode: initialData.countryCode || "+91",
         mobileNumber: initialData.mobileNumber || "",
         email: initialData.email || "",
-        source: (initialData.source as "manual" | "meta" | "direct_enquiry" | "referral" | "paid_ads" | "agents" | "hospital_visit" | "expo_event") || "manual",
+        source: normalizeLegacySource(initialData.source || "manual"),
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
         dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
       });
@@ -369,13 +378,11 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="meta">Meta</SelectItem>
-                      <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
-
-                      <SelectItem value="paid_ads">Paid Ads</SelectItem>
-                      <SelectItem value="agents">Agents</SelectItem>
-                      <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
-                      <SelectItem value="expo_event">Expo / Event</SelectItem>
+                      {CANDIDATE_SOURCES.map((src) => (
+                        <SelectItem key={src.id} value={src.id}>
+                          {src.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 )}
