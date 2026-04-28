@@ -76,6 +76,14 @@ export const navigationConfig: NavItem[] = [
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
+    id: "client-coordinator-dashboard",
+    label: "Dashboard",
+    path: "/agents",
+    icon: Home,
+    roles: ["Client Coordinator"],
+    permissions: ["read:agents"],
+  },
+  {
     id: "interviews-dashboard-top",
     label: "Dashboard",
     path: "/interviews",
@@ -105,6 +113,7 @@ export const navigationConfig: NavItem[] = [
       "Processing Executive",
       "System Admin",
       "Interview Coordinator",
+      "Client Coordinator",
       // "Screening Trainer",
     ],
     children: [
@@ -141,6 +150,7 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "System Admin",
       "CRE",
+      "Client Coordinator",
       // "Screening Trainer",
     ],
     children: [

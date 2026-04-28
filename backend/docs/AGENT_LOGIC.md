@@ -91,6 +91,8 @@ if (!leadershipRoles.includes(userRole)) {
 }
 ```
 
+**Implementation note:** The runtime allowlist lives in `canSeeAgentSourcedCandidates` (`backend/src/candidates/candidate-visibility.ts`) and includes leadership-style roles plus **`Client Coordinator`**.
+
 ## 5. UI/UX Workflow
 
 ### Agents Page (Admins/Managers Only)

@@ -43,6 +43,7 @@ import {
   requiresCREHandling,
   isCandidateStatusTerminal,
 } from '../common/constants';
+import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 
 @Injectable()
 export class CandidatesService {
@@ -439,27 +440,14 @@ export class CandidatesService {
       roles = [],
     } = query;
 
-    const isAdminOrManager = roles.some((role) =>
-      [
-        'CEO',
-        'Director',
-        'Manager',
-        'Team Head',
-        'Team Lead',
-        'Admin',
-        'SuperAdmin',
-        'System Admin',
-      ].includes(role),
-    );
-
     // Handle status alias - status is an alias for currentStatus
     const effectiveStatus = currentStatus || status;
 
     // Build where clause
     const where: any = {};
 
-    // 1. Leadership Check for Agent Source
-    if (!isAdminOrManager) {
+    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
       };
@@ -857,9 +845,8 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Leadership Check for Agent Source
-    // Only leadership can see candidates sourced from agents
-    if (!isAdminOrManager) {
+    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
       };

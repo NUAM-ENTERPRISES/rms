@@ -190,6 +190,20 @@ const roles = [
     ],
   },
   {
+    name: 'Client Coordinator',
+    description:
+      'Client Coordinator - Manages external agents and agent-sourced candidates',
+    permissions: [
+      'read:candidates',
+      'write:candidates',
+      'read:projects',
+      'read:agents',
+      'write:agents',
+      'edit:agents',
+      'delete:agents',
+    ],
+  },
+  {
     name: 'System Admin',
     description:
       'System Administrator - Full system access and user management',
@@ -1330,6 +1344,14 @@ async function main() {
       phone: '9876543222',
       role: 'System Admin',
     },
+    {
+      email: 'clientcoordinator@nuam.com',
+      name: 'Alex Client Coordinator',
+      password: 'client123',
+      countryCode: '+91',
+      phone: '9876543242',
+      role: 'Client Coordinator',
+    },
   ];
 
   for (const userData of testUsers) {
@@ -1580,6 +1602,9 @@ async function main() {
   );
   console.log(
     `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@nuam.com)`,
+  );
+  console.log(
+    `🤝 Client Coordinator: +919876543242 / clientcoord123 (clientcoordinator@nuam.com)`,
   );
   console.log('\n🎯 Each user has their respective role permissions!');
   console.log(
