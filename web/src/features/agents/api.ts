@@ -16,6 +16,41 @@ export interface Agent {
   };
 }
 
+export interface AgentCandidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  countryCode: string;
+  mobileNumber: string;
+  contact: string;
+  email?: string;
+  profileImage?: string;
+  createdAt: string;
+  currentStatus: {
+    id: number;
+    statusName: string;
+  } | null;
+  recruiter: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+export interface GetAgentCandidatesParams {
+  id: string;
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AgentCandidatesResponse {
+  success: boolean;
+  data: AgentCandidate[];
+  meta: AgentsListMeta;
+}
+
 /** Query params for GET /agents (search, pagination, filters). */
 export interface GetAgentsParams {
   search?: string;
@@ -104,6 +139,18 @@ export const agentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Agent"],
     }),
+    getAgentCandidates: builder.query<AgentCandidatesResponse, GetAgentCandidatesParams>({
+      query: ({ id, ...params }) => {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append("search", params.search);
+        if (params.status) searchParams.append("status", params.status);
+        if (params.page) searchParams.append("page", String(params.page));
+        if (params.limit) searchParams.append("limit", String(params.limit));
+        const qs = searchParams.toString();
+        return qs ? `/agents/${id}/candidates?${qs}` : `/agents/${id}/candidates`;
+      },
+      providesTags: (_result, _error, { id }) => [{ type: "Agent", id }],
+    }),
   }),
 });
 
@@ -113,4 +160,5 @@ export const {
   useCreateAgentMutation,
   useUpdateAgentMutation,
   useDeleteAgentMutation,
+  useGetAgentCandidatesQuery,
 } = agentsApi;

@@ -100,6 +100,7 @@ const EditClientPage = lazy(
 );
 
 const AgentsPage = lazy(() => import("@/features/agents/views/AgentsPage"));
+const AgentDetailsPage = lazy(() => import("@/features/agents/views/AgentDetailsPage"));
 
 const InterviewsPage = lazy(
   () => import("@/features/interviews/views/InterviewsPage")
@@ -1085,6 +1086,19 @@ function App() {
                         <ProtectedRoute permissions={["read:agents"]}>
                           <AppLayout>
                             <AgentsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/agents/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:agents"]}>
+                          <AppLayout>
+                            <AgentDetailsPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

@@ -13,6 +13,7 @@ import { AgentsService } from './agents.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
+import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
@@ -37,6 +38,16 @@ export class AgentsController {
   @ApiOperation({ summary: 'Get all agents' })
   findAll(@Query() query: QueryAgentsDto) {
     return this.agentsService.findAll(query);
+  }
+
+  @Get(':id/candidates')
+  @Permissions('read:agents')
+  @ApiOperation({ summary: 'Get candidates for an agent' })
+  getAgentCandidates(
+    @Param('id') id: string,
+    @Query() query: QueryAgentCandidatesDto,
+  ) {
+    return this.agentsService.getAgentCandidates(id, query);
   }
 
   @Get(':id')

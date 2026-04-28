@@ -8,16 +8,12 @@ import {
   Phone, 
   Users, 
   UserPlus,
-  Edit2, 
-  Trash2, 
-  MoreVertical,
-  LayoutGrid
+  LayoutGrid,
+  Eye
 } from "lucide-react";
 import { 
   useGetAgentsQuery, 
-  useDeleteAgentMutation, 
   useCreateAgentMutation, 
-  useUpdateAgentMutation 
 } from "../api";
 import {
   Card,
@@ -33,14 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -79,8 +67,6 @@ export default function AgentsPage() {
   const { user } = useAppSelector((state) => state.auth);
   
   const canWrite = useCan("write:agents");
-  const canEdit = useCan("edit:agents");
-  const canDelete = useCan("delete:agents");
   /** Create API uses write:candidates; CreateCandidatePage also checks manage:candidates */
   const canCreateCandidate =
     useCan("write:candidates") || useCan("manage:candidates");
@@ -108,7 +94,6 @@ export default function AgentsPage() {
   const candidatePageSize = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates">("all");
 
   /** CC: my-candidates (agent source) tile uses counts.totalAssigned from API */
@@ -160,8 +145,6 @@ export default function AgentsPage() {
   );
 
   const [createAgent] = useCreateAgentMutation();
-  const [updateAgent] = useUpdateAgentMutation();
-  const [deleteAgent] = useDeleteAgentMutation();
 
   const agents = agentsPaged?.data ?? [];
 
@@ -271,53 +254,25 @@ export default function AgentsPage() {
     },
   ];
 
-  const handleOpenModal = (agent?: any) => {
-    if (agent) {
-      setEditingAgent(agent);
-      setFormData({
-        name: agent.name,
-        email: agent.email || "",
-        mobileNumber: agent.mobileNumber || "",
-        companyName: agent.companyName || "",
-        agentType: agent.agentType || "",
-      });
-    } else {
-      setEditingAgent(null);
-      setFormData({
-        name: "",
-        email: "",
-        mobileNumber: "",
-        companyName: "",
-        agentType: "",
-      });
-    }
+  const handleOpenModal = () => {
+    setFormData({
+      name: "",
+      email: "",
+      mobileNumber: "",
+      companyName: "",
+      agentType: "",
+    });
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (editingAgent) {
-        await updateAgent({ id: editingAgent.id, body: formData }).unwrap();
-        toast.success("Agent updated successfully");
-      } else {
-        await createAgent(formData).unwrap();
-        toast.success("Agent created successfully");
-      }
+      await createAgent(formData).unwrap();
+      toast.success("Agent created successfully");
       setIsModalOpen(false);
     } catch (error) {
       toast.error("Failed to save agent");
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this agent?")) {
-      try {
-        await deleteAgent(id).unwrap();
-        toast.success("Agent deleted successfully");
-      } catch (error) {
-        toast.error("Failed to delete agent");
-      }
     }
   };
 
@@ -419,7 +374,7 @@ export default function AgentsPage() {
                     ) ? (
                       <Button
                         type="button"
-                        onClick={() => handleOpenModal()}
+                        onClick={handleOpenModal}
                         className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
                       >
                         <Plus className="h-4 w-4" /> Add Agent
@@ -646,49 +601,23 @@ export default function AgentsPage() {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-full gap-2 border border-transparent hover:border-blue-100"
-                              onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
+                              onClick={() => navigate(`/agents/${agent.id}`)}
                             >
                               <Users className="h-4 w-4" />
                               {agent._count?.candidates || 0}
                             </Button>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
-                                  <MoreVertical className="h-4 w-4 text-gray-500" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel>Agent Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {canEdit && (
-                                  <DropdownMenuItem onClick={() => handleOpenModal(agent)} className="cursor-pointer">
-                                    <Edit2 className="h-4 w-4 mr-2 text-slate-500" />
-                                    Edit details
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem 
-                                  onClick={() => navigate(`/candidates?source=agent&agentId=${agent.id}`)}
-                                  className="text-blue-600 focus:text-blue-600 cursor-pointer"
-                                >
-                                  <Handshake className="h-4 w-4 mr-2" />
-                                  View candidates
-                                </DropdownMenuItem>
-                                {canDelete && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem 
-                                      className="text-red-600 focus:text-red-600 cursor-pointer"
-                                      onClick={() => handleDelete(agent.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete agent
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => navigate(`/agents/${agent.id}`)}
+                              title="View agent details"
+                              aria-label={`View details for ${agent.name}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -759,11 +688,9 @@ export default function AgentsPage() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingAgent ? "Edit Agent" : "Add New Agent"}</DialogTitle>
+            <DialogTitle>Add New Agent</DialogTitle>
             <DialogDescription>
-              {editingAgent 
-                ? "Update the partner agent's information." 
-                : "Create a new agent profile for candidate sourcing."}
+              Create a new agent profile for candidate sourcing.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -826,7 +753,7 @@ export default function AgentsPage() {
             <DialogFooter className="pt-4">
               <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
               <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                {editingAgent ? "Update Agent" : "Create Agent"}
+                Create Agent
               </Button>
             </DialogFooter>
           </form>
