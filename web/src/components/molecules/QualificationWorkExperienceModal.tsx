@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,7 +32,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, GraduationCap, Briefcase, Search } from "lucide-react";
+import { X, Plus, GraduationCap, Briefcase, Search, Upload, FileText, Paperclip } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 import {
@@ -40,7 +40,10 @@ import {
   useUpdateCandidateQualificationMutation,
   useCreateWorkExperienceMutation,
   useUpdateWorkExperienceMutation,
+  useUploadDocumentMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -103,6 +106,9 @@ export default function QualificationWorkExperienceModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset page when search changes
   useEffect(() => {
@@ -129,6 +135,8 @@ export default function QualificationWorkExperienceModal({
     useCreateWorkExperienceMutation();
   const [updateWorkExperience, { isLoading: updatingWorkExperience }] =
     useUpdateWorkExperienceMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
 
   const qualifications = qualificationsData?.data?.qualifications || [];
 
@@ -166,7 +174,8 @@ export default function QualificationWorkExperienceModal({
     creatingQualification ||
     updatingQualification ||
     creatingWorkExperience ||
-    updatingWorkExperience;
+    updatingWorkExperience ||
+    isUploadingFiles;
 
   // Initialize form with edit data
   useEffect(() => {
@@ -273,20 +282,58 @@ export default function QualificationWorkExperienceModal({
             : undefined,
       };
 
+      let workExperienceId: string;
       if (isEdit) {
-        await updateWorkExperience({
+        const result = await updateWorkExperience({
           id: (editData as WorkExperience).id,
           ...payload,
         }).unwrap();
+        workExperienceId = (result as WorkExperience)?.id ?? (editData as WorkExperience).id;
       } else {
-        await createWorkExperience({
+        const result = await createWorkExperience({
           candidateId,
           ...payload,
         }).unwrap();
+        workExperienceId = (result as WorkExperience)?.id;
       }
+
+      // Upload any pending experience certificate files
+      if (pendingFiles.length > 0 && workExperienceId) {
+        setIsUploadingFiles(true);
+        const uploadErrors: string[] = [];
+        for (const file of pendingFiles) {
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
+            formData.append("workExperienceId", workExperienceId);
+            const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+            const uploadedDocument = uploadResult.data.document;
+            if (!uploadedDocument) {
+              await createDocument({
+                candidateId,
+                docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+                fileName: uploadResult.data.fileName,
+                fileUrl: uploadResult.data.fileUrl,
+                fileSize: uploadResult.data.fileSize,
+                mimeType: uploadResult.data.mimeType,
+                workExperienceId,
+              }).unwrap();
+            }
+          } catch {
+            uploadErrors.push(file.name);
+          }
+        }
+        setIsUploadingFiles(false);
+        if (uploadErrors.length > 0) {
+          toast.warning(`Work experience saved but ${uploadErrors.length} file(s) failed to upload`);
+        }
+      }
+
       onSuccess?.();
       onClose();
     } catch (error: any) {
+      setIsUploadingFiles(false);
       toast.error(error?.data?.message || "Failed to save work experience");
     }
   };
@@ -313,6 +360,8 @@ export default function QualificationWorkExperienceModal({
     setNewSkill("");
     setSearchQuery("");
     setIsDropdownOpen(false);
+    setPendingFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     onClose();
   };
 
@@ -755,6 +804,66 @@ export default function QualificationWorkExperienceModal({
               />
             </div>
 
+            {/* Experience Certificate Upload */}
+            <div className="space-y-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4">
+              <Label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                <Paperclip className="h-4 w-4 text-slate-500" />
+                Experience Certificates / Proof
+                <span className="text-xs font-normal text-muted-foreground">(optional · PDF)</span>
+              </Label>
+
+              {/* Pending file pills */}
+              {pendingFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {pendingFiles.map((file, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium"
+                    >
+                      <FileText className="h-3 w-3 shrink-0" />
+                      <span className="truncate max-w-[160px]">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))}
+                        className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
+                        aria-label="Remove file"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length > 0) {
+                    setPendingFiles((prev) => [...prev, ...files]);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {pendingFiles.length > 0 ? "Add More Files" : "Attach Certificate PDFs"}
+              </Button>
+              <p className="text-[11px] text-muted-foreground">
+                Multiple files allowed. Files will be uploaded as Experience Letters linked to this work entry.
+              </p>
+            </div>
+
             {/* Submit Button for Work Experience */}
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={handleClose}>
@@ -765,7 +874,9 @@ export default function QualificationWorkExperienceModal({
                 disabled={isLoading}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                {isLoading
+                {isUploadingFiles
+                  ? "Uploading files..."
+                  : isLoading
                   ? "Saving..."
                   : isEdit
                   ? "Update"

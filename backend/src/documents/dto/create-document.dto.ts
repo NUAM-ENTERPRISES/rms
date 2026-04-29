@@ -112,4 +112,12 @@ export class CreateDocumentDto {
   @IsOptional()
   @IsString()
   processingStepId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Work Experience ID to link this document to a specific work experience entry',
+    example: 'wexp_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  workExperienceId?: string;
 }

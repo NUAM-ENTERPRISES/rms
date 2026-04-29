@@ -21,8 +21,10 @@ import {
   ArrowRight,
   Save,
 } from "lucide-react";
-import { useCreateCandidateMutation } from "@/features/candidates";
+import { useCreateCandidateMutation, useUploadDocumentMutation } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
+import { useCreateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import CandidatePreview from "../components/CandidatePreview";
 import { useCan } from "@/hooks/useCan";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -53,6 +55,7 @@ type WorkExperience = {
   location: string;
   skills: string[];
   achievements: string;
+  pendingFiles?: File[];
 };
 
 // ==================== COMPONENT ====================
@@ -99,6 +102,8 @@ export default function CreateCandidatePage() {
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -124,6 +129,12 @@ export default function CreateCandidatePage() {
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  const handleUpdateExperienceFiles = (id: string, files: File[]) => {
+    setWorkExperiences((prev) =>
+      prev.map((exp) => (exp.id === id ? { ...exp, pendingFiles: files } : exp))
+    );
+  };
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
   // Form
@@ -439,6 +450,57 @@ export default function CreateCandidatePage() {
           }
         }
 
+        // Upload experience certificate files for each work experience
+        // The API response work experiences are in the same order as submitted.
+        const createdWorkExperiences: any[] =
+          (result as any).workExperiences ||
+          (result as any).data?.workExperiences ||
+          (result as any).data?.candidate?.workExperiences ||
+          [];
+
+        const experiencesWithFiles = workExperiences.filter(
+          (exp) => exp.pendingFiles && exp.pendingFiles.length > 0
+        );
+
+        if (candidateId && experiencesWithFiles.length > 0) {
+          let fileUploadErrors = 0;
+          for (let i = 0; i < workExperiences.length; i++) {
+            const localExp = workExperiences[i];
+            if (!localExp.pendingFiles || localExp.pendingFiles.length === 0) continue;
+            // Match by index — same submission order as returned by backend
+            const createdExp = createdWorkExperiences[i];
+            const workExperienceId = createdExp?.id;
+            if (!workExperienceId) continue;
+
+            for (const file of localExp.pendingFiles) {
+              try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
+                formData.append("workExperienceId", workExperienceId);
+                const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+                const uploadedDocument = uploadResult.data.document;
+                if (!uploadedDocument) {
+                  await createDocument({
+                    candidateId,
+                    docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+                    fileName: uploadResult.data.fileName,
+                    fileUrl: uploadResult.data.fileUrl,
+                    fileSize: uploadResult.data.fileSize,
+                    mimeType: uploadResult.data.mimeType,
+                    workExperienceId,
+                  }).unwrap();
+                }
+              } catch {
+                fileUploadErrors++;
+              }
+            }
+          }
+          if (fileUploadErrors > 0) {
+            toast.warning(`Candidate created but ${fileUploadErrors} certificate file(s) failed to upload`);
+          }
+        }
+
         toast.success("Candidate created successfully!");
         navigate("/candidates");
       }
@@ -500,6 +562,7 @@ export default function CreateCandidatePage() {
             setEditingExperienceId={setEditingExperienceId}
             newSkill={newSkill}
             setNewSkill={setNewSkill}
+            onUpdateFiles={handleUpdateExperienceFiles}
           />
         );
       case 5:

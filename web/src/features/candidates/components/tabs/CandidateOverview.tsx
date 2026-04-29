@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardHeader,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   User,
   Mail,
@@ -23,12 +24,17 @@ import {
   Trophy,
   Sparkles,
   ClipboardCheck,
+  FileText,
+  Eye,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { DateUtils } from "@/shared/utils/date";
 import { getAge } from "@/utils/getAge";
-import { Candidate, CandidateQualification, WorkExperience } from "../../api";
+import { Candidate, CandidateQualification, WorkExperience, Document } from "../../api";
 import { CandidateResumeList } from "@/components/molecules";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 
 interface CandidateOverviewProps {
   candidate: Candidate;
@@ -44,6 +50,7 @@ interface CandidateOverviewProps {
   onEditLicensing?: () => void;
   onDeleteWorkExperience?: (id: string) => void;
   onDeleteQualification?: (id: string) => void;
+  workExperienceDocs?: Document[];
 }
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
@@ -57,8 +64,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   onEditLicensing,
   onDeleteWorkExperience,
   onDeleteQualification,
+  workExperienceDocs,
 }) => {
   const age = getAge(candidate.dateOfBirth);
+  const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string; isPdf: boolean } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -127,7 +136,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Gender
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1 lowercase capitalize">
+                  <p className="text-sm flex items-center gap-2 mt-1 capitalize">
                     <User className="h-3 w-3 text-slate-400" />
                     {candidate.gender || "N/A"}
                   </p>
@@ -653,6 +662,20 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
                         {candidate.workExperiences.map((exp) => {
                           const duration = DateUtils.calculateDuration(exp.startDate, exp.endDate, exp.isCurrent);
+                          const expDocs = (workExperienceDocs ?? []).filter(
+                            (d) => d.workExperienceId === exp.id
+                          );
+                          const primaryDoc = expDocs[0];
+                          const fallbackEmploymentDocs = (workExperienceDocs ?? []).filter(
+                            (d) =>
+                              !d.workExperienceId &&
+                              (d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS ||
+                                d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTER ||
+                                d.docType === DOCUMENT_TYPE.RELIEVING_LETTER ||
+                                d.docType === DOCUMENT_TYPE.SALARY_SLIP ||
+                                d.docType === DOCUMENT_TYPE.APPOINTMENT_LETTER)
+                          );
+                          const fallbackPrimaryDoc = fallbackEmploymentDocs[0];
                           return (
                           <div
                             key={exp.id}
@@ -680,14 +703,58 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   {exp.companyName || "N/A"}
                                 </p>
                               </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const docToPreview = primaryDoc ?? fallbackPrimaryDoc;
+                                    if (!docToPreview) {
+                                      toast.error("No experience document available to preview.");
+                                      return;
+                                    }
+                                    const isPdf =
+                                      docToPreview.mimeType === "application/pdf" ||
+                                      docToPreview.fileUrl?.toLowerCase().includes(".pdf") ||
+                                      docToPreview.fileName?.toLowerCase().endsWith(".pdf");
+                                    setPreviewDoc({
+                                      fileUrl: docToPreview.fileUrl,
+                                      fileName: docToPreview.fileName,
+                                      isPdf: !!isPdf,
+                                    });
+                                  }}
+                                  disabled={!primaryDoc && !fallbackPrimaryDoc}
+                                  className={
+                                    primaryDoc || fallbackPrimaryDoc
+                                      ? "h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      : "h-7 w-7 text-slate-300 hover:text-slate-400 hover:bg-slate-50"
+                                  }
+                                  aria-label="View experience documents"
+                                  title={
+                                    primaryDoc
+                                      ? `View experience documents (${expDocs.length})`
+                                      : fallbackPrimaryDoc
+                                      ? "View available experience document (not linked)"
+                                      : "No linked experience documents"
+                                  }
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                                {expDocs.length > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] h-5 px-1.5 border-blue-200 text-blue-700 bg-blue-50"
+                                    title={`${expDocs.length} linked document(s)`}
+                                  >
+                                    {expDocs.length}
+                                  </Badge>
+                                )}
                               {canWriteCandidates && (
-                                <div className="flex items-center gap-1">
+                                <>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() =>
-                                      openEditModal("workExperience", exp)
-                                    }
+                                    onClick={() => openEditModal("workExperience", exp)}
                                     className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
                                   >
                                     <Edit className="h-3.5 w-3.5" />
@@ -702,8 +769,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                       <Trash2 className="h-3.5 w-3.5" />
                                     </Button>
                                   )}
-                                </div>
+                                </>
                               )}
+                              </div>
                             </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-slate-500 font-medium">
                               <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
@@ -734,6 +802,48 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 </p>
                               </div>
                             )}
+
+                            {/* Work experience documents */}
+                            {expDocs.length > 0 ? (
+                              <div className="mt-3 pt-3 border-t border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Experience Documents
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {expDocs.map((doc) => {
+                                    const cfg =
+                                      DOCUMENT_TYPE_CONFIG[
+                                        doc.docType as keyof typeof DOCUMENT_TYPE_CONFIG
+                                      ];
+                                    const isPdf =
+                                      doc.mimeType === "application/pdf" ||
+                                      doc.fileUrl?.toLowerCase().includes(".pdf") ||
+                                      doc.fileName?.toLowerCase().endsWith(".pdf");
+                                    return (
+                                      <button
+                                        key={doc.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setPreviewDoc({
+                                            fileUrl: doc.fileUrl,
+                                            fileName: doc.fileName,
+                                            isPdf: !!isPdf,
+                                          })
+                                        }
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors cursor-pointer"
+                                      >
+                                        <FileText className="h-3 w-3 shrink-0" />
+                                        <span className="truncate max-w-[140px]">
+                                          {cfg?.displayName ?? doc.docType}
+                                        </span>
+                                        <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ) : null}
                           </div>
                           );
                         })}
@@ -859,6 +969,46 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
       <div className="mb-0">
         <CandidateResumeList candidateId={candidate.id} />
       </div>
+
+      {/* PDF Viewer for work experience documents */}
+      {previewDoc?.isPdf && (
+        <PDFViewer
+          fileUrl={previewDoc.fileUrl}
+          fileName={previewDoc.fileName}
+          isOpen={!!previewDoc}
+          onClose={() => setPreviewDoc(null)}
+          showDownload
+          showZoomControls
+          showRotationControls
+          showFullscreenToggle
+        />
+      )}
+
+      {/* Image viewer for non-PDF work experience documents */}
+      {previewDoc && !previewDoc.isPdf && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewDoc(null)}
+              className="absolute -top-10 right-0 text-white hover:text-slate-300 text-sm font-medium"
+            >
+              Close ✕
+            </button>
+            <img
+              src={previewDoc.fileUrl}
+              alt={previewDoc.fileName}
+              className="w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

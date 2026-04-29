@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Plus, Star, X, Pencil } from "lucide-react";
+import { Briefcase, Plus, Star, X, Pencil, Upload, FileText, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 
@@ -27,6 +27,7 @@ type WorkExperience = {
   location: string;
   skills: string[];
   achievements: string;
+  pendingFiles?: File[];
 };
 
 interface WorkExperienceStepProps {
@@ -38,6 +39,7 @@ interface WorkExperienceStepProps {
   setEditingExperienceId: (id: string | null) => void;
   newSkill: string;
   setNewSkill: React.Dispatch<React.SetStateAction<string>>;
+  onUpdateFiles?: (id: string, files: File[]) => void;
 }
 
 export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
@@ -49,7 +51,9 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   setEditingExperienceId,
   newSkill,
   setNewSkill,
+  onUpdateFiles,
 }) => {
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const addWorkExperience = () => {
     if (
       newWorkExperience.companyName &&
@@ -216,8 +220,65 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                           )}
                         </div>
                       )}
+
+                    {/* Experience certificate upload */}
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mb-2">
+                        <Paperclip className="h-3 w-3" />
+                        Experience Certificates
+                        <span className="text-[10px] font-normal text-muted-foreground">(PDF / Image)</span>
+                      </p>
+                      {(experience.pendingFiles ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {(experience.pendingFiles ?? []).map((file, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-medium"
+                            >
+                              <FileText className="h-2.5 w-2.5 shrink-0" />
+                              <span className="truncate max-w-[120px]">{file.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (experience.pendingFiles ?? []).filter((_, i) => i !== idx);
+                                  onUpdateFiles?.(experience.id, updated);
+                                }}
+                                className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        multiple
+                        className="hidden"
+                        ref={(el) => { fileInputRefs.current[experience.id] = el; }}
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? []);
+                          if (files.length > 0) {
+                            const existing = experience.pendingFiles ?? [];
+                            onUpdateFiles?.(experience.id, [...existing, ...files]);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs border-dashed border-slate-300 text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() => fileInputRefs.current[experience.id]?.click()}
+                      >
+                        <Upload className="h-3 w-3 mr-1" />
+                        Attach Files
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 ml-4 shrink-0">
                     <Button
                       type="button"
                       variant="outline"

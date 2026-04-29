@@ -27,6 +27,7 @@ export interface Document {
     name: string;
     label: string;
   };
+  workExperienceId?: string;
   createdAt: string;
   updatedAt: string;
   candidate: {
@@ -225,6 +226,7 @@ export interface CreateDocumentRequest {
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
+  workExperienceId?: string;
 }
 
 export interface UpdateDocumentRequest {

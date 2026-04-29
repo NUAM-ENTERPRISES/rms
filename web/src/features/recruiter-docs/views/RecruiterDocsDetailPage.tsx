@@ -427,6 +427,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
     meta: {
       docType: string;
       roleCatalogId?: string;
+      workExperienceId?: string;
       documentNumber?: string;
       expiryDate?: string;
       notes?: string;
@@ -460,6 +461,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
         notes: meta.notes,
         roleCatalogId: meta.roleCatalogId || "",
+        workExperienceId: meta.workExperienceId,
       }).unwrap();
 
       toast.success("Document uploaded successfully");
@@ -1373,6 +1375,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           onClose={() => setShowCandidateUploadDialog(false)}
           onUpload={handleUploadCandidateDocument}
           isUploading={isUploading || isCreating}
+          workExperiences={candidate?.workExperiences}
         />
       </React.Suspense>
 

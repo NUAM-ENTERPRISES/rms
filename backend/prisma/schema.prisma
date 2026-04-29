@@ -488,6 +488,8 @@ model WorkExperience {
   candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
 
+  documents     Document[]
+
   @@index([candidateId])
   @@index([roleCatalogId])
   @@index([companyName])
@@ -583,21 +585,24 @@ model Document {
   expiryDate     DateTime?
   fileSize       Int?
   mimeType       String?
-  roleCatalogId  String?
+  roleCatalogId    String?
+  workExperienceId String?
 
   rejectedAt      DateTime?
   rejectedBy      String?
   rejectionReason String?
   verifiedAt      DateTime?
 
-  verifications CandidateProjectDocumentVerification[]
-  candidate     Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  roleCatalog   RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+  verifications  CandidateProjectDocumentVerification[]
+  candidate      Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog    RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+  workExperience WorkExperience?                        @relation(fields: [workExperienceId], references: [id], onDelete: SetNull)
 
   @@index([candidateId])
   @@index([docType])
   @@index([status])
   @@index([roleCatalogId])
+  @@index([workExperienceId])
   @@map("documents")
 }
 

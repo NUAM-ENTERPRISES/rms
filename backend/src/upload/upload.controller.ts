@@ -14,6 +14,7 @@ import { UploadService } from './upload.service';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam } from '@nestjs/swagger';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { DocumentsService } from '../documents/documents.service';
+import { DocumentWithRelations } from '../documents/types';
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -123,6 +124,10 @@ export class UploadController {
           type: 'string',
           description: 'Document type (e.g., passport, license, degree)',
         },
+        workExperienceId: {
+          type: 'string',
+          description: 'Optional work experience ID to link this document to a specific work experience entry',
+        },
       },
     },
   })
@@ -130,6 +135,8 @@ export class UploadController {
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('docType') docType: string,
+    @Body('workExperienceId') workExperienceId?: string,
+    @Request() req?: any,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
@@ -145,9 +152,28 @@ export class UploadController {
       docType,
     );
 
+    let document: DocumentWithRelations | null = null;
+    if (workExperienceId) {
+      document = await this.documentsService.create(
+        {
+          candidateId,
+          docType,
+          fileName: result.fileName,
+          fileUrl: result.fileUrl,
+          fileSize: result.fileSize,
+          mimeType: result.mimeType,
+          workExperienceId,
+        },
+        req?.user?.sub || 'system',
+      );
+    }
+
     return {
       success: true,
-      data: result,
+      data: {
+        ...result,
+        document,
+      },
       message: 'Document uploaded successfully',
     };
   }

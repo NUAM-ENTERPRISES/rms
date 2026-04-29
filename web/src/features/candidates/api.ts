@@ -22,6 +22,7 @@ export interface Document {
     name: string;
     label: string;
   };
+  workExperienceId?: string;
   createdAt: string;
   updatedAt: string;
 }

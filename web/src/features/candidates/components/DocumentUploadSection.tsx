@@ -51,7 +51,8 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useGetDocumentsQuery, useUploadDocumentMutation } from "../api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
 import { useCreateDocumentMutation } from "@/features/documents/api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
@@ -91,7 +92,7 @@ const DOCUMENT_TYPES = [
   { value: "resume", label: "Resume", category: "employment" },
   { value: "cv", label: "Curriculum Vitae", category: "employment" },
   {
-    value: "experience_letter",
+    value: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
     label: "Experience Letter",
     category: "employment",
   },
@@ -200,6 +201,8 @@ export function DocumentUploadSection({
 
   const documents = externalDocuments || documentsData?.data?.documents || [];
   const isLoading = isExternalLoading || isLocalLoading;
+
+  const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
 
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
@@ -480,6 +483,7 @@ export function DocumentUploadSection({
             expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
             notes: meta.notes,
             roleCatalogId: meta.roleCatalogId,
+            workExperienceId: meta.workExperienceId,
           }).unwrap();
 
           toast.success("Document uploaded successfully");
@@ -490,6 +494,7 @@ export function DocumentUploadSection({
           toast.error("Failed to upload document");
         }
       }}
+      workExperiences={workExperiences}
       isUploading={isUploading}
     />
   </React.Suspense>

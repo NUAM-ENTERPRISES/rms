@@ -8,23 +8,40 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { DepartmentSelect, JobTitleSelect } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, isValidFileExtension, isValidFileSize, getAllowedFormatsString } from "@/constants/document-types";
-import { Plus } from "lucide-react";
+import { Plus, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import type { WorkExperience } from "@/features/candidates/api";
+
+const EMPLOYMENT_DOC_TYPES = new Set([
+  DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+  DOCUMENT_TYPE.EXPERIENCE_LETTER,
+  DOCUMENT_TYPE.RELIEVING_LETTER,
+  DOCUMENT_TYPE.SALARY_SLIP,
+  DOCUMENT_TYPE.APPOINTMENT_LETTER,
+]);
+
+const HIDDEN_DOCUMENT_TYPES = new Set<string>([
+  DOCUMENT_TYPE.EXPERIENCE_LETTER,
+]);
 
 interface Props {
   isOpen: boolean;
+  initialDocType?: string;
+  initialWorkExperienceId?: string;
   onClose: () => void;
   onUpload: (file: File, meta: {
     docType: string;
     roleCatalogId?: string;
+    workExperienceId?: string;
     documentNumber?: string;
     expiryDate?: string;
     notes?: string;
   }) => Promise<void> | void;
   isUploading?: boolean;
+  workExperiences?: WorkExperience[];
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUpload, isUploading }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, onClose, onUpload, isUploading, workExperiences }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -38,12 +55,18 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
   const [departmentId, setDepartmentId] = React.useState<string | undefined>(undefined);
   const [roleCatalogId, setRoleCatalogId] = React.useState<string | undefined>(undefined);
   const [roleLabel, setRoleLabel] = React.useState<string>("");
+  const [selectedWorkExperienceId, setSelectedWorkExperienceId] = React.useState<string | undefined>(undefined);
+
+  const showWorkExperienceSelector =
+    EMPLOYMENT_DOC_TYPES.has(docType as any) && workExperiences && workExperiences.length > 0;
 
   const filteredDocTypes = React.useMemo(() => {
     const q = docTypeFilter.trim().toLowerCase();
-    return Object.entries(DOCUMENT_TYPE_CONFIG).filter(([type, cfg]) =>
-      !q || cfg.displayName.toLowerCase().includes(q) || type.toLowerCase().includes(q)
-    );
+    return Object.entries(DOCUMENT_TYPE_CONFIG)
+      .filter(([type]) => !HIDDEN_DOCUMENT_TYPES.has(type))
+      .filter(([type, cfg]) =>
+        !q || cfg.displayName.toLowerCase().includes(q) || type.toLowerCase().includes(q)
+      );
   }, [docTypeFilter]);
 
   React.useEffect(() => {
@@ -61,8 +84,17 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
       setDepartmentId(undefined);
       setRoleCatalogId(undefined);
       setRoleLabel("");
+      setSelectedWorkExperienceId(undefined);
+    } else if (initialDocType) {
+      setDocType(initialDocType);
     }
-  }, [isOpen]);
+  }, [isOpen, initialDocType]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedWorkExperienceId(initialWorkExperienceId);
+    }
+  }, [isOpen, initialWorkExperienceId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -123,6 +155,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
       await onUpload(selectedFile, {
         docType,
         roleCatalogId,
+        workExperienceId: selectedWorkExperienceId ?? initialWorkExperienceId,
         documentNumber: documentNumber || undefined,
         expiryDate: expiryDate || undefined,
         notes: notes || undefined,
@@ -245,6 +278,35 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
                   />
                 </div>
               </>
+            )}
+
+            {/* For employment docs: link to a specific work experience */}
+            {showWorkExperienceSelector && (
+              <div className="col-span-full space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  Link to Work Experience <span className="text-muted-foreground text-xs">(optional)</span>
+                </Label>
+                <Select
+                  value={selectedWorkExperienceId ?? "__none__"}
+                  onValueChange={(v) => setSelectedWorkExperienceId(v === "__none__" ? undefined : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a work experience entry" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Not linked to a specific experience —</SelectItem>
+                    {workExperiences!.map((exp) => (
+                      <SelectItem key={exp.id} value={exp.id}>
+                        {exp.jobTitle}{exp.companyName ? ` @ ${exp.companyName}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Linking allows this document to appear alongside the relevant work experience entry.
+                </p>
+              </div>
             )}
 
             <div className="space-y-2">
