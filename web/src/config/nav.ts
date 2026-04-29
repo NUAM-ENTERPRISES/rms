@@ -276,7 +276,15 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer", "Documentation Executive", "Interview Coordinator", "Recruiter", "CRE", "Processing Executive"],
+    hiddenForRoles: [
+      "Screening Trainer",
+      "Documentation Executive",
+      "Interview Coordinator",
+      "Recruiter",
+      "CRE",
+      "Processing Executive",
+      "Client Coordinator",
+    ],
     children: [
       {
         id: "screenings-dashboard",
@@ -310,7 +318,14 @@ export const navigationConfig: NavItem[] = [
     label: "Documents",
     icon: FileText,
     permissions: ["read:documents"],
-    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive", "Processing Executive"],
+    hiddenForRoles: [
+      "Interview Coordinator",
+      "Recruiter",
+      "CRE",
+      "Documentation Executive",
+      "Processing Executive",
+      "Client Coordinator",
+    ],
     children: [
       {
         id: "document-verification",
