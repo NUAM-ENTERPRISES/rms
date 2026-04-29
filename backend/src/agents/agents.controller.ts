@@ -14,6 +14,7 @@ import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
 import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
+import { QueryAgentProjectsDto } from './dto/query-agent-projects.dto';
 import { LinkAgentProjectsDto } from './dto/link-agent-projects.dto';
 import { UpdateAgentProjectDto } from './dto/update-agent-project.dto';
 import {
@@ -23,6 +24,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/rbac/permissions.guard';
@@ -123,7 +125,7 @@ export class AgentsController {
   @ApiOperation({
     summary: 'List candidates for an agent',
     description:
-      'Returns candidates where `Candidate.agentId` matches this agent. Supports search and status filter; pagination via query.',
+      'Returns candidates where `Candidate.agentId` matches this agent; each row includes `candidateProjects` (placements via `candidate_projects`). Supports search and status filter; pagination via query.',
   })
   @ApiParam({
     name: 'id',
@@ -173,6 +175,23 @@ export class AgentsController {
     description: 'Agent ID (cuid)',
     example: 'clxxxxxxxx',
   })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    description: 'Page number (1-based)',
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (max 500)',
+    example: 50,
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Filter by project title or client name (case-insensitive)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Agent projects retrieved successfully',
@@ -195,14 +214,26 @@ export class AgentsController {
             },
           },
         },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            page: { type: 'number' },
+            limit: { type: 'number' },
+            totalPages: { type: 'number' },
+          },
+        },
       },
     },
   })
   @ApiResponse({ status: 404, description: 'Agent not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden — missing read:agents' })
-  getAgentProjects(@Param('id') id: string) {
-    return this.agentsService.getAgentProjects(id);
+  getAgentProjects(
+    @Param('id') id: string,
+    @Query() query: QueryAgentProjectsDto,
+  ) {
+    return this.agentsService.getAgentProjects(id, query);
   }
 
   @Post(':id/projects')

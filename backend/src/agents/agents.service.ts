@@ -3,11 +3,13 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
 import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
+import { QueryAgentProjectsDto } from './dto/query-agent-projects.dto';
 import { LinkAgentProjectsDto } from './dto/link-agent-projects.dto';
 import { UpdateAgentProjectDto } from './dto/update-agent-project.dto';
 
@@ -212,6 +214,26 @@ export class AgentsService {
           currentStatus: {
             select: { id: true, statusName: true },
           },
+          projects: {
+            orderBy: { createdAt: 'desc' },
+            take: 30,
+            select: {
+              id: true,
+              projectId: true,
+              project: { select: { id: true, title: true } },
+              mainStatus: { select: { name: true, label: true } },
+              subStatus: { select: { name: true, label: true } },
+            },
+          },
+          agentCandidateDeclaredProjects: {
+            orderBy: { createdAt: 'desc' },
+            take: 30,
+            select: {
+              id: true,
+              projectId: true,
+              project: { select: { id: true, title: true } },
+            },
+          },
           recruiterAssignments: {
             where: { isActive: true },
             take: 1,
@@ -225,12 +247,26 @@ export class AgentsService {
       }),
     ]);
 
-    const data = candidates.map((c) => ({
-      ...c,
-      contact: `${c.countryCode}${c.mobileNumber}`,
-      recruiter: c.recruiterAssignments[0]?.recruiter ?? null,
-      recruiterAssignments: undefined,
-    }));
+    const data = candidates.map((c) => {
+      const { recruiterAssignments, projects, agentCandidateDeclaredProjects, ...rest } = c;
+      return {
+        ...rest,
+        contact: `${c.countryCode}${c.mobileNumber}`,
+        recruiter: recruiterAssignments[0]?.recruiter ?? null,
+        candidateProjects: projects.map((p) => ({
+          id: p.id,
+          projectId: p.projectId,
+          projectTitle: p.project?.title ?? null,
+          mainStatusLabel: p.mainStatus?.label ?? p.mainStatus?.name ?? null,
+          subStatusLabel: p.subStatus?.label ?? p.subStatus?.name ?? null,
+        })),
+        declaredProjects: (agentCandidateDeclaredProjects || []).map((d) => ({
+          id: d.id,
+          projectId: d.projectId,
+          projectTitle: d.project?.title ?? null,
+        })),
+      };
+    });
 
     return {
       success: true,
@@ -245,31 +281,65 @@ export class AgentsService {
     };
   }
 
-  async getAgentProjects(agentId: string) {
+  async getAgentProjects(
+    agentId: string,
+    query: QueryAgentProjectsDto = new QueryAgentProjectsDto(),
+  ) {
     const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
     if (!agent) {
       throw new NotFoundException(`Agent with ID ${agentId} not found`);
     }
 
-    const rows = await this.prisma.agentProject.findMany({
-      where: { agentId },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        project: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            client: { select: { id: true, name: true, type: true } },
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    const trimmedSearch = query.search?.trim();
+
+    const where: Prisma.AgentProjectWhereInput = { agentId };
+    if (trimmedSearch) {
+      where.project = {
+        OR: [
+          { title: { contains: trimmedSearch, mode: 'insensitive' } },
+          {
+            client: {
+              name: { contains: trimmedSearch, mode: 'insensitive' },
+            },
+          },
+        ],
+      };
+    }
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.agentProject.count({ where }),
+      this.prisma.agentProject.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              client: { select: { id: true, name: true, type: true } },
+            },
           },
         },
-      },
-    });
+      }),
+    ]);
 
     return {
       success: true,
       message: 'Agent projects retrieved successfully',
       data: rows,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
     };
   }
 
@@ -317,7 +387,7 @@ export class AgentsService {
       ),
     );
 
-    return this.getAgentProjects(agentId);
+    return this.getAgentProjects(agentId, { page: 1, limit: 500 });
   }
 
   async unlinkAgentProject(agentId: string, projectId: string) {

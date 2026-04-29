@@ -107,6 +107,17 @@ export class CreateCandidateDto {
   agentId?: string;
 
   @ApiPropertyOptional({
+    description:
+      'When source is agent: optional project IDs (from the agent\'s linked client projects only) declaring where this supply is intended — does not nominate the candidate',
+    type: [String],
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  declaredProjectIds?: string[];
+
+  @ApiPropertyOptional({
     description: 'Referral company name (only if source is referral)',
     example: 'ABC Referrals',
   })

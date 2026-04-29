@@ -22,6 +22,7 @@ export const createCandidateSchema = z
     email: z.string().email("Invalid email address").optional().or(z.literal("")),
     source: z.enum(CANDIDATE_SOURCE_IDS),
     agentId: z.string().optional(),
+    declaredProjectIds: z.array(z.string()).optional().default([]),
     gender: z.enum(["MALE", "FEMALE", "OTHER"]),
     dateOfBirth: z.string().optional(),
     expectedSalary: z.preprocess(

@@ -655,6 +655,7 @@ const ProjectCandidatesBoard = ({
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
+              showAgentName={isClientCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
               onAction={(id, action) => {
@@ -779,6 +780,7 @@ const ProjectCandidatesBoard = ({
                 projectId={projectId}
                 isRecruiter={canUseRecruiterPipelineActions}
                 hideContactInfo={hideContactInfo}
+                showAgentName={isClientCoordinator}
                 searchTerm={searchTerm}
                 onView={() => onViewCandidate(assignmentInfo.candidateId)}
                 onAction={(id, action) => {
@@ -896,6 +898,7 @@ const ProjectCandidatesBoard = ({
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
+              showAgentName={isClientCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {

@@ -41,6 +41,8 @@ import { useDebounce } from "@/hooks";
 import { formatDate } from "@/lib/utils";
 
 const PAGE_SIZE = 6;
+/** Page size for the agent-linked projects list GET /agents/:id/projects */
+const LINKED_LIST_PAGE_SIZE = 10;
 
 interface AgentLinkedProjectsSectionProps {
   agentId: string;
@@ -50,8 +52,22 @@ export function AgentLinkedProjectsSection({
   agentId,
 }: AgentLinkedProjectsSectionProps) {
   const canEdit = useCan("edit:agents");
-  const { data, isLoading, isFetching } = useGetAgentProjectsQuery(agentId);
+
+  const [linkedListSearch, setLinkedListSearch] = useState("");
+  const linkedListSearchDebounced = useDebounce(linkedListSearch, 300);
+  const [linkedListPage, setLinkedListPage] = useState(1);
+
+  const { data, isLoading, isFetching } = useGetAgentProjectsQuery({
+    id: agentId,
+    page: linkedListPage,
+    limit: LINKED_LIST_PAGE_SIZE,
+    search: linkedListSearchDebounced.trim() || undefined,
+  });
   const rows = data?.data ?? [];
+  const linkedMeta = data?.meta;
+  const linkedTotalDisplay = linkedMeta?.total ?? rows.length;
+  const linkedTotalPages = linkedMeta?.totalPages ?? 1;
+  const linkedPageCurrent = linkedMeta?.page ?? linkedListPage;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedNewIds, setSelectedNewIds] = useState<Set<string>>(new Set());
@@ -68,6 +84,15 @@ export function AgentLinkedProjectsSection({
   } | null>(null);
 
   const debouncedSearch = useDebounce(search, 300);
+
+  useEffect(() => {
+    setLinkedListSearch("");
+    setLinkedListPage(1);
+  }, [agentId]);
+
+  useEffect(() => {
+    setLinkedListPage(1);
+  }, [linkedListSearchDebounced]);
 
   useEffect(() => {
     setPage(1);
@@ -169,7 +194,8 @@ export function AgentLinkedProjectsSection({
                 Linked Projects
               </h2>
               <p className="text-xs text-slate-500">
-                {rows.length} project{rows.length !== 1 ? "s" : ""} linked
+                {linkedTotalDisplay} project{linkedTotalDisplay !== 1 ? "s" : ""} linked
+                {linkedListSearchDebounced.trim() ? " (filtered)" : ""}
               </p>
             </div>
           </div>
@@ -452,7 +478,28 @@ export function AgentLinkedProjectsSection({
         </div>
       </div>
 
-      <div className="p-5">
+      <div className="p-5 space-y-4">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+          <Input
+            placeholder="Search by project or client..."
+            value={linkedListSearch}
+            onChange={(e) => setLinkedListSearch(e.target.value)}
+            className="h-10 pl-10 pr-10 bg-white border-slate-200 rounded-lg"
+            aria-label="Search linked projects"
+          />
+          {linkedListSearch ? (
+            <button
+              type="button"
+              onClick={() => setLinkedListSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+
         {isLoading || isFetching ? (
           <div className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -464,62 +511,108 @@ export function AgentLinkedProjectsSection({
               <FolderKanban className="h-8 w-8 text-slate-300" aria-hidden />
             </div>
             <div className="text-center space-y-1">
-              <p className="font-medium text-slate-700">No projects linked</p>
+              <p className="font-medium text-slate-700">
+                {linkedListSearchDebounced.trim()
+                  ? "No matching linked projects"
+                  : "No projects linked"}
+              </p>
               <p className="text-sm text-slate-500 max-w-xs">
-                Link projects to scope nominations when creating candidates.
+                {linkedListSearchDebounced.trim()
+                  ? "Try another search term or clear filters."
+                  : "Link projects to scope nominations when creating candidates."}
               </p>
             </div>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {rows.map((row) => (
-              <li
-                key={row.id}
-                className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 transition-colors hover:bg-slate-50"
-              >
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <p className="font-medium text-slate-900 truncate">
-                    {row.project.title}
-                  </p>
-                  <p className="text-sm text-slate-500 truncate">
-                    {row.project.client?.name ?? "No client"}
-                    {!row.isActive ? (
-                      <span className="ml-2 text-amber-600">(inactive)</span>
-                    ) : null}
-                  </p>
-                  {row.notes?.trim() ? (
-                    <p className="flex gap-2 text-xs text-slate-600 leading-snug">
-                      <StickyNote
-                        className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5"
-                        aria-hidden
-                      />
-                      <span className="line-clamp-3 whitespace-pre-wrap break-words">
-                        {row.notes.trim()}
-                      </span>
+          <>
+            <ul className="space-y-2">
+              {rows.map((row) => (
+                <li
+                  key={row.id}
+                  className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/50 px-4 py-3 transition-colors hover:bg-slate-50"
+                >
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <p className="font-medium text-slate-900 truncate">
+                      {row.project.title}
                     </p>
+                    <p className="text-sm text-slate-500 truncate">
+                      {row.project.client?.name ?? "No client"}
+                      {!row.isActive ? (
+                        <span className="ml-2 text-amber-600">(inactive)</span>
+                      ) : null}
+                    </p>
+                    {row.notes?.trim() ? (
+                      <p className="flex gap-2 text-xs text-slate-600 leading-snug">
+                        <StickyNote
+                          className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5"
+                          aria-hidden
+                        />
+                        <span className="line-clamp-3 whitespace-pre-wrap break-words">
+                          {row.notes.trim()}
+                        </span>
+                      </p>
+                    ) : null}
+                  </div>
+                  {canEdit ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-slate-400 hover:text-destructive hover:bg-destructive/10"
+                      disabled={isUnlinking}
+                      onClick={() =>
+                        setUnlinkTarget({
+                          projectId: row.projectId,
+                          projectTitle: row.project.title,
+                        })
+                      }
+                      aria-label={`Remove ${row.project.title}`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </Button>
                   ) : null}
-                </div>
-                {canEdit ? (
+                </li>
+              ))}
+            </ul>
+
+            {linkedTotalPages > 1 ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-3 text-xs text-slate-600">
+                <span className="tabular-nums">
+                  Page {linkedPageCurrent} of {linkedTotalPages}
+                </span>
+                <div className="flex items-center gap-1">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-slate-400 hover:text-destructive hover:bg-destructive/10"
-                    disabled={isUnlinking}
-                    onClick={() =>
-                      setUnlinkTarget({
-                        projectId: row.projectId,
-                        projectTitle: row.project.title,
-                      })
-                    }
-                    aria-label={`Remove ${row.project.title}`}
+                    className="h-8 w-8"
+                    disabled={linkedPageCurrent <= 1 || isFetching}
+                    onClick={() => setLinkedListPage((p) => Math.max(1, p - 1))}
+                    aria-label="Previous linked projects page"
                   >
-                    <Trash2 className="h-4 w-4" aria-hidden />
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={
+                      linkedPageCurrent >= linkedTotalPages || isFetching
+                    }
+                    onClick={() =>
+                      setLinkedListPage((p) =>
+                        Math.min(linkedTotalPages, p + 1),
+                      )
+                    }
+                    aria-label="Next linked projects page"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
 

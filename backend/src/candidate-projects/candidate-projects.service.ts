@@ -27,6 +27,7 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
 } from '../common/constants';
+import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -180,6 +181,8 @@ export class CandidateProjectsService {
         `Candidate already assigned to this project${roleNeededId ? ' for this role' : ''}`,
       );
     }
+
+    await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
 
     // -------------------------------
     // GET NOMINATED MAIN & SUB STATUS
@@ -3184,6 +3187,14 @@ export class CandidateProjectsService {
 
         if (exists) {
           errors.push({ candidateId, error: 'Already assigned to this project with this role' });
+          continue;
+        }
+
+        try {
+          await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Assignment validation failed';
+          errors.push({ candidateId, error: msg });
           continue;
         }
 

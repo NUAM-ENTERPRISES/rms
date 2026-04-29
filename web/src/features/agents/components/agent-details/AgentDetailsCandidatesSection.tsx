@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Search, Users, X, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -7,9 +8,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AgentCandidate } from "../../api";
 import { AgentDetailsCandidateTableRow } from "./AgentDetailsCandidateTableRow";
+import { EditDeclaredProjectsModal } from "./EditDeclaredProjectsModal";
 import { CandidatesTableSkeleton } from "./AgentDetailsSkeletons";
 
-const TABLE_COL_COUNT = 5;
+const TABLE_COL_COUNT = 6;
 
 type AgentDetailsCandidatesSectionProps = {
   search: string;
@@ -27,6 +29,9 @@ type AgentDetailsCandidatesSectionProps = {
   onViewCandidate: (candidateId: string) => void;
   canAddCandidate?: boolean;
   onAddCandidate?: () => void;
+  /** Agent id for loading linked projects in the edit modal */
+  agentId: string;
+  canEditDeclaredProjects?: boolean;
 };
 
 export function AgentDetailsCandidatesSection({
@@ -45,7 +50,12 @@ export function AgentDetailsCandidatesSection({
   onViewCandidate,
   canAddCandidate,
   onAddCandidate,
+  agentId,
+  canEditDeclaredProjects,
 }: AgentDetailsCandidatesSectionProps) {
+  const [candidateForDeclaredEdit, setCandidateForDeclaredEdit] =
+    useState<AgentCandidate | null>(null);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -150,6 +160,9 @@ export function AgentDetailsCandidatesSection({
                     <TableHead className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Assigned To
                     </TableHead>
+                    <TableHead className="min-w-[200px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Projects linked
+                    </TableHead>
                     <TableHead className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                       Added
                     </TableHead>
@@ -195,6 +208,12 @@ export function AgentDetailsCandidatesSection({
                         candidate={candidate}
                         index={index}
                         onView={() => onViewCandidate(candidate.id)}
+                        canEditDeclaredProjects={Boolean(canEditDeclaredProjects)}
+                        onEditDeclaredProjects={
+                          canEditDeclaredProjects
+                            ? () => setCandidateForDeclaredEdit(candidate)
+                            : undefined
+                        }
                       />
                     ))
                   )}
@@ -263,6 +282,15 @@ export function AgentDetailsCandidatesSection({
             )}
           </CardContent>
         </Card>
+
+      <EditDeclaredProjectsModal
+        open={candidateForDeclaredEdit != null}
+        onOpenChange={(open) => {
+          if (!open) setCandidateForDeclaredEdit(null);
+        }}
+        agentId={agentId}
+        candidate={candidateForDeclaredEdit}
+      />
     </motion.div>
   );
 }

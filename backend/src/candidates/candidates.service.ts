@@ -47,6 +47,10 @@ import {
 } from '../common/constants';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
+import {
+  assertAgentCandidateLinkedToAgentProject,
+  agentSourceConsolidatedCandidateWhere,
+} from '../common/agent-project-candidate-scope';
 
 @Injectable()
 export class CandidatesService {
@@ -181,6 +185,38 @@ export class CandidatesService {
     return nomination;
   }
 
+  /** Replace AgentCandidateDeclaredProject rows; validates each project is an active AgentProject for this agent */
+  private async replaceAgentCandidateDeclaredProjects(
+    tx: Prisma.TransactionClient,
+    candidateId: string,
+    agentId: string,
+    rawProjectIds: string[],
+  ): Promise<void> {
+    await tx.agentCandidateDeclaredProject.deleteMany({ where: { candidateId } });
+    const uniq = [...new Set((rawProjectIds || []).filter(Boolean))];
+    if (!uniq.length) return;
+
+    const links = await tx.agentProject.findMany({
+      where: {
+        agentId,
+        isActive: true,
+        projectId: { in: uniq },
+      },
+      select: { projectId: true },
+    });
+    const ok = new Set(links.map((l) => l.projectId));
+    const missing = uniq.filter((id) => !ok.has(id));
+    if (missing.length) {
+      throw new BadRequestException(
+        `Each declaredProjectId must match an active agent-project link on this agent: ${missing.join(', ')}`,
+      );
+    }
+    await tx.agentCandidateDeclaredProject.createMany({
+      data: uniq.map((projectId) => ({ candidateId, projectId })),
+    });
+  }
+
+
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
@@ -305,6 +341,14 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.declaredProjectIds?.length) {
+      if (resolvedSource !== 'agent' || !resolvedAgentId) {
+        throw new BadRequestException(
+          'declaredProjectIds is only allowed when source is agent and agentId is set.',
+        );
+      }
+    }
+
     // Get the default status info for history tracking
     const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
@@ -337,6 +381,16 @@ export class CandidatesService {
                   type: true,
                 },
               },
+            },
+          },
+        },
+      },
+      agentCandidateDeclaredProjects: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
             },
           },
         },
@@ -458,6 +512,19 @@ export class CandidatesService {
         },
         select: { id: true },
       });
+
+      if (
+        resolvedSource === 'agent' &&
+        resolvedAgentId &&
+        createCandidateDto.declaredProjectIds?.length
+      ) {
+        await this.replaceAgentCandidateDeclaredProjects(
+          tx,
+          created.id,
+          resolvedAgentId,
+          createCandidateDto.declaredProjectIds,
+        );
+      }
 
       return tx.candidate.findUniqueOrThrow({
         where: { id: created.id },
@@ -1030,6 +1097,14 @@ export class CandidatesService {
       };
     }
 
+    if (!where.AND) {
+      where.AND = [agentSourceConsolidatedCandidateWhere(projectId)];
+    } else if (Array.isArray(where.AND)) {
+      where.AND.push(agentSourceConsolidatedCandidateWhere(projectId));
+    } else {
+      where.AND = [where.AND, agentSourceConsolidatedCandidateWhere(projectId)];
+    }
+
     const [candidates, total] = await Promise.all([
       this.prisma.candidate.findMany({
         where,
@@ -1040,6 +1115,12 @@ export class CandidatesService {
             select: {
               id: true,
               statusName: true,
+            },
+          },
+          agent: {
+            select: {
+              id: true,
+              name: true,
             },
           },
           qualifications: {
@@ -1714,6 +1795,16 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        agentCandidateDeclaredProjects: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
         recruiterAssignments: {
           where: { isActive: true },
           include: {
@@ -1867,6 +1958,10 @@ export class CandidatesService {
       updateData.profileImage = updateCandidateDto.profileImage;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
+    if (updateCandidateDto.agentId !== undefined) {
+      const v = updateCandidateDto.agentId;
+      updateData.agentId = v === '' || v === null ? null : v;
+    }
     if (updateCandidateDto.referralCompanyName !== undefined)
       updateData.referralCompanyName = updateCandidateDto.referralCompanyName;
     if (updateCandidateDto.referralCountryCode !== undefined)
@@ -1951,40 +2046,86 @@ export class CandidatesService {
       };
     }
 
-    // Update candidate
-    const candidate = await this.prisma.candidate.update({
-      where: { id },
-      data: updateData,
-      include: {
-        // recruiter relation removed - now accessed via projects
-        team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
+    const declaredIdsPayload = updateCandidateDto.declaredProjectIds;
+
+    const mergedAgentValue =
+      updateCandidateDto.agentId !== undefined ? updateCandidateDto.agentId : existingCandidate.agentId;
+    const finalAgentIdMerged =
+      mergedAgentValue === '' || mergedAgentValue === undefined || mergedAgentValue === null
+        ? null
+        : mergedAgentValue;
+
+    if (declaredIdsPayload !== undefined) {
+      const hasDeclared =
+        Array.isArray(declaredIdsPayload) && declaredIdsPayload.length > 0;
+      /** Declarations are keyed off agent linkage; referrals may omit source=agent in legacy rows. */
+      if (hasDeclared && !finalAgentIdMerged) {
+        throw new BadRequestException(
+          'declaredProjectIds can only be set when the candidate is linked to an agent (agentId).',
+        );
+      }
+    }
+
+    const candidateUpdateInclude = {
+      team: true,
+      workExperiences: {
+        include: {
+          roleCatalog: true,
         },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
+      },
+      qualifications: {
+        include: {
+          qualification: true,
         },
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
+      },
+      projects: {
+        include: {
+          project: {
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
                 },
               },
             },
           },
         },
       },
+      agentCandidateDeclaredProjects: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+    } as const;
+
+    let candidate = await this.prisma.candidate.update({
+      where: { id },
+      data: updateData,
+      include: candidateUpdateInclude,
     });
+
+    if (declaredIdsPayload !== undefined && finalAgentIdMerged) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.replaceAgentCandidateDeclaredProjects(
+          tx,
+          id,
+          finalAgentIdMerged,
+          declaredIdsPayload ?? [],
+        );
+      });
+
+      candidate = await this.prisma.candidate.findUniqueOrThrow({
+        where: { id },
+        include: candidateUpdateInclude,
+      });
+    }
 
     // Notify about candidate update for real-time UI
     await this.outboxService.publishEvent('DataSync', {
@@ -2641,6 +2782,12 @@ export class CandidatesService {
         );
       }
     }
+
+    await assertAgentCandidateLinkedToAgentProject(
+      this.prisma,
+      candidate,
+      nominateDto.projectId,
+    );
 
     const prismaTx = this.prisma as unknown as Prisma.TransactionClient;
     const nominationRow = await this.createProjectNominationForWorkflow(

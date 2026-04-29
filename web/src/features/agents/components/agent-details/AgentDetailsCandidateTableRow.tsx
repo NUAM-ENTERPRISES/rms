@@ -1,25 +1,28 @@
-import { Phone, Eye, ExternalLink } from "lucide-react";
-import { FaWhatsapp } from "react-icons/fa";
+import { Eye, ExternalLink, Pencil, FolderKanban } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell } from "@/components/ui/table";
 import type { AgentCandidate } from "../../api";
-import { formatAgentDetailDate, getAgentDetailInitials, formatAgentPhoneForLink } from "./agent-details-utils";
+import { formatAgentDetailDate, getAgentDetailInitials } from "./agent-details-utils";
 
 type AgentDetailsCandidateTableRowProps = {
   candidate: AgentCandidate;
   index: number;
   onView: () => void;
+  /** When true, show control to edit declared (linked) projects only — not nominations. */
+  canEditDeclaredProjects?: boolean;
+  onEditDeclaredProjects?: () => void;
 };
 
 export function AgentDetailsCandidateTableRow({
   candidate,
   index,
   onView,
+  canEditDeclaredProjects,
+  onEditDeclaredProjects,
 }: AgentDetailsCandidateTableRowProps) {
-  const phoneDigits = formatAgentPhoneForLink(candidate.mobileNumber, candidate.countryCode);
-
   return (
     <motion.tr
       initial={{ opacity: 0, y: 10 }}
@@ -74,6 +77,65 @@ export function AgentDetailsCandidateTableRow({
             Unassigned
           </Badge>
         )}
+      </TableCell>
+
+      <TableCell className="max-w-[300px] px-5 py-4 align-middle">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            {candidate.declaredProjects && candidate.declaredProjects.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {candidate.declaredProjects.slice(0, 3).map((p) => (
+                  <Badge
+                    key={p.id}
+                    variant="secondary"
+                    className="font-medium text-[11px] max-w-[140px] truncate bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-200/60 hover:from-emerald-100 hover:to-teal-100 transition-colors"
+                    title={p.projectTitle ?? undefined}
+                  >
+                    <FolderKanban className="h-3 w-3 mr-1 shrink-0" aria-hidden />
+                    {p.projectTitle || p.projectId}
+                  </Badge>
+                ))}
+                {candidate.declaredProjects.length > 3 ? (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-medium text-slate-500 border-slate-200 bg-slate-50"
+                  >
+                    +{candidate.declaredProjects.length - 3} more
+                  </Badge>
+                ) : null}
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-slate-400 italic">
+                <FolderKanban className="h-3.5 w-3.5" aria-hidden />
+                No projects linked
+              </span>
+            )}
+          </div>
+          {canEditDeclaredProjects && onEditDeclaredProjects ? (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 shrink-0 rounded-md border-slate-200/90 bg-white text-slate-500 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 shadow-sm transition-all duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditDeclaredProjects();
+                    }}
+                    aria-label={`Edit linked projects for ${candidate.firstName} ${candidate.lastName}`}
+                  >
+                    <Pencil className="h-3 w-3" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  Edit linked projects
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+        </div>
       </TableCell>
 
       <TableCell className="px-5 py-4">

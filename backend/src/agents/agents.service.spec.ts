@@ -13,6 +13,7 @@ describe('AgentsService', () => {
     },
     agentProject: {
       findMany: jest.fn(),
+      count: jest.fn(),
       upsert: jest.fn(),
       deleteMany: jest.fn(),
       update: jest.fn(),
@@ -117,6 +118,7 @@ describe('AgentsService', () => {
 
     it('returns rows with projects', async () => {
       prisma.agent.findUnique.mockResolvedValue({ id: 'a1' });
+      prisma.agentProject.count.mockResolvedValue(1);
       prisma.agentProject.findMany.mockResolvedValue([
         {
           id: 'ap1',
@@ -134,11 +136,49 @@ describe('AgentsService', () => {
           },
         },
       ]);
+      prisma.$transaction.mockImplementation((args: Promise<unknown>[]) =>
+        Promise.all(args),
+      );
 
       const res = await service.getAgentProjects('a1');
       expect(res.success).toBe(true);
       expect(res.data).toHaveLength(1);
       expect(res.data[0].project.title).toBe('Proj');
+      expect(res.meta.total).toBe(1);
+      expect(res.meta.page).toBe(1);
+      expect(res.meta.limit).toBe(50);
+      expect(res.meta.totalPages).toBe(1);
+    });
+
+    it('filters by search via nested project/client predicates', async () => {
+      prisma.agent.findUnique.mockResolvedValue({ id: 'a1' });
+      prisma.agentProject.count.mockResolvedValue(0);
+      prisma.agentProject.findMany.mockResolvedValue([]);
+      prisma.$transaction.mockImplementation((args: unknown[]) =>
+        Promise.all(args as Promise<unknown>[]),
+      );
+
+      await service.getAgentProjects('a1', {
+        page: 1,
+        limit: 10,
+        search: 'Sunrise',
+      });
+
+      expect(prisma.agentProject.count).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          agentId: 'a1',
+          project: {
+            OR: [
+              { title: { contains: 'Sunrise', mode: 'insensitive' } },
+              {
+                client: {
+                  name: { contains: 'Sunrise', mode: 'insensitive' },
+                },
+              },
+            ],
+          },
+        }),
+      });
     });
   });
 
@@ -157,12 +197,16 @@ describe('AgentsService', () => {
     it('upserts each link in a transaction', async () => {
       prisma.agent.findUnique.mockResolvedValue({ id: 'a1' });
       prisma.project.findMany.mockResolvedValue([{ id: 'p1' }]);
-      prisma.$transaction.mockImplementation(async (ops: Promise<unknown>[]) =>
-        Promise.all(ops),
-      );
-      prisma.agentProject.upsert.mockResolvedValue({});
 
-      prisma.agentProject.findMany.mockResolvedValue([]);
+      prisma.$transaction
+        .mockImplementationOnce((arg: unknown) => {
+          const ops = arg as Promise<unknown>[];
+          return Promise.all(ops);
+        })
+        .mockImplementationOnce((arg: unknown) => {
+          const ops = arg as Promise<unknown>[];
+          return Promise.all(ops);
+        });
 
       await service.linkAgentProjects('a1', {
         links: [{ projectId: 'p1', notes: 'n' }],

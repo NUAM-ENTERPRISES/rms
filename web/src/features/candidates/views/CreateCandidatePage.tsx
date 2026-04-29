@@ -145,6 +145,7 @@ export default function CreateCandidatePage() {
             ? "agent"
             : "manual") as any,
       agentId: "",
+      declaredProjectIds: [],
       gender: "" as any,
       dateOfBirth: "",
       referralCompanyName: "",
@@ -303,6 +304,10 @@ export default function CreateCandidatePage() {
 
       if (data.source === "agent" && data.agentId?.trim()) {
         payload.agentId = data.agentId.trim();
+      }
+
+      if (data.source === "agent" && Array.isArray(data.declaredProjectIds) && data.declaredProjectIds.length > 0) {
+        payload.declaredProjectIds = data.declaredProjectIds;
       }
 
       // Referral fields
@@ -466,6 +471,7 @@ export default function CreateCandidatePage() {
             uploadingImage={uploadingImage}
             isLoading={isLoading}
             lockSourceToAgent={isClientCoordinator}
+            setValue={form.setValue}
           />
         );
       case 2:

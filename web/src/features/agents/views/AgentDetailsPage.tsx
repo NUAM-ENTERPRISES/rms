@@ -19,6 +19,7 @@ export default function AgentDetailsPage() {
   const navigate = useNavigate();
   const canEditAgent = useCan("edit:agents");
   const canCreateCandidate = useCan("write:candidates");
+  const canEditDeclaredProjects = useCan("write:candidates");
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -96,6 +97,8 @@ export default function AgentDetailsPage() {
               onAddCandidate={() =>
                 navigate(`/candidates/create?agentId=${id}`)
               }
+              agentId={id!}
+              canEditDeclaredProjects={canEditDeclaredProjects}
             />
           </div>
 

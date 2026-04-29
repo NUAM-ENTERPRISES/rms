@@ -36,6 +36,20 @@ export interface AgentCandidate {
     name: string;
     email: string;
   } | null;
+  /** Declared intent (agent_candidate_declared_projects), not nomination. */
+  declaredProjects?: Array<{
+    id: string;
+    projectId: string;
+    projectTitle: string | null;
+  }>;
+  /** Placements from candidate_projects (agent detail). */
+  candidateProjects?: Array<{
+    id: string;
+    projectId: string;
+    projectTitle: string | null;
+    mainStatusLabel: string | null;
+    subStatusLabel: string | null;
+  }>;
 }
 
 export interface GetAgentCandidatesParams {
@@ -95,6 +109,15 @@ export interface AgentProjectsListResponse {
   success: boolean;
   message: string;
   data: AgentProjectRow[];
+  meta: AgentsListMeta;
+}
+
+export interface GetAgentProjectsParams {
+  id: string;
+  page?: number;
+  limit?: number;
+  /** Case-insensitive partial match on project title or client name */
+  search?: string;
 }
 
 export interface LinkAgentProjectsPayload {
@@ -183,9 +206,37 @@ export const agentsApi = baseApi.injectEndpoints({
       },
       providesTags: (_result, _error, { id }) => [{ type: "Agent", id }],
     }),
-    getAgentProjects: builder.query<AgentProjectsListResponse, string>({
-      query: (id) => `/agents/${id}/projects`,
-      providesTags: (_result, _error, id) => [{ type: "Agent", id }],
+    getAgentProjects: builder.query<AgentProjectsListResponse, GetAgentProjectsParams | string>({
+      query: (arg) => {
+        const id = typeof arg === "string" ? arg : arg.id;
+        const page = typeof arg === "string" ? 1 : arg.page ?? 1;
+        const limit = typeof arg === "string" ? 10 : arg.limit ?? 10;
+        const search = typeof arg === "string" ? undefined : arg.search?.trim();
+        const searchParams = new URLSearchParams();
+        searchParams.append("page", String(page));
+        searchParams.append("limit", String(limit));
+        if (search) {
+          searchParams.append("search", search);
+        }
+        return `/agents/${id}/projects?${searchParams.toString()}`;
+      },
+      transformResponse: (
+        response: AgentProjectsListResponse & { meta?: AgentsListMeta }
+      ): AgentProjectsListResponse => ({
+        success: response.success,
+        message: response.message,
+        data: response.data ?? [],
+        meta:
+          response.meta ?? {
+            total: response.data?.length ?? 0,
+            page: 1,
+            limit: response.data?.length ?? 0,
+            totalPages: 1,
+          },
+      }),
+      providesTags: (_result, _error, arg) => [
+        { type: "Agent", id: typeof arg === "string" ? arg : arg.id },
+      ],
     }),
     linkAgentProjects: builder.mutation<
       AgentProjectsListResponse,

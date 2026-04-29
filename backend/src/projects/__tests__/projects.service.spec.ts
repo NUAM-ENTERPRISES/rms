@@ -35,6 +35,9 @@ describe('ProjectsService', () => {
       findUnique: jest.fn(),
       findMany: jest.fn(),
     },
+    agentProject: {
+      findUnique: jest.fn(),
+    },
     candidateProjects: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -645,6 +648,23 @@ describe('ProjectsService', () => {
       ).rejects.toThrow(
         new NotFoundException('Candidate with ID candidate123 not found'),
       );
+    });
+
+    it('should throw BadRequestException when agent-sourced candidate lacks AgentProject link', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+      } as any);
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        source: 'agent',
+        agentId: 'agent1',
+      } as any);
+      prismaService.candidateProjects.findFirst.mockResolvedValue(null);
+      prismaService.agentProject.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.assignCandidate('project123', assignCandidateDto, 'user123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when candidate is already assigned', async () => {

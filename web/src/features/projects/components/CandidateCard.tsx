@@ -203,6 +203,11 @@ export interface CandidateRecord {
     name: string;
     email: string;
   };
+  /** Present when API includes agent relation (project board). */
+  agent?: {
+    id?: string;
+    name?: string;
+  } | null;
 }
 
 interface CandidateCardProps {
@@ -272,6 +277,8 @@ interface CandidateCardProps {
   showContactButtons?: boolean;
   /** control hiding of email/phone pills */
   hideContactInfo?: boolean;
+  /** When true, show supplying agent name (Client Coordinator project board). */
+  showAgentName?: boolean;
   /** Drag and Drop support */
   onDragStart?: (e: React.DragEvent, candidateId: string) => void;
   /** Bulk-selection checkbox — when defined, a small checkbox is rendered in the card */
@@ -306,6 +313,7 @@ const CandidateCard = memo(function CandidateCard({
   /** control hiding of email/phone pills */
   hideContactInfo = false,
   searchTerm = "",
+  showAgentName = false,
   onDragStart,
   selected,
   onSelect,
@@ -709,6 +717,16 @@ const CandidateCard = memo(function CandidateCard({
                     {candidate.currentRole}{candidate.currentRole && candidate.currentEmployer ? " at " : ""}{candidate.currentEmployer}
                   </p>
                 )}
+                {showAgentName && candidate.agent?.name ? (
+                  <p className="text-[11px] text-slate-500 truncate leading-tight mt-0.5">
+                    <span className="text-slate-400">Agent</span>
+                    <span className="sr-only">:</span>
+                    <span aria-hidden className="mx-0.5 text-slate-300">
+                      ·
+                    </span>
+                    <span>{candidate.agent.name}</span>
+                  </p>
+                ) : null}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {/* Screening icon moved from footer; shows inline next to other header actions */}

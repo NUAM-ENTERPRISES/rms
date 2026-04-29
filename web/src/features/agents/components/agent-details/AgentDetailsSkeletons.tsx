@@ -52,6 +52,12 @@ export function CandidatesTableSkeleton() {
             </div>
           </TableCell>
           <TableCell className="px-5 py-4">
+            <div className="flex flex-wrap gap-1">
+              <div className="h-5 w-16 rounded-full bg-slate-100" />
+              <div className="h-5 w-20 rounded-full bg-slate-100" />
+            </div>
+          </TableCell>
+          <TableCell className="px-5 py-4">
             <div className="h-3 w-20 rounded bg-slate-100" />
           </TableCell>
           <TableCell className="px-5 py-4">

@@ -140,6 +140,16 @@ Users who are not Recruiters and create candidates with **non-agent** sources (e
 ### Agent detail
 - **Client projects** section: list linked projects, **Link projects** dialog (active projects not yet linked), and remove link (requires `edit:agents`).
 
+### Project detail candidate lists (`eligible` / `consolidated`)
+
+Project boards call **`GET /projects/:id/eligible-candidates`** and **`GET /candidates/project/consolidated`**. Any candidate with **`agentId` set** is treated as agent-channel for this rule: they appear for a given client project **only** if they have **declared** that project (`agent_candidate_declared_projects` / `AgentCandidateDeclaredProject`). Candidates with **`agentId` null** use the normal cross-project eligible pool. Scoping is by **`agentId`**, not **`source`**, so a wrong or legacy `source` value cannot show an agent-linked candidate on every project. Linking the **agent** to the project via **`AgentProject`** alone does **not** surface every candidate under that agent on the board.
+
+The consolidated “All” list **also** includes candidates already **nominated** to that project (`candidate_projects`), even if a declared-project row was never created (historic data).
+
+**Nominated-only** list: **`GET /projects/:id/nominated-candidates`** is driven by **`candidate_projects`** and is unchanged by this rule.
+
+Helpers: `agentSourceEligibleCandidateWhere` and `agentSourceConsolidatedCandidateWhere` in `backend/src/common/agent-project-candidate-scope.ts`. Nomination still validates **`AgentProject`** via `assertAgentCandidateLinkedToAgentProject`.
+
 ## 7. Implementation Phases
 
 1. **DB**: Apply Prisma migration and generate client (including `AgentProject`).

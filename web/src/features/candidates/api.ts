@@ -439,6 +439,8 @@ export interface CreateCandidateRequest {
   teamId?: string;
   /** Required when source is agent */
   agentId?: string;
+  /** Optional: agent-linked project IDs (declaration only, not nomination) */
+  declaredProjectIds?: string[];
 }
 
 export interface UpdateCandidateRequest {
@@ -476,6 +478,8 @@ export interface UpdateCandidateRequest {
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;
+  /** Agent-linked declarations (intent only); only for agent-sourced candidates */
+  declaredProjectIds?: string[];
 }
 
 export interface UpdateCandidateStatusRequest {

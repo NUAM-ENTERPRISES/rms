@@ -241,6 +241,7 @@ model Project {
   mergedDocuments      MergedDocument[]
   documentForwards     DocumentForwardHistory[]
   agentProjects        AgentProject[]
+  agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
 
   @@map("projects")
 }
@@ -377,6 +378,9 @@ model Candidate {
   mergedDocuments      MergedDocument[]
   documentForwards     DocumentForwardHistory[]
 
+  /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
+  agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
+
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
   @@index([currentStatusId])
@@ -422,6 +426,23 @@ model AgentProject {
   @@index([agentId])
   @@index([projectId])
   @@map("agent_projects")
+}
+
+/// Optional intent: which client projects an agent-supplied candidate is scoped to, before nomination.
+model AgentCandidateDeclaredProject {
+  id          String   @id @default(cuid())
+  candidateId String
+  projectId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, projectId])
+  @@index([candidateId])
+  @@index([projectId])
+  @@map("agent_candidate_declared_projects")
 }
 
 model CandidatePreferredCountry {

@@ -4,6 +4,7 @@ export { AgentDetailsStats } from "./AgentDetailsStats";
 export { AgentDetailsCandidatesSection } from "./AgentDetailsCandidatesSection";
 export { AgentLinkedProjectsSection } from "./AgentLinkedProjectsSection";
 export { AgentEditAgentDialog } from "./AgentEditAgentDialog";
+export { EditDeclaredProjectsModal } from "./EditDeclaredProjectsModal";
 export { AgentDetailsCandidateTableRow } from "./AgentDetailsCandidateTableRow";
 export { AgentHeroSkeleton, CandidatesTableSkeleton } from "./AgentDetailsSkeletons";
 export {

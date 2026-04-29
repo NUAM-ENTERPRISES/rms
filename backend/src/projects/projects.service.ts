@@ -29,6 +29,10 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
 } from '../common/constants/statuses';
+import {
+  agentSourceEligibleCandidateWhere,
+  assertAgentCandidateLinkedToAgentProject,
+} from '../common/agent-project-candidate-scope';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -1299,6 +1303,8 @@ export class ProjectsService {
       );
     }
 
+    await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+
     // Get all global recruiters for round-robin allocation
     const recruiters = await this.getAllRecruiters();
     if (recruiters.length === 0) {
@@ -1534,6 +1540,12 @@ export class ProjectsService {
         candidate: {
           include: {
             team: true,
+            agent: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             qualifications: {
               include: {
                 qualification: true,
@@ -1806,6 +1818,8 @@ export class ProjectsService {
 
         // Team
         team: c.team ? { id: c.team.id, name: c.team.name } : null,
+
+        agent: c.agent ? { id: c.agent.id, name: c.agent.name } : null,
 
         // Current Global Candidate Status
         currentStatus: c.currentStatus,
@@ -2182,10 +2196,19 @@ export class ProjectsService {
     // --------------------------------
     // 3. GET CANDIDATES
     // --------------------------------
+    whereClause.AND = whereClause.AND || [];
+    whereClause.AND.push(agentSourceEligibleCandidateWhere(projectId));
+
     const candidates = await this.prisma.candidate.findMany({
       where: whereClause,
       include: {
         team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        agent: {
           select: {
             id: true,
             name: true,
