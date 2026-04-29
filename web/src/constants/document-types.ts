@@ -8,7 +8,7 @@
 
 export const DOCUMENT_TYPE = {
   // Identity Documents
-  PASSPORT: "passport",
+  PASSPORT: "passport_copy",
   AADHAAR: "aadhaar",
   PAN_CARD: "pan_card",
   DRIVING_LICENSE: "driving_license",
@@ -38,7 +38,7 @@ export const DOCUMENT_TYPE = {
   ELIGIBILITY_LETTER: 'eligibility_letter',
 
   // Educational Documents
-  DEGREE: "degree",
+  DEGREE: "degree_certificate",
   DIPLOMA: "diploma",
   CERTIFICATE: "certificate",
   TRANSCRIPT: "transcript",

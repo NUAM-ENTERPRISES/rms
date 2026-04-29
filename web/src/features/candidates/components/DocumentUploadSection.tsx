@@ -51,14 +51,16 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetDocumentsQuery, useUploadDocumentMutation } from "../api";
 import { useCreateDocumentMutation } from "@/features/documents/api";
+import { getCandidateProfileCompletion } from "../profileCompletion";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 
 // Document type options based on backend constants
 const DOCUMENT_TYPES = [
-  { value: "passport", label: "Passport", category: "identity" },
+  { value: DOCUMENT_TYPE.PASSPORT, label: "Passport", category: "identity" },
   { value: "aadhaar", label: "Aadhaar Card", category: "identity" },
   { value: "pan_card", label: "PAN Card", category: "identity" },
   { value: "driving_license", label: "Driving License", category: "identity" },
@@ -83,7 +85,7 @@ const DOCUMENT_TYPES = [
     label: "Registration Certificate",
     category: "professional",
   },
-  { value: "degree", label: "Degree Certificate", category: "educational" },
+  { value: DOCUMENT_TYPE.DEGREE, label: "Degree Certificate", category: "educational" },
   { value: "diploma", label: "Diploma Certificate", category: "educational" },
   { value: "certificate", label: "Certificate", category: "educational" },
   { value: "transcript", label: "Transcript", category: "educational" },
@@ -181,6 +183,7 @@ export function DocumentUploadSection({
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [preselectedDocType, setPreselectedDocType] = useState<string>("");
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
 
@@ -200,6 +203,7 @@ export function DocumentUploadSection({
 
   const documents = externalDocuments || documentsData?.data?.documents || [];
   const isLoading = isExternalLoading || isLocalLoading;
+  const completion = getCandidateProfileCompletion(documents);
 
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
@@ -336,7 +340,55 @@ export function DocumentUploadSection({
       </div>
     </CardHeader>
 
-    <CardContent className="p-0">
+    <CardContent className="space-y-6 p-0">
+      <div className="space-y-5 p-6 border-b border-slate-100 bg-slate-50">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Required Documents Status</p>
+            <p className="text-sm text-slate-500">
+              Upload the missing files below to complete the candidate profile.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-2xl bg-slate-100 px-3 py-2 text-sm font-medium text-slate-900">
+              {completion.completedCount}/{completion.requiredCount} uploaded
+            </div>
+            <div className="rounded-2xl bg-amber-100 px-3 py-2 text-sm font-medium text-amber-900">
+              {completion.missing.length} missing
+            </div>
+          </div>
+        </div>
+
+        {completion.missing.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {completion.missing.map((doc) => (
+              <div
+                key={doc.docType}
+                className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col justify-between"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">{doc.label}</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Mandatory document missing
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => {
+                    setPreselectedDocType(doc.docType);
+                    setShowUploadModal(true);
+                  }}
+                >
+                  Upload {doc.label}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600" />
@@ -459,7 +511,11 @@ export function DocumentUploadSection({
   <React.Suspense fallback={null}>
     <CandidateUploadDocumentModal
       isOpen={showUploadModal}
-      onClose={() => setShowUploadModal(false)}
+      initialDocType={preselectedDocType}
+      onClose={() => {
+        setShowUploadModal(false);
+        setPreselectedDocType("");
+      }}
       onUpload={async (file: File, meta: any) => {
         try {
           const formData = new FormData();

@@ -38,6 +38,7 @@ import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
 import { CandidatePipeline } from "../components/CandidatePipeline";
+import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
@@ -131,8 +132,8 @@ export default function CandidateDetailPage() {
     { skip: !id }
   );
 
-  const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 1 },
+  const { data: documentsData, isLoading: isDocumentsLoading } = useGetDocumentsQuery(
+    { candidateId: id!, page: 1, limit: 50 },
     { skip: !id }
   );
 
@@ -515,17 +516,26 @@ export default function CandidateDetailPage() {
         })}
       </div>
 
+      <Card className="border-0 shadow-lg bg-white/90 mb-8">
+        <CardContent className="p-5">
+          <CandidateProfileCompletion
+            documents={documentsData?.data?.documents}
+            isLoading={isDocumentsLoading}
+          />
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          {/* <TabsTrigger value="projects">Projects</TabsTrigger>
+          <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger> */}
+          <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
         </TabsList>
 

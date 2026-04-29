@@ -66,6 +66,7 @@ import {
   type RecruiterMyCandidatesResponse,
   type AllCandidatesResponse,
 } from "@/features/candidates";
+import { CandidateProfileCompletionCell } from "@/features/candidates/components/CandidateProfileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
@@ -1399,6 +1400,9 @@ export default function CandidatesPage() {
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Created At
                     </TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                      Profile Completion
+                    </TableHead>
                     {/* Skills column removed */}
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       Status
@@ -1544,6 +1548,11 @@ export default function CandidatesPage() {
                               <Calendar className="h-3.5 w-3.5 text-gray-400" />
                               {formatDateTime(candidate.createdAt)}
                             </div>
+                          </TableCell>
+
+                          {/* Profile Completion */}
+                          <TableCell className="px-4 py-3">
+                            <CandidateProfileCompletionCell candidateId={candidate.id} />
                           </TableCell>
 
                           {/* Status Column (single source of truth) */}

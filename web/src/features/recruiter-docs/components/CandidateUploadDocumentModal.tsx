@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 interface Props {
   isOpen: boolean;
+  initialDocType?: string;
   onClose: () => void;
   onUpload: (file: File, meta: {
     docType: string;
@@ -24,7 +25,7 @@ interface Props {
   isUploading?: boolean;
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUpload, isUploading }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, onClose, onUpload, isUploading }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -61,8 +62,10 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
       setDepartmentId(undefined);
       setRoleCatalogId(undefined);
       setRoleLabel("");
+    } else if (initialDocType) {
+      setDocType(initialDocType);
     }
-  }, [isOpen]);
+  }, [isOpen, initialDocType]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -157,7 +160,9 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, onClose, onUplo
               <Label>Document Type *</Label>
               <Select value={docType} onValueChange={(v) => { setDocType(v); setDocTypeFilter(""); setDepartmentId(undefined); setRoleCatalogId(undefined); setRoleLabel(""); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select document type" />
+                  <SelectValue placeholder="Select document type">
+                    {docType ? DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.displayName : undefined}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {/* Search input inside dropdown */}
