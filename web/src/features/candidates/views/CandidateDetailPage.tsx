@@ -14,8 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
   AlertTriangle,
   Target,
   Briefcase,
@@ -105,7 +103,6 @@ export default function CandidateDetailPage() {
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
-  const canManageCandidates = useCan("write:candidates");
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -136,14 +133,6 @@ export default function CandidateDetailPage() {
     { candidateId: id!, page: 1, limit: 50 },
     { skip: !id }
   );
-
-  const handleEdit = () => {
-    navigate(`/candidates/${id}/edit`);
-  };
-
-  const handleDelete = () => {
-    toast.error("Delete functionality coming soon");
-  };
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -267,16 +256,15 @@ export default function CandidateDetailPage() {
   const isFuture =
     candidate?.currentStatus?.statusName?.toLowerCase() === "future";
 
-  // Derive on-hold pipeline step for duration / enteredAt (loaded separately)
-  const onHoldStep = pipelineData?.data?.pipeline?.find(
-    (step: any) =>
-      step.isCurrentStatus &&
-      (step.statusName?.toLowerCase().includes("hold") ||
-        step.statusName?.toLowerCase() === "onhold" ||
-        step.statusName?.toLowerCase() === "backout")
-  );
-
   const stats = [
+    {
+      label: "Overview",
+      value: "Summary",
+      subtitle: "Candidate details",
+      icon: Target,
+      color: "from-slate-500 to-slate-900",
+      tab: "overview",
+    },
     {
       label: "Projects Assigned",
       value: projectsData?.meta?.total ?? 0,
@@ -307,6 +295,11 @@ export default function CandidateDetailPage() {
     string,
     { bg: string; iconBg: string; text: string }
   > = {
+    "from-slate-500 to-slate-900": {
+      bg: "from-slate-50 to-slate-100/50",
+      iconBg: "bg-slate-200/40",
+      text: "text-slate-600",
+    },
     "from-blue-500 to-cyan-500": {
       bg: "from-blue-50 to-blue-100/50",
       iconBg: "bg-blue-200/40",
@@ -442,6 +435,17 @@ export default function CandidateDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
+          <CandidateProfileCompletion
+            documents={documentsData?.data?.documents}
+            isLoading={isDocumentsLoading}
+            variant="circular"
+          />
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-[0.15em]">
+              Profile Completion
+            </span>
+          </div>
+          <div className="h-4 w-[1px] bg-slate-200 mx-1" />
           {/* <div   onClick={() => setIsStatusModalOpen(true)} className=" cursor-pointer flex items-center gap-2">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
             <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
@@ -476,7 +480,7 @@ export default function CandidateDetailPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           const colors = gradientMap[stat.color];
@@ -484,27 +488,27 @@ export default function CandidateDetailPage() {
             <motion.div
               key={i}
               onClick={() => stat.tab && setActiveTab(stat.tab)}
-              className="cursor-pointer"
+              className="flex cursor-pointer"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
             >
               <Card
-                className={`border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
+                className={`flex-1 border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
               >
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${colors.iconBg}`}>
+                <CardContent className="p-5 flex items-center gap-4 h-full">
+                  <div className={`p-3 rounded-xl ${colors.iconBg} shrink-0`}>
                     <Icon className={`h-6 w-6 ${colors.text}`} />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-500 truncate">
                       {stat.label}
                     </p>
                     <div className="flex items-baseline gap-2">
-                      <h3 className="text-2xl font-bold text-slate-900">
+                      <h3 className="text-2xl font-bold text-slate-900 truncate">
                         {stat.value}
                       </h3>
-                      <span className="text-xs text-slate-400 font-normal">
+                      <span className="text-xs text-slate-400 font-normal truncate">
                         {stat.subtitle}
                       </span>
                     </div>
@@ -516,28 +520,19 @@ export default function CandidateDetailPage() {
         })}
       </div>
 
-      <Card className="border-0 shadow-lg bg-white/90 mb-8">
-        <CardContent className="p-5">
-          <CandidateProfileCompletion
-            documents={documentsData?.data?.documents}
-            isLoading={isDocumentsLoading}
-          />
-        </CardContent>
-      </Card>
-
       {/* Tabs */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
+        {/* <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 gap-2">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
@@ -665,11 +660,6 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
-          referralCompanyName: candidate.referralCompanyName,
-          referralEmail: candidate.referralEmail,
-          referralCountryCode: candidate.referralCountryCode,
-          referralPhone: candidate.referralPhone,
-          referralDescription: candidate.referralDescription,
         }}
       />
 

@@ -54,8 +54,8 @@ import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { RecruiterPerformanceChartWrapper } from "../components/RecruiterPerformanceChartWrapper";
 import { ImageViewer, StatusTile } from "@/components/molecules";
+import { CandidateProfileCompletionCell } from "@/features/candidates/components/CandidateProfileCompletion";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
@@ -592,6 +592,8 @@ export default function CandidateOverviewPage() {
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Created By</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Created At</TableHead>
+                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Profile Completion</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
                       {isWorkflowActive ? "Projects" : "Status"}
                     </TableHead>
@@ -711,6 +713,19 @@ export default function CandidateOverviewPage() {
                                 <span className="text-slate-500 text-[10px]">System / Admin</span>
                               )}
                             </div>
+                          </TableCell>
+
+                          {/* Created At */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                              {formatDate(candidate.createdAt)}
+                            </div>
+                          </TableCell>
+
+                          {/* Profile Completion */}
+                          <TableCell className="px-4 py-3">
+                            <CandidateProfileCompletionCell candidateId={candidate.id} />
                           </TableCell>
 
                           {/* Status / Project Count */}

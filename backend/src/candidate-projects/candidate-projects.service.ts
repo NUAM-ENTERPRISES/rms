@@ -29,6 +29,20 @@ import {
 } from '../common/constants';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
+const DOCUMENT_TYPE_ALIASES: Record<string, string[]> = {
+  [DOCUMENT_TYPE.PASSPORT_COPY]: ['passport'],
+  [DOCUMENT_TYPE.PASSPORT_PHOTO]: ['photo'],
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE]: ['degree'],
+};
+
+function documentTypesMatch(a: string, b: string): boolean {
+  return (
+    a === b ||
+    DOCUMENT_TYPE_ALIASES[a]?.includes(b) ||
+    DOCUMENT_TYPE_ALIASES[b]?.includes(a)
+  );
+}
+
 @Injectable()
 export class CandidateProjectsService {
   private readonly logger = new Logger(CandidateProjectsService.name);
@@ -252,17 +266,16 @@ export class CandidateProjectsService {
         },
       });
 
-      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
-      if (roleNeededId) {
-        await this.autoAssignExistingDocuments(
-          tx,
-          candidateId,
-          roleNeededId,
-          newAssignment.id,
-          userId,
-          user?.name,
-        );
-      }
+      // AUTO-ASSIGN EXISTING DOCUMENTS THAT MATCH PROJECT REQUIREMENTS
+      await this.autoAssignExistingDocuments(
+        tx,
+        candidateId,
+        projectId,
+        roleNeededId || null,
+        newAssignment.id,
+        userId,
+        user?.name,
+      );
 
       return newAssignment;
     });
@@ -557,17 +570,15 @@ export class CandidateProjectsService {
         },
       });
 
-      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
-      if (roleNeededId) {
-        await this.autoAssignExistingDocuments(
-          tx,
-          candidateId,
-          roleNeededId,
-          assignment.id,
-          userId,
-          user?.name,
-        );
-      }
+      await this.autoAssignExistingDocuments(
+        tx,
+        candidateId,
+        projectId,
+        roleNeededId || null,
+        assignment.id,
+        userId,
+        user?.name,
+      );
 
       return assignment;
     });
@@ -787,17 +798,15 @@ export class CandidateProjectsService {
         },
       });
 
-      // AUTO-ASSIGN DOCUMENTS OF SAME ROLE
-      if (roleNeededId) {
-        await this.autoAssignExistingDocuments(
-          tx,
-          candidateId,
-          roleNeededId,
-          assignment.id,
-          userId,
-          user?.name,
-        );
-      }
+      await this.autoAssignExistingDocuments(
+        tx,
+        candidateId,
+        projectId,
+        roleNeededId || null,
+        assignment.id,
+        userId,
+        user?.name,
+      );
 
       return { ...assignment, screeningId };
     });
@@ -2497,76 +2506,109 @@ export class CandidateProjectsService {
   }
 
   /**
-   * Automatically assign existing documents of the same role to a new project assignment
+   * Automatically assign existing candidate documents to project requirements when types match.
    */
   private async autoAssignExistingDocuments(
     tx: any,
     candidateId: string,
-    roleNeededId: string,
+    projectId: string,
+    roleNeededId: string | null,
     newAssignmentId: string,
     userId: string,
     userName?: string,
   ) {
-    if (!roleNeededId) return;
-
-    // Find the role catalog ID for this role needed
-    const roleNeeded = await tx.roleNeeded.findUnique({
-      where: { id: roleNeededId },
-      select: { roleCatalogId: true },
+    const requirements = await tx.documentRequirement.findMany({
+      where: {
+        projectId,
+        isDeleted: false,
+      },
+      orderBy: { createdAt: 'asc' },
     });
 
-    if (!roleNeeded) return;
+    if (!requirements.length) return;
 
-    const roleCatalogId = roleNeeded.roleCatalogId;
+    const roleNeeded = roleNeededId
+      ? await tx.roleNeeded.findUnique({
+          where: { id: roleNeededId },
+          select: { roleCatalogId: true },
+        })
+      : null;
+    const roleCatalogId = roleNeeded?.roleCatalogId || null;
 
-    // Find existing resumes for this candidate that match the role
-    // We only auto-assign resumes as per requirement
-    const existingResumes = await tx.document.findMany({
+    const searchDocTypes = new Set<string>();
+    for (const requirement of requirements) {
+      searchDocTypes.add(requirement.docType);
+      const aliases = DOCUMENT_TYPE_ALIASES[requirement.docType];
+      if (aliases) aliases.forEach((alias) => searchDocTypes.add(alias));
+    }
+
+    const existingDocuments = await tx.document.findMany({
       where: {
-        candidateId: candidateId,
-        docType: DOCUMENT_TYPE.RESUME,
-        roleCatalogId: roleCatalogId,
+        candidateId,
+        docType: { in: Array.from(searchDocTypes) },
+        status: { not: DOCUMENT_STATUS.REJECTED },
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    for (const doc of existingResumes) {
-      // Check if this document is already linked to the new assignment
-      const alreadyLinked =
-        await tx.candidateProjectDocumentVerification.findUnique({
-          where: {
-            candidateProjectMapId_documentId: {
-              candidateProjectMapId: newAssignmentId,
-              documentId: doc.id,
-            },
-          },
-        });
+    for (const requirement of requirements) {
+      const matchingDoc = existingDocuments.find((doc: any) => {
+        if (!documentTypesMatch(doc.docType, requirement.docType)) {
+          return false;
+        }
 
-      if (!alreadyLinked) {
-        const newVerification =
-          await tx.candidateProjectDocumentVerification.create({
-            data: {
-              candidateProjectMapId: newAssignmentId,
-              documentId: doc.id,
-              roleCatalogId: roleCatalogId,
-              status: doc.status,
-              notes: `Auto-assigned from existing resume`,
-            },
-          });
+        if (
+          requirement.docType === DOCUMENT_TYPE.RESUME &&
+          roleCatalogId &&
+          doc.roleCatalogId !== roleCatalogId
+        ) {
+          return false;
+        }
 
-        // Create history entry for the auto-assignment
-        await tx.documentVerificationHistory.create({
-          data: {
-            verificationId: newVerification.id,
-            action: doc.status,
-            performedBy: userId,
-            performedByName: userName || null,
-            notes: 'auto assigned when project assigned',
+        return true;
+      });
+
+      if (!matchingDoc) continue;
+
+      const requirementDocTypes = new Set<string>([
+        requirement.docType,
+        ...(DOCUMENT_TYPE_ALIASES[requirement.docType] ?? []),
+      ]);
+
+      const existingLinkedDoc = await tx.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId: newAssignmentId,
+          document: {
+            docType: { in: Array.from(requirementDocTypes) },
           },
-        });
-      }
+          isDeleted: false,
+        },
+      });
+
+      if (existingLinkedDoc) continue;
+
+      const newVerification = await tx.candidateProjectDocumentVerification.create({
+        data: {
+          candidateProjectMapId: newAssignmentId,
+          documentId: matchingDoc.id,
+          roleCatalogId:
+            requirement.docType === DOCUMENT_TYPE.RESUME ? roleCatalogId : null,
+          status: matchingDoc.status,
+          notes: `Auto-assigned from existing candidate document`,
+        },
+      });
+
+      await tx.documentVerificationHistory.create({
+        data: {
+          verificationId: newVerification.id,
+          action: matchingDoc.status,
+          performedBy: userId,
+          performedByName: userName || null,
+          notes: 'Auto-assigned when project assigned',
+        },
+      });
     }
   }
 
@@ -3214,17 +3256,15 @@ export class CandidateProjectsService {
             },
           });
 
-          // Auto-assign documents
-          if (roleNeededId) {
-            await this.autoAssignExistingDocuments(
-              tx,
-              candidateId,
-              roleNeededId,
-              newAssignment.id,
-              userId,
-              user?.name,
-            );
-          }
+          await this.autoAssignExistingDocuments(
+            tx,
+            candidateId,
+            projectId,
+            roleNeededId || null,
+            newAssignment.id,
+            userId,
+            user?.name,
+          );
 
           return newAssignment;
         });

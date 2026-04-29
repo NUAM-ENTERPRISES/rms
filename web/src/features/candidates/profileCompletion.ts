@@ -10,7 +10,7 @@ export type CandidateProfileRequiredDoc = {
 export const CANDIDATE_PROFILE_REQUIRED_DOCUMENTS: CandidateProfileRequiredDoc[] = [
   { docType: DOCUMENT_TYPE.RESUME, label: "Resume", mandatory: true },
   { docType: DOCUMENT_TYPE.DEGREE, label: "Degree Certificate", mandatory: true },
-  { docType: DOCUMENT_TYPE.PHOTO, label: "Passport Size Photo", mandatory: true },
+  { docType: DOCUMENT_TYPE.PASSPORT_PHOTO, label: "Passport Size Photo", mandatory: true },
   { docType: DOCUMENT_TYPE.PASSPORT, label: "Passport Copy", mandatory: true },
   { docType: DOCUMENT_TYPE.AADHAAR, label: "Aadhaar Card", mandatory: true },
   {
@@ -24,9 +24,17 @@ export function getCandidateProfileCompletion(documents: Document[] | undefined)
   const docs = Array.isArray(documents) ? documents : [];
 
   const uploadedByType = new Map<string, boolean>();
+  const normalizeDocType = (docType: string) => {
+    const lower = docType.toLowerCase();
+    if (lower === 'photo') return 'passport_photo';
+    if (lower === 'passport') return 'passport_copy';
+    if (lower === 'degree') return 'degree_certificate';
+    return lower;
+  };
+
   for (const d of docs) {
     if (!d?.docType) continue;
-    uploadedByType.set(String(d.docType).toLowerCase(), true);
+    uploadedByType.set(normalizeDocType(String(d.docType)), true);
   }
 
   const required = CANDIDATE_PROFILE_REQUIRED_DOCUMENTS.filter((d) => d.mandatory);

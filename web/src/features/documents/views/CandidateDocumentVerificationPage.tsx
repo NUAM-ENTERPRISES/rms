@@ -73,7 +73,6 @@ import {
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
-import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
@@ -261,6 +260,59 @@ export default function CandidateDocumentVerificationPage() {
   const allRejected =
     (summary.totalSubmitted || 0) > 0 &&
     (summary.totalRejected || 0) === (summary.totalSubmitted || 0);
+
+  // Handle document verification
+  const handleVerifyDocument = async (verification: any) => {
+    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
+    
+    if (!effectiveMapId) {
+      toast.error("No candidate-project mapping found for this candidate and project");
+      return;
+    }
+
+    try {
+      await verifyDocument({
+        documentId: verification.document.id,
+        candidateProjectMapId: effectiveMapId,
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
+        status: "verified",
+        notes: verificationNotes,
+      }).unwrap();
+      toast.success("Document verified successfully!");
+      setVerificationNotes("");
+      // Ensure UI updates immediately
+      refetchRequirements();
+    } catch (error) {
+      toast.error("Failed to verify document");
+    }
+  };
+
+  // Handle document rejection
+  const handleRejectDocument = async (verification: any) => {
+    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
+
+    if (!effectiveMapId) {
+      toast.error("No candidate-project mapping found for this candidate and project");
+      return;
+    }
+
+    try {
+      await verifyDocument({
+        documentId: verification.document.id,
+        candidateProjectMapId: effectiveMapId,
+        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
+        status: "rejected",
+        notes: verificationNotes,
+        rejectionReason: verificationNotes,
+      }).unwrap();
+      toast.success("Document rejected");
+      setVerificationNotes("");
+      // Ensure UI updates immediately
+      refetchRequirements();
+    } catch (error) {
+      toast.error("Failed to reject document");
+    }
+  };
 
   // Handle verify all documents
   const handleVerifyAllDocuments = async () => {
@@ -473,66 +525,6 @@ export default function CandidateDocumentVerificationPage() {
   const handleOpenPDF = (fileUrl: string, fileName: string) => {
     setSelectedDocument({ fileUrl, fileName });
     setIsPDFViewerOpen(true);
-  };
-
-  const getDocumentTypeLabel = (docType: string) => {
-    return (
-      DOCUMENT_TYPE_CONFIG[docType as any]?.displayName ||
-      docType
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase())
-    );
-  };
-
-  const handleVerifyDocument = async (verification: any) => {
-    const document = verification?.document || verification;
-    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
-
-    if (!effectiveMapId) {
-      toast.error('No candidate-project mapping found for this candidate and project');
-      return;
-    }
-
-    try {
-      await verifyDocument({
-        documentId: document.id,
-        candidateProjectMapId: effectiveMapId,
-        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
-        status: 'verified',
-        notes: verificationNotes,
-      }).unwrap();
-      toast.success('Document verified successfully!');
-      setVerificationNotes('');
-      refetchRequirements();
-    } catch (error) {
-      toast.error('Failed to verify document');
-    }
-  };
-
-  const handleRejectDocument = async (verification: any) => {
-    const document = verification?.document || verification;
-    const effectiveMapId = verification?.candidateProjectMapId || candidateProjectMapId;
-
-    if (!effectiveMapId) {
-      toast.error('No candidate-project mapping found for this candidate and project');
-      return;
-    }
-
-    try {
-      await verifyDocument({
-        documentId: document.id,
-        candidateProjectMapId: effectiveMapId,
-        roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id,
-        status: 'rejected',
-        notes: verificationNotes,
-        rejectionReason: verificationNotes,
-      }).unwrap();
-      toast.success('Document rejected');
-      setVerificationNotes('');
-      refetchRequirements();
-    } catch (error) {
-      toast.error('Failed to reject document');
-    }
   };
 
   // Handle complete verification
@@ -1291,97 +1283,6 @@ export default function CandidateDocumentVerificationPage() {
                     </TableRow>
                   );
                 })}
-                {allCandidateDocuments.length > 0 && (
-                  <>
-                    <TableRow key="candidate-docs-header" className="bg-slate-50">
-                      <TableCell colSpan={4} className="py-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-xl bg-violet-100">
-                              <FileText className="h-5 w-5 text-violet-700" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">Candidate Documents</p>
-                              <p className="text-xs text-slate-500">All documents uploaded for this candidate. Verify, reject, or link documents to this project.</p>
-                            </div>
-                          </div>
-                          <Badge className="text-xs font-semibold bg-slate-100 text-slate-700">
-                            {allCandidateDocuments.length} document{allCandidateDocuments.length === 1 ? '' : 's'}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {allCandidateDocuments.map((doc: any) => {
-                      const displayedStatus = doc.status || 'pending';
-                      return (
-                        <TableRow key={doc.id} className="hover:bg-white/70 transition">
-                          <TableCell className="py-5">
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-center gap-3">
-                                <FileIcon className="h-6 w-6 text-slate-500 flex-shrink-0" />
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-slate-800 truncate">{getDocumentTypeLabel(doc.docType)}</p>
-                                  <p className="text-xs text-slate-500 truncate max-w-[220px]">{doc.fileName}</p>
-                                </div>
-                              </div>
-                              <span className="text-xs text-slate-400">
-                                {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Uploaded date unavailable'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(displayedStatus)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-slate-700 truncate max-w-[180px]">{doc.fileName}</span>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(doc.fileUrl, doc.fileName)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3"
-                                onClick={() => {
-                                  setSelectedDocumentType(doc.id);
-                                  setShowReuseDialog(true);
-                                }}
-                              >
-                                <Link2 className="h-3.5 w-3.5 mr-1.5" />
-                                Link
-                              </Button>
-                              {canVerifyDocuments && selectedProjectId && (
-                                <>
-                                  {displayedStatus !== 'verified' && (
-                                    <Button
-                                      size="sm"
-                                      className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3"
-                                      onClick={() => { setSelectedVerification(doc); setConfirmationAction('verify'); setIsConfirmationOpen(true); }}
-                                    >
-                                      <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                    </Button>
-                                  )}
-                                  {displayedStatus !== 'rejected' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3"
-                                      onClick={() => { setSelectedVerification(doc); setConfirmationAction('reject'); setIsConfirmationOpen(true); }}
-                                    >
-                                      <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </>
-                )}
               </TableBody>
             </Table>
           </div>

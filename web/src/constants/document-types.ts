@@ -9,6 +9,7 @@
 export const DOCUMENT_TYPE = {
   // Identity Documents
   PASSPORT: "passport_copy",
+  PASSPORT_PHOTO: "passport_photo",
   AADHAAR: "aadhaar",
   PAN_CARD: "pan_card",
   DRIVING_LICENSE: "driving_license",
@@ -107,6 +108,17 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     maxSizeMB: 5,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PASSPORT_PHOTO]: {
+    displayName: "Passport Photo",
+    description: "Passport size photo (white background)",
+    category: "identity",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 2,
+    allowedFormats: ["jpg", "jpeg", "png"],
+    icon: "User",
     commonlyRequired: true,
   },
   [DOCUMENT_TYPE.AADHAAR]: {

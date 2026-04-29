@@ -148,6 +148,7 @@ const DOCUMENT_TYPES = [
     label: "Medical Insurance",
     category: "medical",
   },
+  { value: DOCUMENT_TYPE.PASSPORT_PHOTO, label: "Passport Size Photo", category: "identity" },
   { value: "photo", label: "Photograph", category: "other" },
   { value: "bank_details", label: "Bank Account Details", category: "other" },
   { value: "offer_letter", label: "Offer Letter", category: "other" },

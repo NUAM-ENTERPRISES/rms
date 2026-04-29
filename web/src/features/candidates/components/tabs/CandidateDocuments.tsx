@@ -3,7 +3,8 @@ import { DocumentUploadSection } from "../DocumentUploadSection";
 import { useGetDocumentsQuery } from "../../api";
 import { getCandidateProfileCompletion } from "../../profileCompletion";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, FileText, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, FileText, Loader2, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,6 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface CandidateDocumentsProps {
   candidateId: string;
@@ -34,127 +37,201 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   const missingLabels = completion.missing.map((item) => item.label);
 
   return (
-    <div className="space-y-6">
-      <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100 flex flex-row items-center justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-slate-900">
-              <FileText className="h-5 w-5 text-blue-600" />
-              Candidate Specific Documents
-            </CardTitle>
-            <CardDescription className="text-slate-600">
-              All documents uploaded by this candidate.
-            </CardDescription>
-          </div>
-          {(isLoading || isFetching) && (
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-          )}
-        </CardHeader>
-        <CardContent className="space-y-5 p-6">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] items-start">
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-900">Mandatory Documents</p>
-              <p className="text-sm text-slate-500">
-                {completion.completedCount}/{completion.requiredCount} required documents uploaded.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500">
-                Completion
-              </p>
-              <p className="text-2xl font-bold text-slate-900">{completion.percent}%</p>
-              <p className="text-xs text-slate-500">
-                {completion.missing.length} missing
-              </p>
-            </div>
-          </div>
-
-          {completion.missing.length > 0 ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-              <p className="font-semibold">Missing required documents</p>
-              <p className="text-sm text-amber-800 mt-2">
-                Upload the missing files below to complete the candidate profile.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {missingLabels.map((label) => (
-                  <span
-                    key={label}
-                    className="inline-flex items-center rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900"
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
-              <p className="font-semibold">All mandatory documents are uploaded.</p>
-              <p className="text-sm text-emerald-800 mt-2">
-                The candidate has submitted the required documentation for profile completion.
-              </p>
-            </div>
-          )}
-
-          <DocumentUploadSection 
-            candidateId={candidateId} 
-            data={documents}
-            isLoading={isLoading}
-            onRefresh={refetch}
-          />
-
-          {meta && meta.total > 0 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-              <p className="text-sm text-slate-500 font-medium">
-                Showing <span className="text-slate-900">{(page - 1) * limit + 1}</span> to{" "}
-                <span className="text-slate-900">
-                  {Math.min(page * limit, meta.total)}
-                </span>{" "}
-                of <span className="text-slate-900">{meta.total}</span> results
-              </p>
-              {meta.totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1 || isFetching}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(
-                      (p) => (
-                        <Button
-                          key={p}
-                          variant={p === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPage(p)}
-                          disabled={isFetching}
-                          className={`h-8 w-8 p-0 ${
-                            p === page ? "bg-blue-600 hover:bg-blue-700" : ""
-                          }`}
-                        >
-                          {p}
-                        </Button>
-                      )
-                    )}
+    <div className="space-y-8">
+      {/* Header & Status Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                  <div className="p-2.5 bg-blue-50 rounded-2xl">
+                    <FileText className="h-6 w-6 text-blue-600" />
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                    disabled={page === meta.totalPages || isFetching}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                  Document Repository
+                </CardTitle>
+                <CardDescription className="text-slate-500 font-medium ml-1">
+                  Manage and verify all candidate documentation
+                </CardDescription>
+              </div>
+              {(isLoading || isFetching) && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Syncing</span>
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-6 rounded-3xl bg-slate-50/50 border border-slate-100">
+              <div className="relative flex-shrink-0">
+                <svg className="w-24 h-24 transform -rotate-90">
+                  <circle
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-slate-200"
+                  />
+                  <motion.circle
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray={251.2}
+                    initial={{ strokeDashoffset: 251.2 }}
+                    animate={{ strokeDashoffset: 251.2 - (completion.percent / 100) * 251.2 }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    strokeLinecap="round"
+                    className={cn(
+                      "transition-all duration-500",
+                      completion.percent >= 100 ? "text-emerald-500" : 
+                      completion.percent >= 60 ? "text-amber-400" : "text-rose-500"
+                    )}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black text-slate-900">{completion.percent}%</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Done</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 flex-1">
+                <div className="space-y-1">
+                  <h4 className="text-lg font-bold text-slate-900">Profile Completion Status</h4>
+                  <p className="text-sm text-slate-500 font-medium">
+                    {completion.completedCount} of {completion.requiredCount} mandatory documents have been successfully verified.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-xs font-bold text-slate-700">{completion.completedCount} Verified</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <AlertCircle className="h-4 w-4 text-rose-500" />
+                    <span className="text-xs font-bold text-slate-700">{completion.missing.length} Missing</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <Info className="h-5 w-5 text-amber-500" />
+              Action Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <AnimatePresence mode="wait">
+              {completion.missing.length > 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                    The following documents are required to complete the verification process:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {completion.missing.map((doc) => (
+                      <Badge
+                        key={doc.label}
+                        className="px-3 py-1.5 bg-amber-50 text-amber-700 border-amber-100 rounded-xl text-[11px] font-bold uppercase tracking-wider"
+                      >
+                        {doc.label}
+                      </Badge>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-6 text-center space-y-3"
+                >
+                  <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-base font-bold text-slate-900">All Set!</p>
+                    <p className="text-xs text-slate-500 font-medium">No pending mandatory documents.</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Section */}
+      <div className="space-y-6">
+        <DocumentUploadSection 
+          candidateId={candidateId} 
+          data={documents}
+          isLoading={isLoading}
+          onRefresh={refetch}
+        />
+
+        {/* Pagination */}
+        {meta && meta.total > 0 && meta.totalPages > 1 && (
+          <div className="flex items-center justify-between p-6 bg-white/50 backdrop-blur-sm rounded-3xl border border-slate-100 shadow-sm">
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">
+              Page <span className="text-slate-900">{page}</span> of {meta.totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || isFetching}
+                className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md transition-all"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === meta.totalPages || Math.abs(p - page) <= 1)
+                  .map((p, i, arr) => (
+                    <React.Fragment key={p}>
+                      {i > 0 && arr[i-1] !== p - 1 && <span className="text-slate-300 mx-1">...</span>}
+                      <Button
+                        variant={p === page ? "default" : "ghost"}
+                        size="icon"
+                        onClick={() => setPage(p)}
+                        disabled={isFetching}
+                        className={cn(
+                          "h-10 w-10 rounded-xl transition-all font-bold",
+                          p === page ? "bg-blue-600 text-white shadow-lg shadow-blue-200" : "hover:bg-white hover:shadow-md"
+                        )}
+                      >
+                        {p}
+                      </Button>
+                    </React.Fragment>
+                  ))}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                disabled={page === meta.totalPages || isFetching}
+                className="h-10 w-10 rounded-xl hover:bg-white hover:shadow-md transition-all"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

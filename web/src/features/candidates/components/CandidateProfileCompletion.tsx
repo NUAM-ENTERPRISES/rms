@@ -1,5 +1,5 @@
 import React from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGetDocumentsQuery } from "../api";
 import { getCandidateProfileCompletion } from "../profileCompletion";
 import type { Document } from "../api";
@@ -8,6 +8,7 @@ interface CandidateProfileCompletionProps {
   documents?: Document[];
   isLoading?: boolean;
   compact?: boolean;
+  variant?: "default" | "circular";
 }
 
 interface CandidateProfileCompletionCellProps {
@@ -15,6 +16,12 @@ interface CandidateProfileCompletionCellProps {
 }
 
 const getProgressColor = (percent: number) => {
+  if (percent >= 100) return "text-emerald-500";
+  if (percent >= 60) return "text-amber-400";
+  return "text-rose-500";
+};
+
+const getProgressBgColor = (percent: number) => {
   if (percent >= 100) return "bg-emerald-500";
   if (percent >= 60) return "bg-amber-400";
   return "bg-rose-500";
@@ -24,16 +31,100 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
   documents,
   isLoading,
   compact = false,
+  variant = "default",
 }) => {
   const completion = getCandidateProfileCompletion(documents);
   const missingLabels = completion.missing.map((item) => item.label);
   const progressColor = getProgressColor(completion.percent);
+  const progressBgColor = getProgressBgColor(completion.percent);
 
   if (isLoading) {
     return (
       <div className={compact ? "text-xs text-slate-500" : "text-sm text-slate-500"}>
         Loading profile completion...
       </div>
+    );
+  }
+
+  if (variant === "circular") {
+    const radius = 20;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (completion.percent / 100) * circumference;
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative flex items-center justify-center w-12 h-12 cursor-help group">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle
+                  cx="24"
+                  cy="24"
+                  r={radius}
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="transparent"
+                  className="text-slate-100"
+                />
+                <circle
+                  cx="24"
+                  cy="24"
+                  r={radius}
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="transparent"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                  strokeLinecap="round"
+                  className={`${progressColor} transition-all duration-500 ease-in-out`}
+                />
+              </svg>
+              <span className="absolute text-[10px] font-bold text-slate-700">
+                {completion.percent}%
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="end" className="w-64 p-4 bg-white text-slate-900 border border-slate-200 shadow-lg">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-slate-900">Profile Completion</h4>
+                <span className={`text-sm font-bold ${progressColor}`}>{completion.percent}%</span>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                  <span>Documents</span>
+                  <span>{completion.completedCount}/{completion.requiredCount}</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full ${progressBgColor} transition-all duration-500`} 
+                    style={{ width: `${completion.percent}%` }}
+                  />
+                </div>
+              </div>
+
+              {completion.missing.length > 0 ? (
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Missing Required Docs</p>
+                  <div className="flex flex-wrap gap-1">
+                    {completion.missing.map((doc, i) => (
+                      <span key={i} className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] font-medium">
+                        {doc.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-emerald-600">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <p className="text-[10px] font-bold uppercase tracking-wider">All documents verified</p>
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
@@ -57,7 +148,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 
       <div className="rounded-full bg-slate-100 h-2 overflow-hidden">
         <div
-          className={`${progressColor} h-full rounded-full transition-all duration-300`}
+          className={`${progressBgColor} h-full rounded-full transition-all duration-300`}
           style={{ width: `${completion.percent}%` }}
         />
       </div>
@@ -66,31 +157,33 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
         <span>
           {completion.completedCount}/{completion.requiredCount} required documents uploaded
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {completion.missing.length} missing
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="center" className="max-w-[220px]">
-            <div className="space-y-2 text-xs text-slate-900">
-              <p className="font-semibold">{completion.percent}% complete</p>
-              {completion.missing.length > 0 ? (
-                <div>
-                  <p className="font-medium">Missing documents</p>
-                  <p className="mt-1 text-slate-600">
-                    {missingLabels.join(", ")}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-emerald-700">All required documents are submitted.</p>
-              )}
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {completion.missing.length} missing
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center" className="max-w-[220px] bg-white text-slate-900 border border-slate-200 shadow-lg">
+              <div className="space-y-2 text-xs text-slate-900">
+                <p className="font-semibold">{completion.percent}% complete</p>
+                {completion.missing.length > 0 ? (
+                  <div>
+                    <p className="font-medium">Missing documents</p>
+                    <p className="mt-1 text-slate-600">
+                      {missingLabels.join(", ")}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-emerald-700">All required documents are submitted.</p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
@@ -107,11 +200,12 @@ export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletion
   const documents = data?.data?.documents;
 
   return (
-    <div className="min-w-[120px]">
+    <div className="flex justify-center">
       <CandidateProfileCompletion
         documents={documents}
         isLoading={isLoading}
         compact={true}
+        variant="circular"
       />
     </div>
   );

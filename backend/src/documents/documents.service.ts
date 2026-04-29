@@ -39,6 +39,20 @@ import { ProcessingService } from '../processing/processing.service';
 import { UploadService } from '../upload/upload.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 
+const DOCUMENT_TYPE_ALIASES: Record<string, string[]> = {
+  [DOCUMENT_TYPE.PASSPORT_COPY]: ['passport'],
+  [DOCUMENT_TYPE.PASSPORT_PHOTO]: ['photo'],
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE]: ['degree'],
+};
+
+function documentTypesMatch(a: string, b: string): boolean {
+  return (
+    a === b ||
+    DOCUMENT_TYPE_ALIASES[a]?.includes(b) ||
+    DOCUMENT_TYPE_ALIASES[b]?.includes(a)
+  );
+}
+
 @Injectable()
 export class DocumentsService {
   private readonly logger = new Logger(DocumentsService.name);
@@ -112,6 +126,7 @@ export class DocumentsService {
           createDocumentDto.roleCatalog || createDocumentDto.roleCatalogId || createDocumentDto.roleCatelogId || null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,
+        workExperienceId: createDocumentDto.workExperienceId || null,
       },
       include: {
         candidate: {
@@ -159,7 +174,96 @@ export class DocumentsService {
       this.logger.error(`Failed to publish data sync event for document creation: ${err.message}`);
     }
 
+    await this.autoAssignDocumentToExistingProjects(document, userId);
+
     return document as DocumentWithRelations;
+  }
+
+  private async autoAssignDocumentToExistingProjects(
+    document: any,
+    userId: string,
+  ) {
+    const candidateProjects = await this.prisma.candidateProjects.findMany({
+      where: { candidateId: document.candidateId },
+      select: {
+        id: true,
+        projectId: true,
+        roleNeeded: {
+          select: {
+            roleCatalogId: true,
+          },
+        },
+      },
+    });
+
+    if (!candidateProjects.length) return;
+
+    const projectIds = candidateProjects.map((cp) => cp.projectId);
+    const requirements = await this.prisma.documentRequirement.findMany({
+      where: {
+        projectId: { in: projectIds },
+        isDeleted: false,
+      },
+    });
+
+    if (!requirements.length) return;
+
+    for (const candidateProject of candidateProjects) {
+      const matchingRequirements = requirements.filter(
+        (requirement) =>
+          requirement.projectId === candidateProject.projectId &&
+          documentTypesMatch(document.docType, requirement.docType) &&
+          (requirement.docType !== DOCUMENT_TYPE.RESUME ||
+            (document.roleCatalogId &&
+              candidateProject.roleNeeded?.roleCatalogId &&
+              document.roleCatalogId ===
+                candidateProject.roleNeeded.roleCatalogId)),
+      );
+
+      for (const requirement of matchingRequirements) {
+        const requirementDocTypes = new Set<string>([
+          requirement.docType,
+          ...(DOCUMENT_TYPE_ALIASES[requirement.docType] ?? []),
+        ]);
+
+        const existingLinkedVerification =
+          await this.prisma.candidateProjectDocumentVerification.findFirst({
+            where: {
+              candidateProjectMapId: candidateProject.id,
+              document: {
+                docType: { in: Array.from(requirementDocTypes) },
+              },
+              isDeleted: false,
+            },
+          });
+
+        if (existingLinkedVerification) continue;
+
+        const newVerification =
+          await this.prisma.candidateProjectDocumentVerification.create({
+            data: {
+              candidateProjectMapId: candidateProject.id,
+              documentId: document.id,
+              roleCatalogId:
+                requirement.docType === DOCUMENT_TYPE.RESUME
+                  ? document.roleCatalogId
+                  : null,
+              status: document.status,
+              notes: 'Auto-assigned from candidate upload',
+            },
+          });
+
+        await this.prisma.documentVerificationHistory.create({
+          data: {
+            verificationId: newVerification.id,
+            action: document.status,
+            performedBy: userId,
+            performedByName: null,
+            notes: 'Auto-assigned when document uploaded',
+          },
+        });
+      }
+    }
   }
 
   /**
