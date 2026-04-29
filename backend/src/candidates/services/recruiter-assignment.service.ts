@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
@@ -9,6 +10,20 @@ import { ROLE_NAMES } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
+
+/**
+ * Agent-channel candidates: canonical/legacy source values OR any row linked to an Agent
+ * (`agentId` set). Rows may keep `source: 'manual'` while still belonging to this pipeline.
+ */
+function prismaAgentChannelWhere(): Prisma.CandidateWhereInput {
+  return {
+    OR: [
+      { source: 'agent' },
+      { source: 'agents' },
+      { agentId: { not: null } },
+    ],
+  };
+}
 
 export interface RecruiterInfo {
   id: string;
@@ -556,7 +571,14 @@ export class RecruiterAssignmentService {
       ];
     }
     if (source && source !== 'all') {
-      whereClause.source = source;
+      if (source === 'agent') {
+        whereClause.AND = [
+          ...(whereClause.AND ?? []),
+          prismaAgentChannelWhere(),
+        ];
+      } else {
+        whereClause.source = source;
+      }
     }
     if (roleCatalogId && roleCatalogId !== 'all') {
       whereClause.workExperiences = {
@@ -564,6 +586,17 @@ export class RecruiterAssignmentService {
           roleCatalogId: roleCatalogId,
         },
       };
+    }
+
+    // Dashboard counts: when `source` is set, bucket stats on the same cohort as the listing
+    // (respects channel; for `agent`, includes agentId-linked rows, not only source === 'agent').
+    let assignmentWhereForDashboard: Prisma.CandidateWhereInput =
+      assignmentOnlyWhere;
+    if (source && source !== 'all') {
+      assignmentWhereForDashboard =
+        source === 'agent'
+          ? { AND: [assignmentOnlyWhere, prismaAgentChannelWhere()] }
+          : { AND: [assignmentOnlyWhere, { source }] };
     }
 
     // CreatedAt / Date range filtering (server-side)
@@ -606,11 +639,6 @@ export class RecruiterAssignmentService {
       where: whereClause,
     });
 
-    // Dashboard counts (overall assigned to recruiter, not limited by pagination or search)
-    const totalAssignedCount = await this.prisma.candidate.count({
-      where: assignmentOnlyWhere,
-    });
-
     // Use status IDs (more reliable) to compute counts
     // Use case-insensitive lookup for status names to handle different casings in DB
     const untouchedStatus = await this.prisma.candidateStatus.findFirst({
@@ -639,7 +667,7 @@ export class RecruiterAssignmentService {
 
     // Retrieve assigned candidates' currentStatusId and compute counts in-memory
     const assignedCandidates = await this.prisma.candidate.findMany({
-      where: assignmentOnlyWhere,
+      where: assignmentWhereForDashboard,
       select: {
         id: true,
         currentStatusId: true,

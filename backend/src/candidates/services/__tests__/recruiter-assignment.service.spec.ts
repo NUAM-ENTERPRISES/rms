@@ -17,6 +17,11 @@ describe('RecruiterAssignmentService', () => {
     },
     candidate: {
       findUnique: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    candidateStatus: {
+      findFirst: jest.fn(),
     },
     candidateRecruiterAssignment: {
       findFirst: jest.fn(),
@@ -150,6 +155,66 @@ describe('RecruiterAssignmentService', () => {
       expect(result.isRoundRobin).toBe(true);
       expect(result.id).toBe('user-load');
       expect(mockPrismaService.user.findMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('getRecruiterCandidates', () => {
+    const recruiterId = 'rec-1';
+
+    beforeEach(() => {
+      mockPrismaService.candidateStatus.findFirst.mockResolvedValue(null);
+      mockPrismaService.candidate.count.mockResolvedValue(1);
+      mockPrismaService.candidate.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+    });
+
+    it('uses agent channel predicate for source=agent so agentId-linked manual rows match', async () => {
+      await service.getRecruiterCandidates(recruiterId, {
+        page: 1,
+        limit: 10,
+        source: 'agent',
+      });
+
+      expect(mockPrismaService.candidate.count).toHaveBeenCalled();
+      const listWhere =
+        mockPrismaService.candidate.count.mock.calls[0][0].where;
+
+      expect(listWhere.recruiterAssignments).toBeDefined();
+      expect(listWhere).toMatchObject({
+        AND: expect.arrayContaining([
+          expect.objectContaining({
+            OR: expect.arrayContaining([
+              { source: 'agent' },
+              { source: 'agents' },
+              { agentId: { not: null } },
+            ]),
+          }),
+        ]),
+      });
+    });
+
+    it('scopes dashboard counts to agent channel when source=agent', async () => {
+      await service.getRecruiterCandidates(recruiterId, {
+        page: 1,
+        limit: 10,
+        source: 'agent',
+      });
+
+      expect(mockPrismaService.candidate.findMany).toHaveBeenCalled();
+
+      expect(mockPrismaService.candidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            AND: expect.arrayContaining([
+              expect.any(Object),
+              expect.objectContaining({
+                OR: expect.any(Array),
+              }),
+            ]),
+          }),
+        }),
+      );
     });
   });
 });
