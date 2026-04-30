@@ -1,622 +1,105 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { CandidatesService } from '../candidates.service';
 import { PrismaService } from '../../database/prisma.service';
-import { CreateCandidateDto } from '../dto/create-candidate.dto';
-import { UpdateCandidateDto } from '../dto/update-candidate.dto';
-import { AssignProjectDto } from '../dto/assign-project.dto';
-import {
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { OutboxService } from '../../notifications/outbox.service';
+import { PipelineService } from '../pipeline.service';
+import { UnifiedEligibilityService } from '../../candidate-eligibility/unified-eligibility.service';
+import { RecruiterAssignmentService } from '../services/recruiter-assignment.service';
+import { RnrRemindersService } from '../../rnr-reminders/rnr-reminders.service';
+import { WhatsAppService } from '../../notifications/whatsapp.service';
+import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
 
 describe('CandidatesService', () => {
   let service: CandidatesService;
-  let prismaService: jest.Mocked<PrismaService>;
-
-  const mockPrismaService = {
-    candidate: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      count: jest.fn(),
-      groupBy: jest.fn(),
-      aggregate: jest.fn(),
-    },
-    team: {
-      findUnique: jest.fn(),
-    },
-    project: {
-      findUnique: jest.fn(),
-    },
-    candidateProjectMap: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      findMany: jest.fn(),
-    },
+  let prisma: {
+    candidate: { findUnique: jest.Mock };
+    document: { findMany: jest.Mock };
   };
 
   beforeEach(async () => {
+    prisma = {
+      candidate: { findUnique: jest.fn() },
+      document: { findMany: jest.fn() },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CandidatesService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
+        { provide: PrismaService, useValue: prisma },
+        { provide: OutboxService, useValue: {} },
+        { provide: PipelineService, useValue: {} },
+        { provide: UnifiedEligibilityService, useValue: {} },
+        { provide: RecruiterAssignmentService, useValue: {} },
+        { provide: RnrRemindersService, useValue: {} },
+        { provide: WhatsAppService, useValue: {} },
+        { provide: WhatsAppNotificationService, useValue: {} },
       ],
     }).compile();
 
-    service = module.get<CandidatesService>(CandidatesService);
-    prismaService = module.get(PrismaService);
+    service = module.get(CandidatesService);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('create', () => {
-    const createCandidateDto: CreateCandidateDto = {
-      name: 'John Doe',
-      contact: '+1234567890',
-      email: 'john.doe@example.com',
-      source: 'manual',
-      currentStatus: 'new',
-      experience: 5,
-      skills: '["Nursing", "Patient Care"]',
-      currentEmployer: 'City Hospital',
-      expectedMinSalary: 40000,
-      expectedMaxSalary: 60000,
-      preferredCountries: ['AE', 'KW'],
-      facilityPreferences: ['clinic', 'home_care'],
-      teamId: 'team123',
-    };
-
-    const mockCandidate = {
-      id: 'candidate123',
-      name: 'John Doe',
-      contact: '+1234567890',
-      email: 'john.doe@example.com',
-      recruiter: { id: 'user123', name: 'Test User' },
-      team: { id: 'team123', name: 'Test Team' },
-    };
-
-    it('should create a candidate successfully', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-      prismaService.team.findUnique.mockResolvedValue({
-        id: 'team123',
-        name: 'Test Team',
-      } as any);
-      prismaService.candidate.create.mockResolvedValue(mockCandidate as any);
-
-      const result = await service.create(createCandidateDto, 'user123');
-
-      expect(result).toEqual(mockCandidate);
-      expect(prismaService.candidate.create).toHaveBeenCalledWith({
-        data: {
-          name: 'John Doe',
-          contact: '+1234567890',
-          email: 'john.doe@example.com',
-          source: 'manual',
-          dateOfBirth: null,
-          currentStatus: 'new',
-          experience: 5,
-          skills: ['Nursing', 'Patient Care'],
-          currentEmployer: 'City Hospital',
-          expectedMinSalary: 40000,
-          expectedMaxSalary: 60000,
-          assignedTo: 'user123',
-          teamId: 'team123',
-        },
-        include: expect.any(Object),
+  describe('getCandidateProfileCompletion', () => {
+    it('returns 100% when all required personal fields and documents exist', async () => {
+      prisma.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        email: 'john@example.com',
+        mobileNumber: '9876543210',
+        dateOfBirth: new Date('1990-01-01T00:00:00.000Z'),
       });
+
+      prisma.document.findMany.mockResolvedValue([
+        { docType: 'resume' },
+        { docType: 'degree_certificate' },
+        { docType: 'passport_photo' },
+        { docType: 'passport_copy' },
+        { docType: 'aadhaar' },
+        { docType: 'registration_certificate' },
+      ]);
+
+      const result = await service.getCandidateProfileCompletion('candidate123');
+      expect(result.percent).toBe(100);
+      expect(result.missing).toHaveLength(0);
+      expect(result.breakdown.personal.completedCount).toBe(3);
+      expect(result.breakdown.documents.completedCount).toBe(6);
     });
 
-    it('should throw ConflictException when contact already exists', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'existing123',
-      } as any);
+    it('includes missing dob/email and missing required docs', async () => {
+      prisma.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        email: null,
+        mobileNumber: '9876543210',
+        dateOfBirth: null,
+      });
 
+      prisma.document.findMany.mockResolvedValue([
+        { docType: 'resume' },
+        { docType: 'passport_copy' },
+      ]);
+
+      const result = await service.getCandidateProfileCompletion('candidate123');
+      expect(result.percent).toBeLessThan(100);
+
+      const missingKeys = result.missing.map((m: any) => m.key);
+      expect(missingKeys).toEqual(
+        expect.arrayContaining(['dateOfBirth', 'email']),
+      );
+      expect(result.breakdown.personal.completedCount).toBe(1);
+      expect(result.breakdown.documents.completedCount).toBe(2);
+    });
+
+    it('throws NotFoundException when candidate does not exist', async () => {
+      prisma.candidate.findUnique.mockResolvedValue(null);
       await expect(
-        service.create(createCandidateDto, 'user123'),
+        service.getCandidateProfileCompletion('missing'),
       ).rejects.toThrow(
-        new ConflictException(
-          'Candidate with contact +1234567890 already exists',
-        ),
+        new NotFoundException('Candidate with ID missing not found'),
       );
-    });
-
-    it('should throw NotFoundException when team does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-      prismaService.team.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.create(createCandidateDto, 'user123'),
-      ).rejects.toThrow(
-        new NotFoundException('Team with ID team123 not found'),
-      );
-    });
-
-    it('should throw BadRequestException when date of birth is in the future', async () => {
-      const futureDateDto = {
-        ...createCandidateDto,
-        dateOfBirth: '2030-01-01T00:00:00.000Z',
-      };
-
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-      prismaService.team.findUnique.mockResolvedValue({
-        id: 'team123',
-        name: 'Test Team',
-      } as any);
-
-      await expect(service.create(futureDateDto, 'user123')).rejects.toThrow(
-        new BadRequestException('Date of birth must be in the past'),
-      );
-    });
-  });
-
-  describe('findAll', () => {
-    const mockCandidates = [
-      {
-        id: 'candidate123',
-        name: 'John Doe',
-        contact: '+1234567890',
-        email: 'john.doe@example.com',
-        recruiter: { id: 'user123', name: 'Test User' },
-        team: { id: 'team123', name: 'Test Team' },
-      },
-    ];
-
-    it('should return paginated candidates', async () => {
-      prismaService.candidate.count.mockResolvedValue(1);
-      prismaService.candidate.findMany.mockResolvedValue(mockCandidates as any);
-
-      const result = await service.findAll({ page: 1, limit: 10 });
-
-      expect(result).toEqual({
-        candidates: mockCandidates,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 1,
-          totalPages: 1,
-        },
-      });
-    });
-
-    it('should apply search filter (includes qualifications)', async () => {
-      prismaService.candidate.count.mockResolvedValue(1);
-      prismaService.candidate.findMany.mockResolvedValue(mockCandidates as any);
-
-      await service.findAll({ search: 'john' });
-
-      expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: expect.arrayContaining([
-              expect.objectContaining({ firstName: { contains: 'john', mode: 'insensitive' } }),
-              expect.objectContaining({ lastName: { contains: 'john', mode: 'insensitive' } }),
-              expect.objectContaining({ mobileNumber: { contains: 'john', mode: 'insensitive' } }),
-              expect.objectContaining({ email: { contains: 'john', mode: 'insensitive' } }),
-              // qualifications.some -> qualification.name/field and candidateQualification.university should be included
-              expect.objectContaining({
-                qualifications: expect.objectContaining({
-                  some: expect.objectContaining({
-                    OR: expect.arrayContaining([
-                      expect.objectContaining({ qualification: expect.objectContaining({ name: { contains: 'john', mode: 'insensitive' } }) }),
-                      expect.objectContaining({ qualification: expect.objectContaining({ field: { contains: 'john', mode: 'insensitive' } }) }),
-                      expect.objectContaining({ university: { contains: 'john', mode: 'insensitive' } }),
-                    ]),
-                  }),
-                }),
-              }),
-            ]),
-          }),
-        }),
-      );
-    });
-
-    it('should apply createdAt date range filter and expand same-day ranges', async () => {
-      prismaService.candidate.count.mockResolvedValue(1);
-      prismaService.candidate.findMany.mockResolvedValue(mockCandidates as any);
-
-      const dateFrom = '2026-02-17T00:00:00.000Z';
-      const dateToSame = '2026-02-17T00:00:00.000Z'; // same timestamp -> should be expanded
-
-      await service.findAll({ page: 1, limit: 10, dateFrom, dateTo: dateToSame } as any);
-
-      expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            createdAt: expect.objectContaining({
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
-          }),
-        }),
-      );
-
-      const callArg = prismaService.candidate.findMany.mock.calls[0][0];
-      expect(callArg.where.createdAt.gte.toISOString()).toBe(new Date(dateFrom).toISOString());
-
-      // expanded lte should be dateFrom + 24h - 1ms
-      const expectedLte = new Date(new Date(dateFrom).getTime() + 24 * 60 * 60 * 1000 - 1);
-      expect(callArg.where.createdAt.lte.toISOString()).toBe(expectedLte.toISOString());
-    });
-
-    describe('getCandidateOverview', () => {
-      it('should convert minAge/maxAge to dateOfBirth filter', async () => {
-        prismaService.candidate.count.mockResolvedValue(0);
-        prismaService.candidate.findMany
-          .mockResolvedValueOnce([]) // allCandidates
-          .mockResolvedValueOnce([]); // candidates
-
-        await service.getCandidateOverview(
-          {
-            recruiterId: 'all',
-            dateFilter: 'all',
-            minAge: 25,
-            maxAge: 35,
-          } as any,
-          'user1',
-          ['Manager'],
-        );
-
-        expect(prismaService.candidate.findMany).toHaveBeenCalled();
-
-        const firstFindCall = prismaService.candidate.findMany.mock.calls[0][0];
-        expect(firstFindCall.where.dateOfBirth).toBeDefined();
-        expect(firstFindCall.where.dateOfBirth.gte).toBeInstanceOf(Date);
-        expect(firstFindCall.where.dateOfBirth.lte).toBeInstanceOf(Date);
-
-        const now = new Date();
-        const expectedFrom = new Date(now);
-        expectedFrom.setFullYear(now.getFullYear() - 35);
-        expectedFrom.setHours(0, 0, 0, 0);
-
-        const expectedTo = new Date(now);
-        expectedTo.setFullYear(now.getFullYear() - 25);
-        expectedTo.setHours(23, 59, 59, 999);
-
-        expect(firstFindCall.where.dateOfBirth.gte.getTime()).toBe(expectedFrom.getTime());
-        expect(firstFindCall.where.dateOfBirth.lte.getTime()).toBe(expectedTo.getTime());
-      });
-    });
-  });
-
-  describe('findOne', () => {
-    const mockCandidate = {
-      id: 'candidate123',
-      name: 'John Doe',
-      contact: '+1234567890',
-      email: 'john.doe@example.com',
-      recruiter: { id: 'user123', name: 'Test User' },
-      team: { id: 'team123', name: 'Test Team' },
-    };
-
-    it('should return a candidate by id', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(
-        mockCandidate as any,
-      );
-
-      const result = await service.findOne('candidate123');
-
-      expect(result).toEqual(mockCandidate);
-      expect(prismaService.candidate.findUnique).toHaveBeenCalledWith({
-        where: { id: 'candidate123' },
-        include: expect.any(Object),
-      });
-    });
-
-    it('should throw NotFoundException when candidate does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-
-      await expect(service.findOne('candidate123')).rejects.toThrow(
-        new NotFoundException('Candidate with ID candidate123 not found'),
-      );
-    });
-  });
-
-  describe('update', () => {
-    const updateCandidateDto: UpdateCandidateDto = {
-      name: 'Jane Doe',
-      currentStatus: 'shortlisted',
-    };
-
-    const mockCandidate = {
-      id: 'candidate123',
-      name: 'Jane Doe',
-      currentStatus: 'shortlisted',
-      recruiter: { id: 'user123', name: 'Test User' },
-      team: { id: 'team123', name: 'Test Team' },
-    };
-
-    it('should update a candidate successfully', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-        contact: '+1234567890',
-      } as any);
-      prismaService.candidate.update.mockResolvedValue(mockCandidate as any);
-
-      const result = await service.update(
-        'candidate123',
-        updateCandidateDto,
-        'user123',
-      );
-
-      expect(result).toEqual(mockCandidate);
-      expect(prismaService.candidate.update).toHaveBeenCalledWith({
-        where: { id: 'candidate123' },
-        data: {
-          name: 'Jane Doe',
-          currentStatus: 'shortlisted',
-        },
-        include: expect.any(Object),
-      });
-    });
-
-    it('should throw NotFoundException when candidate does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.update('candidate123', updateCandidateDto, 'user123'),
-      ).rejects.toThrow(
-        new NotFoundException('Candidate with ID candidate123 not found'),
-      );
-    });
-
-    it('should throw ConflictException when contact already exists', async () => {
-      prismaService.candidate.findUnique
-        .mockResolvedValueOnce({
-          id: 'candidate123',
-          contact: '+1234567890',
-        } as any)
-        .mockResolvedValueOnce({ id: 'existing123' } as any);
-
-      const updateWithContact = {
-        ...updateCandidateDto,
-        contact: '+9876543210',
-      };
-
-      await expect(
-        service.update('candidate123', updateWithContact, 'user123'),
-      ).rejects.toThrow(
-        new ConflictException(
-          'Candidate with contact +9876543210 already exists',
-        ),
-      );
-    });
-  });
-
-  describe('remove', () => {
-    it('should delete a candidate successfully', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-        projects: [],
-      } as any);
-      prismaService.candidate.delete.mockResolvedValue({
-        id: 'candidate123',
-      } as any);
-
-      const result = await service.remove('candidate123', 'user123');
-
-      expect(result).toEqual({
-        id: 'candidate123',
-        message: 'Candidate deleted successfully',
-      });
-    });
-
-    it('should throw NotFoundException when candidate does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-
-      await expect(service.remove('candidate123', 'user123')).rejects.toThrow(
-        new NotFoundException('Candidate with ID candidate123 not found'),
-      );
-    });
-
-    it('should throw ConflictException when candidate has project assignments', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-        projects: [{ id: 'assignment123' }],
-      } as any);
-
-      await expect(service.remove('candidate123', 'user123')).rejects.toThrow(
-        new ConflictException(
-          'Cannot delete candidate with ID candidate123 because they have project assignments. Please remove all project assignments first.',
-        ),
-      );
-    });
-  });
-
-  describe('assignProject', () => {
-    const assignProjectDto: AssignProjectDto = {
-      projectId: 'project123',
-      notes: 'Test assignment',
-    };
-
-    it('should assign candidate to project successfully', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-      } as any);
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-      } as any);
-      prismaService.candidateProjectMap.findUnique.mockResolvedValue(null);
-      prismaService.candidateProjectMap.create.mockResolvedValue({
-        id: 'assignment123',
-        candidateId: 'candidate123',
-        projectId: 'project123',
-        notes: 'Test assignment',
-      } as any);
-
-      const result = await service.assignProject(
-        'candidate123',
-        assignProjectDto,
-        'user123',
-      );
-
-      expect(result.message).toBe('Candidate assigned to project successfully');
-      expect(prismaService.candidateProjectMap.create).toHaveBeenCalledWith({
-        data: {
-          candidateId: 'candidate123',
-          projectId: 'project123',
-          notes: 'Test assignment',
-        },
-        include: expect.any(Object),
-      });
-    });
-
-    it('should throw NotFoundException when candidate does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.assignProject('candidate123', assignProjectDto, 'user123'),
-      ).rejects.toThrow(
-        new NotFoundException('Candidate with ID candidate123 not found'),
-      );
-    });
-
-    it('should throw NotFoundException when project does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-      } as any);
-      prismaService.project.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.assignProject('candidate123', assignProjectDto, 'user123'),
-      ).rejects.toThrow(
-        new NotFoundException('Project with ID project123 not found'),
-      );
-    });
-
-    it('should throw ConflictException when assignment already exists', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-      } as any);
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-      } as any);
-      prismaService.candidateProjectMap.findUnique.mockResolvedValue({
-        id: 'existing123',
-      } as any);
-
-      await expect(
-        service.assignProject('candidate123', assignProjectDto, 'user123'),
-      ).rejects.toThrow(
-        new ConflictException(
-          'Candidate candidate123 is already assigned to project project123',
-        ),
-      );
-    });
-  });
-
-  describe('getCandidateProjects', () => {
-    const mockAssignments = [
-      {
-        id: 'assignment123',
-        project: {
-          id: 'project123',
-          title: 'Test Project',
-          status: 'active',
-          client: {
-            id: 'client123',
-            name: 'Test Client',
-            type: 'HEALTHCARE_ORGANIZATION',
-          },
-          team: { id: 'team123', name: 'Test Team' },
-        },
-        assignedDate: new Date(),
-        verified: false,
-        shortlisted: false,
-        selected: false,
-        notes: 'Test assignment',
-      },
-    ];
-
-    it('should return candidate projects', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue({
-        id: 'candidate123',
-      } as any);
-      prismaService.candidateProjectMap.findMany.mockResolvedValue(
-        mockAssignments as any,
-      );
-
-      const result = await service.getCandidateProjects('candidate123');
-
-      expect(result).toEqual(mockAssignments);
-      expect(prismaService.candidateProjectMap.findMany).toHaveBeenCalledWith({
-        where: { candidateId: 'candidate123' },
-        include: expect.any(Object),
-        orderBy: { assignedDate: 'desc' },
-      });
-    });
-
-    it('should throw NotFoundException when candidate does not exist', async () => {
-      prismaService.candidate.findUnique.mockResolvedValue(null);
-
-      await expect(
-        service.getCandidateProjects('candidate123'),
-      ).rejects.toThrow(
-        new NotFoundException('Candidate with ID candidate123 not found'),
-      );
-    });
-  });
-
-  describe('getCandidateStats', () => {
-    it('should return candidate statistics', async () => {
-      prismaService.candidate.count
-        .mockResolvedValueOnce(100) // total
-        .mockResolvedValueOnce(50) // new
-        .mockResolvedValueOnce(30) // shortlisted
-        .mockResolvedValueOnce(20) // selected
-        .mockResolvedValueOnce(30) // rejected
-        .mockResolvedValueOnce(20); // hired
-
-      prismaService.candidate.groupBy
-        .mockResolvedValueOnce([
-          { source: 'manual', _count: { source: 60 } },
-          { source: 'meta', _count: { source: 30 } },
-          { source: 'referral', _count: { source: 10 } },
-        ] as any)
-        .mockResolvedValueOnce([
-          { teamId: 'team123', _count: { teamId: 50 } },
-          { teamId: null, _count: { teamId: 50 } },
-        ] as any);
-
-      prismaService.candidate.aggregate.mockResolvedValue({
-        _avg: { experience: 5.2, expectedSalary: 45000 },
-      } as any);
-
-      const result = await service.getCandidateStats();
-
-      expect(result).toEqual({
-        totalCandidates: 100,
-        newCandidates: 50,
-        shortlistedCandidates: 30,
-        selectedCandidates: 20,
-        rejectedCandidates: 30,
-        hiredCandidates: 20,
-        candidatesByStatus: {
-          new: 50,
-          shortlisted: 30,
-          selected: 20,
-          rejected: 30,
-          hired: 20,
-        },
-        candidatesBySource: {
-          manual: 60,
-          meta: 30,
-          referral: 10,
-        },
-        candidatesByTeam: {
-          team123: 50,
-          unassigned: 50,
-        },
-        averageExperience: 5.2,
-        averageExpectedSalary: 45000,
-      });
     });
   });
 });

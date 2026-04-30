@@ -102,7 +102,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
               
               <div className="space-y-3 flex-1">
                 <div className="space-y-1">
-                  <h4 className="text-lg font-bold text-slate-900">Profile Completion Status</h4>
+                  <h4 className="text-lg font-bold text-slate-900">Completion Document Status</h4>
                   <p className="text-sm text-slate-500 font-medium">
                     {completion.completedCount} of {completion.requiredCount} mandatory documents have been successfully verified.
                   </p>

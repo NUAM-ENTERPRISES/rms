@@ -217,6 +217,29 @@ export interface Candidate {
   }>;
 }
 
+export type CandidateProfileCompletion = {
+  percent: number;
+  requiredCount: number;
+  completedCount: number;
+  breakdown: {
+    personal: {
+      requiredCount: number;
+      completedCount: number;
+      missing: Array<{ key: "dateOfBirth" | "mobileNumber" | "email"; label: string }>;
+    };
+    documents: {
+      requiredCount: number;
+      completedCount: number;
+      missing: Array<{ docType: string; label: string }>;
+    };
+  };
+  missing: Array<{
+    type: "personal" | "document";
+    key: string;
+    label: string;
+  }>;
+};
+
 export interface CandidateQualification {
   id: string;
   qualificationId: string;
@@ -912,6 +935,16 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
 
+    getCandidateProfileCompletion: builder.query<CandidateProfileCompletion, string>({
+      query: (id) => `/candidates/${id}/profile-completion`,
+      transformResponse: (response: {
+        success: boolean;
+        data: CandidateProfileCompletion;
+        message: string;
+      }) => response.data,
+      providesTags: (_, __, id) => [{ type: "Candidate", id }],
+    }),
+
     getOriginalRecruiter: builder.query<{ success: boolean; data: { id: string; name: string; email: string; mobileNumber: string; countryCode: string }; message: string }, string>({
       query: (id) => `/candidates/${id}/original-recruiter`,
     }),
@@ -1320,28 +1353,28 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `candidates/${candidateId}/projects-workflow-details`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
     }),
     getCandidateDocumentationWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/documentation-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
     }),
     getCandidateInterviewWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/interview-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
     }),
     getCandidateProcessingWorkflow: builder.query<any, { candidateId: string; subStatus?: string; step?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/processing-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
     }),
   }),
 });
@@ -1350,6 +1383,7 @@ export const {
   useGetCandidateOverviewQuery,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
+  useGetCandidateProfileCompletionQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,

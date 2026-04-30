@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { vi } from "vitest";
+import { vi, describe, it, expect, afterEach } from "vitest";
 import CandidateDetailPage from "../views/CandidateDetailPage";
 
 // Mock react-router hooks
@@ -24,6 +24,10 @@ vi.mock("@/features/candidates", () => ({
     isLoading: false,
     error: null,
   }),
+  useGetCandidateProjectsQuery: () => ({ data: { success: true, data: [], meta: {} }, isLoading: false }),
+  useGetDocumentsQuery: () => ({ data: { success: true, data: { documents: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 1 } } }, isLoading: false }),
+  useDeleteWorkExperienceMutation: () => [vi.fn(), { isLoading: false }],
+  useDeleteCandidateQualificationMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 // Mock pipeline hook
@@ -46,9 +50,15 @@ vi.mock("@/app/hooks", () => ({
 }));
 
 // Stub heavy child components that rely on Redux/RTK Query
-vi.mock("@/components/molecules", () => ({
-  CandidateResumeList: () => null,
-}));
+vi.mock("@/components/molecules", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/molecules")>();
+  return {
+    ...actual,
+    CandidateResumeList: () => null,
+    ImageViewer: () => null,
+    DeleteConfirmationDialog: () => null,
+  };
+});
 
 // Stub additional modal components that call RTK hooks
 vi.mock("@/components/molecules/QualificationWorkExperienceModal", () => ({
@@ -57,6 +67,37 @@ vi.mock("@/components/molecules/QualificationWorkExperienceModal", () => ({
 vi.mock("../components/StatusUpdateModal", () => ({
   StatusUpdateModal: () => null,
   default: () => null,
+}));
+
+vi.mock("../components/UpdateJobPreferenceModal", () => ({
+  UpdateJobPreferenceModal: () => null,
+  default: () => null,
+}));
+
+vi.mock("../components/UpdatePersonalInfoModal", () => ({
+  UpdatePersonalInfoModal: () => null,
+  default: () => null,
+}));
+
+vi.mock("../components/UpdatePhysicalInfoModal", () => ({
+  UpdatePhysicalInfoModal: () => null,
+  default: () => null,
+}));
+
+vi.mock("../components/UpdateLicensingModal", () => ({
+  UpdateLicensingModal: () => null,
+  default: () => null,
+}));
+
+vi.mock("../components/CandidatePipeline", () => ({
+  CandidatePipeline: () => null,
+  default: () => null,
+}));
+
+// Stub profile completion component (it calls RTK Query hooks)
+vi.mock("../components/CandidateProfileCompletion", () => ({
+  CandidateProfileCompletion: () => null,
+  CandidateProfileCompletionCell: () => null,
 }));
 
 describe("CandidateDetailPage", () => {

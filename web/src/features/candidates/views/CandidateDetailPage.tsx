@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import {
   ArrowLeft,
@@ -436,6 +436,8 @@ export default function CandidateDetailPage() {
         </div>
         <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
           <CandidateProfileCompletion
+            candidateId={id!}
+            candidate={candidate}
             documents={documentsData?.data?.documents}
             isLoading={isDocumentsLoading}
             variant="circular"

@@ -1,10 +1,12 @@
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGetDocumentsQuery } from "../api";
+import { useGetCandidateProfileCompletionQuery } from "../api";
 import { getCandidateProfileCompletion } from "../profileCompletion";
-import type { Document } from "../api";
+import type { Candidate, Document } from "../api";
 
 interface CandidateProfileCompletionProps {
+  candidateId?: string;
+  candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth">;
   documents?: Document[];
   isLoading?: boolean;
   compact?: boolean;
@@ -28,17 +30,59 @@ const getProgressBgColor = (percent: number) => {
 };
 
 export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProps> = ({
+  candidateId,
+  candidate,
   documents,
   isLoading,
   compact = false,
   variant = "default",
 }) => {
-  const completion = getCandidateProfileCompletion(documents);
+  const { data: serverCompletion, isLoading: isServerLoading } =
+    useGetCandidateProfileCompletionQuery(candidateId!, {
+      skip: !candidateId,
+    });
+
+  const docsCompletion = getCandidateProfileCompletion(documents);
+
+  const localCompletion = (() => {
+    const missingPersonal = [
+      { key: "dateOfBirth" as const, label: "Date of Birth", ok: !!candidate?.dateOfBirth },
+      { key: "mobileNumber" as const, label: "Mobile Number", ok: !!candidate?.mobileNumber },
+      { key: "email" as const, label: "Email", ok: !!candidate?.email },
+    ].filter((x) => !x.ok);
+
+    const missing = [
+      ...missingPersonal.map((p) => ({ type: "personal" as const, key: p.key, label: p.label })),
+      ...docsCompletion.missing.map((d) => ({ type: "document" as const, key: String(d.docType), label: d.label })),
+    ];
+
+    const requiredCount = docsCompletion.requiredCount + 3;
+    const completedCount = requiredCount - missing.length;
+    const percent =
+      requiredCount > 0 ? Math.round((completedCount / requiredCount) * 100) : 0;
+
+    return {
+      percent,
+      requiredCount,
+      completedCount,
+      missing,
+      breakdown: {
+        personal: {
+          requiredCount: 3,
+          completedCount: 3 - missingPersonal.length,
+          missing: missingPersonal.map((p) => ({ key: p.key, label: p.label })),
+        },
+        documents: docsCompletion,
+      },
+    };
+  })();
+
+  const completion = serverCompletion ?? localCompletion;
   const missingLabels = completion.missing.map((item) => item.label);
   const progressColor = getProgressColor(completion.percent);
   const progressBgColor = getProgressBgColor(completion.percent);
 
-  if (isLoading) {
+  if (isLoading || isServerLoading) {
     return (
       <div className={compact ? "text-xs text-slate-500" : "text-sm text-slate-500"}>
         Loading profile completion...
@@ -93,7 +137,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
               
               <div className="space-y-1">
                 <div className="flex justify-between text-[10px] text-slate-500 uppercase font-bold tracking-wider">
-                  <span>Documents</span>
+                  <span>Overall</span>
                   <span>{completion.completedCount}/{completion.requiredCount}</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -106,11 +150,14 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 
               {completion.missing.length > 0 ? (
                 <div className="pt-2 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Missing Required Docs</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Missing Required Items</p>
                   <div className="flex flex-wrap gap-1">
-                    {completion.missing.map((doc, i) => (
-                      <span key={i} className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] font-medium">
-                        {doc.label}
+                    {completion.missing.map((item, i) => (
+                      <span
+                        key={`${item.key}-${i}`}
+                        className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded text-[10px] font-medium"
+                      >
+                        {item.label}
                       </span>
                     ))}
                   </div>
@@ -118,7 +165,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
               ) : (
                 <div className="pt-2 border-t border-slate-100 flex items-center gap-2 text-emerald-600">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <p className="text-[10px] font-bold uppercase tracking-wider">All documents verified</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider">Profile complete</p>
                 </div>
               )}
             </div>
@@ -137,7 +184,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
           </p>
           {!compact && (
             <p className="text-xs text-slate-500">
-              Based on required candidate documents submitted so far.
+              Based on required personal details and documents.
             </p>
           )}
         </div>
@@ -155,7 +202,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 
       <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
         <span>
-          {completion.completedCount}/{completion.requiredCount} required documents uploaded
+          {completion.completedCount}/{completion.requiredCount} required items completed
         </span>
         <TooltipProvider>
           <Tooltip>
@@ -172,13 +219,13 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
                 <p className="font-semibold">{completion.percent}% complete</p>
                 {completion.missing.length > 0 ? (
                   <div>
-                    <p className="font-medium">Missing documents</p>
+                    <p className="font-medium">Missing items</p>
                     <p className="mt-1 text-slate-600">
                       {missingLabels.join(", ")}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-emerald-700">All required documents are submitted.</p>
+                  <p className="text-emerald-700">All required items are completed.</p>
                 )}
               </div>
             </TooltipContent>
@@ -192,18 +239,10 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletionCellProps> = ({
   candidateId,
 }) => {
-  const { data, isLoading } = useGetDocumentsQuery(
-    { candidateId, page: 1, limit: 20 },
-    { skip: !candidateId }
-  );
-
-  const documents = data?.data?.documents;
-
   return (
     <div className="flex justify-center">
       <CandidateProfileCompletion
-        documents={documents}
-        isLoading={isLoading}
+        candidateId={candidateId}
         compact={true}
         variant="circular"
       />

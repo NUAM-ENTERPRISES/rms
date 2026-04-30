@@ -45,12 +45,63 @@ It is used as the foundational upload widget in candidates and document manageme
 
 ### Profile Completion Computation
 
-The upload section uses `getCandidateProfileCompletion()` to compute:
-- how many required documents are already uploaded,
-- how many documents are missing,
-- which document types are still required.
+The UI supports **two levels** of completion tracking:
+
+1. **Document-only completion (legacy / local fallback)** via `getCandidateProfileCompletion()`:
+   - how many required documents are already uploaded
+   - how many documents are missing
+   - which document types are still required
+
+2. **Overall profile completion (preferred)**: **personal info + documents** (server-calculated, with local fallback)
+   - personal info required: **Date of Birth**, **Mobile Number**, **Email**
+   - documents required: Resume, Degree Certificate, Passport Photo, Passport Copy, Aadhaar, Registration Certificate
 
 This is used to render the status summary and the missing document cards.
+
+### Overall Profile Completion (Personal + Documents)
+
+The preferred completion signal comes from the backend endpoint:
+
+- **Endpoint**: `GET /api/v1/candidates/:id/profile-completion`
+- **Auth/RBAC**: requires `read:candidates`
+- **Purpose**: provides a single, consistent completion calculation across the system.
+
+#### Response Shape (simplified)
+
+```json
+{
+  "success": true,
+  "data": {
+    "percent": 78,
+    "requiredCount": 9,
+    "completedCount": 7,
+    "breakdown": {
+      "personal": {
+        "requiredCount": 3,
+        "completedCount": 2,
+        "missing": [{ "key": "email", "label": "Email" }]
+      },
+      "documents": {
+        "requiredCount": 6,
+        "completedCount": 5,
+        "missing": [{ "docType": "aadhaar", "label": "Aadhaar Card" }]
+      }
+    },
+    "missing": [
+      { "type": "personal", "key": "email", "label": "Email" },
+      { "type": "document", "key": "aadhaar", "label": "Aadhaar Card" }
+    ]
+  },
+  "message": "Candidate profile completion retrieved successfully"
+}
+```
+
+#### Frontend behavior
+
+- `CandidateProfileCompletion` tries to use the server response first.
+- If the endpoint is unavailable/slow, the UI falls back to a **local** computation using:
+  - candidate fields (`dateOfBirth`, `mobileNumber`, `email`)
+  - uploaded documents (from `useGetDocumentsQuery`)
 
 ### Missing Document Cards
 
