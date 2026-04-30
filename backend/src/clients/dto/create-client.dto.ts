@@ -10,32 +10,76 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ClientType } from '@prisma/client';
+
+export class CreateClientSubClientDto {
+  @ApiProperty({ description: 'Sub-client (end client) name' })
+  @IsString()
+  @MaxLength(512)
+  name: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Sub-client taxonomy (defaults to DIRECT_CLIENT when omitted)',
+    enum: ClientType,
+    example: ClientType.DIRECT_CLIENT,
+  })
+  @IsOptional()
+  @IsEnum(ClientType)
+  type?: ClientType;
+
+  @ApiPropertyOptional({ description: 'Sub-client email' })
+  @IsOptional()
+  @IsString()
+  email?: string;
+
+  @ApiPropertyOptional({ description: 'Sub-client phone number' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Sub-client address line' })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Physical country (`countries.code`) for sub-client mailing address',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  addressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical state (`states.id`) for sub-client',
+  })
+  @IsOptional()
+  @IsString()
+  addressStateId?: string;
+}
 
 export class CreateClientDto {
   @ApiProperty({ description: 'Client name' })
   @IsString()
+  @MaxLength(512)
   name: string;
 
   @ApiProperty({
     description: 'Client type',
-    enum: [
-      'INDIVIDUAL',
-      'SUB_AGENCY',
-      'HEALTHCARE_ORGANIZATION',
-      'EXTERNAL_SOURCE',
-    ],
+    enum: ClientType,
+    example: ClientType.DIRECT_CLIENT,
   })
-  @IsEnum([
-    'INDIVIDUAL',
-    'SUB_AGENCY',
-    'HEALTHCARE_ORGANIZATION',
-    'EXTERNAL_SOURCE',
-  ])
-  type:
-    | 'INDIVIDUAL'
-    | 'SUB_AGENCY'
-    | 'HEALTHCARE_ORGANIZATION'
-    | 'EXTERNAL_SOURCE';
+  @IsEnum(ClientType)
+  type: ClientType;
+
+  /** Optional: link an end-client when type is SUB_AGENT or FREELANCE */
+  @ApiPropertyOptional({ type: () => CreateClientSubClientDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateClientSubClientDto)
+  subClient?: CreateClientSubClientDto;
 
   @ApiPropertyOptional({ description: 'Point of contact name' })
   @IsOptional()
@@ -58,7 +102,7 @@ export class CreateClientDto {
   address?: string;
 
   @ApiPropertyOptional({
-    description: 'Physical / mailing country (`countries.code`, e.g. ISO id used in catalog)',
+    description: 'Physical / mailing country (`countries.code`)',
   })
   @IsOptional()
   @IsString()
@@ -93,7 +137,6 @@ export class CreateClientDto {
   @IsEnum(['CURRENT_EMPLOYEE', 'FORMER_EMPLOYEE', 'NETWORK_CONTACT'])
   relationship?: 'CURRENT_EMPLOYEE' | 'FORMER_EMPLOYEE' | 'NETWORK_CONTACT';
 
-  // Sub-Agency specific fields
   @ApiPropertyOptional({
     description: 'Agency type (for sub-agencies)',
     enum: ['LOCAL', 'REGIONAL', 'SPECIALIZED'],
@@ -111,7 +154,6 @@ export class CreateClientDto {
   @IsString({ each: true })
   specialties?: string[];
 
-  // Healthcare Organization specific fields
   @ApiPropertyOptional({
     description: 'Facility type (for healthcare organizations)',
     enum: ['HOSPITAL', 'CLINIC', 'NURSING_HOME', 'MEDICAL_CENTER'],
@@ -137,7 +179,6 @@ export class CreateClientDto {
   @IsString({ each: true })
   locations?: string[];
 
-  // External Source specific fields
   @ApiPropertyOptional({
     description: 'Source type (for external sources)',
     enum: [
@@ -184,7 +225,6 @@ export class CreateClientDto {
   @IsString()
   sourceNotes?: string;
 
-  // Optional financial fields
   @ApiPropertyOptional({
     description: 'Relationship type (for financial tracking)',
     enum: ['REFERRAL', 'PARTNERSHIP', 'DIRECT_CLIENT', 'EXTERNAL_SOURCE'],

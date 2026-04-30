@@ -32,6 +32,7 @@ import {
   ProjectWithRelations,
   PaginatedProjects,
   PaginatedProjectPicker,
+  PaginatedProjectSummaryList,
   ProjectStats,
 } from './types';
 
@@ -202,6 +203,13 @@ export class ProjectsController {
     description: 'Items per page',
     example: 10,
   })
+  @ApiQuery({
+    name: 'summary',
+    required: false,
+    description:
+      'If true, each item only includes id, title, deadline, status, priority, createdAt, projectType, countryCode, and nested country (code, name)',
+    schema: { type: 'boolean' },
+  })
   @ApiResponse({
     status: 200,
     description: 'Projects retrieved successfully',
@@ -290,7 +298,7 @@ export class ProjectsController {
   })
   async findAll(@Query() query: QueryProjectsDto): Promise<{
     success: boolean;
-    data: PaginatedProjects;
+    data: PaginatedProjects | PaginatedProjectSummaryList;
     message: string;
   }> {
     const result = await this.projectsService.findAll(query);

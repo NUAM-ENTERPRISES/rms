@@ -1,20 +1,54 @@
 import { baseApi } from "@/app/api/baseApi";
+import type { ClientTypeValue } from "@/features/clients/constants/client-types";
+
+export interface ClientSubClientLink {
+  id: string;
+  parentClientId: string;
+  childClientId: string;
+  linkType: "SUB_AGENT" | "FREELANCE";
+  createdAt: string;
+  child?: Client;
+  parent?: Client;
+}
+
+/** Country row joined from DB when `addressCountryCode` is set */
+export interface ClientAddressCountry {
+  code: string;
+  name: string;
+  region: string;
+  callingCode: string;
+  currency: string;
+  timezone: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** State row joined from DB when `addressStateId` is set */
+export interface ClientAddressState {
+  id: string;
+  name: string;
+  code: string;
+  countryCode: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 // Client Types
 export interface Client {
   id: string;
   name: string;
-  type:
-    | "INDIVIDUAL"
-    | "SUB_AGENCY"
-    | "HEALTHCARE_ORGANIZATION"
-    | "EXTERNAL_SOURCE";
+  type: ClientTypeValue;
   pointOfContact?: string;
   email?: string;
   phone?: string;
   address?: string;
   addressCountryCode?: string;
   addressStateId?: string;
+  /** Populated by GET/PATCH responses when physical address FKs are set */
+  addressCountry?: ClientAddressCountry | null;
+  addressState?: ClientAddressState | null;
 
   // Individual Referrer specific fields
   profession?: string;
@@ -59,8 +93,16 @@ export interface Client {
   createdAt: string;
   updatedAt: string;
 
-  // Relations
+  /** GET /clients/:id and GET /clients (list) */
+  projectCount?: number;
+  activeProjectCount?: number;
+  subClientCount?: number;
+  parentClientCount?: number;
+
+  // Relations — only populated by GET /clients/:id (single-detail endpoint)
   projects?: ClientProject[];
+  subClientLinks?: ClientSubClientLink[];
+  parentClientLinks?: ClientSubClientLink[];
 }
 
 export interface ClientProject {
@@ -70,9 +112,21 @@ export interface ClientProject {
   deadline?: string;
 }
 
+export interface CreateClientSubClientRequest {
+  name: string;
+  type?: ClientTypeValue;
+  email?: string;
+  phone?: string;
+  address?: string;
+  addressCountryCode?: string;
+  addressStateId?: string;
+}
+
 export interface CreateClientRequest {
   name: string;
   type: Client["type"];
+  /** Optional linked row when type is SUB_AGENT or FREELANCE */
+  subClient?: CreateClientSubClientRequest;
   pointOfContact?: string;
   email?: string;
   phone?: string;
@@ -187,6 +241,21 @@ export const clientsApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { id }) => [{ type: "Client", id }, "Client"],
     }),
 
+    linkClientSubClient: builder.mutation<
+      ClientResponse,
+      { parentClientId: string; body: CreateClientSubClientRequest }
+    >({
+      query: ({ parentClientId, body }) => ({
+        url: `/clients/${parentClientId}/sub-clients`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_, __, { parentClientId }) => [
+        { type: "Client", id: parentClientId },
+        "Client",
+      ],
+    }),
+
     // Delete client
     deleteClient: builder.mutation<
       { success: boolean; message: string },
@@ -214,5 +283,6 @@ export const {
   useCreateClientMutation,
   useUpdateClientMutation,
   useDeleteClientMutation,
+  useLinkClientSubClientMutation,
   useGetClientStatsQuery,
 } = clientsApi;

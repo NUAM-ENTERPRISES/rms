@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm, Controller, useWatch } from "react-hook-form";
+import { useForm, Controller, useWatch, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -23,11 +22,8 @@ import {
 } from "@/components/ui/select";
 import {
   Building2,
-  User,
   Briefcase,
-  Hospital,
-  ExternalLink,
-  Plus,
+  Handshake,
   X,
   Save,
 } from "lucide-react";
@@ -35,9 +31,65 @@ import { useGetClientQuery, useUpdateClientMutation } from "@/features/clients";
 import { useCan } from "@/hooks/useCan";
 import {
   clientFormSchema,
+  CLIENT_FORM_DEFAULT_VALUES,
+  normalizeClientFormType,
   type ClientFormData,
 } from "@/features/clients/schemas/client-schemas";
+import {
+  CLIENT_TYPE_LABELS,
+  CLIENT_TYPES,
+} from "@/features/clients/constants/client-types";
 import { PhysicalAddressFields } from "@/components/molecules";
+
+const INDIVIDUAL_RELATIONSHIPS = [
+  "CURRENT_EMPLOYEE",
+  "FORMER_EMPLOYEE",
+  "NETWORK_CONTACT",
+] as const;
+
+const AGENCY_TYPES = ["LOCAL", "REGIONAL", "SPECIALIZED"] as const;
+
+const FACILITY_TYPES = [
+  "HOSPITAL",
+  "CLINIC",
+  "NURSING_HOME",
+  "MEDICAL_CENTER",
+] as const;
+
+const FACILITY_SIZES = ["SMALL", "MEDIUM", "LARGE"] as const;
+
+const SOURCE_TYPES = [
+  "JOB_BOARD",
+  "SOCIAL_MEDIA",
+  "REFERRAL_PLATFORM",
+  "INDUSTRY_EVENT",
+  "COLD_OUTREACH",
+  "OTHER",
+] as const;
+
+const ACQUISITION_METHODS = [
+  "ORGANIC",
+  "PAID",
+  "PARTNERSHIP",
+  "REFERRAL",
+] as const;
+
+const RELATIONSHIP_TYPES = [
+  "REFERRAL",
+  "PARTNERSHIP",
+  "DIRECT_CLIENT",
+  "EXTERNAL_SOURCE",
+] as const;
+
+function coerceOptionalEnum<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T | undefined {
+  if (value == null) return undefined;
+  const s = String(value).trim();
+  if (!s) return undefined;
+  return (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
+}
 
 export default function EditClientPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,8 +97,6 @@ export default function EditClientPage() {
   const canUpdateClients = useCan("manage:clients");
 
   const [updateClient, { isLoading }] = useUpdateClientMutation();
-  const [newSpecialty, setNewSpecialty] = useState("");
-  const [newLocation, setNewLocation] = useState("");
 
   const {
     data: clientData,
@@ -56,24 +106,15 @@ export default function EditClientPage() {
 
   // Use the main schema with conditional validation
   const form = useForm<ClientFormData>({
-    resolver: zodResolver(clientFormSchema),
+    resolver: zodResolver(clientFormSchema) as Resolver<ClientFormData>,
     mode: "onChange",
     reValidateMode: "onChange",
-    // Don't set defaultValues here - we'll set them when data loads
+    defaultValues: CLIENT_FORM_DEFAULT_VALUES,
   });
 
   // Use useWatch for better performance
   const watchedClientType = useWatch({ control: form.control, name: "type" });
   const clientType = watchedClientType ?? clientData?.data?.type;
-  const specialties =
-    useWatch({ control: form.control, name: "specialties" }) ??
-    clientData?.data?.specialties ??
-    [];
-  const locations =
-    useWatch({ control: form.control, name: "locations" }) ??
-    clientData?.data?.locations ??
-    [];
-
   // Load client data into form
   useEffect(() => {
     if (clientData?.data) {
@@ -83,7 +124,7 @@ export default function EditClientPage() {
       // Reset form with client data - this sets the new default values
       form.reset({
         name: client.name,
-        type: client.type,
+        type: normalizeClientFormType(client.type),
         pointOfContact: client.pointOfContact || "",
         email: client.email || "",
         phone: client.phone || "",
@@ -92,32 +133,33 @@ export default function EditClientPage() {
         addressStateId: client.addressStateId || "",
         profession: client.profession || "",
         organization: client.organization || "",
-        relationship: client.relationship ?? undefined,
-        agencyType: client.agencyType ?? undefined,
+        relationship: coerceOptionalEnum(
+          client.relationship,
+          INDIVIDUAL_RELATIONSHIPS,
+        ),
+        agencyType: coerceOptionalEnum(client.agencyType, AGENCY_TYPES),
         specialties: client.specialties || [],
-        facilityType: client.facilityType ?? undefined,
-        facilitySize: client.facilitySize ?? undefined,
+        facilityType: coerceOptionalEnum(client.facilityType, FACILITY_TYPES),
+        facilitySize: coerceOptionalEnum(client.facilitySize, FACILITY_SIZES),
         locations: client.locations || [],
-        sourceType: client.sourceType ?? undefined,
+        sourceType: coerceOptionalEnum(client.sourceType, SOURCE_TYPES),
         sourceName: client.sourceName || "",
-        acquisitionMethod: client.acquisitionMethod ?? undefined,
+        acquisitionMethod: coerceOptionalEnum(
+          client.acquisitionMethod,
+          ACQUISITION_METHODS,
+        ),
         sourceNotes: client.sourceNotes || "",
-        relationshipType: client.relationshipType ?? undefined,
-        commissionRate: client.commissionRate ?? 0,
+        relationshipType: coerceOptionalEnum(
+          client.relationshipType,
+          RELATIONSHIP_TYPES,
+        ),
+        commissionRate: client.commissionRate ?? undefined,
         paymentTerms: client.paymentTerms || "",
-        contractStartDate: client.contractStartDate || undefined,
-        contractEndDate: client.contractEndDate || undefined,
+        contractStartDate: client.contractStartDate ?? "",
+        contractEndDate: client.contractEndDate ?? "",
         billingAddress: client.billingAddress || "",
         taxId: client.taxId || "",
       });
-
-      // Explicitly set the type field after reset
-      setTimeout(() => {
-        form.setValue("type", client.type, {
-          shouldDirty: false,
-          shouldValidate: true,
-        });
-      }, 100);
     }
   }, [clientData, form]);
 
@@ -156,44 +198,6 @@ export default function EditClientPage() {
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to update client");
     }
-  };
-
-  const addSpecialty = () => {
-    if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
-      const updatedSpecialties = [...specialties, newSpecialty.trim()];
-      form.setValue("specialties", updatedSpecialties, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setNewSpecialty("");
-    }
-  };
-
-  const removeSpecialtyAtIndex = (index: number) => {
-    const updatedSpecialties = specialties.filter((_, i) => i !== index);
-    form.setValue("specialties", updatedSpecialties, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
-  };
-
-  const addLocation = () => {
-    if (newLocation.trim() && !locations.includes(newLocation.trim())) {
-      const updatedLocations = [...locations, newLocation.trim()];
-      form.setValue("locations", updatedLocations, {
-        shouldDirty: true,
-        shouldValidate: true,
-      });
-      setNewLocation("");
-    }
-  };
-
-  const removeLocationAtIndex = (index: number) => {
-    const updatedLocations = locations.filter((_, i) => i !== index);
-    form.setValue("locations", updatedLocations, {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
   };
 
   if (!canUpdateClients) {
@@ -258,14 +262,12 @@ export default function EditClientPage() {
 
   const getClientTypeIcon = (type: ClientFormData["type"]) => {
     switch (type) {
-      case "INDIVIDUAL":
-        return User;
-      case "SUB_AGENCY":
+      case "DIRECT_CLIENT":
+        return Briefcase;
+      case "SUB_AGENT":
         return Building2;
-      case "HEALTHCARE_ORGANIZATION":
-        return Hospital;
-      case "EXTERNAL_SOURCE":
-        return ExternalLink;
+      case "FREELANCE":
+        return Handshake;
       default:
         return Briefcase;
     }
@@ -335,6 +337,7 @@ export default function EditClientPage() {
                     render={({ field }) => (
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         placeholder="e.g., John Smith, ABC Healthcare"
                         className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
@@ -387,10 +390,6 @@ export default function EditClientPage() {
                             shouldDirty: true,
                             shouldValidate: true,
                           });
-                          form.setValue("locations", [], {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
                           form.setValue("sourceType", undefined, {
                             shouldDirty: true,
                             shouldValidate: true,
@@ -404,22 +403,17 @@ export default function EditClientPage() {
                             shouldValidate: true,
                           });
                         }}
-                        value={field.value ?? undefined}
+                        value={field.value ?? CLIENT_FORM_DEFAULT_VALUES.type}
                       >
                         <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
                           <SelectValue placeholder="Select client type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="INDIVIDUAL">
-                            Individual Referrer
-                          </SelectItem>
-                          <SelectItem value="SUB_AGENCY">Sub Agency</SelectItem>
-                          <SelectItem value="HEALTHCARE_ORGANIZATION">
-                            Healthcare Organization
-                          </SelectItem>
-                          <SelectItem value="EXTERNAL_SOURCE">
-                            External Source
-                          </SelectItem>
+                          {CLIENT_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {CLIENT_TYPE_LABELS[t]}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
@@ -445,6 +439,7 @@ export default function EditClientPage() {
                     render={({ field }) => (
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         placeholder="Contact person name"
                         className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
@@ -471,6 +466,7 @@ export default function EditClientPage() {
                     render={({ field }) => (
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         type="email"
                         placeholder="client@example.com"
                         className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
@@ -498,6 +494,7 @@ export default function EditClientPage() {
                     render={({ field }) => (
                       <Input
                         {...field}
+                        value={field.value ?? ""}
                         placeholder="+1 (555) 123-4567"
                         className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                       />
@@ -519,713 +516,6 @@ export default function EditClientPage() {
                     disabled={isLoading}
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Individual Referrer Details */}
-          {clientType === "INDIVIDUAL" && (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-600" />
-                  Individual Referrer Details
-                </CardTitle>
-                <CardDescription>
-                  Specific information for individual referrers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Profession */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="profession"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Profession
-                    </Label>
-                    <Controller
-                      name="profession"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Input
-                          {...field}
-                          placeholder="e.g., Nurse, Doctor"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.profession && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.profession.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Organization */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="organization"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Organization
-                    </Label>
-                    <Controller
-                      name="organization"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Input
-                          {...field}
-                          placeholder="Current employer"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.organization && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.organization.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Relationship */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="relationship"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Relationship Type
-                    </Label>
-                    <Controller
-                      name="relationship"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select relationship" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CURRENT_EMPLOYEE">
-                              Current Employee
-                            </SelectItem>
-                            <SelectItem value="FORMER_EMPLOYEE">
-                              Former Employee
-                            </SelectItem>
-                            <SelectItem value="NETWORK_CONTACT">
-                              Network Contact
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Sub Agency Details */}
-          {clientType === "SUB_AGENCY" && (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-blue-600" />
-                  Sub Agency Details
-                </CardTitle>
-                <CardDescription>
-                  Specific information for sub agencies
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Agency Type */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="agencyType"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Agency Type
-                    </Label>
-                    <Controller
-                      name="agencyType"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select agency type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="LOCAL">Local</SelectItem>
-                            <SelectItem value="REGIONAL">Regional</SelectItem>
-                            <SelectItem value="SPECIALIZED">
-                              Specialized
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">
-                    Specialties
-                  </Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      placeholder="Add specialty"
-                      value={newSpecialty}
-                      onChange={(e) => setNewSpecialty(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addSpecialty();
-                        }
-                      }}
-                      className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    <Button type="button" onClick={addSpecialty} size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {specialties.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {specialties.map((specialty, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm"
-                        >
-                          {specialty}
-                          <button
-                            type="button"
-                            onClick={() => removeSpecialtyAtIndex(index)}
-                            className="hover:text-blue-600"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {form.formState.errors.specialties && (
-                    <p className="text-sm text-red-600 mt-2">
-                      {form.formState.errors.specialties.message}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Healthcare Organization Details */}
-          {clientType === "HEALTHCARE_ORGANIZATION" && (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <Hospital className="h-5 w-5 text-blue-600" />
-                  Healthcare Organization Details
-                </CardTitle>
-                <CardDescription>
-                  Specific information for healthcare organizations
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Facility Type */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="facilityType"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Facility Type
-                    </Label>
-                    <Controller
-                      name="facilityType"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select facility type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="HOSPITAL">Hospital</SelectItem>
-                            <SelectItem value="CLINIC">Clinic</SelectItem>
-                            <SelectItem value="NURSING_HOME">
-                              Nursing Home
-                            </SelectItem>
-                            <SelectItem value="MEDICAL_CENTER">
-                              Medical Center
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {form.formState.errors.facilityType && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.facilityType.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Facility Size */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="facilitySize"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Facility Size
-                    </Label>
-                    <Controller
-                      name="facilitySize"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select facility size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SMALL">Small</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="LARGE">Large</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {form.formState.errors.facilitySize && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.facilitySize.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">
-                    Locations
-                  </Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      placeholder="Add location"
-                      value={newLocation}
-                      onChange={(e) => setNewLocation(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addLocation();
-                        }
-                      }}
-                      className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                    <Button type="button" onClick={addLocation} size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {locations.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {locations.map((location, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-md text-sm"
-                        >
-                          {location}
-                          <button
-                            type="button"
-                            onClick={() => removeLocationAtIndex(index)}
-                            className="hover:text-green-600"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {form.formState.errors.locations && (
-                    <p className="text-sm text-red-600 mt-2">
-                      {form.formState.errors.locations.message}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* External Source Details */}
-          {clientType === "EXTERNAL_SOURCE" && (
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                  <ExternalLink className="h-5 w-5 text-blue-600" />
-                  External Source Details
-                </CardTitle>
-                <CardDescription>
-                  Specific information for external sources
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Source Type */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="sourceType"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Source Type
-                    </Label>
-                    <Controller
-                      name="sourceType"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select source type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="JOB_BOARD">Job Board</SelectItem>
-                            <SelectItem value="SOCIAL_MEDIA">
-                              Social Media
-                            </SelectItem>
-                            <SelectItem value="REFERRAL_PLATFORM">
-                              Referral Platform
-                            </SelectItem>
-                            <SelectItem value="INDUSTRY_EVENT">
-                              Industry Event
-                            </SelectItem>
-                            <SelectItem value="COLD_OUTREACH">
-                              Cold Outreach
-                            </SelectItem>
-                            <SelectItem value="OTHER">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {form.formState.errors.sourceType && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.sourceType.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Source Name */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="sourceName"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Source Name
-                    </Label>
-                    <Controller
-                      name="sourceName"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Input
-                          {...field}
-                          placeholder="e.g., LinkedIn, Indeed"
-                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.sourceName && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.sourceName.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Acquisition Method */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="acquisitionMethod"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Acquisition Method
-                    </Label>
-                    <Controller
-                      name="acquisitionMethod"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value ?? undefined}
-                        >
-                          <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                            <SelectValue placeholder="Select acquisition method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ORGANIC">Organic</SelectItem>
-                            <SelectItem value="PAID">Paid</SelectItem>
-                            <SelectItem value="PARTNERSHIP">
-                              Partnership
-                            </SelectItem>
-                            <SelectItem value="REFERRAL">Referral</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {form.formState.errors.acquisitionMethod && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.acquisitionMethod.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Source Notes */}
-                  <div className="space-y-2 md:col-span-2">
-                    <Label
-                      htmlFor="sourceNotes"
-                      className="text-sm font-medium text-slate-700"
-                    >
-                      Source Notes
-                    </Label>
-                    <Controller
-                      name="sourceNotes"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Textarea
-                          {...field}
-                          placeholder="Additional notes about this source"
-                          className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                        />
-                      )}
-                    />
-                    {form.formState.errors.sourceNotes && (
-                      <p className="text-sm text-red-600">
-                        {form.formState.errors.sourceNotes.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Financial Information */}
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-blue-600" />
-                Financial Information
-              </CardTitle>
-              <CardDescription>
-                Optional financial tracking and contract details
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Relationship Type */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="relationshipType"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Relationship Type
-                  </Label>
-                  <Controller
-                    name="relationshipType"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? undefined}
-                      >
-                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue placeholder="Select relationship type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="REFERRAL">Referral</SelectItem>
-                          <SelectItem value="PARTNERSHIP">
-                            Partnership
-                          </SelectItem>
-                          <SelectItem value="DIRECT_CLIENT">
-                            Direct Client
-                          </SelectItem>
-                          <SelectItem value="EXTERNAL_SOURCE">
-                            External Source
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                {/* Commission Rate */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="commissionRate"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Commission Rate (%)
-                  </Label>
-                  <Controller
-                    name="commissionRate"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="0"
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value === "" ? "" : Number(e.target.value)
-                          )
-                        }
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.commissionRate && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.commissionRate.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Payment Terms */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="paymentTerms"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Payment Terms
-                  </Label>
-                  <Controller
-                    name="paymentTerms"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="e.g., Net 30, Net 60"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.paymentTerms && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.paymentTerms.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Tax ID */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="taxId"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Tax ID
-                  </Label>
-                  <Controller
-                    name="taxId"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        placeholder="12-3456789"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.taxId && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.taxId.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Contract Start Date */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="contractStartDate"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Contract Start Date
-                  </Label>
-                  <Controller
-                    name="contractStartDate"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="date"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.contractStartDate && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.contractStartDate.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Contract End Date */}
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="contractEndDate"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Contract End Date
-                  </Label>
-                  <Controller
-                    name="contractEndDate"
-                    control={form.control}
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        type="date"
-                        className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                      />
-                    )}
-                  />
-                  {form.formState.errors.contractEndDate && (
-                    <p className="text-sm text-red-600">
-                      {form.formState.errors.contractEndDate.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Billing Address */}
-              <div className="space-y-2">
-                <Label
-                  htmlFor="billingAddress"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Billing Address
-                </Label>
-                <Controller
-                  name="billingAddress"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Textarea
-                      {...field}
-                      placeholder="Billing address for invoices"
-                      className="border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-                    />
-                  )}
-                />
-                {form.formState.errors.billingAddress && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.billingAddress.message}
-                  </p>
-                )}
               </div>
             </CardContent>
           </Card>

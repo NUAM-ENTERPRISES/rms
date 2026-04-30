@@ -166,10 +166,10 @@ export function useCountriesLookup(
 }
 
 /**
- * Hook for country validation
+ * Hook for country validation (uses active-countries endpoint unless `skip` is true)
  */
-export function useCountryValidation() {
-  const { countries } = useCountriesLookup();
+export function useCountryValidation(options?: { skip?: boolean }) {
+  const { countries } = useCountriesLookup(undefined, options);
 
   return {
     validateCountryCode: (code?: string) => {

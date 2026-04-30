@@ -481,6 +481,7 @@ import {
   Phone,
   Mail,
   Briefcase,
+  Handshake,
   MoreVertical,
   Download,
   Edit,
@@ -547,27 +548,21 @@ export default function ClientsPage() {
 
   const clientTypeOptions = [
     {
-      value: "INDIVIDUAL",
-      label: "Individual Referrer",
-      icon: Users,
-      color: "bg-sky-500",
+      value: "DIRECT_CLIENT",
+      label: "Direct client",
+      icon: Briefcase,
+      color: "bg-emerald-500",
     },
     {
-      value: "SUB_AGENCY",
-      label: "Sub Agency",
+      value: "SUB_AGENT",
+      label: "Sub Agent",
       icon: Building2,
       color: "bg-violet-500",
     },
     {
-      value: "HEALTHCARE_ORGANIZATION",
-      label: "Healthcare Org",
-      icon: Building2,
-      color: "bg-emerald-500",
-    },
-    {
-      value: "EXTERNAL_SOURCE",
-      label: "External Source",
-      icon: Briefcase,
+      value: "FREELANCE",
+      label: "Freelance",
+      icon: Handshake,
       color: "bg-amber-500",
     },
   ];

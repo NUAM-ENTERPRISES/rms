@@ -23,6 +23,7 @@ import {
   ProjectWithRelations,
   PaginatedProjects,
   PaginatedProjectPicker,
+  PaginatedProjectSummaryList,
   ProjectStats,
 } from './types';
 import {
@@ -394,7 +395,9 @@ export class ProjectsService {
     return normalized;
   }
 
-  async findAll(query: QueryProjectsDto): Promise<PaginatedProjects> {
+  async findAll(
+    query: QueryProjectsDto,
+  ): Promise<PaginatedProjects | PaginatedProjectSummaryList> {
     const {
       search,
       status,
@@ -409,6 +412,7 @@ export class ProjectsService {
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      summary,
     } = query;
 
     // Build where clause
@@ -433,7 +437,7 @@ export class ProjectsService {
       const now = new Date();
       const nextWeek = new Date();
       nextWeek.setDate(now.getDate() + 7);
-      
+
       where.deadline = {
         gte: now,
         lte: nextWeek,
@@ -463,9 +467,56 @@ export class ProjectsService {
       }
     }
 
-    // Calculate pagination
     const skip = (page - 1) * limit;
     const total = await this.prisma.project.count({ where });
+
+    if (summary) {
+      const rows = await this.prisma.project.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        select: {
+          id: true,
+          title: true,
+          deadline: true,
+          status: true,
+          priority: true,
+          createdAt: true,
+          projectType: true,
+          countryCode: true,
+          country: {
+            select: { code: true, name: true },
+          },
+        },
+      });
+
+      const projects = rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        deadline: p.deadline ? p.deadline.toISOString() : null,
+        status: p.status,
+        priority: p.priority,
+        createdAt: p.createdAt.toISOString(),
+        projectType: p.projectType,
+        countryCode: p.countryCode,
+        country: p.country
+          ? { code: p.country.code, name: p.country.name }
+          : p.countryCode
+            ? { code: p.countryCode, name: null }
+            : null,
+      }));
+
+      return {
+        projects,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 0,
+        },
+      };
+    }
 
     // Get projects with relations
     const projects = await this.prisma.project.findMany({

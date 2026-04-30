@@ -266,6 +266,59 @@ describe('ProjectsService', () => {
         }),
       );
     });
+
+    it('should return summary rows when summary=true', async () => {
+      const created = new Date('2026-01-15T10:00:00.000Z');
+      const deadline = new Date('2026-06-01T00:00:00.000Z');
+      const slimRows = [
+        {
+          id: 'proj-1',
+          title: 'Nursing',
+          deadline,
+          status: 'active',
+          priority: 'high',
+          createdAt: created,
+          projectType: 'private',
+          countryCode: 'AE',
+          country: { code: 'AE', name: 'United Arab Emirates' },
+        },
+      ];
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(slimRows as any);
+
+      const result = await service.findAll({
+        clientId: 'client-1',
+        page: 1,
+        limit: 10,
+        summary: true,
+      });
+
+      expect('projects' in result && result.projects[0]).toEqual({
+        id: 'proj-1',
+        title: 'Nursing',
+        deadline: deadline.toISOString(),
+        status: 'active',
+        priority: 'high',
+        createdAt: created.toISOString(),
+        projectType: 'private',
+        countryCode: 'AE',
+        country: { code: 'AE', name: 'United Arab Emirates' },
+      });
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            id: true,
+            title: true,
+            deadline: true,
+            status: true,
+            priority: true,
+            createdAt: true,
+            projectType: true,
+            countryCode: true,
+          }),
+        }),
+      );
+    });
   });
 
   describe('findPickerList', () => {
@@ -277,7 +330,7 @@ describe('ProjectsService', () => {
           title: 'Alpha',
           status: 'active',
           deadline,
-          client: { id: 'c1', name: 'Client A', type: 'HEALTHCARE_ORGANIZATION' },
+          client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
         },
       ];
       prismaService.project.count.mockResolvedValue(1);
@@ -297,7 +350,7 @@ describe('ProjectsService', () => {
         title: 'Alpha',
         status: 'active',
         deadline: deadline.toISOString(),
-        client: { id: 'c1', name: 'Client A', type: 'HEALTHCARE_ORGANIZATION' },
+        client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
       });
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

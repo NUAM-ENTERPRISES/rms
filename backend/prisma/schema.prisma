@@ -191,10 +191,29 @@ model Client {
   addressCountry    Country?                  @relation("PhysicalAddressCountryClient", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState      State?                    @relation("PhysicalAddressStateClient", fields: [addressStateId], references: [id], onDelete: SetNull)
   projects          Project[]
+  subClientLinks    ClientSubClient[]         @relation("ClientSubClientParent")
+  parentClientLinks ClientSubClient[]         @relation("ClientSubClientChild")
 
   @@index([addressCountryCode])
   @@index([addressStateId])
   @@map("clients")
+}
+
+/// Parent intermediary (SUB_AGENT | FREELANCE) → child end client (typically DIRECT_CLIENT).
+model ClientSubClient {
+  id             String                   @id @default(cuid())
+  parentClientId String
+  childClientId  String
+  linkType       ClientSubClientLinkType
+  createdAt      DateTime                 @default(now())
+
+  parent Client @relation("ClientSubClientParent", fields: [parentClientId], references: [id], onDelete: Cascade)
+  child  Client @relation("ClientSubClientChild", fields: [childClientId], references: [id], onDelete: Cascade)
+
+  @@unique([parentClientId, childClientId])
+  @@index([parentClientId])
+  @@index([childClientId])
+  @@map("client_sub_clients")
 }
 
 model Country {
@@ -1310,10 +1329,14 @@ model AllocationCursor {
 }
 
 enum ClientType {
-  INDIVIDUAL
-  SUB_AGENCY
-  HEALTHCARE_ORGANIZATION
-  EXTERNAL_SOURCE
+  DIRECT_CLIENT
+  SUB_AGENT
+  FREELANCE
+}
+
+enum ClientSubClientLinkType {
+  SUB_AGENT
+  FREELANCE
 }
 
 enum IndividualRelationship {
