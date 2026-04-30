@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
@@ -63,8 +63,20 @@ const DEFAULT_PROFILE_IMAGE =
 export default function CandidateDetailPage() { 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams] = useSearchParams();
+
+  const initialTab = useMemo(() => {
+    const tab = searchParams.get("tab");
+    const allowed = new Set(["overview", "projects", "documents", "history", "metrics"]);
+    return tab && allowed.has(tab) ? tab : "overview";
+  }, [searchParams]);
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const {} = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);

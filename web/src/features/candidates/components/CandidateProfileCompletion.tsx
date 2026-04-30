@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGetDocumentsQuery } from "../api";
 import { getCandidateProfileCompletion } from "../profileCompletion";
@@ -11,6 +12,8 @@ interface CandidateProfileCompletionProps {
   isLoading?: boolean;
   compact?: boolean;
   variant?: "default" | "circular";
+  onCircleClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  circleAriaLabel?: string;
 }
 
 interface CandidateProfileCompletionCellProps {
@@ -37,6 +40,8 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
   isLoading,
   compact = false,
   variant = "default",
+  onCircleClick,
+  circleAriaLabel,
 }) => {
   const docsCompletion = getCandidateProfileCompletion(documents);
 
@@ -95,7 +100,12 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="relative flex items-center justify-center w-12 h-12 cursor-help group">
+            <button
+              type="button"
+              onClick={onCircleClick}
+              aria-label={circleAriaLabel ?? "View profile completion"}
+              className="relative flex items-center justify-center w-12 h-12 cursor-pointer group"
+            >
               <svg className="w-full h-full transform -rotate-90">
                 <circle
                   cx="24"
@@ -122,7 +132,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
               <span className="absolute text-[10px] font-bold text-slate-700">
                 {completion.percent}%
               </span>
-            </div>
+            </button>
           </TooltipTrigger>
           <TooltipContent side="bottom" align="end" className="w-64 p-4 bg-white text-slate-900 border border-slate-200 shadow-lg">
             <div className="space-y-3">
@@ -236,6 +246,9 @@ export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletion
   candidateId,
   candidate,
 }) => {
+  // navigation target: candidate detail, open Documents tab
+  const navigate = useNavigate();
+
   const { data, isLoading } = useGetDocumentsQuery(
     { candidateId, page: 1, limit: 50 },
     { skip: !candidateId }
@@ -252,6 +265,11 @@ export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletion
         isLoading={isLoading}
         compact={true}
         variant="circular"
+        onCircleClick={(e) => {
+          e.stopPropagation();
+          navigate(`/candidates/${candidateId}?tab=documents`);
+        }}
+        circleAriaLabel="Open candidate documents"
       />
     </div>
   );
