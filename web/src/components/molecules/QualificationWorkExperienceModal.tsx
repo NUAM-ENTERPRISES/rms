@@ -32,7 +32,19 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, GraduationCap, Briefcase, Search, Upload, FileText, Paperclip, Eye } from "lucide-react";
+import { DeleteConfirmationDialog } from "@/components/molecules/DeleteConfirmationDialog";
+import {
+  X,
+  Plus,
+  GraduationCap,
+  Briefcase,
+  Search,
+  Upload,
+  FileText,
+  Paperclip,
+  Eye,
+  Trash2,
+} from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 import {
@@ -42,7 +54,10 @@ import {
   useUpdateWorkExperienceMutation,
   useUploadDocumentMutation,
 } from "@/features/candidates";
-import { useCreateDocumentMutation } from "@/features/documents/api";
+import {
+  useCreateDocumentMutation,
+  useDeleteDocumentMutation,
+} from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type {
   CandidateQualification,
@@ -111,12 +126,25 @@ export default function QualificationWorkExperienceModal({
   const [page, setPage] = useState(1);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [existingDocs, setExistingDocs] = useState<Document[]>([]);
+  const [deletingDocIds, setDeletingDocIds] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [deleteDocTarget, setDeleteDocTarget] = useState<Document | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset page when search changes
   useEffect(() => {
     setPage(1);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setExistingDocs(existingDocuments);
+      setDeletingDocIds({});
+    }
+  }, [existingDocuments, isOpen]);
 
   // API hooks - pagination (limit 15)
   // Only fetch qualifications when the modal is open to avoid calling the API on page load
@@ -140,6 +168,7 @@ export default function QualificationWorkExperienceModal({
     useUpdateWorkExperienceMutation();
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
+  const [deleteDocument] = useDeleteDocumentMutation();
 
   const qualifications = qualificationsData?.data?.qualifications || [];
 
@@ -157,7 +186,8 @@ export default function QualificationWorkExperienceModal({
   });
 
   const workExperienceForm = useForm<WorkExperienceFormData>({
-    resolver: zodResolver(workExperienceSchema),
+    // z.preprocess on salary makes the resolver typing a bit too strict for RHF generics
+    resolver: zodResolver(workExperienceSchema) as any,
     defaultValues: {
       companyName: "",
       jobTitle: "",
@@ -310,19 +340,22 @@ export default function QualificationWorkExperienceModal({
             formData.append("file", file);
             formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
             formData.append("workExperienceId", workExperienceId);
-            const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
-            const uploadedDocument = uploadResult.data.document;
-            if (!uploadedDocument) {
-              await createDocument({
-                candidateId,
-                docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-                fileName: uploadResult.data.fileName,
-                fileUrl: uploadResult.data.fileUrl,
-                fileSize: uploadResult.data.fileSize,
-                mimeType: uploadResult.data.mimeType,
-                workExperienceId,
-              }).unwrap();
-            }
+            const uploadResult: any = await uploadDocument({
+              candidateId,
+              formData,
+            }).unwrap();
+            const uploadData = uploadResult.data;
+
+            // Upload endpoint stores file in Spaces; we create a Document DB record here.
+            await createDocument({
+              candidateId,
+              docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+              fileName: uploadData.fileName,
+              fileUrl: uploadData.fileUrl,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              workExperienceId,
+            }).unwrap();
           } catch {
             uploadErrors.push(file.name);
           }
@@ -364,8 +397,39 @@ export default function QualificationWorkExperienceModal({
     setSearchQuery("");
     setIsDropdownOpen(false);
     setPendingFiles([]);
+    setExistingDocs([]);
+    setDeletingDocIds({});
+    setDeleteDocTarget(null);
+    setIsDeleteModalOpen(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     onClose();
+  };
+
+  const handleDeleteExistingDoc = async (doc: Document) => {
+    if (!doc?.id) return;
+    setDeletingDocIds((prev) => ({ ...prev, [doc.id]: true }));
+    try {
+      await deleteDocument(doc.id).unwrap();
+      setExistingDocs((prev) => prev.filter((d) => d.id !== doc.id));
+      toast.success("Certificate deleted");
+      onSuccess?.();
+      // Close confirmation modal after successful delete
+      closeDeleteModal();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to delete certificate");
+    } finally {
+      setDeletingDocIds((prev) => ({ ...prev, [doc.id]: false }));
+    }
+  };
+
+  const openDeleteModal = (doc: Document) => {
+    setDeleteDocTarget(doc);
+    setIsDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeleteDocTarget(null);
   };
 
   return (
@@ -816,25 +880,45 @@ export default function QualificationWorkExperienceModal({
               </Label>
 
               {/* Existing linked documents (edit mode) */}
-              {existingDocuments.length > 0 && (
+              {existingDocs.length > 0 && (
                 <div className="mb-2">
                   <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
                     Already Uploaded
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {existingDocuments.map((doc) => (
-                      <a
+                    {existingDocs.map((doc) => (
+                      <div
                         key={doc.id}
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium hover:bg-emerald-100 transition-colors"
-                        title={`View: ${doc.fileName}`}
+                        className="flex items-center gap-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium overflow-hidden"
                       >
-                        <FileText className="h-3 w-3 shrink-0" />
-                        <span className="truncate max-w-[160px]">{doc.fileName}</span>
-                        <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
-                      </a>
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1 hover:bg-emerald-100 transition-colors min-w-0"
+                          title={`View: ${doc.fileName}`}
+                        >
+                          <FileText className="h-3 w-3 shrink-0" />
+                          <span className="truncate max-w-[140px]">
+                            {doc.fileName}
+                          </span>
+                          <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeleteModal(doc);
+                          }}
+                          disabled={!!deletingDocIds[doc.id]}
+                          className="px-2 py-1 text-emerald-700/70 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          aria-label={`Delete ${doc.fileName}`}
+                          title="Delete certificate"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -885,7 +969,11 @@ export default function QualificationWorkExperienceModal({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {pendingFiles.length > 0 ? "Add More Files" : existingDocuments.length > 0 ? "Add More Certificates" : "Attach Certificate PDFs"}
+                {pendingFiles.length > 0
+                  ? "Add More Files"
+                  : existingDocs.length > 0
+                    ? "Add More Certificates"
+                    : "Attach Certificate PDFs"}
               </Button>
               <p className="text-[11px] text-muted-foreground">
                 Multiple files allowed. Files will be uploaded as Experience Letters linked to this work entry.
@@ -911,6 +999,20 @@ export default function QualificationWorkExperienceModal({
                   : "Add Work Experience"}
               </Button>
             </div>
+
+            {/* Delete certificate confirmation */}
+            <DeleteConfirmationDialog
+              isOpen={isDeleteModalOpen}
+              onClose={closeDeleteModal}
+              onConfirm={() => {
+                if (!deleteDocTarget) return;
+                handleDeleteExistingDoc(deleteDocTarget);
+              }}
+              title={deleteDocTarget?.fileName ?? "Certificate"}
+              itemType="certificate"
+              description="Are you sure you want to delete this certificate? This action cannot be undone."
+              isLoading={deleteDocTarget?.id ? !!deletingDocIds[deleteDocTarget.id] : false}
+            />
           </form>
         )}
       </DialogContent>
