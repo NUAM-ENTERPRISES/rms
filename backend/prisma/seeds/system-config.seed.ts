@@ -112,6 +112,28 @@ export async function seedSystemConfig() {
     },
   });
 
+  // State code → ordered language codes for recruiter auto-assignment (extend in production)
+  const stateRecruitmentLanguages: Record<string, string[]> = {
+    KL: ['ml'],
+    MH: ['hi', 'mr'],
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'STATE_RECRUITMENT_LANGUAGES' },
+    update: {
+      value: stateRecruitmentLanguages,
+      description: 'Map state code (e.g. KL, MH) to ISO 639-1 language codes for round-robin matching',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'STATE_RECRUITMENT_LANGUAGES',
+      value: stateRecruitmentLanguages,
+      description: 'Map state code (e.g. KL, MH) to ISO 639-1 language codes for round-robin matching',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);

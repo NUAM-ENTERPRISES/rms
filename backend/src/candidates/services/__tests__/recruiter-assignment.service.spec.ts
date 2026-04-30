@@ -4,6 +4,7 @@ import { PrismaService } from '../../../database/prisma.service';
 import { OutboxService } from '../../../notifications/outbox.service';
 import { RolesService } from '../../../roles/roles.service';
 import { ROLE_NAMES } from '../../../common/constants/role-ids';
+import { LanguageProficiency } from '@prisma/client';
 
 describe('RecruiterAssignmentService', () => {
   let service: RecruiterAssignmentService;
@@ -18,6 +19,12 @@ describe('RecruiterAssignmentService', () => {
     candidate: {
       findUnique: jest.fn(),
       count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    systemConfig: {
+      findUnique: jest.fn(),
+    },
+    language: {
       findMany: jest.fn(),
     },
     candidateStatus: {
@@ -155,6 +162,155 @@ describe('RecruiterAssignmentService', () => {
       expect(result.isRoundRobin).toBe(true);
       expect(result.id).toBe('user-load');
       expect(mockPrismaService.user.findMany).toHaveBeenCalled();
+    });
+  });
+
+  describe('getRecruiterWithLanguageAwareRoundRobin', () => {
+    const recruitersBase = {
+      email: 'r@test.com',
+      mobileNumber: '1',
+      countryCode: '+1',
+    };
+
+    beforeEach(() => {
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        addressState: { code: 'KL' },
+      });
+      mockPrismaService.systemConfig.findUnique.mockResolvedValue({
+        value: { KL: ['ml'] },
+      });
+      mockPrismaService.language.findMany.mockResolvedValue([{ code: 'ml' }]);
+    });
+
+    it('prefers higher proficiency tier when several recruiters speak the target language', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'ra',
+          name: 'Secondary only',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [],
+          userLanguages: [
+            { languageCode: 'ml', proficiency: LanguageProficiency.SECONDARY },
+          ],
+        },
+        {
+          id: 'rb',
+          name: 'Primary',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [],
+          userLanguages: [
+            { languageCode: 'ml', proficiency: LanguageProficiency.PRIMARY },
+          ],
+        },
+      ]);
+
+      const result = await service.getRecruiterWithLanguageAwareRoundRobin(
+        'cand-1',
+      );
+
+      expect(result.id).toBe('rb');
+    });
+
+    it('breaks tier ties by least active assignment count', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rbusy',
+          name: 'Busy Primary',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [{}],
+          userLanguages: [
+            { languageCode: 'ml', proficiency: LanguageProficiency.PRIMARY },
+          ],
+        },
+        {
+          id: 'rfree',
+          name: 'Free Primary',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [],
+          userLanguages: [
+            { languageCode: 'ml', proficiency: LanguageProficiency.PRIMARY },
+          ],
+        },
+      ]);
+
+      const result = await service.getRecruiterWithLanguageAwareRoundRobin(
+        'cand-2',
+      );
+
+      expect(result.id).toBe('rfree');
+    });
+
+    it('uses first ordered language that has at least one matching recruiter', async () => {
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        addressState: { code: 'MH' },
+      });
+      mockPrismaService.systemConfig.findUnique.mockResolvedValue({
+        value: { MH: ['ml', 'hi'] },
+      });
+      mockPrismaService.language.findMany.mockResolvedValue([
+        { code: 'ml' },
+        { code: 'hi' },
+      ]);
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rmi',
+          name: 'Malayalam',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [],
+          userLanguages: [
+            { languageCode: 'ml', proficiency: LanguageProficiency.PRIMARY },
+          ],
+        },
+        {
+          id: 'rhi',
+          name: 'Hindi',
+          ...recruitersBase,
+          candidateRecruiterAssignments: [],
+          userLanguages: [
+            { languageCode: 'hi', proficiency: LanguageProficiency.PRIMARY },
+          ],
+        },
+      ]);
+
+      const result = await service.getRecruiterWithLanguageAwareRoundRobin(
+        'cand-3',
+      );
+
+      expect(result.id).toBe('rmi');
+    });
+
+    it('falls back to workload when no recruiter matches configured languages', async () => {
+      mockPrismaService.user.findMany
+        .mockResolvedValueOnce([
+          {
+            id: 'x1',
+            name: 'No Malayalam',
+            ...recruitersBase,
+            candidateRecruiterAssignments: [],
+            userLanguages: [],
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'y1',
+            name: 'Least loaded',
+            ...recruitersBase,
+            candidateRecruiterAssignments: [],
+          },
+          {
+            id: 'y2',
+            name: 'More loaded',
+            ...recruitersBase,
+            candidateRecruiterAssignments: [{}],
+          },
+        ]);
+
+      const result = await service.getRecruiterWithLanguageAwareRoundRobin(
+        'cand-4',
+      );
+
+      expect(result.id).toBe('y1');
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
+import { seedLanguages } from './seeds/languages.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
@@ -1015,6 +1016,8 @@ async function main() {
 
   // Seed states
   await seedStates();
+
+  await seedLanguages(prisma);
 
   // Seed candidate statuses
   await seedCandidateStatus();

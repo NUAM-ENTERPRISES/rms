@@ -74,6 +74,9 @@ model User {
   addressCountry              Country?                      @relation("PhysicalAddressCountryUser", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState                State?                        @relation("PhysicalAddressStateUser", fields: [addressStateId], references: [id], onDelete: SetNull)
 
+  userLanguages        UserLanguage[]
+  userCountryCoverages UserCountryCoverage[]
+
   @@unique([countryCode, mobileNumber])
   @@index([email])
   @@index([countryCode, mobileNumber])
@@ -236,6 +239,7 @@ model Country {
   clientsPhysicalAddress        Client[]                      @relation("PhysicalAddressCountryClient")
   usersPhysicalAddress          User[]                        @relation("PhysicalAddressCountryUser")
   candidatesPhysicalAddress     Candidate[]                 @relation("PhysicalAddressCountryCandidate")
+  userCountryCoverages          UserCountryCoverage[]
 
   @@map("countries")
 }
@@ -1434,6 +1438,64 @@ model State {
   candidatesPhysicalAddress Candidate[]  @relation("PhysicalAddressStateCandidate")
 
   @@map("states")
+}
+
+enum LanguageProficiency {
+  PRIMARY
+  SECONDARY
+  TERTIARY
+}
+
+enum RecruiterCountrySectorScope {
+  HEALTHCARE
+  NON_HEALTH_CARE
+}
+
+model Language {
+  code      String   @id
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userLanguages UserLanguage[]
+
+  @@index([isActive])
+  @@map("languages")
+}
+
+model UserLanguage {
+  id           String              @id @default(cuid())
+  userId       String
+  languageCode String
+  proficiency  LanguageProficiency
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Restrict)
+
+  @@unique([userId, languageCode])
+  @@index([userId])
+  @@index([languageCode])
+  @@map("user_languages")
+}
+
+model UserCountryCoverage {
+  id           String                         @id @default(cuid())
+  userId       String
+  countryCode  String
+  sectorScopes RecruiterCountrySectorScope[]
+  createdAt    DateTime                       @default(now())
+  updatedAt    DateTime                       @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([userId, countryCode])
+  @@index([userId])
+  @@index([countryCode])
+  @@map("user_country_coverage")
 }
 
 model CandidateRecruiterAssignment {

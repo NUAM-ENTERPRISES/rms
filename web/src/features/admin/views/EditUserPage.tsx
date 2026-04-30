@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -20,7 +20,13 @@ import {
   ProfileImageUpload,
   PhysicalAddressFields,
 } from "@/components/molecules";
-import { useGetUserQuery, useUpdateUserMutation } from "@/features/admin/api";
+import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
+import {
+  useGetUserQuery,
+  useUpdateUserMutation,
+  useListUserLanguagesQuery,
+  useUpdateRecruiterCapabilitiesMutation,
+} from "@/features/admin/api";
 import {
   useUploadUserProfileImageMutation,
   useDeleteFileMutation,
@@ -28,9 +34,12 @@ import {
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import {
-  updateUserSchema,
+  buildUpdateUserSchema,
   type UpdateUserFormData,
+  type LanguageProficiencyValue,
+  type RecruiterSectorScopeValue,
 } from "@/features/admin/schemas/user-schemas";
+import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 
 export default function EditUserPage() {
@@ -42,6 +51,8 @@ export default function EditUserPage() {
   const { data: systemConfig, isLoading: isLoadingSystemConfig } =
     useSystemConfig();
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
+    useUpdateRecruiterCapabilitiesMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [deleteFile] = useDeleteFileMutation();
@@ -65,12 +76,38 @@ export default function EditUserPage() {
   };
 
   const form = useForm<UpdateUserFormData>({
-    resolver: zodResolver(updateUserSchema),
+    resolver: zodResolver(buildUpdateUserSchema(true)),
     mode: "onChange",
     reValidateMode: "onChange",
+    defaultValues: {
+      recruiterLanguages: [],
+      recruiterCountryCoverages: [],
+    },
   });
 
   const addressCountryCodeTrimmed = (form.watch("addressCountryCode") ?? "").trim();
+  const roleIdWatched = useWatch({ control: form.control, name: "roleId" });
+  const selectedRoleForCaps = useMemo(
+    () => systemConfig?.data?.roles?.find((r) => r.id === roleIdWatched),
+    [systemConfig, roleIdWatched]
+  );
+  const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
+    selectedRoleForCaps?.name
+  );
+
+  const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
+    skip: !isRecruiterCapabilitiesRole,
+  });
+  const languageOptions = languagesResponse?.data ?? [];
+
+  const prevRecruiterCapRef = useRef(isRecruiterCapabilitiesRole);
+  useEffect(() => {
+    if (prevRecruiterCapRef.current && !isRecruiterCapabilitiesRole) {
+      form.setValue("recruiterLanguages", []);
+      form.setValue("recruiterCountryCoverages", []);
+    }
+    prevRecruiterCapRef.current = isRecruiterCapabilitiesRole;
+  }, [isRecruiterCapabilitiesRole, form]);
   const { data: addressCountryMeta } = useGetCountryByCodeQuery(
     addressCountryCodeTrimmed,
     { skip: !addressCountryCodeTrimmed },
@@ -118,6 +155,14 @@ export default function EditUserPage() {
         addressCountryCode: user.addressCountryCode ?? "",
         addressStateId: user.addressStateId ?? "",
         address: user.address ?? "",
+        recruiterLanguages: (user.userLanguages ?? []).map((ul) => ({
+          languageCode: ul.languageCode,
+          proficiency: ul.proficiency as LanguageProficiencyValue,
+        })),
+        recruiterCountryCoverages: (user.userCountryCoverages ?? []).map((uc) => ({
+          countryCode: uc.countryCode,
+          sectorScopes: [...(uc.sectorScopes as RecruiterSectorScopeValue[])],
+        })),
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -222,6 +267,32 @@ export default function EditUserPage() {
       }).unwrap();
 
       if (result.success) {
+        const role = systemConfig?.data?.roles?.find((r) => r.id === data.roleId);
+        try {
+          await updateRecruiterCapabilities({
+            id: id!,
+            body: {
+              languages: roleNameHasRecruiterCapabilities(role?.name)
+                ? data.recruiterLanguages.map((l) => ({
+                    languageCode: l.languageCode,
+                    proficiency: l.proficiency,
+                  }))
+                : [],
+              countryCoverages: roleNameHasRecruiterCapabilities(role?.name)
+                ? data.recruiterCountryCoverages.map((c) => ({
+                    countryCode: c.countryCode,
+                    sectorScopes: [...c.sectorScopes],
+                  }))
+                : [],
+            },
+          }).unwrap();
+        } catch (capErr: unknown) {
+          console.error(capErr);
+          toast.warning(
+            "Profile was updated, but languages / country coverage could not be saved."
+          );
+        }
+
         // Handle profile image changes
         if (selectedImage) {
           // Upload new image
@@ -595,6 +666,18 @@ export default function EditUserPage() {
             </CardContent>
           </Card>
 
+          {isRecruiterCapabilitiesRole && (
+            <RecruiterCapabilitiesFormCard
+              control={form.control}
+              watch={form.watch}
+              setValue={form.setValue}
+              errors={form.formState.errors}
+              disabled={isUpdating || savingRecruiterCaps}
+              languageOptions={languageOptions}
+              description="Set languages and country coverage for this user. Changes are saved when you click Save changes."
+            />
+          )}
+
           {/* Action Buttons */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardContent className="pt-6">
@@ -613,14 +696,19 @@ export default function EditUserPage() {
                   disabled={
                     isUpdating ||
                     uploadingImage ||
+                    savingRecruiterCaps ||
                     (!form.formState.isDirty && !hasImageChanged)
                   }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  {isUpdating || uploadingImage ? (
+                  {isUpdating || uploadingImage || savingRecruiterCaps ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      {uploadingImage ? "Uploading..." : "Updating..."}
+                      {uploadingImage
+                        ? "Uploading..."
+                        : savingRecruiterCaps
+                          ? "Saving coverage..."
+                          : "Updating..."}
                     </>
                   ) : (
                     <>

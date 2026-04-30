@@ -18,20 +18,20 @@ When a candidate is created, the system automatically assigns a recruiter using 
    - ✅ The candidate is assigned **directly to the creating user** (e.g. **Client Coordinator** agent pipeline)
    - ❌ **No round-robin assignment** for agent-sourced creates
 
-3. **If the creator is NOT a Recruiter and the source is not `agent` (e.g., Manager, Team Head, Admin creating a manual candidate):**
-   - ✅ The system uses **round-robin assignment** based on workload
-   - ✅ The recruiter with the **least number of active candidates** is assigned
-   - This ensures fair workload distribution
+3. **If the creator is NOT a Recruiter and the source is not agent-channel (e.g., Manager, Team Head, Admin creating a manual or meta candidate):**
+   - ✅ The system uses **automatic assignment** with **`isRoundRobin: true`** on the result (for notifications / audit semantics)
+   - ✅ **`getRecruiterWithLanguageAwareRoundRobin`** runs first: if **`STATE_RECRUITMENT_LANGUAGES`** maps the candidate’s **address state** to target language codes, recruiters are filtered by **`userLanguages`**, ranked by **proficiency tier** (`PRIMARY` beats `SECONDARY` beats `TERTIARY`), then tie-broken by **fewest active** `candidate_recruiter_assignments`
+   - ✅ If there is **no** state map, **no** targets, or **no** recruiter matches any target language → **`getRecruiterWithLeastWorkload()`** picks the recruiter with the **least active assignments** among all Recruiters
+   - This is **not** the same as the cursor-based **`RoundRobinService`** used for project role allocation (see [Recruiter capabilities & assignment](../docs/FEATURE_RECRUITER_CAPABILITIES.md#automatic-assignment--language-aware-matching))
 
 ## Implementation Details
 
 ### Key Files Modified
 
 1. **`src/candidates/services/recruiter-assignment.service.ts`**
-   - `getBestRecruiterForAssignment()` method
-   - Checks if creator has the "Recruiter" role (case-insensitive)
-   - Returns creator if they are a recruiter
-   - Otherwise, calls `getRecruiterWithLeastWorkload()`
+   - `getBestRecruiterForAssignment()` — Recruiter creator → direct; agent-channel source → creator; else `getRecruiterWithLanguageAwareRoundRobin()` (fallback `getRecruiterWithLeastWorkload()`)
+   - `getRecruiterWithLanguageAwareRoundRobin()` — reads **`SystemConfig`** `STATE_RECRUITMENT_LANGUAGES`, candidate `addressState.code`, and recruiters’ **`userLanguages`** (see feature doc)
+   - **`userCountryCoverages`** are **not** used in this service today
 
 2. **`src/candidates/candidates.service.ts`**
    - `create()` method
@@ -59,14 +59,14 @@ const recruiter = await this.getBestRecruiterForAssignment(
 
 // Step 4: Inside getBestRecruiterForAssignment()
 if (isRecruiter) {
-  // Return the creator as the recruiter
-  return { id: creator.id, name: creator.name, email: creator.email };
-} else if (candidate.source is agent) {
-  // Agent-sourced: assign to creator (Client Coordinator / agent pipeline)
-  return { id: creator.id, name: creator.name, email: creator.email };
+  return { ..., isRoundRobin: false, directAssignmentKind: 'recruiter' };
+} else if (candidate is agent-channel / agent-sourced) {
+  return { ..., isRoundRobin: false, directAssignmentKind: 'agent_source' };
 } else {
-  // Use round-robin (least workload)
-  return await this.getRecruiterWithLeastWorkload();
+  const best = await this.getRecruiterWithLanguageAwareRoundRobin(candidateId);
+  return { ...best, isRoundRobin: true };
+  // getRecruiterWithLanguageAwareRoundRobin internally falls back to
+  // getRecruiterWithLeastWorkload() when language targets are empty or unmatched
 }
 ```
 
@@ -80,14 +80,21 @@ Candidate {candidateId} created by {userName} ({email}). User roles: Recruiter, 
 ✅ Successfully assigned recruiter {recruiterName} ({email}) to candidate {candidateId}
 ```
 
-Or for non-recruiters:
+Or for non-recruiters (automatic path):
 
 ```
-Candidate {candidateId} created by {userName} ({email}). User roles: Manager
-Creator {userName} is NOT a Recruiter - using round-robin assignment based on least workload
-Assigned recruiter {recruiterName} with {count} active candidates
-✅ Successfully assigned recruiter {recruiterName} ({email}) to candidate {candidateId}
+Creator {userName} is NOT a Recruiter - using assignment (language-aware round-robin when configured)
+Language-aware assignment: candidate=... lang=... recruiter=... tierScore=...
 ```
+(or fallback: `Language-aware assignment: no recruiter matched targets=[...] — fallback workload` / workload-only log from `getRecruiterWithLeastWorkload`)
+
+## Recruiter capabilities (languages & country coverage)
+
+Language list and proficiency on each recruiter are maintained via Admin (**`PUT /users/:id/recruiter-capabilities`**) and stored in **`user_languages`**. They directly affect **`getRecruiterWithLanguageAwareRoundRobin`**. Country coverage rows (**`user_country_coverage`**) are stored for the same users but are **not** read by this assignment service yet.
+
+**Canonical detail:** [../docs/FEATURE_RECRUITER_CAPABILITIES.md](../docs/FEATURE_RECRUITER_CAPABILITIES.md) (including `STATE_RECRUITMENT_LANGUAGES` behaviour).
+
+**Tests:** `src/candidates/services/__tests__/recruiter-assignment.service.spec.ts` (`getRecruiterWithLanguageAwareRoundRobin`, round-robin vs direct flags).
 
 ## Testing
 
@@ -106,12 +113,22 @@ Assigned recruiter {recruiterName} with {count} active candidates
 
 **Given:**
 - User does NOT have the "Recruiter" role (e.g., Manager, Team Head)
-- User creates a new candidate
+- User creates a new candidate (non-agent source)
 
 **Expected:**
-- System finds recruiter with least workload
-- Candidate is assigned to that recruiter
-- Log shows: "Creator {name} is NOT a Recruiter - using round-robin assignment"
+- System uses **`getRecruiterWithLanguageAwareRoundRobin`** (then least-workload fallback if needed); result has **`isRoundRobin: true`**
+- Candidate is assigned to the selected recruiter
+- Log shows language-aware assignment or fallback workload messaging (see service logs)
+
+### Test Case 2b: Language-aware tie-break
+
+**Given:**
+- `STATE_RECRUITMENT_LANGUAGES` includes a language code for the candidate’s state
+- Several recruiters have that language with different **`UserLanguage.proficiency`** values
+
+**Expected:**
+- A recruiter with **higher** tier (`PRIMARY` over `SECONDARY` over `TERTIARY`) is preferred
+- Among equal tier, the recruiter with **fewer active assignments** is preferred (see unit tests)
 
 ### Test Case 3: Recruiter with Multiple Roles
 
@@ -216,13 +233,13 @@ model CandidateRecruiterAssignment {
 ## Future Enhancements
 
 1. **Team-based assignment**: Assign recruiters from the same team as the candidate
-2. **Skill-based matching**: Assign recruiters based on candidate's role/skills
-3. **Manual override**: Allow admins to manually assign/reassign recruiters
+2. **Country / sector coverage in assignment**: Use **`user_country_coverage`** (and sector scopes) when choosing recruiters, if product rules require it
+3. **Manual override**: Allow admins to manually assign/reassign recruiters (where not already supported)
 4. **Workload metrics**: More sophisticated workload calculation (active vs qualified vs working)
 5. **Assignment history**: Track all assignment changes with audit trail
 
 ## Related Documentation
 
-- [Candidate Creation API](./CANDIDATE_API.md)
-- [Role-Based Access Control](./RBAC.md)
-- [Recruiter Management](./RECRUITER_MANAGEMENT.md)
+- [Recruiter capabilities & language-aware assignment](../docs/FEATURE_RECRUITER_CAPABILITIES.md)
+- [Agent / recruiter assignment notes](./docs/AGENT_LOGIC.md)
+- Candidate creation and other flows: see `src/candidates/candidates.service.ts` and Swagger
