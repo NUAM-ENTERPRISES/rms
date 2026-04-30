@@ -617,7 +617,6 @@ export default function CandidatesPage() {
     const rnrCount = recruiterCounts?.rnr ?? 0;
     const onHoldCount = recruiterCounts?.onHold ?? 0;
     const interestedCount = recruiterCounts?.interested ?? 0;
-    const qualifiedCount = recruiterCounts?.qualified ?? 0;
     const futureCount = recruiterCounts?.future ?? 0;
     const workingCount = recruiterCounts?.working ?? 0;
     const notInterestedCount = recruiterCounts?.notInterested ?? 0;
@@ -707,7 +706,6 @@ export default function CandidatesPage() {
       const rnrCount = allCounts?.rnr ?? 0;
       const onHoldCount = allCounts?.onHold ?? 0;
       const interestedCount = allCounts?.interested ?? 0;
-      const qualifiedCount = allCounts?.qualified ?? 0;
       const futureCount = allCounts?.future ?? 0;
       const workingCount = allCounts?.working ?? 0;
       const notInterestedCount = allCounts?.notInterested ?? 0;
@@ -1552,7 +1550,7 @@ export default function CandidatesPage() {
 
                           {/* Profile Completion */}
                           <TableCell className="px-4 py-3">
-                            <CandidateProfileCompletionCell candidateId={candidate.id} />
+                            <CandidateProfileCompletionCell candidateId={candidate.id} candidate={candidate} />
                           </TableCell>
 
                           {/* Status Column (single source of truth) */}

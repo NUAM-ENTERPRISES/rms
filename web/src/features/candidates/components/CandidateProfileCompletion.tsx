@@ -1,6 +1,6 @@
 import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGetCandidateProfileCompletionQuery } from "../api";
+import { useGetDocumentsQuery } from "../api";
 import { getCandidateProfileCompletion } from "../profileCompletion";
 import type { Candidate, Document } from "../api";
 
@@ -15,6 +15,7 @@ interface CandidateProfileCompletionProps {
 
 interface CandidateProfileCompletionCellProps {
   candidateId: string;
+  candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth">;
 }
 
 const getProgressColor = (percent: number) => {
@@ -37,11 +38,6 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
   compact = false,
   variant = "default",
 }) => {
-  const { data: serverCompletion, isLoading: isServerLoading } =
-    useGetCandidateProfileCompletionQuery(candidateId!, {
-      skip: !candidateId,
-    });
-
   const docsCompletion = getCandidateProfileCompletion(documents);
 
   const localCompletion = (() => {
@@ -77,12 +73,12 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
     };
   })();
 
-  const completion = serverCompletion ?? localCompletion;
+  const completion = localCompletion;
   const missingLabels = completion.missing.map((item) => item.label);
   const progressColor = getProgressColor(completion.percent);
   const progressBgColor = getProgressBgColor(completion.percent);
 
-  if (isLoading || isServerLoading) {
+  if (isLoading) {
     return (
       <div className={compact ? "text-xs text-slate-500" : "text-sm text-slate-500"}>
         Loading profile completion...
@@ -238,11 +234,22 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 
 export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletionCellProps> = ({
   candidateId,
+  candidate,
 }) => {
+  const { data, isLoading } = useGetDocumentsQuery(
+    { candidateId, page: 1, limit: 50 },
+    { skip: !candidateId }
+  );
+
+  const documents = data?.data?.documents;
+
   return (
     <div className="flex justify-center">
       <CandidateProfileCompletion
         candidateId={candidateId}
+        candidate={candidate}
+        documents={documents}
+        isLoading={isLoading}
         compact={true}
         variant="circular"
       />

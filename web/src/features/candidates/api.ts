@@ -217,28 +217,6 @@ export interface Candidate {
   }>;
 }
 
-export type CandidateProfileCompletion = {
-  percent: number;
-  requiredCount: number;
-  completedCount: number;
-  breakdown: {
-    personal: {
-      requiredCount: number;
-      completedCount: number;
-      missing: Array<{ key: "dateOfBirth" | "mobileNumber" | "email"; label: string }>;
-    };
-    documents: {
-      requiredCount: number;
-      completedCount: number;
-      missing: Array<{ docType: string; label: string }>;
-    };
-  };
-  missing: Array<{
-    type: "personal" | "document";
-    key: string;
-    label: string;
-  }>;
-};
 
 export interface CandidateQualification {
   id: string;
@@ -935,15 +913,6 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
 
-    getCandidateProfileCompletion: builder.query<CandidateProfileCompletion, string>({
-      query: (id) => `/candidates/${id}/profile-completion`,
-      transformResponse: (response: {
-        success: boolean;
-        data: CandidateProfileCompletion;
-        message: string;
-      }) => response.data,
-      providesTags: (_, __, id) => [{ type: "Candidate", id }],
-    }),
 
     getOriginalRecruiter: builder.query<{ success: boolean; data: { id: string; name: string; email: string; mobileNumber: string; countryCode: string }; message: string }, string>({
       query: (id) => `/candidates/${id}/original-recruiter`,
@@ -1383,7 +1352,6 @@ export const {
   useGetCandidateOverviewQuery,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
-  useGetCandidateProfileCompletionQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,

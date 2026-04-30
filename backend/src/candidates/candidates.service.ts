@@ -43,51 +43,10 @@ import {
   requiresCREHandling,
   isCandidateStatusTerminal,
 } from '../common/constants';
-import {
-  DOCUMENT_TYPE,
-  DOCUMENT_TYPE_META,
-} from '../common/constants/document-types';
 
 @Injectable()
 export class CandidatesService {
   private readonly logger = new Logger(CandidatesService.name);
-
-  private readonly PROFILE_COMPLETION_REQUIRED_DOCS: Array<{
-    docType: string;
-    label: string;
-    mandatory: true;
-  }> = [
-    {
-      docType: DOCUMENT_TYPE.RESUME,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.RESUME].displayName,
-      mandatory: true,
-    },
-    {
-      docType: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.DEGREE_CERTIFICATE].displayName,
-      mandatory: true,
-    },
-    {
-      docType: DOCUMENT_TYPE.PASSPORT_PHOTO,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.PASSPORT_PHOTO].displayName,
-      mandatory: true,
-    },
-    {
-      docType: DOCUMENT_TYPE.PASSPORT_COPY,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.PASSPORT_COPY].displayName,
-      mandatory: true,
-    },
-    {
-      docType: DOCUMENT_TYPE.AADHAAR,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.AADHAAR].displayName,
-      mandatory: true,
-    },
-    {
-      docType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
-      label: DOCUMENT_TYPE_META[DOCUMENT_TYPE.REGISTRATION_CERTIFICATE].displayName,
-      mandatory: true,
-    },
-  ];
 
   constructor(
     private readonly prisma: PrismaService,
@@ -4850,99 +4809,6 @@ export class CandidatesService {
         limit,
         totalPages: Math.ceil(totalProjects / limit),
       },
-    };
-  }
-
-  /**
-   * Candidate profile completion
-   * Includes personal fields + commonly required documents.
-   */
-  async getCandidateProfileCompletion(candidateId: string) {
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: candidateId },
-      select: {
-        id: true,
-        email: true,
-        mobileNumber: true,
-        dateOfBirth: true,
-      },
-    });
-
-    if (!candidate) {
-      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
-    }
-
-    const documents = await this.prisma.document.findMany({
-      where: { candidateId, isDeleted: false },
-      select: { docType: true },
-    });
-
-    const normalizeDocType = (docType: string) => {
-      const lower = String(docType ?? '').toLowerCase().trim();
-      // legacy / UI aliases that exist in some data
-      if (lower === 'photo') return DOCUMENT_TYPE.PASSPORT_PHOTO;
-      if (lower === 'passport') return DOCUMENT_TYPE.PASSPORT_COPY;
-      if (lower === 'degree') return DOCUMENT_TYPE.DEGREE_CERTIFICATE;
-      return lower;
-    };
-
-    const uploadedByType = new Set<string>();
-    for (const d of documents) {
-      if (!d?.docType) continue;
-      uploadedByType.add(normalizeDocType(d.docType));
-    }
-
-    const requiredDocs = this.PROFILE_COMPLETION_REQUIRED_DOCS;
-    const missingDocs = requiredDocs.filter(
-      (r) => !uploadedByType.has(String(r.docType).toLowerCase()),
-    );
-
-    const personalRequirements = [
-      { key: 'dateOfBirth', label: 'Date of Birth', ok: !!candidate.dateOfBirth },
-      { key: 'mobileNumber', label: 'Mobile Number', ok: !!candidate.mobileNumber },
-      { key: 'email', label: 'Email', ok: !!candidate.email },
-    ] as const;
-
-    const missingPersonal = personalRequirements
-      .filter((p) => !p.ok)
-      .map((p) => ({ key: p.key, label: p.label }));
-
-    const missing = [
-      ...missingPersonal.map((p) => ({
-        type: 'personal' as const,
-        key: p.key,
-        label: p.label,
-      })),
-      ...missingDocs.map((d) => ({
-        type: 'document' as const,
-        key: d.docType,
-        label: d.label,
-      })),
-    ];
-
-    const requiredCount = personalRequirements.length + requiredDocs.length;
-    const completedCount = requiredCount - missing.length;
-    const percent =
-      requiredCount > 0 ? Math.round((completedCount / requiredCount) * 100) : 0;
-
-    return {
-      percent,
-      requiredCount,
-      completedCount,
-      breakdown: {
-        personal: {
-          requiredCount: personalRequirements.length,
-          completedCount:
-            personalRequirements.length - missingPersonal.length,
-          missing: missingPersonal,
-        },
-        documents: {
-          requiredCount: requiredDocs.length,
-          completedCount: requiredDocs.length - missingDocs.length,
-          missing: missingDocs.map((d) => ({ docType: d.docType, label: d.label })),
-        },
-      },
-      missing,
     };
   }
 }

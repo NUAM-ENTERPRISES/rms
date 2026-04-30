@@ -126,7 +126,6 @@ export class DocumentsService {
           createDocumentDto.roleCatalog || createDocumentDto.roleCatalogId || createDocumentDto.roleCatelogId || null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,
-        workExperienceId: createDocumentDto.workExperienceId || null,
       },
       include: {
         candidate: {

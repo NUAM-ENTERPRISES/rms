@@ -811,33 +811,6 @@ export class CandidatesController {
     };
   }
 
-  @Get(':id/profile-completion')
-  @Permissions('read:candidates')
-  @ApiOperation({
-    summary: 'Get candidate profile completion',
-    description:
-      'Returns profile completion percent and missing personal fields (DOB/mobile/email) and required documents.',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Candidate ID',
-    example: 'candidate123',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Profile completion retrieved successfully',
-  })
-  @ApiResponse({ status: 404, description: 'Not Found - Candidate not found' })
-  async getProfileCompletion(@Param('id') id: string) {
-    const completion =
-      await this.candidatesService.getCandidateProfileCompletion(id);
-    return {
-      success: true,
-      data: completion,
-      message: 'Candidate profile completion retrieved successfully',
-    };
-  }
-
   @Patch(':id')
   @Permissions('write:candidates')
   @ApiOperation({

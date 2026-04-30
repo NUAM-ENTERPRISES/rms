@@ -60,48 +60,12 @@ This is used to render the status summary and the missing document cards.
 
 ### Overall Profile Completion (Personal + Documents)
 
-The preferred completion signal comes from the backend endpoint:
+Overall profile completion is computed **locally** in the frontend using:
 
-- **Endpoint**: `GET /api/v1/candidates/:id/profile-completion`
-- **Auth/RBAC**: requires `read:candidates`
-- **Purpose**: provides a single, consistent completion calculation across the system.
+- candidate fields (`dateOfBirth`, `mobileNumber`, `email`)
+- uploaded documents (via `useGetDocumentsQuery`)
 
-#### Response Shape (simplified)
-
-```json
-{
-  "success": true,
-  "data": {
-    "percent": 78,
-    "requiredCount": 9,
-    "completedCount": 7,
-    "breakdown": {
-      "personal": {
-        "requiredCount": 3,
-        "completedCount": 2,
-        "missing": [{ "key": "email", "label": "Email" }]
-      },
-      "documents": {
-        "requiredCount": 6,
-        "completedCount": 5,
-        "missing": [{ "docType": "aadhaar", "label": "Aadhaar Card" }]
-      }
-    },
-    "missing": [
-      { "type": "personal", "key": "email", "label": "Email" },
-      { "type": "document", "key": "aadhaar", "label": "Aadhaar Card" }
-    ]
-  },
-  "message": "Candidate profile completion retrieved successfully"
-}
-```
-
-#### Frontend behavior
-
-- `CandidateProfileCompletion` tries to use the server response first.
-- If the endpoint is unavailable/slow, the UI falls back to a **local** computation using:
-  - candidate fields (`dateOfBirth`, `mobileNumber`, `email`)
-  - uploaded documents (from `useGetDocumentsQuery`)
+This avoids any dependency on a dedicated “profile completion” backend endpoint.
 
 ### Missing Document Cards
 

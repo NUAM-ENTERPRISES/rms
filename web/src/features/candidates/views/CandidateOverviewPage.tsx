@@ -725,7 +725,7 @@ export default function CandidateOverviewPage() {
 
                           {/* Profile Completion */}
                           <TableCell className="px-4 py-3">
-                            <CandidateProfileCompletionCell candidateId={candidate.id} />
+                            <CandidateProfileCompletionCell candidateId={candidate.id} candidate={candidate} />
                           </TableCell>
 
                           {/* Status / Project Count */}
