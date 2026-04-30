@@ -112,6 +112,7 @@ export class DocumentsService {
         notes: createDocumentDto.notes,
         roleCatalogId:
           createDocumentDto.roleCatalog || createDocumentDto.roleCatalogId || createDocumentDto.roleCatelogId || null,
+        workExperienceId: createDocumentDto.workExperienceId ?? null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,
       },

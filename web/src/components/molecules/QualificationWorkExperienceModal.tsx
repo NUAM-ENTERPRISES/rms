@@ -32,7 +32,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { X, Plus, GraduationCap, Briefcase, Search, Upload, FileText, Paperclip } from "lucide-react";
+import { X, Plus, GraduationCap, Briefcase, Search, Upload, FileText, Paperclip, Eye } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
 import {
@@ -47,6 +47,7 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type {
   CandidateQualification,
   WorkExperience,
+  Document,
 } from "@/features/candidates/api";
 
 // Validation schemas
@@ -90,6 +91,7 @@ interface QualificationWorkExperienceModalProps {
   candidateId: string;
   type: "qualification" | "workExperience";
   editData?: CandidateQualification | WorkExperience;
+  existingDocuments?: Document[];
   onSuccess?: () => void;
 }
 
@@ -99,6 +101,7 @@ export default function QualificationWorkExperienceModal({
   candidateId,
   type,
   editData,
+  existingDocuments = [],
   onSuccess,
 }: QualificationWorkExperienceModalProps) {
   const [newSkill, setNewSkill] = useState("");
@@ -812,7 +815,32 @@ export default function QualificationWorkExperienceModal({
                 <span className="text-xs font-normal text-muted-foreground">(optional · PDF)</span>
               </Label>
 
-              {/* Pending file pills */}
+              {/* Existing linked documents (edit mode) */}
+              {existingDocuments.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Already Uploaded
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {existingDocuments.map((doc) => (
+                      <a
+                        key={doc.id}
+                        href={doc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium hover:bg-emerald-100 transition-colors"
+                        title={`View: ${doc.fileName}`}
+                      >
+                        <FileText className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[160px]">{doc.fileName}</span>
+                        <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pending new file pills */}
               {pendingFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-2">
                   {pendingFiles.map((file, idx) => (
@@ -857,7 +885,7 @@ export default function QualificationWorkExperienceModal({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {pendingFiles.length > 0 ? "Add More Files" : "Attach Certificate PDFs"}
+                {pendingFiles.length > 0 ? "Add More Files" : existingDocuments.length > 0 ? "Add More Certificates" : "Attach Certificate PDFs"}
               </Button>
               <p className="text-[11px] text-muted-foreground">
                 Multiple files allowed. Files will be uploaded as Experience Letters linked to this work entry.

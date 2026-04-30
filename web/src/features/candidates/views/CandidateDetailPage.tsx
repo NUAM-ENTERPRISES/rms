@@ -85,6 +85,7 @@ export default function CandidateDetailPage() {
   const [editData, setEditData] = useState<
     CandidateQualification | WorkExperience | undefined
   >();
+  const [editModalExistingDocs, setEditModalExistingDocs] = useState<any[]>([]);
 
   // Delete confirmation state
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -169,6 +170,14 @@ export default function CandidateDetailPage() {
   ) => {
     setModalType(type);
     setEditData(data);
+    if (type === "workExperience") {
+      const linked = (documentsData?.data?.documents ?? []).filter(
+        (d: any) => d.workExperienceId === (data as WorkExperience).id
+      );
+      setEditModalExistingDocs(linked);
+    } else {
+      setEditModalExistingDocs([]);
+    }
     setIsModalOpen(true);
   };
 
@@ -201,6 +210,7 @@ export default function CandidateDetailPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditData(undefined);
+    setEditModalExistingDocs([]);
   };
 
   const handleModalSuccess = () => {
@@ -627,6 +637,7 @@ export default function CandidateDetailPage() {
         candidateId={id!}
         type={modalType}
         editData={editData}
+        existingDocuments={editModalExistingDocs}
         onSuccess={handleModalSuccess}
       />
 

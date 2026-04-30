@@ -488,7 +488,11 @@ export function DocumentUploadSection({
 
           toast.success("Document uploaded successfully");
           setShowUploadModal(false);
-          refetch();
+          if (onRefresh) {
+            onRefresh();
+          } else {
+            refetch();
+          }
         } catch (error) {
           console.error("Upload error:", error);
           toast.error("Failed to upload document");
