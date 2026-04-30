@@ -18,6 +18,7 @@ import {
   CountryCodeSelect,
   RoleSelect,
   ProfileImageUpload,
+  PhysicalAddressFields,
 } from "@/components/molecules";
 import { useCreateUserMutation } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
@@ -51,6 +52,9 @@ export default function CreateUserPage() {
       mobileNumber: "",
       dateOfBirth: "",
       roleId: "no-role",
+      addressCountryCode: "",
+      addressStateId: "",
+      address: "",
     },
   });
 
@@ -71,6 +75,9 @@ export default function CreateUserPage() {
           data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
             ? [data.roleId]
             : undefined,
+        addressCountryCode: data.addressCountryCode?.trim() || undefined,
+        addressStateId: data.addressStateId?.trim() || undefined,
+        address: data.address?.trim() || undefined,
       };
 
       console.log("Create User - Form Data:", formData);
@@ -390,6 +397,15 @@ export default function CreateUserPage() {
                         {form.formState.errors.dateOfBirth.message}
                       </p>
                     )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <PhysicalAddressFields
+                      control={form.control}
+                      setValue={form.setValue}
+                      errors={form.formState.errors}
+                      disabled={isLoading}
+                    />
                   </div>
                 </div>
               </div>

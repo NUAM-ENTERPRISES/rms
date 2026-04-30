@@ -3,6 +3,12 @@ export * from "./domain";
 
 // Shared molecules
 export { default as CountrySelect } from "./CountrySelect";
+export { StateSelect } from "./StateSelect";
+export { PhysicalAddressFields } from "./PhysicalAddressFields";
+export type {
+  PhysicalAddressFieldsProps,
+  PhysicalAddressFormFields,
+} from "./PhysicalAddressFields";
 export { default as MultiCountrySelect } from "./MultiCountrySelect";
 export { default as MultiSelect } from "./MultiSelect";
 export { CountryCodeSelect } from "./CountryCodeSelect";

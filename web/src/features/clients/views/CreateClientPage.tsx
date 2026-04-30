@@ -51,6 +51,7 @@ import {
   clientFormSchema,
   type ClientFormData,
 } from "@/features/clients/schemas/client-schemas";
+import { PhysicalAddressFields } from "@/components/molecules";
 
 export default function CreateClientPage() {
   const navigate = useNavigate();
@@ -90,6 +91,8 @@ export default function CreateClientPage() {
         email: data.email || undefined,
         phone: data.phone || undefined,
         address: data.address || undefined,
+        addressCountryCode: data.addressCountryCode?.trim() || undefined,
+        addressStateId: data.addressStateId?.trim() || undefined,
         profession: data.profession || undefined,
         organization: data.organization || undefined,
         sourceName: data.sourceName || undefined,
@@ -418,27 +421,13 @@ export default function CreateClientPage() {
         )}
       </div>
 
-      {/* Address */}
-      <div className="space-y-2.5">
-        <Label className="text-sm font-semibold text-slate-700">Address</Label>
-        <Controller
-          name="address"
+      {/* Address (optional) */}
+      <div className="md:col-span-2">
+        <PhysicalAddressFields
           control={form.control}
-          render={({ field }) => (
-            <Input
-              {...field}
-              id="address"
-              placeholder="123 Health St, Medical City, State 90210"
-              className="h-12 rounded-xl border-slate-200 focus:border-blue-500 
-                         focus:ring-4 focus:ring-blue-500/10"
-            />
-          )}
+          setValue={form.setValue}
+          errors={form.formState.errors}
         />
-        {form.formState.errors.address && (
-          <p className="text-sm text-red-600 font-medium">
-            {form.formState.errors.address.message}
-          </p>
-        )}
       </div>
     </div>
   </CardContent>

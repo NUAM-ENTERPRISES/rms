@@ -153,6 +153,9 @@ export default function CreateCandidatePage() {
       referralCountryCode: "",
       referralPhone: "",
       referralDescription: "",
+      addressCountryCode: "",
+      addressStateId: "",
+      address: "",
       // physical information defaults
       height: undefined,
       weight: undefined,
@@ -317,6 +320,16 @@ export default function CreateCandidatePage() {
         if (data.referralCountryCode) payload.referralCountryCode = data.referralCountryCode;
         if (data.referralPhone) payload.referralPhone = data.referralPhone;
         if (data.referralDescription) payload.referralDescription = data.referralDescription;
+      }
+
+      if (data.addressCountryCode?.trim()) {
+        payload.addressCountryCode = data.addressCountryCode.trim();
+      }
+      if (data.addressStateId?.trim()) {
+        payload.addressStateId = data.addressStateId.trim();
+      }
+      if (data.address?.trim()) {
+        payload.address = data.address.trim();
       }
 
       // Preference fields

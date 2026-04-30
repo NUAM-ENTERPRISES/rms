@@ -99,6 +99,17 @@ export const clientFormSchema = z.object({
   contractEndDate: z.string().optional(),
   billingAddress: z.string().optional(),
   taxId: z.string().optional(),
+
+  addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+  addressStateId: z.string().optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a country before state",
+      path: ["addressCountryCode"],
+    });
+  }
 });
 
 // Type inference
@@ -110,4 +121,7 @@ export const defaultClientValues: Partial<ClientFormData> = {
   specialties: [],
   locations: [],
   commissionRate: 0,
+  addressCountryCode: "",
+  addressStateId: "",
+  address: "",
 };

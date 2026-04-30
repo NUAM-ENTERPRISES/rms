@@ -14,6 +14,10 @@ import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
 import { UserWithRoles, PaginatedUsers } from './types';
 import { UploadService } from '../upload/upload.service';
+import {
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
 
 @Injectable()
 export class UsersService {
@@ -50,6 +54,11 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createUserDto.addressCountryCode ?? null,
+      addressStateId: createUserDto.addressStateId ?? null,
+    });
+
     const hashedPassword = await argon2.hash(createUserDto.password);
 
     // Create user with role assignments in a transaction
@@ -66,6 +75,9 @@ export class UsersService {
             ? new Date(createUserDto.dateOfBirth)
             : null,
           profileImage: createUserDto.profileImage,
+          addressCountryCode: createUserDto.addressCountryCode,
+          addressStateId: createUserDto.addressStateId,
+          address: createUserDto.address,
         },
       });
 
@@ -222,6 +234,12 @@ export class UsersService {
             },
           },
         },
+        addressCountry: {
+          select: { code: true, name: true },
+        },
+        addressState: {
+          select: { id: true, name: true, code: true },
+        },
       },
     });
 
@@ -245,6 +263,14 @@ export class UsersService {
     if (!existingUser) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
+
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(existingUser, {
+        addressCountryCode: updateUserDto.addressCountryCode,
+        addressStateId: updateUserDto.addressStateId,
+      }),
+    );
 
     if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
       const emailExists = await this.prisma.user.findUnique({
@@ -528,6 +554,9 @@ export class UsersService {
       profileImage: user.profileImage
         ? this.getProfileImageUrl(user.profileImage)
         : null,
+      addressCountryCode: user.addressCountryCode,
+      addressStateId: user.addressStateId,
+      address: user.address,
       location: null, // Field doesn't exist in schema
       timezone: null, // Field doesn't exist in schema
       roles,

@@ -13,6 +13,8 @@ export interface Client {
   email?: string;
   phone?: string;
   address?: string;
+  addressCountryCode?: string;
+  addressStateId?: string;
 
   // Individual Referrer specific fields
   profession?: string;
@@ -75,6 +77,8 @@ export interface CreateClientRequest {
   email?: string;
   phone?: string;
   address?: string;
+  addressCountryCode?: string;
+  addressStateId?: string;
   profession?: string;
   organization?: string;
   relationship?: string;

@@ -49,10 +49,23 @@ export const createUserSchema = z
       .string()
       .min(1, "Role is required")
       .refine((val) => val && val !== "no-role", "Please select a role"),
+
+    addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+    addressStateId: z.string().optional().or(z.literal("")),
+    address: z.string().max(500).optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ["confirmPassword"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select a country before state",
+        path: ["addressCountryCode"],
+      });
+    }
   });
 
 // User form schema for updating (matching backend UpdateUserDto)
@@ -85,6 +98,18 @@ export const updateUserSchema = z.object({
 
   // Role assignment
   roleId: z.string().optional().or(z.literal("no-role")),
+
+  addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+  addressStateId: z.string().optional().or(z.literal("")),
+  address: z.string().max(500).optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a country before state",
+      path: ["addressCountryCode"],
+    });
+  }
 });
 
 // Type inference
@@ -101,6 +126,9 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   mobileNumber: "",
   dateOfBirth: "",
   roleId: "",
+  addressCountryCode: "",
+  addressStateId: "",
+  address: "",
 };
 
 // Default values for update user form
@@ -111,4 +139,7 @@ export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   mobileNumber: "",
   dateOfBirth: "",
   roleId: "",
+  addressCountryCode: "",
+  addressStateId: "",
+  address: "",
 };

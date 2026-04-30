@@ -18,6 +18,7 @@ import {
   CountryCodeSelect,
   RoleSelect,
   ProfileImageUpload,
+  PhysicalAddressFields,
 } from "@/components/molecules";
 import { useGetUserQuery, useUpdateUserMutation } from "@/features/admin/api";
 import {
@@ -30,6 +31,7 @@ import {
   updateUserSchema,
   type UpdateUserFormData,
 } from "@/features/admin/schemas/user-schemas";
+import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 
 export default function EditUserPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,6 +69,12 @@ export default function EditUserPage() {
     mode: "onChange",
     reValidateMode: "onChange",
   });
+
+  const addressCountryCodeTrimmed = (form.watch("addressCountryCode") ?? "").trim();
+  const { data: addressCountryMeta } = useGetCountryByCodeQuery(
+    addressCountryCodeTrimmed,
+    { skip: !addressCountryCodeTrimmed },
+  );
 
   // Load user data into form
   useEffect(() => {
@@ -107,6 +115,9 @@ export default function EditUserPage() {
           console.log("EditUserPage - Extracted roleId:", roleId);
           return roleId || "no-role";
         })(),
+        addressCountryCode: user.addressCountryCode ?? "",
+        addressStateId: user.addressStateId ?? "",
+        address: user.address ?? "",
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -192,6 +203,13 @@ export default function EditUserPage() {
           data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
             ? [data.roleId]
             : undefined,
+        addressCountryCode: data.addressCountryCode?.trim()
+          ? data.addressCountryCode.trim()
+          : null,
+        addressStateId: data.addressStateId?.trim()
+          ? data.addressStateId.trim()
+          : null,
+        address: data.address?.trim() ? data.address.trim() : null,
       };
 
       console.log("Edit User - Form Data:", formData);
@@ -497,6 +515,23 @@ export default function EditUserPage() {
                         {form.formState.errors.dateOfBirth.message}
                       </p>
                     )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <PhysicalAddressFields
+                      control={form.control}
+                      setValue={form.setValue}
+                      errors={form.formState.errors}
+                      disabled={isUpdating}
+                        initialCountryData={
+                          addressCountryMeta
+                            ? {
+                                code: addressCountryMeta.code,
+                                name: addressCountryMeta.name,
+                              }
+                            : undefined
+                        }
+                    />
                   </div>
                 </div>
               </div>

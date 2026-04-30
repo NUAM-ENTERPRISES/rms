@@ -7,6 +7,10 @@ import { PrismaService } from '../database/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
+import {
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
 
 @Injectable()
 export class ClientsService {
@@ -32,6 +36,11 @@ export class ClientsService {
     if (createClientDto.contractEndDate) {
       createData.contractEndDate = new Date(createClientDto.contractEndDate);
     }
+
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createClientDto.addressCountryCode ?? null,
+      addressStateId: createClientDto.addressStateId ?? null,
+    });
 
     const client = await this.prisma.client.create({
       data: createData,
@@ -154,6 +163,14 @@ export class ClientsService {
     if (!existingClient) {
       throw new NotFoundException('Client not found');
     }
+
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(existingClient, {
+        addressCountryCode: updateClientDto.addressCountryCode,
+        addressStateId: updateClientDto.addressStateId,
+      }),
+    );
 
     const updateData: any = { ...updateClientDto };
 

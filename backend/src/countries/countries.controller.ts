@@ -196,6 +196,36 @@ export class CountriesController {
     };
   }
 
+  @Get(':code/states')
+  @Public()
+  @ApiOperation({
+    summary: 'List active states/provinces for a country',
+    description:
+      'Used for physical / mailing address (FK to states.id). Country must exist.',
+  })
+  @ApiParam({
+    name: 'code',
+    description: 'Country code (e.g. IN, AE)',
+    example: 'IN',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'States retrieved' })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Country not found',
+  })
+  async getStatesForCountry(@Param('code') code: string): Promise<{
+    success: boolean;
+    data: { states: Array<{ id: string; name: string; code: string }> };
+    message: string;
+  }> {
+    const states = await this.countriesService.findActiveStatesForCountry(code);
+    return {
+      success: true,
+      data: { states },
+      message: 'States retrieved successfully',
+    };
+  }
+
   @Get(':code')
   @Public()
   @ApiOperation({

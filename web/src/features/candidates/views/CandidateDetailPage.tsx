@@ -655,11 +655,9 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
-          referralCompanyName: candidate.referralCompanyName,
-          referralEmail: candidate.referralEmail,
-          referralCountryCode: candidate.referralCountryCode,
-          referralPhone: candidate.referralPhone,
-          referralDescription: candidate.referralDescription,
+          addressCountryCode: candidate.addressCountryCode,
+          addressStateId: candidate.addressStateId,
+          address: candidate.address,
         }}
       />
 

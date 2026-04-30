@@ -13,6 +13,7 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -79,6 +80,30 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsString()
   profileImage?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Physical / mailing country (`countries.code`). Distinct from phone `countryCode` (dial code).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  addressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical / mailing state (`states.id`)',
+  })
+  @IsOptional()
+  @IsString()
+  addressStateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Street or full mailing address line',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',

@@ -27,6 +27,11 @@ export interface UserWithRoles {
   userRoles: Array<{
     role: UserRole;
   }>;
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+  addressCountry?: { code: string; name: string } | null;
+  addressState?: { id: string; name: string; code: string } | null;
 }
 
 export interface PaginatedUsersData {
@@ -45,6 +50,9 @@ export interface CreateUserRequest {
   mobileNumber: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string;
+  addressStateId?: string;
+  address?: string;
 }
 
 export interface UpdateUserRequest {
@@ -54,6 +62,9 @@ export interface UpdateUserRequest {
   mobileNumber?: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
 }
 
 export interface QueryUsersRequest {

@@ -89,6 +89,12 @@ export interface Candidate {
   referralPhone?: string | null;
   referralDescription?: string | null;
 
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+  addressCountry?: { code: string; name: string } | null;
+  addressState?: { id: string; name: string; code: string } | null;
+
   // Educational Qualifications (legacy fields)
   highestEducation?: string;
   university?: string;
@@ -441,6 +447,9 @@ export interface CreateCandidateRequest {
   agentId?: string;
   /** Optional: agent-linked project IDs (declaration only, not nomination) */
   declaredProjectIds?: string[];
+  addressCountryCode?: string;
+  addressStateId?: string;
+  address?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -480,6 +489,9 @@ export interface UpdateCandidateRequest {
   eligibility?: boolean;
   /** Agent-linked declarations (intent only); only for agent-sourced candidates */
   declaredProjectIds?: string[];
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
 }
 
 export interface UpdateCandidateStatusRequest {

@@ -20,14 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { User, Save, X, Mail, Phone, Calendar } from "lucide-react";
-import { CountryCodeSelect, ProfileImageUpload } from "@/components/molecules";
+import { CountryCodeSelect, ProfileImageUpload, PhysicalAddressFields } from "@/components/molecules";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
 import { CANDIDATE_SOURCES } from "@/constants/candidate-constants";
+import { useGetCountryByCodeQuery } from "@/shared/hooks/useCountriesLookup";
 
 const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
   string,
@@ -49,8 +49,17 @@ const personalInfoSchema = z.object({
   source: z.enum(CANDIDATE_SOURCE_IDS),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: z.string().optional().or(z.literal("")),
-}).superRefine((_data, _ctx) => {
-  // No referral-specific validation required here.
+  addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+  addressStateId: z.string().optional().or(z.literal("")),
+  address: z.string().max(500).optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a country before state",
+      path: ["addressCountryCode"],
+    });
+  }
 });
 
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
@@ -69,6 +78,9 @@ interface UpdatePersonalInfoModalProps {
     source: string;
     gender?: string;
     dateOfBirth?: string | null;
+    addressCountryCode?: string | null;
+    addressStateId?: string | null;
+    address?: string | null;
   };
 }
 
@@ -88,6 +100,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<PersonalInfoFormData>({
     resolver: zodResolver(personalInfoSchema),
@@ -100,8 +113,17 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
+      addressCountryCode: initialData.addressCountryCode ?? "",
+      addressStateId: initialData.addressStateId ?? "",
+      address: initialData.address ?? "",
     },
   });
+
+  const addressCountryCodeTrimmed = (initialData.addressCountryCode ?? "").trim();
+  const { data: addressCountryMeta } = useGetCountryByCodeQuery(
+    addressCountryCodeTrimmed,
+    { skip: !isOpen || !addressCountryCodeTrimmed },
+  );
 
   const source = watch("source");
 
@@ -117,6 +139,9 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         source: normalizeLegacySource(initialData.source || "manual"),
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
         dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
+        addressCountryCode: initialData.addressCountryCode ?? "",
+        addressStateId: initialData.addressStateId ?? "",
+        address: initialData.address ?? "",
       });
     }
   }, [isOpen, initialData, reset]);
@@ -139,6 +164,14 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       } else {
         payload.email = null;
       }
+
+      payload.addressCountryCode = data.addressCountryCode?.trim()
+        ? data.addressCountryCode.trim()
+        : null;
+      payload.addressStateId = data.addressStateId?.trim()
+        ? data.addressStateId.trim()
+        : null;
+      payload.address = data.address?.trim() ? data.address.trim() : null;
 
       await updateCandidate({
         id: candidateId,
@@ -390,6 +423,24 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
               {errors.source && (
                 <p className="text-sm text-red-600">{errors.source.message}</p>
               )}
+            </div>
+
+            <div className="md:col-span-2">
+              <PhysicalAddressFields
+                control={control}
+                setValue={setValue}
+                errors={errors}
+                disabled={isLoading}
+                title="Candidate address (optional)"
+                initialCountryData={
+                  addressCountryMeta
+                    ? {
+                        code: addressCountryMeta.code,
+                        name: addressCountryMeta.name,
+                      }
+                    : undefined
+                }
+              />
             </div>
 
             <div className="md:col-span-2">

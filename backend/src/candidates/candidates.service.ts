@@ -48,6 +48,10 @@ import {
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
+import {
   assertAgentCandidateLinkedToAgentProject,
   agentSourceConsolidatedCandidateWhere,
 } from '../common/agent-project-candidate-scope';
@@ -349,6 +353,11 @@ export class CandidatesService {
       }
     }
 
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createCandidateDto.addressCountryCode ?? null,
+      addressStateId: createCandidateDto.addressStateId ?? null,
+    });
+
     // Get the default status info for history tracking
     const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
@@ -406,6 +415,9 @@ export class CandidatesService {
           mobileNumber: createCandidateDto.mobileNumber,
           email: createCandidateDto.email,
           profileImage: createCandidateDto.profileImage,
+          addressCountryCode: createCandidateDto.addressCountryCode,
+          addressStateId: createCandidateDto.addressStateId,
+          address: createCandidateDto.address,
           source: resolvedSource,
           agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
           referralCompanyName: createCandidateDto.referralCompanyName,
@@ -1795,6 +1807,12 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        addressCountry: {
+          select: { code: true, name: true },
+        },
+        addressState: {
+          select: { id: true, name: true, code: true },
+        },
         agentCandidateDeclaredProjects: {
           include: {
             project: {
@@ -1956,6 +1974,12 @@ export class CandidatesService {
       updateData.email = updateCandidateDto.email;
     if (updateCandidateDto.profileImage !== undefined)
       updateData.profileImage = updateCandidateDto.profileImage;
+    if (updateCandidateDto.addressCountryCode !== undefined)
+      updateData.addressCountryCode = updateCandidateDto.addressCountryCode;
+    if (updateCandidateDto.addressStateId !== undefined)
+      updateData.addressStateId = updateCandidateDto.addressStateId;
+    if (updateCandidateDto.address !== undefined)
+      updateData.address = updateCandidateDto.address;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.agentId !== undefined) {
@@ -2065,6 +2089,14 @@ export class CandidatesService {
         );
       }
     }
+
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(existingCandidate, {
+        addressCountryCode: updateCandidateDto.addressCountryCode,
+        addressStateId: updateCandidateDto.addressStateId,
+      }),
+    );
 
     const candidateUpdateInclude = {
       team: true,

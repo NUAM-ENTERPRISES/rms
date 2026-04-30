@@ -68,9 +68,17 @@ model User {
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                   @relation("ScreeningCoordinator")
 
+  addressCountryCode          String?
+  addressStateId              String?
+  address                     String?
+  addressCountry              Country?                      @relation("PhysicalAddressCountryUser", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState                State?                        @relation("PhysicalAddressStateUser", fields: [addressStateId], references: [id], onDelete: SetNull)
+
   @@unique([countryCode, mobileNumber])
   @@index([email])
   @@index([countryCode, mobileNumber])
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@index([createdAt])
   @@map("users")
 }
@@ -178,8 +186,14 @@ model Client {
   specialties       Json                    @default("[]")
   taxId             String?
   type              ClientType
+  addressCountryCode String?
+  addressStateId    String?
+  addressCountry    Country?                  @relation("PhysicalAddressCountryClient", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState      State?                    @relation("PhysicalAddressStateClient", fields: [addressStateId], references: [id], onDelete: SetNull)
   projects          Project[]
 
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@map("clients")
 }
 
@@ -200,6 +214,9 @@ model Country {
   countryDocumentRequirements   CountryDocumentRequirement[]
   processingCountrySteps        ProcessingCountryStep[]
   candidatePreferences          CandidatePreferredCountry[]
+  clientsPhysicalAddress        Client[]                      @relation("PhysicalAddressCountryClient")
+  usersPhysicalAddress          User[]                        @relation("PhysicalAddressCountryUser")
+  candidatesPhysicalAddress     Candidate[]                 @relation("PhysicalAddressCountryCandidate")
 
   @@map("countries")
 }
@@ -381,9 +398,17 @@ model Candidate {
   /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
   agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
 
+  addressCountryCode             String?
+  addressStateId                 String?
+  address                        String?
+  addressCountry                 Country?                      @relation("PhysicalAddressCountryCandidate", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState                   State?                        @relation("PhysicalAddressStateCandidate", fields: [addressStateId], references: [id], onDelete: SetNull)
+
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
   @@index([currentStatusId])
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@index([source])
@@ -1380,6 +1405,10 @@ model State {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  clientsPhysicalAddress    Client[]     @relation("PhysicalAddressStateClient")
+  usersPhysicalAddress      User[]       @relation("PhysicalAddressStateUser")
+  candidatesPhysicalAddress Candidate[]  @relation("PhysicalAddressStateCandidate")
 
   @@map("states")
 }

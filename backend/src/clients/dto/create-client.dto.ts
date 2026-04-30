@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsArray,
   ValidateNested,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -55,6 +56,21 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical / mailing country (`countries.code`, e.g. ISO id used in catalog)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  addressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical / mailing state (`states.id`)',
+  })
+  @IsOptional()
+  @IsString()
+  addressStateId?: string;
 
   // Individual Referrer specific fields
   @ApiPropertyOptional({ description: 'Profession (for individual referrers)' })

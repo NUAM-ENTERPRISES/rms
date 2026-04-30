@@ -22,6 +22,7 @@ import {
   ClipboardCheck,
   Cog,
   Lock,
+  MapPin,
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -437,10 +438,10 @@ export default function UserDetailPage() {
                   {user.mobileNumber && (
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                        Mobile Number
+                        Contact number
                       </p>
                       <p className="text-sm text-slate-800 flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
+                        <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         {user.countryCode && user.countryCode !== "N/A"
                           ? `${user.countryCode} `
                           : ""}
@@ -460,6 +461,38 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   )}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        Country
+                      </p>
+                      <p className="text-sm text-slate-800 flex items-start gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden />
+                        {user.addressCountry?.name?.trim() ||
+                          user.addressCountryCode?.trim() ||
+                          "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        State / province
+                      </p>
+                      <p className="text-sm text-slate-800">
+                        {user.addressState?.name ?? "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        Street address
+                      </p>
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">
+                        {user.address?.trim() ? user.address : "N/A"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <Separator className="my-4" />
