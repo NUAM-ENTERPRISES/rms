@@ -175,6 +175,12 @@ export interface ClientsResponse {
       total: number;
       pages: number;
     };
+    totals: {
+      totalClients: number;
+      directClients: number;
+      subAgencyClients: number;
+      freelanceClients: number;
+    };
   };
   message: string;
 }

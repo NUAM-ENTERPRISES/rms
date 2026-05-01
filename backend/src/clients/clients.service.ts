@@ -222,7 +222,7 @@ export class ClientsService {
       ];
     }
 
-    const [rawClients, total] = await Promise.all([
+    const [rawClients, total, countsByType] = await Promise.all([
       this.prisma.client.findMany({
         where,
         skip,
@@ -231,6 +231,22 @@ export class ClientsService {
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.client.count({ where }),
+      this.prisma.client.groupBy({
+        by: ['type'],
+        where: {
+          ...(search ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+              { pointOfContact: { contains: search, mode: 'insensitive' } },
+              { organization: { contains: search, mode: 'insensitive' } },
+            ]
+          } : {})
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     const clients = rawClients.map(({ _count, ...rest }) => ({
@@ -239,6 +255,18 @@ export class ClientsService {
       subClientCount: _count.subClientLinks,
       parentClientCount: _count.parentClientLinks,
     }));
+
+    const totalsByType = countsByType.reduce(
+      (acc, item) => {
+        acc[item.type] = item._count._all;
+        return acc;
+      },
+      {
+        DIRECT_CLIENT: 0,
+        SUB_AGENT: 0,
+        FREELANCE: 0,
+      } as Record<string, number>,
+    );
 
     return {
       success: true,
@@ -249,6 +277,12 @@ export class ClientsService {
           limit,
           total,
           pages: Math.ceil(total / limit),
+        },
+        totals: {
+          totalClients: total,
+          directClients: totalsByType.DIRECT_CLIENT,
+          subAgencyClients: totalsByType.SUB_AGENT,
+          freelanceClients: totalsByType.FREELANCE,
         },
       },
       message: 'Clients retrieved successfully',

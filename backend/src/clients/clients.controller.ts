@@ -154,6 +154,15 @@ export class ClientsController {
                 pages: { type: 'number' },
               },
             },
+            totals: {
+              type: 'object',
+              properties: {
+                totalClients: { type: 'number', example: 120 },
+                directClients: { type: 'number', example: 75 },
+                subAgencyClients: { type: 'number', example: 25 },
+                freelanceClients: { type: 'number', example: 20 },
+              },
+            },
           },
         },
         message: { type: 'string', example: 'Clients retrieved successfully' },
