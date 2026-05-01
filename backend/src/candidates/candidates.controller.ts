@@ -671,6 +671,33 @@ export class CandidatesController {
     };
   }
 
+  @Get('user-candidates')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get candidates created by the current user',
+    description: 'Retrieve candidates where the current user created the recruiter assignment (i.e., candidates they personally added). Reusable across roles.',
+  })
+  @ApiResponse({ status: 200, description: 'User candidates retrieved successfully' })
+  async getUserCandidates(
+    @Request() req,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+  ) {
+    const userId = req.user.id;
+    const result = await this.candidatesService.getUserCandidates(userId, {
+      page: Number(page),
+      limit: Number(limit),
+      search,
+    });
+
+    return {
+      success: true,
+      data: result,
+      message: 'User candidates retrieved successfully',
+    };
+  }
+
   @Post(':id/converted-response')
   @Permissions('read:candidates')
   @ApiOperation({

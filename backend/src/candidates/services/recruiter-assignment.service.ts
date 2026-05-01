@@ -425,6 +425,15 @@ export class RecruiterAssignmentService {
       },
     });
 
+    // Preserve the original createdBy (the user who first brought this candidate in).
+    // On the very first assignment there are no prior rows, so we fall back to createdByUserId.
+    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId },
+      orderBy: { assignedAt: 'asc' },
+      select: { createdBy: true },
+    });
+    const preservedCreatedBy = originalAssignment?.createdBy ?? createdByUserId;
+
     // Deactivate any existing active assignments
     await this.prisma.candidateRecruiterAssignment.updateMany({
       where: {
@@ -444,7 +453,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
-        createdBy: createdByUserId,
+        createdBy: preservedCreatedBy,
         reason: defaultAssignmentReason,
       },
     });
@@ -498,10 +507,16 @@ export class RecruiterAssignmentService {
       return cre;
     }
 
-    const createdByUserId =
-      assignedByUserId && assignedByUserId !== 'system'
-        ? assignedByUserId
-        : assignerUserId;
+    // Preserve the original createdBy — the user who first created the candidate's assignment.
+    // The CRE assignment is a concurrent handler row; it must NOT overwrite who created the candidate.
+    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId },
+      orderBy: { assignedAt: 'asc' },
+      select: { createdBy: true },
+    });
+    const preservedCreatedBy =
+      originalAssignment?.createdBy ??
+      (assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId);
 
     // Create new CRE assignment WITHOUT deactivating others
     await this.prisma.candidateRecruiterAssignment.create({
@@ -509,7 +524,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: cre.id,
         assignedBy: assignerUserId,
-        createdBy: createdByUserId,
+        createdBy: preservedCreatedBy,
         reason: reason || 'Automatic CRE assignment for RNR status',
         assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
       },
@@ -525,15 +540,13 @@ export class RecruiterAssignmentService {
       select: { recruiterId: true }
     });
 
-    const createdByUser = assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId;
-
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       cre.id,
       assignerUserId,
       reason,
       currentRecruiter?.recruiterId,
-      createdByUserId,
+      preservedCreatedBy,
     );
 
     this.logger.log(
@@ -574,8 +587,8 @@ export class RecruiterAssignmentService {
     minutesInRNR: number;
     currentRecruiterId?: string;
   }>> {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
 
     // First, resolve the RNR status record to get its ID
     const rnrStatus = await this.prisma.candidateStatus.findFirst({
@@ -596,7 +609,7 @@ export class RecruiterAssignmentService {
       where: {
         currentStatusId: rnrStatus.id,
         updatedAt: {
-          lte: threeDaysAgo,
+          lte: oneMinuteAgo,
         },
       },
       include: {

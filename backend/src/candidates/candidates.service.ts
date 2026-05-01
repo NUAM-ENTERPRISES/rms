@@ -1305,12 +1305,31 @@ export class CandidatesService {
       'on_hold': 'on hold',
       'on hold': 'on hold',
       untouched: 'untouched',
+      junk: 'junk',
     };
 
     if (normalizedStatusInput) {
       if (normalizedStatusInput === 'interested') {
         // Converted Response mode: now identified by assignmentType instead of status
         where.recruiterAssignments.some.assignmentType = CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED;
+      } else if (normalizedStatusInput === 'junk') {
+        // Junk Candidates logic: Assigned > 5 days ago, active, not converted/reassigned
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - 5);
+
+        where.recruiterAssignments = {
+          some: {
+            recruiterId: creUserId,
+            isActive: true,
+            assignedAt: { lt: threshold },
+            assignmentType: {
+              notIn: [
+                CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+                CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              ],
+            },
+          },
+        };
       } else {
         const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
         const statusId = Number(normalizedStatusInput);
@@ -1322,12 +1341,21 @@ export class CandidatesService {
         }
       }
     } else {
-      // Default CRE assigned listing: exclude converted and reassigned candidates
-      where.recruiterAssignments.some.assignmentType = {
-        notIn: [
-          CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
-          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-        ],
+      // Default CRE assigned listing: exclude converted, reassigned, and junk (assigned > 5 days ago) candidates
+      const junkThreshold = new Date();
+      junkThreshold.setDate(junkThreshold.getDate() - 5);
+      where.recruiterAssignments = {
+        some: {
+          recruiterId: creUserId,
+          isActive: true,
+          assignedAt: { gte: junkThreshold },
+          assignmentType: {
+            notIn: [
+              CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+              CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+            ],
+          },
+        },
       };
     }
 
@@ -1427,6 +1455,7 @@ export class CandidatesService {
         recruiterAssignments: {
           select: {
             assignmentType: true,
+            assignedAt: true,
           },
           where: {
             recruiterId: creUserId,
@@ -1436,6 +1465,9 @@ export class CandidatesService {
       },
     });
 
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - 5);
+
     const roleCounters = {
       assigned: 0,
       converted: 0,
@@ -1443,11 +1475,14 @@ export class CandidatesService {
       rnr: 0,
       onHold: 0,
       untouched: 0,
+      junk: 0,
       other: 0,
     };
 
     allAssigned.forEach((candidate) => {
-      const assignmentType = candidate.recruiterAssignments[0]?.assignmentType;
+      const assignment = candidate.recruiterAssignments[0];
+      const assignmentType = assignment?.assignmentType;
+      const assignedAt = assignment?.assignedAt;
       
       if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED || 
           assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED) {
@@ -1455,6 +1490,12 @@ export class CandidatesService {
           roleCounters.converted += 1;
         }
         return; // Don't count converted or reassigned in "Total Assigned" status-based buckets
+      }
+
+      // Check for junk (assigned > 5 days ago)
+      if (assignedAt && assignedAt < threshold) {
+        roleCounters.junk += 1;
+        return; // Don't count junk candidates in status-based buckets or total
       }
 
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
@@ -1508,9 +1549,23 @@ export class CandidatesService {
       },
     });
 
+    // Count candidates created by this CRE user
+    const createdCount = await this.prisma.candidate.count({
+      where: {
+        recruiterAssignments: {
+          some: {
+            createdBy: creUserId,
+          },
+        },
+      },
+    });
+
     return {
       total: roleCounters.assigned,
-      roleCounters,
+      roleCounters: {
+        ...roleCounters,
+        created: createdCount,
+      },
     };
   }
 
@@ -1757,6 +1812,68 @@ export class CandidatesService {
       skip,
       take: limit,
       orderBy: { updatedAt: 'desc' },
+      include: {
+        currentStatus: { select: { id: true, statusName: true } },
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: { select: { id: true, name: true, email: true } },
+            assignedByUser: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      candidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Get candidates created by a specific CRE user
+   * Uses candidateRecruiterAssignment.createdBy to identify creator
+   */
+  async getUserCandidates(
+    creUserId: string,
+    query: { page?: number; limit?: number; search?: string },
+  ) {
+    const { page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      recruiterAssignments: {
+        some: {
+          createdBy: creUserId,
+        },
+      },
+    };
+
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const total = await this.prisma.candidate.count({ where });
+
+    const candidates = await this.prisma.candidate.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
       include: {
         currentStatus: { select: { id: true, statusName: true } },
         recruiterAssignments: {
