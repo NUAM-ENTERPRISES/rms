@@ -89,6 +89,7 @@ import { useGetProjectQuery, useSendForVerificationMutation, useCheckBulkCandida
 import { 
   useGetCandidateProjectRequirementsQuery,
   useCreateDocumentMutation,
+  useUpdateDocumentMutation,
   useReuseDocumentMutation,
   useGetDocumentsQuery,
   useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
@@ -242,6 +243,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const [uploadDocument, { isLoading: isUploading }] = useUploadDocumentMutation();
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
   const [reuploadDocument] = useReuploadDocumentMutation();
@@ -428,6 +430,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       docType: string;
       roleCatalogId?: string;
       workExperienceId?: string;
+      docName?: string;
       documentNumber?: string;
       expiryDate?: string;
       notes?: string;
@@ -448,21 +451,40 @@ const RecruiterDocsDetailPage: React.FC = () => {
         formData,
       }).unwrap();
 
-      const uploadData = response.data;
+      const uploadData: any = response.data as any;
 
-      await createDocument({
-        candidateId,
-        docType: meta.docType,
-        fileName: uploadData.fileName,
-        fileUrl: uploadData.fileUrl,
-        fileSize: uploadData.fileSize,
-        mimeType: uploadData.mimeType,
-        documentNumber: meta.documentNumber,
-        expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
-        notes: meta.notes,
-        roleCatalogId: meta.roleCatalogId || "",
-        workExperienceId: meta.workExperienceId,
-      }).unwrap();
+      const uploadedDocument =
+        uploadData?.document && uploadData.document.id
+          ? uploadData.document
+          : uploadData?.id
+            ? uploadData
+            : null;
+
+      const desiredDocName = (meta.docName && meta.docName.trim()) || "";
+
+      if (uploadedDocument) {
+        if (desiredDocName) {
+          await updateDocument({
+            id: uploadedDocument.id,
+            docName: desiredDocName,
+          }).unwrap();
+        }
+      } else {
+        await createDocument({
+          candidateId,
+          docType: meta.docType,
+          docName: desiredDocName || undefined,
+          fileName: uploadData.fileName,
+          fileUrl: uploadData.fileUrl,
+          fileSize: uploadData.fileSize,
+          mimeType: uploadData.mimeType,
+          documentNumber: meta.documentNumber,
+          expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+          notes: meta.notes,
+          roleCatalogId: meta.roleCatalogId || "",
+          workExperienceId: meta.workExperienceId,
+        }).unwrap();
+      }
 
       toast.success("Document uploaded successfully");
       setShowCandidateUploadDialog(false);
@@ -861,6 +883,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Doc Name</TableHead>
                     <TableHead>Document Type</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>File Name</TableHead>
@@ -872,7 +895,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <TableBody>
                   {isCandidateDocsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
+                      <TableCell colSpan={7} className="text-center py-10">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mt-2">Loading documents...</p>
                       </TableCell>
@@ -880,6 +903,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   ) : candidateDocs.length > 0 ? (
                     candidateDocs.map((doc) => (
                       <TableRow key={doc.id}>
+                        <TableCell>
+                          <span className="text-xs font-medium text-slate-700">
+                            {doc.docName ? doc.docName : "—"}
+                          </span>
+                        </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -963,7 +991,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                         No documents found for this candidate.
                       </TableCell>
                     </TableRow>

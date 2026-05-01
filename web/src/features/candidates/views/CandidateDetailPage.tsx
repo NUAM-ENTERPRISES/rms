@@ -35,7 +35,7 @@ import {
   useDeleteWorkExperienceMutation,
   useDeleteCandidateQualificationMutation,
 } from "@/features/candidates";
-import { useCreateDocumentMutation } from "@/features/documents/api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
@@ -122,6 +122,7 @@ export default function CandidateDetailPage() {
   const [deleteQualification, { isLoading: isDeletingQual }] = useDeleteCandidateQualificationMutation();
   const [uploadDocument, { isLoading: isUploadingDoc }] = useUploadDocumentMutation();
   const [createDocument, { isLoading: isCreatingDoc }] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Fetch candidate data from API
   const {
@@ -661,21 +662,40 @@ export default function CandidateDetailPage() {
               formData.append("docType", meta.docType);
 
               const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
-              const uploadData = uploadResp.data;
+              const uploadData: any = uploadResp.data;
+              const uploadedDocument =
+                uploadData?.document && uploadData.document.id
+                  ? uploadData.document
+                  : uploadData?.id
+                    ? uploadData
+                    : null;
 
-              await createDocument({
-                candidateId,
-                docType: meta.docType,
-                fileName: uploadData.fileName,
-                fileUrl: uploadData.fileUrl,
-                fileSize: uploadData.fileSize,
-                mimeType: uploadData.mimeType,
-                notes: meta.notes,
-                documentNumber: meta.documentNumber,
-                expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
-                roleCatalogId: meta.roleCatalogId,
-                workExperienceId: meta.workExperienceId,
-              }).unwrap();
+              const desiredDocName =
+                (meta.docName && meta.docName.trim()) || "";
+
+              if (uploadedDocument) {
+                if (desiredDocName) {
+                  await updateDocument({
+                    id: uploadedDocument.id,
+                    docName: desiredDocName,
+                  }).unwrap();
+                }
+              } else {
+                await createDocument({
+                  candidateId,
+                  docType: meta.docType,
+                  docName: desiredDocName || undefined,
+                  fileName: uploadData.fileName,
+                  fileUrl: uploadData.fileUrl,
+                  fileSize: uploadData.fileSize,
+                  mimeType: uploadData.mimeType,
+                  notes: meta.notes,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+                  roleCatalogId: meta.roleCatalogId,
+                  workExperienceId: meta.workExperienceId,
+                }).unwrap();
+              }
 
               toast.success("Experience certificate uploaded and linked");
               setIsWorkExpDocModalOpen(false);
@@ -726,11 +746,6 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
-          referralCompanyName: candidate.referralCompanyName,
-          referralEmail: candidate.referralEmail,
-          referralCountryCode: candidate.referralCountryCode,
-          referralPhone: candidate.referralPhone,
-          referralDescription: candidate.referralDescription,
         }}
       />
 

@@ -44,6 +44,8 @@ import {
   Paperclip,
   Eye,
   Trash2,
+  Check,
+  Edit,
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
@@ -57,6 +59,7 @@ import {
 import {
   useCreateDocumentMutation,
   useDeleteDocumentMutation,
+  useUpdateDocumentMutation,
 } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type {
@@ -84,6 +87,7 @@ const workExperienceSchema = z.object({
   endDate: z.string().optional(),
   isCurrent: z.boolean(),
   description: z.string().optional(),
+  docName: z.string().optional(),
   salary: z.preprocess(
     (val) => {
       if (val === "" || val === null || val === undefined) return undefined;
@@ -130,6 +134,8 @@ export default function QualificationWorkExperienceModal({
   const [deletingDocIds, setDeletingDocIds] = useState<Record<string, boolean>>(
     {},
   );
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
+  const [docNameDrafts, setDocNameDrafts] = useState<Record<string, string>>({});
   const [deleteDocTarget, setDeleteDocTarget] = useState<Document | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,6 +149,8 @@ export default function QualificationWorkExperienceModal({
     if (isOpen) {
       setExistingDocs(existingDocuments);
       setDeletingDocIds({});
+      setEditingDocId(null);
+      setDocNameDrafts({});
     }
   }, [existingDocuments, isOpen]);
 
@@ -168,6 +176,7 @@ export default function QualificationWorkExperienceModal({
     useUpdateWorkExperienceMutation();
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
   const [deleteDocument] = useDeleteDocumentMutation();
 
   const qualifications = qualificationsData?.data?.qualifications || [];
@@ -195,6 +204,7 @@ export default function QualificationWorkExperienceModal({
       endDate: "",
       isCurrent: false,
       description: "",
+      docName: "",
       salary: undefined,
       location: "",
       skills: [],
@@ -236,6 +246,7 @@ export default function QualificationWorkExperienceModal({
           endDate: exp.endDate ? exp.endDate.split("T")[0] : "",
           isCurrent: exp.isCurrent,
           description: exp.description || "",
+          docName: "",
           salary: exp.salary,
           location: exp.location || "",
           skills: expSkills,
@@ -261,6 +272,7 @@ export default function QualificationWorkExperienceModal({
         endDate: "",
         isCurrent: false,
         description: "",
+        docName: "",
         salary: undefined,
         location: "",
         skills: [],
@@ -297,7 +309,7 @@ export default function QualificationWorkExperienceModal({
 
   const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
-      const { departmentId, ...dataWithoutDepartmentId } = data;
+      const { departmentId, docName, ...dataWithoutDepartmentId } = data;
       const payload = {
         ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
@@ -345,17 +357,37 @@ export default function QualificationWorkExperienceModal({
               formData,
             }).unwrap();
             const uploadData = uploadResult.data;
+            const uploadedDocument =
+              uploadData?.document && uploadData.document.id ? uploadData.document : null;
 
-            // Upload endpoint stores file in Spaces; we create a Document DB record here.
-            await createDocument({
-              candidateId,
-              docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-              fileName: uploadData.fileName,
-              fileUrl: uploadData.fileUrl,
-              fileSize: uploadData.fileSize,
-              mimeType: uploadData.mimeType,
-              workExperienceId,
-            }).unwrap();
+            // Some backends already create the Document record during upload.
+            // Only create a Document DB record if the upload response did NOT include one.
+            if (uploadedDocument) {
+              const desiredDocName =
+                (docName && docName.trim()) ||
+                (data.companyName && data.companyName.trim()) ||
+                "";
+              if (desiredDocName) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  docName: desiredDocName,
+                }).unwrap();
+              }
+            } else {
+              await createDocument({
+                candidateId,
+                docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+                docName:
+                  (docName && docName.trim()) ||
+                  (data.companyName && data.companyName.trim()) ||
+                  undefined,
+                fileName: uploadData.fileName,
+                fileUrl: uploadData.fileUrl,
+                fileSize: uploadData.fileSize,
+                mimeType: uploadData.mimeType,
+                workExperienceId,
+              }).unwrap();
+            }
           } catch {
             uploadErrors.push(file.name);
           }
@@ -419,6 +451,48 @@ export default function QualificationWorkExperienceModal({
       toast.error(error?.data?.message || "Failed to delete certificate");
     } finally {
       setDeletingDocIds((prev) => ({ ...prev, [doc.id]: false }));
+    }
+  };
+
+  const startEditDocName = (doc: Document) => {
+    setEditingDocId(doc.id);
+    setDocNameDrafts((prev) => ({
+      ...prev,
+      [doc.id]: doc.docName ?? "",
+    }));
+  };
+
+  const cancelEditDocName = () => {
+    setEditingDocId(null);
+  };
+
+  const saveDocName = async (doc: Document) => {
+    const draft = (docNameDrafts[doc.id] ?? "").trim();
+    try {
+      const updated = await updateDocument({
+        id: doc.id,
+        docName: draft || undefined,
+      }).unwrap();
+
+      const updatedDoc = (updated as any)?.data ?? null;
+      setExistingDocs((prev) =>
+        prev.map((d) =>
+          d.id === doc.id
+            ? {
+                ...d,
+                docName:
+                  updatedDoc?.docName !== undefined
+                    ? updatedDoc.docName
+                    : draft || undefined,
+              }
+            : d,
+        ),
+      );
+      toast.success("Doc name updated");
+      setEditingDocId(null);
+      onSuccess?.();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update doc name");
     }
   };
 
@@ -871,7 +945,15 @@ export default function QualificationWorkExperienceModal({
               />
             </div>
 
-            {/* Experience Certificate Upload */}
+            {/* Document Name (shown after upload section) */}
+            <div className="space-y-2">
+              <Label htmlFor="docName">Certificate Doc Name</Label>
+              <Input
+                {...workExperienceForm.register("docName")}
+                placeholder="Aster (used for experience certificate label)"
+              />
+            </div>
+              {/* Experience Certificate Upload */}
             <div className="space-y-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4">
               <Label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
                 <Paperclip className="h-4 w-4 text-slate-500" />
@@ -896,14 +978,28 @@ export default function QualificationWorkExperienceModal({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-1.5 px-2.5 py-1 hover:bg-emerald-100 transition-colors min-w-0"
-                          title={`View: ${doc.fileName}`}
+                          title={`View: ${doc.docName ? `${doc.docName} : ` : ""}${doc.fileName}`}
                         >
                           <FileText className="h-3 w-3 shrink-0" />
                           <span className="truncate max-w-[140px]">
+                            {doc.docName ? `${doc.docName} : ` : ""}
                             {doc.fileName}
                           </span>
                           <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
                         </a>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            startEditDocName(doc);
+                          }}
+                          className="px-2 py-1 text-emerald-700/70 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          aria-label={`Edit doc name for ${doc.fileName}`}
+                          title="Edit doc name"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -920,6 +1016,66 @@ export default function QualificationWorkExperienceModal({
                         </button>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {editingDocId && (
+                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <Label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                        Edit Certificate Doc Name
+                      </Label>
+                      <Input
+                        value={docNameDrafts[editingDocId] ?? ""}
+                        onChange={(e) =>
+                          setDocNameDrafts((prev) => ({
+                            ...prev,
+                            [editingDocId]: e.target.value,
+                          }))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelEditDocName();
+                          }
+                        }}
+                        placeholder="e.g., Aster"
+                        className="h-9"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        This will update the label shown as{" "}
+                        <span className="font-medium">
+                          docName : Experience Letter
+                        </span>
+                        .
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={cancelEditDocName}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const doc = existingDocs.find(
+                            (d) => d.id === editingDocId
+                          );
+                          if (doc) void saveDocName(doc);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Save
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -979,7 +1135,6 @@ export default function QualificationWorkExperienceModal({
                 Multiple files allowed. Files will be uploaded as Experience Letters linked to this work entry.
               </p>
             </div>
-
             {/* Submit Button for Work Experience */}
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={handleClose}>

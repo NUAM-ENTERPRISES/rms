@@ -6,6 +6,7 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -1327,28 +1328,28 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `candidates/${candidateId}/projects-workflow-details`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
     }),
     getCandidateDocumentationWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/documentation-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
     }),
     getCandidateInterviewWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/interview-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
     }),
     getCandidateProcessingWorkflow: builder.query<any, { candidateId: string; subStatus?: string; step?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/processing-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
     }),
   }),
 });

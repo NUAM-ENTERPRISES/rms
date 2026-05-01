@@ -28,6 +28,7 @@ type WorkExperience = {
   skills: string[];
   achievements: string;
   pendingFiles?: File[];
+  docName?: string;
 };
 
 interface WorkExperienceStepProps {
@@ -54,6 +55,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   onUpdateFiles,
 }) => {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const newExperienceFileInputRef = useRef<HTMLInputElement | null>(null);
   const addWorkExperience = () => {
     if (
       newWorkExperience.companyName &&
@@ -93,6 +95,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         location: "",
         skills: [],
         achievements: "",
+        pendingFiles: [],
+        docName: "",
       });
       setNewSkill("");
     } else {
@@ -119,6 +123,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         location: "",
         skills: [],
         achievements: "",
+        pendingFiles: [],
+        docName: "",
       });
     }
   };
@@ -276,6 +282,26 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                         <Upload className="h-3 w-3 mr-1" />
                         Attach Files
                       </Button>
+
+                      {/* Doc name shown after upload */}
+                      <div className="mt-2">
+                        <Label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                          Doc Name (for easy identification)
+                        </Label>
+                        <Input
+                          value={experience.docName ?? ""}
+                          onChange={(e) => {
+                            const updated = workExperiences.map((exp) =>
+                              exp.id === experience.id
+                                ? { ...exp, docName: e.target.value }
+                                : exp
+                            );
+                            setWorkExperiences(updated);
+                          }}
+                          placeholder={experience.companyName || "Aster"}
+                          className="h-8 mt-1 bg-white border-slate-200 text-xs"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4 shrink-0">
@@ -334,6 +360,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                       location: "",
                       skills: [],
                       achievements: "",
+                      pendingFiles: [],
+                      docName: "",
                     });
                   }}
                   className="ml-1 hover:text-blue-900"
@@ -587,6 +615,93 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
             )}
           </div>
 
+        
+          {/* Doc Name at end (after upload) */}
+          <div className="mt-4 space-y-2">
+            <Label className="text-slate-700 font-medium">
+              Experience Certificate Doc Name
+            </Label>
+            <Input
+              value={newWorkExperience.docName ?? ""}
+              onChange={(e) =>
+                setNewWorkExperience({
+                  ...newWorkExperience,
+                  docName: e.target.value,
+                })
+              }
+              placeholder={newWorkExperience.companyName || "Aster"}
+              className="h-11 bg-white border-slate-200"
+            />
+          </div>
+ {/* Experience certificate upload (for the form entry) */}
+          <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold text-slate-500 flex items-center gap-1 mb-2">
+              <Paperclip className="h-3 w-3" />
+              Experience Certificates
+              <span className="text-[10px] font-normal text-muted-foreground">(PDF / Image)</span>
+            </p>
+
+            {(newWorkExperience.pendingFiles ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {(newWorkExperience.pendingFiles ?? []).map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-blue-700 text-[11px] font-medium"
+                  >
+                    <FileText className="h-2.5 w-2.5 shrink-0" />
+                    <span className="truncate max-w-[160px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = (newWorkExperience.pendingFiles ?? []).filter(
+                          (_, i) => i !== idx
+                        );
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          pendingFiles: updated,
+                        });
+                      }}
+                      className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              multiple
+              className="hidden"
+              ref={(el) => {
+                newExperienceFileInputRef.current = el;
+              }}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) {
+                  const existing = newWorkExperience.pendingFiles ?? [];
+                  setNewWorkExperience({
+                    ...newWorkExperience,
+                    pendingFiles: [...existing, ...files],
+                  });
+                  e.target.value = "";
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs border-dashed border-slate-300 text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50"
+              onClick={() => newExperienceFileInputRef.current?.click()}
+            >
+              <Upload className="h-3 w-3 mr-1" />
+              Attach Files
+            </Button>
+          </div>
+
           {/* Add/Update Button */}
           <div className="flex justify-end mt-4 gap-2">
             {editingExperienceId && (
@@ -607,6 +722,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                     location: "",
                     skills: [],
                     achievements: "",
+                    pendingFiles: [],
+                    docName: "",
                   });
                 }}
                 variant="outline"

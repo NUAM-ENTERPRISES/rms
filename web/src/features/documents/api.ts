@@ -7,6 +7,7 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: DocumentType;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -218,6 +219,7 @@ export interface RecruiterVerifiedRejectedDocumentsResponse {
 export interface CreateDocumentRequest {
   candidateId: string;
   docType: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -230,6 +232,7 @@ export interface CreateDocumentRequest {
 }
 
 export interface UpdateDocumentRequest {
+  docName?: string;
   fileName?: string;
   fileUrl?: string;
   fileSize?: number;
@@ -637,7 +640,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Document", "DocumentSummary", "CandidateProjectStatus"],
+      invalidatesTags: ["Document", "DocumentSummary", "CandidateProject"],
     }),
 
     reuploadDocument: builder.mutation<
@@ -772,7 +775,7 @@ export const documentsApi = baseApi.injectEndpoints({
       string
     >({
       query: (candidateId) => `/documents/candidates/${candidateId}/projects`,
-      providesTags: (result, error, candidateId) => [
+      providesTags: (_, __, candidateId) => [
         // tag by candidate so we can invalidate only the relevant cache
         { type: "DocumentVerification", id: candidateId },
       ],
@@ -784,7 +787,7 @@ export const documentsApi = baseApi.injectEndpoints({
     >({
       query: ({ candidateId, projectId }) =>
         `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
-      providesTags: (result, error, { candidateId }) => [
+      providesTags: (_, __, { candidateId }) => [
         { type: "DocumentVerification", id: candidateId },
       ],
     }),

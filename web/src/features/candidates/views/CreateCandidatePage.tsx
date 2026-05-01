@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useCreateCandidateMutation, useUploadDocumentMutation } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
-import { useCreateDocumentMutation } from "@/features/documents/api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import CandidatePreview from "../components/CandidatePreview";
 import { useCan } from "@/hooks/useCan";
@@ -56,6 +56,7 @@ type WorkExperience = {
   skills: string[];
   achievements: string;
   pendingFiles?: File[];
+  docName?: string;
 };
 
 // ==================== COMPONENT ====================
@@ -104,6 +105,7 @@ export default function CreateCandidatePage() {
     useUploadCandidateProfileImageMutation();
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -125,6 +127,7 @@ export default function CreateCandidatePage() {
     location: "",
     skills: [],
     achievements: "",
+    docName: "",
   });
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
@@ -479,15 +482,35 @@ export default function CreateCandidatePage() {
                 formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
                 formData.append("workExperienceId", workExperienceId);
                 const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
-                const uploadedDocument = uploadResult.data.document;
-                if (!uploadedDocument) {
+                const uploadData: any = (uploadResult as any).data;
+                const uploadedDocument =
+                  uploadData?.document && uploadData.document.id
+                    ? uploadData.document
+                    : uploadData?.id
+                      ? uploadData
+                      : null;
+                const desiredDocName =
+                  (localExp.docName && localExp.docName.trim()) ||
+                  (localExp.companyName && localExp.companyName.trim()) ||
+                  "";
+
+                if (uploadedDocument) {
+                  if (desiredDocName) {
+                    await updateDocument({
+                      id: uploadedDocument.id,
+                      docName: desiredDocName,
+                    }).unwrap();
+                  }
+                } else {
                   await createDocument({
                     candidateId,
                     docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-                    fileName: uploadResult.data.fileName,
-                    fileUrl: uploadResult.data.fileUrl,
-                    fileSize: uploadResult.data.fileSize,
-                    mimeType: uploadResult.data.mimeType,
+                    docName:
+                      desiredDocName || undefined,
+                    fileName: uploadData.fileName,
+                    fileUrl: uploadData.fileUrl,
+                    fileSize: uploadData.fileSize,
+                    mimeType: uploadData.mimeType,
                     workExperienceId,
                   }).unwrap();
                 }

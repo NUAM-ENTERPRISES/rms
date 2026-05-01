@@ -33,6 +33,7 @@ interface Props {
     docType: string;
     roleCatalogId?: string;
     workExperienceId?: string;
+    docName?: string;
     documentNumber?: string;
     expiryDate?: string;
     notes?: string;
@@ -52,6 +53,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
   const [documentNumber, setDocumentNumber] = React.useState("");
   const [expiryDate, setExpiryDate] = React.useState("");
   const [notes, setNotes] = React.useState("");
+  const [docName, setDocName] = React.useState("");
   const [departmentId, setDepartmentId] = React.useState<string | undefined>(undefined);
   const [roleCatalogId, setRoleCatalogId] = React.useState<string | undefined>(undefined);
   const [roleLabel, setRoleLabel] = React.useState<string>("");
@@ -81,6 +83,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       setDocumentNumber("");
       setExpiryDate("");
       setNotes("");
+      setDocName("");
       setDepartmentId(undefined);
       setRoleCatalogId(undefined);
       setRoleLabel("");
@@ -156,6 +159,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         docType,
         roleCatalogId,
         workExperienceId: selectedWorkExperienceId ?? initialWorkExperienceId,
+        docName: docName || undefined,
         documentNumber: documentNumber || undefined,
         expiryDate: expiryDate || undefined,
         notes: notes || undefined,
@@ -183,7 +187,14 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
             Upload a document for this candidate. Select type and provide optional metadata.
           </DialogDescription>
         </DialogHeader>
-
+         <div className="space-y-2 col-span-full">
+              <Label>Doc Name</Label>
+              <Input
+                value={docName}
+                onChange={(e) => setDocName(e.target.value)}
+                placeholder="e.g., Aster (shown as Doc Name : Document Type)"
+              />
+            </div>
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -318,6 +329,8 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
               <Label>Expiry Date</Label>
               <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
             </div>
+
+           
           </div>
 
           <div className="space-y-2">

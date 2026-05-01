@@ -25,6 +25,15 @@ export class CreateDocumentDto {
   @IsEnum(Object.values(DOCUMENT_TYPE))
   docType: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Human-friendly document name (e.g., company/hospital name for experience certificates)',
+    example: 'Aster',
+  })
+  @IsOptional()
+  @IsString()
+  docName?: string;
+
   @ApiProperty({
     description: 'File name',
     example: 'passport_john_doe.pdf',

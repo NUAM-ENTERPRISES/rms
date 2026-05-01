@@ -810,7 +810,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   <FileText className="h-3 w-3" />
                                   Experience Documents
                                 </p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                   {expDocs.map((doc) => {
                                     const cfg =
                                       DOCUMENT_TYPE_CONFIG[
@@ -831,13 +831,39 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                             isPdf: !!isPdf,
                                           })
                                         }
-                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium hover:bg-blue-100 transition-colors cursor-pointer"
+                                        className="group w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs hover:border-blue-300 hover:bg-blue-50/40 transition-all cursor-pointer shadow-sm hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                                        aria-label={`View ${doc.docName ? `${doc.docName} - ` : ""}${cfg?.displayName ?? doc.docType}`}
+                                        title={`${doc.docName ? `${doc.docName} : ` : ""}${cfg?.displayName ?? doc.docType}`}
                                       >
-                                        <FileText className="h-3 w-3 shrink-0" />
-                                        <span className="truncate max-w-[140px]">
-                                          {cfg?.displayName ?? doc.docType}
-                                        </span>
-                                        <Eye className="h-2.5 w-2.5 shrink-0 opacity-60" />
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+                                            <FileText className="h-3.5 w-3.5 text-blue-600" />
+                                          </div>
+                                          <div className="min-w-0">
+                                            <div className="truncate font-semibold text-slate-900">
+                                              {doc.docName || cfg?.displayName || doc.docType}
+                                            </div>
+                                            <div className="mt-1 flex items-center gap-1.5">
+                                              {doc.docName ? (
+                                                <Badge
+                                                  variant="outline"
+                                                  className="h-4 px-1.5 text-[10px] border-slate-200 text-slate-500 bg-white"
+                                                >
+                                                  {cfg?.displayName ?? doc.docType}
+                                                </Badge>
+                                              ) : null}
+                                              <span className="text-[10px] text-slate-400 truncate">
+                                                {doc.fileName}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="hidden sm:flex items-center gap-1 text-blue-600/80 group-hover:text-blue-700 transition-colors shrink-0">
+                                          <Eye className="h-3.5 w-3.5" />
+                                          <span className="text-[10px] font-semibold uppercase tracking-wide">
+                                            View
+                                          </span>
+                                        </div>
                                       </button>
                                     );
                                   })}

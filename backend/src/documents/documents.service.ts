@@ -101,6 +101,7 @@ export class DocumentsService {
       data: {
         candidateId: createDocumentDto.candidateId,
         docType: createDocumentDto.docType,
+        docName: createDocumentDto.docName ?? null,
         fileName: createDocumentDto.fileName,
         fileUrl: createDocumentDto.fileUrl,
         fileSize: createDocumentDto.fileSize,
@@ -204,6 +205,7 @@ export class DocumentsService {
     if (search) {
       where.OR = [
         { fileName: { contains: search, mode: 'insensitive' } },
+        { docName: { contains: search, mode: 'insensitive' } },
         { documentNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -322,6 +324,7 @@ export class DocumentsService {
     const document = await this.prisma.document.update({
       where: { id },
       data: {
+        docName: updateDocumentDto.docName,
         fileName: updateDocumentDto.fileName,
         fileUrl: updateDocumentDto.fileUrl,
         fileSize: updateDocumentDto.fileSize,

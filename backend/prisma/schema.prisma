@@ -567,6 +567,8 @@ model Document {
   id          String  @id @default(cuid())
   candidateId String
   docType     String
+  /// Human-friendly display name for the document (e.g., "Aster", "ABC Hospital")
+  docName     String?
   fileName    String
   fileUrl     String
   uploadedBy  String
@@ -600,6 +602,7 @@ model Document {
 
   @@index([candidateId])
   @@index([docType])
+  @@index([docName])
   @@index([status])
   @@index([roleCatalogId])
   @@index([workExperienceId])
