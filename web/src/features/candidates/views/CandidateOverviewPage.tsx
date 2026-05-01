@@ -498,51 +498,54 @@ export default function CandidateOverviewPage() {
         </div>
 
         {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <Input
-                placeholder="Search candidates..."
+                placeholder="Search candidates by name, email or role..."
                 value={filters.search}
                 onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            
+            <div className="flex flex-wrap items-center gap-2">
               {(isManagerOrAdmin && !isRecruiter) && (
-                <UserSelect
-                  value={filters.recruiterId === "all" ? "" : filters.recruiterId}
-                  onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
-                  placeholder="All Recruiters"
-                  role="Recruiter"
-                  allowClear={true}
-                  className="h-9 text-sm shadow-none bg-white border-slate-200 rounded-xl"
-                />
+                <div className="w-full sm:w-[200px]">
+                  <UserSelect
+                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
+                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
+                    placeholder="All Recruiters"
+                    role="Recruiter"
+                    allowClear={true}
+                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
+                  />
+                </div>
               )}
+              
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-1.5 h-9 px-3 rounded-xl border-slate-200 hover:bg-slate-50"
+                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline text-xs">Filters</span>
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
                 {activeFilterCount > 0 && (
-                  <span className="flex items-center justify-center h-4 w-4 text-[9px] font-bold text-white bg-blue-600 rounded-full">
+                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
                     {activeFilterCount}
-                  </span>
+                  </Badge>
                 )}
               </Button>
+
               {activeFilterCount > 0 && (
                 <Button
                   variant="ghost"
-                  size="sm"
                   onClick={handleResetFilters}
-                  className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-slate-500 hover:text-slate-700"
+                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
                 >
-                  <FilterX className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline text-xs">Clear</span>
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
                 </Button>
               )}
             </div>
