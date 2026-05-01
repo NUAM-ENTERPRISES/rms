@@ -1,8 +1,11 @@
 import { Test } from '@nestjs/testing';
+import { getQueueToken } from '@nestjs/bullmq';
 import { DocumentsService } from '../documents.service';
 import { PrismaService } from '../../database/prisma.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { ProcessingService } from '../../processing/processing.service';
+import { UploadService } from '../../upload/upload.service';
+import { GoogleDriveService } from '../../google-drive/google-drive.service';
 
 describe('DocumentsService - verifyOfferLetter', () => {
   let service: DocumentsService;
@@ -309,5 +312,51 @@ describe('DocumentsService - getVerificationCandidates', () => {
     expect(result.items[0].screening).toEqual(candidateProject.screenings[0]);
     expect(result.counts.pending).toBe(1);
     expect(result.pagination.total).toBe(1);
+  });
+});
+
+describe('DocumentsService - findAllByCandidateIds', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('groups documents by candidateId and returns empty arrays for ids with no docs', async () => {
+    const docs = [
+      { id: 'd1', candidateId: 'c1', isDeleted: false },
+      { id: 'd2', candidateId: 'c1', isDeleted: false },
+      { id: 'd3', candidateId: 'c2', isDeleted: false },
+    ];
+    jest.spyOn(prisma.document, 'findMany' as any).mockResolvedValue(docs);
+
+    const result = await service.findAllByCandidateIds(['c1', 'c2', 'c3']);
+
+    expect(prisma.document.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          candidateId: { in: ['c1', 'c2', 'c3'] },
+          isDeleted: false,
+        }),
+      }),
+    );
+    expect(result.byCandidateId.c1).toHaveLength(2);
+    expect(result.byCandidateId.c2).toHaveLength(1);
+    expect(result.byCandidateId.c3).toEqual([]);
   });
 });

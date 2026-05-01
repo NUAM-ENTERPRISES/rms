@@ -19,6 +19,10 @@ interface CandidateProfileCompletionProps {
 interface CandidateProfileCompletionCellProps {
   candidateId: string;
   candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth">;
+  /** When true, skips per-row GET /documents; parent loads via POST /documents/by-candidates */
+  useBatchDocuments?: boolean;
+  batchDocuments?: Document[];
+  batchDocumentsLoading?: boolean;
 }
 
 const getProgressColor = (percent: number) => {
@@ -245,14 +249,55 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletionCellProps> = ({
   candidateId,
   candidate,
+  useBatchDocuments,
+  batchDocuments,
+  batchDocumentsLoading,
 }) => {
   // navigation target: candidate detail, open Documents tab
   const navigate = useNavigate();
 
   const { data, isLoading } = useGetDocumentsQuery(
     { candidateId, page: 1, limit: 50 },
-    { skip: !candidateId }
+    { skip: !candidateId || !!useBatchDocuments }
   );
+
+  if (useBatchDocuments) {
+    if (batchDocumentsLoading) {
+      return (
+        <div className="flex justify-center">
+          <CandidateProfileCompletion
+            candidateId={candidateId}
+            candidate={candidate}
+            isLoading
+            compact={true}
+            variant="circular"
+            onCircleClick={(e) => {
+              e.stopPropagation();
+              navigate(`/candidates/${candidateId}?tab=documents`);
+            }}
+            circleAriaLabel="Open candidate documents"
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="flex justify-center">
+        <CandidateProfileCompletion
+          candidateId={candidateId}
+          candidate={candidate}
+          documents={batchDocuments ?? []}
+          isLoading={false}
+          compact={true}
+          variant="circular"
+          onCircleClick={(e) => {
+            e.stopPropagation();
+            navigate(`/candidates/${candidateId}?tab=documents`);
+          }}
+          circleAriaLabel="Open candidate documents"
+        />
+      </div>
+    );
+  }
 
   const documents = data?.data?.documents;
 

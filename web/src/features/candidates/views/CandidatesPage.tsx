@@ -62,6 +62,7 @@ import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
   useGetRecruiterMyCandidatesQuery,
+  useGetDocumentsByCandidatesQuery,
   useTransferCandidateMutation,
   type RecruiterMyCandidatesResponse,
   type AllCandidatesResponse,
@@ -307,6 +308,25 @@ export default function CandidatesPage() {
   const totalCount =
     pagination?.totalCount ?? pagination?.total ?? filteredCandidates.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / filters.limit));
+
+  /** One POST /documents/by-candidates for the whole table instead of N GET /documents per row */
+  const pageCandidateIds = useMemo(
+    () => pageItems.map((c: any) => c?.id).filter(Boolean) as string[],
+    [pageItems]
+  );
+  const useBatchDocs = pageCandidateIds.length > 0;
+  const {
+    data: batchDocumentsResponse,
+    isLoading: batchDocumentsLoading,
+    isFetching: batchDocumentsFetching,
+  } = useGetDocumentsByCandidatesQuery(
+    { candidateIds: pageCandidateIds },
+    { skip: !useBatchDocs }
+  );
+  const documentsByCandidateId =
+    batchDocumentsResponse?.data?.byCandidateId ?? {};
+  const batchDocumentsBusy =
+    useBatchDocs && (batchDocumentsLoading || batchDocumentsFetching);
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -1550,7 +1570,13 @@ export default function CandidatesPage() {
 
                           {/* Profile Completion */}
                           <TableCell className="px-4 py-3">
-                            <CandidateProfileCompletionCell candidateId={candidate.id} candidate={candidate} />
+                            <CandidateProfileCompletionCell
+                              candidateId={candidate.id}
+                              candidate={candidate}
+                              useBatchDocuments={useBatchDocs}
+                              batchDocuments={documentsByCandidateId[candidate.id]}
+                              batchDocumentsLoading={batchDocumentsBusy}
+                            />
                           </TableCell>
 
                           {/* Status Column (single source of truth) */}

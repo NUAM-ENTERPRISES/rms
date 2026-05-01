@@ -1141,6 +1141,30 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Document"],
     }),
+
+    /** One request for all documents on the current candidate list page (profile completion / tables). */
+    getDocumentsByCandidates: builder.query<
+      {
+        success: boolean;
+        data: { byCandidateId: Record<string, Document[]> };
+      },
+      { candidateIds: string[] }
+    >({
+      query: ({ candidateIds }) => ({
+        url: "/documents/by-candidates",
+        method: "POST",
+        body: {
+          candidateIds: [...new Set(candidateIds.filter(Boolean))],
+        },
+      }),
+      serializeQueryArgs: ({ queryArgs }) => {
+        const key = [...new Set(queryArgs.candidateIds.filter(Boolean))]
+          .sort()
+          .join("|");
+        return `documentsByCandidates(${key})`;
+      },
+      providesTags: ["Document"],
+    }),
     uploadDocument: builder.mutation<
       { success: boolean; data: Document; message?: string },
       UploadDocumentRequest
@@ -1368,6 +1392,7 @@ export const {
   useUpdateCandidateQualificationMutation,
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
+  useGetDocumentsByCandidatesQuery,
   useUploadDocumentMutation,
   useUpdateCandidateStatusMutation,
   useAssignRecruiterMutation,
