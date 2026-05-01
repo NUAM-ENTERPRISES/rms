@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -46,10 +47,10 @@ import {
   AlertCircle,
   FileSearch,
   Repeat,
+  ArrowRightLeft,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { useGetCandidateOverviewQuery, useTransferCandidateMutation } from "@/features/candidates/api";
-import { usersApi } from "@/features/admin/api";
+import { useGetCandidateOverviewQuery, useTransferCandidateMutation, useBulkTransferCandidatesMutation } from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
@@ -58,6 +59,7 @@ import { RecruiterPerformanceChartWrapper } from "../components/RecruiterPerform
 import { ImageViewer, StatusTile } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
@@ -88,6 +90,11 @@ export default function CandidateOverviewPage() {
   }>({ isOpen: false });
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
+  const [bulkTransferCandidates, { isLoading: isBulkTransferring }] = useBulkTransferCandidatesMutation();
+
+  // Multi-select state
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<Set<string>>(new Set());
+  const [bulkTransferDialog, setBulkTransferDialog] = useState(false);
 
   // Advanced filters sheet state
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
@@ -161,12 +168,6 @@ export default function CandidateOverviewPage() {
     !!filters.subStatus,
     !!filters.processingStep,
   ].filter(Boolean).length;
-
-  // Fetch reference data
-  const { data: usersData } = usersApi.useGetUsersQuery(
-    { roles: ["Recruiter", "Team Lead"], limit: 100 },
-    { skip: isRecruiter }
-  );
 
   // Fetch live statuses from API only when a workflow tile is active
   const isWorkflowActive = ["registered", "documentation", "interview", "processing"].includes(filters.status);
@@ -285,6 +286,21 @@ export default function CandidateOverviewPage() {
       workExperienceCompany: "",
       workExperienceTitle: "",
     });
+  };
+
+  const handleBulkTransfer = async (data: { targetRecruiterId: string; reason: string }) => {
+    try {
+      await bulkTransferCandidates({
+        candidateIds: [...selectedCandidateIds],
+        targetRecruiterId: data.targetRecruiterId,
+        reason: data.reason,
+      }).unwrap();
+      setSelectedCandidateIds(new Set());
+      setBulkTransferDialog(false);
+      refetch();
+    } catch (error: any) {
+      console.error("Failed to bulk transfer candidates:", error);
+    }
   };
 
   const handleTransferCandidate = async (data: {
@@ -410,10 +426,7 @@ export default function CandidateOverviewPage() {
     return digits || null;
   };
 
-  const displayedRecruiterName =
-    filters.recruiterId === currentUser?.id || filters.recruiterId === "all"
-      ? currentUser?.name
-      : usersData?.data?.users?.find((u: any) => u.id === filters.recruiterId)?.name;
+  const displayedRecruiterName = currentUser?.name;
 
   return (
     <div className="min-h-screen">
@@ -517,6 +530,16 @@ export default function CandidateOverviewPage() {
                         </div>
                       )}
 
+                      {canTransferCandidates && selectedCandidateIds.size > 0 && (
+                        <Button
+                          onClick={() => setBulkTransferDialog(true)}
+                          className="h-9 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md rounded-lg gap-2 text-sm"
+                        >
+                          <ArrowRightLeft className="h-4 w-4" />
+                          Transfer Selected ({selectedCandidateIds.size})
+                        </Button>
+                      )}
+
                       <Button 
                         onClick={() => navigate("/candidates/create")} 
                         className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
@@ -589,6 +612,26 @@ export default function CandidateOverviewPage() {
                <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                    {canTransferCandidates && (
+                      <TableHead className="h-9 px-4 w-10">
+                        <Checkbox
+                          checked={
+                            candidates.length > 0 &&
+                            candidates.every((c: any) => selectedCandidateIds.has(c.id))
+                          }
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedCandidateIds(
+                                new Set(candidates.map((c: any) => c.id))
+                              );
+                            } else {
+                              setSelectedCandidateIds(new Set());
+                            }
+                          }}
+                          aria-label="Select all candidates on this page"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Created By</TableHead>
@@ -604,12 +647,12 @@ export default function CandidateOverviewPage() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={7} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 8 : 7} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-64 text-center">
+                      <TableCell colSpan={canTransferCandidates ? 8 : 7} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <UserCheck className="h-12 w-12 text-slate-200 mb-4" />
                           <p className="text-slate-500 font-medium">No candidates found for the selected filters.</p>
@@ -632,7 +675,32 @@ export default function CandidateOverviewPage() {
                       const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
 
                       return (
-                        <TableRow key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
+                        <TableRow
+                          key={candidate.id}
+                          className={`border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group ${
+                            selectedCandidateIds.has(candidate.id) ? "bg-indigo-50/60" : ""
+                          }`}
+                        >
+                          {/* Multi-select Checkbox */}
+                          {canTransferCandidates && (
+                            <TableCell className="px-4 py-3 w-10">
+                              <Checkbox
+                                checked={selectedCandidateIds.has(candidate.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedCandidateIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (checked) {
+                                      next.add(candidate.id);
+                                    } else {
+                                      next.delete(candidate.id);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                aria-label={`Select ${candidate.firstName} ${candidate.lastName}`}
+                              />
+                            </TableCell>
+                          )}
                           {/* Candidate */}
                           <TableCell className="px-4 py-3">
                             <div className="flex items-center gap-3">
@@ -900,6 +968,25 @@ export default function CandidateOverviewPage() {
           isLoading={isTransferring}
         />
       )}
+
+      {/* Bulk Transfer Candidates Dialog */}
+      <BulkTransferCandidateDialog
+        open={bulkTransferDialog}
+        onOpenChange={setBulkTransferDialog}
+        selectedCount={selectedCandidateIds.size}
+        candidates={candidates
+          .filter((c: any) => selectedCandidateIds.has(c.id))
+          .map((c: any) => ({ id: c.id, name: `${c.firstName} ${c.lastName}` }))}
+        onRemoveCandidate={(id) =>
+          setSelectedCandidateIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          })
+        }
+        onConfirm={handleBulkTransfer}
+        isLoading={isBulkTransferring}
+      />
     </div>
   );
 }

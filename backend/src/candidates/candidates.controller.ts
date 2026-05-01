@@ -32,6 +32,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
@@ -1359,6 +1360,40 @@ export class CandidatesController {
       success: true,
       data: result,
       message: 'Candidate transferred successfully',
+    };
+  }
+
+  @Post('bulk-transfer')
+  @Permissions('transfer:candidates')
+  @ApiOperation({
+    summary: 'Bulk transfer candidates to another recruiter',
+    description:
+      'Transfer multiple candidates from their current recruiter to a new recruiter in one operation.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk transfer completed',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid payload',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Target recruiter not found',
+  })
+  async bulkTransferRecruiter(
+    @Body() bulkTransferDto: BulkTransferCandidateDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidatesService.bulkTransferRecruiter(
+      bulkTransferDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: result.message,
     };
   }
 

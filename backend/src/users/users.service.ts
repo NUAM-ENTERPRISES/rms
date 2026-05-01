@@ -207,6 +207,16 @@ export class UsersService {
             },
           },
         },
+        userLanguages: {
+          include: {
+            language: { select: { code: true, name: true } },
+          },
+        },
+        userCountryCoverages: {
+          include: {
+            country: { select: { code: true, name: true } },
+          },
+        },
       },
     });
 

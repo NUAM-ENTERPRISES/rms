@@ -26,6 +26,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
@@ -3607,7 +3608,7 @@ export class CandidatesService {
       );
     }
 
-    // Use the existing assignRecruiter method to handle the transfer
+    // Use the existing assignRecruiter method to handle the transfer (skip generic notification)
     const result = await this.assignRecruiter(
       candidateId,
       {
@@ -3617,11 +3618,98 @@ export class CandidatesService {
           `Transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'}`,
       },
       userId,
+      true, // skipNotification — we publish CandidateTransferred below
     );
+
+    // Publish transfer-specific notification event
+    await this.outboxService.publishEvent('CandidateTransferred', {
+      candidateId,
+      targetRecruiterId: transferCandidateDto.targetRecruiterId,
+      transferredBy: userId,
+      reason: transferCandidateDto.reason || '',
+      previousRecruiterId: currentAssignment?.recruiterId ?? null,
+    });
 
     return {
       message: `Candidate transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'} to ${targetRecruiter.name}`,
       assignment: result.assignment,
+    };
+  }
+
+  /**
+   * Bulk transfer multiple candidates to a new recruiter
+   */
+  async bulkTransferRecruiter(
+    dto: BulkTransferCandidateDto,
+    userId: string,
+  ): Promise<{ message: string; transferred: number; skipped: string[] }> {
+    // Verify target recruiter exists once
+    const targetRecruiter = await this.prisma.user.findUnique({
+      where: { id: dto.targetRecruiterId },
+    });
+
+    if (!targetRecruiter) {
+      throw new NotFoundException(
+        `Target recruiter with ID ${dto.targetRecruiterId} not found`,
+      );
+    }
+
+    let transferred = 0;
+    const skipped: string[] = [];
+
+    for (const candidateId of dto.candidateIds) {
+      try {
+        // Check current assignment
+        const candidate = await this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          include: {
+            recruiterAssignments: {
+              where: { isActive: true },
+              select: { recruiterId: true },
+            },
+          },
+        });
+
+        if (!candidate) {
+          skipped.push(candidateId);
+          continue;
+        }
+
+        const currentAssignment = candidate.recruiterAssignments[0];
+        if (currentAssignment?.recruiterId === dto.targetRecruiterId) {
+          skipped.push(candidateId);
+          continue;
+        }
+
+        await this.assignRecruiter(
+          candidateId,
+          {
+            recruiterId: dto.targetRecruiterId,
+            reason: dto.reason || `Bulk transferred to ${targetRecruiter.name}`,
+          },
+          userId,
+          true, // skipNotification — we publish CandidateTransferred below
+        );
+
+        // Publish transfer-specific notification event per candidate
+        await this.outboxService.publishEvent('CandidateTransferred', {
+          candidateId,
+          targetRecruiterId: dto.targetRecruiterId,
+          transferredBy: userId,
+          reason: dto.reason || '',
+          previousRecruiterId: currentAssignment?.recruiterId ?? null,
+        });
+
+        transferred++;
+      } catch {
+        skipped.push(candidateId);
+      }
+    }
+
+    return {
+      message: `Bulk transfer complete: ${transferred} transferred, ${skipped.length} skipped`,
+      transferred,
+      skipped,
     };
   }
 

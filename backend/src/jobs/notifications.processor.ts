@@ -52,6 +52,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateAssignedToRecruiter(job);
         case 'CandidateRecruiterAssigned':
           return await this.handleCandidateRecruiterAssigned(job);
+        case 'CandidateTransferred':
+          return await this.handleCandidateTransferred(job);
         case 'CandidateTransferredBack':
           return await this.handleCandidateTransferredBack(job);
         case 'CandidateAssignedToScreening':
@@ -1186,6 +1188,105 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process candidate recruiter assignment: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleCandidateTransferred(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing candidate transfer notification event: ${eventId}`);
+
+    try {
+      const { candidateId, targetRecruiterId, transferredBy, reason, previousRecruiterId } = payload as {
+        candidateId: string;
+        targetRecruiterId: string;
+        transferredBy: string;
+        reason?: string;
+        previousRecruiterId?: string | null;
+      };
+
+      const [candidate, sender, targetRecruiter] = await Promise.all([
+        this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          select: { id: true, firstName: true, lastName: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: transferredBy },
+          select: { id: true, name: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id: targetRecruiterId },
+          select: { id: true, name: true },
+        }),
+      ]);
+
+      if (!candidate) {
+        this.logger.warn(`Candidate ${candidateId} not found for transfer notification`);
+        return;
+      }
+
+      const candidateName = `${candidate.firstName} ${candidate.lastName}`;
+      const reasonText = reason ? ` Reason: ${reason}` : '';
+
+      // Notify the SENDER — "Transferred successfully"
+      if (transferredBy && transferredBy !== 'system') {
+        await this.notificationsService.createNotification({
+          userId: transferredBy,
+          type: 'candidate_transferred',
+          title: 'Candidate Transferred Successfully',
+          message: `Candidate ${candidateName} has been successfully transferred to ${targetRecruiter?.name ?? 'recruiter'}.${reasonText}`,
+          link: `/candidates/${candidateId}`,
+          meta: { candidateId, targetRecruiterId, reason },
+          idemKey: `${eventId}:${transferredBy}:transfer_sender`,
+        });
+      }
+
+      // Notify the RECEIVER — "Candidate has been transferred to you"
+      await this.notificationsService.createNotification({
+        userId: targetRecruiterId,
+        type: 'candidate_transferred',
+        title: 'Candidate Transferred to You',
+        message: `Candidate ${candidateName} has been transferred to you by ${sender?.name ?? 'a team member'}.${reasonText}`,
+        link: `/candidates/${candidateId}`,
+        meta: { candidateId, transferredBy, reason },
+        idemKey: `${eventId}:${targetRecruiterId}:transfer_receiver`,
+      });
+
+      // Notify the PREVIOUS recruiter if different from sender
+      if (
+        previousRecruiterId &&
+        previousRecruiterId !== targetRecruiterId &&
+        previousRecruiterId !== transferredBy
+      ) {
+        await this.notificationsService.createNotification({
+          userId: previousRecruiterId,
+          type: 'candidate_transferred',
+          title: 'Candidate Reassigned',
+          message: `Candidate ${candidateName} has been transferred from you to ${targetRecruiter?.name ?? 'another recruiter'} by ${sender?.name ?? 'a team member'}.${reasonText}`,
+          link: `/candidates/${candidateId}`,
+          meta: { candidateId, targetRecruiterId, reason },
+          idemKey: `${eventId}:${previousRecruiterId}:transfer_previous`,
+        });
+      }
+
+      // Real-time UI sync
+      await this.prisma.outboxEvent.create({
+        data: {
+          type: 'DataSync',
+          payload: {
+            type: 'Candidate',
+            candidateId,
+            message: `Candidate ${candidateName} transferred to ${targetRecruiter?.name ?? 'recruiter'}`,
+          },
+        },
+      });
+
+      this.logger.log(`Transfer notifications created for candidate ${candidateId}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to process candidate transfer notification: ${error.message}`,
         error.stack,
       );
       throw error;

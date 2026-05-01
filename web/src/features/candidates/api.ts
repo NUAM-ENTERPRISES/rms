@@ -1302,6 +1302,19 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate"],
     }),
 
+    // Bulk transfer candidates to another recruiter
+    bulkTransferCandidates: builder.mutation<
+      { success: boolean; message: string; data?: { transferred: number; skipped: string[] } },
+      { candidateIds: string[]; targetRecruiterId: string; reason: string }
+    >({
+      query: (body) => ({
+        url: `/candidates/bulk-transfer`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+
     // Transfer candidate back
     transferBackCandidate: builder.mutation<
       { success: boolean; message: string },
@@ -1394,6 +1407,7 @@ export const {
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
   useTransferCandidateMutation,
+  useBulkTransferCandidatesMutation,
   useTransferBackCandidateMutation,
   useGetOriginalRecruiterQuery,
   useGetCandidateProjectsQuery,
