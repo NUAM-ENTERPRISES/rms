@@ -5,6 +5,8 @@ import UserMenu from "@/components/organisms/UserMenu";
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
 import { HRDReminderBadge } from "@/features/processing/components/HRDReminderBadge";
 import { DataFlowReminderBadge } from "@/features/processing/components/DataFlowReminderBadge";
+import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
+import SessionAvailabilityToggles from "@/features/staff/components/SessionAvailabilityToggles";
 
 interface HeaderProps {
   onMobileMenuToggle: () => void;
@@ -32,6 +34,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
           {/* Processing team badges */}
           <DataFlowReminderBadge />
           <HRDReminderBadge />
+          <SessionAvailabilityToggles />
+          <IdleUsersNotification />
           <NotificationBell />
           <UserMenu />
         </div>

@@ -33,6 +33,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
+import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
+// (kept controller consistent with existing query parsing; no DTO needed here)
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { UserWithRoles, PaginatedUsers } from './types';
@@ -298,6 +300,72 @@ export class UsersController {
     };
   }
 
+  @Put('profile/session/activity')
+  @ApiOperation({
+    summary: 'Update current session activity',
+    description:
+      'Refresh the authenticated session last activity timestamp for idle tracking.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session activity updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Current session not available' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateCurrentSessionActivity(@Request() req) {
+    const currentSessionId =
+      req.user.sid ||
+      (await this.usersService.getLatestActiveSessionId(req.user.id));
+
+    if (!currentSessionId) {
+      throw new BadRequestException('Current session not available');
+    }
+
+    await this.usersService.updateSessionActivity(currentSessionId);
+    return {
+      success: true,
+      data: null,
+      message: 'Session activity updated successfully',
+    };
+  }
+
+  @Put('profile/session/availability')
+  @ApiOperation({
+    summary: 'Update current session availability',
+    description:
+      'Set break or on-call so the session is not counted as idle when inactive.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Session availability updated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Current session not available' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async updateSessionAvailability(
+    @Request() req,
+    @Body() dto: SetSessionAvailabilityDto,
+  ) {
+    const currentSessionId =
+      req.user.sid ||
+      (await this.usersService.getLatestActiveSessionId(req.user.id));
+
+    if (!currentSessionId) {
+      throw new BadRequestException('Current session not available');
+    }
+
+    const data = await this.usersService.setSessionAvailability(
+      currentSessionId,
+      req.user.id,
+      dto.availability,
+    );
+
+    return {
+      success: true,
+      data,
+      message: 'Session availability updated successfully',
+    };
+  }
+
   @Put('profile')
   @ApiOperation({
     summary: 'Update current user profile',
@@ -457,6 +525,53 @@ export class UsersController {
       limit,
     });
     return { success: true, ...result, message: 'Sessions retrieved successfully' };
+  }
+
+  @Get('sessions/admin/idle')
+  @Permissions('read:users')
+  @ApiOperation({
+    summary: 'Admin — idle sessions summary',
+    description:
+      'Manager / System Admin can see currently idle users (15+ minutes without activity).',
+  })
+  @ApiQuery({
+    name: 'role',
+    required: false,
+    description: 'Filter by role name (e.g. Recruiter, CRE)',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by user name or email',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Max idle sessions to return (default 10, max 50)',
+  })
+  @ApiResponse({ status: 200, description: 'Idle sessions retrieved successfully' })
+  async getAdminIdleSessionsSummary(
+    @Query('role') role?: string,
+    @Query('search') search?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limitParsed = limitRaw ? parseInt(limitRaw, 10) : 10;
+    const limit = Number.isFinite(limitParsed)
+      ? Math.min(Math.max(limitParsed, 1), 50)
+      : 10;
+
+    const result = await this.usersService.getAdminIdleSessionsSummary({
+      role: role || undefined,
+      search: search || undefined,
+      limit,
+    });
+
+    return {
+      success: true,
+      data: result,
+      message: 'Idle sessions retrieved successfully',
+    };
   }
 
   @Get(':id')

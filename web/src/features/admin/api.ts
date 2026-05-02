@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import type { SessionAvailability } from "@/shared/types/session-availability";
 
 // API Response wrapper type
 interface ApiResponse<T> {
@@ -67,7 +68,10 @@ export interface AdminSession {
   os: string | null;
   deviceType: string | null;
   loginAt: string;
+  lastActivityAt: string;
   isActive: boolean;
+  isIdle: boolean;
+  availability?: SessionAvailability;
 }
 
 export interface AdminSessionsQuery {
@@ -76,6 +80,15 @@ export interface AdminSessionsQuery {
   isActive?: boolean;
   page?: number;
   limit?: number;
+}
+
+export interface AdminIdleSessionsSummaryResponse {
+  success: boolean;
+  data: {
+    idleCount: number;
+    sessions: AdminSession[];
+  };
+  message: string;
 }
 
 export interface QueryUsersRequest {
@@ -202,6 +215,16 @@ export const usersApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }],
     }),
 
+    pingCurrentSessionActivity: builder.mutation<
+      { success: boolean; data: null; message: string },
+      void
+    >({
+      query: () => ({
+        url: "/users/profile/session/activity",
+        method: "PUT",
+      }),
+    }),
+
     // Get recruiter statistics for analytics
     getRecruiterStats: builder.query<
       ApiResponse<
@@ -322,6 +345,19 @@ export const usersApi = baseApi.injectEndpoints({
       providesTags: ['User'],
     }),
 
+    // Admin: idle sessions summary for header notification
+    getAdminIdleSessionsSummary: builder.query<
+      AdminIdleSessionsSummaryResponse,
+      { role?: string; search?: string; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: '/users/sessions/admin/idle',
+        method: 'GET',
+        params: params || undefined,
+      }),
+      providesTags: ['User'],
+    }),
+
   }),
 });
 
@@ -337,7 +373,9 @@ export const {
   useUpdateUserPasswordMutation,
   useGetRecruiterStatsQuery,
   useGetRecruiterPerformanceQuery,
+  usePingCurrentSessionActivityMutation,
   useGetAdminSessionsQuery,
+  useGetAdminIdleSessionsSummaryQuery,
 } = usersApi;
 
 // Export roles API

@@ -8,9 +8,11 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import {
   ConflictException,
+  ForbiddenException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { SessionAvailability } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 describe('UsersService', () => {
@@ -34,6 +36,11 @@ describe('UsersService', () => {
     candidateProjects: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
+    },
+    userSession: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
@@ -184,23 +191,148 @@ describe('UsersService', () => {
         5,
       );
 
-      expect(result).toEqual([
-        expect.objectContaining({
-          month: 'May',
-          year: 2026,
-          assigned: 1,
-          screening: 0,
-          interview: 1,
-          selected: 0,
-          joined: 1,
-          deployed: 1,
-          hired: 1,
-          registered: 0,
-          documentVerified: 1,
-          shortlisted: 1,
-          interviewPassed: 1,
-        }),
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            month: 'May',
+            year: 2026,
+            assigned: 1,
+            screening: 0,
+            interview: 1,
+            selected: 0,
+            joined: 1,
+            deployed: 1,
+            hired: 1,
+            registered: 0,
+            documentVerified: 1,
+            shortlisted: 1,
+            interviewPassed: 1,
+          }),
+        ]),
+      );
+    });
+  });
+
+  describe('getAdminIdleSessionsSummary', () => {
+    it('should return idleCount and limited idle sessions', async () => {
+      const now = Date.now();
+      const idleAt = new Date(now - 20 * 60 * 1000);
+
+      mockPrismaService.userSession.findMany.mockResolvedValue([
+        {
+          id: 's1',
+          userId: 'u1',
+          ipAddress: '127.0.0.1',
+          browser: 'Chrome',
+          os: 'macOS',
+          deviceType: 'desktop',
+          loginAt: new Date(now - 60 * 60 * 1000),
+          lastActivityAt: idleAt,
+          isActive: true,
+          availability: SessionAvailability.ACTIVE,
+          user: {
+            id: 'u1',
+            name: 'Idle One',
+            email: 'idle1@example.com',
+            userRoles: [{ role: { name: 'Recruiter' } }],
+          },
+        },
+        {
+          id: 's2',
+          userId: 'u2',
+          ipAddress: '127.0.0.1',
+          browser: 'Safari',
+          os: 'macOS',
+          deviceType: 'desktop',
+          loginAt: new Date(now - 30 * 60 * 1000),
+          lastActivityAt: new Date(now - 2 * 60 * 1000),
+          isActive: true,
+          availability: SessionAvailability.ACTIVE,
+          user: {
+            id: 'u2',
+            name: 'Active Two',
+            email: 'active2@example.com',
+            userRoles: [{ role: { name: 'Recruiter' } }],
+          },
+        },
       ]);
+
+      const result = await service.getAdminIdleSessionsSummary({ limit: 10 });
+
+      expect(result.idleCount).toBe(1);
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0]).toEqual(
+        expect.objectContaining({
+          userId: 'u1',
+          userName: 'Idle One',
+          isIdle: true,
+        }),
+      );
+    });
+
+    it('should exclude sessions on break or on-call from idle count', async () => {
+      const now = Date.now();
+      const idleAt = new Date(now - 20 * 60 * 1000);
+
+      mockPrismaService.userSession.findMany.mockResolvedValue([
+        {
+          id: 's1',
+          userId: 'u1',
+          ipAddress: '127.0.0.1',
+          browser: 'Chrome',
+          os: 'macOS',
+          deviceType: 'desktop',
+          loginAt: new Date(now - 60 * 60 * 1000),
+          lastActivityAt: idleAt,
+          isActive: true,
+          availability: SessionAvailability.BREAK,
+          user: {
+            id: 'u1',
+            name: 'On Break',
+            email: 'break@example.com',
+            userRoles: [{ role: { name: 'Recruiter' } }],
+          },
+        },
+      ]);
+
+      const result = await service.getAdminIdleSessionsSummary({ limit: 10 });
+
+      expect(result.idleCount).toBe(0);
+      expect(result.sessions).toHaveLength(0);
+    });
+  });
+
+  describe('setSessionAvailability', () => {
+    it('should update availability without sending notifications', async () => {
+      mockPrismaService.userSession.findUnique.mockResolvedValue({
+        id: 'sess1',
+        userId: 'u1',
+        availability: SessionAvailability.ACTIVE,
+      });
+      mockPrismaService.userSession.update.mockResolvedValue({});
+
+      const result = await service.setSessionAvailability(
+        'sess1',
+        'u1',
+        SessionAvailability.BREAK,
+      );
+
+      expect(result.availability).toBe(SessionAvailability.BREAK);
+      expect(mockPrismaService.userSession.update).toHaveBeenCalled();
+      expect(mockPrismaService.user.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should reject wrong user', async () => {
+      mockPrismaService.userSession.findUnique.mockResolvedValue({
+        id: 'sess1',
+        userId: 'other',
+        availability: SessionAvailability.ACTIVE,
+      });
+
+      await expect(
+        service.setSessionAvailability('sess1', 'u1', SessionAvailability.BREAK),
+      ).rejects.toThrow(ForbiddenException);
+      expect(mockPrismaService.userSession.update).not.toHaveBeenCalled();
     });
   });
 

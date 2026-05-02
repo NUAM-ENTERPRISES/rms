@@ -7,6 +7,7 @@ import {
   setStatus,
 } from "@/features/auth/authSlice";
 import { authApi } from "@/services/authApi";
+import { useSessionActivityTracker } from "@/hooks/useSessionActivityTracker";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 
 interface AuthProviderProps {
@@ -18,6 +19,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const location = useLocation();
   const { accessToken, status } = useAppSelector((s) => s.auth);
   const [bootstrapped, setBootstrapped] = useState(false);
+
+  useSessionActivityTracker(status === "authenticated");
 
   useEffect(() => {
     // Performance measurement

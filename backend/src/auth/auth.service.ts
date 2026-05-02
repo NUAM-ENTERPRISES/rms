@@ -738,6 +738,7 @@ export class AuthService {
         browser,
         os,
         deviceType,
+        lastActivityAt: new Date(),
         isActive: true,
       },
     });

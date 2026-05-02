@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SessionAvailability {
+  ACTIVE
+  BREAK
+  ON_CALL
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   familyId  String
@@ -24,17 +30,20 @@ model RefreshToken {
 }
 
 model UserSession {
-  id             String   @id @default(cuid())
-  userId         String
-  refreshTokenId String?
-  ipAddress      String?
-  userAgent      String?
-  browser        String?
-  os             String?
-  deviceType     String?
-  loginAt        DateTime @default(now())
-  isActive       Boolean  @default(true)
-  user           User     @relation(fields: [userId], references: [id])
+  id                    String              @id @default(cuid())
+  userId                String
+  refreshTokenId        String?
+  ipAddress             String?
+  userAgent             String?
+  browser               String?
+  os                    String?
+  deviceType            String?
+  loginAt               DateTime            @default(now())
+  lastActivityAt        DateTime            @default(now())
+  isActive              Boolean             @default(true)
+  availability          SessionAvailability @default(ACTIVE)
+  availabilityUpdatedAt DateTime?
+  user                  User                @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([refreshTokenId])

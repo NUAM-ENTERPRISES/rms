@@ -3,7 +3,9 @@ import {
   NotFoundException,
   ConflictException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { SessionAvailability } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,6 +17,8 @@ import * as bcrypt from 'bcrypt';
 import { UserWithRoles, PaginatedUsers } from './types';
 import { UploadService } from '../upload/upload.service';
 
+const IDLE_THRESHOLD_MS = 15 * 60 * 1000;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -22,6 +26,43 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly uploadService: UploadService,
   ) {}
+
+  async setSessionAvailability(
+    sessionId: string,
+    userId: string,
+    availability: SessionAvailability,
+  ): Promise<{ availability: SessionAvailability }> {
+    const session = await this.prisma.userSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session || session.userId !== userId) {
+      throw new ForbiddenException('Session not found or access denied');
+    }
+
+    const previous = session.availability ?? SessionAvailability.ACTIVE;
+
+    if (previous === availability) {
+      return { availability };
+    }
+
+    await this.prisma.userSession.update({
+      where: { id: sessionId },
+      data: {
+        availability,
+        availabilityUpdatedAt: new Date(),
+      },
+    });
+
+    return { availability };
+  }
+
+  private isSessionAvailabilityEligibleForIdle(
+    availability: SessionAvailability | undefined | null,
+  ): boolean {
+    const a = availability ?? SessionAvailability.ACTIVE;
+    return a === SessionAvailability.ACTIVE;
+  }
 
   async create(
     createUserDto: CreateUserDto,
@@ -564,7 +605,10 @@ export class UsersService {
       os: s.os,
       deviceType: s.deviceType,
       loginAt: s.loginAt,
+      lastActivityAt: s.lastActivityAt,
       isActive: s.isActive,
+      availability: s.availability ?? SessionAvailability.ACTIVE,
+      availabilityUpdatedAt: s.availabilityUpdatedAt ?? null,
       isCurrent: currentSessionId ? s.id === currentSessionId : false,
     }));
   }
@@ -603,43 +647,68 @@ export class UsersService {
       sessionWhere.user = userWhere;
     }
 
-    const [sessions, total] = await Promise.all([
-      (this.prisma as any).userSession.findMany({
-        where: sessionWhere,
-        orderBy: { loginAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              userRoles: {
-                select: {
-                  role: { select: { name: true } },
-                },
+    const sessions = await (this.prisma as any).userSession.findMany({
+      where: sessionWhere,
+      orderBy: [
+        { userId: 'asc' },
+        { lastActivityAt: 'desc' },
+      ],
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            userRoles: {
+              select: {
+                role: { select: { name: true } },
               },
             },
           },
         },
-      }),
-      (this.prisma as any).userSession.count({ where: sessionWhere }),
-    ]);
+      },
+    });
 
-    const data = sessions.map((s: any) => ({
-      id: s.id,
-      userId: s.userId,
-      userName: s.user?.name ?? null,
-      userEmail: s.user?.email ?? null,
-      roles: (s.user?.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean),
-      ipAddress: s.ipAddress,
-      browser: s.browser,
-      os: s.os,
-      deviceType: s.deviceType,
-      loginAt: s.loginAt,
-      isActive: s.isActive,
-    }));
+    const uniqueSessionsByUser = new Map<string, any>();
+    for (const session of sessions) {
+      if (!uniqueSessionsByUser.has(session.userId)) {
+        uniqueSessionsByUser.set(session.userId, session);
+      }
+    }
+
+    const distinctSessions = Array.from(uniqueSessionsByUser.values());
+    const total = distinctSessions.length;
+    const pageSessions = distinctSessions.slice(skip, skip + limit);
+
+    const data = pageSessions.map((s: any) => {
+      const lastActivityAt = s.lastActivityAt ?? s.loginAt;
+      const availability = s.availability ?? SessionAvailability.ACTIVE;
+      const timeIdle =
+        lastActivityAt instanceof Date &&
+        Date.now() - lastActivityAt.getTime() > IDLE_THRESHOLD_MS;
+      const isIdle =
+        s.isActive &&
+        timeIdle &&
+        this.isSessionAvailabilityEligibleForIdle(availability);
+      const isActive = s.isActive && !isIdle;
+
+      return {
+        id: s.id,
+        userId: s.userId,
+        userName: s.user?.name ?? null,
+        userEmail: s.user?.email ?? null,
+        roles: (s.user?.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean),
+        ipAddress: s.ipAddress,
+        browser: s.browser,
+        os: s.os,
+        deviceType: s.deviceType,
+        loginAt: s.loginAt,
+        lastActivityAt,
+        availability,
+        isActive,
+        isIdle,
+      };
+    });
 
     return {
       data,
@@ -648,6 +717,144 @@ export class UsersService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async getAdminIdleSessionsSummary(query: {
+    role?: string;
+    search?: string;
+    limit?: number;
+  }): Promise<{
+    idleCount: number;
+    sessions: Array<{
+      id: string;
+      userId: string;
+      userName: string | null;
+      userEmail: string | null;
+      roles: string[];
+      ipAddress: string | null;
+      browser: string | null;
+      os: string | null;
+      deviceType: string | null;
+      loginAt: Date;
+      lastActivityAt: Date;
+      isActive: boolean;
+      isIdle: boolean;
+    }>;
+  }> {
+    const { role, search, limit = 10 } = query;
+
+    // Build the where clause for sessions
+    const sessionWhere: any = { isActive: true };
+
+    // Build the where clause for the user relation
+    const userWhere: any = {};
+    if (search) {
+      userWhere.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    if (role) {
+      userWhere.userRoles = {
+        some: { role: { name: { equals: role, mode: 'insensitive' } } },
+      };
+    }
+    if (Object.keys(userWhere).length > 0) {
+      sessionWhere.user = userWhere;
+    }
+
+    const sessions = await (this.prisma as any).userSession.findMany({
+      where: sessionWhere,
+      orderBy: [{ userId: 'asc' }, { lastActivityAt: 'desc' }],
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            userRoles: {
+              select: {
+                role: { select: { name: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Deduplicate to latest session per user (already ordered by userId + lastActivityAt)
+    const uniqueSessionsByUser = new Map<string, any>();
+    for (const session of sessions) {
+      if (!uniqueSessionsByUser.has(session.userId)) {
+        uniqueSessionsByUser.set(session.userId, session);
+      }
+    }
+
+    const distinctSessions = Array.from(uniqueSessionsByUser.values());
+
+    // Compute idle on the fly (idle = active but no activity for 15 minutes)
+    const idleSessions = distinctSessions
+      .map((s: any) => {
+        const lastActivityAt = s.lastActivityAt ?? s.loginAt;
+        const availability = s.availability ?? SessionAvailability.ACTIVE;
+        const timeIdle =
+          lastActivityAt instanceof Date &&
+          Date.now() - lastActivityAt.getTime() > IDLE_THRESHOLD_MS;
+        const isIdle =
+          s.isActive &&
+          timeIdle &&
+          this.isSessionAvailabilityEligibleForIdle(availability);
+
+        return {
+          id: s.id,
+          userId: s.userId,
+          userName: s.user?.name ?? null,
+          userEmail: s.user?.email ?? null,
+          roles: (s.user?.userRoles ?? [])
+            .map((ur: any) => ur.role?.name)
+            .filter(Boolean),
+          ipAddress: s.ipAddress,
+          browser: s.browser,
+          os: s.os,
+          deviceType: s.deviceType,
+          loginAt: s.loginAt,
+          lastActivityAt,
+          availability,
+          isActive: s.isActive && !isIdle,
+          isIdle: s.isActive && isIdle,
+        };
+      })
+      .filter((s: any) => s.isIdle);
+
+    const idleCount = idleSessions.length;
+    const topIdle = idleSessions
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.lastActivityAt).getTime() - new Date(b.lastActivityAt).getTime(),
+      )
+      .slice(0, Math.min(Math.max(limit, 1), 50));
+
+    return { idleCount, sessions: topIdle };
+  }
+
+  async updateSessionActivity(sessionId: string) {
+    await (this.prisma as any).userSession.update({
+      where: { id: sessionId },
+      data: { lastActivityAt: new Date() },
+    });
+  }
+
+  async getLatestActiveSessionId(userId: string) {
+    const session = await (this.prisma as any).userSession.findFirst({
+      where: {
+        userId,
+        isActive: true,
+      },
+      orderBy: { lastActivityAt: 'desc' },
+      select: { id: true },
+    });
+
+    return session?.id ?? null;
   }
 
   private async getUserStats(userId: string) {

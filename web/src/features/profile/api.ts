@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import type { SessionAvailability } from "@/shared/types/session-availability";
 
 // Profile interfaces
 export interface UserProfile {
@@ -39,8 +40,11 @@ export interface LoginSession {
   os: string | null;
   deviceType: string | null;
   loginAt: string;
+  lastActivityAt?: string;
   isActive: boolean;
   isCurrent: boolean;
+  availability?: SessionAvailability;
+  availabilityUpdatedAt?: string | null;
 }
 
 export interface UpdateProfileRequest {
@@ -70,6 +74,22 @@ export const profileApi = baseApi.injectEndpoints({
     getSessions: builder.query<{ success: boolean; data: LoginSession[] }, void>({
       query: () => "/users/profile/sessions",
       providesTags: ["User"],
+    }),
+
+    setSessionAvailability: builder.mutation<
+      {
+        success: boolean;
+        data: { availability: SessionAvailability };
+        message: string;
+      },
+      { availability: SessionAvailability }
+    >({
+      query: (body) => ({
+        url: "/users/profile/session/availability",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["User"],
     }),
 
     updateProfile: builder.mutation<
@@ -122,6 +142,7 @@ export const profileApi = baseApi.injectEndpoints({
 export const {
   useGetProfileQuery,
   useGetSessionsQuery,
+  useSetSessionAvailabilityMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useDeleteAccountMutation,
