@@ -60,6 +60,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
 
 
@@ -992,6 +993,9 @@ export default function CandidatesPage() {
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Status
                     </TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Profile
+                    </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Last Updated
                     </TableHead>
@@ -1167,6 +1171,10 @@ export default function CandidatesPage() {
                                 {candidate.currentStatus?.statusName || "Unknown"}
                               </Badge>
                             </div>
+                          </TableCell>
+
+                          <TableCell className="px-2 py-3 w-[4.5rem] text-center">
+                            <CandidateProfileCompletionCell candidate={candidate} />
                           </TableCell>
 
                           {/* Last Updated */}

@@ -59,6 +59,7 @@ import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
+import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
@@ -463,25 +464,13 @@ export default function CandidateDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
-          {/* <div   onClick={() => setIsStatusModalOpen(true)} className=" cursor-pointer flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
-            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-          </div> */}
-          
-          <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-
-          {/* {canWriteCandidates && (
-            <button
-              onClick={() => setIsStatusModalOpen(true)}
-              className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
-            >
-              <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-12" />
-              <span className="text-[10px] font-black text-slate-500 group-hover:text-blue-700 uppercase tracking-widest">
-                Update Status
-              </span>
-            </button>
-          )} */}
+        <div className="flex flex-col items-end gap-2 shrink-0 self-start">
+          <CandidateProfileCompletion
+            candidate={candidate}
+            documents={documentsData?.data?.documents}
+            variant="circular"
+            onNavigateToOverview={() => setActiveTab("overview")}
+          />
         </div>
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleEdit}>
