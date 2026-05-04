@@ -641,7 +641,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Eligibility Submission Date & Time
+                    Eligibility Agency Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
