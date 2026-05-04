@@ -32,11 +32,18 @@ export interface DocumentWithRelations extends Document {
   })[];
 }
 
+/** Extra fields added by DocumentsService.findAll for recruiter table columns */
+export type DocumentListRow = DocumentWithRelations & {
+  documentDisplayName?: string;
+  /** Alias of docType for stable UI column binding */
+  documentType?: string;
+};
+
 /**
  * Paginated documents response
  */
 export interface PaginatedDocuments {
-  documents: DocumentWithRelations[];
+  documents: DocumentListRow[];
   pagination: {
     page: number;
     limit: number;

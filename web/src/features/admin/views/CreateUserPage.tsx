@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -18,20 +18,28 @@ import {
   CountryCodeSelect,
   RoleSelect,
   ProfileImageUpload,
+  PhysicalAddressFields,
 } from "@/components/molecules";
-import { useCreateUserMutation } from "@/features/admin/api";
+import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
+import {
+  useCreateUserMutation,
+  useListUserLanguagesQuery,
+  useUpdateRecruiterCapabilitiesMutation,
+} from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
 import { useCan } from "@/hooks/useCan";
-import {
-  createUserSchema,
-  type CreateUserFormData,
-} from "@/features/admin/schemas/user-schemas";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
+import { buildCreateUserSchema, type CreateUserFormData } from "@/features/admin/schemas/user-schemas";
+import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 
 export default function CreateUserPage() {
   const navigate = useNavigate();
   const canManageUsers = useCan("manage:users");
+  const { data: systemConfig } = useSystemConfig();
 
   const [createUser, { isLoading }] = useCreateUserMutation();
+  const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
+    useUpdateRecruiterCapabilitiesMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
@@ -39,7 +47,7 @@ export default function CreateUserPage() {
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const form = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserSchema),
+    resolver: zodResolver(buildCreateUserSchema(true)),
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
@@ -51,8 +59,34 @@ export default function CreateUserPage() {
       mobileNumber: "",
       dateOfBirth: "",
       roleId: "no-role",
+      addressCountryCode: "",
+      addressStateId: "",
+      address: "",
+      recruiterLanguages: [],
+      recruiterCountryCoverages: [],
     },
   });
+
+  const roleId = useWatch({ control: form.control, name: "roleId" });
+  const selectedRole = React.useMemo(
+    () => systemConfig?.data?.roles?.find((r) => r.id === roleId),
+    [systemConfig, roleId]
+  );
+  const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
+    selectedRole?.name
+  );
+
+  const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
+    skip: !isRecruiterCapabilitiesRole,
+  });
+  const languageOptions = languagesResponse?.data ?? [];
+
+  React.useEffect(() => {
+    if (!isRecruiterCapabilitiesRole) {
+      form.setValue("recruiterLanguages", []);
+      form.setValue("recruiterCountryCoverages", []);
+    }
+  }, [isRecruiterCapabilitiesRole, form]);
 
   const onSubmit = async (data: CreateUserFormData) => {
     try {
@@ -71,6 +105,9 @@ export default function CreateUserPage() {
           data.roleId && data.roleId.trim() !== "" && data.roleId !== "no-role"
             ? [data.roleId]
             : undefined,
+        addressCountryCode: data.addressCountryCode?.trim() || undefined,
+        addressStateId: data.addressStateId?.trim() || undefined,
+        address: data.address?.trim() || undefined,
       };
 
       console.log("Create User - Form Data:", formData);
@@ -80,6 +117,30 @@ export default function CreateUserPage() {
       const result = await createUser(formData).unwrap();
 
       if (result.success) {
+        const role = systemConfig?.data?.roles?.find((r) => r.id === data.roleId);
+        if (roleNameHasRecruiterCapabilities(role?.name)) {
+          try {
+            await updateRecruiterCapabilities({
+              id: result.data.id,
+              body: {
+                languages: data.recruiterLanguages.map((l) => ({
+                  languageCode: l.languageCode,
+                  proficiency: l.proficiency,
+                })),
+                countryCoverages: data.recruiterCountryCoverages.map((c) => ({
+                  countryCode: c.countryCode,
+                  sectorScopes: [...c.sectorScopes],
+                })),
+              },
+            }).unwrap();
+          } catch (capError: unknown) {
+            console.error(capError);
+            toast.warning(
+              "User was created, but recruiter languages / country coverage could not be saved. You can edit them from the user profile."
+            );
+          }
+        }
+
         // If profile image selected, upload it
         if (selectedImage) {
           try {
@@ -391,6 +452,15 @@ export default function CreateUserPage() {
                       </p>
                     )}
                   </div>
+
+                  <div className="md:col-span-2">
+                    <PhysicalAddressFields
+                      control={form.control}
+                      setValue={form.setValue}
+                      errors={form.formState.errors}
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -428,6 +498,18 @@ export default function CreateUserPage() {
             </CardContent>
           </Card>
 
+          {isRecruiterCapabilitiesRole && (
+            <RecruiterCapabilitiesFormCard
+              control={form.control}
+              watch={form.watch}
+              setValue={form.setValue}
+              errors={form.formState.errors}
+              disabled={isLoading || savingRecruiterCaps}
+              languageOptions={languageOptions}
+              description="Languages and country coverage are saved after the user is created. Add entries as needed."
+            />
+          )}
+
           {/* Action Buttons */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
             <CardContent className="pt-6">
@@ -437,21 +519,28 @@ export default function CreateUserPage() {
                   variant="outline"
                   onClick={() => navigate("/admin/users")}
                   className="h-11 px-8 border-slate-200 hover:border-slate-300"
-                  disabled={isLoading}
+                  disabled={isLoading || savingRecruiterCaps}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={
-                    isLoading || uploadingImage || !form.formState.isValid
+                    isLoading ||
+                    uploadingImage ||
+                    savingRecruiterCaps ||
+                    !form.formState.isValid
                   }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  {isLoading || uploadingImage ? (
+                  {isLoading || uploadingImage || savingRecruiterCaps ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      {uploadingImage ? "Uploading..." : "Creating..."}
+                      {uploadingImage
+                        ? "Uploading..."
+                        : savingRecruiterCaps
+                          ? "Saving capabilities..."
+                          : "Creating..."}
                     </>
                   ) : (
                     <>

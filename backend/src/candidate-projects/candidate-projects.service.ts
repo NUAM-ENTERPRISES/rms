@@ -27,6 +27,7 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
 } from '../common/constants';
+import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -180,6 +181,8 @@ export class CandidateProjectsService {
         `Candidate already assigned to this project${roleNeededId ? ' for this role' : ''}`,
       );
     }
+
+    await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
 
     // -------------------------------
     // GET NOMINATED MAIN & SUB STATUS
@@ -1145,8 +1148,10 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
-    // Role-based filtering: recruiter only sees their assigned candidates
+    // Role-based filtering: recruiters and Client Coordinators only see candidates
+    // assigned to them on the project row (aligned with recruiter pipeline / agent CC flow).
     const isRecruiter = userRoles.includes('Recruiter');
+    const isClientCoordinator = userRoles.includes('Client Coordinator');
     const isSpecialistOrManagement = userRoles.some(r =>
       [
         'CEO',
@@ -1162,7 +1167,10 @@ export class CandidateProjectsService {
       ].includes(r),
     );
 
-    if (isRecruiter && !isSpecialistOrManagement) {
+    const scopeToOwnAssignments =
+      (isRecruiter || isClientCoordinator) && !isSpecialistOrManagement;
+
+    if (scopeToOwnAssignments) {
       where.recruiterId = userId;
       baseWhereForCounts.recruiterId = userId;
     }
@@ -3179,6 +3187,14 @@ export class CandidateProjectsService {
 
         if (exists) {
           errors.push({ candidateId, error: 'Already assigned to this project with this role' });
+          continue;
+        }
+
+        try {
+          await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Assignment validation failed';
+          errors.push({ candidateId, error: msg });
           continue;
         }
 

@@ -45,6 +45,8 @@ export class UploadService {
       this.configService.get<string>('DO_SPACES_SECRET') || '';
 
     // Initialize S3 client (DigitalOcean Spaces is S3-compatible)
+    // forcePathStyle: true sends requests to blr1.digitaloceanspaces.com/bucket/key
+    // instead of bucket.blr1.digitaloceanspaces.com/key — avoids subdomain DNS failures
     this.s3Client = new S3Client({
       endpoint: this.endpoint,
       region: this.region,
@@ -52,7 +54,7 @@ export class UploadService {
         accessKeyId,
         secretAccessKey,
       },
-      forcePathStyle: false, // DigitalOcean Spaces uses virtual-hosted-style URLs
+      forcePathStyle: true,
     });
   }
 

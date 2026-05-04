@@ -228,6 +228,34 @@ describe("ProtectedRoute", () => {
     expect(screen.getByText("Protected Content")).toBeInTheDocument();
   });
 
+  it("should allow access with matchRolesOrPermissions when user lacks role but has permission", () => {
+    renderWithProviders(
+      <ProtectedRoute
+        matchRolesOrPermissions
+        roles={["Recruiter", "Client Coordinator"]}
+        permissions={["nominate:candidates"]}
+      >
+        <div>Protected Content</div>
+      </ProtectedRoute>,
+      {
+        isAuthenticated: true,
+        isLoading: false,
+        user: {
+          id: "1",
+          name: "Coordinator",
+          email: "cc@example.com",
+          roles: ["Other Role"],
+          permissions: ["nominate:candidates"],
+        },
+        accessToken: "token",
+        refreshToken: "refresh",
+        status: "authenticated",
+      },
+    );
+
+    expect(screen.getByText("Protected Content")).toBeInTheDocument();
+  });
+
   it("should allow access when user has wildcard permission", () => {
     renderWithProviders(
       <ProtectedRoute permissions={["manage:users"]}>

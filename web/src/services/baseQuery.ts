@@ -1,3 +1,4 @@
+import type { BaseQueryApi } from "@reduxjs/toolkit/query";
 import {
   fetchBaseQuery,
   BaseQueryFn,
@@ -36,47 +37,75 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
+/**
+ * One in-flight `/auth/refresh` at a time. Parallel API calls that get 401
+ * otherwise each trigger their own refresh (duplicate network + race).
+ */
+let refreshPromise: Promise<boolean> | null = null;
+
+/** RTK `fetchBaseQuery` expects `{}`; generics widen RTKQ callers’ argument as unknown */
+function asRtKQExtras(extraOptions: unknown): object {
+  return typeof extraOptions === "object" && extraOptions !== null
+    ? extraOptions
+    : {};
+}
+
+function getSharedRefreshPromise(
+  api: BaseQueryApi,
+  extraOptions: unknown,
+): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async (): Promise<boolean> => {
+      const refreshResult = await baseQuery(
+        {
+          url: "/auth/refresh",
+          method: "POST",
+        },
+        api,
+        asRtKQExtras(extraOptions),
+      );
+
+      if (refreshResult.data) {
+        const refreshData = refreshResult.data as RefreshResponse;
+        const at = refreshData.data.accessToken;
+        const user = refreshData.data.user;
+
+        if (at && user) {
+          api.dispatch(
+            setCredentials({
+              user: user,
+              accessToken: at,
+              refreshToken: refreshData.data.refreshToken,
+            }),
+          );
+          return true;
+        }
+        api.dispatch(clearCredentials());
+        return false;
+      }
+      api.dispatch(clearCredentials());
+      return false;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
+  const extras = asRtKQExtras(extraOptions);
+
+  let result = await baseQuery(args, api, extras);
 
   if (result.error && result.error.status === 401) {
-    // Try to get a new token
-    const refreshResult = await baseQuery(
-      {
-        url: "/auth/refresh",
-        method: "POST",
-      },
-      api,
-      extraOptions
-    );
+    const ok = await getSharedRefreshPromise(api, extraOptions);
 
-    if (refreshResult.data) {
-      // Store the new token and user data
-      const refreshData = refreshResult.data as RefreshResponse;
-      const at = refreshData.data.accessToken;
-      const user = refreshData.data.user;
-      
-      if (at && user) {
-        api.dispatch(
-          setCredentials({
-            user: user,
-            accessToken: at,
-            refreshToken: refreshData.data.refreshToken,
-          })
-        );
-
-        // Retry the original query
-        result = await baseQuery(args, api, extraOptions);
-      } else {
-        api.dispatch(clearCredentials());
-      }
-    } else {
-      // Refresh failed, logout user
-      api.dispatch(clearCredentials());
+    if (ok) {
+      result = await baseQuery(args, api, extras);
     }
   }
 

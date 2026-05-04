@@ -18,10 +18,11 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { ClientsService } from './clients.service';
-import { CreateClientDto } from './dto/create-client.dto';
+import { CreateClientDto, CreateClientSubClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { ClientType } from '@prisma/client';
 
 @ApiTags('Clients')
 @ApiBearerAuth()
@@ -48,7 +49,7 @@ export class ClientsController {
           properties: {
             id: { type: 'string', example: 'client123' },
             name: { type: 'string', example: 'City General Hospital' },
-            type: { type: 'string', example: 'HEALTHCARE_ORGANIZATION' },
+            type: { type: 'string', example: 'DIRECT_CLIENT' },
             // ... other client properties
           },
         },
@@ -65,6 +66,33 @@ export class ClientsController {
     return this.clientsService.create(createClientDto, req.user.id);
   }
 
+  @Post(':parentClientId/sub-clients')
+  @Permissions('manage:clients')
+  @ApiOperation({
+    summary: 'Create and link an end-client to a Sub Agent / Freelance client',
+    description:
+      'Creates a client row and attaches it via client_sub_clients. Parent must be SUB_AGENT or FREELANCE.',
+  })
+  @ApiParam({
+    name: 'parentClientId',
+    description: 'Parent intermediary client ID',
+    example: 'cl_parent',
+  })
+  @ApiResponse({ status: 201, description: 'Parent client with updated links' })
+  @ApiResponse({ status: 400, description: 'Invalid parent type or duplicate link' })
+  @ApiResponse({ status: 404, description: 'Parent client not found' })
+  async linkSubClient(
+    @Param('parentClientId') parentClientId: string,
+    @Body() body: CreateClientSubClientDto,
+    @Request() req,
+  ) {
+    return this.clientsService.linkSubClient(
+      parentClientId,
+      body,
+      req.user.id,
+    );
+  }
+
   @Get()
   @Permissions('read:clients')
   @ApiOperation({
@@ -76,12 +104,7 @@ export class ClientsController {
     name: 'type',
     required: false,
     description: 'Filter by client type',
-    enum: [
-      'INDIVIDUAL',
-      'SUB_AGENCY',
-      'HEALTHCARE_ORGANIZATION',
-      'EXTERNAL_SOURCE',
-    ],
+    enum: ClientType,
   })
   @ApiQuery({
     name: 'search',
@@ -131,6 +154,15 @@ export class ClientsController {
                 pages: { type: 'number' },
               },
             },
+            totals: {
+              type: 'object',
+              properties: {
+                totalClients: { type: 'number', example: 120 },
+                directClients: { type: 'number', example: 75 },
+                subAgencyClients: { type: 'number', example: 25 },
+                freelanceClients: { type: 'number', example: 20 },
+              },
+            },
           },
         },
         message: { type: 'string', example: 'Clients retrieved successfully' },
@@ -167,10 +199,9 @@ export class ClientsController {
             byType: {
               type: 'object',
               properties: {
-                INDIVIDUAL: { type: 'number', example: 45 },
-                SUB_AGENCY: { type: 'number', example: 30 },
-                HEALTHCARE_ORGANIZATION: { type: 'number', example: 60 },
-                EXTERNAL_SOURCE: { type: 'number', example: 15 },
+                DIRECT_CLIENT: { type: 'number', example: 45 },
+                SUB_AGENT: { type: 'number', example: 30 },
+                FREELANCE: { type: 'number', example: 15 },
               },
             },
           },

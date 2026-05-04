@@ -112,6 +112,20 @@ export const countriesApi = baseApi.injectEndpoints({
       providesTags: (_, __, code) => [{ type: "Country", id: code }],
       keepUnusedDataFor: 3600, // Cache for 1 hour
     }),
+
+    getStatesByCountryCode: builder.query<
+      { states: Array<{ id: string; name: string; code: string }> },
+      string
+    >({
+      query: (code) => `countries/${encodeURIComponent(code)}/states`,
+      transformResponse: (response: {
+        data: { states: Array<{ id: string; name: string; code: string }> };
+      }) => response.data,
+      providesTags: (_r, _e, code) => [
+        { type: "Country" as const, id: `STATES_${code}` },
+      ],
+      keepUnusedDataFor: 600,
+    }),
   }),
 });
 
@@ -122,6 +136,7 @@ export const {
   useGetCountriesByRegionQuery,
   useGetCountryByCodeQuery,
   useLazyGetCountryByCodeQuery,
+  useGetStatesByCountryCodeQuery,
 } = countriesApi;
 
 /**
@@ -151,10 +166,10 @@ export function useCountriesLookup(
 }
 
 /**
- * Hook for country validation
+ * Hook for country validation (uses active-countries endpoint unless `skip` is true)
  */
-export function useCountryValidation() {
-  const { countries } = useCountriesLookup();
+export function useCountryValidation(options?: { skip?: boolean }) {
+  const { countries } = useCountriesLookup(undefined, options);
 
   return {
     validateCountryCode: (code?: string) => {

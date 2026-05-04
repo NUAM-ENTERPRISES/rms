@@ -51,8 +51,9 @@ import {
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useGetDocumentsQuery, useUploadDocumentMutation } from "../api";
-import { useCreateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 
@@ -91,7 +92,7 @@ const DOCUMENT_TYPES = [
   { value: "resume", label: "Resume", category: "employment" },
   { value: "cv", label: "Curriculum Vitae", category: "employment" },
   {
-    value: "experience_letter",
+    value: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
     label: "Experience Letter",
     category: "employment",
   },
@@ -201,8 +202,11 @@ export function DocumentUploadSection({
   const documents = externalDocuments || documentsData?.data?.documents || [];
   const isLoading = isExternalLoading || isLocalLoading;
 
+  const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
+
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   const form = useForm<UploadFormData>({
     resolver: zodResolver(uploadSchema),
@@ -467,29 +471,55 @@ export function DocumentUploadSection({
           formData.append("docType", meta.docType);
 
           const response = await uploadDocument({ candidateId, formData }).unwrap();
-          const uploadData = response.data;
+          const uploadData: any = response.data;
+          const uploadedDocument =
+            uploadData?.document && uploadData.document.id
+              ? uploadData.document
+              : uploadData?.id
+                ? uploadData
+                : null;
 
-          await createDocument({
-            candidateId,
-            docType: meta.docType,
-            fileName: uploadData.fileName,
-            fileUrl: uploadData.fileUrl,
-            fileSize: uploadData.fileSize,
-            mimeType: uploadData.mimeType,
-            documentNumber: meta.documentNumber,
-            expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
-            notes: meta.notes,
-            roleCatalogId: meta.roleCatalogId,
-          }).unwrap();
+          const desiredDocName = (meta.docName && meta.docName.trim()) || "";
+
+          if (uploadedDocument) {
+            if (desiredDocName) {
+              await updateDocument({
+                id: uploadedDocument.id,
+                docName: desiredDocName,
+              }).unwrap();
+            }
+          } else {
+            await createDocument({
+              candidateId,
+              docType: meta.docType,
+              docName: desiredDocName || undefined,
+              fileName: uploadData.fileName,
+              fileUrl: uploadData.fileUrl,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              documentNumber: meta.documentNumber,
+              expiryDate: meta.expiryDate
+                ? new Date(meta.expiryDate).toISOString()
+                : undefined,
+              notes: meta.notes,
+              roleCatalogId: meta.roleCatalogId,
+              workExperienceId: meta.workExperienceId,
+            }).unwrap();
+          }
 
           toast.success("Document uploaded successfully");
           setShowUploadModal(false);
-          refetch();
+          if (onRefresh) {
+            onRefresh();
+          } else {
+            refetch();
+          }
         } catch (error) {
           console.error("Upload error:", error);
           toast.error("Failed to upload document");
         }
       }}
+      workExperiences={workExperiences}
       isUploading={isUploading}
     />
   </React.Suspense>

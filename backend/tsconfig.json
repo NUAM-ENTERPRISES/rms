@@ -23,6 +23,6 @@
     "noFallthroughCasesInSwitch": false,
      "isolatedModules": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "*.ts"]
+  "include": ["src/**/*", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
 }

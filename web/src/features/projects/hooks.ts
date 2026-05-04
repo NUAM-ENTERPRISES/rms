@@ -1,6 +1,7 @@
 // Feature-specific hooks for projects
 export {
   useGetProjectsQuery,
+  useGetClientProjectsSummaryQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
   useCreateProjectMutation,
