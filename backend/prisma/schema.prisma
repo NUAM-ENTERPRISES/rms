@@ -1903,6 +1903,8 @@ model ProcessingStep {
   councilValidAt        DateTime?
   prometricPassedAt     DateTime?
   prometricValidAt      DateTime?
+  medicalIssuedAt       DateTime?
+  medicalValidAt        DateTime?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?

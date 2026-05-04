@@ -86,4 +86,14 @@ export class UpdateProcessingStepDto {
   @IsOptional()
   @IsDateString()
   prometricValidAt?: string;
+
+  @ApiPropertyOptional({ description: 'Medical issued date', example: '2026-05-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  medicalIssuedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Medical validity date', example: '2027-05-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  medicalValidAt?: string;
 }
