@@ -41,6 +41,12 @@ import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
 // ==================== WORK EXPERIENCE TYPES ====================
 
+type PendingCertBatch = {
+  id: string;
+  docName: string;
+  files: File[];
+};
+
 type WorkExperience = {
   id: string;
   companyName: string;
@@ -55,8 +61,7 @@ type WorkExperience = {
   location: string;
   skills: string[];
   achievements: string;
-  pendingFiles?: File[];
-  docName?: string;
+  pendingCertBatches?: PendingCertBatch[];
 };
 
 // ==================== COMPONENT ====================
@@ -127,17 +132,12 @@ export default function CreateCandidatePage() {
     location: "",
     skills: [],
     achievements: "",
-    docName: "",
+    pendingCertBatches: [],
   });
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
-  const handleUpdateExperienceFiles = (id: string, files: File[]) => {
-    setWorkExperiences((prev) =>
-      prev.map((exp) => (exp.id === id ? { ...exp, pendingFiles: files } : exp))
-    );
-  };
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
   // Form
@@ -461,61 +461,66 @@ export default function CreateCandidatePage() {
           (result as any).data?.candidate?.workExperiences ||
           [];
 
-        const experiencesWithFiles = workExperiences.filter(
-          (exp) => exp.pendingFiles && exp.pendingFiles.length > 0
+        const experiencesWithFiles = workExperiences.filter((exp) =>
+          (exp.pendingCertBatches ?? []).some((b) => b.files.length > 0)
         );
 
         if (candidateId && experiencesWithFiles.length > 0) {
           let fileUploadErrors = 0;
           for (let i = 0; i < workExperiences.length; i++) {
             const localExp = workExperiences[i];
-            if (!localExp.pendingFiles || localExp.pendingFiles.length === 0) continue;
+            const batches = (localExp.pendingCertBatches ?? []).filter(
+              (b) => b.files.length > 0
+            );
+            if (batches.length === 0) continue;
             // Match by index — same submission order as returned by backend
             const createdExp = createdWorkExperiences[i];
             const workExperienceId = createdExp?.id;
             if (!workExperienceId) continue;
 
-            for (const file of localExp.pendingFiles) {
-              try {
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
-                formData.append("workExperienceId", workExperienceId);
-                const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
-                const uploadData: any = (uploadResult as any).data;
-                const uploadedDocument =
-                  uploadData?.document && uploadData.document.id
-                    ? uploadData.document
-                    : uploadData?.id
-                      ? uploadData
-                      : null;
-                const desiredDocName =
-                  (localExp.docName && localExp.docName.trim()) ||
-                  (localExp.companyName && localExp.companyName.trim()) ||
-                  "";
+            for (const batch of batches) {
+              const desiredDocName =
+                (batch.docName && batch.docName.trim()) ||
+                (localExp.companyName && localExp.companyName.trim()) ||
+                "";
 
-                if (uploadedDocument) {
-                  if (desiredDocName) {
-                    await updateDocument({
-                      id: uploadedDocument.id,
-                      docName: desiredDocName,
+              for (const file of batch.files) {
+                try {
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
+                  formData.append("workExperienceId", workExperienceId);
+                  const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+                  const uploadData: any = (uploadResult as any).data;
+                  const uploadedDocument =
+                    uploadData?.document && uploadData.document.id
+                      ? uploadData.document
+                      : uploadData?.id
+                        ? uploadData
+                        : null;
+
+                  if (uploadedDocument) {
+                    if (desiredDocName) {
+                      await updateDocument({
+                        id: uploadedDocument.id,
+                        docName: desiredDocName,
+                      }).unwrap();
+                    }
+                  } else {
+                    await createDocument({
+                      candidateId,
+                      docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+                      docName: desiredDocName || undefined,
+                      fileName: uploadData.fileName,
+                      fileUrl: uploadData.fileUrl,
+                      fileSize: uploadData.fileSize,
+                      mimeType: uploadData.mimeType,
+                      workExperienceId,
                     }).unwrap();
                   }
-                } else {
-                  await createDocument({
-                    candidateId,
-                    docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-                    docName:
-                      desiredDocName || undefined,
-                    fileName: uploadData.fileName,
-                    fileUrl: uploadData.fileUrl,
-                    fileSize: uploadData.fileSize,
-                    mimeType: uploadData.mimeType,
-                    workExperienceId,
-                  }).unwrap();
+                } catch {
+                  fileUploadErrors++;
                 }
-              } catch {
-                fileUploadErrors++;
               }
             }
           }
@@ -585,7 +590,6 @@ export default function CreateCandidatePage() {
             setEditingExperienceId={setEditingExperienceId}
             newSkill={newSkill}
             setNewSkill={setNewSkill}
-            onUpdateFiles={handleUpdateExperienceFiles}
           />
         );
       case 5:

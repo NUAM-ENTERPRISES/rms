@@ -6,6 +6,10 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: string;
+  /** Set by API list endpoint when docName is empty (catalog display name) */
+  documentDisplayName?: string;
+  /** Alias of docType for table columns */
+  documentType?: string;
   docName?: string;
   fileName: string;
   fileUrl: string;
@@ -1159,6 +1163,40 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Document", "Candidate"],
     }),
 
+    /** Batch upload for work experience certificates (multiple files, one docName). */
+    uploadWorkExperienceDocuments: builder.mutation<
+      {
+        success: boolean;
+        data: { documents: Document[]; failedFileNames: string[] };
+        message: string;
+      },
+      {
+        candidateId: string;
+        workExperienceId: string;
+        docType: string;
+        docName?: string;
+        files: File[];
+      }
+    >({
+      query: ({ candidateId, workExperienceId, docType, docName, files }) => {
+        const formData = new FormData();
+        formData.append("docType", docType);
+        formData.append("workExperienceId", workExperienceId);
+        if (docName?.trim()) {
+          formData.append("docName", docName.trim());
+        }
+        for (const file of files) {
+          formData.append("files", file);
+        }
+        return {
+          url: `/upload/work-experience-documents/${candidateId}`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["Document", "Candidate"],
+    }),
+
     // Status update endpoints
     updateCandidateStatus: builder.mutation<
       { success: boolean; data: Candidate; message: string },
@@ -1375,6 +1413,7 @@ export const {
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
   useUploadDocumentMutation,
+  useUploadWorkExperienceDocumentsMutation,
   useUpdateCandidateStatusMutation,
   useAssignRecruiterMutation,
   useGetCurrentRecruiterAssignmentQuery,

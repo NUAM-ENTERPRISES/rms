@@ -7,6 +7,9 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: DocumentType;
+  /** From API: catalog name when docName is empty */
+  documentDisplayName?: string;
+  documentType?: string;
   docName?: string;
   fileName: string;
   fileUrl: string;

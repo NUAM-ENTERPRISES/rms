@@ -177,34 +177,25 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-green-600" />
+      <DialogContent className="sm:max-w-xl gap-3 p-5 sm:p-6">
+        <DialogHeader className="gap-1 space-y-0 pb-0">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Plus className="h-5 w-5 shrink-0 text-green-600" />
             Upload Candidate Document
           </DialogTitle>
-          <DialogDescription>
-            Upload a document for this candidate. Select type and provide optional metadata.
+          <DialogDescription className="text-xs leading-snug">
+            Select type, add optional details, then choose a file.
           </DialogDescription>
         </DialogHeader>
-         <div className="space-y-2 col-span-full">
-              <Label>Doc Name</Label>
-              <Input
-                value={docName}
-                onChange={(e) => setDocName(e.target.value)}
-                placeholder="e.g., Aster (shown as Doc Name : Document Type)"
-              />
-            </div>
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Document Type *</Label>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Document Type *</Label>
               <Select value={docType} onValueChange={(v) => { setDocType(v); setDocTypeFilter(""); setDepartmentId(undefined); setRoleCatalogId(undefined); setRoleLabel(""); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 w-full">
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {/* Search input inside dropdown */}
                   <div className="p-2">
                     <Input
                       placeholder="Search document types..."
@@ -229,19 +220,36 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>File</Label>
-              <Input type="file" onChange={handleFileChange} accept={allowedFormats || undefined} />
-              {docType && (
-                <p className="text-xs text-muted-foreground mt-1">Allowed: {getAllowedFormatsString(docType as any)} • Max: {DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.maxSizeMB} MB</p>
-              )}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Document Name</Label>
+              <Input
+                value={docName}
+                onChange={(e) => setDocName(e.target.value)}
+                placeholder="e.g., Aster (shown as Document Name : Document Type)"
+                className="h-9"
+              />
+            </div>
+          </div>
 
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-1.5">
+            <Label className="text-xs font-medium">File</Label>
+            <div className="flex w-full flex-col gap-1.5">
+              <Input
+                type="file"
+                onChange={handleFileChange}
+                accept={allowedFormats || undefined}
+                className="h-9 cursor-pointer bg-background"
+              />
+              {docType && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Allowed: {getAllowedFormatsString(docType as any)} · Max {DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.maxSizeMB} MB
+                </p>
+              )}
               {selectedFile && (
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-sm truncate max-w-[280px]">{selectedFile.name}</span>
-                  <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(true)}>View</Button>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    // remove file and preview
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2">
+                  <span className="text-xs font-medium truncate max-w-[240px] text-slate-800">{selectedFile.name}</span>
+                  <Button variant="ghost" size="sm" type="button" onClick={() => setPreviewOpen(true)}>View</Button>
+                  <Button variant="ghost" size="sm" type="button" onClick={() => {
                     setSelectedFile(null);
                     if (previewSrc) {
                       URL.revokeObjectURL(previewSrc);
@@ -253,93 +261,102 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 </div>
               )}
             </div>
-
-            {/* Only for resume: department + role */}
-            {docType === DOCUMENT_TYPE.RESUME && (
-              <>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <DepartmentSelect
-                    value={departmentId}
-                    onValueChange={(value) => {
-                      setDepartmentId(value);
-                      setRoleCatalogId(undefined);
-                      setRoleLabel("");
-                    }}
-                    placeholder="Select department"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role</Label>
-                  <JobTitleSelect
-                    value={roleLabel}
-                    onRoleChange={(role) => {
-                      if (role) {
-                        setRoleCatalogId(role.id);
-                        setRoleLabel(role.label || role.name || "");
-                      } else {
-                        setRoleCatalogId(undefined);
-                        setRoleLabel("");
-                      }
-                    }}
-                    departmentId={departmentId}
-                    placeholder="Select a role"
-                    disabled={docType === DOCUMENT_TYPE.RESUME && !departmentId}
-                    required={docType === DOCUMENT_TYPE.RESUME}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* For employment docs: link to a specific work experience */}
-            {showWorkExperienceSelector && (
-              <div className="col-span-full space-y-2">
-                <Label className="flex items-center gap-1.5">
-                  <Briefcase className="h-4 w-4 text-muted-foreground" />
-                  Link to Work Experience <span className="text-muted-foreground text-xs">(optional)</span>
-                </Label>
-                <Select
-                  value={selectedWorkExperienceId ?? "__none__"}
-                  onValueChange={(v) => setSelectedWorkExperienceId(v === "__none__" ? undefined : v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a work experience entry" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Not linked to a specific experience —</SelectItem>
-                    {workExperiences!.map((exp) => (
-                      <SelectItem key={exp.id} value={exp.id}>
-                        {exp.jobTitle}{exp.companyName ? ` @ ${exp.companyName}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Linking allows this document to appear alongside the relevant work experience entry.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <Label>Document Number</Label>
-              <Input value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} placeholder="Optional" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Expiry Date</Label>
-              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
-            </div>
-
-           
           </div>
 
-          <div className="space-y-2">
-            <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+          <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Document Number</Label>
+              <Input
+                value={documentNumber}
+                onChange={(e) => setDocumentNumber(e.target.value)}
+                placeholder="Optional"
+                className="h-9"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Expiry Date</Label>
+              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="h-9" />
+            </div>
+          </div>
+
+          {docType === DOCUMENT_TYPE.RESUME && (
+            <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2 md:gap-y-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Department</Label>
+                <DepartmentSelect
+                  value={departmentId}
+                  onValueChange={(value) => {
+                    setDepartmentId(value);
+                    setRoleCatalogId(undefined);
+                    setRoleLabel("");
+                  }}
+                  placeholder="Select department"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Role</Label>
+                <JobTitleSelect
+                  value={roleLabel}
+                  onRoleChange={(role) => {
+                    if (role) {
+                      setRoleCatalogId(role.id);
+                      setRoleLabel(role.label || role.name || "");
+                    } else {
+                      setRoleCatalogId(undefined);
+                      setRoleLabel("");
+                    }
+                  }}
+                  departmentId={departmentId}
+                  placeholder="Select a role"
+                  disabled={docType === DOCUMENT_TYPE.RESUME && !departmentId}
+                  required={docType === DOCUMENT_TYPE.RESUME}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Employment docs: link work experience */}
+          {showWorkExperienceSelector && (
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5 text-xs font-medium">
+                <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                Link to work experience <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Select
+                value={selectedWorkExperienceId ?? "__none__"}
+                onValueChange={(v) => setSelectedWorkExperienceId(v === "__none__" ? undefined : v)}
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Select a work experience entry" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Not linked to a specific experience —</SelectItem>
+                  {workExperiences!.map((exp) => (
+                    <SelectItem key={exp.id} value={exp.id}>
+                      {exp.jobTitle}{exp.companyName ? ` @ ${exp.companyName}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Shows this document with the matching experience entry.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Notes</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="min-h-[68px] resize-y text-sm"
+            />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 pt-2 sm:pt-3">
           <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
           {/* Only show upload button when user has selected a type and a file. For resumes, require role selection (button disabled until role chosen). */}
           {docType && selectedFile ? (

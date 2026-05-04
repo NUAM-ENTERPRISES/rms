@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -41,7 +42,6 @@ import {
   Search,
   Upload,
   FileText,
-  Paperclip,
   Eye,
   Trash2,
   Check,
@@ -54,10 +54,9 @@ import {
   useUpdateCandidateQualificationMutation,
   useCreateWorkExperienceMutation,
   useUpdateWorkExperienceMutation,
-  useUploadDocumentMutation,
+  useUploadWorkExperienceDocumentsMutation,
 } from "@/features/candidates";
 import {
-  useCreateDocumentMutation,
   useDeleteDocumentMutation,
   useUpdateDocumentMutation,
 } from "@/features/documents/api";
@@ -87,7 +86,6 @@ const workExperienceSchema = z.object({
   endDate: z.string().optional(),
   isCurrent: z.boolean(),
   description: z.string().optional(),
-  docName: z.string().optional(),
   salary: z.preprocess(
     (val) => {
       if (val === "" || val === null || val === undefined) return undefined;
@@ -128,8 +126,14 @@ export default function QualificationWorkExperienceModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  type PendingCertBatch = { id: string; docName: string; files: File[] };
+  const [pendingCertBatches, setPendingCertBatches] = useState<
+    PendingCertBatch[]
+  >([]);
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [certDocName, setCertDocName] = useState("");
+  const [certFiles, setCertFiles] = useState<File[]>([]);
+  const certFileInputRef = useRef<HTMLInputElement>(null);
   const [existingDocs, setExistingDocs] = useState<Document[]>([]);
   const [deletingDocIds, setDeletingDocIds] = useState<Record<string, boolean>>(
     {},
@@ -138,7 +142,6 @@ export default function QualificationWorkExperienceModal({
   const [docNameDrafts, setDocNameDrafts] = useState<Record<string, string>>({});
   const [deleteDocTarget, setDeleteDocTarget] = useState<Document | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset page when search changes
   useEffect(() => {
@@ -174,8 +177,8 @@ export default function QualificationWorkExperienceModal({
     useCreateWorkExperienceMutation();
   const [updateWorkExperience, { isLoading: updatingWorkExperience }] =
     useUpdateWorkExperienceMutation();
-  const [uploadDocument] = useUploadDocumentMutation();
-  const [createDocument] = useCreateDocumentMutation();
+  const [uploadWorkExperienceDocuments, { isLoading: isUploadingCertBatch }] =
+    useUploadWorkExperienceDocumentsMutation();
   const [updateDocument] = useUpdateDocumentMutation();
   const [deleteDocument] = useDeleteDocumentMutation();
 
@@ -204,7 +207,6 @@ export default function QualificationWorkExperienceModal({
       endDate: "",
       isCurrent: false,
       description: "",
-      docName: "",
       salary: undefined,
       location: "",
       skills: [],
@@ -218,7 +220,7 @@ export default function QualificationWorkExperienceModal({
     updatingQualification ||
     creatingWorkExperience ||
     updatingWorkExperience ||
-    isUploadingFiles;
+    isUploadingCertBatch;
 
   // Initialize form with edit data
   useEffect(() => {
@@ -246,7 +248,6 @@ export default function QualificationWorkExperienceModal({
           endDate: exp.endDate ? exp.endDate.split("T")[0] : "",
           isCurrent: exp.isCurrent,
           description: exp.description || "",
-          docName: "",
           salary: exp.salary,
           location: exp.location || "",
           skills: expSkills,
@@ -272,7 +273,6 @@ export default function QualificationWorkExperienceModal({
         endDate: "",
         isCurrent: false,
         description: "",
-        docName: "",
         salary: undefined,
         location: "",
         skills: [],
@@ -309,7 +309,7 @@ export default function QualificationWorkExperienceModal({
 
   const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
-      const { departmentId, docName, ...dataWithoutDepartmentId } = data;
+      const { departmentId, ...dataWithoutDepartmentId } = data;
       const payload = {
         ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
@@ -342,66 +342,37 @@ export default function QualificationWorkExperienceModal({
         workExperienceId = (result as WorkExperience)?.id;
       }
 
-      // Upload any pending experience certificate files
-      if (pendingFiles.length > 0 && workExperienceId) {
-        setIsUploadingFiles(true);
-        const uploadErrors: string[] = [];
-        for (const file of pendingFiles) {
+      if (pendingCertBatches.length > 0 && workExperienceId) {
+        const failedBatches: string[] = [];
+        for (const batch of pendingCertBatches) {
+          if (batch.files.length === 0) continue;
           try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
-            formData.append("workExperienceId", workExperienceId);
-            const uploadResult: any = await uploadDocument({
+            const res = await uploadWorkExperienceDocuments({
               candidateId,
-              formData,
+              workExperienceId,
+              docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+              docName: batch.docName || data.companyName?.trim() || undefined,
+              files: batch.files,
             }).unwrap();
-            const uploadData = uploadResult.data;
-            const uploadedDocument =
-              uploadData?.document && uploadData.document.id ? uploadData.document : null;
-
-            // Some backends already create the Document record during upload.
-            // Only create a Document DB record if the upload response did NOT include one.
-            if (uploadedDocument) {
-              const desiredDocName =
-                (docName && docName.trim()) ||
-                (data.companyName && data.companyName.trim()) ||
-                "";
-              if (desiredDocName) {
-                await updateDocument({
-                  id: uploadedDocument.id,
-                  docName: desiredDocName,
-                }).unwrap();
-              }
-            } else {
-              await createDocument({
-                candidateId,
-                docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-                docName:
-                  (docName && docName.trim()) ||
-                  (data.companyName && data.companyName.trim()) ||
-                  undefined,
-                fileName: uploadData.fileName,
-                fileUrl: uploadData.fileUrl,
-                fileSize: uploadData.fileSize,
-                mimeType: uploadData.mimeType,
-                workExperienceId,
-              }).unwrap();
+            if (res.data?.failedFileNames?.length) {
+              failedBatches.push(
+                ...res.data.failedFileNames.map((n) => `${batch.docName || "Batch"}: ${n}`)
+              );
             }
           } catch {
-            uploadErrors.push(file.name);
+            failedBatches.push(batch.docName || "Unnamed batch");
           }
         }
-        setIsUploadingFiles(false);
-        if (uploadErrors.length > 0) {
-          toast.warning(`Work experience saved but ${uploadErrors.length} file(s) failed to upload`);
+        if (failedBatches.length > 0) {
+          toast.warning(
+            `Work experience saved but some certificate file(s) failed: ${failedBatches.slice(0, 3).join(", ")}${failedBatches.length > 3 ? "…" : ""}`
+          );
         }
       }
 
       onSuccess?.();
       onClose();
     } catch (error: any) {
-      setIsUploadingFiles(false);
       toast.error(error?.data?.message || "Failed to save work experience");
     }
   };
@@ -428,12 +399,17 @@ export default function QualificationWorkExperienceModal({
     setNewSkill("");
     setSearchQuery("");
     setIsDropdownOpen(false);
-    setPendingFiles([]);
+    setPendingCertBatches([]);
+    setCertModalOpen(false);
+    setCertDocName("");
+    setCertFiles([]);
     setExistingDocs([]);
     setDeletingDocIds({});
+    setEditingDocId(null);
+    setDocNameDrafts({});
     setDeleteDocTarget(null);
     setIsDeleteModalOpen(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (certFileInputRef.current) certFileInputRef.current.value = "";
     onClose();
   };
 
@@ -506,8 +482,56 @@ export default function QualificationWorkExperienceModal({
     setDeleteDocTarget(null);
   };
 
+  const newBatchId = () =>
+    globalThis.crypto?.randomUUID?.() ??
+    `batch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const openCertModal = () => {
+    setCertDocName("");
+    setCertFiles([]);
+    if (certFileInputRef.current) certFileInputRef.current.value = "";
+    setCertModalOpen(true);
+  };
+
+  const closeCertModal = () => {
+    setCertModalOpen(false);
+    setCertDocName("");
+    setCertFiles([]);
+    if (certFileInputRef.current) certFileInputRef.current.value = "";
+  };
+
+  const confirmCertModal = () => {
+    if (certFiles.length === 0) {
+      toast.error("Select at least one file to add.");
+      return;
+    }
+    setPendingCertBatches((prev) => [
+      ...prev,
+      { id: newBatchId(), docName: certDocName.trim(), files: [...certFiles] },
+    ]);
+    closeCertModal();
+  };
+
+  const addCertFilesFromInput = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length > 0) {
+      setCertFiles((prev) => [...prev, ...files]);
+      e.target.value = "";
+    }
+  };
+
+  const removeCertFileAt = (idx: number) => {
+    setCertFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -945,27 +969,33 @@ export default function QualificationWorkExperienceModal({
               />
             </div>
 
-            {/* Document Name (shown after upload section) */}
-            <div className="space-y-2">
-              <Label htmlFor="docName">Certificate Doc Name</Label>
-              <Input
-                {...workExperienceForm.register("docName")}
-                placeholder="Aster (used for experience certificate label)"
-              />
-            </div>
-              {/* Experience Certificate Upload */}
-            <div className="space-y-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-4">
-              <Label className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                <Paperclip className="h-4 w-4 text-slate-500" />
-                Experience Certificates / Proof
-                <span className="text-xs font-normal text-muted-foreground">(optional · PDF)</span>
-              </Label>
+            {/* Experience certificates */}
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <Label className="text-sm font-semibold text-slate-800">
+                    Experience certificates
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    PDF or images. Add documents before saving; they upload after work experience is saved.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={openCertModal}
+                  className="shrink-0"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Add document
+                </Button>
+              </div>
 
-              {/* Existing linked documents (edit mode) */}
               {existingDocs.length > 0 && (
-                <div className="mb-2">
+                <div>
                   <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
-                    Already Uploaded
+                    Uploaded
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {existingDocs.map((doc) => (
@@ -1020,121 +1050,46 @@ export default function QualificationWorkExperienceModal({
                 </div>
               )}
 
-              {editingDocId && (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <Label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                        Edit Certificate Doc Name
-                      </Label>
-                      <Input
-                        value={docNameDrafts[editingDocId] ?? ""}
-                        onChange={(e) =>
-                          setDocNameDrafts((prev) => ({
-                            ...prev,
-                            [editingDocId]: e.target.value,
-                          }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            cancelEditDocName();
-                          }
-                        }}
-                        placeholder="e.g., Aster"
-                        className="h-9"
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        This will update the label shown as{" "}
-                        <span className="font-medium">
-                          docName : Experience Letter
+              {pendingCertBatches.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">
+                    Pending upload
+                  </p>
+                  <ul className="flex flex-col gap-2">
+                    {pendingCertBatches.map((batch) => (
+                      <li
+                        key={batch.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-blue-100 bg-blue-50/80 px-3 py-2 text-xs text-blue-900"
+                      >
+                        <span className="min-w-0 truncate">
+                          <span className="font-medium">
+                            {batch.docName || "Experience letter"}
+                          </span>
+                          <span className="text-blue-700/80">
+                            {" "}
+                            · {batch.files.length} file
+                            {batch.files.length === 1 ? "" : "s"}
+                          </span>
                         </span>
-                        .
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 pt-5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={cancelEditDocName}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          const doc = existingDocs.find(
-                            (d) => d.id === editingDocId
-                          );
-                          if (doc) void saveDocName(doc);
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Save
-                      </Button>
-                    </div>
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPendingCertBatches((prev) =>
+                              prev.filter((b) => b.id !== batch.id)
+                            )
+                          }
+                          className="shrink-0 text-blue-500 hover:text-red-600 transition-colors"
+                          aria-label="Remove pending upload"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
-
-              {/* Pending new file pills */}
-              {pendingFiles.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {pendingFiles.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-medium"
-                    >
-                      <FileText className="h-3 w-3 shrink-0" />
-                      <span className="truncate max-w-[160px]">{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))}
-                        className="ml-0.5 text-blue-400 hover:text-red-500 transition-colors"
-                        aria-label="Remove file"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/pdf,image/jpeg,image/png"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length > 0) {
-                    setPendingFiles((prev) => [...prev, ...files]);
-                    e.target.value = "";
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full border-dashed border-slate-300 text-slate-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {pendingFiles.length > 0
-                  ? "Add More Files"
-                  : existingDocs.length > 0
-                    ? "Add More Certificates"
-                    : "Attach Certificate PDFs"}
-              </Button>
-              <p className="text-[11px] text-muted-foreground">
-                Multiple files allowed. Files will be uploaded as Experience Letters linked to this work entry.
-              </p>
             </div>
+
             {/* Submit Button for Work Experience */}
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={handleClose}>
@@ -1145,8 +1100,8 @@ export default function QualificationWorkExperienceModal({
                 disabled={isLoading}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                {isUploadingFiles
-                  ? "Uploading files..."
+                {isUploadingCertBatch
+                  ? "Uploading certificates..."
                   : isLoading
                   ? "Saving..."
                   : isEdit
@@ -1154,23 +1109,160 @@ export default function QualificationWorkExperienceModal({
                   : "Add Work Experience"}
               </Button>
             </div>
-
-            {/* Delete certificate confirmation */}
-            <DeleteConfirmationDialog
-              isOpen={isDeleteModalOpen}
-              onClose={closeDeleteModal}
-              onConfirm={() => {
-                if (!deleteDocTarget) return;
-                handleDeleteExistingDoc(deleteDocTarget);
-              }}
-              title={deleteDocTarget?.fileName ?? "Certificate"}
-              itemType="certificate"
-              description="Are you sure you want to delete this certificate? This action cannot be undone."
-              isLoading={deleteDocTarget?.id ? !!deletingDocIds[deleteDocTarget.id] : false}
-            />
           </form>
         )}
       </DialogContent>
     </Dialog>
+
+    <Dialog
+      open={certModalOpen}
+      onOpenChange={(open) => {
+        if (!open) closeCertModal();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add experience certificate</DialogTitle>
+          <DialogDescription>
+            Optional label for this group of files. Upload one or more PDFs or images.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="cert-doc-name">Document name</Label>
+            <Input
+              id="cert-doc-name"
+              value={certDocName}
+              onChange={(e) => setCertDocName(e.target.value)}
+              placeholder="e.g. Aster Hospital"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Shown as a prefix before the file name when viewing the certificate.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Files</Label>
+            <input
+              ref={certFileInputRef}
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              multiple
+              className="hidden"
+              onChange={addCertFilesFromInput}
+            />
+            {certFiles.length > 0 && (
+              <ul className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-white p-2">
+                {certFiles.map((file, idx) => (
+                  <li
+                    key={`${file.name}-${idx}`}
+                    className="flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 max-w-full"
+                  >
+                    <FileText className="h-3 w-3 shrink-0" />
+                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeCertFileAt(idx)}
+                      className="text-slate-500 hover:text-red-600"
+                      aria-label="Remove file"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => certFileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {certFiles.length > 0 ? "Add more files" : "Choose files"}
+            </Button>
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={closeCertModal}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={confirmCertModal}>
+            Add to list
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog
+      open={!!editingDocId}
+      onOpenChange={(open) => {
+        if (!open) cancelEditDocName();
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit certificate label</DialogTitle>
+          <DialogDescription>
+            Updates how this file is labeled alongside “Experience letter”.
+          </DialogDescription>
+        </DialogHeader>
+        {editingDocId ? (
+          <div className="space-y-2 py-1">
+            <Label htmlFor="edit-cert-doc-name">Document name</Label>
+            <Input
+              id="edit-cert-doc-name"
+              value={docNameDrafts[editingDocId] ?? ""}
+              onChange={(e) =>
+                setDocNameDrafts((prev) => ({
+                  ...prev,
+                  [editingDocId]: e.target.value,
+                }))
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelEditDocName();
+                }
+              }}
+              placeholder="e.g., Aster"
+            />
+          </div>
+        ) : null}
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={cancelEditDocName}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => {
+              const doc = existingDocs.find((d) => d.id === editingDocId);
+              if (doc) void saveDocName(doc);
+            }}
+            disabled={!editingDocId}
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <DeleteConfirmationDialog
+      isOpen={isDeleteModalOpen}
+      onClose={closeDeleteModal}
+      onConfirm={() => {
+        if (!deleteDocTarget) return;
+        handleDeleteExistingDoc(deleteDocTarget);
+      }}
+      title={deleteDocTarget?.fileName ?? "Certificate"}
+      itemType="certificate"
+      description="Are you sure you want to delete this certificate? This action cannot be undone."
+      isLoading={
+        deleteDocTarget?.id ? !!deletingDocIds[deleteDocTarget.id] : false
+      }
+    />
+    </>
   );
 }

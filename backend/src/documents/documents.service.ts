@@ -24,6 +24,7 @@ import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto, DeliveryMethod } from './dto/bulk-forward-to-client.dto';
 import {
   DocumentWithRelations,
+  DocumentListRow,
   PaginatedDocuments,
   DocumentStats,
   CandidateProjectDocumentSummary,
@@ -32,6 +33,7 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
   DOCUMENT_TYPE_META,
+  DocumentType,
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
   ROLE_NAMES,
@@ -43,6 +45,44 @@ import { GoogleDriveService } from '../google-drive/google-drive.service';
 
 @Injectable()
 export class DocumentsService {
+  /** Human-readable label for a document type key (fallback when not in DOCUMENT_TYPE_META). */
+  private formatDocTypeKey(docType: string): string {
+    return docType
+      .split('_')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  /** Requirement row for recruiter UI: friendly name vs technical type key. */
+  private enrichProjectRequirementRow(r: Record<string, unknown> & { docType: string }) {
+    const docType = r.docType;
+    const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+    const documentName =
+      meta?.displayName ?? this.formatDocTypeKey(docType);
+    return {
+      ...r,
+      documentName,
+      documentType: docType,
+    };
+  }
+
+  /** Document list row: optional user-provided docName, else catalog display name. */
+  private enrichDocumentListItem(doc: Record<string, unknown>) {
+    const docType = doc.docType as string;
+    const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+    const docName = doc.docName;
+    const documentDisplayName =
+      typeof docName === 'string' && docName.trim() !== ''
+        ? docName.trim()
+        : meta?.displayName ?? this.formatDocTypeKey(docType);
+    return {
+      ...doc,
+      documentDisplayName,
+      documentType: docType,
+    };
+  }
+
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
@@ -250,7 +290,9 @@ export class DocumentsService {
     ]);
 
     return {
-      documents: documents as DocumentWithRelations[],
+      documents: (documents as DocumentWithRelations[]).map((d) =>
+        this.enrichDocumentListItem(d as unknown as Record<string, unknown>),
+      ) as DocumentListRow[],
       pagination: {
         page,
         limit,
@@ -891,6 +933,12 @@ export class DocumentsService {
     if (!candidateProjectMap) {
       throw new NotFoundException(
         `Candidate project mapping with ID ${reuploadDto.candidateProjectMapId} not found`,
+      );
+    }
+
+    if (candidateProjectMap.candidateId !== document.candidateId) {
+      throw new BadRequestException(
+        'This document does not belong to the candidate for the selected project.',
       );
     }
 
@@ -2180,7 +2228,11 @@ export class DocumentsService {
     return {
       candidateProject,
       isSendedForDocumentVerification,
-      requirements,
+      requirements: requirements.map((r) =>
+        this.enrichProjectRequirementRow(
+          r as Record<string, unknown> & { docType: string },
+        ),
+      ),
       verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
       allCandidateDocuments, // FULL HISTORY
       isDocumentationReviewed,
