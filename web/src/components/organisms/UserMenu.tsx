@@ -34,20 +34,17 @@ export default function UserMenu() {
   const handleLogout = async () => {
     try {
       await dispatch(authApi.endpoints.logout.initiate()).unwrap();
-    } catch {
-      // Ignore logout API errors and clear local state anyway.
-    } finally {
-      dispatch(clearCredentials());
-      dispatch(baseApi.util.resetApiState());
-      toast.success("Logged out successfully");
-      navigate("/login");
-    } catch (error) {
-      // Even if logout API fails, clear local state
-      dispatch(clearCredentials());
-      dispatch(baseApi.util.resetApiState());
-      toast.success("Logged out successfully");
-      navigate("/login");
+    } 
+    catch (error) {
+      
+      toast.error("Failed to log out from server. Please try again.");
+      console.error("Logout API error:", error);
+      // Ignore logout API errors; session is cleared below regardless.
     }
+    dispatch(clearCredentials());
+    dispatch(baseApi.util.resetApiState());
+    toast.success("Logged out successfully");
+    navigate("/login");
   };
 
   const handleConfirmLogout = () => {
