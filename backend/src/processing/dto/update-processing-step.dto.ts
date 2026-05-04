@@ -27,6 +27,11 @@ export class UpdateProcessingStepDto {
   @IsString()
   eligibilityDuration?: string;
 
+  @ApiPropertyOptional({ description: 'Eligibility number', example: 'EL-12345' })
+  @IsOptional()
+  @IsString()
+  eligibilityNumber?: string;
+
   @ApiPropertyOptional({ description: 'Council issued date', example: '2026-04-01T00:00:00Z' })
   @IsOptional()
   @IsDateString()

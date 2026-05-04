@@ -1898,6 +1898,7 @@ model ProcessingStep {
   eligibilityIssuedAt   DateTime?
   eligibilityValidAt    DateTime?
   eligibilityDuration   String?
+  eligibilityNumber     String?
   councilIssuedAt       DateTime?
   councilValidAt        DateTime?
   rejectionReason       String?
