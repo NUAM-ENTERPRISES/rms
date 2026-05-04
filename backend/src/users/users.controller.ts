@@ -33,6 +33,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
+import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { UserWithRoles, PaginatedUsers } from './types';
@@ -406,6 +407,28 @@ export class UsersController {
     };
   }
 
+  @Get('languages')
+  @Permissions('read:users', 'manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'List active languages',
+    description:
+      'Language catalog (ISO 639-1 codes) for recruiter skills. Requires user-management permissions.',
+  })
+  @ApiResponse({ status: 200, description: 'Languages retrieved successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async listLanguages(): Promise<{
+    success: boolean;
+    data: { code: string; name: string }[];
+    message: string;
+  }> {
+    const data = await this.usersService.listActiveLanguages();
+    return {
+      success: true,
+      data,
+      message: 'Languages retrieved successfully',
+    };
+  }
+
   @Get(':id')
   @ApiOperation({
     summary: 'Get user by ID',
@@ -462,6 +485,39 @@ export class UsersController {
       success: true,
       data: user,
       message: 'User retrieved successfully',
+    };
+  }
+
+  @Put(':id/recruiter-capabilities')
+  @Permissions('manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'Replace recruiter languages and country coverage',
+    description:
+      'Full replace of user_languages and user_country_coverage for users with the Recruiter or Manager role. Empty payload clears stored capabilities for any user.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Capabilities updated' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateRecruiterCapabilities(
+    @Param('id') id: string,
+    @Body() dto: UpdateRecruiterCapabilitiesDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateRecruiterCapabilities(
+      id,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data: user,
+      message: 'Recruiter capabilities updated successfully',
     };
   }
 

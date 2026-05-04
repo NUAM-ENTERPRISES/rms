@@ -610,7 +610,7 @@ describe('CandidatesService', () => {
           client: {
             id: 'client123',
             name: 'Test Client',
-            type: 'HEALTHCARE_ORGANIZATION',
+            type: 'DIRECT_CLIENT',
           },
           team: { id: 'team123', name: 'Test Team' },
         },

@@ -746,6 +746,9 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
+          addressCountryCode: candidate.addressCountryCode,
+          addressStateId: candidate.addressStateId,
+          address: candidate.address,
         }}
       />
 

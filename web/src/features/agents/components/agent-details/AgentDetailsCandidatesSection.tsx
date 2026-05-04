@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Search, Users, X, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { AgentCandidate } from "../../api";
 import { AgentDetailsCandidateTableRow } from "./AgentDetailsCandidateTableRow";
@@ -57,20 +55,16 @@ export function AgentDetailsCandidatesSection({
     useState<AgentCandidate | null>(null);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.2 }}
-    >
-      <Card className="border-0 shadow-lg rounded-2xl overflow-hidden h-full">
-          <div className="bg-white border-b border-slate-100 px-5 py-4">
+    <div>
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600">
-                  <Users className="h-5 w-5 text-white" />
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Users className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">Referred Candidates</h2>
+                  <h2 className="text-base font-bold text-gray-900">Referred Candidates</h2>
                   <p className="text-xs text-slate-500">
                     {totalCount} candidate{totalCount !== 1 ? "s" : ""} from this agent
                   </p>
@@ -112,61 +106,54 @@ export function AgentDetailsCandidatesSection({
               </div>
             </div>
 
-            <AnimatePresence>
-              {hasActiveSearch && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 pt-3 border-t border-slate-100"
-                >
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-slate-500">Search:</span>
-                    <Badge variant="secondary" className="gap-1 pr-1">
-                      {search}
-                      <button
-                        type="button"
-                        onClick={onClearSearch}
-                        className="ml-1 hover:bg-slate-200 rounded p-0.5"
-                        aria-label="Clear search"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
+            {hasActiveSearch && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-slate-500">Search:</span>
+                  <Badge variant="secondary" className="gap-1 pr-1">
+                    {search}
                     <button
                       type="button"
                       onClick={onClearSearch}
-                      className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                      className="ml-1 hover:bg-slate-200 rounded p-0.5"
+                      aria-label="Clear search"
                     >
-                      Clear
+                      <X className="h-3 w-3" />
                     </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </Badge>
+                  <button
+                    type="button"
+                    onClick={onClearSearch}
+                    className="text-blue-600 hover:text-blue-700 text-xs font-medium"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          <CardContent className="p-0">
+          <div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
-                    <TableHead className="w-[280px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                    <TableHead className="w-[280px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Candidate
                     </TableHead>
-                    <TableHead className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Contact
                     </TableHead>
-                    <TableHead className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Assigned To
                     </TableHead>
-                    <TableHead className="min-w-[200px] px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <TableHead className="min-w-[200px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Projects linked
                     </TableHead>
-                    <TableHead className="px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Added
                     </TableHead>
-                    <TableHead className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -222,7 +209,7 @@ export function AgentDetailsCandidatesSection({
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4 bg-slate-50/50">
+              <div className="flex items-center justify-between border-t border-slate-100 px-6 py-4 bg-slate-50/50 gap-3">
                 <p className="text-sm text-slate-500">
                   Showing <span className="font-medium text-slate-700">{(page - 1) * pageSize + 1}</span> to{" "}
                   <span className="font-medium text-slate-700">{Math.min(page * pageSize, totalCount)}</span> of{" "}
@@ -280,8 +267,8 @@ export function AgentDetailsCandidatesSection({
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
       <EditDeclaredProjectsModal
         open={candidateForDeclaredEdit != null}
@@ -291,6 +278,6 @@ export function AgentDetailsCandidatesSection({
         agentId={agentId}
         candidate={candidateForDeclaredEdit}
       />
-    </motion.div>
+    </div>
   );
 }

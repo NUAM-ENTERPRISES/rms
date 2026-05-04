@@ -107,7 +107,7 @@ interface UpdateCandidateRequest {
 
 interface GetMyAssignedCandidatesParams {
   search?: string;
-  currentStatus?: number;
+  currentStatus?: string;
   page?: number;
   limit?: number;
 }
@@ -163,7 +163,20 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: ["Candidate"],
     }),
     getCREAssignedSummary: builder.query<
-      { total: number; roleCounters: { assigned: number; converted: number; reassigned: number; rnr: number; onHold: number; untouched: number; other: number } },
+      {
+        total: number;
+        roleCounters: {
+          assigned: number;
+          converted: number;
+          reassigned: number;
+          rnr: number;
+          onHold: number;
+          untouched: number;
+          junk: number;
+          other: number;
+          created: number;
+        };
+      },
       void
     >({
       query: () => "/candidates/my-assigned/summary",
@@ -181,6 +194,27 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (params.limit) queryParams.append("limit", params.limit.toString());
 
         return `/candidates/my-assigned/reassigned?${queryParams.toString()}`;
+      },
+      transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
+        data: response.data.candidates,
+        total: response.data.pagination.total,
+        page: response.data.pagination.page,
+        limit: response.data.pagination.limit,
+        totalPages: response.data.pagination.totalPages,
+      }),
+      providesTags: ["Candidate"],
+    }),
+    getUserCandidates: builder.query<
+      PaginatedCandidatesResponse,
+      GetMyAssignedCandidatesParams
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params.search) queryParams.append("search", params.search);
+        if (params.page) queryParams.append("page", params.page.toString());
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+
+        return `/candidates/user-candidates?${queryParams.toString()}`;
       },
       transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
         data: response.data.candidates,
@@ -382,6 +416,7 @@ export const {
   useGetMyAssignedCandidatesQuery,
   useGetCREAssignedSummaryQuery,
   useGetCREReassignedCandidatesQuery,
+  useGetUserCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,

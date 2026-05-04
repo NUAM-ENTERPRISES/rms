@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { LanguageProficiency, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
@@ -48,7 +48,10 @@ export class RecruiterAssignmentService {
    * Get the best recruiter to assign to a candidate based on user role and workload
    * If the creator is a recruiter, assign the candidate to them directly
    * If the candidate source is agent, assign to the creator (Client Coordinator pipeline; no round-robin)
-   * Otherwise, use round-robin (least workload) assignment
+   * Otherwise, use language-aware assignment: state-driven target languages from
+   * SystemConfig STATE_RECRUITMENT_LANGUAGES, match recruiter UserLanguage tiers
+   * (PRIMARY > SECONDARY > TERTIARY), then least workload; if no config or no match,
+   * fall back to plain least-workload among recruiters.
    */
   async getBestRecruiterForAssignment(
     candidateId: string,
@@ -131,15 +134,157 @@ export class RecruiterAssignmentService {
       };
     }
 
-    // If not a recruiter and not agent-sourced, use workload-based round-robin assignment
+    // If not a recruiter and not agent-sourced, use language-aware round-robin when configured
     this.logger.log(
-      `Creator ${creator.name} is NOT a Recruiter - using round-robin assignment`,
+      `Creator ${creator.name} is NOT a Recruiter - using assignment (language-aware round-robin when configured)`,
     );
-    const bestRecruiter = await this.getRecruiterWithLeastWorkload();
+    const bestRecruiter = await this.getRecruiterWithLanguageAwareRoundRobin(
+      candidateId,
+    );
     return {
       ...bestRecruiter,
       isRoundRobin: true,
     };
+  }
+
+  private tierScore(p: LanguageProficiency): number {
+    switch (p) {
+      case LanguageProficiency.PRIMARY:
+        return 3;
+      case LanguageProficiency.SECONDARY:
+        return 2;
+      case LanguageProficiency.TERTIARY:
+        return 1;
+      default:
+        return 0;
+    }
+  }
+
+  private async getTargetLanguageCodesForCandidate(
+    candidateId: string,
+  ): Promise<string[]> {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        addressState: { select: { code: true } },
+      },
+    });
+    if (!candidate?.addressState?.code) {
+      return [];
+    }
+    const row = await this.prisma.systemConfig.findUnique({
+      where: { key: 'STATE_RECRUITMENT_LANGUAGES' },
+    });
+    if (!row?.value || typeof row.value !== 'object' || row.value === null) {
+      return [];
+    }
+    const map = row.value as Record<string, unknown>;
+    const key = candidate.addressState.code;
+    const raw = map[key];
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+    const codes = raw.filter(
+      (x): x is string => typeof x === 'string' && x.length > 0,
+    );
+    if (codes.length === 0) {
+      return [];
+    }
+    const valid = await this.prisma.language.findMany({
+      where: { code: { in: codes }, isActive: true },
+      select: { code: true },
+    });
+    const validSet = new Set(valid.map((v) => v.code));
+    return codes.filter((c) => validSet.has(c));
+  }
+
+  /**
+   * Prefer recruiters whose languages match candidate state config (SystemConfig),
+   * then tier (PRIMARY > SECONDARY > TERTIARY), then least active assignments.
+   * Fallback: least workload among all recruiters.
+   */
+  async getRecruiterWithLanguageAwareRoundRobin(
+    candidateId: string,
+  ): Promise<RecruiterInfo> {
+    const targets = await this.getTargetLanguageCodesForCandidate(candidateId);
+    if (targets.length === 0) {
+      return this.getRecruiterWithLeastWorkload();
+    }
+
+    const recruiterRoleId = await this.rolesService.findIdByName(
+      ROLE_NAMES.RECRUITER,
+    );
+    const recruiters = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            roleId: recruiterRoleId,
+          },
+        },
+      },
+      include: {
+        candidateRecruiterAssignments: {
+          where: {
+            isActive: true,
+          },
+        },
+        userLanguages: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    if (recruiters.length === 0) {
+      throw new Error('No recruiters found in the system');
+    }
+
+    for (const lang of targets) {
+      const matchRecruiters = recruiters.filter((r) =>
+        r.userLanguages.some((ul) => ul.languageCode === lang),
+      );
+      if (matchRecruiters.length === 0) {
+        continue;
+      }
+      let bestScore = -1;
+      const bestAtScore: typeof matchRecruiters = [];
+      for (const r of matchRecruiters) {
+        const ul = r.userLanguages.find((x) => x.languageCode === lang)!;
+        const sc = this.tierScore(ul.proficiency);
+        if (sc > bestScore) {
+          bestScore = sc;
+          bestAtScore.length = 0;
+          bestAtScore.push(r);
+        } else if (sc === bestScore) {
+          bestAtScore.push(r);
+        }
+      }
+      bestAtScore.sort(
+        (a, b) =>
+          a.candidateRecruiterAssignments.length -
+          b.candidateRecruiterAssignments.length,
+      );
+      const pick = bestAtScore[0]!;
+      const info: RecruiterInfo = {
+        id: pick.id,
+        name: pick.name,
+        email: pick.email,
+        mobileNumber: pick.mobileNumber,
+        countryCode: pick.countryCode,
+        candidateCount: pick.candidateRecruiterAssignments.length,
+      };
+      this.logger.log(
+        `Language-aware assignment: candidate=${candidateId} lang=${lang} recruiter=${pick.name} tierScore=${bestScore}`,
+      );
+      return info;
+    }
+
+    this.logger.log(
+      `Language-aware assignment: no recruiter matched targets=[${targets.join(
+        ',',
+      )}] for candidate=${candidateId} — fallback workload`,
+    );
+    return this.getRecruiterWithLeastWorkload();
   }
 
   /**
@@ -280,6 +425,15 @@ export class RecruiterAssignmentService {
       },
     });
 
+    // Preserve the original createdBy (the user who first brought this candidate in).
+    // On the very first assignment there are no prior rows, so we fall back to createdByUserId.
+    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId },
+      orderBy: { assignedAt: 'asc' },
+      select: { createdBy: true },
+    });
+    const preservedCreatedBy = originalAssignment?.createdBy ?? createdByUserId;
+
     // Deactivate any existing active assignments
     await this.prisma.candidateRecruiterAssignment.updateMany({
       where: {
@@ -299,7 +453,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: recruiter.id,
         assignedBy: createdByUserId,
-        createdBy: createdByUserId,
+        createdBy: preservedCreatedBy,
         reason: defaultAssignmentReason,
       },
     });
@@ -353,10 +507,16 @@ export class RecruiterAssignmentService {
       return cre;
     }
 
-    const createdByUserId =
-      assignedByUserId && assignedByUserId !== 'system'
-        ? assignedByUserId
-        : assignerUserId;
+    // Preserve the original createdBy — the user who first created the candidate's assignment.
+    // The CRE assignment is a concurrent handler row; it must NOT overwrite who created the candidate.
+    const originalAssignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId },
+      orderBy: { assignedAt: 'asc' },
+      select: { createdBy: true },
+    });
+    const preservedCreatedBy =
+      originalAssignment?.createdBy ??
+      (assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId);
 
     // Create new CRE assignment WITHOUT deactivating others
     await this.prisma.candidateRecruiterAssignment.create({
@@ -364,7 +524,7 @@ export class RecruiterAssignmentService {
         candidateId,
         recruiterId: cre.id,
         assignedBy: assignerUserId,
-        createdBy: createdByUserId,
+        createdBy: preservedCreatedBy,
         reason: reason || 'Automatic CRE assignment for RNR status',
         assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
       },
@@ -380,15 +540,13 @@ export class RecruiterAssignmentService {
       select: { recruiterId: true }
     });
 
-    const createdByUser = assignedByUserId && assignedByUserId !== 'system' ? assignedByUserId : assignerUserId;
-
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       cre.id,
       assignerUserId,
       reason,
       currentRecruiter?.recruiterId,
-      createdByUserId,
+      preservedCreatedBy,
     );
 
     this.logger.log(
@@ -429,8 +587,8 @@ export class RecruiterAssignmentService {
     minutesInRNR: number;
     currentRecruiterId?: string;
   }>> {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
 
     // First, resolve the RNR status record to get its ID
     const rnrStatus = await this.prisma.candidateStatus.findFirst({
@@ -451,7 +609,7 @@ export class RecruiterAssignmentService {
       where: {
         currentStatusId: rnrStatus.id,
         updatedAt: {
-          lte: threeDaysAgo,
+          lte: oneMinuteAgo,
         },
       },
       include: {

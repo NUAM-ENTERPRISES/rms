@@ -70,7 +70,7 @@ export default function AgentDetailsPage() {
 
       <AgentDetailsStats agent={agent} totalCount={totalCount} />
 
-      <div className="px-4 pb-8 pt-2 sm:pt-4">
+      <div className="px-6 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Left: Candidates table (takes 2 cols on lg) */}
           <div className="lg:col-span-2">

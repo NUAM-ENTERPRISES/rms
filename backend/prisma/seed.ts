@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
+import { seedLanguages } from './seeds/languages.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
@@ -1016,6 +1017,8 @@ async function main() {
   // Seed states
   await seedStates();
 
+  await seedLanguages(prisma);
+
   // Seed candidate statuses
   await seedCandidateStatus();
 
@@ -1453,15 +1456,14 @@ async function main() {
     }
   }
 
-  // Create sample clients for each type
+  // Create sample clients (DIRECT_CLIENT / SUB_AGENT / FREELANCE)
   console.log('🏥 Creating sample clients...');
 
-  // Healthcare Organization
   const healthcareClient = await prisma.client.upsert({
     where: { id: 'healthcare-client-id' },
     update: {
       name: 'City General Hospital',
-      type: 'HEALTHCARE_ORGANIZATION',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Dr. John Smith',
       email: 'contact@citygeneral.com',
       phone: '+1234567890',
@@ -1476,7 +1478,7 @@ async function main() {
     create: {
       id: 'healthcare-client-id',
       name: 'City General Hospital',
-      type: 'HEALTHCARE_ORGANIZATION',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Dr. John Smith',
       email: 'contact@citygeneral.com',
       phone: '+1234567890',
@@ -1490,12 +1492,11 @@ async function main() {
     },
   });
 
-  // Individual Referrer
   const individualClient = await prisma.client.upsert({
     where: { id: 'individual-client-id' },
     update: {
       name: 'Sarah Johnson',
-      type: 'INDIVIDUAL',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Sarah Johnson',
       email: 'sarah.johnson@email.com',
       phone: '+1987654321',
@@ -1508,7 +1509,7 @@ async function main() {
     create: {
       id: 'individual-client-id',
       name: 'Sarah Johnson',
-      type: 'INDIVIDUAL',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Sarah Johnson',
       email: 'sarah.johnson@email.com',
       phone: '+1987654321',
@@ -1520,12 +1521,11 @@ async function main() {
     },
   });
 
-  // Sub-Agency
   const agencyClient = await prisma.client.upsert({
     where: { id: 'agency-client-id' },
     update: {
       name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENCY',
+      type: 'SUB_AGENT',
       pointOfContact: 'Mike Wilson',
       email: 'mike@regionalstaffing.com',
       phone: '+1555123456',
@@ -1539,7 +1539,7 @@ async function main() {
     create: {
       id: 'agency-client-id',
       name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENCY',
+      type: 'SUB_AGENT',
       pointOfContact: 'Mike Wilson',
       email: 'mike@regionalstaffing.com',
       phone: '+1555123456',
@@ -1552,12 +1552,41 @@ async function main() {
     },
   });
 
-  // External Source
+  const agencySubClient = await prisma.client.upsert({
+    where: { id: 'agency-sub-client-id' },
+    update: {
+      name: 'Metro End Client (via Agency)',
+      type: 'DIRECT_CLIENT',
+      email: 'hr@metro-end.example.com',
+    },
+    create: {
+      id: 'agency-sub-client-id',
+      name: 'Metro End Client (via Agency)',
+      type: 'DIRECT_CLIENT',
+      email: 'hr@metro-end.example.com',
+    },
+  });
+
+  await prisma.clientSubClient.upsert({
+    where: {
+      parentClientId_childClientId: {
+        parentClientId: agencyClient.id,
+        childClientId: agencySubClient.id,
+      },
+    },
+    update: { linkType: 'SUB_AGENT' },
+    create: {
+      parentClientId: agencyClient.id,
+      childClientId: agencySubClient.id,
+      linkType: 'SUB_AGENT',
+    },
+  });
+
   const externalClient = await prisma.client.upsert({
     where: { id: 'external-client-id' },
     update: {
       name: 'LinkedIn Healthcare Jobs',
-      type: 'EXTERNAL_SOURCE',
+      type: 'FREELANCE',
       pointOfContact: 'LinkedIn Team',
       email: 'healthcare@linkedin.com',
       sourceType: 'SOCIAL_MEDIA',
@@ -1569,7 +1598,7 @@ async function main() {
     create: {
       id: 'external-client-id',
       name: 'LinkedIn Healthcare Jobs',
-      type: 'EXTERNAL_SOURCE',
+      type: 'FREELANCE',
       pointOfContact: 'LinkedIn Team',
       email: 'healthcare@linkedin.com',
       sourceType: 'SOCIAL_MEDIA',
@@ -1577,6 +1606,34 @@ async function main() {
       acquisitionMethod: 'ORGANIC',
       sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
       relationshipType: 'EXTERNAL_SOURCE',
+    },
+  });
+
+  const freelanceSubClient = await prisma.client.upsert({
+    where: { id: 'freelance-sub-client-id' },
+    update: {
+      name: 'End Client (via Freelance)',
+      type: 'DIRECT_CLIENT',
+    },
+    create: {
+      id: 'freelance-sub-client-id',
+      name: 'End Client (via Freelance)',
+      type: 'DIRECT_CLIENT',
+    },
+  });
+
+  await prisma.clientSubClient.upsert({
+    where: {
+      parentClientId_childClientId: {
+        parentClientId: externalClient.id,
+        childClientId: freelanceSubClient.id,
+      },
+    },
+    update: { linkType: 'FREELANCE' },
+    create: {
+      parentClientId: externalClient.id,
+      childClientId: freelanceSubClient.id,
+      linkType: 'FREELANCE',
     },
   });
 

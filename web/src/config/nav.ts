@@ -229,12 +229,12 @@ export const navigationConfig: NavItem[] = [
         path: "/interviews",
         permissions: ["read:interviews"],
       },
-      {
-        id: "interviews-list",
-        label: "My Interviews",
-        path: "/interviews/list",
-        permissions: ["read:interviews"],
-      },
+      // {
+      //   id: "interviews-list",
+      //   label: "My Interviews",
+      //   path: "/interviews/list",
+      //   permissions: ["read:interviews"],
+      // },
     ],
     // Hidden from CRE - they focus on RNR candidates
   },

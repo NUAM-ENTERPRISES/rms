@@ -235,6 +235,45 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                 )}
 
+              {/* Candidate address (catalog country/state; separate from phone dial code) */}
+              <div className="mt-6 pt-4 border-t border-slate-200">
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2 block">
+                  Candidate address
+                </label>
+                <p className="text-xs text-slate-500 mb-4">
+                  Candidate address is the address of the candidate.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Country
+                    </label>
+                    <p className="text-sm flex items-start gap-2 mt-1">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden />
+                      {candidate.addressCountry?.name?.trim() ||
+                        candidate.addressCountryCode?.trim() ||
+                        "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      State / province
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.addressState?.name ?? "N/A"}
+                    </p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Street address
+                    </label>
+                    <p className="text-sm mt-1 text-slate-800 whitespace-pre-wrap">
+                      {candidate.address?.trim() ? candidate.address : "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Skills Section */}
               {candidate.skills && candidate.skills.length > 0 && (
                 <div className="mt-6 pt-4 border-t border-slate-200">

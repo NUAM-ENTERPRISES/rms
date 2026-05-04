@@ -9,13 +9,11 @@ import {
   Users,
   UserPlus,
   LayoutGrid,
+  ArrowUpRight,
+  Calendar,
   Eye,
 } from "lucide-react";
 import { useGetAgentsQuery } from "../api";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,9 +27,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { StatusTile } from "@/components/molecules";
 import { useCan, useHasRole } from "@/hooks/useCan";
+import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import {
   useGetRecruiterMyCandidatesQuery,
@@ -196,33 +193,16 @@ export default function AgentsPage() {
 
   const isCandidatePipelineFilter = activeFilter === "with-candidates";
 
+  const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+    blue:   { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",     icon: "text-blue-600",   iconBg: "bg-blue-100",   value: "text-blue-700",   ring: "ring-blue-400/50",   dot: "bg-blue-500" },
+    indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
+    purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+  };
+
   const statTiles = [
-    { 
-      label: "Total Agents", 
-      value: totalAgentsCount, 
-      icon: Handshake, 
-      statusFilter: "all", 
-      color: "from-blue-500 to-cyan-500",
-      subtitle: "Registered partners" 
-    },
-    { 
-      label: "Total Candidates", 
-      value: totalCandidates, 
-      icon: Users, 
-      statusFilter: "with-candidates", 
-      color: "from-indigo-500 to-violet-500",
-      subtitle: isClientCoordinator
-        ? "Total assigned (agent-sourced my-candidates)"
-        : "Referral volume",
-    },
-    { 
-      label: "Active Agents", 
-      value: activeAgentsCount, 
-      icon: LayoutGrid, 
-      statusFilter: "active", 
-      color: "from-purple-500 to-pink-500",
-      subtitle: "Currently sourcing" 
-    },
+    { label: "Total Agents",     value: totalAgentsCount, icon: Handshake,  statusFilter: "all",             accent: "blue",   subtitle: "Registered partners" },
+    { label: "Total Candidates", value: totalCandidates,  icon: Users,      statusFilter: "with-candidates", accent: "indigo", subtitle: isClientCoordinator ? "Agent-sourced assignments" : "Referral volume" },
+    { label: "Active Agents",    value: activeAgentsCount, icon: LayoutGrid, statusFilter: "active",          accent: "purple", subtitle: "Currently sourcing" },
   ];
 
   const coordinatorCandidates =
@@ -232,149 +212,135 @@ export default function AgentsPage() {
     isClientCoordinator && isCandidatePipelineFilter;
 
   return (
-    <div className="py-2 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Agents</h1>
-          <p className="text-slate-500 mt-1">Manage external partner agents and agencies.</p>
+    <div className="min-h-screen">
+      <div className="w-full mx-auto space-y-5 mt-2">
+
+        {/* ── Stat Tiles ───────────────────────────────────────────── */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+          {statTiles.map((stat) => {
+            const Icon = stat.icon;
+            const s = accentStyles[stat.accent];
+            const isActive = activeFilter === stat.statusFilter;
+            return (
+              <button
+                key={stat.label}
+                type="button"
+                onClick={() => {
+                  setActiveFilter(stat.statusFilter as any);
+                  tableRef.current?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive
+                    ? `ring-2 shadow-md ${s.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
+                    <p className="text-xs text-slate-500">{stat.subtitle}</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <Icon className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })}
         </div>
-       
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {statTiles.map((stat, i) => {
-          const colors = {
-            "from-blue-500 to-cyan-500": { bg: "from-blue-50 to-blue-100/50", iconBg: "bg-blue-200/40", text: "text-blue-600" },
-            "from-indigo-500 to-violet-500": { bg: "from-indigo-50 to-violet-100/50", iconBg: "bg-indigo-200/40", text: "text-indigo-700" },
-            "from-purple-500 to-pink-500": { bg: "from-purple-50 to-purple-100/50", iconBg: "bg-purple-200/40", text: "text-purple-600" },
-          }[stat.color] || { bg: "from-slate-50 to-slate-100/50", iconBg: "bg-slate-200/40", text: "text-slate-600" };
+        {/* ── Main Card ────────────────────────────────────────────── */}
+        <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
 
-          const isActive = activeFilter === stat.statusFilter;
-
-          return (
-            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-              <StatusTile
-                label={stat.label}
-                value={stat.value}
-                subtitle={stat.subtitle}
-                icon={stat.icon}
-                bgGradient={colors.bg}
-                iconBg={colors.iconBg}
-                textColor={colors.text}
-                active={isActive}
-                onClick={() => setActiveFilter(stat.statusFilter as any)}
-                scrollTargetRef={tableRef}
-                scrollOnClick={true}
-                className="h-full"
-              />
-            </motion.div>
-          );
-        })}
-      </div>
-
-      <Card className="border-0 shadow-lg bg-white/90">
-        <CardContent className="pt-0 pb-0">
-          <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
+          {/* Table Header Bar */}
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                     {isCandidatePipelineFilter && isClientCoordinator ? (
-                      <Users className="h-6 w-6 text-white" aria-hidden />
+                      <Users className="h-5 w-5 text-white" aria-hidden />
                     ) : (
-                      <Handshake className="h-6 w-6 text-white" aria-hidden />
+                      <Handshake className="h-5 w-5 text-white" aria-hidden />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <h2 className="text-base font-bold text-gray-900 truncate">
                       {activeFilter === "all"
                         ? "All Agents"
                         : activeFilter === "active"
                           ? "Active Agents"
                           : isClientCoordinator
-                            ? "Your candidates"
-                            : "Agents with candidates"}
-                    </h4>
-                    <p className="text-sm text-gray-600 font-medium">
+                            ? "Your Candidates"
+                            : "Agents with Candidates"}
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {showCcCandidateTable
-                        ? `${coordinatorPagination?.totalCount ?? 0} candidate${
-                            (coordinatorPagination?.totalCount ?? 0) !== 1
-                              ? "s"
-                              : ""
-                          } (assigned total: ${totalCandidates})`
-                        : `${filteredAgents.length} agent${
-                            filteredAgents.length !== 1 ? "s" : ""
-                          } on this page`}
+                        ? `${coordinatorPagination?.totalCount ?? 0} candidate${(coordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
+                        : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? "s" : ""} on this page`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {activeFilter === "with-candidates" && canCreateCandidate ? (
-                      <Button
-                        type="button"
-                        onClick={() => navigate("/candidates/create")}
-                        className="h-9 px-4 bg-gradient-to-r from-indigo-600 to-violet-700 text-white shadow-md rounded-lg gap-2 text-sm"
-                      >
-                        <UserPlus className="h-4 w-4" /> Add Candidate
-                      </Button>
-                    ) : null}
-                    {canWrite &&
-                    !(
-                      activeFilter === "with-candidates" && canCreateCandidate
-                    ) ? (
-                      <Button
-                        type="button"
-                        onClick={() => setIsModalOpen(true)}
-                        className="h-9 px-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md rounded-lg gap-2 text-sm"
-                      >
-                        <Plus className="h-4 w-4" /> Add Agent
-                      </Button>
-                    ) : null}
-                  </div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1 max-w-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Search className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <Input
-                      placeholder={
-                        showCcCandidateTable
-                          ? "Search candidates..."
-                          : "Search agents..."
-                      }
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 h-9 text-sm border-gray-200 bg-white focus:ring-2 focus:ring-blue-500/20 rounded-lg"
-                    />
-                  </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeFilter === "with-candidates" && canCreateCandidate && (
+                    <Button
+                      type="button"
+                      onClick={() => navigate("/candidates/create")}
+                      size="sm"
+                      className="h-9 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm gap-1.5"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" /> Add Candidate
+                    </Button>
+                  )}
+                  {canWrite && !(activeFilter === "with-candidates" && canCreateCandidate) && (
+                    <Button
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      size="sm"
+                      className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add Agent
+                    </Button>
+                  )}
                 </div>
               </div>
-            </div>
 
-            {showCcCandidateTable ? (
-              <>
+              {/* Search */}
+              <div className="relative max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder={showCcCandidateTable ? "Search candidates…" : "Search agents…"}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── CC Candidate Table ──────────────────────────────────── */}
+          {showCcCandidateTable ? (
+            <>
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="sticky">
-                    <TableRow className="border-b border-gray-200 bg-gray-50/50">
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Candidate
-                      </TableHead>
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Created By
-                      </TableHead>
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Agent
-                      </TableHead>
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Created
-                      </TableHead>
-                      <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Contact
-                      </TableHead>
-                      <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                        Actions
-                      </TableHead>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Agent</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-center">Contact</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -394,254 +360,163 @@ export default function AgentsPage() {
                     />
                   </TableBody>
                 </Table>
-                {coordinatorPagination &&
-                  coordinatorPagination.totalCount > 0 && (
-                    <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-slate-500">
-                        Showing{" "}
-                        <span className="font-semibold">
-                          {(candidateListPage - 1) * candidatePageSize + 1}
-                        </span>{" "}
-                        to{" "}
-                        <span className="font-semibold">
-                          {Math.min(
-                            candidateListPage * candidatePageSize,
-                            coordinatorPagination.totalCount,
-                          )}
-                        </span>{" "}
-                        of{" "}
-                        <span className="font-semibold">
-                          {coordinatorPagination.totalCount}
-                        </span>
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-3"
-                          disabled={
-                            coordinatorCandidatesLoading ||
-                            candidateListPage <= 1
-                          }
-                          onClick={() =>
-                            setCandidateListPage((p) => Math.max(1, p - 1))
-                          }
-                        >
-                          Previous
-                        </Button>
-                        <span className="text-xs tabular-nums text-slate-600">
-                          Page {candidateListPage} of{" "}
-                          {coordinatorPagination.totalPages}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-3"
-                          disabled={
-                            coordinatorCandidatesLoading ||
-                            candidateListPage >=
-                              coordinatorPagination.totalPages
-                          }
-                          onClick={() =>
-                            setCandidateListPage((p) =>
-                              Math.min(
-                                coordinatorPagination.totalPages,
-                                p + 1,
-                              ),
-                            )
-                          }
-                        >
-                          Next
-                        </Button>
+              </div>
+              {coordinatorPagination && coordinatorPagination.totalCount > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+                  <p className="text-xs text-slate-500">
+                    Showing <span className="font-semibold text-slate-700">{(candidateListPage - 1) * candidatePageSize + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(candidateListPage * candidatePageSize, coordinatorPagination.totalCount)}</span> of <span className="font-semibold text-slate-700">{coordinatorPagination.totalCount}</span> candidates
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={coordinatorCandidatesLoading || candidateListPage <= 1} onClick={() => setCandidateListPage((p) => Math.max(1, p - 1))}>
+                      Prev
+                    </Button>
+                    <span className="text-xs tabular-nums text-slate-600 px-1">Page {candidateListPage} of {coordinatorPagination.totalPages}</span>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={coordinatorCandidatesLoading || candidateListPage >= coordinatorPagination.totalPages} onClick={() => setCandidateListPage((p) => Math.min(coordinatorPagination.totalPages, p + 1))}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              {/* ── Agents Card Grid ─────────────────────────────────── */}
+              {agentsLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 animate-pulse">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="h-10 w-10 rounded-xl bg-gray-100" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 bg-gray-100 rounded w-2/3" />
+                          <div className="h-3 bg-gray-100 rounded w-1/3" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-3 bg-gray-100 rounded w-full" />
+                        <div className="h-3 bg-gray-100 rounded w-5/6" />
+                        <div className="h-3 bg-gray-100 rounded w-3/4" />
                       </div>
                     </div>
-                  )}
-              </>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader className="sticky">
-                    <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Agent Details</TableHead>
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold">Company</TableHead>
-                      <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Contact</TableHead>
-                      <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-center">Candidates</TableHead>
-                      <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600 font-semibold text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAgents.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-64 text-center">
-                          <div className="flex flex-col items-center justify-center space-y-3">
-                            <div className="bg-slate-50 p-4 rounded-full border border-slate-100 shadow-inner">
-                              <Search className="h-8 w-8 text-slate-300" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-slate-900 font-semibold">
-                                {agentsLoading
-                                  ? "Loading..."
-                                  : isCandidatePipelineFilter
-                                    ? "No candidates found"
-                                    : "No agents found"}
-                              </p>
-                              <p className="text-slate-500 text-sm">
-                                {isCandidatePipelineFilter
-                                  ? isClientCoordinator
-                                    ? "You have no agent-sourced assignments yet, or none match your search."
-                                    : "No agents currently have linked candidates, or none match your search."
-                                  : "Try adjusting your search or filters."}
-                              </p>
-                            </div>
+                  ))}
+                </div>
+              ) : filteredAgents.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                    <Handshake className="h-8 w-8 text-slate-300" />
+                  </div>
+                  <p className="font-semibold text-slate-600">
+                    {isCandidatePipelineFilter ? "No agents with candidates" : "No agents found"}
+                  </p>
+                  <p className="text-sm text-slate-400 max-w-xs text-center">
+                    {isCandidatePipelineFilter
+                      ? "No agents currently have linked candidates, or none match your search."
+                      : "Try adjusting your search or filters."}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
+                  {filteredAgents.map((agent) => (
+                    <div
+                      key={agent.id}
+                      onClick={() => navigate(`/agents/${agent.id}`)}
+                      className="group relative bg-white rounded-2xl border border-gray-100 border-l-4 border-l-blue-500 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+                    >
+                      {/* Card header */}
+                      <div className="flex items-start justify-between p-5 pb-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+                            {agent.name.charAt(0)}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredAgents.map((agent) => (
-                        <TableRow key={agent.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0 group">
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                                {agent.name.charAt(0)}
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{agent.name}</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
-                                    Added {new Date(agent.createdAt).toLocaleDateString()}
-                                  </span>
-                                  {agent.agentType && (
-                                    <Badge variant="outline" className="text-[9px] py-0 h-4 bg-blue-50 text-blue-700 border-blue-100">
-                                      {agent.agentType}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="bg-slate-100 p-1.5 rounded-md">
-                                <Building2 className="h-3.5 w-3.5 text-slate-500" />
-                              </div>
-                              <span className="font-medium text-sm text-gray-700">{agent.companyName || "Personal"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex flex-col items-center gap-1">
-                              {agent.email && (
-                                <div className="flex items-center gap-2 text-xs text-slate-600">
-                                  <Mail className="h-3 w-3 text-slate-400" />
-                                  {agent.email}
-                                </div>
-                              )}
-                              {agent.mobileNumber && (
-                                <div className="flex items-center gap-2 text-xs text-slate-600">
-                                  <Phone className="h-3 w-3 text-slate-400" />
-                                  <span className="font-medium">{agent.mobileNumber}</span>
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-center">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-bold rounded-full gap-2 border border-transparent hover:border-blue-100"
-                              onClick={() => navigate(`/agents/${agent.id}`)}
-                            >
-                              <Users className="h-4 w-4" />
-                              {agent._count?.candidates || 0}
-                            </Button>
-                          </TableCell>
-                          <TableCell className="px-4 py-3 text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-full text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              onClick={() => navigate(`/agents/${agent.id}`)}
-                              title="View agent details"
-                              aria-label={`View details for ${agent.name}`}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-                {agentsPaged?.meta &&
-                  agentsPaged.meta.total > 0 &&
-                  (agentsPaged.meta.totalPages ?? 0) > 1 && (
-                    <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-xs text-slate-500">
-                        Showing{" "}
-                        <span className="font-semibold">
-                          {(agentListPage - 1) * agentPageSize + 1}
-                        </span>{" "}
-                        to{" "}
-                        <span className="font-semibold">
-                          {Math.min(
-                            agentListPage * agentPageSize,
-                            agentsPaged.meta.total,
-                          )}
-                        </span>{" "}
-                        of <span className="font-semibold">{agentsPaged.meta.total}</span>{" "}
-                        agents
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-3"
-                          disabled={agentsLoading || agentListPage <= 1}
-                          onClick={() =>
-                            setAgentListPage((p) => Math.max(1, p - 1))
-                          }
-                        >
-                          Previous
-                        </Button>
-                        <span className="text-xs tabular-nums text-slate-600">
-                          Page {agentListPage} of {agentsPaged.meta.totalPages}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-3"
-                          disabled={
-                            agentsLoading ||
-                            agentListPage >= agentsPaged.meta.totalPages
-                          }
-                          onClick={() =>
-                            setAgentListPage((p) =>
-                              Math.min(agentsPaged.meta.totalPages, p + 1),
-                            )
-                          }
-                        >
-                          Next
-                        </Button>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900 truncate leading-tight">{agent.name}</p>
+                            {agent.agentType && (
+                              <span className="inline-flex items-center gap-1 mt-1 text-xs font-medium px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                {agent.agentType}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* View button */}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0 ml-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-gray-100"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/agents/${agent.id}`); }}
+                            aria-label={`View details for ${agent.name}`}
+                          >
+                            <Eye className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="mx-5 border-t border-gray-50" />
+
+                      {/* Card body */}
+                      <div className="p-5 pt-3 space-y-2">
+                        {agent.companyName && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Building2 className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate">{agent.companyName}</span>
+                          </div>
+                        )}
+                        {agent.email && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Mail className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate">{agent.email}</span>
+                          </div>
+                        )}
+                        {agent.mobileNumber && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Phone className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate">{agent.mobileNumber}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                          <span>{agent._count?.candidates || 0} candidate{(agent._count?.candidates || 0) !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                          <Calendar className="h-3.5 w-3.5 shrink-0" />
+                          <span>Added {new Date(agent.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                        </div>
                       </div>
                     </div>
-                  )}
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination */}
+              {agentsPaged?.meta && agentsPaged.meta.total > 0 && (agentsPaged.meta.totalPages ?? 0) > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+                  <p className="text-xs text-slate-500">
+                    Showing <span className="font-semibold text-slate-700">{(agentListPage - 1) * agentPageSize + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(agentListPage * agentPageSize, agentsPaged.meta.total)}</span> of <span className="font-semibold text-slate-700">{agentsPaged.meta.total}</span> agents
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl" disabled={agentsLoading || agentListPage <= 1} onClick={() => setAgentListPage((p) => Math.max(1, p - 1))}>
+                      Prev
+                    </Button>
+                    <span className="text-xs tabular-nums text-slate-600 px-1">Page {agentListPage} of {agentsPaged.meta.totalPages}</span>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl" disabled={agentsLoading || agentListPage >= agentsPaged.meta.totalPages} onClick={() => setAgentListPage((p) => Math.min(agentsPaged.meta.totalPages, p + 1))}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
       <CreateAgentDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
 
       {transferDialog.isOpen ? (
         <TransferCandidateDialog
           open={transferDialog.isOpen}
-          onOpenChange={(open) =>
-            setTransferDialog((prev) => ({ ...prev, isOpen: open }))
-          }
+          onOpenChange={(open) => setTransferDialog((prev) => ({ ...prev, isOpen: open }))}
           candidateName={transferDialog.candidateName || "Candidate"}
           currentRecruiter={transferDialog.currentRecruiter}
           onConfirm={handleTransferConfirm}

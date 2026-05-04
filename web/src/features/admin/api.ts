@@ -27,6 +27,24 @@ export interface UserWithRoles {
   userRoles: Array<{
     role: UserRole;
   }>;
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+  addressCountry?: { code: string; name: string } | null;
+  addressState?: { id: string; name: string; code: string } | null;
+
+  userLanguages?: Array<{
+    id: string;
+    languageCode: string;
+    proficiency: string;
+    language?: { code: string; name: string } | null;
+  }>;
+  userCountryCoverages?: Array<{
+    id: string;
+    countryCode: string;
+    sectorScopes: string[];
+    country?: { code: string; name: string } | null;
+  }>;
 }
 
 export interface PaginatedUsersData {
@@ -45,6 +63,9 @@ export interface CreateUserRequest {
   mobileNumber: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string;
+  addressStateId?: string;
+  address?: string;
 }
 
 export interface UpdateUserRequest {
@@ -54,6 +75,33 @@ export interface UpdateUserRequest {
   mobileNumber?: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+}
+
+export type LanguageProficiencyApi = "PRIMARY" | "SECONDARY" | "TERTIARY";
+export type RecruiterCountrySectorScopeApi = "HEALTHCARE" | "NON_HEALTH_CARE";
+
+export interface RecruiterCapabilityLanguageItem {
+  languageCode: string;
+  proficiency: LanguageProficiencyApi;
+}
+
+export interface RecruiterCapabilityCountryItem {
+  countryCode: string;
+  sectorScopes: RecruiterCountrySectorScopeApi[];
+}
+
+export interface UpdateRecruiterCapabilitiesRequest {
+  languages: RecruiterCapabilityLanguageItem[];
+  countryCoverages: RecruiterCapabilityCountryItem[];
+}
+
+export interface UserLanguagesResponse {
+  success: boolean;
+  data: { code: string; name: string }[];
+  message: string;
 }
 
 export interface QueryUsersRequest {
@@ -120,6 +168,25 @@ export const usersApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: ["User"],
+    }),
+
+    listUserLanguages: builder.query<UserLanguagesResponse, void>({
+      query: () => ({
+        url: "/users/languages",
+        method: "GET",
+      }),
+    }),
+
+    updateRecruiterCapabilities: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateRecruiterCapabilitiesRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/recruiter-capabilities`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
     }),
 
     // Update existing user
@@ -280,6 +347,8 @@ export const {
   useGetUsersQuery,
   useGetUserQuery,
   useCreateUserMutation,
+  useListUserLanguagesQuery,
+  useUpdateRecruiterCapabilitiesMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
   useGetUserRolesQuery,

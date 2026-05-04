@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,14 +35,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  ArrowUpRight,
+  FilterX,
 } from "lucide-react";
 import { motion } from "framer-motion";
-
-// lazy-load dashboard tiles for code-splitting
-const ScreeningApprovedTile = lazy(() => import('@/features/documents/components/ScreeningApprovedTile'));
-const PendingCandidatesTile = lazy(() => import('@/features/documents/components/PendingCandidatesTile'));
-const VerifiedDocumentsTile = lazy(() => import('@/features/documents/components/VerifiedDocumentsTile'));
-const RejectedDocumentsTile = lazy(() => import('@/features/documents/components/RejectedDocumentsTile'));
 
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
 import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coordination";
@@ -51,14 +47,19 @@ import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
-import { ProjectRoleFilter, type ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
+import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
 
+const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+  red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
+};
+
 export default function DocumentVerificationPage() {
   const navigate = useNavigate();
-  const tableRef = useRef<HTMLDivElement>(null);
   const canReadDocuments = useCan("read:documents");
   const user = useAppSelector((s) => s.auth.user);
   // Only treat a user as a strict recruiter for filtering when they have the explicit "Recruiter" role
@@ -395,171 +396,231 @@ export default function DocumentVerificationPage() {
           subtitle="Review and verify candidate documents with enterprise-grade precision"
         />
 
-        {/* Dashboard Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Tiles Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Pending Candidates Tile */}
+          {(() => {
+            const s = accentStyles.blue;
+            const isActive = statusFilter === "verification_in_progress_document";
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("verification_in_progress_document");
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Pending Candidates</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.verification_in_progress_document}</p>
+                    <p className="text-xs text-slate-500">For verification</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <User className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })()}
 
-          {/* Total Candidates Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-            <StatusTile
-              label="Pending Candidates"
-              value={statusCounts.verification_in_progress_document}
-              subtitle="For verification"
-              icon={User}
-              bgGradient="from-blue-50 to-blue-100/50"
-              iconBg="bg-blue-200/40"
-              textColor="text-blue-600"
-              active={statusFilter === "verification_in_progress_document"}
-              onClick={() => {
-                setStatusFilter("verification_in_progress_document");
-                setCurrentPage(1);
-              }}
-              scrollTargetRef={tableRef}
-              scrollOnClick={true}
-              className="h-full"
-            />
-          </motion.div>
+          {/* Verified Documents Tile */}
+          {(() => {
+            const s = accentStyles.emerald;
+            const isActive = statusFilter === "documents_verified";
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("documents_verified");
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Verified Documents</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.documents_verified}</p>
+                    <p className="text-xs text-slate-500">Approved</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <Building2 className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })()}
 
-          {/* Verified Documents Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-            <StatusTile
-              label="Verified Documents"
-              value={statusCounts.documents_verified}
-              subtitle="Approved"
-              icon={Building2}
-              bgGradient="from-emerald-50 to-emerald-100/50"
-              iconBg="bg-emerald-200/40"
-              textColor="text-emerald-700"
-              active={statusFilter === "documents_verified"}
-              onClick={() => {
-                setStatusFilter("documents_verified");
-                setCurrentPage(1);
-              }}
-              scrollTargetRef={tableRef}
-              scrollOnClick={true}
-              className="h-full"
-            />
-          </motion.div>
-
-          {/* Rejected Documents Card */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <StatusTile
-              label="Rejected Documents"
-              value={statusCounts.rejected_documents}
-              subtitle="Need attention"
-              icon={XCircle}
-              bgGradient="from-red-50 to-red-100/50"
-              iconBg="bg-red-200/40"
-              textColor="text-red-700"
-              active={statusFilter === "rejected_documents"}
-              onClick={() => {
-                setStatusFilter("rejected_documents");
-                setCurrentPage(1);
-              }}
-              scrollTargetRef={tableRef}
-              scrollOnClick={true}
-              className="h-full"
-            />
-          </motion.div>
+          {/* Rejected Documents Tile */}
+          {(() => {
+            const s = accentStyles.red;
+            const isActive = statusFilter === "rejected_documents";
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("rejected_documents");
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rejected Documents</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.rejected_documents}</p>
+                    <p className="text-xs text-slate-500">Need attention</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <XCircle className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })()}
         </div>
 
-        {/* Compact Filters */}
-        <div ref={tableRef} className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-slate-200 shadow-sm">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
-            <div className="w-full md:w-1/3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search candidates or files..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="pl-10 h-9 text-sm"
-                />
+        {/* Unified Table Container */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <Input
+                    placeholder="Search candidates or files..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <ProjectRoleFilter
+                    value={projectRoleFilter}
+                    onChange={handleProjectRoleChange}
+                    className="sm:w-80"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setProjectRoleFilter({ projectId: "all", roleCatalogId: "all" });
+                      setScreeningFilter(false);
+                      setStatusFilter("verification_in_progress_document");
+                      setCurrentPage(1);
+                    }}
+                    title="Reset Filters"
+                  >
+                    <FilterX className="h-4 w-4 text-slate-500" />
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="flex-1 flex flex-col md:flex-row gap-4 items-center w-full">
-              <ProjectRoleFilter
-                value={projectRoleFilter}
-                onChange={handleProjectRoleChange}
-                showRoleFilter={true}
-                className="flex-1"
-              />
-              
-              <div className={cn(
-                "flex items-center space-x-2 px-3 py-2 bg-slate-50 rounded-md border border-slate-200 transition-opacity",
-                statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
-              )}>
-                <Checkbox
-                  id="screening-filter"
-                  checked={statusFilter === "screening_approved" ? true : screeningFilter}
-                  onCheckedChange={(checked) => {
-                    setScreeningFilter(checked as boolean);
-                    setCurrentPage(1);
-                  }}
-                  disabled={statusFilter === "screening_approved"}
-                />
-                <label
-                  htmlFor="screening-filter"
-                  className="text-sm font-medium leading-none cursor-pointer whitespace-nowrap"
-                >
-                  Screening Approved
-                </label>
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "flex items-center space-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 transition-all",
+                  statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
+                )}>
+                  <Checkbox
+                    id="screening-filter"
+                    checked={statusFilter === "screening_approved" ? true : screeningFilter}
+                    onCheckedChange={(checked) => {
+                      setScreeningFilter(checked as boolean);
+                      setCurrentPage(1);
+                    }}
+                    disabled={statusFilter === "screening_approved"}
+                  />
+                  <label htmlFor="screening-filter" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                    Screening Approved Only
+                  </label>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Compact Documents Table */}
-       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-  {/* Header */}
-  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-       <div className="rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-lg shadow-purple-500/20">
-          <User className="h-5 w-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {(() => {
-              switch (statusFilter) {
-                case "documents_verified":
-                  return "Verified Candidates";
-                case "verification_in_progress_document":
-                  return "In-progress Candidates";
-                case "rejected_documents":
-                  return "Rejected Candidates";
-                case "screening_approved":
-                  return "Screening Approved Candidates";
-                default:
-                  return "Candidates for Verification";
-              }
-            })()}
-          </h3>
-          <p className="text-sm text-gray-500">
-            <span className="font-semibold text-gray-900">{totalCandidates}</span>{' '}
-            {(() => {
-              return totalCandidates === 1 ? 'candidate' : 'candidates';
-            })()} {statusFilter === 'all' ? 'to review' : ''}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-500" />}
-        {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidatesForModal.length > 0 && (
-          <Button
-            onClick={handleBulkSendToClient}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            size="sm"
-          >
-            Bulk Send to Client ({selectedCandidatesForModal.length})
-          </Button>
-        )}
-      </div>
-    </div>
-  </div>
+          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <User className="h-5 w-5 text-white" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">
+                    {(() => {
+                      switch (statusFilter) {
+                        case "documents_verified":
+                          return "Verified Candidates";
+                        case "verification_in_progress_document":
+                          return "In-progress Candidates";
+                        case "rejected_documents":
+                          return "Rejected Candidates";
+                        case "screening_approved":
+                          return "Screening Approved Candidates";
+                        default:
+                          return "Candidates for Verification";
+                      }
+                    })()}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    <span className="font-semibold text-gray-900">{totalCandidates}</span>{" "}
+                    {totalCandidates === 1 ? "candidate" : "candidates"} found
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />}
+                {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidatesForModal.length > 0 && (
+                  <Button
+                    onClick={handleBulkSendToClient}
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                    size="sm"
+                  >
+                    Bulk Send to Client ({selectedCandidatesForModal.length})
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0">
 
   {/* Loading */}
   {isLoading && (
@@ -997,6 +1058,7 @@ export default function DocumentVerificationPage() {
       <p className="mt-4 text-sm text-gray-500">No candidates found</p>
     </div>
   )}
+</div>
 </div>
 
         {/* Compact Verification Dialog */}

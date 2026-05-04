@@ -248,7 +248,7 @@ describe('AuditInterceptor', () => {
         url: '/api/v1/clients',
         body: {
           name: 'Test Client',
-          type: 'HEALTHCARE_ORGANIZATION',
+          type: 'DIRECT_CLIENT',
           email: 'client@example.com',
           commissionRate: 0.15,
         },
@@ -275,7 +275,7 @@ describe('AuditInterceptor', () => {
             userId: 'user-123',
             changes: {
               name: 'Test Client',
-              type: 'HEALTHCARE_ORGANIZATION',
+              type: 'DIRECT_CLIENT',
               email: '[REDACTED]',
               commissionRate: '[REDACTED]',
             },

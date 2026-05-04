@@ -112,6 +112,66 @@ export async function seedSystemConfig() {
     },
   });
 
+  // State code → ordered language codes for recruiter auto-assignment
+  const stateRecruitmentLanguages: Record<string, string[]> = {
+    // States
+    AP: ['te', 'hi', 'en'], // Andhra Pradesh
+    AR: ['hi', 'en'],       // Arunachal Pradesh
+    AS: ['as', 'hi', 'en'], // Assam
+    BR: ['hi', 'en'],       // Bihar
+    CT: ['hi', 'en'],       // Chhattisgarh
+    GA: ['gom', 'hi', 'en'],// Goa
+    GJ: ['gu', 'hi', 'en'], // Gujarat
+    HR: ['hi', 'en'],       // Haryana
+    HP: ['hi', 'en'],       // Himachal Pradesh
+    JH: ['hi', 'en'],       // Jharkhand
+    KA: ['kn', 'hi', 'en'], // Karnataka
+    KL: ['ml', 'en'],       // Kerala
+    MP: ['hi', 'en'],       // Madhya Pradesh
+    MH: ['hi', 'mr'],       // Maharashtra (Hindi priority as requested)
+    MN: ['mni', 'hi', 'en'],// Manipur
+    ML: ['hi', 'en'],       // Meghalaya
+    MZ: ['lus', 'hi', 'en'],// Mizoram
+    NL: ['en', 'hi'],       // Nagaland
+    OR: ['or', 'hi', 'en'], // Odisha
+    PB: ['pa', 'hi', 'en'], // Punjab
+    RJ: ['hi', 'en'],       // Rajasthan
+    SK: ['ne', 'hi', 'en'], // Sikkim
+    TN: ['ta', 'en'],       // Tamil Nadu
+    TG: ['te', 'hi', 'en'], // Telangana
+    TR: ['hi', 'en'],       // Tripura
+    UP: ['hi', 'en'],       // Uttar Pradesh
+    UT: ['hi', 'en'],       // Uttarakhand
+    WB: ['bn', 'hi', 'en'], // West Bengal
+
+    // Union Territories
+    AN: ['hi', 'en'],       // Andaman and Nicobar Islands
+    CH: ['hi', 'en'],       // Chandigarh
+    DN: ['hi', 'en'],       // Dadra and Nagar Haveli
+    DD: ['hi', 'en'],       // Daman and Diu
+    DL: ['hi', 'en'],       // Delhi
+    JK: ['hi', 'en'],       // Jammu and Kashmir
+    LA: ['hi', 'en'],       // Ladakh
+    LD: ['ml', 'en'],       // Lakshadweep
+    PY: ['ta', 'en'],       // Puducherry
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'STATE_RECRUITMENT_LANGUAGES' },
+    update: {
+      value: stateRecruitmentLanguages,
+      description: 'Map state code (e.g. KL, MH) to ISO 639-1 language codes for round-robin matching',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'STATE_RECRUITMENT_LANGUAGES',
+      value: stateRecruitmentLanguages,
+      description: 'Map state code (e.g. KL, MH) to ISO 639-1 language codes for round-robin matching',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);

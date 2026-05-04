@@ -3,6 +3,8 @@ export {
   useGetUsersQuery,
   useGetUserQuery,
   useCreateUserMutation,
+  useListUserLanguagesQuery,
+  useUpdateRecruiterCapabilitiesMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
 } from "./api";

@@ -63,6 +63,10 @@ export const createCandidateSchema = z
     referralPhone: z.string().optional(),
     referralDescription: z.string().optional(),
 
+    addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+    addressStateId: z.string().optional().or(z.literal("")),
+    address: z.string().max(500).optional().or(z.literal("")),
+
     highestEducation: z.string().max(100).optional(),
     university: z.string().max(200).optional(),
     graduationYear: z.number().min(1950).max(2030).optional(),
@@ -101,6 +105,15 @@ export const createCandidateSchema = z
         code: z.ZodIssueCode.custom,
         message: "Referral company name is required when source is referral",
         path: ["referralCompanyName"],
+      });
+    }
+  })
+  .superRefine((data, ctx) => {
+    if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select a country before state",
+        path: ["addressCountryCode"],
       });
     }
   });

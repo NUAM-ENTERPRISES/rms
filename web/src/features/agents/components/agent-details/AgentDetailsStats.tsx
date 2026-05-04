@@ -1,6 +1,5 @@
-import { motion } from "framer-motion";
-import { Users, Handshake, FolderKanban } from "lucide-react";
-import { StatusTile } from "@/components/molecules";
+import { Users, Handshake, FolderKanban, ArrowUpRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Agent } from "../../api";
 
 type AgentDetailsStatsProps = {
@@ -8,46 +7,65 @@ type AgentDetailsStatsProps = {
   totalCount: number;
 };
 
+const accentStyles = {
+  blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",    iconBg: "bg-blue-100",    icon: "text-blue-600",    value: "text-blue-700"    },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", iconBg: "bg-emerald-100", icon: "text-emerald-600", value: "text-emerald-700" },
+  amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",  iconBg: "bg-amber-100",   icon: "text-amber-600",   value: "text-amber-700"   },
+} as const;
+
 export function AgentDetailsStats({ agent, totalCount }: AgentDetailsStatsProps) {
-  const linkedProjects = agent ? (agent._count?.agentProjects ?? 0) : "—";
+  const tiles = [
+    {
+      label: "Total Candidates",
+      value: agent?._count?.candidates ?? totalCount,
+      subtitle: "All time referrals",
+      Icon: Users,
+      accent: "blue" as const,
+    },
+    {
+      label: "Linked Projects",
+      value: agent?._count?.agentProjects ?? 0,
+      subtitle: "Client projects tied to this agent",
+      Icon: FolderKanban,
+      accent: "emerald" as const,
+    },
+    {
+      label: "Agent Type",
+      value: agent?.agentType ?? "—",
+      subtitle: agent?.isActive ? "Currently active" : "Inactive",
+      Icon: Handshake,
+      accent: "amber" as const,
+    },
+  ];
 
   return (
-    <div className="px-6 -mt-4 relative z-10 pb-6 sm:pb-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"
-      >
-        <StatusTile
-          label="Total Candidates"
-          value={agent?._count?.candidates ?? totalCount}
-          subtitle="All time referrals"
-          icon={Users}
-          bgGradient="from-blue-50 to-indigo-50"
-          iconBg="bg-blue-100"
-          textColor="text-blue-700"
-        />
-        <StatusTile
-          label="Linked Projects"
-          value={linkedProjects}
-          subtitle="Client projects tied to this agent"
-          icon={FolderKanban}
-          bgGradient="from-emerald-50 to-teal-50"
-          iconBg="bg-emerald-100"
-          textColor="text-emerald-700"
-        />
-        <StatusTile
-          label="Agent Type"
-          value={agent?.agentType ?? "—"}
-          subtitle={agent?.isActive ? "Currently active" : "Inactive"}
-          icon={Handshake}
-          bgGradient="from-amber-50 to-orange-50"
-          iconBg="bg-amber-100"
-          textColor="text-amber-700"
-          className="sm:col-span-2 xl:col-span-1"
-        />
-      </motion.div>
+    <div className="px-6 py-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {tiles.map((tile) => {
+          const s = accentStyles[tile.accent];
+          return (
+            <div
+              key={tile.label}
+              className={cn("relative rounded-2xl border bg-gradient-to-br p-5 shadow-sm", s.card)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                  <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
+                  <p className="text-xs text-slate-500">{tile.subtitle}</p>
+                </div>
+                <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                  <tile.Icon className={cn("h-5 w-5", s.icon)} />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400">
+                <span>Agent overview</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

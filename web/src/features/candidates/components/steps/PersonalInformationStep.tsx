@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CountryCodeSelect, SelectAgent } from "@/components/molecules";
+import { CountryCodeSelect, SelectAgent, PhysicalAddressFields } from "@/components/molecules";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -598,6 +598,16 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 </p>
               )}
             </div>
+
+            {setValue ? (
+              <PhysicalAddressFields
+                control={control}
+                setValue={setValue}
+                errors={errors}
+                disabled={isLoading}
+                title="Candidate address (optional)"
+              />
+            ) : null}
 
             {/* Source */}
             <div className="space-y-2">
