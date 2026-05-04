@@ -474,7 +474,7 @@ export default function SessionsMonitoringPage() {
                   {allCount}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  All roles (paginated)
+                  All roles
                 </p>
               </div>
               <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-slate-100 dark:bg-slate-800">
