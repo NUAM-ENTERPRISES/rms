@@ -210,6 +210,30 @@ export interface Candidate {
   candidateQualifications?: any[];
   candidateExperience?: number;
   documents?: any[];
+  /** Non-deleted documents count from GET /candidates/:id (avoids an extra documents list request for stat tiles). */
+  documentsCount?: number;
+  profileCompletion?: {
+    percent: number;
+    requiredCount: number;
+    completedCount: number;
+    missing: Array<{
+      type: "personal" | "document";
+      key: string;
+      label: string;
+    }>;
+    breakdown?: {
+      personal: {
+        requiredCount: number;
+        completedCount: number;
+        missing: Array<{ key: string; label: string }>;
+      };
+      documents: {
+        requiredCount: number;
+        completedCount: number;
+        missing: Array<{ key: string; label: string }>;
+      };
+    };
+  };
   roleMatches?: Array<{
     roleId?: string;
     designation?: string;
@@ -1142,29 +1166,6 @@ export const candidatesApi = baseApi.injectEndpoints({
       providesTags: ["Document"],
     }),
 
-    /** One request for all documents on the current candidate list page (profile completion / tables). */
-    getDocumentsByCandidates: builder.query<
-      {
-        success: boolean;
-        data: { byCandidateId: Record<string, Document[]> };
-      },
-      { candidateIds: string[] }
-    >({
-      query: ({ candidateIds }) => ({
-        url: "/documents/by-candidates",
-        method: "POST",
-        body: {
-          candidateIds: [...new Set(candidateIds.filter(Boolean))],
-        },
-      }),
-      serializeQueryArgs: ({ queryArgs }) => {
-        const key = [...new Set(queryArgs.candidateIds.filter(Boolean))]
-          .sort()
-          .join("|");
-        return `documentsByCandidates(${key})`;
-      },
-      providesTags: ["Document"],
-    }),
     uploadDocument: builder.mutation<
       { success: boolean; data: Document; message?: string },
       UploadDocumentRequest
@@ -1392,7 +1393,6 @@ export const {
   useUpdateCandidateQualificationMutation,
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
-  useGetDocumentsByCandidatesQuery,
   useUploadDocumentMutation,
   useUpdateCandidateStatusMutation,
   useAssignRecruiterMutation,

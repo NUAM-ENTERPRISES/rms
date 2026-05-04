@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -50,7 +50,6 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import {
   useGetCandidateOverviewQuery,
-  useGetDocumentsByCandidatesQuery,
   useTransferCandidateMutation,
 } from "@/features/candidates/api";
 import { usersApi } from "@/features/admin/api";
@@ -196,27 +195,6 @@ export default function CandidateOverviewPage() {
   const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
 
   const candidates = data?.data || [];
-
-  const overviewCandidateIds = useMemo(
-    () =>
-      (Array.isArray(candidates)
-        ? candidates.map((c: { id?: string }) => c?.id).filter(Boolean)
-        : []) as string[],
-    [candidates]
-  );
-  const useBatchDocs = overviewCandidateIds.length > 0;
-  const {
-    data: batchDocumentsResponse,
-    isLoading: batchDocumentsLoading,
-    isFetching: batchDocumentsFetching,
-  } = useGetDocumentsByCandidatesQuery(
-    { candidateIds: overviewCandidateIds },
-    { skip: !useBatchDocs }
-  );
-  const documentsByCandidateId =
-    batchDocumentsResponse?.data?.byCandidateId ?? {};
-  const batchDocumentsBusy =
-    useBatchDocs && (batchDocumentsLoading || batchDocumentsFetching);
 
   const statsData = data?.stats || {
     total: 0,
@@ -754,9 +732,6 @@ export default function CandidateOverviewPage() {
                             <CandidateProfileCompletionCell
                               candidateId={candidate.id}
                               candidate={candidate}
-                              useBatchDocuments={useBatchDocs}
-                              batchDocuments={documentsByCandidateId[candidate.id]}
-                              batchDocumentsLoading={batchDocumentsBusy}
                             />
                           </TableCell>
 

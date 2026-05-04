@@ -28,7 +28,6 @@ import { formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
   useGetCandidateProjectsQuery,
-  useGetDocumentsQuery,
   useDeleteWorkExperienceMutation,
   useDeleteCandidateQualificationMutation,
 } from "@/features/candidates";
@@ -138,11 +137,6 @@ export default function CandidateDetailPage() {
   // Fetch counts for stat cards
   const { data: projectsData } = useGetCandidateProjectsQuery(
     { candidateId: id!, page: 1, limit: 1 },
-    { skip: !id }
-  );
-
-  const { data: documentsData, isLoading: isDocumentsLoading } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 50 },
     { skip: !id }
   );
 
@@ -287,8 +281,8 @@ export default function CandidateDetailPage() {
     },
     {
       label: "Total Documents",
-      value: documentsData?.data?.pagination?.total ?? 0,
-      subtitle: "Verified files",
+      value: candidate.documentsCount ?? 0,
+      subtitle: "Uploaded files",
       icon: FileText,
       color: "from-purple-500 to-pink-500",
       tab: "documents",
@@ -450,8 +444,8 @@ export default function CandidateDetailPage() {
           <CandidateProfileCompletion
             candidateId={id!}
             candidate={candidate}
-            documents={documentsData?.data?.documents}
-            isLoading={isDocumentsLoading}
+            completion={candidate.profileCompletion}
+            isLoading={false}
             variant="circular"
           />
           <div className="flex flex-col">

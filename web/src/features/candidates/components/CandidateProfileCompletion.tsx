@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGetDocumentsQuery } from "../api";
 import { getCandidateProfileCompletion } from "../profileCompletion";
 import type { Candidate, Document } from "../api";
 
@@ -9,6 +8,7 @@ interface CandidateProfileCompletionProps {
   candidateId?: string;
   candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth">;
   documents?: Document[];
+  completion?: Candidate["profileCompletion"];
   isLoading?: boolean;
   compact?: boolean;
   variant?: "default" | "circular";
@@ -18,11 +18,7 @@ interface CandidateProfileCompletionProps {
 
 interface CandidateProfileCompletionCellProps {
   candidateId: string;
-  candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth">;
-  /** When true, skips per-row GET /documents; parent loads via POST /documents/by-candidates */
-  useBatchDocuments?: boolean;
-  batchDocuments?: Document[];
-  batchDocumentsLoading?: boolean;
+  candidate?: Pick<Candidate, "email" | "mobileNumber" | "dateOfBirth" | "profileCompletion">;
 }
 
 const getProgressColor = (percent: number) => {
@@ -41,6 +37,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
   candidateId,
   candidate,
   documents,
+  completion: completionOverride,
   isLoading,
   compact = false,
   variant = "default",
@@ -82,7 +79,7 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
     };
   })();
 
-  const completion = localCompletion;
+  const completion = completionOverride ?? localCompletion;
   const missingLabels = completion.missing.map((item) => item.label);
   const progressColor = getProgressColor(completion.percent);
   const progressBgColor = getProgressBgColor(completion.percent);
@@ -249,65 +246,17 @@ export const CandidateProfileCompletion: React.FC<CandidateProfileCompletionProp
 export const CandidateProfileCompletionCell: React.FC<CandidateProfileCompletionCellProps> = ({
   candidateId,
   candidate,
-  useBatchDocuments,
-  batchDocuments,
-  batchDocumentsLoading,
 }) => {
   // navigation target: candidate detail, open Documents tab
   const navigate = useNavigate();
-
-  const { data, isLoading } = useGetDocumentsQuery(
-    { candidateId, page: 1, limit: 50 },
-    { skip: !candidateId || !!useBatchDocuments }
-  );
-
-  if (useBatchDocuments) {
-    if (batchDocumentsLoading) {
-      return (
-        <div className="flex justify-center">
-          <CandidateProfileCompletion
-            candidateId={candidateId}
-            candidate={candidate}
-            isLoading
-            compact={true}
-            variant="circular"
-            onCircleClick={(e) => {
-              e.stopPropagation();
-              navigate(`/candidates/${candidateId}?tab=documents`);
-            }}
-            circleAriaLabel="Open candidate documents"
-          />
-        </div>
-      );
-    }
-    return (
-      <div className="flex justify-center">
-        <CandidateProfileCompletion
-          candidateId={candidateId}
-          candidate={candidate}
-          documents={batchDocuments ?? []}
-          isLoading={false}
-          compact={true}
-          variant="circular"
-          onCircleClick={(e) => {
-            e.stopPropagation();
-            navigate(`/candidates/${candidateId}?tab=documents`);
-          }}
-          circleAriaLabel="Open candidate documents"
-        />
-      </div>
-    );
-  }
-
-  const documents = data?.data?.documents;
 
   return (
     <div className="flex justify-center">
       <CandidateProfileCompletion
         candidateId={candidateId}
         candidate={candidate}
-        documents={documents}
-        isLoading={isLoading}
+        completion={candidate?.profileCompletion}
+        isLoading={false}
         compact={true}
         variant="circular"
         onCircleClick={(e) => {

@@ -6,6 +6,7 @@ import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
 import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { computeCandidateProfileCompletion } from '../utils/profile-completion.util';
 
 export interface RecruiterInfo {
   id: string;
@@ -736,6 +737,10 @@ export class RecruiterAssignmentService {
           },
         },
         workExperiences: true,
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
         // Include ALL active recruiter assignments to detect CRE handling and recruiter info
         recruiterAssignments: {
           where: {
@@ -776,8 +781,9 @@ export class RecruiterAssignmentService {
     });
 
     const formattedCandidates = candidates.map((candidate) => {
+      const { documents: documentRows, ...candidateRest } = candidate as any;
       // Find the specific CRE assignment if it exists
-      const creAssignment = candidate.recruiterAssignments.find(
+      const creAssignment = candidateRest.recruiterAssignments.find(
         (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
       );
 
@@ -785,7 +791,7 @@ export class RecruiterAssignmentService {
       const isHandledByCRE = !!creAssignment;
 
       // Extract the specific recruiter assignment for the logged-in recruiter
-      const recruiterAssignment = candidate.recruiterAssignments.find(
+      const recruiterAssignment = candidateRest.recruiterAssignments.find(
         (a) => a.recruiterId === recruiterId
       );
 
@@ -793,9 +799,15 @@ export class RecruiterAssignmentService {
       const isCREReassigned = recruiterAssignment?.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
 
       return {
-        ...candidate,
+        ...candidateRest,
         isHandledByCRE,
         isCREReassigned,
+        profileCompletion: computeCandidateProfileCompletion({
+          email: candidateRest.email,
+          mobileNumber: candidateRest.mobileNumber,
+          dateOfBirth: candidateRest.dateOfBirth,
+          documents: documentRows ?? [],
+        }),
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,

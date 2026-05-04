@@ -43,6 +43,7 @@ import {
   requiresCREHandling,
   isCandidateStatusTerminal,
 } from '../common/constants';
+import { computeCandidateProfileCompletion } from './utils/profile-completion.util';
 
 @Injectable()
 export class CandidatesService {
@@ -756,16 +757,21 @@ export class CandidatesService {
               },
             },
           }
-        }
+        },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
     });
 
     const candidatesWithCreator = candidates.map((candidate: any) => {
+      const { documents: documentRows, ...candidateRest } = candidate;
       // Find the specific active assignment
-      const activeAssignment = candidate.recruiterAssignments?.[0];
+      const activeAssignment = candidateRest.recruiterAssignments?.[0];
       
       // Find the specific CRE assignment if it exists
-      const creAssignment = candidate.recruiterAssignments.find(
+      const creAssignment = candidateRest.recruiterAssignments.find(
         (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
       );
 
@@ -773,14 +779,20 @@ export class CandidatesService {
       const isHandledByCRE = !!creAssignment;
 
       // Check if any active assignment is marked as CRE_REASSIGNED
-      const isCREReassigned = candidate.recruiterAssignments.some(
+      const isCREReassigned = candidateRest.recruiterAssignments.some(
         (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
       );
 
       return {
-        ...candidate,
+        ...candidateRest,
         isHandledByCRE,
         isCREReassigned,
+        profileCompletion: computeCandidateProfileCompletion({
+          email: candidateRest.email,
+          mobileNumber: candidateRest.mobileNumber,
+          dateOfBirth: candidateRest.dateOfBirth,
+          documents: documentRows ?? [],
+        }),
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,
@@ -1549,61 +1561,70 @@ export class CandidatesService {
   }
 
   async findOne(id: string): Promise<CandidateWithRelations> {
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id },
-      include: {
-        currentStatus: {
-          select: {
-            id: true,
-            statusName: true,
-          },
-        },
-        team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        preferredCountries: {
-          include: {
-            country: true,
-          },
-        },
-        facilityPreferences: true,
-        recruiterAssignments: {
-          where: { isActive: true },
-          include: {
-            recruiter: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            assignedByUser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            createdByUser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
+    const [candidate, documentsCount] = await Promise.all([
+      this.prisma.candidate.findUnique({
+        where: { id },
+        include: {
+          currentStatus: {
+            select: {
+              id: true,
+              statusName: true,
             },
           },
-          orderBy: { assignedAt: 'asc' },
+          team: true,
+          workExperiences: {
+            include: {
+              roleCatalog: true,
+            },
+          },
+          qualifications: {
+            include: {
+              qualification: true,
+            },
+          },
+          preferredCountries: {
+            include: {
+              country: true,
+            },
+          },
+          facilityPreferences: true,
+          recruiterAssignments: {
+            where: { isActive: true },
+            include: {
+              recruiter: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              assignedByUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+              createdByUser: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: { assignedAt: 'asc' },
+          },
+          documents: {
+            where: { isDeleted: false },
+            select: { docType: true },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.document.count({
+        where: { candidateId: id, isDeleted: false },
+      }),
+    ]);
 
     if (!candidate) {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
@@ -1616,10 +1637,18 @@ export class CandidatesService {
       firstAssignment?.assignedByUser ||
       null;
 
-    // Pipeline data removed from response to reduce payload
+    const { documents: documentRows, ...candidateRest } = candidate as any;
+
     return {
-      ...candidate,
+      ...candidateRest,
       createdBy,
+      documentsCount,
+      profileCompletion: computeCandidateProfileCompletion({
+        email: candidate.email,
+        mobileNumber: candidate.mobileNumber,
+        dateOfBirth: candidate.dateOfBirth,
+        documents: documentRows ?? [],
+      }),
     } as any;
   }
 
@@ -4111,6 +4140,10 @@ export class CandidatesService {
         preferredCountries: {
           include: { country: true },
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
         _count: {
           select: {
             projects: projectsFilter ? projectsFilter : true,
@@ -4181,11 +4214,17 @@ export class CandidatesService {
       const firstStatusChange = (c as any).statusHistories?.[0]; // Use status history as a reliable creator source
       const latestProject = c.projects?.[0] as any;
       
-      // Destructure to remove projects array from the final response object
-      const { projects, ...candidateRest } = c;
+      // Destructure to remove projects / internal doc rows from the final response object
+      const { projects, documents: documentRows, ...candidateRest } = c as any;
 
       return {
         ...candidateRest,
+        profileCompletion: computeCandidateProfileCompletion({
+          email: (candidateRest as any).email,
+          mobileNumber: (candidateRest as any).mobileNumber,
+          dateOfBirth: (candidateRest as any).dateOfBirth,
+          documents: documentRows ?? [],
+        }),
         recruiter: activeAssignment?.recruiter || null,
         createdBy: 
           firstStatusChange?.changedBy || 

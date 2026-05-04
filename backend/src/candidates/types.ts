@@ -12,6 +12,30 @@ import {
 
 export interface CandidateWithRelations extends Candidate {
   team: Team | null;
+  /**
+   * Server-computed profile completion used by dashboard tables.
+   * Includes personal + required document checks.
+   */
+  profileCompletion?: {
+    percent: number;
+    requiredCount: number;
+    completedCount: number;
+    missing: Array<{ type: 'personal' | 'document'; key: string; label: string }>;
+    breakdown?: {
+      personal: {
+        requiredCount: number;
+        completedCount: number;
+        missing: Array<{ key: string; label: string }>;
+      };
+      documents: {
+        requiredCount: number;
+        completedCount: number;
+        missing: Array<{ key: string; label: string }>;
+      };
+    };
+  };
+  /** Non-deleted document row count (for dashboards without loading full document lists). */
+  documentsCount?: number;
   projects?: (CandidateProjects & {
     project: {
       id: string;

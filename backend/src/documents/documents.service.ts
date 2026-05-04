@@ -359,69 +359,6 @@ export class DocumentsService {
   }
 
   /**
-   * Fetch documents for many candidates in one query (for list UIs / profile completion).
-   * Results are grouped by candidateId; each requested id appears as a key (possibly empty array).
-   */
-  async findAllByCandidateIds(
-    candidateIds: string[],
-  ): Promise<{ byCandidateId: Record<string, DocumentWithRelations[]> }> {
-    const uniqueIds = [...new Set((candidateIds || []).map((id) => id?.trim()).filter(Boolean))];
-    const byCandidateId: Record<string, DocumentWithRelations[]> = {};
-    for (const id of uniqueIds) {
-      byCandidateId[id] = [];
-    }
-    if (uniqueIds.length === 0) {
-      return { byCandidateId };
-    }
-
-    const documents = await this.prisma.document.findMany({
-      where: {
-        candidateId: { in: uniqueIds },
-        isDeleted: false,
-      },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            countryCode: true,
-            mobileNumber: true,
-            email: true,
-          },
-        },
-        roleCatalog: true,
-        verifications: {
-          where: { isDeleted: false },
-          include: {
-            candidateProjectMap: {
-              include: {
-                project: {
-                  select: {
-                    id: true,
-                    title: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    for (const doc of documents) {
-      const cid = doc.candidateId;
-      if (!byCandidateId[cid]) {
-        byCandidateId[cid] = [];
-      }
-      byCandidateId[cid].push(doc as DocumentWithRelations);
-    }
-
-    return { byCandidateId };
-  }
-
-  /**
    * Get a single document by ID
    */
   async findOne(id: string): Promise<DocumentWithRelations> {

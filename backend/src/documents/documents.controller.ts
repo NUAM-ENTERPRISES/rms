@@ -25,7 +25,6 @@ import {
 } from '@nestjs/swagger';
 import { DocumentsService } from './documents.service';
 import { CreateDocumentDto } from './dto/create-document.dto';
-import { BatchDocumentsByCandidatesDto } from './dto/batch-documents-by-candidates.dto';
 import { UpdateDocumentDto } from './dto/update-document.dto';
 import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
@@ -69,24 +68,6 @@ export class DocumentsController {
       success: true,
       data: document,
       message: 'Document uploaded successfully',
-    };
-  }
-
-  @Post('by-candidates')
-  @Permissions('read:documents')
-  @ApiOperation({
-    summary: 'List documents for multiple candidates (batch)',
-    description:
-      'Returns all non-deleted documents for the given candidate IDs in a single query, grouped by candidateId. Use this from candidate list tables instead of N parallel GET /documents?candidateId=... calls.',
-  })
-  @ApiResponse({ status: 200, description: 'Documents grouped by candidate id' })
-  async findAllByCandidates(@Body() dto: BatchDocumentsByCandidatesDto) {
-    const result = await this.documentsService.findAllByCandidateIds(
-      dto.candidateIds,
-    );
-    return {
-      success: true,
-      data: result,
     };
   }
 

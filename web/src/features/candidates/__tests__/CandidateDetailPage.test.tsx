@@ -21,12 +21,22 @@ vi.mock("@/features/candidates", () => ({
       currentStatus: { statusName: "Untouched" },
       createdAt: "2020-01-01",
       updatedAt: "2025-01-01",
+      documentsCount: 0,
+      profileCompletion: {
+        percent: 100,
+        requiredCount: 9,
+        completedCount: 9,
+        missing: [],
+        breakdown: {
+          personal: { requiredCount: 3, completedCount: 3, missing: [] },
+          documents: { requiredCount: 6, completedCount: 6, missing: [] },
+        },
+      },
     },
     isLoading: false,
     error: null,
   }),
   useGetCandidateProjectsQuery: () => ({ data: { success: true, data: [], meta: {} }, isLoading: false }),
-  useGetDocumentsQuery: () => ({ data: { success: true, data: { documents: [], pagination: { total: 0, page: 1, limit: 50, totalPages: 1 } } }, isLoading: false }),
   useDeleteWorkExperienceMutation: () => [vi.fn(), { isLoading: false }],
   useDeleteCandidateQualificationMutation: () => [vi.fn(), { isLoading: false }],
 }));
