@@ -15,7 +15,6 @@ import {
   Users,
   Clock,
   ArrowUpRight,
-  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,6 +228,7 @@ export default function SessionsMonitoringPage() {
     role: undefined,
     search: "",
     status: undefined,
+    availability: undefined,
     page: 1,
     limit: 10,
   });
@@ -238,6 +238,7 @@ export default function SessionsMonitoringPage() {
     role: filters.role || undefined,
     search: filters.search || undefined,
     status: filters.status,
+    availability: filters.availability,
     page: filters.page,
     limit: filters.limit,
   };
@@ -259,6 +260,7 @@ export default function SessionsMonitoringPage() {
       role: filters.role || undefined,
       search: filters.search || undefined,
       status: undefined,
+      availability: undefined,
       page: 1,
       limit: 1,
     }),
@@ -302,6 +304,7 @@ export default function SessionsMonitoringPage() {
             : value === "ended"
               ? "ENDED"
               : undefined,
+      availability: undefined,
       page: 1,
     }));
   }
@@ -313,32 +316,33 @@ export default function SessionsMonitoringPage() {
   const allCount = countsData?.counts?.total ?? 0;
   const activeCount = countsData?.counts?.active ?? 0;
   const idleCount = countsData?.counts?.idle ?? 0;
-  const endedCount = countsData?.counts?.ended ?? 0;
+  const onBreakCount = countsData?.counts?.onBreak ?? 0;
+  const onCallCount = countsData?.counts?.onCall ?? 0;
 
   const isErrorAny = isError || isErrorCounts;
   const isFetchingAny = isFetching || isFetchingCounts;
 
-  const selectedTile: "all" | "active" | "idle" | "ended" =
-    filters.status === "ACTIVE"
-      ? "active"
-      : filters.status === "IDLE"
-        ? "idle"
-        : filters.status === "ENDED"
-          ? "ended"
-          : "all";
+  const selectedTile: "all" | "active" | "idle" | "break" | "call" =
+    filters.availability === "BREAK"
+      ? "break"
+      : filters.availability === "ON_CALL"
+        ? "call"
+        : filters.status === "ACTIVE"
+          ? "active"
+          : filters.status === "IDLE"
+            ? "idle"
+            : "all";
 
-  function handleTileFilter(next: "all" | "active" | "idle" | "ended") {
+  function handleTileFilter(next: "all" | "active" | "idle" | "break" | "call") {
     setFilters((f) => ({
       ...f,
-      // Prefer derived status filter (more accurate than isActive).
-      status:
-        next === "all"
-          ? undefined
-          : next === "active"
-            ? "ACTIVE"
-            : next === "idle"
-              ? "IDLE"
-              : "ENDED",
+      status: next === "active" ? "ACTIVE" : next === "idle" ? "IDLE" : undefined,
+      availability:
+        next === "break"
+          ? "BREAK"
+          : next === "call"
+            ? "ON_CALL"
+            : undefined,
       page: 1,
       limit: 10,
     }));
@@ -352,48 +356,101 @@ export default function SessionsMonitoringPage() {
       <div className="max-w-screen-xl mx-auto p-6 space-y-6">
 
         {/* ── Header ── */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 dark:bg-slate-100">
-                <Activity className="h-4 w-4 text-white dark:text-slate-900" />
-              </div>
-              <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-                Session Monitoring
-              </h1>
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 pl-10">
-              Monitor live and historical login sessions across all staff roles
-            </p>
-            {isErrorAny && (
-              <div className="pl-10 pt-1">
-                <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300">
-                  <WifiOff className="h-3.5 w-3.5" />
-                  Unable to refresh sessions. Check connection and try again.
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-emerald-950/20" />
+          <div className="relative p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
+                      <Activity className="h-5 w-5 text-white dark:text-slate-900" />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                        Session Monitoring
+                      </h1>
+
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider",
+                          isFetchingAny
+                            ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300"
+                            : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300"
+                        )}
+                      >
+                        <LivePulse color={isFetchingAny ? "amber" : "green"} />
+                        {isFetchingAny ? "Syncing" : "Live"}
+                      </span>
+
+                      {(filters.role || filters.search || filters.status) && (
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          Filtered
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      Monitor live and historical login sessions across all staff roles
+                    </p>
+
+                    {/* <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <Users className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+                        {allCount} total
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <Wifi className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                        {activeCount} active
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        {idleCount} idle
+                      </span>
+                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <XCircle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                        {endedCount} ended
+                      </span>
+                    </div> */}
+
+                    {isErrorAny && (
+                      <div className="mt-3">
+                        <div className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+                          <WifiOff className="h-4 w-4" />
+                          Unable to refresh sessions. Check connection and try again.
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetch();
-              refetchCounts();
-            }}
-            disabled={isFetchingAny}
-            className="shrink-0 gap-2 border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+              <div className="flex items-center gap-2 sm:pt-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    refetch();
+                    refetchCounts();
+                  }}
+                  disabled={isFetchingAny}
+                  className="gap-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Dashboard tiles (click to filter table) ── */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <button
             type="button"
             onClick={() => handleTileFilter("all")}
@@ -473,42 +530,6 @@ export default function SessionsMonitoringPage() {
 
           <button
             type="button"
-            onClick={() => handleTileFilter("ended")}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              "from-rose-50 via-white to-rose-50/30 border-rose-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-rose-900/40",
-              selectedTile === "ended"
-                ? "ring-2 ring-rose-400/40 shadow-md"
-                : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
-            {selectedTile === "ended" && (
-              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-rose-500" />
-            )}
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Ended
-                </p>
-                <p className="text-3xl font-bold tabular-nums text-rose-700 dark:text-rose-400">
-                  {endedCount}
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Ended sessions
-                </p>
-              </div>
-              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-rose-100 dark:bg-rose-950">
-                <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-              </div>
-            </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-              <span>{selectedTile === "ended" ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
-          </button>
-
-          <button
-            type="button"
             onClick={() => handleTileFilter("idle")}
             className={cn(
               "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
@@ -544,6 +565,88 @@ export default function SessionsMonitoringPage() {
             </div>
             <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
               <span>{selectedTile === "idle" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTileFilter("break")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-sky-50 via-white to-sky-50/30 border-sky-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-sky-900/40",
+              selectedTile === "break"
+                ? "ring-2 ring-sky-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "break" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-sky-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  On break
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold tabular-nums text-sky-700 dark:text-sky-300">
+                    {onBreakCount}
+                  </p>
+                  <div className="mb-1.5">
+                    <LivePulse color="sky" />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  BREAK
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-sky-100 dark:bg-sky-950">
+                <Clock className="h-5 w-5 text-sky-600 dark:text-sky-300" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "break" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTileFilter("call")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-violet-50 via-white to-violet-50/30 border-violet-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-violet-900/40",
+              selectedTile === "call"
+                ? "ring-2 ring-violet-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "call" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-violet-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  On call
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold tabular-nums text-violet-700 dark:text-violet-300">
+                    {onCallCount}
+                  </p>
+                  <div className="mb-1.5">
+                    <LivePulse color="violet" />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  CALL
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-violet-100 dark:bg-violet-950">
+                <Clock className="h-5 w-5 text-violet-600 dark:text-violet-300" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "call" ? "Viewing now" : "Click to filter"}</span>
               <ArrowUpRight className="h-3 w-3" />
             </div>
           </button>
@@ -636,9 +739,11 @@ export default function SessionsMonitoringPage() {
                       ? "Active sessions"
                       : selectedTile === "idle"
                         ? "Idle sessions"
-                        : selectedTile === "ended"
-                          ? "Ended sessions"
-                          : "All sessions"}
+                        : selectedTile === "break"
+                          ? "On break"
+                          : selectedTile === "call"
+                            ? "On call"
+                            : "All sessions"}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {filters.role ? `Role: ${filters.role}` : "All roles"}

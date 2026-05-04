@@ -127,6 +127,7 @@ export interface AdminSessionsQuery {
   search?: string;
   isActive?: boolean;
   status?: "ACTIVE" | "IDLE" | "ENDED";
+  availability?: "ACTIVE" | "BREAK" | "ON_CALL";
   page?: number;
   limit?: number;
 }
@@ -399,6 +400,8 @@ export const usersApi = baseApi.injectEndpoints({
           active: number;
           idle: number;
           ended: number;
+          onBreak: number;
+          onCall: number;
         };
         message: string;
       },
@@ -410,6 +413,8 @@ export const usersApi = baseApi.injectEndpoints({
           if (params.role) searchParams.set('role', params.role);
           if (params.search) searchParams.set('search', params.search);
           if (params.status) searchParams.set('status', params.status);
+          if (params.availability)
+            searchParams.set('availability', params.availability);
           if (typeof params.isActive === 'boolean')
             searchParams.set('isActive', String(params.isActive));
           if (params.page) searchParams.set('page', String(params.page));

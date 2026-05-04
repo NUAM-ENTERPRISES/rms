@@ -671,10 +671,12 @@ export class UsersService {
     search?: string;
     isActive?: boolean;
     status?: 'ACTIVE' | 'IDLE' | 'ENDED';
+    availability?: 'ACTIVE' | 'BREAK' | 'ON_CALL';
     page?: number;
     limit?: number;
   }) {
-    const { role, search, isActive, status, page = 1, limit = 30 } = query;
+    const { role, search, isActive, status, availability, page = 1, limit = 30 } =
+      query;
 
     // Build the where clause for sessions
     const sessionWhere: any = {};
@@ -768,19 +770,41 @@ export class UsersService {
     });
 
     const counts = computed.reduce(
-      (acc: { total: number; active: number; idle: number; ended: number }, row: any) => {
+      (
+        acc: {
+          total: number;
+          active: number;
+          idle: number;
+          ended: number;
+          onBreak: number;
+          onCall: number;
+        },
+        row: any,
+      ) => {
         acc.total += 1;
         if (row.status === 'ACTIVE') acc.active += 1;
         else if (row.status === 'IDLE') acc.idle += 1;
         else acc.ended += 1;
+
+        // Availability counts are meaningful only for active sessions.
+        if (row.isActive && row.availability === SessionAvailability.BREAK)
+          acc.onBreak += 1;
+        if (row.isActive && row.availability === SessionAvailability.ON_CALL)
+          acc.onCall += 1;
         return acc;
       },
-      { total: 0, active: 0, idle: 0, ended: 0 },
+      { total: 0, active: 0, idle: 0, ended: 0, onBreak: 0, onCall: 0 },
     );
 
     // Apply derived active/inactive filter AFTER idle computation.
     const filtered = (() => {
       if (status) return computed.filter((row: any) => row.status === status);
+      if (availability)
+        return computed.filter(
+          (row: any) =>
+            row.isActive &&
+            (row.availability ?? SessionAvailability.ACTIVE) === availability,
+        );
       if (typeof isActive === 'boolean')
         return computed.filter((row: any) => row.isActive === isActive);
       return computed;
