@@ -3,19 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
-import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
-const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -41,7 +37,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
-  const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
@@ -49,12 +44,13 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
 
   const [updateStepStatus, { isLoading: isUpdatingTicket }] = useUpdateStepStatusMutation();
 
-  // Ticket submission date state
-  const [ticketSubmissionDate, setTicketSubmissionDate] = useState<Date | undefined>(undefined);
-
   // Ticket metadata state
   const [ticketDate, setTicketDate] = useState<Date | undefined>(undefined);
   const [initialTicketDate, setInitialTicketDate] = useState<Date | undefined>(undefined);
+  const [flightTime, setFlightTime] = useState<Date | undefined>(undefined);
+  const [initialFlightTime, setInitialFlightTime] = useState<Date | undefined>(undefined);
+  const [airportLocation, setAirportLocation] = useState<string>("");
+  const [initialAirportLocation, setInitialAirportLocation] = useState<string>("");
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -70,11 +66,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
-  // Submit date confirmation modal
-  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
-  // Edit existing submitted date modal
-  const [editSubmitOpen, setEditSubmitOpen] = useState(false);
-  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -95,6 +86,14 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
     const stepTicketDate = activeStep.ticketDate ? new Date(activeStep.ticketDate) : undefined;
     setTicketDate(stepTicketDate);
     setInitialTicketDate(stepTicketDate);
+
+    const stepFlightTime = activeStep.flightTime ? new Date(activeStep.flightTime) : undefined;
+    setFlightTime(stepFlightTime);
+    setInitialFlightTime(stepFlightTime);
+
+    const stepAirportLocation = activeStep.airportLocation || "";
+    setAirportLocation(stepAirportLocation);
+    setInitialAirportLocation(stepAirportLocation);
   }, [activeStep]);
 
   // Whether this specific step has been cancelled
@@ -373,11 +372,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
       return;
     }
 
-    if (!hasSubmittedAt) {
-      toast.error("Cannot complete — Submission date not set");
-      return;
-    }
-
     setCompleteModalOpen(true);
   };
 
@@ -423,34 +417,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
     }
   };
 
-  const handleSubmitTicketDate = async (date?: Date): Promise<boolean> => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return false;
-    }
-
-    const payloadDate = date ?? ticketSubmissionDate;
-
-    if (!payloadDate) {
-      toast.error("Please select a date and time");
-      return false;
-    }
-
-    try {
-      await submitHrdDate({
-        stepId: activeStep.id,
-        submittedAt: payloadDate.toISOString(),
-      }).unwrap();
-      toast.success("Ticket submission date saved successfully");
-      await refetch();
-      return true;
-    } catch (err: any) {
-      console.error("Submit Ticket date failed", err);
-      toast.error(err?.data?.message || "Failed to save Ticket submission date");
-      return false;
-    }
-  };
-
   const handleSaveTicketMetadata = async () => {
     if (!activeStep?.id) {
       toast.error("No active ticket step found");
@@ -463,7 +429,10 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
     }
 
     try {
-      await updateStepStatus({ stepId: activeStep.id, data: { ticketDate: ticketDate.toISOString() } }).unwrap();
+      const payload: any = { ticketDate: ticketDate.toISOString() };
+      if (flightTime) payload.flightTime = flightTime.toISOString();
+      payload.airportLocation = airportLocation || null;
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
       toast.success("Ticket details saved successfully");
       await refetch();
     } catch (err: any) {
@@ -474,7 +443,9 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
   };
 
   const ticketChanged =
-    (ticketDate?.toISOString() || "") !== (initialTicketDate?.toISOString() || "");
+    (ticketDate?.toISOString() || "") !== (initialTicketDate?.toISOString() || "") ||
+    (flightTime?.toISOString() || "") !== (initialFlightTime?.toISOString() || "") ||
+    airportLocation.trim() !== initialAirportLocation.trim();
   const showSaveTicketButton = ticketChanged && !isTicketCompleted && !isStepCancelled;
 
   const apiCounts = data?.counts;
@@ -485,9 +456,8 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
   const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
   const statMissing = apiCounts?.missingCount ?? missingDocs.length;
 
-  const hasSubmittedAt = Boolean(activeStep?.submittedAt);
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt;
+  const canMarkComplete = allVerified;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -558,87 +528,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                 </div>
               </div>
 
-              {/* Submission Date Section (compact) */}
-              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Ticket Agency Submission Date & Time
-                  </h4>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
-
-                      {activeStep?.submittedAt ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
-                          </div>
-
-                          {!isTicketCompleted && !isStepCancelled && (
-                            <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
-                                onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
-                                title="Edit submission date"
-                              >
-                                <Edit2 className="h-4 w-4 text-slate-700" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <DatePicker
-                            value={ticketSubmissionDate}
-                            onChange={setTicketSubmissionDate}
-                            placeholder="Pick date and time"
-                            disabled={isTicketCompleted}
-                            className="w-full sm:min-w-[220px] h-8"
-                            compact
-                          />
-
-                          {!activeStep?.submittedAt && (
-                            <div className="mt-1">
-                              {ticketSubmissionDate ? (
-                                <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
-                              ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Ticket</p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <div className="flex items-center">
-                      {!activeStep?.submittedAt && !isStepCancelled && (
-                        <Button
-                          size="sm"
-                          onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !ticketSubmissionDate || isTicketCompleted || isStepCancelled}
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {isSubmittingDate ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Submit Date
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {isTicketCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Ticket is completed. Submission date cannot be modified.</p>
-                  )}
-                </div>
-              </div>
-
               {/* Ticket Details (new) */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50 mt-3">
                 <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
@@ -658,6 +547,29 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                     />
                   </div>
 
+                  <div>
+                    <Label className="text-xs text-slate-600 mb-1 block">Flight time</Label>
+                    <DatePicker
+                      value={flightTime}
+                      onChange={setFlightTime}
+                      placeholder="Pick flight date & time"
+                      disabled={isTicketCompleted || isStepCancelled}
+                      compact
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-slate-600 mb-1 block">Airport location</Label>
+                    <input
+                      type="text"
+                      value={airportLocation}
+                      onChange={(e) => setAirportLocation(e.target.value)}
+                      placeholder="Enter airport location"
+                      disabled={isTicketCompleted || isStepCancelled}
+                      className="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+
                   {showSaveTicketButton && (
                     <div className="flex justify-end">
                       <Button
@@ -666,7 +578,7 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                         disabled={isUpdatingTicket || isTicketCompleted || isStepCancelled}
                         className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
                       >
-                        {isUpdatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Ticket Date'}
+                        {isUpdatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Ticket Details'}
                       </Button>
                     </div>
                   )}
@@ -882,27 +794,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : !hasSubmittedAt ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button
-                            size="sm"
-                            onClick={handleMarkComplete}
-                            disabled={true}
-                            className="opacity-80"
-                            aria-disabled={true}
-                          >
-                            {'Mark Ticket Complete'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Submission date required to complete Ticket. Please select and submit a date.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 ) : (
                   <Button
                     size="sm"
@@ -942,34 +833,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
-        />
-      </React.Suspense>
-
-      {/* Confirm Submit Date Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmSubmitDateModal
-          isOpen={submitConfirmOpen}
-          onClose={() => setSubmitConfirmOpen(false)}
-          date={ticketSubmissionDate}
-          onConfirm={async () => {
-            const ok = await handleSubmitTicketDate();
-            if (ok) setSubmitConfirmOpen(false);
-          }}
-          isSubmitting={isSubmittingDate}
-        />
-      </React.Suspense>
-
-      {/* Edit Submit Date Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmEditSubmitDateModal
-          isOpen={editSubmitOpen}
-          onClose={() => setEditSubmitOpen(false)}
-          existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
-          onConfirm={async (newDate: Date) => {
-            const ok = await handleSubmitTicketDate(newDate);
-            return ok;
-          }}
-          isSubmitting={isSubmittingDate}
         />
       </React.Suspense>
 

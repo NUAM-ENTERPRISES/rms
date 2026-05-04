@@ -1893,6 +1893,8 @@ model ProcessingStep {
   biometricDate         DateTime?
   biometricLocation     String?
   ticketDate            DateTime?
+  flightTime            DateTime?
+  airportLocation       String?
   visaIssuedAt          DateTime?
   visaValidAt           DateTime?
   eligibilityIssuedAt   DateTime?

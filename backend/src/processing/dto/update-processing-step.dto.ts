@@ -67,6 +67,16 @@ export class UpdateProcessingStepDto {
   @IsDateString()
   ticketDate?: string;
 
+  @ApiPropertyOptional({ description: 'Flight time', example: '2026-04-01T15:30:00Z' })
+  @IsOptional()
+  @IsDateString()
+  flightTime?: string;
+
+  @ApiPropertyOptional({ description: 'Airport location', example: 'London Heathrow' })
+  @IsOptional()
+  @IsString()
+  airportLocation?: string;
+
   @ApiPropertyOptional({ description: 'Rejection reason', example: 'Incorrect document' })
   @IsOptional()
   @IsString()
