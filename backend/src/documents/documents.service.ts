@@ -966,6 +966,10 @@ export class DocumentsService {
         data: {
           candidateId: document.candidateId,
           docType: document.docType,
+          docName:
+            typeof reuploadDto.docName === 'string' && reuploadDto.docName.trim() !== ''
+              ? reuploadDto.docName.trim()
+              : document.docName,
           fileName: reuploadDto.fileName,
           fileUrl: reuploadDto.fileUrl,
           fileSize: reuploadDto.fileSize,
@@ -2110,6 +2114,7 @@ export class DocumentsService {
             select: {
               id: true,
               docType: true,
+              docName: true,
               fileName: true,
               fileUrl: true,
               status: true,
@@ -2136,7 +2141,12 @@ export class DocumentsService {
     }
 
     // Latest verification results (only 1 per docType)
-    const verifications = Array.from(latestVerificationsMap.values());
+    const verifications = Array.from(latestVerificationsMap.values()).map(
+      (v: any) => ({
+        ...v,
+        document: this.enrichDocumentListItem(v.document),
+      }),
+    );
 
     // GET ALL candidate documents (global history)
     const allCandidateDocuments = await this.prisma.document.findMany({

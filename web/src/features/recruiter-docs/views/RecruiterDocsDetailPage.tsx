@@ -190,6 +190,9 @@ interface DocumentVerification {
   document: {
     id: string;
     docType: string;
+    documentDisplayName?: string;
+    documentType?: string;
+    docName?: string;
     fileName: string;
     fileUrl: string;
   };
@@ -378,7 +381,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
     [candidateProject?.id]
   );
 
-  const handleUploadDocument = async (file: File) => {
+  const handleUploadDocument = async (file: File, meta?: { docName?: string }) => {
     if (!uploadDocType || !candidateId || !projectId) return;
 
     try {
@@ -402,9 +405,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
       if (isReuploadMode && reuploadDocId) {
         // Handle Reupload
+        const desiredDocName = (meta?.docName && meta.docName.trim()) || undefined;
         await reuploadDocument({
           documentId: reuploadDocId,
           candidateProjectMapId: candidateProject?.id || "",
+          docName: desiredDocName,
           fileName: uploadData.fileName,
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
@@ -416,6 +421,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         const documentData = await createDocument({
           candidateId,
           docType: uploadDocType,
+          docName: meta?.docName?.trim() || undefined,
           fileName: uploadData.fileName,
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
@@ -734,23 +740,37 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
                             <div className="flex flex-col min-w-0">
                               <span className="truncate">
-                                {requirement.documentName ?? requirement.docType}
+                                {verification?.document?.documentDisplayName ??
+                                  verification?.document?.docName ??
+                                  requirement.documentName ??
+                                  requirement.docType}
                               </span>
-                              {requirement.description ? (
-                                <span className="text-xs text-muted-foreground font-normal line-clamp-2">
-                                  {requirement.description}
-                                </span>
-                              ) : null}
-                              {requirement.mandatory && (
-                                <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">Required</span>
-                              )}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {requirement.documentType ?? requirement.docType}
-                          </span>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-900">
+                                {DOCUMENT_TYPE_CONFIG[requirement.docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.displayName ??
+                                  requirement.documentName ??
+                                  requirement.docType}
+                              </span>
+                              {requirement.mandatory ? (
+                                <Badge
+                                  variant="destructive"
+                                  className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
+                                >
+                                  Required
+                                </Badge>
+                              ) : null}
+                            </div>
+                            {requirement.description ? (
+                              <span className="text-xs text-muted-foreground font-normal line-clamp-3">
+                                {requirement.description}
+                              </span>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell>
                           {verification ? (
@@ -1481,6 +1501,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         roleDesignation={candidateProject?.roleNeeded?.designation || project.rolesNeeded?.[0]?.designation || "N/A"}
         docType={uploadDocType}
         docTypeLabel={uploadDocTypeLabel}
+        docTypeDescription={selectedRequirement?.description}
         isMandatory={selectedRequirement?.mandatory}
         isUploading={isUploading || isCreating || isReusing}
         variant={isReuploadMode ? "reupload" : "upload"}
