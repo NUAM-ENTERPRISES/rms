@@ -68,7 +68,9 @@ export default function SessionAvailabilityToggles() {
   const { hasRole } = usePermissions();
   const isLeadership = hasRole([...LEADERSHIP_ROLES]);
 
-  const { data: sessionsData } = useGetSessionsQuery();
+  const { data: sessionsData } = useGetSessionsQuery(undefined, {
+    skip: isLeadership,
+  });
   const [setAvailability, { isLoading }] = useSetSessionAvailabilityMutation();
 
   const [confirmOpen, setConfirmOpen] = useState(false);

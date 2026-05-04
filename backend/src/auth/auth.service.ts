@@ -259,6 +259,35 @@ export class AuthService {
     }
   }
 
+  async logoutCurrentSession(params: {
+    userId?: string;
+    sessionId?: string;
+    refreshTokenId?: string;
+  }) {
+    const { userId, sessionId, refreshTokenId } = params;
+
+    // Best-effort: revoke refresh family (cookie-based web flow)
+    await this.revokeFamilyByTokenId(refreshTokenId);
+
+    // Reliable: end the current session by JWT sid (per LOGIN_SESSION_IMPLEMENTATION)
+    if (userId && sessionId) {
+      await (this.prisma as any).userSession.updateMany({
+        where: { id: sessionId, userId },
+        data: { isActive: false },
+      });
+    }
+
+    if (userId) {
+      await this.auditService.logAuthAction('logout', userId, {
+        action: 'user_logout',
+        timestamp: new Date(),
+        ...(sessionId ? { sessionId } : {}),
+      });
+    }
+
+    return { success: true, message: 'Logout successful' };
+  }
+
 
   async sendLoginOtp(sendLoginOtpDto: SendLoginOtpDto) {
     const { countryCode, mobileNumber } = sendLoginOtpDto;

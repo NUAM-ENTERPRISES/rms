@@ -502,6 +502,8 @@ export class UsersController {
   @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, CRE)' })
   @ApiQuery({ name: 'search', required: false, description: 'Search by user name or email' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter active/inactive sessions' })
+  @ApiQuery({ name: 'status', required: false, description: 'Derived status filter: ACTIVE | IDLE | ENDED' })
+  @ApiQuery({ name: 'availability', required: false, description: 'Availability filter: ACTIVE | BREAK | ON_CALL' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
@@ -510,11 +512,23 @@ export class UsersController {
     @Query('role') role?: string,
     @Query('search') search?: string,
     @Query('isActive') isActiveRaw?: string,
+    @Query('status') statusRaw?: string,
+    @Query('availability') availabilityRaw?: string,
     @Query('page') pageRaw?: string,
     @Query('limit') limitRaw?: string,
   ) {
     const isActive =
       isActiveRaw === 'true' ? true : isActiveRaw === 'false' ? false : undefined;
+    const status =
+      statusRaw === 'ACTIVE' || statusRaw === 'IDLE' || statusRaw === 'ENDED'
+        ? statusRaw
+        : undefined;
+    const availability =
+      availabilityRaw === 'ACTIVE' ||
+      availabilityRaw === 'BREAK' ||
+      availabilityRaw === 'ON_CALL'
+        ? availabilityRaw
+        : undefined;
     const page = pageRaw ? parseInt(pageRaw, 10) : 1;
     const limit = limitRaw ? Math.min(parseInt(limitRaw, 10), 100) : 30;
 
@@ -522,6 +536,8 @@ export class UsersController {
       role: role || undefined,
       search: search || undefined,
       isActive,
+      status,
+      availability,
       page,
       limit,
     });
