@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsDateString, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateProcessingStepDto {
@@ -96,4 +96,9 @@ export class UpdateProcessingStepDto {
   @IsOptional()
   @IsDateString()
   medicalValidAt?: string;
+
+  @ApiPropertyOptional({ description: 'Mark emigration as completed manually', example: true })
+  @IsOptional()
+  @IsBoolean()
+  isEmigrationCompleted?: boolean;
 }

@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Loader2, FileCheck, RefreshCw, Calendar, Send, Edit2, XCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertCircle, Loader2, FileCheck, RefreshCw, Calendar, Send, Edit2, CheckCircle2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
-import React, { useState } from "react";
-import { useGetEmigrationRequirementsQuery, useCompleteStepMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useState, useEffect } from "react";
+import { useGetEmigrationRequirementsQuery, useCompleteStepMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConfirmSubmitDateModal from "../../components/ConfirmSubmitDateModal";
@@ -28,8 +29,16 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus] = useUpdateStepStatusMutation();
 
   const [emigrationSubmissionDate, setEmigrationSubmissionDate] = useState<Date | undefined>(undefined);
+  const [isEmigrationCompletedCheck, setIsEmigrationCompletedCheck] = useState(false);
+
+  useEffect(() => {
+    if (data?.step) {
+      setIsEmigrationCompletedCheck(data.step.isEmigrationCompleted || false);
+    }
+  }, [data?.step]);
 
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
@@ -39,7 +48,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
 
   const activeStep = data?.step;
 
-  const isEmigrationCompleted = data?.isEmigrationCompleted ?? false;
+  const isEmigrationCompleted = data?.step?.isEmigrationCompleted ?? data?.isEmigrationCompleted ?? false;
   const isStepCancelled = activeStep?.status === "cancelled";
 
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
@@ -70,6 +79,12 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
     if (!hasSubmittedAt && !emigrationSubmissionDate) { toast.error("Please set a submission date"); return false; }
 
     try {
+      // Save isEmigrationCompleted from local checkbox state before marking the step complete
+      await updateStepStatus({
+        stepId: activeStep.id,
+        data: { status: activeStep.status as any, isEmigrationCompleted: isEmigrationCompletedCheck },
+      }).unwrap();
+
       await completeStep({ stepId: activeStep.id, notes }).unwrap();
       toast.success("Emigration step marked complete");
 
@@ -182,7 +197,34 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                 </div>
               </div>
 
-
+              <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="bg-slate-50 px-3 py-2 border-b">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Emigration Completion Status
+                  </h4>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-md border border-slate-100">
+                    <Checkbox
+                      id="isEmigrationCompleted"
+                      checked={isEmigrationCompletedCheck}
+                      onCheckedChange={(checked) => setIsEmigrationCompletedCheck(!!checked)}
+                      disabled={isStepCancelled || isEmigrationCompleted}
+                      className="h-5 w-5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label htmlFor="isEmigrationCompleted" className="text-sm font-semibold text-slate-800 cursor-pointer">
+                        Emigration Completed
+                      </label>
+                      <p className="text-xs text-slate-500">
+                        Check this then click <span className="font-medium">Mark Emigration Complete</span> to save.
+                      </p>
+                    </div>
+                    {isCompletingStep && <Loader2 className="h-4 w-4 animate-spin text-slate-400 ml-auto" />}
+                  </div>
+                </div>
+              </div>
 
             </div>
           )}

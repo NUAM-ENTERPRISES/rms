@@ -1909,6 +1909,7 @@ model ProcessingStep {
   meta                  Json?
   mofaNumber            String?
   isMedicalPassed       Boolean?
+  isEmigrationCompleted Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
