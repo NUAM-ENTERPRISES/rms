@@ -126,6 +126,7 @@ export interface AdminSessionsQuery {
   role?: string;
   search?: string;
   isActive?: boolean;
+  status?: "ACTIVE" | "IDLE" | "ENDED";
   page?: number;
   limit?: number;
 }
@@ -393,6 +394,12 @@ export const usersApi = baseApi.injectEndpoints({
         page: number;
         limit: number;
         totalPages: number;
+        counts?: {
+          total: number;
+          active: number;
+          idle: number;
+          ended: number;
+        };
         message: string;
       },
       AdminSessionsQuery | void
@@ -402,6 +409,7 @@ export const usersApi = baseApi.injectEndpoints({
         if (params) {
           if (params.role) searchParams.set('role', params.role);
           if (params.search) searchParams.set('search', params.search);
+          if (params.status) searchParams.set('status', params.status);
           if (typeof params.isActive === 'boolean')
             searchParams.set('isActive', String(params.isActive));
           if (params.page) searchParams.set('page', String(params.page));
@@ -444,6 +452,7 @@ export const {
   useGetRecruiterPerformanceQuery,
   usePingCurrentSessionActivityMutation,
   useGetAdminSessionsQuery,
+  useLazyGetAdminSessionsQuery,
   useGetAdminIdleSessionsSummaryQuery,
 } = usersApi;
 

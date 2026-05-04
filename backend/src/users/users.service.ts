@@ -670,16 +670,18 @@ export class UsersService {
     role?: string;
     search?: string;
     isActive?: boolean;
+    status?: 'ACTIVE' | 'IDLE' | 'ENDED';
     page?: number;
     limit?: number;
   }) {
-    const { role, search, isActive, page = 1, limit = 30 } = query;
-    const skip = (page - 1) * limit;
+    const { role, search, isActive, status, page = 1, limit = 30 } = query;
 
     // Build the where clause for sessions
     const sessionWhere: any = {};
-    if (typeof isActive === 'boolean') {
-      sessionWhere.isActive = isActive;
+    // Important: admin UI "Active" is DERIVED (active && !idle). If the caller asks for active sessions,
+    // we can safely limit DB rows to active sessions. For inactive, we must include active-but-idle sessions too.
+    if (status === 'ACTIVE' || isActive === true) {
+      sessionWhere.isActive = true;
     }
 
     // Build the where clause for the user relation
@@ -730,10 +732,8 @@ export class UsersService {
     }
 
     const distinctSessions = Array.from(uniqueSessionsByUser.values());
-    const total = distinctSessions.length;
-    const pageSessions = distinctSessions.slice(skip, skip + limit);
 
-    const data = pageSessions.map((s: any) => {
+    const computed = distinctSessions.map((s: any) => {
       const lastActivityAt = s.lastActivityAt ?? s.loginAt;
       const availability = s.availability ?? SessionAvailability.ACTIVE;
       const timeIdle =
@@ -744,6 +744,11 @@ export class UsersService {
         timeIdle &&
         this.isSessionAvailabilityEligibleForIdle(availability);
       const isActive = s.isActive && !isIdle;
+      const derivedStatus: 'ACTIVE' | 'IDLE' | 'ENDED' = isActive
+        ? 'ACTIVE'
+        : isIdle
+          ? 'IDLE'
+          : 'ENDED';
 
       return {
         id: s.id,
@@ -758,17 +763,44 @@ export class UsersService {
         loginAt: s.loginAt,
         lastActivityAt,
         availability,
+        status: derivedStatus,
         isActive,
         isIdle,
       };
     });
 
+    const counts = computed.reduce(
+      (acc: { total: number; active: number; idle: number; ended: number }, row: any) => {
+        acc.total += 1;
+        if (row.status === 'ACTIVE') acc.active += 1;
+        else if (row.status === 'IDLE') acc.idle += 1;
+        else acc.ended += 1;
+        return acc;
+      },
+      { total: 0, active: 0, idle: 0, ended: 0 },
+    );
+
+    // Apply derived active/inactive filter AFTER idle computation.
+    const filtered = (() => {
+      if (status) return computed.filter((row: any) => row.status === status);
+      if (typeof isActive === 'boolean')
+        return computed.filter((row: any) => row.isActive === isActive);
+      return computed;
+    })();
+
+    const total = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+    const skip = (safePage - 1) * limit;
+    const data = filtered.slice(skip, skip + limit);
+
     return {
       data,
       total,
-      page,
+      page: safePage,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
+      counts,
     };
   }
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Monitor,
   Smartphone,
@@ -13,17 +14,11 @@ import {
   Activity,
   Users,
   Clock,
+  ArrowUpRight,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -159,8 +154,39 @@ function LivePulse({
   );
 }
 
+function coerceBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const v = value.trim().toLowerCase();
+    if (v === "true" || v === "1" || v === "yes") return true;
+    if (v === "false" || v === "0" || v === "no") return false;
+  }
+  return Boolean(value);
+}
+
+function getSessionFlags(session: AdminSession) {
+  const raw = session as unknown as { isActive?: unknown; isIdle?: unknown };
+  return {
+    isActive: coerceBoolean(raw.isActive),
+    isIdle: coerceBoolean(raw.isIdle),
+  };
+}
+
 function SessionStatusBadge({ session }: { session: AdminSession }) {
-  if (!session.isActive) {
+  const { isActive, isIdle } = getSessionFlags(session);
+
+  // Idle should never appear as "Ended". The API computes idle separately.
+  if (isIdle) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/50 dark:text-amber-400">
+        <LivePulse color="amber" />
+        Idle
+      </span>
+    );
+  }
+
+  if (!isActive) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
         <LivePulse color="gray" />
@@ -190,15 +216,6 @@ function SessionStatusBadge({ session }: { session: AdminSession }) {
     );
   }
 
-  if (session.isIdle) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/50 dark:text-amber-400">
-        <LivePulse color="amber" />
-        Idle
-      </span>
-    );
-  }
-
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/50 dark:text-emerald-400">
       <LivePulse color="green" />
@@ -211,25 +228,33 @@ export default function SessionsMonitoringPage() {
   const [filters, setFilters] = useState<AdminSessionsQuery>({
     role: undefined,
     search: "",
-    isActive: undefined,
+    status: undefined,
     page: 1,
-    limit: 30,
+    limit: 10,
   });
   const [searchInput, setSearchInput] = useState("");
 
   const queryArgs: AdminSessionsQuery = {
     role: filters.role || undefined,
     search: filters.search || undefined,
-    isActive: filters.isActive,
+    status: filters.status,
     page: filters.page,
     limit: filters.limit,
   };
 
-  const { data, isLoading, isFetching, refetch } =
-    useGetAdminSessionsQuery(queryArgs);
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useGetAdminSessionsQuery(queryArgs, {
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
 
   const sessions = data?.data ?? [];
-  const total = data?.total ?? 0;
+  const total = data?.total ?? 0; // table total (changes with filters)
   const totalPages = data?.totalPages ?? 1;
 
   function handleSearch() {
@@ -247,8 +272,14 @@ export default function SessionsMonitoringPage() {
   function handleStatusChange(value: string) {
     setFilters((f) => ({
       ...f,
-      isActive:
-        value === "active" ? true : value === "inactive" ? false : undefined,
+      status:
+        value === "active"
+          ? "ACTIVE"
+          : value === "idle"
+            ? "IDLE"
+            : value === "ended"
+              ? "ENDED"
+              : undefined,
       page: 1,
     }));
   }
@@ -257,9 +288,40 @@ export default function SessionsMonitoringPage() {
     setFilters((f) => ({ ...f, page: newPage }));
   }
 
-  // Count active sessions from current page for summary
-  const activeCount = sessions.filter((s) => s.isActive).length;
-  const idleCount = sessions.filter((s) => s.isIdle).length;
+  // Stable counts for tiles: provided by API in a single response (optimization)
+  const allCount = data?.counts?.total ?? 0;
+  const activeCount = data?.counts?.active ?? 0;
+  const idleCount = data?.counts?.idle ?? 0;
+  const endedCount = data?.counts?.ended ?? 0;
+
+  const selectedTile: "all" | "active" | "idle" | "ended" =
+    filters.status === "ACTIVE"
+      ? "active"
+      : filters.status === "IDLE"
+        ? "idle"
+        : filters.status === "ENDED"
+          ? "ended"
+          : "all";
+
+  function handleTileFilter(next: "all" | "active" | "idle" | "ended") {
+    setFilters((f) => ({
+      ...f,
+      // Prefer derived status filter (more accurate than isActive).
+      status:
+        next === "all"
+          ? undefined
+          : next === "active"
+            ? "ACTIVE"
+            : next === "idle"
+              ? "IDLE"
+              : "ENDED",
+      page: 1,
+      limit: 10,
+    }));
+  }
+
+  const startIndex = total > 0 ? (filters.page ?? 1) * (filters.limit ?? 10) - (filters.limit ?? 10) + 1 : 0;
+  const endIndex = total > 0 ? Math.min((filters.page ?? 1) * (filters.limit ?? 10), total) : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -279,6 +341,14 @@ export default function SessionsMonitoringPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 pl-10">
               Monitor live and historical login sessions across all staff roles
             </p>
+            {isError && (
+              <div className="pl-10 pt-1">
+                <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300">
+                  <WifiOff className="h-3.5 w-3.5" />
+                  Unable to refresh sessions. Check connection and try again.
+                </div>
+              </div>
+            )}
           </div>
 
           <Button
@@ -295,62 +365,161 @@ export default function SessionsMonitoringPage() {
           </Button>
         </div>
 
-        {/* ── Metric cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Total */}
-          <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Total sessions
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                <Users className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+        {/* ── Dashboard tiles (click to filter table) ── */}
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => handleTileFilter("all")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-slate-50 via-white to-slate-50/30 border-slate-200 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-slate-800",
+              selectedTile === "all"
+                ? "ring-2 ring-slate-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "all" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-slate-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Total sessions
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-slate-900 dark:text-slate-50">
+                  {allCount}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  All roles (paginated)
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-slate-100 dark:bg-slate-800">
+                <Users className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
             </div>
-            <p className="text-3xl font-semibold text-slate-900 dark:text-slate-50">
-              {total}
-            </p>
-          </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "all" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
 
-          {/* Active */}
-          <div className="rounded-xl border border-emerald-100 bg-white dark:border-emerald-900/40 dark:bg-slate-900 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Active now
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950">
-                <Wifi className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <button
+            type="button"
+            onClick={() => handleTileFilter("active")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-emerald-50 via-white to-emerald-50/30 border-emerald-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-emerald-900/40",
+              selectedTile === "active"
+                ? "ring-2 ring-emerald-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "active" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-emerald-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Active (this page)
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {activeCount}
+                  </p>
+                  <div className="mb-1.5">
+                    <LivePulse color="green" />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Live sessions (not idle)
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-emerald-100 dark:bg-emerald-950">
+                <Wifi className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
-            <div className="flex items-end gap-2">
-              <p className="text-3xl font-semibold text-emerald-600 dark:text-emerald-400">
-                {activeCount}
-              </p>
-              <div className="mb-1.5">
-                <LivePulse color="green" />
-              </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "active" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
             </div>
-          </div>
+          </button>
 
-          {/* Idle */}
-          <div className="rounded-xl border border-amber-100 bg-white dark:border-amber-900/40 dark:bg-slate-900 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Idle (this page)
-              </span>
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950">
-                <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          <button
+            type="button"
+            onClick={() => handleTileFilter("ended")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-rose-50 via-white to-rose-50/30 border-rose-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-rose-900/40",
+              selectedTile === "ended"
+                ? "ring-2 ring-rose-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "ended" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-rose-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Ended
+                </p>
+                <p className="text-3xl font-bold tabular-nums text-rose-700 dark:text-rose-400">
+                  {endedCount}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Ended sessions
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-rose-100 dark:bg-rose-950">
+                <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
               </div>
             </div>
-            <div className="flex items-end gap-2">
-              <p className="text-3xl font-semibold text-amber-600 dark:text-amber-400">
-                {idleCount}
-              </p>
-              <div className="mb-1.5">
-                <LivePulse color="amber" />
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "ended" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTileFilter("idle")}
+            className={cn(
+              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+              "from-amber-50 via-white to-amber-50/30 border-amber-100 dark:from-slate-900 dark:via-slate-900 dark:to-slate-900/40 dark:border-amber-900/40",
+              selectedTile === "idle"
+                ? "ring-2 ring-amber-400/40 shadow-md"
+                : "hover:-translate-y-0.5 hover:shadow-md"
+            )}
+          >
+            {selectedTile === "idle" && (
+              <span className="absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse bg-amber-500" />
+            )}
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Idle
+                </p>
+                <div className="flex items-end gap-2">
+                  <p className="text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">
+                    {idleCount}
+                  </p>
+                  <div className="mb-1.5">
+                    <LivePulse color="amber" />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  15+ min inactive (ACTIVE only)
+                </p>
+              </div>
+              <div className="shrink-0 rounded-xl p-2.5 shadow-sm bg-amber-100 dark:bg-amber-950">
+                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
             </div>
-          </div>
+            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
+              <span>{selectedTile === "idle" ? "Viewing now" : "Click to filter"}</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </div>
+          </button>
         </div>
 
         {/* ── Filters ── */}
@@ -407,39 +576,71 @@ export default function SessionsMonitoringPage() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="idle">Idle</SelectItem>
+                <SelectItem value="ended">Ended</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* ── Table ── */}
-        <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/60 hover:bg-slate-50/80">
-                  {[
-                    "User",
-                    "Role",
-                    "Device",
-                    "Browser / OS",
-                    "IP Address",
-                    "Login Time",
-                    "Last Activity",
-                    "Status",
-                  ].map((h) => (
-                    <TableHead
-                      key={h}
-                      className={`text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 py-3 ${
-                        h === "Status" ? "text-center" : ""
-                      }`}
-                    >
-                      {h}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
+        {/* ── Table (CandidatesPage-style) ── */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+          {/* Table Header Bar */}
+          <div className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-900 px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-slate-900 via-emerald-600 to-amber-500 p-2.5 shadow-md dark:from-slate-50 dark:via-emerald-300 dark:to-amber-300">
+                  <Activity className="h-5 w-5 text-white dark:text-slate-900" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">
+                    {selectedTile === "active"
+                      ? "Active sessions"
+                      : selectedTile === "idle"
+                        ? "Idle sessions"
+                        : selectedTile === "ended"
+                          ? "Ended sessions"
+                          : "All sessions"}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {filters.role ? `Role: ${filters.role}` : "All roles"}
+                    {filters.search ? ` • Search: "${filters.search}"` : ""}
+                    {" — "}
+                    {total} session{total !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Premium Table Container */}
+          <div className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="sticky top-0 z-10">
+                  <TableRow className="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/80">
+                    {[
+                      "User",
+                      "Role",
+                      "Device",
+                      "Browser / OS",
+                      "IP Address",
+                      "Login Time",
+                      "Last Activity",
+                      "Status",
+                    ].map((h) => (
+                      <TableHead
+                        key={h}
+                        className={cn(
+                          "h-10 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400",
+                          h === "Status" && "text-center"
+                        )}
+                      >
+                        {h}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
 
               <TableBody>
                 {isLoading ? (
@@ -447,7 +648,7 @@ export default function SessionsMonitoringPage() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow
                       key={i}
-                      className="border-b border-slate-50 dark:border-slate-800/60"
+                      className="border-b border-slate-100 dark:border-slate-800/60 last:border-b-0"
                     >
                       {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}>
@@ -457,26 +658,31 @@ export default function SessionsMonitoringPage() {
                     </TableRow>
                   ))
                 ) : sessions.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center py-16 text-sm text-slate-400 dark:text-slate-500"
-                    >
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-8 w-8 text-slate-200 dark:text-slate-700" />
-                        <span>No sessions found for the selected filters.</span>
+                  <TableRow className="border-b-0">
+                    <TableCell colSpan={8} className="px-4 py-20">
+                      <div className="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
+                        <div className="h-16 w-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                          <Users className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                        </div>
+                        <p className="font-semibold text-slate-600 dark:text-slate-300">
+                          No sessions found
+                        </p>
+                        <p className="text-sm text-slate-400 dark:text-slate-500 text-center max-w-xs">
+                          {filters.search || filters.role || filters.status
+                            ? "Try adjusting your search criteria or filters."
+                            : "No sessions available yet."}
+                        </p>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   sessions.map((session) => {
-                    const primaryRole = session.roles[0] ?? null;
                     const avatarPalette = getAvatarPalette(session.userName);
 
                     return (
                       <TableRow
                         key={session.id}
-                        className="border-b border-slate-50 dark:border-slate-800/60 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+                        className="border-b border-slate-100 dark:border-slate-800/60 hover:bg-emerald-50/20 dark:hover:bg-slate-800/40 transition-colors last:border-b-0"
                       >
                         {/* User */}
                         <TableCell className="py-3">
@@ -576,43 +782,86 @@ export default function SessionsMonitoringPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Page{" "}
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  {filters.page}
+          {total > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 dark:border-slate-800 px-6 py-4 gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Showing{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  {startIndex}
+                </span>
+                –
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  {endIndex}
                 </span>{" "}
                 of{" "}
-                <span className="font-medium text-slate-600 dark:text-slate-300">
-                  {totalPages}
-                </span>{" "}
-                &mdash;{" "}
-                <span className="font-medium text-slate-600 dark:text-slate-300">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
                   {total}
                 </span>{" "}
-                total sessions
+                sessions
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={(filters.page ?? 1) <= 1 || isFetching}
-                  onClick={() => handlePageChange((filters.page ?? 1) - 1)}
-                  className="h-7 gap-1 px-2.5 text-xs border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                  onClick={() => handlePageChange(Math.max(1, (filters.page ?? 1) - 1))}
+                  disabled={(filters.page ?? 1) === 1 || isFetching}
+                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   <ChevronLeft className="h-3 w-3" />
-                  Previous
+                  Prev
                 </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    const current = filters.page ?? 1;
+                    const shouldShow =
+                      totalPages <= 7 ||
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= current - 1 && p <= current + 1);
+
+                    if (shouldShow) {
+                      return (
+                        <Button
+                          key={p}
+                          variant={current === p ? "default" : "ghost"}
+                          size="sm"
+                          disabled={isFetching}
+                          onClick={() => handlePageChange(p)}
+                          className={cn(
+                            "h-8 w-8 p-0 text-xs",
+                            current === p
+                              ? "bg-slate-900 hover:bg-slate-900/90 shadow-sm dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-50/90"
+                              : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                          )}
+                        >
+                          {p}
+                        </Button>
+                      );
+                    }
+
+                    if (p === (filters.page ?? 1) - 2 || p === (filters.page ?? 1) + 2) {
+                      return (
+                        <span key={p} className="text-slate-300 dark:text-slate-700 text-xs px-0.5">
+                          …
+                        </span>
+                      );
+                    }
+
+                    return null;
+                  })}
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => handlePageChange(Math.min(totalPages, (filters.page ?? 1) + 1))}
                   disabled={(filters.page ?? 1) >= totalPages || isFetching}
-                  onClick={() => handlePageChange((filters.page ?? 1) + 1)}
-                  className="h-7 gap-1 px-2.5 text-xs border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700"
+                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Next
                   <ChevronRight className="h-3 w-3" />

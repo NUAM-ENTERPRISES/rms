@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, CheckCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,34 +17,38 @@ import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
 import { usePermissions } from "@/shared/hooks/usePermissions";
 import { useIdleSessionsDismissed } from "@/shared/hooks/useIdleSessionsDismissed";
-import { useGetAdminIdleSessionsSummaryQuery } from "@/features/admin/api";
+import { useLazyGetAdminSessionsQuery } from "@/features/admin/api";
 
 const MANAGER_ADMIN_ROLES = ["CEO", "Director", "Manager", "System Admin"] as const;
+const IDLE_POPOVER_LIMIT = 10;
 
 export default function IdleUsersNotification() {
   const { hasRole } = usePermissions();
   const canSee = hasRole([...MANAGER_ADMIN_ROLES]);
   const userId = useAppSelector((s) => s.auth.user?.id);
+  const [open, setOpen] = useState(false);
 
-  const { data, isFetching, isError } = useGetAdminIdleSessionsSummaryQuery(
-    undefined,
-    {
-      skip: !canSee,
-      pollingInterval: 30_000,
-      refetchOnFocus: true,
-      refetchOnReconnect: true,
-    }
-  );
+  const [fetchIdleSessions, { data, isFetching, isError }] =
+    useLazyGetAdminSessionsQuery();
 
-  const sessions = data?.data?.sessions ?? [];
+  useEffect(() => {
+    if (!canSee || !open) return;
+    void fetchIdleSessions(
+      { status: "IDLE", page: 1, limit: IDLE_POPOVER_LIMIT },
+      true
+    );
+  }, [canSee, open, fetchIdleSessions]);
+
+  const sessions = data?.data ?? [];
+  const idleTotal = data?.counts?.idle ?? data?.total ?? 0;
   const sessionIdsKey = useMemo(
     () =>
-      (data?.data?.sessions ?? [])
+      (data?.data ?? [])
         .map((s) => s.id)
         .slice()
         .sort()
         .join("|"),
-    [data?.data?.sessions]
+    [data?.data]
   );
 
   const { dismissOne, dismissAll, visibleSessions, syncPrune } =
@@ -66,7 +70,7 @@ export default function IdleUsersNotification() {
   return (
     <TooltipProvider>
       <Tooltip>
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
           <TooltipTrigger asChild>
             <PopoverTrigger asChild>
               <Button
@@ -133,7 +137,7 @@ export default function IdleUsersNotification() {
                         : "bg-slate-400"
                     )}
                   >
-                    {unreadCount} Idle
+                    {idleTotal} Idle
                   </Badge>
                 </div>
               </div>
