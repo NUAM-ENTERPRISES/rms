@@ -76,4 +76,14 @@ export class UpdateProcessingStepDto {
   @IsOptional()
   @IsDateString()
   dueDate?: string;
+
+  @ApiPropertyOptional({ description: 'Prometric / licensing exam pass date', example: '2026-05-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  prometricPassedAt?: string;
+
+  @ApiPropertyOptional({ description: 'Prometric / licensing exam validity date', example: '2027-05-01T00:00:00Z' })
+  @IsOptional()
+  @IsDateString()
+  prometricValidAt?: string;
 }

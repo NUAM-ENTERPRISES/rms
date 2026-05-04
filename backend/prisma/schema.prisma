@@ -1901,6 +1901,8 @@ model ProcessingStep {
   eligibilityNumber     String?
   councilIssuedAt       DateTime?
   councilValidAt        DateTime?
+  prometricPassedAt     DateTime?
+  prometricValidAt      DateTime?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?

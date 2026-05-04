@@ -21,6 +21,7 @@ interface DatePickerProps {
   disabled?: boolean;
   className?: string;
   compact?: boolean; // render compact (smaller height) variant
+  align?: "center" | "start" | "end";
 }
 
 export function DatePicker({
@@ -31,6 +32,7 @@ export function DatePicker({
   disabled = false,
   className,
   compact = false,
+  align = "center",
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -99,7 +101,7 @@ export function DatePicker({
 
   const buttonHeightClasses = compact ? "h-8 sm:h-9 text-sm" : "h-10 sm:h-11 text-sm sm:text-base";
   const inputHeightClasses = compact ? "h-8 sm:h-9" : "h-10 sm:h-11";
-  const cellSize = compact ? "[--cell-size:2.25rem]" : "[--cell-size:2.75rem]";
+  const cellSize = compact ? "[--cell-size:1.75rem]" : "[--cell-size:2.5rem]";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -120,8 +122,8 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className={showTime ? "w-auto min-w-[520px] max-w-[700px] p-3 sm:p-4" : "w-auto min-w-[320px] max-w-[520px] p-3 sm:p-4"}
-        align="start"
+        className={showTime ? "w-auto min-w-[520px] max-w-[700px] p-3 sm:p-4" : compact ? "w-auto min-w-[260px] max-w-[320px] p-2" : "w-auto min-w-[300px] max-w-[420px] p-3 sm:p-4"}
+        align={align}
       >
         {showTime ? (
           <div className="flex gap-6">
@@ -178,10 +180,10 @@ export function DatePicker({
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-slate-700">Select Date</Label>
-            <div className="flex justify-center p-2 bg-slate-50 rounded-lg">
-              <div className="w-full max-w-[320px]">
+          <div className={compact ? "space-y-1.5" : "space-y-3"}>
+            {!compact && <Label className="text-sm font-medium text-slate-700">Select Date</Label>}
+            <div className={`flex justify-center ${compact ? 'p-0' : 'p-2 bg-slate-50 rounded-lg'}`}>
+              <div className="w-full">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -192,12 +194,12 @@ export function DatePicker({
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className={`flex justify-end gap-2 ${compact ? 'pt-1' : 'pt-2'}`}>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCancel}
-                className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} border-slate-200 hover:border-slate-300 text-sm`}
+                className={`${compact ? 'h-7 px-2 text-xs' : 'h-9 sm:h-10 px-4 sm:px-6 text-sm'} border-slate-200 hover:border-slate-300`}
               >
                 Cancel
               </Button>
@@ -205,7 +207,7 @@ export function DatePicker({
                 size="sm"
                 onClick={handleApply}
                 disabled={!selectedDate}
-                className={`${compact ? 'h-8 sm:h-9 px-3' : 'h-9 sm:h-10 px-4 sm:px-6'} bg-blue-600 hover:bg-blue-700 text-sm`}
+                className={`${compact ? 'h-7 px-3 text-xs' : 'h-9 sm:h-10 px-4 sm:px-6 text-sm'} bg-blue-600 hover:bg-blue-700`}
               >
                 OK
               </Button>
