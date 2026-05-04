@@ -964,6 +964,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   <TableRow>
                     <TableHead>Document Name</TableHead>
                     <TableHead>Document Type</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>File Name</TableHead>
                     <TableHead>Uploaded At</TableHead>
@@ -973,7 +974,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <TableBody>
                   {isCandidateDocsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
+                      <TableCell colSpan={7} className="text-center py-10">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mt-2">Loading documents...</p>
                       </TableCell>
@@ -993,6 +994,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                               {doc.documentType ?? doc.docType}
                             </span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {doc.roleCatalog?.label || doc.roleCatalog?.name || "—"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
