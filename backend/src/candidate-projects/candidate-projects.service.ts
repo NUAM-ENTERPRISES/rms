@@ -21,12 +21,13 @@ import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-quer
 import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
-  TRAINING_TYPE,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
+  TRAINING_STATUS,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
 } from '../common/constants';
+import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -180,6 +181,8 @@ export class CandidateProjectsService {
         `Candidate already assigned to this project${roleNeededId ? ' for this role' : ''}`,
       );
     }
+
+    await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
 
     // -------------------------------
     // GET NOMINATED MAIN & SUB STATUS
@@ -1041,7 +1044,16 @@ export class CandidateProjectsService {
       search, 
       startDate, 
       endDate, 
-      period 
+      period,
+      gender,
+      countries,
+      visaTypes,
+      sectors,
+      qualification,
+      minExp,
+      maxExp,
+      minAge,
+      maxAge,
     } = queryDto;
     
     const skip = (page - 1) * limit;
@@ -1050,6 +1062,80 @@ export class CandidateProjectsService {
     // 1. Build Base Where Clause
     // -------------------------------
     const where: any = { projectId };
+
+    // Advanced Filters Integration
+    if (gender) {
+      where.candidate = { ...where.candidate, gender };
+    }
+
+    if (countries) {
+      const countryList = countries.split(',').filter(Boolean);
+      if (countryList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          candidateCountries: {
+            some: {
+              countryId: { in: countryList }
+            }
+          }
+        };
+      }
+    }
+
+    if (visaTypes) {
+      const visaList = visaTypes.split(',').filter(Boolean);
+      if (visaList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          visaType: { in: visaList }
+        };
+      }
+    }
+
+    if (sectors) {
+      const sectorList = sectors.split(',').filter(Boolean);
+      if (sectorList.length > 0) {
+        where.candidate = {
+          ...where.candidate,
+          sectorType: { in: sectorList }
+        };
+      }
+    }
+
+    if (qualification) {
+      where.candidate = {
+        ...where.candidate,
+        qualifications: {
+          contains: qualification,
+          mode: 'insensitive'
+        }
+      };
+    }
+
+    if (minExp !== undefined || maxExp !== undefined) {
+      where.candidate = {
+        ...where.candidate,
+        experienceYears: {
+          ...(minExp !== undefined && { gte: minExp }),
+          ...(maxExp !== undefined && { lte: maxExp }),
+        }
+      };
+    }
+
+    if (minAge !== undefined || maxAge !== undefined) {
+      const now = new Date();
+      where.candidate = {
+        ...where.candidate,
+        dateOfBirth: {
+          ...(maxAge !== undefined && { 
+            gte: new Date(now.getFullYear() - maxAge - 1, now.getMonth(), now.getDate()) 
+          }),
+          ...(minAge !== undefined && { 
+            lte: new Date(now.getFullYear() - minAge, now.getMonth(), now.getDate()) 
+          }),
+        }
+      };
+    }
 
     if (roleCatalogId) {
       where.roleNeeded = { roleCatalogId };
@@ -1062,8 +1148,10 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
-    // Role-based filtering: recruiter only sees their assigned candidates
+    // Role-based filtering: recruiters and Client Coordinators only see candidates
+    // assigned to them on the project row (aligned with recruiter pipeline / agent CC flow).
     const isRecruiter = userRoles.includes('Recruiter');
+    const isClientCoordinator = userRoles.includes('Client Coordinator');
     const isSpecialistOrManagement = userRoles.some(r =>
       [
         'CEO',
@@ -1079,7 +1167,10 @@ export class CandidateProjectsService {
       ].includes(r),
     );
 
-    if (isRecruiter && !isSpecialistOrManagement) {
+    const scopeToOwnAssignments =
+      (isRecruiter || isClientCoordinator) && !isSpecialistOrManagement;
+
+    if (scopeToOwnAssignments) {
       where.recruiterId = userId;
       baseWhereForCounts.recruiterId = userId;
     }
@@ -2272,15 +2363,14 @@ export class CandidateProjectsService {
 
       // If this is a training assignment, create a training record and interview history entry
       if (type === 'training_assigned') {
-        // Create training assignment
-        await tx.trainingAssignment.create({
+        // Create training record for basic training without a linked screening
+        await tx.screeningTraining.create({
           data: {
             candidateProjectMapId: assignment.id,
             assignedBy: userId,
-            trainingType: TRAINING_TYPE.BASIC as any,
             focusAreas: [],
             priority: TRAINING_PRIORITY.MEDIUM as any,
-            status: TRAINING_EVENT.BASIC_ASSIGNED as any,
+            status: TRAINING_STATUS.ASSIGNED as any,
             assignedAt: new Date(),
             notes: notes || 'basic training assigned',
           },
@@ -3097,6 +3187,14 @@ export class CandidateProjectsService {
 
         if (exists) {
           errors.push({ candidateId, error: 'Already assigned to this project with this role' });
+          continue;
+        }
+
+        try {
+          await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Assignment validation failed';
+          errors.push({ candidateId, error: msg });
           continue;
         }
 

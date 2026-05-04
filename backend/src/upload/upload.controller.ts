@@ -4,16 +4,20 @@ import {
   Delete,
   Body,
   UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   BadRequestException,
+  NotFoundException,
   Param,
   Request,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam } from '@nestjs/swagger';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { DocumentsService } from '../documents/documents.service';
+import { DocumentWithRelations } from '../documents/types';
+import { PrismaService } from '../database/prisma.service';
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -21,6 +25,7 @@ export class UploadController {
   constructor(
     private readonly uploadService: UploadService,
     private readonly documentsService: DocumentsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
@@ -123,6 +128,10 @@ export class UploadController {
           type: 'string',
           description: 'Document type (e.g., passport, license, degree)',
         },
+        workExperienceId: {
+          type: 'string',
+          description: 'Optional work experience ID to link this document to a specific work experience entry',
+        },
       },
     },
   })
@@ -130,6 +139,8 @@ export class UploadController {
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('docType') docType: string,
+    @Body('workExperienceId') workExperienceId?: string,
+    @Request() req?: any,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded. Please ensure you are sending a file using multipart/form-data with the field name "file".');
@@ -145,10 +156,133 @@ export class UploadController {
       docType,
     );
 
+    let document: DocumentWithRelations | null = null;
+    if (workExperienceId) {
+      document = await this.documentsService.create(
+        {
+          candidateId,
+          docType,
+          fileName: result.fileName,
+          fileUrl: result.fileUrl,
+          fileSize: result.fileSize,
+          mimeType: result.mimeType,
+          workExperienceId,
+        },
+        req?.user?.sub || 'system',
+      );
+    }
+
     return {
       success: true,
-      data: result,
+      data: {
+        ...result,
+        document,
+      },
       message: 'Document uploaded successfully',
+    };
+  }
+
+  /**
+   * Upload multiple files as one batch linked to work experience (e.g. experience letters).
+   * Same docType and optional docName applied to each created document record.
+   */
+  @Post('work-experience-documents/:candidateId')
+  @UseInterceptors(FilesInterceptor('files', 15))
+  @Permissions('write:candidates', 'manage:candidates', 'write:documents')
+  @ApiOperation({
+    summary: 'Upload multiple work experience certificate files',
+    description:
+      'Multipart field `files` (repeat per file). Requires docType and workExperienceId. Optional docName labels all created documents.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+        docType: { type: 'string', example: 'experience_letters' },
+        workExperienceId: { type: 'string' },
+        docName: { type: 'string', description: 'Optional label for all files in this batch' },
+      },
+      required: ['docType', 'workExperienceId'],
+    },
+  })
+  async uploadWorkExperienceDocuments(
+    @Param('candidateId') candidateId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body('docType') docType: string,
+    @Body('workExperienceId') workExperienceId: string,
+    @Body('docName') docName: string | undefined,
+    @Request() req: { user?: { sub: string } },
+  ) {
+    if (!files?.length) {
+      throw new BadRequestException(
+        'At least one file is required (multipart field name: files).',
+      );
+    }
+    if (!docType) {
+      throw new BadRequestException('docType is required');
+    }
+    if (!workExperienceId) {
+      throw new BadRequestException('workExperienceId is required');
+    }
+
+    const workExperience = await this.prisma.workExperience.findFirst({
+      where: { id: workExperienceId, candidateId },
+      select: { id: true },
+    });
+    if (!workExperience) {
+      throw new NotFoundException(
+        'Work experience not found for this candidate.',
+      );
+    }
+
+    const userId = req?.user?.sub || 'system';
+    const trimmedDocName = docName?.trim() || undefined;
+    const documents: DocumentWithRelations[] = [];
+    const failedFileNames: string[] = [];
+
+    for (const file of files) {
+      try {
+        const uploadResult = await this.uploadService.uploadDocument(
+          file,
+          candidateId,
+          docType,
+        );
+        const doc = await this.documentsService.create(
+          {
+            candidateId,
+            docType,
+            docName: trimmedDocName,
+            fileName: uploadResult.fileName,
+            fileUrl: uploadResult.fileUrl,
+            fileSize: uploadResult.fileSize,
+            mimeType: uploadResult.mimeType,
+            workExperienceId,
+          },
+          userId,
+        );
+        documents.push(doc);
+      } catch {
+        failedFileNames.push(file.originalname || 'unknown');
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        documents,
+        failedFileNames,
+      },
+      message:
+        documents.length === files.length
+          ? `Uploaded ${documents.length} document(s) successfully`
+          : `Uploaded ${documents.length} of ${files.length} file(s)${
+              failedFileNames.length ? `; failed: ${failedFileNames.join(', ')}` : ''
+            }`,
     };
   }
 

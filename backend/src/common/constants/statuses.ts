@@ -24,6 +24,7 @@ export const CANDIDATE_PROJECT_STATUS = {
   DOCUMENTS_SUBMITTED: 'documents_submitted',
   VERIFICATION_IN_PROGRESS: 'verification_in_progress',
   DOCUMENTS_VERIFIED: 'documents_verified',
+  CLIENT_REVISION_REQUESTED: 'client_revision_requested',
   SUBMITTED_TO_CLIENT: 'submitted_to_client',
   SHORTLISTED: 'shortlisted',
   NOT_SHORTLISTED: 'not_shortlisted',
@@ -34,6 +35,8 @@ export const CANDIDATE_PROJECT_STATUS = {
   SCREENING_COMPLETED: 'screening_completed',
   SCREENING_PASSED: 'screening_passed',
   SCREENING_FAILED: 'screening_failed',
+  SCREENING_NEEDS_TRAINING: 'screening_needs_training',
+  SCREENING_ON_HOLD: 'screening_on_hold',
 
   // === Training/Screening Stage ===
   TRAINING_ASSIGNED: 'training_assigned',
@@ -115,8 +118,18 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   ],
   [CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED]: [
     CANDIDATE_PROJECT_STATUS.SCREENING_PASSED,
-    CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+    CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING,
+    CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD,
     CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED, // Reschedule
+  ],
+  [CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING]: [
+    CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  ],
+  [CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD]: [
+    CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+    CANDIDATE_PROJECT_STATUS.APPROVED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
   [CANDIDATE_PROJECT_STATUS.SCREENING_PASSED]: [
     CANDIDATE_PROJECT_STATUS.APPROVED, // Proceed to approval
@@ -159,6 +172,12 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   [CANDIDATE_PROJECT_STATUS.SUBMITTED_TO_CLIENT]: [
     CANDIDATE_PROJECT_STATUS.SHORTLISTED,
     CANDIDATE_PROJECT_STATUS.NOT_SHORTLISTED,
+    CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+    CANDIDATE_PROJECT_STATUS.CLIENT_REVISION_REQUESTED,
+  ],
+  [CANDIDATE_PROJECT_STATUS.CLIENT_REVISION_REQUESTED]: [
+    CANDIDATE_PROJECT_STATUS.VERIFICATION_IN_PROGRESS,
+    CANDIDATE_PROJECT_STATUS.PENDING_DOCUMENTS,
     CANDIDATE_PROJECT_STATUS.WITHDRAWN,
   ],
   [CANDIDATE_PROJECT_STATUS.SHORTLISTED]: [
@@ -363,6 +382,9 @@ export const TRAINING_STATUS = {
   ASSIGNED: 'assigned',
   SCHEDULED: 'scheduled',
   IN_PROGRESS: 'in_progress',
+  PASSED: 'passed',
+  FAILED: 'failed',
+  RETRAINING: 'retraining',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 } as const;
@@ -658,7 +680,9 @@ export function getStatusStage(status: CandidateProjectStatus): string {
     screening_scheduled: 'screening',
     screening_completed: 'screening',
     screening_passed: 'screening',
+    screening_needs_training: 'screening',
     screening_failed: 'screening',
+    screening_on_hold: 'on_hold',
     // Training Stage
     training_assigned: 'training',
     training_in_progress: 'training',

@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
+import {
+  createCandidateSchema,
+  type CreateCandidateFormData,
+} from "@/features/candidates/createCandidateFormSchema";
 import { toast } from "sonner";
 import { useState } from "react";
 import {
@@ -19,8 +21,10 @@ import {
   ArrowRight,
   Save,
 } from "lucide-react";
-import { useCreateCandidateMutation } from "@/features/candidates";
+import { useCreateCandidateMutation, useUploadDocumentMutation } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import CandidatePreview from "../components/CandidatePreview";
 import { useCan } from "@/hooks/useCan";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -35,73 +39,13 @@ import {
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
-// ==================== VALIDATION SCHEMA ====================
-
-const createCandidateSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, "First name is required")
-    .max(50),
-  lastName: z
-    .string()
-    .min(1, "Last name is required")
-    .max(50),
-  countryCode: z.string().min(1, "Country code is required"),
-  mobileNumber: z
-    .string()
-    .min(10, "Mobile number must be at least 10 characters")
-    .max(15, "Mobile number must not exceed 15 characters"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  source: z.enum(["manual", "meta", "direct_enquiry", "referral", "paid_ads", "agents", "hospital_visit", "expo_event"]),
-  gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-  dateOfBirth: z.string().optional(),
-  expectedSalary: z.preprocess(
-    (val) => {
-      if (val === "" || val === null || val === undefined) return undefined;
-      const num = Number(val);
-      return isNaN(num) ? undefined : num;
-    },
-    z.number().min(0).nullable()
-  ).optional(),
-
-  preferredCountries: z.array(z.string()).optional(),
-  facilityPreferences: z.array(z.string()).optional(),
-  sectorType: z.string().optional(),
-  visaType: z.string().optional(),
-  height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
-  weight: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
-  skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional(),
-  languageProficiency: z.string().optional(),
-  smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional(),
-  licensingExam: z.string().optional(),
-  dataFlow: z.boolean().optional().default(false),
-  eligibility: z.boolean().optional().default(false),
-
-  // Educational Qualifications (legacy fields for backward compatibility)
-  highestEducation: z.string().max(100).optional(),
-  university: z.string().max(200).optional(),
-  graduationYear: z.number().min(1950).max(2030).optional(),
-  gpa: z.number().min(0).max(4).optional(),
-
-  // Multiple qualifications
-  qualifications: z
-    .array(
-      z.object({
-        id: z.string(),
-        qualificationId: z.string(),
-        university: z.string().optional(),
-        graduationYear: z.number().min(1950).max(2030).optional(),
-        gpa: z.number().min(0).max(4).optional(),
-        isCompleted: z.boolean(),
-        notes: z.string().optional(),
-      })
-    )
-    .optional(),
-});
-
-type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;
-
 // ==================== WORK EXPERIENCE TYPES ====================
+
+type PendingCertBatch = {
+  id: string;
+  docName: string;
+  files: File[];
+};
 
 type WorkExperience = {
   id: string;
@@ -117,6 +61,7 @@ type WorkExperience = {
   location: string;
   skills: string[];
   achievements: string;
+  pendingCertBatches?: PendingCertBatch[];
 };
 
 // ==================== COMPONENT ====================
@@ -152,15 +97,20 @@ const STEPS = [
 
 export default function CreateCandidatePage() {
   const navigate = useNavigate();
-  const canManageCandidates = useCan("manage:candidates");
+  const canCreateCandidate =
+    useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruiter");
   const isCRE = hasRole("CRE");
+  const isClientCoordinator = hasRole("Client Coordinator");
 
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
   
   // Step management
   const [currentStep, setCurrentStep] = useState(1);
@@ -182,14 +132,16 @@ export default function CreateCandidatePage() {
     location: "",
     skills: [],
     achievements: "",
+    pendingCertBatches: [],
   });
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
   // Form
-  const form = useForm({
+  const form = useForm<CreateCandidateFormData>({
     resolver: zodResolver(createCandidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
@@ -199,9 +151,25 @@ export default function CreateCandidatePage() {
       countryCode: "+91",
       mobileNumber: "",
       email: "",
-      source: (isCRE ? "direct_enquiry" : isRecruiter ? "referral" : "manual") as any,
+      source: (isCRE
+        ? "direct_enquiry"
+        : isRecruiter
+          ? "referral"
+          : isClientCoordinator
+            ? "agent"
+            : "manual") as any,
+      agentId: "",
+      declaredProjectIds: [],
       gender: "" as any,
       dateOfBirth: "",
+      referralCompanyName: "",
+      referralEmail: "",
+      referralCountryCode: "",
+      referralPhone: "",
+      referralDescription: "",
+      addressCountryCode: "",
+      addressStateId: "",
+      address: "",
       // physical information defaults
       height: undefined,
       weight: undefined,
@@ -224,7 +192,7 @@ export default function CreateCandidatePage() {
   });
 
   // Permission check
-  if (!canManageCandidates) {
+  if (!canCreateCandidate) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <Card className="w-full max-w-md mx-4">
@@ -253,6 +221,7 @@ export default function CreateCandidatePage() {
       "countryCode",
       "mobileNumber",
       "source",
+      "agentId",
       "gender",
       "referralCompanyName",
       "referralEmail",
@@ -350,6 +319,14 @@ export default function CreateCandidatePage() {
         payload.email = data.email;
       }
 
+      if (data.source === "agent" && data.agentId?.trim()) {
+        payload.agentId = data.agentId.trim();
+      }
+
+      if (data.source === "agent" && Array.isArray(data.declaredProjectIds) && data.declaredProjectIds.length > 0) {
+        payload.declaredProjectIds = data.declaredProjectIds;
+      }
+
       // Referral fields
       if (data.source === "referral") {
         if (data.referralCompanyName) payload.referralCompanyName = data.referralCompanyName;
@@ -357,6 +334,16 @@ export default function CreateCandidatePage() {
         if (data.referralCountryCode) payload.referralCountryCode = data.referralCountryCode;
         if (data.referralPhone) payload.referralPhone = data.referralPhone;
         if (data.referralDescription) payload.referralDescription = data.referralDescription;
+      }
+
+      if (data.addressCountryCode?.trim()) {
+        payload.addressCountryCode = data.addressCountryCode.trim();
+      }
+      if (data.addressStateId?.trim()) {
+        payload.addressStateId = data.addressStateId.trim();
+      }
+      if (data.address?.trim()) {
+        payload.address = data.address.trim();
       }
 
       // Preference fields
@@ -479,6 +466,82 @@ export default function CreateCandidatePage() {
           }
         }
 
+        // Upload experience certificate files for each work experience
+        // The API response work experiences are in the same order as submitted.
+        const createdWorkExperiences: any[] =
+          (result as any).workExperiences ||
+          (result as any).data?.workExperiences ||
+          (result as any).data?.candidate?.workExperiences ||
+          [];
+
+        const experiencesWithFiles = workExperiences.filter((exp) =>
+          (exp.pendingCertBatches ?? []).some((b) => b.files.length > 0)
+        );
+
+        if (candidateId && experiencesWithFiles.length > 0) {
+          let fileUploadErrors = 0;
+          for (let i = 0; i < workExperiences.length; i++) {
+            const localExp = workExperiences[i];
+            const batches = (localExp.pendingCertBatches ?? []).filter(
+              (b) => b.files.length > 0
+            );
+            if (batches.length === 0) continue;
+            // Match by index — same submission order as returned by backend
+            const createdExp = createdWorkExperiences[i];
+            const workExperienceId = createdExp?.id;
+            if (!workExperienceId) continue;
+
+            for (const batch of batches) {
+              const desiredDocName =
+                (batch.docName && batch.docName.trim()) ||
+                (localExp.companyName && localExp.companyName.trim()) ||
+                "";
+
+              for (const file of batch.files) {
+                try {
+                  const formData = new FormData();
+                  formData.append("file", file);
+                  formData.append("docType", DOCUMENT_TYPE.EXPERIENCE_LETTERS);
+                  formData.append("workExperienceId", workExperienceId);
+                  const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+                  const uploadData: any = (uploadResult as any).data;
+                  const uploadedDocument =
+                    uploadData?.document && uploadData.document.id
+                      ? uploadData.document
+                      : uploadData?.id
+                        ? uploadData
+                        : null;
+
+                  if (uploadedDocument) {
+                    if (desiredDocName) {
+                      await updateDocument({
+                        id: uploadedDocument.id,
+                        docName: desiredDocName,
+                      }).unwrap();
+                    }
+                  } else {
+                    await createDocument({
+                      candidateId,
+                      docType: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+                      docName: desiredDocName || undefined,
+                      fileName: uploadData.fileName,
+                      fileUrl: uploadData.fileUrl,
+                      fileSize: uploadData.fileSize,
+                      mimeType: uploadData.mimeType,
+                      workExperienceId,
+                    }).unwrap();
+                  }
+                } catch {
+                  fileUploadErrors++;
+                }
+              }
+            }
+          }
+          if (fileUploadErrors > 0) {
+            toast.warning(`Candidate created but ${fileUploadErrors} certificate file(s) failed to upload`);
+          }
+        }
+
         toast.success("Candidate created successfully!");
         navigate("/candidates");
       }
@@ -510,6 +573,8 @@ export default function CreateCandidatePage() {
             setSelectedImage={setSelectedImage}
             uploadingImage={uploadingImage}
             isLoading={isLoading}
+            lockSourceToAgent={isClientCoordinator}
+            setValue={form.setValue}
           />
         );
       case 2:

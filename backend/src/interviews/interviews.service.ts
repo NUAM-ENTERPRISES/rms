@@ -22,6 +22,27 @@ export class InterviewsService {
     private readonly outboxService: OutboxService,
   ) {}
 
+  private formatCandidateDob(candidate: any) {
+    if (!candidate || !candidate.dateOfBirth) return candidate;
+
+    const dob = candidate.dateOfBirth;
+    candidate.dateOfBirth = typeof dob === 'string'
+      ? dob.split('T')[0]
+      : dob instanceof Date
+      ? dob.toISOString().slice(0, 10)
+      : dob;
+
+    return candidate;
+  }
+
+  private formatInterviewCandidateDob(interview: any) {
+    if (!interview) return interview;
+    if (interview.candidateProjectMap?.candidate) {
+      this.formatCandidateDob(interview.candidateProjectMap.candidate);
+    }
+    return interview;
+  }
+
   async create(createInterviewDto: CreateInterviewDto, scheduledBy: string) {
     // If bulk IDs are provided in a single DTO, we route to createBulk
     if (createInterviewDto.candidateProjectMapIds && createInterviewDto.candidateProjectMapIds.length > 0) {
@@ -47,7 +68,20 @@ export class InterviewsService {
     const candidateProjectMap = await this.prisma.candidateProjects.findUnique({
       where: { id: createInterviewDto.candidateProjectMapId },
       include: {
-        candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            mobileNumber: true,
+            profileImage: true,
+            totalExperience: true,
+            dateOfBirth: true,
+            highestEducation: true,
+            gender: true,
+          },
+        },
         project: { select: { id: true, title: true } },
       },
     });
@@ -130,6 +164,12 @@ export class InterviewsService {
                   firstName: true,
                   lastName: true,
                   email: true,
+                  mobileNumber: true,
+                  profileImage: true,
+                  totalExperience: true,
+                  dateOfBirth: true,
+                  highestEducation: true,
+                  gender: true,
                 },
               },
               project: {
@@ -232,7 +272,7 @@ export class InterviewsService {
       return created;
     });
 
-    return interview;
+    return this.formatInterviewCandidateDob(interview);
   }
 
   /**
@@ -465,7 +505,7 @@ export class InterviewsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      interviews,
+      interviews: interviews.map((interview) => this.formatInterviewCandidateDob(interview)),
       pagination: {
         page,
         limit,
@@ -1142,6 +1182,7 @@ export class InterviewsService {
           subStatusId: targetSub.id,
           mainStatusId: targetSub.stageId,
           recruiterId: activeRecruiterId,
+          notes: notes ?? cp.notes,
         },
         include: {
           candidate: true,
@@ -1197,7 +1238,9 @@ export class InterviewsService {
         ? `Client shortlisted ${candidateName} for ${projectTitle}`
         : `Client did not shortlist ${candidateName} for ${projectTitle}`;
 
-      const link = `/interviews?candidateProjectMapId=${result.id}`;
+      const link = result.candidate?.id
+        ? `/candidates/${result.candidate.id}`
+        : `/interviews?candidateProjectMapId=${result.id}`;
 
       // best-effort publish (async) — don't block return on failure
       try {
@@ -1319,6 +1362,9 @@ export class InterviewsService {
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                dateOfBirth: true,
+                highestEducation: true,
+                gender: true,
               },
             },
             project: {
@@ -1385,7 +1431,7 @@ export class InterviewsService {
     }));
 
     return {
-      interviews: interviewsWithExpired,
+      interviews: interviewsWithExpired.map((it) => this.formatInterviewCandidateDob(it)),
       pagination: {
         page,
         limit,
@@ -1524,17 +1570,28 @@ export class InterviewsService {
    * - Backwards-compatible: when `query` is omitted the full array is returned
    */
   async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
-    // Ensure interview exists
-    const interview = await this.prisma.interview.findUnique({ where: { id: interviewId } });
+    // Ensure interview exists and get the associated candidate project map if any
+    const interview = await this.prisma.interview.findUnique({
+      where: { id: interviewId },
+      select: { id: true, candidateProjectMapId: true },
+    });
     if (!interview) {
       throw new NotFoundException('Interview not found');
+    }
+
+    const historyWhere: any = {
+      interviewType: 'client',
+      OR: [{ interviewId }],
+    };
+    if (interview.candidateProjectMapId) {
+      historyWhere.OR.push({ candidateProjectMapId: interview.candidateProjectMapId });
     }
 
     // If caller did not request pagination, return full history array (preserve existing behavior)
     const wantsPagination = !!(query && (query.page !== undefined || query.limit !== undefined));
     if (!wantsPagination) {
       const histories = await this.prisma.interviewStatusHistory.findMany({
-        where: { interviewId, interviewType: 'client' },
+        where: historyWhere,
         orderBy: { statusAt: 'desc' },
         include: {
           changedBy: {
@@ -1550,9 +1607,9 @@ export class InterviewsService {
     const skip = (page - 1) * limit;
 
     const [total, items] = await Promise.all([
-      this.prisma.interviewStatusHistory.count({ where: { interviewId, interviewType: 'client' } }),
+      this.prisma.interviewStatusHistory.count({ where: historyWhere }),
       this.prisma.interviewStatusHistory.findMany({
-        where: { interviewId, interviewType: 'client' },
+        where: historyWhere,
         orderBy: { statusAt: 'desc' },
         skip,
         take: limit,
@@ -1613,7 +1670,20 @@ export class InterviewsService {
         include: {
           candidateProjectMap: {
             include: {
-              candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+              candidate: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  mobileNumber: true,
+                  profileImage: true,
+                  totalExperience: true,
+                  dateOfBirth: true,
+                  highestEducation: true,
+                  gender: true,
+                },
+              },
               project: { select: { id: true, title: true } },
               roleNeeded: { select: { id: true, designation: true } },
               recruiter: { select: { id: true, name: true, email: true } },
@@ -1741,7 +1811,7 @@ export class InterviewsService {
       return updatedInterview;
     });
 
-    return updated;
+    return this.formatInterviewCandidateDob(updated);
   }
 
   /**
@@ -1791,6 +1861,9 @@ export class InterviewsService {
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                dateOfBirth: true,
+                highestEducation: true,
+                gender: true,
               },
             },
             project: {
@@ -1798,6 +1871,11 @@ export class InterviewsService {
                 id: true,
                 title: true,
                 countryCode: true,
+                deadline: true,
+                status: true,
+                requiredScreening: true,
+                resumeEditable: true,
+                groomingRequired: true,
                 client: {
                   select: {
                     id: true,
@@ -1812,6 +1890,8 @@ export class InterviewsService {
               select: {
                 id: true,
                 designation: true,
+                minExperience: true,
+                maxExperience: true,
                 roleCatalog: {
                   select: {
                     id: true,
@@ -1829,6 +1909,11 @@ export class InterviewsService {
             id: true,
             title: true,
             countryCode: true,
+            deadline: true,
+            status: true,
+            requiredScreening: true,
+            resumeEditable: true,
+            groomingRequired: true,
             client: {
               select: {
                 id: true,
@@ -1846,7 +1931,7 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
-    return interview;
+    return this.formatInterviewCandidateDob(interview);
   }
 
   async update(id: string, updateInterviewDto: UpdateInterviewDto) {
@@ -1860,23 +1945,26 @@ export class InterviewsService {
 
     // If mode is being changed to video and no meetingLink provided, generate one
     const generateMeetingLink = () => `https://meet.affiniks.com/${Date.now().toString(36)}${Math.random().toString(36).slice(2,8)}`;
-    const dataToUpdate: any = { ...updateInterviewDto };
+
+    // Strip fields that don't exist in the Prisma Interview model
+    const { airTicketUp: dtoAirTicketUp, airTicketDown: dtoAirTicketDown, ...rest } = updateInterviewDto;
+    const dataToUpdate: any = { ...rest };
+
     if (updateInterviewDto.mode === 'video' && !updateInterviewDto.meetingLink && !interview.meetingLink) {
       dataToUpdate.meetingLink = generateMeetingLink();
     }
 
-    if (updateInterviewDto.airTicket || updateInterviewDto.airTicketUp !== undefined || updateInterviewDto.airTicketDown !== undefined) {
-      const airTicketUp = updateInterviewDto.airTicketUp ??
-        (updateInterviewDto.airTicket === 'up-only' || updateInterviewDto.airTicket === 'up-and-down');
-      const airTicketDown = updateInterviewDto.airTicketDown ??
-        (updateInterviewDto.airTicket === 'down-only' || updateInterviewDto.airTicket === 'up-and-down');
+    // Derive airTicket string from boolean legs if not directly provided
+    if (updateInterviewDto.airTicketUp !== undefined || updateInterviewDto.airTicketDown !== undefined) {
+      const airTicketUp = dtoAirTicketUp ?? false;
+      const airTicketDown = dtoAirTicketDown ?? false;
 
       if (!updateInterviewDto.airTicket) {
         if (airTicketUp && airTicketDown) dataToUpdate.airTicket = 'up-and-down';
         else if (airTicketUp) dataToUpdate.airTicket = 'up-only';
         else if (airTicketDown) dataToUpdate.airTicket = 'down-only';
+        else dataToUpdate.airTicket = null;
       }
-      dataToUpdate.accommodation = updateInterviewDto.accommodation ?? dataToUpdate.accommodation;
     }
 
     const updatedInterview = await this.prisma.interview.update({
@@ -1891,12 +1979,32 @@ export class InterviewsService {
                 firstName: true,
                 lastName: true,
                 email: true,
+                mobileNumber: true,
+                profileImage: true,
+                totalExperience: true,
+                dateOfBirth: true,
+                highestEducation: true,
+                gender: true,
               },
             },
             project: {
               select: {
                 id: true,
                 title: true,
+                countryCode: true,
+                deadline: true,
+                status: true,
+                requiredScreening: true,
+                resumeEditable: true,
+                groomingRequired: true,
+                client: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                  },
+                },
               },
             },
           },
@@ -1904,7 +2012,7 @@ export class InterviewsService {
       },
     });
 
-    return updatedInterview;
+    return this.formatInterviewCandidateDob(updatedInterview);
   }
 
   async remove(id: string) {

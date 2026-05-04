@@ -42,6 +42,9 @@ export const PERMISSIONS = {
   NOMINATE_CANDIDATES: 'nominate:candidates',
   APPROVE_CANDIDATES: 'approve:candidates',
   REJECT_CANDIDATES: 'reject:candidates',
+  SHORTLIST_CANDIDATES: 'shortlist:candidates',
+  TRANSFER_CANDIDATES: 'transfer:candidates',
+  TRANSFER_BACK_CANDIDATES: 'transfer_back:candidates',
 
   // Document management
   READ_DOCUMENTS: 'read:documents',
@@ -79,6 +82,12 @@ export const PERMISSIONS = {
   WRITE_ROLES: 'write:roles',
   MANAGE_ROLES: 'manage:roles',
 
+  // Agent management
+  READ_AGENTS: 'read:agents',
+  WRITE_AGENTS: 'write:agents',
+  EDIT_AGENTS: 'edit:agents',
+  DELETE_AGENTS: 'delete:agents',
+
   // Client management
   READ_CLIENTS: 'read:clients',
   WRITE_CLIENTS: 'write:clients',
@@ -93,6 +102,19 @@ export const PERMISSIONS = {
   READ_SETTINGS: 'read:settings',
   WRITE_SETTINGS: 'write:settings',
   MANAGE_SETTINGS: 'manage:settings',
+
+  // Screening Interview & Training management
+  READ_SCREENINGS: 'read:screenings',
+  WRITE_SCREENINGS: 'write:screenings',
+  MANAGE_SCREENINGS: 'manage:screenings',
+  CONDUCT_SCREENINGS: 'conduct:screenings',
+  READ_INTERVIEW_TEMPLATES: 'read:interview_templates',
+  WRITE_INTERVIEW_TEMPLATES: 'write:interview_templates',
+  MANAGE_INTERVIEW_TEMPLATES: 'manage:interview_templates',
+  READ_TRAINING: 'read:training',
+  WRITE_TRAINING: 'write:training',
+  MANAGE_TRAINING: 'manage:training',
+  ASSIGN_TRAINING: 'assign:training',
 
   // Admin dashboard
   READ_ADMIN_DASHBOARD: 'read:admin-dashboard',
@@ -152,6 +174,9 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.NOMINATE_CANDIDATES,
     PERMISSIONS.APPROVE_CANDIDATES,
     PERMISSIONS.REJECT_CANDIDATES,
+    PERMISSIONS.SHORTLIST_CANDIDATES,
+    PERMISSIONS.TRANSFER_CANDIDATES,
+    PERMISSIONS.TRANSFER_BACK_CANDIDATES,
   ],
   DOCUMENT: [
     PERMISSIONS.READ_DOCUMENTS,
@@ -184,7 +209,26 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.ASSIGN_CRE,
     PERMISSIONS.HANDLE_RNR_CANDIDATES,
   ],
+  AGENT: [
+    PERMISSIONS.READ_AGENTS,
+    PERMISSIONS.WRITE_AGENTS,
+    PERMISSIONS.EDIT_AGENTS,
+    PERMISSIONS.DELETE_AGENTS,
+  ],
   ADMIN_DASHBOARD: [
     PERMISSIONS.READ_ADMIN_DASHBOARD,
+  ],
+  SCREENING_TRAINING: [
+    PERMISSIONS.READ_SCREENINGS,
+    PERMISSIONS.WRITE_SCREENINGS,
+    PERMISSIONS.MANAGE_SCREENINGS,
+    PERMISSIONS.CONDUCT_SCREENINGS,
+    PERMISSIONS.READ_INTERVIEW_TEMPLATES,
+    PERMISSIONS.WRITE_INTERVIEW_TEMPLATES,
+    PERMISSIONS.MANAGE_INTERVIEW_TEMPLATES,
+    PERMISSIONS.READ_TRAINING,
+    PERMISSIONS.WRITE_TRAINING,
+    PERMISSIONS.MANAGE_TRAINING,
+    PERMISSIONS.ASSIGN_TRAINING,
   ],
 } as const;

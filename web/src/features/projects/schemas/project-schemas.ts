@@ -153,5 +153,6 @@ export const defaultProjectValues = {
       mandatory: true,
       description: "Updated resume/CV",
     },
+  
   ],
 };

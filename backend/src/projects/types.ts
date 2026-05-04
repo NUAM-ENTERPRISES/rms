@@ -58,6 +58,52 @@ export interface PaginatedProjects {
   };
 }
 
+/** Slim row returned by GET /projects?summary=true */
+export interface ProjectSummaryListItem {
+  id: string;
+  title: string;
+  deadline: string | null;
+  status: string;
+  priority: string;
+  createdAt: string;
+  projectType: string;
+  countryCode: string | null;
+  country: { code: string; name: string | null } | null;
+}
+
+export interface PaginatedProjectSummaryList {
+  projects: ProjectSummaryListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+/** Minimal project row for pickers / link dialogs (no roles, documents, etc.). */
+export interface ProjectPickerItem {
+  id: string;
+  title: string;
+  status: string;
+  deadline: string | null;
+  client: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface PaginatedProjectPicker {
+  projects: ProjectPickerItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface ProjectStats {
   totalProjects: number;
   activeProjects: number;
@@ -75,34 +121,4 @@ export interface ProjectStats {
     };
   };
   upcomingDeadlines: ProjectWithRelations[];
-}
-
-export interface RecruiterAnalytics {
-  urgentProject: {
-    id: string;
-    title: string;
-    priority: string;
-    deadline: Date | null;
-    clientName: string | null;
-    daysUntilDeadline: number | null;
-  } | null;
-  overdueProjects: {
-    id: string;
-    title: string;
-    clientName: string | null;
-    overdueDays: number | null;
-  }[];
-  untouchedCandidatesCount: number;
-  untouchedCandidates: {
-    id: string;
-    name: string;
-    countryCode: string | null;
-    currentRole: string | null;
-    assignedProjectId: string | null;
-    assignedProjectTitle: string | null;
-  }[];
-  hiredOrSelectedCount: number;
-  activeCandidateCount: number;
-  upcomingInterviewsCount: number;
-  assignedProjectCount: number;
 }

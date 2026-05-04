@@ -6,6 +6,11 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: string;
+  /** Set by API list endpoint when docName is empty (catalog display name) */
+  documentDisplayName?: string;
+  /** Alias of docType for table columns */
+  documentType?: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -22,6 +27,7 @@ export interface Document {
     name: string;
     label: string;
   };
+  workExperienceId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -88,6 +94,12 @@ export interface Candidate {
   referralCountryCode?: string | null;
   referralPhone?: string | null;
   referralDescription?: string | null;
+
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+  addressCountry?: { code: string; name: string } | null;
+  addressState?: { id: string; name: string; code: string } | null;
 
   // Educational Qualifications (legacy fields)
   highestEducation?: string;
@@ -437,6 +449,13 @@ export interface CreateCandidateRequest {
   }>;
   skills?: string;
   teamId?: string;
+  /** Required when source is agent */
+  agentId?: string;
+  /** Optional: agent-linked project IDs (declaration only, not nomination) */
+  declaredProjectIds?: string[];
+  addressCountryCode?: string;
+  addressStateId?: string;
+  address?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -474,6 +493,11 @@ export interface UpdateCandidateRequest {
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;
+  /** Agent-linked declarations (intent only); only for agent-sourced candidates */
+  declaredProjectIds?: string[];
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
 }
 
 export interface UpdateCandidateStatusRequest {
@@ -1151,6 +1175,40 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Document", "Candidate"],
     }),
 
+    /** Batch upload for work experience certificates (multiple files, one docName). */
+    uploadWorkExperienceDocuments: builder.mutation<
+      {
+        success: boolean;
+        data: { documents: Document[]; failedFileNames: string[] };
+        message: string;
+      },
+      {
+        candidateId: string;
+        workExperienceId: string;
+        docType: string;
+        docName?: string;
+        files: File[];
+      }
+    >({
+      query: ({ candidateId, workExperienceId, docType, docName, files }) => {
+        const formData = new FormData();
+        formData.append("docType", docType);
+        formData.append("workExperienceId", workExperienceId);
+        if (docName?.trim()) {
+          formData.append("docName", docName.trim());
+        }
+        for (const file of files) {
+          formData.append("files", file);
+        }
+        return {
+          url: `/upload/work-experience-documents/${candidateId}`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["Document", "Candidate"],
+    }),
+
     // Status update endpoints
     updateCandidateStatus: builder.mutation<
       { success: boolean; data: Candidate; message: string },
@@ -1284,6 +1342,19 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: ["Candidate"],
     }),
 
+    // Bulk transfer candidates to another recruiter
+    bulkTransferCandidates: builder.mutation<
+      { success: boolean; message: string; data?: { transferred: number; skipped: string[] } },
+      { candidateIds: string[]; targetRecruiterId: string; reason: string }
+    >({
+      query: (body) => ({
+        url: `/candidates/bulk-transfer`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+
     // Transfer candidate back
     transferBackCandidate: builder.mutation<
       { success: boolean; message: string },
@@ -1320,28 +1391,28 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `candidates/${candidateId}/projects-workflow-details`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROJECT-WORKFLOW-${candidateId}` }],
     }),
     getCandidateDocumentationWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/documentation-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `DOC-WORKFLOW-${candidateId}` }],
     }),
     getCandidateInterviewWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/interview-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
     }),
     getCandidateProcessingWorkflow: builder.query<any, { candidateId: string; subStatus?: string; step?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/processing-workflow`,
         params,
       }),
-      providesTags: (result, error, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `PROCESSING-WORKFLOW-${candidateId}` }],
     }),
   }),
 });
@@ -1367,6 +1438,7 @@ export const {
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
   useUploadDocumentMutation,
+  useUploadWorkExperienceDocumentsMutation,
   useUpdateCandidateStatusMutation,
   useAssignRecruiterMutation,
   useGetCurrentRecruiterAssignmentQuery,
@@ -1376,6 +1448,7 @@ export const {
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
   useTransferCandidateMutation,
+  useBulkTransferCandidatesMutation,
   useTransferBackCandidateMutation,
   useGetOriginalRecruiterQuery,
   useGetCandidateProjectsQuery,

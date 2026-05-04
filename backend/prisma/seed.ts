@@ -5,6 +5,7 @@ import * as argon2 from 'argon2';
 import * as fs from 'fs';
 import * as path from 'path';
 import { seedSystemConfig } from './seeds/system-config.seed';
+import { seedLanguages } from './seeds/languages.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
 import { seedRoleCatalog } from './seeds/role-catalog.seed';
@@ -53,7 +54,7 @@ const roles = [
       'read:screenings',
       'read:interview_templates',
       'read:training',
-      'manage:training',
+      'read:agents',
     ],
   },
   {
@@ -74,6 +75,10 @@ const roles = [
       'read:documents',
       'transfer:candidates',
       'transfer_back:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
+      'read:agents',
     ],
   },
   {
@@ -98,6 +103,9 @@ const roles = [
       'approve:candidates',
       'reject:candidates',
       'shortlist:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -116,6 +124,8 @@ const roles = [
       'read:projects',
       'read:interviews',
       'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -136,6 +146,9 @@ const roles = [
       'verify:documents',
       'manage:documents',
       'request:resubmission',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
     ],
   },
   {
@@ -153,16 +166,8 @@ const roles = [
       'manage:interviews',
       'schedule:interviews',
       'read:screenings',
-      'write:screenings',
-      'manage:screenings',
-      'conduct:screenings',
       'read:interview_templates',
-      'write:interview_templates',
-      'manage:interview_templates',
       'read:training',
-      'write:training',
-      'manage:training',
-      'assign:training',
       'read:documents',
     ],
   },
@@ -183,6 +188,35 @@ const roles = [
       'assign:training',
       'read:candidates',
       'read:projects',
+    ],
+  },
+  {
+    name: 'Client Coordinator',
+    description:
+      'Client Coordinator - Manages external agents and agent-sourced candidates',
+    permissions: [
+      'read:candidates',
+      'read:assigned_candidates',
+      'write:candidates',
+      'manage:candidates',
+      'nominate:candidates',
+      'read:projects',
+      // Project board parity with Recruiter: assign, send for verification, documents
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'manage:documents',
+      'request:resubmission',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
+      'read:agents',
+      'write:agents',
+      'edit:agents',
+      'delete:agents',
     ],
   },
   {
@@ -243,14 +277,30 @@ const allPermissions = [
   'read:processing',
   'write:processing',
   'manage:processing',
+  'transfer:processing',
 
   // Recruiter management
   'manage:recruiters',
+  'read:recruiters',
+  'write:recruiters',
+
+  // CRE (Customer Relationship Executive) management
+  'read:cre',
+  'write:cre',
+  'manage:cre',
+  'assign:cre',
+  'handle:rnr_candidates',
 
   // Role management
   'read:roles',
   'write:roles',
   'manage:roles',
+
+  // Agent management
+  'read:agents',
+  'write:agents',
+  'edit:agents',
+  'delete:agents',
 
   // Client management
   'read:clients',
@@ -285,6 +335,8 @@ const allPermissions = [
   'read:settings',
   'write:settings',
   'manage:settings',
+  // Admin dashboard
+  'read:admin-dashboard',
   // System config (RNR/HRD) - admin only
   'read:system_config',
   'manage:system_config',
@@ -965,6 +1017,8 @@ async function main() {
   // Seed states
   await seedStates();
 
+  await seedLanguages(prisma);
+
   // Seed candidate statuses
   await seedCandidateStatus();
 
@@ -1308,6 +1362,14 @@ async function main() {
       phone: '9876543222',
       role: 'System Admin',
     },
+    {
+      email: 'clientcoordinator@nuam.com',
+      name: 'Alex Client Coordinator',
+      password: 'client123',
+      countryCode: '+91',
+      phone: '9876543242',
+      role: 'Client Coordinator',
+    },
   ];
 
   for (const userData of testUsers) {
@@ -1394,15 +1456,14 @@ async function main() {
     }
   }
 
-  // Create sample clients for each type
+  // Create sample clients (DIRECT_CLIENT / SUB_AGENT / FREELANCE)
   console.log('🏥 Creating sample clients...');
 
-  // Healthcare Organization
   const healthcareClient = await prisma.client.upsert({
     where: { id: 'healthcare-client-id' },
     update: {
       name: 'City General Hospital',
-      type: 'HEALTHCARE_ORGANIZATION',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Dr. John Smith',
       email: 'contact@citygeneral.com',
       phone: '+1234567890',
@@ -1417,7 +1478,7 @@ async function main() {
     create: {
       id: 'healthcare-client-id',
       name: 'City General Hospital',
-      type: 'HEALTHCARE_ORGANIZATION',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Dr. John Smith',
       email: 'contact@citygeneral.com',
       phone: '+1234567890',
@@ -1431,12 +1492,11 @@ async function main() {
     },
   });
 
-  // Individual Referrer
   const individualClient = await prisma.client.upsert({
     where: { id: 'individual-client-id' },
     update: {
       name: 'Sarah Johnson',
-      type: 'INDIVIDUAL',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Sarah Johnson',
       email: 'sarah.johnson@email.com',
       phone: '+1987654321',
@@ -1449,7 +1509,7 @@ async function main() {
     create: {
       id: 'individual-client-id',
       name: 'Sarah Johnson',
-      type: 'INDIVIDUAL',
+      type: 'DIRECT_CLIENT',
       pointOfContact: 'Sarah Johnson',
       email: 'sarah.johnson@email.com',
       phone: '+1987654321',
@@ -1461,12 +1521,11 @@ async function main() {
     },
   });
 
-  // Sub-Agency
   const agencyClient = await prisma.client.upsert({
     where: { id: 'agency-client-id' },
     update: {
       name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENCY',
+      type: 'SUB_AGENT',
       pointOfContact: 'Mike Wilson',
       email: 'mike@regionalstaffing.com',
       phone: '+1555123456',
@@ -1480,7 +1539,7 @@ async function main() {
     create: {
       id: 'agency-client-id',
       name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENCY',
+      type: 'SUB_AGENT',
       pointOfContact: 'Mike Wilson',
       email: 'mike@regionalstaffing.com',
       phone: '+1555123456',
@@ -1493,12 +1552,41 @@ async function main() {
     },
   });
 
-  // External Source
+  const agencySubClient = await prisma.client.upsert({
+    where: { id: 'agency-sub-client-id' },
+    update: {
+      name: 'Metro End Client (via Agency)',
+      type: 'DIRECT_CLIENT',
+      email: 'hr@metro-end.example.com',
+    },
+    create: {
+      id: 'agency-sub-client-id',
+      name: 'Metro End Client (via Agency)',
+      type: 'DIRECT_CLIENT',
+      email: 'hr@metro-end.example.com',
+    },
+  });
+
+  await prisma.clientSubClient.upsert({
+    where: {
+      parentClientId_childClientId: {
+        parentClientId: agencyClient.id,
+        childClientId: agencySubClient.id,
+      },
+    },
+    update: { linkType: 'SUB_AGENT' },
+    create: {
+      parentClientId: agencyClient.id,
+      childClientId: agencySubClient.id,
+      linkType: 'SUB_AGENT',
+    },
+  });
+
   const externalClient = await prisma.client.upsert({
     where: { id: 'external-client-id' },
     update: {
       name: 'LinkedIn Healthcare Jobs',
-      type: 'EXTERNAL_SOURCE',
+      type: 'FREELANCE',
       pointOfContact: 'LinkedIn Team',
       email: 'healthcare@linkedin.com',
       sourceType: 'SOCIAL_MEDIA',
@@ -1510,7 +1598,7 @@ async function main() {
     create: {
       id: 'external-client-id',
       name: 'LinkedIn Healthcare Jobs',
-      type: 'EXTERNAL_SOURCE',
+      type: 'FREELANCE',
       pointOfContact: 'LinkedIn Team',
       email: 'healthcare@linkedin.com',
       sourceType: 'SOCIAL_MEDIA',
@@ -1518,6 +1606,34 @@ async function main() {
       acquisitionMethod: 'ORGANIC',
       sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
       relationshipType: 'EXTERNAL_SOURCE',
+    },
+  });
+
+  const freelanceSubClient = await prisma.client.upsert({
+    where: { id: 'freelance-sub-client-id' },
+    update: {
+      name: 'End Client (via Freelance)',
+      type: 'DIRECT_CLIENT',
+    },
+    create: {
+      id: 'freelance-sub-client-id',
+      name: 'End Client (via Freelance)',
+      type: 'DIRECT_CLIENT',
+    },
+  });
+
+  await prisma.clientSubClient.upsert({
+    where: {
+      parentClientId_childClientId: {
+        parentClientId: externalClient.id,
+        childClientId: freelanceSubClient.id,
+      },
+    },
+    update: { linkType: 'FREELANCE' },
+    create: {
+      parentClientId: externalClient.id,
+      childClientId: freelanceSubClient.id,
+      linkType: 'FREELANCE',
     },
   });
 
@@ -1558,6 +1674,9 @@ async function main() {
   );
   console.log(
     `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@nuam.com)`,
+  );
+  console.log(
+    `🤝 Client Coordinator: +919876543242 / clientcoord123 (clientcoordinator@nuam.com)`,
   );
   console.log('\n🎯 Each user has their respective role permissions!');
   console.log(

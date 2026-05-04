@@ -17,12 +17,14 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
+import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto, DeliveryMethod } from './dto/bulk-forward-to-client.dto';
 import {
   DocumentWithRelations,
+  DocumentListRow,
   PaginatedDocuments,
   DocumentStats,
   CandidateProjectDocumentSummary,
@@ -31,8 +33,10 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
   DOCUMENT_TYPE_META,
+  DocumentType,
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
+  ROLE_NAMES,
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
@@ -41,6 +45,44 @@ import { GoogleDriveService } from '../google-drive/google-drive.service';
 
 @Injectable()
 export class DocumentsService {
+  /** Human-readable label for a document type key (fallback when not in DOCUMENT_TYPE_META). */
+  private formatDocTypeKey(docType: string): string {
+    return docType
+      .split('_')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  /** Requirement row for recruiter UI: friendly name vs technical type key. */
+  private enrichProjectRequirementRow(r: Record<string, unknown> & { docType: string }) {
+    const docType = r.docType;
+    const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+    const documentName =
+      meta?.displayName ?? this.formatDocTypeKey(docType);
+    return {
+      ...r,
+      documentName,
+      documentType: docType,
+    };
+  }
+
+  /** Document list row: optional user-provided docName, else catalog display name. */
+  private enrichDocumentListItem(doc: Record<string, unknown>) {
+    const docType = doc.docType as string;
+    const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+    const docName = doc.docName;
+    const documentDisplayName =
+      typeof docName === 'string' && docName.trim() !== ''
+        ? docName.trim()
+        : meta?.displayName ?? this.formatDocTypeKey(docType);
+    return {
+      ...doc,
+      documentDisplayName,
+      documentType: docType,
+    };
+  }
+
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
@@ -99,6 +141,7 @@ export class DocumentsService {
       data: {
         candidateId: createDocumentDto.candidateId,
         docType: createDocumentDto.docType,
+        docName: createDocumentDto.docName ?? null,
         fileName: createDocumentDto.fileName,
         fileUrl: createDocumentDto.fileUrl,
         fileSize: createDocumentDto.fileSize,
@@ -110,6 +153,7 @@ export class DocumentsService {
         notes: createDocumentDto.notes,
         roleCatalogId:
           createDocumentDto.roleCatalog || createDocumentDto.roleCatalogId || createDocumentDto.roleCatelogId || null,
+        workExperienceId: createDocumentDto.workExperienceId ?? null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,
       },
@@ -201,6 +245,7 @@ export class DocumentsService {
     if (search) {
       where.OR = [
         { fileName: { contains: search, mode: 'insensitive' } },
+        { docName: { contains: search, mode: 'insensitive' } },
         { documentNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -245,7 +290,9 @@ export class DocumentsService {
     ]);
 
     return {
-      documents: documents as DocumentWithRelations[],
+      documents: (documents as DocumentWithRelations[]).map((d) =>
+        this.enrichDocumentListItem(d as unknown as Record<string, unknown>),
+      ) as DocumentListRow[],
       pagination: {
         page,
         limit,
@@ -319,6 +366,7 @@ export class DocumentsService {
     const document = await this.prisma.document.update({
       where: { id },
       data: {
+        docName: updateDocumentDto.docName,
         fileName: updateDocumentDto.fileName,
         fileUrl: updateDocumentDto.fileUrl,
         fileSize: updateDocumentDto.fileSize,
@@ -664,6 +712,111 @@ export class DocumentsService {
   }
 
   /**
+   * Request document re-upload after a client has requested revisions
+   */
+  async requestClientReupload(
+    dto: RequestClientReuploadDto,
+    requesterId: string,
+  ): Promise<any> {
+    const { candidateProjectMapId, reason } = dto;
+
+    // 1. Validate candidateProjectMap exists
+    const cpm = (await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        project: {
+          select: {
+            id: true,
+          },
+        },
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    })) as any;
+
+    if (!cpm) {
+      throw new NotFoundException(`Candidate project mapping with ID ${candidateProjectMapId} not found`);
+    }
+
+    // Use recruiterId from CandidateProject mapping instead of candidate if it exists there
+    const recruiterIdNotification = cpm.recruiterId;
+
+    // 2. Locate statuses
+    const mainStatus = await this.prisma.candidateProjectMainStatus.findFirst({
+      where: { name: 'documents' },
+    });
+    const subStatus = await this.prisma.candidateProjectSubStatus.findFirst({
+      where: { name: 'client_revision_requested' },
+    });
+
+    if (!mainStatus || !subStatus) {
+      throw new BadRequestException('Required statuses (documents/client_revision_requested) not found in database.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Update CPM status
+      const updatedCpm = await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Record History in CandidateProjectStatusHistory
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId,
+          mainStatusId: mainStatus.id,
+          subStatusId: subStatus.id,
+          changedById: requesterId,
+          reason: `Client revision requested: ${reason}`,
+          notes: `Client revision requested: ${reason}`,
+        },
+      });
+
+      // 4. Trigger Recruiter Notification (via Outbox)
+      if (recruiterIdNotification) {
+        await this.outboxService.publishRecruiterNotification(
+          recruiterIdNotification,
+          `Client requested document revision for ${cpm.candidate.firstName} ${cpm.candidate.lastName}: ${reason}`,
+          'Client Revision Requested',
+          `/recruiter-docs/${cpm.project.id}/${cpm.candidate.id}`,
+          {
+            candidateId: cpm.candidate.id,
+            candidateProjectMapId: candidateProjectMapId,
+            reason: reason,
+          },
+        );
+      }
+
+      // 5. Trigger Interview Coordinator Notification
+      await this.outboxService.publishRoleNotification(
+        ROLE_NAMES.INTERVIEW_COORDINATOR,
+        `Candidate ${cpm.candidate.firstName} ${cpm.candidate.lastName} is waiting for client revision. Reason: ${reason}`,
+        'Client Revision Requested',
+        `/interviews/shortlist-pending`, // Link to the list where coordinator can see this candidate
+        {
+          candidateId: cpm.candidate.id,
+          projectId: cpm.project.id,
+          candidateProjectMapId: candidateProjectMapId,
+          reason: reason,
+          candidateName: `${cpm.candidate.firstName} ${cpm.candidate.lastName}`,
+          syncTags: ['Interview'], // Specify which tags frontend should invalidate
+        },
+      );
+
+      return updatedCpm;
+    });
+  }
+
+  /**
    * Re-upload a document by a recruiter (notifies documentation team)
    */
   async reuploadRecruiter(
@@ -780,6 +933,12 @@ export class DocumentsService {
     if (!candidateProjectMap) {
       throw new NotFoundException(
         `Candidate project mapping with ID ${reuploadDto.candidateProjectMapId} not found`,
+      );
+    }
+
+    if (candidateProjectMap.candidateId !== document.candidateId) {
+      throw new BadRequestException(
+        'This document does not belong to the candidate for the selected project.',
       );
     }
 
@@ -2069,7 +2228,11 @@ export class DocumentsService {
     return {
       candidateProject,
       isSendedForDocumentVerification,
-      requirements,
+      requirements: requirements.map((r) =>
+        this.enrichProjectRequirementRow(
+          r as Record<string, unknown> & { docType: string },
+        ),
+      ),
       verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
       allCandidateDocuments, // FULL HISTORY
       isDocumentationReviewed,
@@ -2766,7 +2929,9 @@ export class DocumentsService {
       throw new BadRequestException('Recruiter ID is required');
     }
 
-    const skip = (page - 1) * limit;
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+    const skip = (pageNumber - 1) * limitNumber;
 
     // Build where clause
     let pendingStatusCondition: any = {
@@ -2923,7 +3088,7 @@ export class DocumentsService {
         },
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: Number(limit),
+        take: limitNumber,
       }),
       this.prisma.candidateProjects.count({ where }),
       this.prisma.candidateProjects.count({
@@ -3059,10 +3224,10 @@ export class DocumentsService {
     return {
       items,
       pagination: {
-        page,
-        limit: Number(limit),
+        page: pageNumber,
+        limit: limitNumber,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: limitNumber > 0 ? Math.ceil(total / limitNumber) : 1,
       },
       counts: {
         pending: total,
@@ -3093,7 +3258,9 @@ export class DocumentsService {
       throw new BadRequestException('Recruiter ID is required');
     }
 
-    const skip = (page - 1) * limit;
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+    const skip = (pageNumber - 1) * limitNumber;
 
     // 1. Define the base where clauses for counts (filtered by recruiter but NOT search)
     const pendingWhereBase: any = {
@@ -3306,7 +3473,7 @@ export class DocumentsService {
         },
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: Number(limit),
+        take: limitNumber,
       }),
       this.prisma.candidateProjects.count({ where: activeWhere }),
       this.prisma.candidateProjects.count({ where: pendingWhereBase }),
@@ -3388,10 +3555,10 @@ export class DocumentsService {
     return {
       items,
       pagination: {
-        page,
-        limit: Number(limit),
+        page: pageNumber,
+        limit: limitNumber,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: limitNumber > 0 ? Math.ceil(total / limitNumber) : 1,
       },
       counts: {
         pending: pendingCount,

@@ -22,6 +22,7 @@ describe('InterviewsService - client decision flows', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    screeningTraining: { create: jest.fn() },
     candidateProjectSubStatus: {
       findUnique: jest.fn(),
     },
@@ -106,7 +107,7 @@ describe('InterviewsService - client decision flows', () => {
       'rec-1',
       expect.stringContaining('Jane Doe'),
       expect.stringContaining('Client decision'),
-      expect.stringContaining('/shortlisting/'),
+      expect.stringContaining('/candidates/cand-1'),
       expect.objectContaining({ candidateProjectMapId: 'cpm-1', candidateId: 'cand-1', projectId: 'proj-1', decision: 'shortlisted' }),
     );
 
@@ -137,6 +138,48 @@ describe('InterviewsService - client decision flows', () => {
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toHaveProperty('notShortlistedReason', 'Not a fit');
     expect(result.pagination.total).toBe(1);
+  });
+
+  it('getInterviewHistory includes candidateProjectMap shortlist events for client interview', async () => {
+    mockPrisma.interview.findUnique.mockResolvedValueOnce({ id: 'i-1', candidateProjectMapId: 'cpm-1' });
+    mockPrisma.interviewStatusHistory.count.mockResolvedValueOnce(2);
+    mockPrisma.interviewStatusHistory.findMany.mockResolvedValueOnce([
+      {
+        id: 'hist-1',
+        interviewType: 'client',
+        interviewId: 'i-1',
+        candidateProjectMapId: 'cpm-1',
+        status: 'assigned',
+        statusSnapshot: 'Interview Assigned',
+        statusAt: new Date().toISOString(),
+        changedBy: { id: 'user-1', name: 'Admin', email: 'admin@example.com' },
+        reason: 'Interview scheduled',
+      },
+      {
+        id: 'hist-2',
+        interviewType: 'client',
+        interviewId: null,
+        candidateProjectMapId: 'cpm-1',
+        status: 'shortlisted',
+        statusSnapshot: 'Shortlisted',
+        statusAt: new Date().toISOString(),
+        changedBy: { id: 'user-1', name: 'Admin', email: 'admin@example.com' },
+        reason: 'Client shortlisted candidate',
+      },
+    ]);
+
+    const result = (await service.getInterviewHistory('i-1', { page: 1, limit: 10 })) as any;
+
+    expect(mockPrisma.interviewStatusHistory.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        OR: expect.arrayContaining([
+          expect.objectContaining({ interviewId: 'i-1' }),
+          expect.objectContaining({ candidateProjectMapId: 'cpm-1' }),
+        ]),
+      }),
+    }));
+    expect(result.items).toHaveLength(2);
+    expect(result.pagination.total).toBe(2);
   });
 
   it('create interview sets outcome to scheduled', async () => {

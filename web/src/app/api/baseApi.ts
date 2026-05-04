@@ -55,6 +55,7 @@ export const baseApi = createApi({
     "ForwardingHistory",
     "RecruiterDocuments",
     "RecruiterAnalytics",
+    "Agent",
   ],
   endpoints: () => ({}),
 });

@@ -4,6 +4,7 @@ import {
   Controller,
   FieldErrors,
 } from "react-hook-form";
+import type { CreateCandidateFormData } from "@/features/candidates/createCandidateFormSchema";
 import {
   Card,
   CardContent,
@@ -22,13 +23,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { CheckSquare, FileCheck, ClipboardList } from "lucide-react";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
-
-type CreateCandidateFormData = {
-  licensingExam?: string;
-  dataFlow?: boolean;
-  eligibility?: boolean;
-  [key: string]: any;
-};
 
 interface ChecklistStepProps {
   control: Control<CreateCandidateFormData>;

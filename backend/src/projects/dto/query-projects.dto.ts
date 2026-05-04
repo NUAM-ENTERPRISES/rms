@@ -6,8 +6,9 @@ import {
   Min,
   Max,
   IsDateString,
+  IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryProjectsDto {
@@ -20,12 +21,38 @@ export class QueryProjectsDto {
   search?: string;
 
   @ApiPropertyOptional({
+    description:
+      'When true, each project includes only id, title, deadline, status, priority, createdAt, projectType, countryCode, and country (code, name). Omits roles, documents, and other relations.',
+    example: false,
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  summary?: boolean;
+
+  @ApiPropertyOptional({
     description: 'Filter by project status',
     enum: ['active', 'completed', 'cancelled'],
   })
   @IsOptional()
   @IsEnum(['active', 'completed', 'cancelled'])
   status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by priority',
+    enum: ['low', 'medium', 'high', 'urgent'],
+  })
+  @IsOptional()
+  @IsEnum(['low', 'medium', 'high', 'urgent'])
+  priority?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter projects with urgent deadlines',
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  isUrgent?: boolean;
 
   @ApiPropertyOptional({
     description: 'Filter by client ID',

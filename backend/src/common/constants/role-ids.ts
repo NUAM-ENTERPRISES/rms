@@ -19,6 +19,7 @@ export const ROLE_NAMES = {
   INTERVIEW_COORDINATOR: 'Interview Coordinator',
   SYSTEM_ADMIN: 'System Admin',
   CRE: 'CRE',
+  CLIENT_COORDINATOR: 'Client Coordinator',
 } as const;
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];

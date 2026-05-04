@@ -1,20 +1,13 @@
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, AlertCircle, Clock, TrendingUp, MoreHorizontal, Eye, Search, ChevronLeft, ChevronRight, Calendar, CalendarDays, Phone, Mail, ArrowRight } from "lucide-react";
+import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, RefreshCw, ArrowUpRight, PlusCircle } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
 import { TransferCandidateModal } from "@/components/molecules/TransferCandidateModal";
-import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery, useGetCREReassignedCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
+import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery, useGetCREReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
+import { cn } from "@/lib/utils";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
@@ -46,7 +40,7 @@ export default function CREDashboardPage() {
   
   // Fetch only candidates assigned to this CRE with optional status filter
   const assignedCandidatesQuery = useGetMyAssignedCandidatesQuery({
-    currentStatus: statusFilter === 'reassigned' ? undefined : statusFilter,
+    currentStatus: (statusFilter === 'reassigned' || statusFilter === 'created') ? undefined : statusFilter,
     page: page,
     limit: limitCount,
     search: debouncedSearch,
@@ -58,9 +52,24 @@ export default function CREDashboardPage() {
     search: debouncedSearch,
   });
 
-  const isLoading = statusFilter === 'reassigned' ? reassignedCandidatesQuery.isLoading : assignedCandidatesQuery.isLoading;
-  const assignedCandidatesData = statusFilter === 'reassigned' ? reassignedCandidatesQuery.data : assignedCandidatesQuery.data;
-  const refetch = statusFilter === 'reassigned' ? reassignedCandidatesQuery.refetch : assignedCandidatesQuery.refetch;
+  const createdCandidatesQuery = useGetUserCandidatesQuery({
+    page: page,
+    limit: limitCount,
+    search: debouncedSearch,
+  });
+
+  const isLoading =
+    statusFilter === 'reassigned' ? reassignedCandidatesQuery.isLoading
+    : statusFilter === 'created' ? createdCandidatesQuery.isLoading
+    : assignedCandidatesQuery.isLoading;
+  const assignedCandidatesData =
+    statusFilter === 'reassigned' ? reassignedCandidatesQuery.data
+    : statusFilter === 'created' ? createdCandidatesQuery.data
+    : assignedCandidatesQuery.data;
+  const refetch =
+    statusFilter === 'reassigned' ? reassignedCandidatesQuery.refetch
+    : statusFilter === 'created' ? createdCandidatesQuery.refetch
+    : assignedCandidatesQuery.refetch;
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -82,10 +91,10 @@ export default function CREDashboardPage() {
   const [currentRecruiterForTransfer, setCurrentRecruiterForTransfer] = useState<string>('');
 
   const assignedCount = summaryData?.total ?? totalCount;
-  const convertedCount = summaryData?.roleCounters?.converted ?? 0;
   const reassignedCount = summaryData?.roleCounters?.reassigned ?? 0;
-  const onHoldCount = summaryData?.roleCounters?.onHold ?? 0;
-  const untouchedCount = summaryData?.roleCounters?.untouched ?? 0;
+  const junkCount = summaryData?.roleCounters?.junk ?? 0;
+  const createdCount = summaryData?.roleCounters?.created ?? createdCandidatesQuery.data?.total ?? 0;
+ 
 
   const statusLabel =
     statusFilter === undefined
@@ -94,6 +103,8 @@ export default function CREDashboardPage() {
       ? 'Converted Responses'
       : statusFilter === 'reassigned'
       ? 'Reassigned'
+      : statusFilter === 'junk'
+      ? 'Junk'
       : statusFilter === 'on_hold'
       ? 'On Hold'
       : statusFilter === 'untouched'
@@ -105,41 +116,26 @@ export default function CREDashboardPage() {
     ? 'Try adjusting your search query.'
     : `You'll see ${statusLabel.toLowerCase()} candidates here once they're escalated to you.`;
 
-  // Calculate stats based on current view/total
-  const totalAssigned = totalCount;
-  const todayAssigned = candidates.filter((candidate: any) => {
-    const assignedDate = new Date(candidate.updatedAt || new Date());
-    const today = new Date();
-    return assignedDate.toDateString() === today.toDateString();
-  }).length;
-
   const getTableTitle = () => {
     if (statusFilter === 'rnr') return 'Ring No Response (RNR) Candidates';
     if (statusFilter === 'reassigned') return 'Reassigned Candidates';
+    if (statusFilter === 'junk') return 'Junk Candidates';
     if (statusFilter === 'on_hold') return 'On Hold Candidates';
     if (statusFilter === 'untouched') return 'Untouched Candidates';
     if (statusFilter === 'interested') return 'Converted Responses';
+    if (statusFilter === 'created') return 'Created Candidates';
     return 'Assigned Candidates';
   };
 
   const getTableSubtitle = () => {
     if (statusFilter === 'rnr') return 'Candidates marked as RNR';
     if (statusFilter === 'reassigned') return 'Candidates transferred by CRE to recruiter';
+    if (statusFilter === 'junk') return 'Candidates assigned for more than 5 days';
     if (statusFilter === 'on_hold') return 'Candidates currently on hold';
     if (statusFilter === 'untouched') return 'New untouched candidates';
     if (statusFilter === 'interested') return 'Candidates converted from CRE call';
+    if (statusFilter === 'created') return 'Candidates you personally added to the system';
     return 'Candidates assigned to you';
-  };
-
-  const formatDateTime = (value?: string) => {
-    if (!value) return 'N/A';
-    return new Date(value).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const formatPhoneForLink = (candidate: any) => {
@@ -175,430 +171,375 @@ export default function CREDashboardPage() {
     }
   };
 
+  // Tile config — Junk is last
+  const statCards = [
+    {
+      label: 'Untouched Candidates',
+      value: assignedCount,
+      subtitle: 'Auto-assigned to you',
+      icon: Users,
+      accent: 'blue',
+      statusId: undefined as string | undefined,
+    },
+    {
+      label: 'Reassigned Candidates',
+      value: reassignedCount,
+      subtitle: 'Transferred to recruiters',
+      icon: UserCheck,
+      accent: 'indigo',
+      statusId: 'reassigned',
+    },
+    {
+      label: 'Created Candidates',
+      value: createdCount,
+      subtitle: 'Candidates you added',
+      icon: PlusCircle,
+      accent: 'green',
+      statusId: 'created',
+    },
+    {
+      label: 'Junk Candidates',
+      value: junkCount,
+      subtitle: 'Assigned for > 5 days',
+      icon: AlertCircle,
+      accent: 'orange',
+      statusId: 'junk',
+    },
+  ] as const;
+
+  const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+    blue:   { card: 'from-blue-50 via-white to-blue-50/30 border-blue-100',   icon: 'text-blue-600',   iconBg: 'bg-blue-100',   value: 'text-blue-700',   ring: 'ring-blue-400/50',   dot: 'bg-blue-500' },
+    indigo: { card: 'from-indigo-50 via-white to-indigo-50/30 border-indigo-100', icon: 'text-indigo-600', iconBg: 'bg-indigo-100', value: 'text-indigo-700', ring: 'ring-indigo-400/50', dot: 'bg-indigo-500' },
+    green:  { card: 'from-green-50 via-white to-green-50/30 border-green-100',  icon: 'text-green-600',  iconBg: 'bg-green-100',  value: 'text-green-700',  ring: 'ring-green-400/50',  dot: 'bg-green-500' },
+    orange: { card: 'from-orange-50 via-white to-orange-50/30 border-orange-100', icon: 'text-orange-600', iconBg: 'bg-orange-100', value: 'text-orange-700', ring: 'ring-orange-400/50', dot: 'bg-orange-500' },
+  };
+
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <div className="space-y-6 p-6 max-w-7xl mx-auto">
-        {/* Welcome Section */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-            Welcome back, {user?.name || "CRE"}! 👋
-          </h1>
-          <p className="text-sm text-slate-500">
-            Role(s): {Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}
-          </p>
-          <p className="text-lg text-slate-600">
-            {statusFilter === undefined
-              ? "Showing all assigned candidates"
-              : statusFilter === 'interested'
-              ? "Showing Converted Responses candidates"
-              : statusFilter === 'reassigned'
-              ? "Showing Reassigned candidates"
-              : statusFilter === 'on_hold'
-              ? "Showing On Hold candidates"
-              : statusFilter === 'untouched'
-              ? "Showing Untouched candidates"
-              : "Showing selected filter candidates"}
-          </p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/40 to-indigo-50/40">
+        <div className="max-w-screen-2xl mx-auto space-y-6 p-4 md:p-6">
 
-        {/* Replaced stat cards with an updated CandidatePage-style card row */}
-        <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-4">
-          {[
-            {
-              label: 'Total Assigned Candidates',
-              value: assignedCount,
-              subtitle: 'All assigned excluding converted',
-              icon: Users,
-              color: 'from-blue-500 to-blue-600',
-              statusId: undefined,
-            },
-            {
-              label: 'Converted Responses',
-              value: summaryData?.roleCounters?.converted ?? 0,
-              subtitle: 'Recently converted by CRE',
-              icon: TrendingUp,
-              color: 'from-green-500 to-green-600',
-              statusId: 'interested',
-            },
-            {
-              label: 'Reassigned Candidates',
-              value: reassignedCount,
-              subtitle: 'CRE transferred to recruiters',
-              icon: UserCheck,
-              color: 'from-indigo-500 to-indigo-600',
-              statusId: 'reassigned',
-            },
-          ].map((stat) => {
-            const Icon = stat.icon;
-            const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> = {
-              'from-blue-500 to-blue-600': {
-                bg: 'from-blue-50 to-blue-100/50',
-                iconBg: 'bg-blue-200/40',
-                text: 'text-blue-600',
-              },
-              'from-green-500 to-green-600': {
-                bg: 'from-green-50 to-green-100/50',
-                iconBg: 'bg-green-200/40',
-                text: 'text-green-600',
-              },
-              'from-emerald-500 to-emerald-600': {
-                bg: 'from-emerald-50 to-emerald-100/50',
-                iconBg: 'bg-emerald-200/40',
-                text: 'text-emerald-600',
-              },
-              'from-orange-500 to-orange-600': {
-                bg: 'from-orange-50 to-orange-100/50',
-                iconBg: 'bg-orange-200/40',
-                text: 'text-orange-600',
-              },
-              'from-purple-500 to-purple-600': {
-                bg: 'from-purple-50 to-purple-100/50',
-                iconBg: 'bg-purple-200/40',
-                text: 'text-purple-600',
-              },
-              'from-indigo-500 to-indigo-600': {
-                bg: 'from-indigo-50 to-indigo-100/50',
-                iconBg: 'bg-indigo-200/40',
-                text: 'text-indigo-600',
-              },
-            };
-            const defaultColors = {
-              bg: 'from-slate-50 to-slate-100/50',
-              iconBg: 'bg-slate-200/40',
-              text: 'text-slate-600',
-            };
-            const colors = gradientMap[stat.color] || defaultColors;
-            const isActive = statusFilter === stat.statusId;
+          {/* Header */}
+          <TypedHeader
+            userName={user?.name || "CRE"}
+            subtitle={`Roles: ${Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}`}
+          />
 
-            return (
-              <Card
-                key={stat.label}
-                onClick={() => {
-                  setStatusFilter(stat.statusId);
-                  setPage(1);
-                }}
-                className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
-              >
-                <CardContent className="pt-1 pb-1">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-0.5">{stat.label}</p>
-                      <h3 className={`text-xl font-semibold ${colors.text}`}>{stat.value}</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">{stat.subtitle}</p>
+          {/* Stat Cards */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            {statCards.map((stat) => {
+              const Icon = stat.icon;
+              const s = accentStyles[stat.accent];
+              const isActive = statusFilter === stat.statusId;
+              return (
+                <button
+                  key={stat.label}
+                  type="button"
+                  onClick={() => { setStatusFilter(stat.statusId); setPage(1); }}
+                  className={cn(
+                    "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                    s.card,
+                    isActive
+                      ? `ring-2 shadow-md ${s.ring}`
+                      : "hover:-translate-y-0.5 hover:shadow-md"
+                  )}
+                >
+                  {isActive && (
+                    <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                  )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
+                      <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
+                      <p className="text-xs text-slate-500">{stat.subtitle}</p>
                     </div>
-                    <div className={`p-1 ${colors.iconBg} rounded-full`}>
-                      <Icon className={`h-4 w-4 ${colors.text}`} />
+                    <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                      <Icon className={cn("h-5 w-5", s.icon)} />
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                    <span>{isActive ? 'Viewing now' : 'Click to view'}</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Recent Assigned Candidates */}
-        <Card className="border-0 shadow-xl bg-white/90">
-        
-          <CardContent className="pt-6">
+          {/* Candidates Table Card */}
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+
+            {/* Table Header Bar */}
+            <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-bold text-gray-900 truncate">{getTableTitle()}</h2>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{getTableSubtitle()}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search name, email or phone…"
+                      className="pl-9 h-9 text-sm border-slate-200 bg-white focus:ring-2 focus:ring-blue-100"
+                    />
+                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-slate-200" onClick={() => refetch()}>
+                        <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom"><p className="text-xs">Refresh</p></TooltipContent>
+                  </Tooltip>
+                  {statusFilter === 'created' && (
+                    <Button
+                      size="sm"
+                      className="h-9 px-3 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-sm gap-1.5 shrink-0"
+                      onClick={() => navigate('/candidates/create')}
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" />
+                      Create Candidate
+                    </Button>
+                  )}
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 shrink-0">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium whitespace-nowrap">
+                      {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {isLoading ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p>Loading candidates...</p>
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-200 border-t-blue-600" />
+                <p className="text-sm font-medium">Loading candidates…</p>
               </div>
             ) : candidates.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="h-10 w-10 text-slate-400" />
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-slate-300" />
                 </div>
-                <p className="font-semibold text-lg text-slate-700">{noCandidatesTitle}</p>
-                <p className="text-sm mt-2">{noCandidatesSubtitle}</p>
+                <p className="font-semibold text-slate-600">{noCandidatesTitle}</p>
+                <p className="text-sm text-slate-400 text-center max-w-xs">{noCandidatesSubtitle}</p>
               </div>
             ) : (
               <>
-                {/* <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"> */}
-                  {/* <h3 className="text-xl font-semibold text-slate-800">{statusLabel} Candidate List</h3> */}
-                  {/* <p className="text-sm text-slate-500">
-                    {candidates.length} of {totalCount} candidate{totalCount !== 1 && 's'} displayed
-                  </p> */}
-                {/* </div> */}
-
-                <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-                  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
-                        <Users className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900">{getTableTitle()}</h4>
-                        <p className="text-sm text-gray-600 mt-1 font-medium">
-                          {getTableSubtitle()} — {candidates.length} candidate{candidates.length !== 1 ? 's' : ''} in total
-                        </p>
-                        <div className="mt-3 relative w-full md:w-96">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                          <Input
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by candidate name, email or phone..."
-                            className="pl-10 h-10 w-full border-slate-200"
-                          />
-                        </div>
-                      </div>
-                      {candidates.length > 0 && (
-                        <div className="ml-auto hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          <span className="text-xs font-medium">
-                            {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                          </span>
-                        </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 w-64">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
+                      {statusFilter === 'reassigned' && (
+                        <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned By</TableHead>
                       )}
-                    </div>
-                  </div>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned At</TableHead>
+                      {statusFilter !== 'created' && (
+                        <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
+                      )}
+                    </TableRow>
+                  </TableHeader>
 
-                  <Table>
-                    <TableHeader className="sticky">
-                      <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Candidate</TableHead>
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Recruiter</TableHead>
-                        {statusFilter === 'reassigned' && (
-                          <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Assigned By</TableHead>
-                        )}
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Reason</TableHead>
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Status</TableHead>
-                        <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">Assigned At</TableHead>
-                        <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">Contact</TableHead>
-                        <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                  <TableBody>
+                    {candidates.map((candidate: any) => {
+                      const activeAssignment = candidate.recruiterAssignments?.find((a: any) => a.isActive);
+                      const nonCreAssignment = candidate.recruiterAssignments?.find(
+                        (a: any) => a.recruiter?.id && a.recruiter?.id !== user?.id
+                      );
+                      const recruiterName =
+                        nonCreAssignment?.recruiter?.name ||
+                        activeAssignment?.recruiter?.name ||
+                        'Unassigned';
+                      const assignedByName =
+                        activeAssignment?.assignedByUser?.name ||
+                        nonCreAssignment?.assignedByUser?.name ||
+                        'System / Admin';
+                      const statusName = candidate.currentStatus?.statusName || 'Unknown';
+                      const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
+                      const assignmentReason = activeAssignment?.reason || '';
+                      const phoneDigits = formatPhoneForLink(candidate);
 
-                    <TableBody>
-                      {candidates.map((candidate: any) => {
-                        const activeAssignment = candidate.recruiterAssignments?.find((a: any) => a.isActive);
-                        const nonCreAssignment = candidate.recruiterAssignments?.find(
-                          (a: any) => a.recruiter?.id && a.recruiter?.id !== user?.id
-                        );
-                        const recruiterName =
-                          nonCreAssignment?.recruiter?.name ||
-                          activeAssignment?.recruiter?.name ||
-                          'Unassigned';
-                        const assignedByName =
-                          activeAssignment?.assignedByUser?.name ||
-                          nonCreAssignment?.assignedByUser?.name ||
-                          'System / Admin';
-                        const statusName = candidate.currentStatus?.statusName || 'Unknown';
-                        const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
-                        const assignmentReason = activeAssignment?.reason || '';
-                        const phoneDigits = formatPhoneForLink(candidate);
-                        const isCREAssigned = candidate.recruiterAssignments?.some((a: any) => a.assignmentType === 'cre_assigned');
+                      const statusBadgeClass =
+                        statusName.toLowerCase() === 'rnr'
+                          ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                          : statusName.toLowerCase() === 'on hold' || statusName.toLowerCase() === 'on_hold'
+                          ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                          : statusName.toLowerCase() === 'untouched'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : statusName.toLowerCase() === 'interested'
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200';
 
-                        return (
-                          <TableRow
-                            key={candidate.id}
-                            className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
-                          >
-                            <TableCell className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                <ImageViewer
-                                  title={`${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || 'Candidate'}
-                                  src={candidate.profileImage || null}
-                                  fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
-                                  className="h-10 w-10 rounded-full"
-                                  ariaLabel={`View full image for ${candidate.firstName || ''} ${candidate.lastName || ''}`}
-                                  enableHoverPreview
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/candidates/${candidate.id}`);
-                                    }}
-                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
-                                  >
-                                    {candidate.firstName || ''} {candidate.lastName || ''}
-                                  </button>
-                                  <div className="text-xs text-slate-500 mt-0.5 font-medium truncate">
-                                    {candidate.countryCode || ''} {candidate.mobileNumber || ''}
-                                  </div>
+                      return (
+                        <TableRow
+                          key={candidate.id}
+                          className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0 group"
+                        >
+                          {/* Candidate */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <ImageViewer
+                                title={`${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() || 'Candidate'}
+                                src={candidate.profileImage || null}
+                                fallbackSrc="https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
+                                className="h-9 w-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
+                                ariaLabel={`View full image for ${candidate.firstName || ''} ${candidate.lastName || ''}`}
+                                enableHoverPreview
+                              />
+                              <div className="min-w-0">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); navigate(`/candidates/${candidate.id}`); }}
+                                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-colors truncate block max-w-[160px]"
+                                >
+                                  {candidate.firstName || ''} {candidate.lastName || ''}
+                                </button>
+                                <div className="text-xs text-slate-400 mt-0.5 truncate">
+                                  {candidate.countryCode || ''} {candidate.mobileNumber || ''}
                                 </div>
                               </div>
-                            </TableCell>
+                            </div>
+                          </TableCell>
 
+                          {/* Recruiter */}
+                          <TableCell className="px-4 py-3">
+                            <span className="text-xs font-medium text-slate-700 truncate max-w-[120px] block">{recruiterName}</span>
+                          </TableCell>
+
+                          {/* Assigned By (reassigned only) */}
+                          {statusFilter === 'reassigned' && (
                             <TableCell className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="text-xs font-medium text-slate-900 truncate">{recruiterName}</div>
-                                {isCREAssigned && (
-                                  <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
-                                    CRE Assigned
-                                  </Badge>
-                                )}
-                              </div>
+                              <span className="text-xs text-slate-600 truncate block max-w-[120px]">{assignedByName}</span>
                             </TableCell>
+                          )}
 
-                            {statusFilter === 'reassigned' && (
-                              <TableCell className="px-4 py-3">
-                                <div className="text-xs truncate">{assignedByName}</div>
-                              </TableCell>
+                          {/* Reason */}
+                          <TableCell className="px-4 py-3 max-w-[160px]">
+                            {assignmentReason ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="text-xs text-slate-600 truncate block max-w-[140px] cursor-help">{assignmentReason}</span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs"><p className="text-xs">{assignmentReason}</p></TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-xs text-slate-300">—</span>
                             )}
+                          </TableCell>
 
-                            <TableCell className="px-4 py-3">
-                              {assignmentReason ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="text-xs text-slate-600 truncate max-w-[150px] cursor-help">
-                                      {assignmentReason}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-xs">
-                                    <p className="text-xs">{assignmentReason}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <div className="text-xs text-slate-400">No reason</div>
+                          {/* Status */}
+                          <TableCell className="px-4 py-3">
+                            <Badge className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full", statusBadgeClass)}>
+                              {statusName}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Assigned At */}
+                          <TableCell className="px-4 py-3">
+                            <span className="text-xs text-slate-500 whitespace-nowrap">
+                              {new Date(assignedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </span>
+                          </TableCell>
+
+                          {/* Actions */}
+                          {statusFilter !== 'created' && (
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, '_blank'); }}
+                                    disabled={!phoneDigits}
+                                  >
+                                    <Phone className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p className="text-xs">WhatsApp</p></TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                    onClick={(e) => { e.stopPropagation(); navigate(`/candidates/${candidate.id}`); }}
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p className="text-xs">View Profile</p></TooltipContent>
+                              </Tooltip>
+
+                              {statusFilter !== 'reassigned' && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors"
+                                  disabled={isTransferring}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCandidateToTransfer(candidate);
+                                    setCurrentRecruiterForTransfer(recruiterName);
+                                    setIsTransferModalOpen(true);
+                                  }}
+                                >
+                                  Reassign
+                                </Button>
                               )}
-                            </TableCell>
-
-                            <TableCell className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  className={`text-xs font-semibold px-2 py-0.5 ${
-                                    statusName.toLowerCase() === 'rnr'
-                                      ? 'bg-orange-100 text-orange-700'
-                                      : statusName.toLowerCase() === 'on hold'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : statusName.toLowerCase() === 'untouched'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : statusName.toLowerCase() === 'interested'
-                                      ? 'bg-green-100 text-green-700'
-                                      : 'bg-blue-100 text-blue-700'
-                                  }`}
-                                >
-                                  {statusName}
-                                </Badge>
-                                {isCREAssigned && (
-                                  <Badge className="text-[10px] bg-slate-100 text-slate-700 border border-slate-200">
-                                    CRE Assigned
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="px-4 py-3">
-                              <div className="text-xs text-gray-600">
-                                {new Date(assignedDate).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })}
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="px-4 py-3 text-center">
-                              <div className="text-xs text-gray-600">{candidate.countryCode || ''} {candidate.mobileNumber || ''}</div>
-                            </TableCell>
-
-                            <TableCell className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, '_blank');
-                                  }}
-                                  disabled={!phoneDigits}
-                                >
-                                  <Phone className="h-4 w-4" />
-                                </Button>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-
-                                {(statusName.toLowerCase() === 'interested' || statusFilter === 'interested') ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={isTransferring}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCandidateToTransfer(candidate);
-                                      setCurrentRecruiterForTransfer(recruiterName);
-                                      setIsTransferModalOpen(true);
-                                    }}
-                                  >
-                                    Reassign
-                                  </Button>
-                                ) : statusFilter !== 'reassigned' && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled={isConverting}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCandidateToConvert(candidate);
-                                      setIsConvertModalOpen(true);
-                                    }}
-                                  >
-                                    Convert
-                                  </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                            </div>
+                          </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
 
                 {totalPages > 1 && (
-                  <div className="mt-4 flex flex-col md:flex-row items-center justify-between border-t border-slate-100 pt-6 gap-3">
-                    <p className="text-sm text-slate-500">
-                      Showing <span className="font-semibold">{candidates.length}</span> of{' '}
-                      <span className="font-semibold">{totalCount}</span> candidates
+                  <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+                    <p className="text-xs text-slate-500">
+                      Showing <span className="font-semibold text-slate-700">{candidates.length}</span> of{' '}
+                      <span className="font-semibold text-slate-700">{totalCount}</span> candidates
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600"
+                        className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
                       >
-                        <ChevronLeft className="h-4 w-4" /> Previous
+                        <ChevronLeft className="h-3.5 w-3.5" /> Prev
                       </Button>
-                      <div className="flex items-center gap-1.5 mx-2">
+                      <div className="flex items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                          if (
-                            totalPages <= 7 ||
-                            p === 1 ||
-                            p === totalPages ||
-                            (p >= page - 1 && p <= page + 1)
-                          ) {
+                          if (totalPages <= 7 || p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
                             return (
                               <Button
                                 key={p}
                                 variant={page === p ? 'default' : 'ghost'}
                                 size="sm"
                                 onClick={() => setPage(p)}
-                                className={`h-8 w-8 p-0 ${
-                                  page === p
-                                    ? 'bg-blue-600 hover:bg-blue-700 shadow-md'
-                                    : 'text-slate-600 hover:bg-slate-100'
-                                }`}
+                                className={cn("h-8 w-8 p-0 text-xs", page === p ? 'bg-blue-600 hover:bg-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-100')}
                               >
                                 {p}
                               </Button>
                             );
                           } else if (p === page - 2 || p === page + 2) {
-                            return (
-                              <span key={p} className="text-slate-400">
-                                ...
-                              </span>
-                            );
+                            return <span key={p} className="text-slate-300 text-xs px-0.5">…</span>;
                           }
                           return null;
                         })}
@@ -608,18 +549,18 @@ export default function CREDashboardPage() {
                         size="sm"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
-                        className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600"
+                        className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
                       >
-                        Next <ChevronRight className="h-4 w-4" />
+                        Next <ChevronRight className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
                 )}
               </>
             )}
-          </CardContent>
-        </Card>
-        <ConvertCandidateModal
+          </div>
+
+          <ConvertCandidateModal
           isOpen={isConvertModalOpen}
           onClose={() => {
             setIsConvertModalOpen(false);
@@ -630,7 +571,7 @@ export default function CREDashboardPage() {
           isSubmitting={isConverting}
         />
 
-        <TransferCandidateModal
+          <TransferCandidateModal
           isOpen={isTransferModalOpen}
           onClose={() => {
             setIsTransferModalOpen(false);
@@ -642,8 +583,8 @@ export default function CREDashboardPage() {
           currentRecruiterName={currentRecruiterForTransfer}
           isSubmitting={isTransferring}
         />
+        </div>
       </div>
-    </div>
     </TooltipProvider>
   );
 }

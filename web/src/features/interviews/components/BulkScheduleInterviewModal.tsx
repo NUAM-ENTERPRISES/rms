@@ -362,11 +362,11 @@ export function BulkScheduleInterviewModal({
                         <div>
                           <Label className="text-[10px] uppercase text-muted-foreground">Air Ticket</Label>
                           <Select
-                            value={schedule.airTicket || "up-and-down"}
+                            value={schedule.airTicket}
                             onValueChange={(val) => updateIndividualSchedule(c.id, "airTicket", val as InterviewSchedule["airTicket"])}
                           >
                             <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Air ticket" />
+                              <SelectValue placeholder="Select air ticket" />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="up-and-down">Up and Down</SelectItem>

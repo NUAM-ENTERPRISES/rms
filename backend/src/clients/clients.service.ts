@@ -3,19 +3,120 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ClientSubClientLinkType,
+  ClientType,
+  Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import { CreateClientDto } from './dto/create-client.dto';
+import { CreateClientDto, CreateClientSubClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { QueryClientsDto } from './dto/query-clients.dto';
+import {
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
+
+const clientSingleDetailInclude = {
+  addressCountry: true,
+  addressState: true,
+  _count: {
+    select: {
+      projects: true,
+      subClientLinks: true,
+      parentClientLinks: true,
+    },
+  },
+  subClientLinks: {
+    include: {
+      child: {
+        include: {
+          addressCountry: true,
+          addressState: true,
+        },
+      },
+    },
+  },
+  parentClientLinks: {
+    include: {
+      parent: {
+        include: {
+          addressCountry: true,
+          addressState: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ClientInclude;
+
+/** Full include for create/update/linkSubClient responses — returns all relations. */
+const clientWithRelationsInclude = {
+  addressCountry: true,
+  addressState: true,
+  projects: {
+    include: {
+      rolesNeeded: true,
+      candidateProjects: {
+        include: {
+          candidate: true,
+        },
+      },
+    },
+  },
+  subClientLinks: {
+    include: {
+      child: {
+        include: {
+          addressCountry: true,
+          addressState: true,
+        },
+      },
+    },
+  },
+  parentClientLinks: {
+    include: {
+      parent: {
+        include: {
+          addressCountry: true,
+          addressState: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.ClientInclude;
+
+/** Lean include for list responses — no nested arrays, just counts. */
+const clientListInclude = {
+  addressCountry: true,
+  addressState: true,
+  _count: {
+    select: {
+      projects: true,
+      subClientLinks: true,
+      parentClientLinks: true,
+    },
+  },
+} satisfies Prisma.ClientInclude;
 
 @Injectable()
 export class ClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createClientDto: CreateClientDto, createdBy: string) {
-    const createData: any = { ...createClientDto };
+    const { subClient, ...parentFields } = createClientDto;
 
-    // Handle JSON fields
+    if (createClientDto.type === ClientType.DIRECT_CLIENT && subClient) {
+      throw new BadRequestException(
+        'subClient must not be provided when type is DIRECT_CLIENT',
+      );
+    }
+
+    const allowsLinkedSub =
+      createClientDto.type === ClientType.SUB_AGENT ||
+      createClientDto.type === ClientType.FREELANCE;
+
+    const createData: Record<string, unknown> = { ...parentFields };
+
     if (createClientDto.specialties) {
       createData.specialties = createClientDto.specialties;
     }
@@ -23,7 +124,6 @@ export class ClientsService {
       createData.locations = createClientDto.locations;
     }
 
-    // Handle date fields
     if (createClientDto.contractStartDate) {
       createData.contractStartDate = new Date(
         createClientDto.contractStartDate,
@@ -33,20 +133,66 @@ export class ClientsService {
       createData.contractEndDate = new Date(createClientDto.contractEndDate);
     }
 
-    const client = await this.prisma.client.create({
-      data: createData,
-      include: {
-        projects: {
-          include: {
-            rolesNeeded: true,
-            candidateProjects: {
-              include: {
-                candidate: true,
-              },
-            },
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createClientDto.addressCountryCode ?? null,
+      addressStateId: createClientDto.addressStateId ?? null,
+    });
+
+    if (subClient) {
+      await assertPhysicalAddressConsistent(this.prisma, {
+        addressCountryCode: subClient.addressCountryCode ?? null,
+        addressStateId: subClient.addressStateId ?? null,
+      });
+    }
+
+    const linkType: ClientSubClientLinkType | undefined =
+      createClientDto.type === ClientType.SUB_AGENT
+        ? ClientSubClientLinkType.SUB_AGENT
+        : createClientDto.type === ClientType.FREELANCE
+          ? ClientSubClientLinkType.FREELANCE
+          : undefined;
+
+    const shouldCreateLinkedSubClient =
+      allowsLinkedSub &&
+      Boolean(subClient?.name?.trim()) &&
+      Boolean(linkType);
+
+    const client = await this.prisma.$transaction(async (tx) => {
+      const parent = await tx.client.create({
+        data: createData as Prisma.ClientCreateInput,
+        include: clientWithRelationsInclude,
+      });
+
+      if (shouldCreateLinkedSubClient && subClient && linkType) {
+        const childPayload: Record<string, unknown> = {
+          type: subClient.type ?? ClientType.DIRECT_CLIENT,
+          name: subClient.name.trim(),
+          email: subClient.email,
+          phone: subClient.phone,
+          address: subClient.address,
+          addressCountryCode: subClient.addressCountryCode,
+          addressStateId: subClient.addressStateId,
+        };
+
+        const child = await tx.client.create({
+          data: childPayload as Prisma.ClientCreateInput,
+        });
+
+        await tx.clientSubClient.create({
+          data: {
+            parentClientId: parent.id,
+            childClientId: child.id,
+            linkType,
           },
-        },
-      },
+        });
+
+        return tx.client.findUniqueOrThrow({
+          where: { id: parent.id },
+          include: clientWithRelationsInclude,
+        });
+      }
+
+      return parent;
     });
 
     return {
@@ -61,7 +207,7 @@ export class ClientsService {
 
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.ClientWhereInput = {};
 
     if (type) {
       where.type = type;
@@ -76,27 +222,51 @@ export class ClientsService {
       ];
     }
 
-    const [clients, total] = await Promise.all([
+    const [rawClients, total, countsByType] = await Promise.all([
       this.prisma.client.findMany({
         where,
         skip,
         take: limit,
-        include: {
-          projects: {
-            include: {
-              rolesNeeded: true,
-              candidateProjects: {
-                include: {
-                  candidate: true,
-                },
-              },
-            },
-          },
-        },
+        include: clientListInclude,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.client.count({ where }),
+      this.prisma.client.groupBy({
+        by: ['type'],
+        where: {
+          ...(search ? {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { email: { contains: search, mode: 'insensitive' } },
+              { pointOfContact: { contains: search, mode: 'insensitive' } },
+              { organization: { contains: search, mode: 'insensitive' } },
+            ]
+          } : {})
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
+
+    const clients = rawClients.map(({ _count, ...rest }) => ({
+      ...rest,
+      projectCount: _count.projects,
+      subClientCount: _count.subClientLinks,
+      parentClientCount: _count.parentClientLinks,
+    }));
+
+    const totalsByType = countsByType.reduce(
+      (acc, item) => {
+        acc[item.type] = item._count._all;
+        return acc;
+      },
+      {
+        DIRECT_CLIENT: 0,
+        SUB_AGENT: 0,
+        FREELANCE: 0,
+      } as Record<string, number>,
+    );
 
     return {
       success: true,
@@ -108,6 +278,12 @@ export class ClientsService {
           total,
           pages: Math.ceil(total / limit),
         },
+        totals: {
+          totalClients: total,
+          directClients: totalsByType.DIRECT_CLIENT,
+          subAgencyClients: totalsByType.SUB_AGENT,
+          freelanceClients: totalsByType.FREELANCE,
+        },
       },
       message: 'Clients retrieved successfully',
     };
@@ -116,29 +292,121 @@ export class ClientsService {
   async findOne(id: string) {
     const client = await this.prisma.client.findUnique({
       where: { id },
-      include: {
-        projects: {
-          include: {
-            rolesNeeded: true,
-            candidateProjects: {
-              include: {
-                candidate: true,
-              },
-            },
-          },
-        },
-      },
+      include: clientSingleDetailInclude,
     });
 
     if (!client) {
       throw new NotFoundException('Client not found');
     }
 
+    const activeProjectCount = await this.prisma.project.count({
+      where: {
+        clientId: id,
+        status: { equals: 'active', mode: 'insensitive' },
+      },
+    });
+
+    const { _count, ...rest } = client;
+
     return {
       success: true,
-      data: client,
+      data: {
+        ...rest,
+        projectCount: _count.projects,
+        subClientCount: _count.subClientLinks,
+        parentClientCount: _count.parentClientLinks,
+        activeProjectCount,
+      },
       message: 'Client retrieved successfully',
     };
+  }
+
+  /**
+   * Create a linked end-client for an existing Sub Agent / Freelance parent.
+   */
+  async linkSubClient(
+    parentClientId: string,
+    dto: CreateClientSubClientDto,
+    _createdBy: string,
+  ) {
+    const parent = await this.prisma.client.findUnique({
+      where: { id: parentClientId },
+    });
+
+    if (!parent) {
+      throw new NotFoundException('Client not found');
+    }
+
+    if (
+      parent.type !== ClientType.SUB_AGENT &&
+      parent.type !== ClientType.FREELANCE
+    ) {
+      throw new BadRequestException(
+        'Linked end clients can only be added when the client type is Sub Agent or Freelance',
+      );
+    }
+
+    const nameTrimmed = dto.name?.trim();
+    if (!nameTrimmed) {
+      throw new BadRequestException('Linked client name is required');
+    }
+
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: dto.addressCountryCode ?? null,
+      addressStateId: dto.addressStateId ?? null,
+    });
+
+    const linkType: ClientSubClientLinkType =
+      parent.type === ClientType.SUB_AGENT
+        ? ClientSubClientLinkType.SUB_AGENT
+        : ClientSubClientLinkType.FREELANCE;
+
+    try {
+      const client = await this.prisma.$transaction(async (tx) => {
+        const childPayload: Record<string, unknown> = {
+          type: dto.type ?? ClientType.DIRECT_CLIENT,
+          name: nameTrimmed,
+          email: dto.email,
+          phone: dto.phone,
+          address: dto.address,
+          addressCountryCode: dto.addressCountryCode,
+          addressStateId: dto.addressStateId,
+        };
+
+        const child = await tx.client.create({
+          data: childPayload as Prisma.ClientCreateInput,
+        });
+
+        await tx.clientSubClient.create({
+          data: {
+            parentClientId: parent.id,
+            childClientId: child.id,
+            linkType,
+          },
+        });
+
+        return tx.client.findUniqueOrThrow({
+          where: { id: parent.id },
+          include: clientWithRelationsInclude,
+        });
+      });
+
+      return {
+        success: true,
+        data: client,
+        message: 'Linked end client created successfully',
+      };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BadRequestException(
+          'This end client link already exists or child client is already linked.',
+        );
+      }
+      throw error;
+    }
   }
 
   async update(
@@ -146,7 +414,6 @@ export class ClientsService {
     updateClientDto: UpdateClientDto,
     updatedBy: string,
   ) {
-    // Check if client exists
     const existingClient = await this.prisma.client.findUnique({
       where: { id },
     });
@@ -155,9 +422,20 @@ export class ClientsService {
       throw new NotFoundException('Client not found');
     }
 
-    const updateData: any = { ...updateClientDto };
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(existingClient, {
+        addressCountryCode: updateClientDto.addressCountryCode,
+        addressStateId: updateClientDto.addressStateId,
+      }),
+    );
 
-    // Handle date fields
+    const updateData: Record<string, unknown> = { ...updateClientDto };
+
+    if ('subClient' in updateData) {
+      delete updateData.subClient;
+    }
+
     if (updateClientDto.contractStartDate) {
       updateData.contractStartDate = new Date(
         updateClientDto.contractStartDate,
@@ -169,19 +447,8 @@ export class ClientsService {
 
     const client = await this.prisma.client.update({
       where: { id },
-      data: updateData,
-      include: {
-        projects: {
-          include: {
-            rolesNeeded: true,
-            candidateProjects: {
-              include: {
-                candidate: true,
-              },
-            },
-          },
-        },
-      },
+      data: updateData as Prisma.ClientUpdateInput,
+      include: clientWithRelationsInclude,
     });
 
     return {
@@ -192,7 +459,6 @@ export class ClientsService {
   }
 
   async remove(id: string, removedBy: string) {
-    // Check if client exists
     const existingClient = await this.prisma.client.findUnique({
       where: { id },
       include: {
@@ -204,7 +470,6 @@ export class ClientsService {
       throw new NotFoundException('Client not found');
     }
 
-    // Check if client has active projects
     const activeProjects = existingClient.projects.filter(
       (project) => project.status === 'active',
     );

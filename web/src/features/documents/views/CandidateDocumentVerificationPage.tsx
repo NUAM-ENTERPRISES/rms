@@ -78,6 +78,7 @@ import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
+import { RequestClientRevisionModal } from "../components/RequestClientRevisionModal";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
@@ -139,6 +140,8 @@ export default function CandidateDocumentVerificationPage() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
+  const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  console.log('isGeneratingPDF state:', isGeneratingPDF);
 
   // API Queries
   const {
@@ -168,15 +171,19 @@ export default function CandidateDocumentVerificationPage() {
     );
 
   // selectedProject should be the candidateProject mapping object.
+  // We prefer the one from requirementsData if available as it's more direct
+  const apiCandidateProject = requirementsData?.data?.candidateProject;
+
   const candidateProjectMapping = projectResponse?.data?.candidateProjects?.find((p: any) => {
     const mappingCandidateId = p.candidateId?.id || p.candidateId;
     return String(mappingCandidateId) === String(candidateId);
   });
 
   const selectedProject = projectResponse?.data ? {
-    ...(candidateProjectMapping || {}),
-    id: candidateProjectMapping?.id, // Ensure ID is explicitly set
+    ...(apiCandidateProject || candidateProjectMapping || {}),
+    id: apiCandidateProject?.id || candidateProjectMapping?.id, // Ensure ID is explicitly set
     project: projectResponse.data,
+    subStatus: apiCandidateProject?.subStatus || (candidateProjectMapping as any)?.subStatus,
     // Add compatibility for roleNeeded if missing
     roleNeeded: (candidateProjectMapping as any)?.roleNeeded || projectResponse.data.rolesNeeded?.[0], 
     // Add compatibility for firstName/lastName if only name is present
@@ -213,6 +220,7 @@ export default function CandidateDocumentVerificationPage() {
     useRequestResubmissionMutation();
   const [reuploadDocument, { isLoading: isReuploading }] =
     useReuploadDocumentMutation();
+  console.log('isReuploading state:', isReuploading);
 
     // Project-related refetch helpers so we can trigger live updates elsewhere
     const { refetch: refetchProject } = useGetProjectQuery(selectedProject?.project?.id || "", {
@@ -237,7 +245,7 @@ export default function CandidateDocumentVerificationPage() {
   const summary = requirementsData?.data?.summary || {};
 
   // Documents that are verified and have a file URL
-  const verifiedDocuments = verifications
+  const verifiedDocuments = (verifications || [])
     .filter((v: any) => v.status === "verified" && v.document?.fileUrl)
     .map((v: any) => ({ 
       id: v.document.id, // Use the actual Document ID, not the Verification ID
@@ -700,6 +708,10 @@ export default function CandidateDocumentVerificationPage() {
       case "pending":
         return <Badge variant="outline" className="whitespace-nowrap">Pending</Badge>;
       default:
+        // Handle backend-style names like "client_revision_requested" if passed here
+        if (status === "client_revision_requested") {
+          return <Badge className="bg-orange-500 text-white font-semibold whitespace-nowrap">Revision Req.</Badge>;
+        }
         return <Badge variant="outline" className="whitespace-nowrap">Unknown</Badge>;
     }
   };
@@ -1142,20 +1154,22 @@ export default function CandidateDocumentVerificationPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
-                                onClick={() => { 
-                                  setUploadDocType(verification.document.docType); 
-                                  setIsReuploadMode(true);
-                                  setReuploadDocId(verification.document.id);
-                                  setShowUploadDialog(true); 
-                                  setUploadFile(null); 
-                                }}
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
+                              {(displayedStatus !== "verified" || selectedProject?.subStatus?.name === "client_revision_requested") && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
+                                  onClick={() => { 
+                                    setUploadDocType(verification.document.docType); 
+                                    setIsReuploadMode(true);
+                                    setReuploadDocId(verification.document.id);
+                                    setShowUploadDialog(true); 
+                                    setUploadFile(null); 
+                                  }}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -1165,7 +1179,7 @@ export default function CandidateDocumentVerificationPage() {
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {summary.isDocumentationReviewed ? (
+                          {summary.isDocumentationReviewed && selectedProject?.subStatus?.name !== "client_revision_requested" ? (
                             <Badge className={cn(
                               "font-semibold text-xs",
                               summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
@@ -1288,53 +1302,66 @@ export default function CandidateDocumentVerificationPage() {
           </div>
 
           {/* Final Actions */}
-          {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
-       <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
+          <div className="mt-10 pt-8 border-t border-white/30 flex justify-end gap-5">
+            {/* Client Revision Requested Button */}
+            {selectedProject?.subStatus?.name === "submitted_to_client" && canVerifyDocuments && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-50 font-semibold text-base px-6 py-3 rounded-lg shadow-sm flex items-center justify-center gap-3 transition hover:scale-105"
+                onClick={() => setIsRevisionModalOpen(true)}
+              >
+                <RefreshCw className="h-6 w-6" />
+                <span>Client Revision Requested</span>
+              </Button>
+            )}
 
-  {summary.allDocumentsVerified && canVerifyDocuments && (
-    <div className="flex gap-3">
-      {/* "Generate Unified PDF" button moved into SendToClient modal */}
+            {((summary.allDocumentsVerified && canVerifyDocuments) || (allRejected && canVerifyDocuments && !summary.isDocumentationReviewed)) && (
+              <div className="flex gap-3">
+                {summary.allDocumentsVerified && canVerifyDocuments && (
+                  <>
+                    {/* "Generate Unified PDF" button moved into SendToClient modal */}
+                    {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
+                        onClick={() => setIsSendModalOpen(true)}
+                        disabled={verifiedCount === 0}
+                      >
+                        <Send className="h-6 w-6" />
+                        <span>Send to Client</span>
+                      </Button>
+                    )}
+                  </>
+                )}
 
-      {summary.isDocumentationReviewed && (summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified") && (
-        <Button
-          size="sm"
-          className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[260px] flex items-center justify-center gap-3"
-          onClick={() => setIsSendModalOpen(true)}
-          disabled={verifiedCount === 0}
-        >
-          <Send className="h-6 w-6" />
-          <span>Send to Client</span>
-        </Button>
-      )}
-    </div>
-  )}
+                {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+                    onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
+                    disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
+                  >
+                    {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />}
+                    <span>Complete Verification</span>
+                  </Button>
+                )}
 
-  {summary.allDocumentsVerified && !summary.isDocumentationReviewed && (
-    <Button
-      size="sm"
-      className="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
-      onClick={() => { setCompletionAction("complete"); setIsCompletionConfirmationOpen(true); }}
-      disabled={isCompleting || selectedProject?.status === CANDIDATE_PROJECT_STATUS.DOCUMENTS_VERIFIED}
-    >
-      {isCompleting ? <RefreshCw className="h-6 w-6 animate-spin" /> : <CheckCircle className="h-6 w-6" />}
-      <span>Complete Verification</span>
-    </Button>
-  )}
-
-  {allRejected && !summary.isDocumentationReviewed && (
-    <Button
-      size="sm"
-      variant="destructive"
-      className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
-      onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
-      disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
-    >
-      {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin" /> : <XCircle className="h-6 w-6" />}
-      <span>Reject Verification</span>
-    </Button>
-  )}
-</div>
-          )}
+                {allRejected && !summary.isDocumentationReviewed && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 font-semibold text-base px-6 py-3 rounded-lg shadow-2xl hover:scale-105 transition max-w-[220px] flex items-center justify-center gap-3"
+                    onClick={() => { setCompletionAction("reject"); setIsCompletionConfirmationOpen(true); }}
+                    disabled={isRejectingComplete || selectedProject?.status === CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS}
+                  >
+                    {isRejectingComplete ? <RefreshCw className="h-6 w-6 animate-spin" /> : <XCircle className="h-6 w-6" />}
+                    <span>Reject Verification</span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -1681,7 +1708,25 @@ export default function CandidateDocumentVerificationPage() {
           documents={verifiedDocuments}
           clientData={projectResponse?.data?.client}
           candidateName={`${candidate?.firstName} ${candidate?.lastName}`}
+          onSuccess={() => {
+            refetchRequirements();
+            refetchProject?.();
+          }}
         />
+
+        {/* Client Revision Modal */}
+        {selectedProject?.id && (
+          <RequestClientRevisionModal
+            isOpen={isRevisionModalOpen}
+            onOpenChange={setIsRevisionModalOpen}
+            candidateProjectMapId={selectedProject.id}
+            candidateName={`${candidate?.firstName} ${candidate?.lastName}`}
+            onSuccess={() => {
+              refetchRequirements();
+              refetchProject?.();
+            }}
+          />
+        )}
       </div>
     </div>
   );

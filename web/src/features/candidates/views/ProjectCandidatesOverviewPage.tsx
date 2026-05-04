@@ -1,12 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -28,19 +21,23 @@ import {
   CheckCircle,
   Send,
   UserCheck,
-  CalendarDays,
-  ArrowRight,
   Phone,
   Mail,
   AlertTriangle,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { DatePicker, ProjectRoleFilter, ImageViewer } from "@/components/molecules";
+import { ProjectRoleFilter, ImageViewer } from "@/components/molecules";
+import { cn } from "@/lib/utils";
+import { SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
 import { useGetProjectsQuery } from "@/services/projectsApi";
 import { useDebounce } from "@/hooks/useDebounce";
-
+import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
+import { useAppSelector } from "@/app/hooks";
 
 
 // -------------------------------------------------------------------
@@ -49,68 +46,27 @@ import { useDebounce } from "@/hooks/useDebounce";
 type TileDef = {
   key: string;
   label: string;
+  subtitle: string;
   icon: React.ElementType;
-  gradient: string;
-  bgGradient: string;
-  iconBg: string;
-  textColor: string;
+  accent: string;
+};
+
+const TILE_ACCENT_STYLES: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+  blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
+  indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",  iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
+  amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+  purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",  iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
+  orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",  iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
 };
 
 const TILES: TileDef[] = [
-  {
-    key: "all",
-    label: "Total Candidates In Project",
-    icon: Users,
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-blue-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-blue-600",
-  },
-  {
-    key: "nominated",
-    label: "Nominated",
-    icon: Send,
-    gradient: "from-indigo-500 to-blue-500",
-    bgGradient: "from-indigo-50 to-blue-100/50",
-    iconBg: "bg-indigo-200/40",
-    textColor: "text-indigo-600",
-  },
-  {
-    key: "documents",
-    label: "Documents",
-    icon: FileText,
-    gradient: "from-yellow-400 to-amber-500",
-    bgGradient: "from-yellow-50 to-amber-100/50",
-    iconBg: "bg-yellow-200/40",
-    textColor: "text-amber-600",
-  },
-  {
-    key: "interview",
-    label: "Interview",
-    icon: Mic,
-    gradient: "from-purple-500 to-violet-500",
-    bgGradient: "from-purple-50 to-violet-100/50",
-    iconBg: "bg-purple-200/40",
-    textColor: "text-purple-600",
-  },
-  {
-    key: "processing",
-    label: "Processing",
-    icon: Settings,
-    gradient: "from-orange-500 to-red-500",
-    bgGradient: "from-orange-50 to-red-100/50",
-    iconBg: "bg-orange-200/40",
-    textColor: "text-orange-600",
-  },
-  {
-    key: "final",
-    label: "Deployed",
-    icon: CheckCircle,
-    gradient: "from-emerald-500 to-green-500",
-    bgGradient: "from-emerald-50 to-green-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-emerald-600",
-  },
+  { key: "all",        label: "Total Candidates",  subtitle: "In this project",        icon: Users,        accent: "blue"    },
+  { key: "nominated",  label: "Registered",         subtitle: "Submitted candidates",    icon: Send,         accent: "indigo"  },
+  { key: "documents",  label: "Documents",          subtitle: "In document stage",       icon: FileText,     accent: "amber"   },
+  { key: "interview",  label: "Interview",          subtitle: "Scheduled / completed",   icon: Mic,          accent: "purple"  },
+  { key: "processing", label: "Processing",         subtitle: "Under processing",        icon: Settings,     accent: "orange"  },
+  { key: "final",      label: "Deployed",           subtitle: "Successfully deployed",   icon: CheckCircle,  accent: "emerald" },
 ];
 
 // Map mainStatus → badge style
@@ -150,6 +106,7 @@ const STATUS_BADGE: Record<
 // -------------------------------------------------------------------
 export default function ProjectCandidatesOverviewPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState("all");
@@ -157,6 +114,11 @@ export default function ProjectCandidatesOverviewPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const debouncedSearch = useDebounce(search, 500);
+
+  const handleTileClick = (tileKey: string) => {
+    setActiveFilter(tileKey);
+    setPage(1);
+  };
 
   // Project and Role state
   const [projectRole, setProjectRole] = useState({
@@ -168,6 +130,50 @@ export default function ProjectCandidatesOverviewPage() {
   const [dateRange, setDateRange] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  // Advanced Filters
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    countryPreferences: [] as string[],
+    gender: "all",
+    visaTypes: [] as string[],
+    sectorTypes: [] as string[],
+    qualification: "",
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
+  });
+
+  const user = useAppSelector((state) => state.auth.user);
+  const isManagerOrAdmin = useMemo(() => 
+    user?.roles?.some(r => ["CEO", "Director", "Manager", "Team Head", "System Admin"].includes(r)) || false,
+    [user]
+  );
+  const isRecruiter = useMemo(() => 
+    user?.roles?.includes("Recruiter") || false,
+    [user]
+  );
+
+  const handleResetFilters = () => {
+    setAdvancedFilters({
+      countryPreferences: [],
+      gender: "all",
+      visaTypes: [],
+      sectorTypes: [],
+      qualification: "",
+      minExperience: undefined,
+      maxExperience: undefined,
+      minAge: undefined,
+      maxAge: undefined,
+    });
+    setSearch("");
+    setDateRange("all");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+    setActiveFilter("all");
+    setPage(1);
+  };
 
   // Auto-select the first project on initial load handled by ProjectRoleFilter via defaultProject prop
   const { data: projectsData, isLoading: isLoadingProjects } = useGetProjectsQuery({ limit: 10, page: 1 });
@@ -185,6 +191,15 @@ export default function ProjectCandidatesOverviewPage() {
       period: dateRange !== "all" && dateRange !== "custom" ? dateRange : undefined,
       startDate: dateRange === "custom" && dateFrom ? format(dateFrom, "yyyy-MM-dd") : undefined,
       endDate: dateRange === "custom" && dateTo ? format(dateTo, "yyyy-MM-dd") : undefined,
+      gender: advancedFilters.gender !== "all" ? advancedFilters.gender : undefined,
+      countries: advancedFilters.countryPreferences.length > 0 ? advancedFilters.countryPreferences.join(",") : undefined,
+      visaTypes: advancedFilters.visaTypes.length > 0 ? advancedFilters.visaTypes.join(",") : undefined,
+      sectors: advancedFilters.sectorTypes.length > 0 ? advancedFilters.sectorTypes.join(",") : undefined,
+      qualification: advancedFilters.qualification || undefined,
+      minExp: advancedFilters.minExperience,
+      maxExp: advancedFilters.maxExperience,
+      minAge: advancedFilters.minAge,
+      maxAge: advancedFilters.maxAge,
       page,
       limit,
     },
@@ -279,186 +294,110 @@ export default function ProjectCandidatesOverviewPage() {
         </div>
 
         {/* ── Search & Filter ── */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="relative group flex-1">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 p-1 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow">
-                  <Search className="h-4 w-4 text-white" />
-                </div>
-                <Input
-                  placeholder="Search by name, role, or email..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <ProjectRoleFilter
-                  value={projectRole}
-                  onChange={(v) => {
-                    setProjectRole(v);
-                    setPage(1);
-                  }}
-                  defaultProject={true}
-                />
-              </div>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by name, role, or email..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+              />
             </div>
-
-            {/* ── Date Filter Section ── */}
-            <div className="border-t border-gray-100 pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 mr-1">
-                  <CalendarDays className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-gray-700">Date Added</span>
-                </div>
-
-                {[
-                  { key: "all", label: "All" },
-                  { key: "today", label: "Today" },
-                  { key: "yesterday", label: "Yesterday" },
-                  { key: "this_week", label: "This week" },
-                  { key: "last_week", label: "Last week" },
-                  { key: "this_month", label: "This month" },
-                  { key: "custom", label: "Custom" },
-                ].map((preset) => {
-                  const isActive = dateRange === preset.key;
-                  return (
-                    <button
-                      key={preset.key}
-                      onClick={() => {
-                        setDateRange(preset.key);
-                        if (preset.key !== "custom") {
-                          setDateFrom(undefined);
-                          setDateTo(undefined);
-                        }
-                        setPage(1);
-                      }}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                        isActive
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {dateRange === "custom" && (
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 border-blue-300 bg-blue-50/50`}>
-                    <span className="text-xs font-medium text-gray-500 min-w-[32px]">From</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={dateFrom}
-                        showTime={false}
-                        onChange={(d) => {
-                          const newFrom = d as Date | undefined;
-                          setDateFrom(newFrom);
-                          setPage(1);
-                        }}
-                        placeholder="Start date"
-                        compact
-                      />
-                    </div>
-
-                    <ArrowRight className="h-3.5 w-3.5 text-gray-400 mx-1" />
-
-                    <span className="text-xs font-medium text-gray-500 min-w-[20px]">To</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={dateTo}
-                        showTime={false}
-                        onChange={(d) => {
-                          const newTo = d as Date | undefined;
-                          setDateTo(newTo);
-                          setPage(1);
-                        }}
-                        placeholder="End date"
-                        compact
-                        disabled={!dateFrom}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <ProjectRoleFilter
+                value={projectRole}
+                onChange={(v) => {
+                  setProjectRole(v);
+                  setPage(1);
+                }}
+                defaultProject={true}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAdvancedFiltersOpen(true)}
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl border transition-all duration-200 shrink-0 ${
+                  isAdvancedFiltersOpen
+                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="text-xs font-medium">Filters</span>
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {TILES.map((tile, i) => {
             const Icon = tile.icon;
+            const s = TILE_ACCENT_STYLES[tile.accent];
             const isActive = activeFilter === tile.key;
 
             return (
-              <motion.div
+              <motion.button
                 key={tile.key}
+                type="button"
+                onClick={() => {
+                  handleTileClick(tile.key);
+                  tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
-                <Card
-                  onClick={() => {
-                    setActiveFilter(tile.key);
-                    setPage(1);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setActiveFilter(tile.key);
-                      setPage(1);
-                    }
-                  }}
-                  className={`border-0 shadow-sm bg-gradient-to-br ${tile.bgGradient} backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5 ${
-                    isActive ? "ring-2 ring-blue-500/30 shadow-md" : ""
-                  }`}
-                >
-                  <CardContent className="pt-2 pb-2 px-3">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-medium text-slate-600 mb-0.5 truncate">
-                          {tile.label}
-                        </p>
-                        <h3 className={`text-lg font-bold ${tile.textColor}`}>
-                          {counts[tile.key] ?? 0}
-                        </h3>
-                      </div>
-                      <div className={`p-1.5 ${tile.iconBg} rounded-full shrink-0`}>
-                        <Icon className={`h-3.5 w-3.5 ${tile.textColor}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                {isActive && (
+                  <span className={cn("absolute top-2.5 right-2.5 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 leading-tight">{tile.label}</p>
+                    <p className={cn("text-2xl font-bold tabular-nums", s.value)}>{counts[tile.key] ?? 0}</p>
+                    <p className="text-[10px] text-slate-500">{tile.subtitle}</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2 shadow-sm", s.iconBg)}>
+                    <Icon className={cn("h-4 w-4", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </motion.button>
             );
           })}
         </div>
 
         {/* ── Candidates Table ── */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
-                  {getActiveTileLabel()}
-                </CardTitle>
-                <CardDescription>
+        <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {/* Table Header Bar */}
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900 truncate">{getActiveTileLabel()}</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
                   {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
-                </CardDescription>
+                </p>
               </div>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent>
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden min-h-[400px]">
+          <div className="min-h-[400px]">  
               {isError ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <AlertTriangle className="h-12 w-12 text-red-500" />
@@ -474,22 +413,6 @@ export default function ProjectCandidatesOverviewPage() {
                 </div>
               ) : (
                 <>
-                  <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
-                        <Users className="h-7 w-7 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="text-lg font-semibold text-gray-900">
-                          {getActiveTileLabel()}
-                        </h4>
-                        <p className="text-sm text-gray-600 mt-1 font-medium">
-                          {counts[activeFilter] || candidates.length} candidate{counts[activeFilter] !== 1 ? "s" : ""} in total
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50/50 border-b border-gray-200">
@@ -528,7 +451,7 @@ export default function ProjectCandidatesOverviewPage() {
                         return (
                           <TableRow
                             key={item.id}
-                            className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
+                            className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0 group"
                           >
                             <TableCell className="px-6 py-5">
                               <div className="flex items-center gap-4">
@@ -616,93 +539,101 @@ export default function ProjectCandidatesOverviewPage() {
                   </Table>
 
                   {candidates.length === 0 && (
-                    <div className="text-center py-20">
-                      <UserCheck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-slate-600 mb-2">
-                        No candidates found
-                      </h3>
-                      <p className="text-slate-500">
-                        Try selecting a different filter or project.
-                      </p>
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+                      <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                        <UserCheck className="h-8 w-8 text-slate-300" />
+                      </div>
+                      <p className="font-semibold text-slate-600">No candidates found</p>
+                      <p className="text-sm text-slate-400 text-center max-w-xs">Try selecting a different filter or project.</p>
                     </div>
                   )}
                 </>
               )}
+          </div>
+
+          {/* Pagination */}
+          {meta && meta.totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-semibold text-slate-700">{(page - 1) * limit + 1}–{Math.min(page * limit, meta.total)}</span> of{" "}
+                <span className="font-semibold text-slate-700">{meta.total}</span> candidates
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: meta.totalPages }, (_, i) => i + 1).map((n) => {
+                    if (meta.totalPages <= 7 || n === 1 || n === meta.totalPages || (n >= page - 1 && n <= page + 1)) {
+                      return (
+                        <Button
+                          key={n}
+                          variant={page === n ? "default" : "ghost"}
+                          size="sm"
+                          onClick={() => setPage(n)}
+                          className={cn("h-8 w-8 p-0 text-xs", page === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                        >
+                          {n}
+                        </Button>
+                      );
+                    } else if (n === page - 2 || n === page + 2) {
+                      return <span key={n} className="text-slate-300 text-xs px-0.5">…</span>;
+                    }
+                    return null;
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                  disabled={page >= meta.totalPages}
+                  className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-
-            {/* Pagination */}
-            {meta && meta.totalPages > 1 && (
-              <Card className="mt-4 border-0 shadow-lg bg-white/90">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-slate-600 font-medium">
-                      Showing {(page - 1) * limit + 1} to{" "}
-                      {Math.min(page * limit, meta.total)} of {meta.total}{" "}
-                      candidates
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="h-9 px-3"
-                      >
-                        Previous
-                      </Button>
-
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-                          .filter(
-                            (n) =>
-                              n === 1 ||
-                              n === meta.totalPages ||
-                              (n >= page - 1 && n <= page + 1)
-                          )
-                          .map((n, idx, arr) => {
-                            const prev = arr[idx - 1];
-                            const showEllipsis = prev && n - prev > 1;
-                            return (
-                              <div key={n} className="flex items-center">
-                                {showEllipsis && (
-                                  <span className="px-2 text-slate-400">
-                                    ...
-                                  </span>
-                                )}
-                                <Button
-                                  variant={page === n ? "default" : "outline"}
-                                  size="sm"
-                                  onClick={() => setPage(n)}
-                                  className={`h-9 w-9 p-0 font-semibold ${
-                                    page === n
-                                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/30"
-                                      : ""
-                                  }`}
-                                >
-                                  {n}
-                                </Button>
-                              </div>
-                            );
-                          })}
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                        disabled={page >= meta.totalPages}
-                        className="h-9 px-3"
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
+
+      <AdvancedFiltersSheet
+        isOpen={isAdvancedFiltersOpen}
+        onOpenChange={setIsAdvancedFiltersOpen}
+        filters={{
+          ...advancedFilters,
+          search,
+          page,
+          limit,
+          dateFilter: dateRange,
+          dateFrom,
+          dateTo,
+          sectorTypes: advancedFilters.sectorTypes,
+          facilityPreferences: [],
+          sources: [],
+          status: "all",
+        }}
+        setFilters={(update) => {
+          setAdvancedFilters((prev) => ({
+            ...prev,
+            ...update,
+          }));
+          if (update.search !== undefined) setSearch(update.search);
+          if (update.dateFilter !== undefined) setDateRange(update.dateFilter);
+          if (update.dateFrom !== undefined) setDateFrom(update.dateFrom);
+          if (update.dateTo !== undefined) setDateTo(update.dateTo);
+          setPage(1);
+        }}
+        isManagerOrAdmin={isManagerOrAdmin}
+        isRecruiter={isRecruiter}
+        handleResetFilters={handleResetFilters}
+      />
     </div>
   );
 }

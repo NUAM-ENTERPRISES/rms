@@ -488,5 +488,29 @@ export class OutboxService {
     );
   }
 
+  /**
+   * Publish multiple notification events for users with a specific role
+   */
+  async publishRoleNotification(
+    roleName: string,
+    message: string,
+    title: string,
+    link?: string,
+    meta?: Record<string, any>,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'RoleNotification',
+      {
+        roleName,
+        message,
+        title,
+        link,
+        meta,
+      },
+      tx,
+    );
+  }
+
 }
 

@@ -13,6 +13,7 @@ import {
   ClipboardCheck,
   BookOpen,
   BarChart3,
+  UserSquare2,
 } from "lucide-react";
 
 export interface NavItem {
@@ -75,6 +76,14 @@ export const navigationConfig: NavItem[] = [
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
+    id: "client-coordinator-dashboard",
+    label: "Dashboard",
+    path: "/agents",
+    icon: Home,
+    roles: ["Client Coordinator"],
+    permissions: ["read:agents"],
+  },
+  {
     id: "interviews-dashboard-top",
     label: "Dashboard",
     path: "/interviews",
@@ -104,6 +113,7 @@ export const navigationConfig: NavItem[] = [
       "Processing Executive",
       "System Admin",
       "Interview Coordinator",
+      "Client Coordinator",
       // "Screening Trainer",
     ],
     children: [
@@ -116,6 +126,12 @@ export const navigationConfig: NavItem[] = [
         id: "projects-management",
         label: "Management",
         path: "/projects",
+      },
+      {
+        id: "recruiter-docs",
+        label: "Documents Collection",
+        path: "/recruiter-docs",
+        roles: ["Recruiter", "System Admin", "Client Coordinator"],
       },
     ],
   },
@@ -136,6 +152,7 @@ export const navigationConfig: NavItem[] = [
       "CRE",
       // "Screening Trainer",
     ],
+    hiddenForRoles: ["Client Coordinator"],
     children: [
       {
         id: "candidate-overview",
@@ -147,12 +164,6 @@ export const navigationConfig: NavItem[] = [
         id: "candidates-list",
         label: "My Follow Up",
         path: "/candidates",
-      },
-      {
-        id: "recruiter-docs",
-        label: "Documents Collection",
-        path: "/recruiter-docs",
-        roles: ["Recruiter", "System Admin"],
       },
     ],
   },
@@ -178,6 +189,15 @@ export const navigationConfig: NavItem[] = [
     icon: Briefcase,
     permissions: ["read:clients"],
     // Hidden from Recruiter, Documentation Executive, and CRE roles
+  },
+  {
+    id: "agents",
+    label: "Agents",
+    path: "/agents",
+    icon: UserSquare2,
+    permissions: ["read:agents"],
+    // Client Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
+    hiddenForRoles: ["Client Coordinator"],
   },
   {
     id: "teams",
@@ -209,12 +229,12 @@ export const navigationConfig: NavItem[] = [
         path: "/interviews",
         permissions: ["read:interviews"],
       },
-      {
-        id: "interviews-list",
-        label: "My Interviews",
-        path: "/interviews/list",
-        permissions: ["read:interviews"],
-      },
+      // {
+      //   id: "interviews-list",
+      //   label: "My Interviews",
+      //   path: "/interviews/list",
+      //   permissions: ["read:interviews"],
+      // },
     ],
     // Hidden from CRE - they focus on RNR candidates
   },
@@ -227,7 +247,7 @@ export const navigationConfig: NavItem[] = [
     roles: ["Screening Trainer"],
     permissions: ["read:screenings"],
   },
-  {
+  /* {
     id: "screenings-list-top",
     label: "My Screenings",
     path: "/screenings/list",
@@ -242,7 +262,7 @@ export const navigationConfig: NavItem[] = [
     icon: ClipboardCheck,
     roles: ["Screening Trainer"],
     permissions: ["read:training"],
-  },
+  }, */
   {
     id: "screenings-templates-top",
     label: "Templates",
@@ -256,7 +276,15 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
-    hiddenForRoles: ["Screening Trainer", "Documentation Executive"],
+    hiddenForRoles: [
+      "Screening Trainer",
+      "Documentation Executive",
+      "Interview Coordinator",
+      "Recruiter",
+      "CRE",
+      "Processing Executive",
+      "Client Coordinator",
+    ],
     children: [
       {
         id: "screenings-dashboard",
@@ -264,18 +292,18 @@ export const navigationConfig: NavItem[] = [
         path: "/screenings",
         permissions: ["read:screenings"],
       },
-      {
-        id: "screenings-list",
-        label: "My Screenings",
-        path: "/screenings/list",
-        permissions: ["read:screenings"],
-      },
-      {
-        id: "screenings-training",
-        label: "Screening Training",
-        path: "/screenings/training",
-        permissions: ["read:training"],
-      },
+      // {
+      //   id: "screenings-list",
+      //   label: "My Screenings",
+      //   path: "/screenings/list",
+      //   permissions: ["read:screenings"],
+      // },
+      // {
+      //   id: "screenings-training",
+      //   label: "Screening Training",
+      //   path: "/screenings/training",
+      //   permissions: ["read:training"],
+      // },
       {
         id: "screenings-templates",
         label: "Templates",
@@ -290,7 +318,14 @@ export const navigationConfig: NavItem[] = [
     label: "Documents",
     icon: FileText,
     permissions: ["read:documents"],
-    hiddenForRoles: ["Interview Coordinator", "Recruiter", "CRE", "Documentation Executive", "Processing Executive"],
+    hiddenForRoles: [
+      "Interview Coordinator",
+      "Recruiter",
+      "CRE",
+      "Documentation Executive",
+      "Processing Executive",
+      "Client Coordinator",
+    ],
     children: [
       {
         id: "document-verification",

@@ -1,11 +1,11 @@
 /**
- * Create Client Modal - Quick client creation with mandatory fields only
+ * Create Client Modal - quick create (Direct, Sub Agent, Freelance)
  */
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, Loader2, Building2, User, Hospital, ExternalLink } from "lucide-react";
+import { Save, Loader2, Building2, Briefcase, Handshake } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -24,25 +24,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateClientMutation } from "@/features/clients";
+import { useCreateClientMutation, type CreateClientRequest } from "@/features/clients";
+import {
+  CLIENT_TYPE_LABELS,
+  CLIENT_TYPES,
+} from "@/features/clients/constants/client-types";
 
-// Minimal schema with only mandatory fields
 const quickClientSchema = z.object({
   name: z.string().min(1, "Client name is required"),
-  type: z.enum([
-    "INDIVIDUAL",
-    "SUB_AGENCY",
-    "HEALTHCARE_ORGANIZATION",
-    "EXTERNAL_SOURCE",
-  ]),
+  type: z.enum(CLIENT_TYPES),
+  subClientName: z.string().optional(),
 });
-
-type QuickClientFormData = z.infer<typeof quickClientSchema>;
 
 interface CreateClientModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: (clientId: string, clientName: string) => void;
+}
+
+function getClientTypeIcon(type: QuickClientFormData["type"]) {
+  switch (type) {
+    case "DIRECT_CLIENT":
+      return Briefcase;
+    case "SUB_AGENT":
+      return Building2;
+    case "FREELANCE":
+      return Handshake;
+    default:
+      return Building2;
+  }
 }
 
 export function CreateClientModal({
@@ -62,20 +72,35 @@ export function CreateClientModal({
     resolver: zodResolver(quickClientSchema),
     defaultValues: {
       name: "",
-      type: "INDIVIDUAL",
+      type: "DIRECT_CLIENT",
+      subClientName: "",
     },
   });
 
   const clientType = watch("type");
+  const ClientTypeIcon = getClientTypeIcon(clientType);
 
   const onSubmit = async (data: QuickClientFormData) => {
     try {
-      const result = await createClient({
-        ...data,
+      const payload: CreateClientRequest = {
+        name: data.name.trim(),
+        type: data.type,
         specialties: [],
         locations: [],
         commissionRate: 0,
-      }).unwrap();
+      };
+
+      if (
+        (data.type === "SUB_AGENT" || data.type === "FREELANCE") &&
+        data.subClientName?.trim()
+      ) {
+        payload.subClient = {
+          name: data.subClientName.trim(),
+          type: "DIRECT_CLIENT",
+        };
+      }
+
+      const result = await createClient(payload).unwrap();
 
       if (result.success) {
         toast.success("Client created successfully!");
@@ -83,8 +108,18 @@ export function CreateClientModal({
         reset();
         onClose();
       }
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to create client");
+    } catch (error: unknown) {
+      const message =
+        error &&
+        typeof error === "object" &&
+        "data" in error &&
+        error.data &&
+        typeof error.data === "object" &&
+        "message" in error.data &&
+        typeof (error.data as { message?: string }).message === "string"
+          ? (error.data as { message: string }).message
+          : "Failed to create client";
+      toast.error(message);
     }
   };
 
@@ -101,42 +136,24 @@ export function CreateClientModal({
     }
   };
 
-  const getClientTypeIcon = (type: QuickClientFormData["type"]) => {
-    switch (type) {
-      case "INDIVIDUAL":
-        return User;
-      case "SUB_AGENCY":
-        return Building2;
-      case "HEALTHCARE_ORGANIZATION":
-        return Hospital;
-      case "EXTERNAL_SOURCE":
-        return ExternalLink;
-      default:
-        return Building2;
-    }
-  };
-
-  const ClientTypeIcon = getClientTypeIcon(clientType);
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
             <ClientTypeIcon className="h-5 w-5 text-blue-600" />
             Create New Client
           </DialogTitle>
           <DialogDescription>
-            Quickly add a new client with essential information. You can add more
-            details later.
+            Add a client. Sub Agent and Freelance types can optionally link a
+            direct (end) client by name.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4">
-          {/* Client Name */}
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium text-slate-700">
-              Client Name *
+            <Label htmlFor="modal-name" className="text-sm font-medium text-slate-700">
+              Client name *
             </Label>
             <Controller
               name="name"
@@ -144,66 +161,79 @@ export function CreateClientModal({
               render={({ field }) => (
                 <Input
                   {...field}
+                  id="modal-name"
                   placeholder="e.g., John Smith, ABC Healthcare"
                   className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
                   autoFocus
                 />
               )}
             />
-            {errors.name && (
+            {errors.name ? (
               <p className="text-sm text-red-600">{errors.name.message}</p>
-            )}
+            ) : null}
           </div>
 
-          {/* Client Type */}
           <div className="space-y-2">
-            <Label htmlFor="type" className="text-sm font-medium text-slate-700">
-              Client Type *
+            <Label htmlFor="modal-type" className="text-sm font-medium text-slate-700">
+              Client type *
             </Label>
             <Controller
               name="type"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                  <SelectTrigger
+                    id="modal-type"
+                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  >
                     <SelectValue placeholder="Select client type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="INDIVIDUAL">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span>Individual Referrer</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="SUB_AGENCY">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        <span>Sub Agency</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="HEALTHCARE_ORGANIZATION">
-                      <div className="flex items-center gap-2">
-                        <Hospital className="h-4 w-4" />
-                        <span>Healthcare Organization</span>
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="EXTERNAL_SOURCE">
-                      <div className="flex items-center gap-2">
-                        <ExternalLink className="h-4 w-4" />
-                        <span>External Source</span>
-                      </div>
-                    </SelectItem>
+                    {CLIENT_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {CLIENT_TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}
             />
-            {errors.type && (
+            {errors.type ? (
               <p className="text-sm text-red-600">{errors.type.message}</p>
-            )}
+            ) : null}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          {(clientType === "SUB_AGENT" || clientType === "FREELANCE") ? (
+            <div className="space-y-2">
+              <Label
+                htmlFor="modal-sub-client"
+                className="text-sm font-medium text-slate-700"
+              >
+                End client name
+              </Label>
+              <Controller
+                name="subClientName"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="modal-sub-client"
+                    placeholder="Skip or name the linked organisation"
+                    className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                )}
+              />
+              {errors.subClientName ? (
+                <p className="text-sm text-red-600">{errors.subClientName.message}</p>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Leave empty to create this agency/freelancer only.
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -216,17 +246,17 @@ export function CreateClientModal({
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-6"
+              className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 hover:from-blue-700 hover:to-blue-800"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating...
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating…
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Create Client
+                  <Save className="mr-2 h-4 w-4" />
+                  Create
                 </>
               )}
             </Button>

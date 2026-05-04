@@ -107,15 +107,21 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) =>
-      ['CEO', 'Director', 'Manager', 'System Admin', 'Interview Coordinator'].includes(role),
+      ['CEO', 'Director', 'Manager', 'System Admin'].includes(role),
     );
     const isCoordinator = roles.some((role: string) =>
+      ['Interview Coordinator'].includes(role),
+    );
+    const isTrainer = roles.some((role: string) =>
       ['Screening Trainer'].includes(role),
     );
 
     if (isCoordinator) {
       query.coordinatorId = user.sub ?? user.userId ?? user.id;
     }
+
+    // Screening Trainers can see all screenings by default (no coordinatorId filter)
+    // unless they specifically request their own via query params
 
     return this.screeningsService.findAll(query);
   }
@@ -168,11 +174,13 @@ export class ScreeningsController {
     const user = req.user;
     const roles = user?.userRoles?.map((ur: any) => ur.role.name) || [];
     const isAdmin = roles.some((role: string) => ['CEO', 'Director', 'Manager', 'System Admin'].includes(role));
-    const isCoordinator = roles.some((role: string) => ['Interview Coordinator', 'Screening Trainer'].includes(role));
+    const isCoordinator = roles.some((role: string) => ['Interview Coordinator'].includes(role));
+    const isTrainer = roles.some((role: string) => ['Screening Trainer'].includes(role));
 
-    // If not admin/coordinator/screening trainer, they can only see their own assignments
-    if (!isAdmin && !isCoordinator) {
-      query.coordinatorId = user.id;
+    // If Interview Coordinator, they can only see their own assignments
+    // Admins and Screening Trainers can see all assignments
+    if (isCoordinator) {
+      query.coordinatorId = user.sub ?? user.userId ?? user.id;
     }
 
     return this.screeningsService.getAssignedCandidateProjects(query);

@@ -23,6 +23,8 @@ export const CANDIDATE_PROJECT_STATUS = {
   DOCUMENTS_SUBMITTED: "documents_submitted",
   VERIFICATION_IN_PROGRESS: "verification_in_progress",
   DOCUMENTS_VERIFIED: "documents_verified",
+  CLIENT_REVISION_REQUESTED: "client_revision_requested",
+  SUBMITTED_TO_CLIENT: "submitted_to_client",
 
   // Approval Stage
   APPROVED: "approved",
@@ -145,6 +147,28 @@ export const CANDIDATE_PROJECT_STATUS_CONFIG: Record<
     stage: "documents",
     isTerminal: false,
     sortOrder: 5,
+  },
+  [CANDIDATE_PROJECT_STATUS.CLIENT_REVISION_REQUESTED]: {
+    label: "Client Revision Requested",
+    shortLabel: "Revision",
+    description: "Client has requested document revisions",
+    color: "orange",
+    badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+    icon: "RotateCcw",
+    stage: "documents",
+    isTerminal: false,
+    sortOrder: 5.5,
+  },
+  [CANDIDATE_PROJECT_STATUS.SUBMITTED_TO_CLIENT]: {
+    label: "Submitted to Client",
+    shortLabel: "Sent",
+    description: "Documents have been forwarded to the client",
+    color: "purple",
+    badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+    icon: "Send",
+    stage: "documents",
+    isTerminal: false,
+    sortOrder: 5.7,
   },
   [CANDIDATE_PROJECT_STATUS.APPROVED]: {
     label: "Approved",

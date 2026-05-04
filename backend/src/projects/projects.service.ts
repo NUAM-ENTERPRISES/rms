@@ -17,17 +17,23 @@ import {
 } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
+import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import {
   ProjectWithRelations,
   PaginatedProjects,
+  PaginatedProjectPicker,
+  PaginatedProjectSummaryList,
   ProjectStats,
-  RecruiterAnalytics,
 } from './types';
 import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
 } from '../common/constants/statuses';
+import {
+  agentSourceEligibleCandidateWhere,
+  assertAgentCandidateLinkedToAgentProject,
+} from '../common/agent-project-candidate-scope';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -389,10 +395,14 @@ export class ProjectsService {
     return normalized;
   }
 
-  async findAll(query: QueryProjectsDto): Promise<PaginatedProjects> {
+  async findAll(
+    query: QueryProjectsDto,
+  ): Promise<PaginatedProjects | PaginatedProjectSummaryList> {
     const {
       search,
       status,
+      priority,
+      isUrgent,
       clientId,
       teamId,
       createdBy,
@@ -402,6 +412,7 @@ export class ProjectsService {
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      summary,
     } = query;
 
     // Build where clause
@@ -416,6 +427,22 @@ export class ProjectsService {
 
     if (status) {
       where.status = status;
+    }
+
+    if (priority) {
+      where.priority = priority;
+    }
+
+    if (isUrgent) {
+      const now = new Date();
+      const nextWeek = new Date();
+      nextWeek.setDate(now.getDate() + 7);
+
+      where.deadline = {
+        gte: now,
+        lte: nextWeek,
+      };
+      where.status = 'active';
     }
 
     if (clientId) {
@@ -440,9 +467,56 @@ export class ProjectsService {
       }
     }
 
-    // Calculate pagination
     const skip = (page - 1) * limit;
     const total = await this.prisma.project.count({ where });
+
+    if (summary) {
+      const rows = await this.prisma.project.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        select: {
+          id: true,
+          title: true,
+          deadline: true,
+          status: true,
+          priority: true,
+          createdAt: true,
+          projectType: true,
+          countryCode: true,
+          country: {
+            select: { code: true, name: true },
+          },
+        },
+      });
+
+      const projects = rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        deadline: p.deadline ? p.deadline.toISOString() : null,
+        status: p.status,
+        priority: p.priority,
+        createdAt: p.createdAt.toISOString(),
+        projectType: p.projectType,
+        countryCode: p.countryCode,
+        country: p.country
+          ? { code: p.country.code, name: p.country.name }
+          : p.countryCode
+            ? { code: p.countryCode, name: null }
+            : null,
+      }));
+
+      return {
+        projects,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit) || 0,
+        },
+      };
+    }
 
     // Get projects with relations
     const projects = await this.prisma.project.findMany({
@@ -520,6 +594,69 @@ export class ProjectsService {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Lightweight project list for pickers (id, title, status, deadline, client only).
+   */
+  async findPickerList(query: QueryProjectPickerDto): Promise<PaginatedProjectPicker> {
+    const {
+      search,
+      status = 'active',
+      page: pageRaw,
+      limit: limitRaw,
+    } = query;
+    const page = pageRaw ?? 1;
+    const limit = limitRaw ?? 10;
+
+    const where: Record<string, unknown> = {};
+    if (status) {
+      where.status = status;
+    }
+    if (search?.trim()) {
+      where.title = { contains: search.trim(), mode: 'insensitive' };
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await this.prisma.project.count({ where });
+
+    const rows = await this.prisma.project.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { title: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        deadline: true,
+        client: {
+          select: { id: true, name: true, type: true },
+        },
+      },
+    });
+
+    return {
+      projects: rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        deadline: p.deadline ? p.deadline.toISOString() : null,
+        client: p.client
+          ? {
+              id: p.client.id,
+              name: p.client.name,
+              type: p.client.type,
+            }
+          : null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 0,
       },
     };
   }
@@ -1217,6 +1354,8 @@ export class ProjectsService {
       );
     }
 
+    await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+
     // Get all global recruiters for round-robin allocation
     const recruiters = await this.getAllRecruiters();
     if (recruiters.length === 0) {
@@ -1376,7 +1515,13 @@ export class ProjectsService {
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter) {
+    const isClientCoordinator =
+      userRoles.includes('Client Coordinator') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter || isClientCoordinator) {
       whereClause.AND = whereClause.AND || [];
       whereClause.AND.push({
         OR: [
@@ -1446,6 +1591,12 @@ export class ProjectsService {
         candidate: {
           include: {
             team: true,
+            agent: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             qualifications: {
               include: {
                 qualification: true,
@@ -1718,6 +1869,8 @@ export class ProjectsService {
 
         // Team
         team: c.team ? { id: c.team.id, name: c.team.name } : null,
+
+        agent: c.agent ? { id: c.agent.id, name: c.agent.name } : null,
 
         // Current Global Candidate Status
         currentStatus: c.currentStatus,
@@ -2003,200 +2156,6 @@ export class ProjectsService {
     };
   }
 
-  async getRecruiterAnalytics(
-    recruiterId: string,
-    roles: string[] = [],
-  ): Promise<RecruiterAnalytics> {
-    if (!roles?.includes('Recruiter')) {
-      throw new ForbiddenException(
-        'Recruiter analytics are only available to Recruiter role',
-      );
-    }
-
-    const now = new Date();
-    const startOfToday = new Date(now);
-    startOfToday.setHours(0, 0, 0, 0);
-    const upcomingWindow = new Date(now);
-    upcomingWindow.setDate(upcomingWindow.getDate() + 14);
-    const terminalProjectStatuses = [
-      CANDIDATE_PROJECT_STATUS.HIRED,
-      CANDIDATE_PROJECT_STATUS.REJECTED_DOCUMENTS,
-      CANDIDATE_PROJECT_STATUS.REJECTED_INTERVIEW,
-      CANDIDATE_PROJECT_STATUS.REJECTED_SELECTION,
-      CANDIDATE_PROJECT_STATUS.WITHDRAWN,
-    ];
-    const excludedProjectStatuses = ['completed', 'cancelled', 'archived'];
-    const untouchedCandidateWhere = {
-      currentStatus: {
-        statusName: CANDIDATE_STATUS.UNTOUCHED,
-      },
-      recruiterAssignments: {
-        some: {
-          recruiterId,
-          isActive: true,
-        },
-      },
-    };
-
-    const urgentProjectRecord = await this.prisma.project.findFirst({
-      where: {
-        priority: { in: ['high', 'urgent'] },
-        deadline: { not: null, gte: now },
-        status: {
-          notIn: excludedProjectStatuses,
-        },
-      },
-      orderBy: { deadline: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        deadline: true,
-        priority: true,
-        client: { select: { name: true } },
-      },
-    });
-
-    const overdueProjectRecords = await this.prisma.project.findMany({
-      where: {
-        deadline: { not: null, lt: startOfToday },
-        status: {
-          notIn: excludedProjectStatuses,
-        },
-      },
-      orderBy: { deadline: 'asc' },
-      take: 6,
-      select: {
-        id: true,
-        title: true,
-        deadline: true,
-        client: { select: { name: true } },
-      },
-    });
-
-    const [
-      hiredOrSelectedCount,
-      activeCandidateCount,
-      upcomingInterviewsCount,
-      assignedProjects,
-      untouchedCandidatesCount,
-      untouchedCandidateRows,
-    ] = await this.prisma.$transaction([
-      this.prisma.candidateProjects.count({
-        where: {
-          recruiterId,
-          currentProjectStatus: {
-            statusName: { in: ['selected', 'hired'] },
-          },
-        },
-      }),
-      this.prisma.candidateProjects.count({
-        where: {
-          recruiterId,
-          currentProjectStatus: {
-            statusName: { notIn: ['selected', 'hired'] },
-          },
-        },
-      }),
-      this.prisma.interview.count({
-        where: {
-          candidateProjectMap: { recruiterId },
-          scheduledTime: {
-            gte: now,
-            lte: upcomingWindow,
-          },
-        },
-      }),
-      this.prisma.candidateProjects.groupBy({
-        by: ['projectId'],
-        where: { recruiterId },
-        orderBy: {
-          projectId: 'asc',
-        },
-      }),
-      this.prisma.candidate.count({
-        where: untouchedCandidateWhere,
-      }),
-      this.prisma.candidate.findMany({
-        where: untouchedCandidateWhere,
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          countryCode: true,
-          currentRole: true,
-          projects: {
-            where: { recruiterId },
-            select: {
-              project: {
-                select: {
-                  id: true,
-                  title: true,
-                },
-              },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 1,
-          },
-        },
-        orderBy: { createdAt: 'asc' },
-        take: 6,
-      }),
-    ]);
-
-    const urgentProject = urgentProjectRecord
-      ? {
-          id: urgentProjectRecord.id,
-          title: urgentProjectRecord.title,
-          priority: urgentProjectRecord.priority,
-          deadline: urgentProjectRecord.deadline,
-          clientName: urgentProjectRecord.client?.name ?? null,
-          daysUntilDeadline: urgentProjectRecord.deadline
-            ? Math.max(
-                0,
-                Math.ceil(
-                  (urgentProjectRecord.deadline.getTime() - now.getTime()) /
-                    (1000 * 60 * 60 * 24),
-                ),
-              )
-            : null,
-        }
-      : null;
-
-    return {
-      urgentProject,
-      overdueProjects: overdueProjectRecords.map((project) => ({
-        id: project.id,
-        title: project.title,
-        clientName: project.client?.name ?? null,
-        overdueDays: project.deadline
-          ? Math.max(
-              1,
-              Math.ceil(
-                (now.getTime() - project.deadline.getTime()) /
-                  (1000 * 60 * 60 * 24),
-              ),
-            )
-          : null,
-      })),
-      hiredOrSelectedCount,
-      activeCandidateCount,
-      upcomingInterviewsCount,
-      assignedProjectCount: assignedProjects.length,
-      untouchedCandidatesCount,
-      untouchedCandidates: untouchedCandidateRows.map((candidate) => {
-        const latestProject = candidate.projects?.[0]?.project;
-        return {
-          id: candidate.id,
-          name: `${candidate.firstName} ${candidate.lastName}`.trim(),
-          countryCode: candidate.countryCode ?? null,
-          currentRole: candidate.currentRole ?? null,
-          assignedProjectId: latestProject?.id ?? null,
-          assignedProjectTitle: latestProject?.title ?? null,
-        };
-      }),
-    };
-  }
-
   /**
    * Get eligible candidates for a project
    * Returns candidates who match project requirements and are not yet nominated
@@ -2252,14 +2211,20 @@ export class ProjectsService {
       },
     };
 
-    // Recruiter specific filter
+    // Recruiter / Client Coordinator: only eligible pool = own assignments
     const isRecruiter =
       userRoles.includes('Recruiter') &&
       !userRoles.includes('Manager') &&
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter) {
+    const isClientCoordinator =
+      userRoles.includes('Client Coordinator') &&
+      !userRoles.includes('Manager') &&
+      !userRoles.includes('CEO') &&
+      !userRoles.includes('Director');
+
+    if (isRecruiter || isClientCoordinator) {
       whereClause.recruiterAssignments = {
         some: {
           recruiterId: userId,
@@ -2282,10 +2247,19 @@ export class ProjectsService {
     // --------------------------------
     // 3. GET CANDIDATES
     // --------------------------------
+    whereClause.AND = whereClause.AND || [];
+    whereClause.AND.push(agentSourceEligibleCandidateWhere(projectId));
+
     const candidates = await this.prisma.candidate.findMany({
       where: whereClause,
       include: {
         team: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        agent: {
           select: {
             id: true,
             name: true,

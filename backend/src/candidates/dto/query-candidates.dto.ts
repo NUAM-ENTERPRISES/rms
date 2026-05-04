@@ -42,11 +42,25 @@ export class QueryCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
   })
   @IsOptional()
-  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'])
+  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'])
   source?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by specific agent ID',
+    example: 'agent123',
+  })
+  @IsOptional()
+  @IsString()
+  agentId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Admin/Manager roles (injected by controller)',
+  })
+  @IsOptional()
+  roles?: string[];
 
   @ApiPropertyOptional({
     description: 'Filter by gender',

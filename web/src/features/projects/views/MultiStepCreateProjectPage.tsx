@@ -220,12 +220,8 @@ export default function MultiStepCreateProjectPage() {
 
         let roleHasError = false;
 
-        if (r.minExperience == null) {
+        if (r.maxExperience != null && r.minExperience == null) {
           setError(`rolesNeeded.${idx}.minExperience`, { type: "manual", message: "Minimum experience is required" });
-          roleHasError = true;
-        }
-        if (r.maxExperience == null) {
-          setError(`rolesNeeded.${idx}.maxExperience`, { type: "manual", message: "Maximum experience is required" });
           roleHasError = true;
         }
         if (r.minExperience != null && r.maxExperience != null && r.minExperience > r.maxExperience) {

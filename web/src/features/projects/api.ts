@@ -239,6 +239,8 @@ export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
 export interface QueryProjectsRequest {
   search?: string;
   status?: "active" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
+  isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
   countryCode?: string;
@@ -246,6 +248,8 @@ export interface QueryProjectsRequest {
   limit?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  /** When true, GET /projects returns slim rows only (see ProjectSummaryListItem). */
+  summary?: boolean;
 }
 
 export interface PaginatedProjectsResponse {
@@ -256,6 +260,59 @@ export interface PaginatedProjectsResponse {
     total: number;
     totalPages: number;
   };
+}
+
+/** Row shape for GET /projects?summary=true */
+export interface ProjectSummaryListItem {
+  id: string;
+  title: string;
+  deadline: string | null;
+  status: string;
+  priority: string;
+  createdAt: string;
+  projectType: string;
+  countryCode: string | null;
+  country: { code: string; name: string | null } | null;
+}
+
+export interface PaginatedProjectSummaryResponse {
+  projects: ProjectSummaryListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+/** Minimal project row from GET /projects/picker (link dialogs, pickers). */
+export interface ProjectPickerItem {
+  id: string;
+  title: string;
+  status: string;
+  deadline: string | null;
+  client: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface PaginatedProjectPickerResponse {
+  projects: ProjectPickerItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface QueryProjectPickerRequest {
+  status?: "active" | "completed" | "cancelled";
+  search?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface ProjectStats {
@@ -272,36 +329,6 @@ export interface ProjectStats {
     [clientId: string]: number;
   };
   upcomingDeadlines: Project[];
-}
-
-export interface RecruiterAnalytics {
-  urgentProject: {
-    id: string;
-    title: string;
-    priority: string;
-    deadline: string | null;
-    clientName: string | null;
-    daysUntilDeadline: number | null;
-  } | null;
-  overdueProjects: {
-    id: string;
-    title: string;
-    clientName: string | null;
-    overdueDays: number | null;
-  }[];
-  untouchedCandidatesCount: number;
-  untouchedCandidates: {
-    id: string;
-    name: string;
-    countryCode: string | null;
-    currentRole: string | null;
-    assignedProjectId: string | null;
-    assignedProjectTitle: string | null;
-  }[];
-  hiredOrSelectedCount: number;
-  activeCandidateCount: number;
-  upcomingInterviewsCount: number;
-  assignedProjectCount: number;
 }
 
 // Eligible Candidate with match score
@@ -340,6 +367,57 @@ export const projectsApi = baseApi.injectEndpoints({
           : [{ type: "Project", id: "LIST" }],
     }),
 
+    /**
+     * Slim project list for client detail (id, title, deadline, status, country, priority, createdAt, projectType).
+     * Uses GET /projects?summary=true with pagination and search.
+     */
+    getClientProjectsSummary: builder.query<
+      ApiResponse<PaginatedProjectSummaryResponse>,
+      Pick<QueryProjectsRequest, "clientId" | "page" | "limit" | "search">
+    >({
+      query: ({ clientId, page = 1, limit = 10, search }) => ({
+        url: "/projects",
+        params: {
+          clientId,
+          page,
+          limit,
+          search: search?.trim() || undefined,
+          summary: true,
+        },
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.projects.map(({ id }) => ({
+                type: "Project" as const,
+                id,
+              })),
+              { type: "Project", id: "LIST" },
+            ]
+          : [{ type: "Project", id: "LIST" }],
+    }),
+
+    /** Minimal project list for pickers (no roles, documents, candidates). */
+    getProjectsPicker: builder.query<
+      ApiResponse<PaginatedProjectPickerResponse>,
+      QueryProjectPickerRequest | void
+    >({
+      query: (params) => ({
+        url: "/projects/picker",
+        params: params ?? {},
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.data.projects.map(({ id }) => ({
+                type: "Project" as const,
+                id,
+              })),
+              { type: "Project", id: "LIST" },
+            ]
+          : [{ type: "Project", id: "LIST" }],
+    }),
+
     // Get project by ID
     getProject: builder.query<ApiResponse<Project>, string>({
       query: (id) => `/projects/${id}`,
@@ -351,12 +429,6 @@ export const projectsApi = baseApi.injectEndpoints({
       query: () => "/projects/stats",
       providesTags: ["ProjectStats"],
     }),
-
-    getRecruiterAnalytics: builder.query<ApiResponse<RecruiterAnalytics>, void>(
-      {
-        query: () => "/projects/recruiter/analytics",
-      }
-    ),
 
     // Get eligible candidates for a project
     getEligibleCandidates: builder.query<
@@ -401,7 +473,11 @@ export const projectsApi = baseApi.injectEndpoints({
           method: "POST",
           body: project,
         }),
-        invalidatesTags: [{ type: "Project", id: "LIST" }, "ProjectStats"],
+        invalidatesTags: (_, __, body) => [
+          { type: "Project", id: "LIST" },
+          "ProjectStats",
+          { type: "Client", id: body.clientId },
+        ],
       }
     ),
 
@@ -415,11 +491,20 @@ export const projectsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (_, __, { id }) => [
-        { type: "Project", id },
-        { type: "Project", id: "LIST" },
-        "ProjectStats",
-      ],
+      invalidatesTags: (result, _, { id }) => {
+        const tags: Array<
+          "ProjectStats" | { type: "Project"; id: string } | { type: "Client"; id: string }
+        > = [
+          { type: "Project", id },
+          { type: "Project", id: "LIST" },
+          "ProjectStats",
+        ];
+        const cid = result?.data?.clientId;
+        if (cid) {
+          tags.push({ type: "Client", id: cid });
+        }
+        return tags;
+      },
     }),
 
     // Delete project
@@ -833,9 +918,10 @@ export const projectsApi = baseApi.injectEndpoints({
 
 export const {
   useGetProjectsQuery,
+  useGetClientProjectsSummaryQuery,
+  useGetProjectsPickerQuery,
   useGetProjectQuery,
   useGetProjectStatsQuery,
-  useGetRecruiterAnalyticsQuery,
   useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ClipboardCheck,
@@ -17,14 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  ArrowUpRight,
+  FilterX,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,8 +57,9 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
-import { motion } from "framer-motion";
+import { UpdateScreeningTrainingModal } from "../components/UpdateScreeningTrainingModal";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
@@ -71,7 +67,7 @@ import ScheduleTrainingModal from "@/features/screening-coordination/training/co
 type TileKey =
   | "assigned"
   | "scheduled"
-  | "retraining"
+  | "training_assigned"
   | "training_scheduled"
   | "training_completed"
   | "passed"
@@ -85,10 +81,7 @@ interface TileConfig {
   icon: React.ElementType;
   value: number | string;
   hint: string;
-  gradient: string;
-  bgGradient: string;
-  iconBg: string;
-  textColor: string;
+  accent: string;
 }
 
 const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): TileConfig[] => [
@@ -98,10 +91,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: ClipboardCheck,
     value: assigned,
     hint: "Screenings assigned to you",
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-blue-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-blue-600",
+    accent: "blue",
   },
   {
     key: "scheduled",
@@ -109,21 +99,15 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Calendar,
     value: scheduled,
     hint: "Upcoming scheduled screenings",
-    gradient: "from-indigo-500 to-blue-500",
-    bgGradient: "from-indigo-50 to-blue-100/50",
-    iconBg: "bg-indigo-200/40",
-    textColor: "text-indigo-600",
+    accent: "indigo",
   },
   {
-    key: "retraining",
+    key: "training_assigned",
     label: "Training Assigned",
-    icon: Users,
-    value: stats?.byDecision?.needsTraining ?? 0,
-    hint: "Candidate assigned to training",
-    gradient: "from-yellow-400 to-amber-500",
-    bgGradient: "from-yellow-50 to-amber-100/50",
-    iconBg: "bg-yellow-200/40",
-    textColor: "text-amber-600",
+    icon: Calendar,
+    value: stats?.byDecision?.trainingAssigned ?? 0,
+    hint: "Candidates with training already assigned",
+    accent: "blue",
   },
   {
     key: "training_scheduled",
@@ -131,10 +115,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Clock,
     value: stats?.byDecision?.trainingScheduled ?? 0,
     hint: "Candidates with scheduled training",
-    gradient: "from-blue-400 to-indigo-500",
-    bgGradient: "from-blue-50 to-indigo-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-indigo-600",
+    accent: "indigo",
   },
   {
     key: "training_completed",
@@ -142,10 +123,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: CheckCircle2,
     value: stats?.byDecision?.trainingCompleted ?? 0,
     hint: "Candidates who completed training",
-    gradient: "from-emerald-400 to-teal-500",
-    bgGradient: "from-emerald-50 to-teal-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-teal-600",
+    accent: "emerald",
   },
   {
     key: "passed",
@@ -153,10 +131,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: CheckCircle2,
     value: stats?.byDecision?.approved ?? 0,
     hint: "Candidates with passed decision",
-    gradient: "from-emerald-500 to-green-500",
-    bgGradient: "from-emerald-50 to-green-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-emerald-600",
+    accent: "emerald",
   },
   {
     key: "rejected",
@@ -164,10 +139,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Shield,
     value: stats?.byDecision?.rejected ?? 0,
     hint: "Candidates rejected",
-    gradient: "from-orange-500 to-red-500",
-    bgGradient: "from-orange-50 to-red-100/50",
-    iconBg: "bg-orange-200/40",
-    textColor: "text-orange-600",
+    accent: "orange",
   },
   {
     key: "on_hold",
@@ -175,10 +147,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Clock,
     value: stats?.byDecision?.onHold ?? 0,
     hint: "Candidates on hold",
-    gradient: "from-slate-500 to-slate-700",
-    bgGradient: "from-slate-50 to-slate-100/50",
-    iconBg: "bg-slate-200/40",
-    textColor: "text-slate-600",
+    accent: "slate",
   },
   {
     key: "pass_rate",
@@ -186,17 +155,29 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: TrendingUp,
     value: `${stats?.passRate ?? stats?.approvalRate ?? 0}%`,
     hint: "Percentage of passed interviews",
-    gradient: "from-purple-500 to-violet-500",
-    bgGradient: "from-purple-50 to-violet-100/50",
-    iconBg: "bg-purple-200/40",
-    textColor: "text-purple-600",
+    accent: "purple",
   },
 ];
 
+const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
+  indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+  orange: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
+  slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
+  purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+};
+
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
   const coordinatorId = (user?.id as string) || "";
+
+  const handleTileClick = (tile: TileConfig) => {
+    setActiveTile(tile.key);
+    setCurrentPage(1);
+  };
 
   const [activeTile, setActiveTile] = useState<TileKey>("assigned");
   const [currentPage, setCurrentPage] = useState(1);
@@ -215,6 +196,7 @@ export default function ScreeningsDashboardPage() {
   });
 
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [isUpdateTrainingModalOpen, setIsUpdateTrainingModalOpen] = useState(false);
   const [decisionScreeningItem, setDecisionScreeningItem] = useState<any | null>(null);
   const [decisionValue, setDecisionValue] = useState<SCREENING_DECISION | null>(null);
   const [decisionRemarks, setDecisionRemarks] = useState("");
@@ -331,7 +313,7 @@ export default function ScreeningsDashboardPage() {
 
   const activeDecisionParam = useMemo(() => {
     switch (activeTile) {
-      case "retraining":
+      case "training_assigned":
         return SCREENING_DECISION.NEEDS_TRAINING;
       case "training_scheduled":
         return SCREENING_DECISION.NEEDS_TRAINING; // Both use NEEDS_TRAINING decision, filtered by status below
@@ -356,7 +338,7 @@ export default function ScreeningsDashboardPage() {
         ? "training_completed"
         : activeTile === "training_scheduled"
         ? "training_scheduled"
-        : activeTile === "retraining"
+        : activeTile === "training_assigned"
         ? "training_assigned"
         : undefined,
       sortBy: "createdAt",
@@ -425,6 +407,12 @@ export default function ScreeningsDashboardPage() {
         decision: item.decision,
         conductedAt: item.conductedAt,
         overallRating: item.overallRating,
+        goodLooking: item.goodLooking,
+        fairness: item.fairness,
+        languageProficiency: item.languageProficiency,
+        strengths: item.strengths,
+        remarks: item.remarks,
+        trainingAssignments: item.trainingAssignments,
         trainingAssignment,
       };
     });
@@ -489,195 +477,171 @@ export default function ScreeningsDashboardPage() {
       <div className="w-full max-w-full mx-auto space-y-3 mt-1 px-3">
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Welcome back, {user?.name || "Coordinator"}! 👋
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Overview of training screening assignments, scheduling, decisions, and performance.
-            </p>
-          </div>
+          <TypedHeader
+            userName={user?.name || "Coordinator"}
+            subtitle="Overview of training screening assignments, scheduling, decisions, and performance."
+            className="w-full"
+          />
         </div>
 
         {/* ── Status Tiles ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {allStats.map((tile, i) => {
+          {allStats.map((tile) => {
             const Icon = tile.icon;
             const isActive = activeTile === tile.key;
+            const s = accentStyles[tile.accent];
 
             return (
-              <motion.div
+              <button
                 key={tile.key}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.05 }}
+                type="button"
+                onClick={() => handleTileClick(tile)}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive
+                    ? `ring-2 shadow-md ${s.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
-                <Card
-                  onClick={() => setActiveTile(tile.key)}
-                  role="button"
-                  tabIndex={0}
-                  className={cn(
-                    "h-full border-0 shadow-sm bg-gradient-to-br backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5",
-                    tile.bgGradient,
-                    isActive ? "ring-2 ring-indigo-500/30 shadow-md scale-[1.02]" : ""
-                  )}
-                >
-                  <CardContent className="py-2 px-2.5 h-full flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 mb-0.5 truncate uppercase tracking-wider">
-                          {tile.label}
-                        </p>
-                        <h3 className={cn("text-xl font-extrabold tracking-tight", tile.textColor)}>
-                          {tile.value}
-                        </h3>
-                      </div>
-                      <div className={cn("p-1.5 rounded-lg shrink-0 shadow-sm", tile.iconBg)}>
-                        <Icon className={cn("h-4 w-4", tile.textColor)} />
-                      </div>
-                    </div>
-                    <p className="mt-1 text-[9px] text-slate-500 font-medium line-clamp-1 italic">
-                      {tile.hint}
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
+                    <p className="text-xs text-slate-500">{tile.hint}</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <Icon className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
             );
           })}
         </div>
 
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader className="py-3 px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-800">
-                  {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {tableItems.length} record{tableItems.length === 1 ? "" : "s"} found
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-4">
-                <ProjectRoleFilter
-                  value={filter}
-                  onChange={(newFilter) => setFilter(newFilter)}
-                  className="w-auto min-w-[300px]"
-                />
-                <div className="relative group w-64">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <Search className="h-4 w-4 text-slate-400" />
-                  </div>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <Input
                     placeholder="Search in list..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-9 text-xs border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl"
+                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
                   />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActiveTile("assigned");
-                    setFilter({ projectId: "all", roleCatalogId: "all" });
-                    setSearch("");
-                  }}
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="border border-gray-200 bg-white">
-              <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2 shadow-lg shadow-purple-500/20">
-                    <ClipboardCheck className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
-                    </h4>
-                    <p className="text-xs text-gray-600 mt-0.5 font-medium">
-                      {tableItems.length} candidate{tableItems.length !== 1 ? "s" : ""} in total
-                    </p>
-                  </div>
-                  {activeTile === "assigned" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
-                        onClick={() => setIsBulkScheduleOpen(true)}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Bulk Schedule ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
-                  {activeTile === "retraining" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-amber-600 hover:bg-amber-700 text-white shadow-md animate-in fade-in slide-in-from-right-2 mr-2"
-                        onClick={() => {
-                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
-                          // Map screening items to training assignments if possible
-                          // Normally, retraining tile shows screenings with needs_training decision
-                          // These already have training assignments created via the completeScreening API
-                          setSelectedAssignmentsForTraining(selected.map((s: any) => s.trainingAssignment).filter(Boolean));
-                          setIsScheduleTrainingOpen(true);
-                        }}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Schedule Bulk Training ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
-                  {activeTile === "training_scheduled" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
-                        onClick={() => {
-                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
-                          navigate("/screening-coordination/training/conduct", { 
-                            state: { 
-                              assignments: selected.map((s: any) => ({
-                                ...s.trainingAssignment,
-                                candidateProjectMap: s.candidateProjectMap || {
-                                  candidate: s.candidate,
-                                  project: s.project,
-                                  roleNeeded: s.roleNeeded
-                                }
-                              })).filter(Boolean) 
-                            } 
-                          });
-                        }}
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Conduct Bulk Training ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <ProjectRoleFilter
+                    value={filter}
+                    onChange={(newFilter) => setFilter(newFilter)}
+                    className="sm:w-80"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
+                    onClick={() => {
+                      setActiveTile("assigned");
+                      setFilter({ projectId: "all", roleCatalogId: "all" });
+                      setSearch("");
+                    }}
+                    title="Reset Filters"
+                  >
+                    <FilterX className="h-4 w-4 text-slate-500" />
+                  </Button>
                 </div>
               </div>
+            </div>
+          </div>
 
+          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <ClipboardCheck className="h-5 w-5 text-white" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">
+                    {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {totalCount} candidate{totalCount !== 1 ? "s" : ""} found
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeTile === "assigned" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                    onClick={() => setIsBulkScheduleOpen(true)}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Bulk Schedule ({selectedIds.length})
+                  </Button>
+                )}
+                {activeTile === "training_assigned" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                    onClick={() => {
+                      const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                      setSelectedAssignmentsForTraining(
+                        selected
+                          .map((s: any) => s.trainingAssignment)
+                          .filter(Boolean)
+                      );
+                      setIsScheduleTrainingOpen(true);
+                    }}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule Bulk Training ({selectedIds.length})
+                  </Button>
+                )}
+                {activeTile === "training_scheduled" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                    onClick={() => {
+                      const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                      navigate("/screening-coordination/training/conduct", { 
+                        state: { 
+                          assignments: selected.map((s: any) => ({
+                            ...s.trainingAssignment,
+                            candidateProjectMap: s.candidateProjectMap || {
+                              candidate: s.candidate,
+                              project: s.project,
+                              roleNeeded: s.roleNeeded
+                            }
+                          })).filter(Boolean) 
+                        } 
+                      });
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Conduct Bulk Training ({selectedIds.length})
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0">
+            <div ref={tableRef} className="overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
-                      <TableHead className="w-[40px] px-4">
+                  <TableRow className="bg-slate-50/80 border-b border-gray-200">
+                    {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
+                      <TableHead className="w-[40px] h-10 px-4">
                         <Checkbox
                           checked={tableItems.length > 0 && selectedIds.length === tableItems.length}
                           onCheckedChange={(checked) => {
@@ -690,17 +654,17 @@ export default function ScreeningsDashboardPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
-                    {(activeTile === "retraining" || activeTile === "training_scheduled") && (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempt</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project & Role</TableHead>
+                    {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempt</TableHead>
                     )}
                     {activeTile === "scheduled" ? (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Mode</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Mode</TableHead>
                     ) : activeTile !== "assigned" && (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Decision</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Decision</TableHead>
                     )}
-                    {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                    {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                       <>
                         <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Conducted At</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Overall Rating</TableHead>
@@ -712,11 +676,13 @@ export default function ScreeningsDashboardPage() {
                         ? "Assigned At"
                         : activeTile === "scheduled"
                         ? "Scheduled"
-                        : activeTile === "retraining"
+                        : activeTile === "training_assigned"
                         ? "Assigned At"
+                        : activeTile === "training_completed"
+                        ? "Completed At"
                         : "Scheduled"}
                     </TableHead>
-                    {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                    {(activeTile !== "training_scheduled") && (
                       <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
                     )}
                     <TableHead className="h-10 px-4 text-right text-[11px] font-medium uppercase tracking-wider text-gray-600 w-24">Actions</TableHead>
@@ -739,19 +705,20 @@ export default function ScreeningsDashboardPage() {
                         ? `${trainingAssignment.trainingAttemptTotal}${trainingAssignment.trainingAttemptCurrent ? ` (Current: ${trainingAssignment.trainingAttemptCurrent})` : ""}`
                         : null;
 
+                      const isTrainingTile =
+                        activeTile === "training_assigned" ||
+                        activeTile === "training_scheduled" ||
+                        activeTile === "training_completed";
+
                       const targetScreeningsUrl = activeTile === "scheduled"
                         ? `/screenings/${item.id}/conduct`
-                        : activeTile === "retraining"
-                        ? "/screenings/training" // navigate to the training listing page
-                        : ["training_scheduled", "training_completed"].includes(activeTile)
-                        ? "/screenings/training"
-                        : ["passed", "on_hold"].includes(activeTile)
-                        ? "/screenings/list"
-                        : "/screenings";
+                        : isTrainingTile
+                        ? `/screenings/${item.id}?scrollTo=training`
+                        : `/screenings/${item.id}`;
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
-                          {((activeTile === "assigned") || (activeTile === "retraining") || (activeTile === "training_scheduled")) && (
+                          {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
                             <TableCell className="px-4 py-2">
                               <Checkbox
                                 checked={selectedIds.includes(item.id)}
@@ -811,7 +778,7 @@ export default function ScreeningsDashboardPage() {
                               <span className="text-[10px] text-slate-500 font-medium">{roleName}</span>
                             </div>
                           </TableCell>
-                          {(activeTile === "retraining" || activeTile === "training_scheduled") && (
+                          {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                             <TableCell className="px-4 py-2">
                               {attemptText ? (
                                 <Badge className="text-[10px] font-semibold uppercase px-2 py-1 bg-amber-100 text-amber-700 border-amber-200">
@@ -846,7 +813,7 @@ export default function ScreeningsDashboardPage() {
                                 >
                                   {decision}
                                 </Badge>
-                                {activeTile === "training_completed" && item.decision === "needs_training" && (
+                                {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
                                   <div className="relative group flex items-center">
                                     <div className="w-5 h-5 flex items-center justify-center rounded-full bg-white border border-red-400 text-red-600 font-extrabold animate-pulse cursor-help">
                                       !
@@ -860,7 +827,7 @@ export default function ScreeningsDashboardPage() {
                               </div>
                             </TableCell>
                           )}
-                          {((activeTile === "retraining") || (activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
+                          {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                             <>
                               <TableCell className="px-4 py-2 text-[11px] text-gray-600">
                                 {item.conductedAt ? format(new Date(item.conductedAt), "dd MMM, HH:mm") : "-"}
@@ -895,13 +862,19 @@ export default function ScreeningsDashboardPage() {
                               item.createdAt ? format(new Date(item.createdAt), "dd MMM, HH:mm") : "-"
                             ) : activeTile === "scheduled" ? (
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
-                            ) : activeTile === "retraining" ? (
+                            ) : activeTile === "training_assigned" ? (
                               item.trainingAssignedAt ? format(new Date(item.trainingAssignedAt), "dd MMM, HH:mm") : "-"
+                            ) : activeTile === "training_completed" ? (
+                              trainingAssignment?.completedAt
+                                ? format(new Date(trainingAssignment.completedAt), "dd MMM, HH:mm")
+                                : item.scheduledTime
+                                ? format(new Date(item.scheduledTime), "dd MMM, HH:mm")
+                                : "-"
                             ) : (
                               item.scheduledTime ? format(new Date(item.scheduledTime), "dd MMM, HH:mm") : "-"
                             )}
                           </TableCell>
-                          {(activeTile !== "retraining" && activeTile !== "training_scheduled") && (
+                          {(activeTile !== "training_scheduled") && (
                             <TableCell className="px-4 py-2">
                               <div className="flex items-center gap-1.5">
                                 <UserCheck className="h-3.5 w-3.5 text-gray-400" />
@@ -910,28 +883,29 @@ export default function ScreeningsDashboardPage() {
                             </TableCell>
                           )}
                           <TableCell className="px-4 py-2 text-right flex items-center justify-end gap-2 w-24">
-                            {activeTile === "retraining" && (
+                            {activeTile === "training_assigned" && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2 text-xs border-amber-200 text-amber-700 hover:bg-amber-50"
+                                className="h-8 w-8 p-0 text-blue-700 border-blue-200 hover:bg-blue-50"
                                 onClick={() => {
                                   if (item.trainingAssignment) {
-                                    setSelectedAssignmentsForTraining([item.trainingAssignment]);
+                                    setSelectedAssignmentsForTraining([{ ...item.trainingAssignment }]);
                                     setIsScheduleTrainingOpen(true);
                                   } else {
                                     toast.error("No training assignment found for this candidate");
                                   }
                                 }}
+                                title="Schedule Training"
                               >
-                                <Calendar className="h-3.5 w-3.5 mr-1" />
+                                <Calendar className="h-4 w-4" />
                               </Button>
                             )}
                             {activeTile === "training_scheduled" && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-8 px-2 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                className="h-8 w-8 p-0 text-indigo-700 border-indigo-200 hover:bg-indigo-50"
                                 onClick={() => {
                                   if (item.trainingAssignment) {
                                     navigate("/screening-coordination/training/conduct", { 
@@ -950,22 +924,32 @@ export default function ScreeningsDashboardPage() {
                                     toast.error("No training assignment found for this candidate");
                                   }
                                 }}
+                                title="Conduct Training"
                               >
-                                <Users className="h-3.5 w-3.5 mr-1" />
-                                Conduct Training
+                                <Users className="h-4 w-4" />
                               </Button>
                             )}
                             {activeTile === "training_completed" && item.decision === SCREENING_DECISION.NEEDS_TRAINING && (
                               <Button
                                 size="sm"
-                                variant="ghost"
-                                className="h-7 w-7 p-0"
-                                onClick={() => openDecisionModal(item)}
-                                title="Edit decision"
+                                variant="outline"
+                                className="h-8 w-8 p-0 text-amber-700 border-amber-200 hover:bg-amber-50"
+                                onClick={() => {
+                                  setDecisionScreeningItem(item);
+                                  setIsUpdateTrainingModalOpen(true);
+                                }}
+                                title="Update Decision"
                               >
-                                <Pencil className="h-3.5 w-3.5 text-amber-600" />
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDecisionModal(item)}
+                            >
+                              Decision
+                            </Button>
                             {activeTile === "assigned" ? (
                               <Button
                                 size="sm"
@@ -1073,8 +1057,8 @@ export default function ScreeningsDashboardPage() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <ScheduleScreeningModal
           open={isScheduleOpen || isBulkScheduleOpen}
@@ -1256,38 +1240,75 @@ export default function ScreeningsDashboardPage() {
           onConfirm={handleUpdateDecision}
         />
 
+        <UpdateScreeningTrainingModal
+          open={isUpdateTrainingModalOpen}
+          onOpenChange={setIsUpdateTrainingModalOpen}
+          screening={decisionScreeningItem}
+        />
+
         <AssignToTrainerDialog
           open={assignToTrainerOpen}
           onOpenChange={setAssignToTrainerOpen}
           candidateName={
-            selectedInterviewForTraining?.candidateProjectMap?.candidate
+            selectedIds.length > 1
+              ? `${selectedIds.length} candidates`
+              : selectedInterviewForTraining?.candidateProjectMap?.candidate
               ? `${selectedInterviewForTraining.candidateProjectMap.candidate.firstName} ${selectedInterviewForTraining.candidateProjectMap.candidate.lastName}`
               : undefined
           }
           onSubmit={async (formData: any) => {
-            if (!selectedInterviewForTraining) return;
             if (!user?.id) {
               return;
             }
+
+            const targets = selectedIds.length > 0
+              ? tableItems.filter((it: any) => selectedIds.includes(it.id))
+              : selectedInterviewForTraining
+              ? [selectedInterviewForTraining]
+              : [];
+
+            if (targets.length === 0) return;
+
+            const targetsWithoutAssignment = targets.filter(
+              (target: any) => !target.trainingAssignments || target.trainingAssignments.length === 0,
+            );
+
+            if (targetsWithoutAssignment.length === 0) {
+              toast.error("Selected candidate(s) already have a training assignment for this screening.");
+              return;
+            }
+
+            const skippedCount = targets.length - targetsWithoutAssignment.length;
+
             try {
-              await createTrainingAssignment({
-                candidateProjectMapId: selectedInterviewForTraining?.candidateProjectMap?.id,
-                screeningId: selectedInterviewForTraining.id,
-                assignedBy: user.id,
-                trainingType: formData.trainingType,
-                focusAreas: formData.focusAreas,
-                priority: formData.priority,
-                targetCompletionDate: formData.targetCompletionDate || undefined,
-                notes: formData.notes,
-              }).unwrap();
+              for (const target of targetsWithoutAssignment) {
+                await createTrainingAssignment({
+                  candidateProjectMapId: target?.candidateProjectMap?.id,
+                  screeningId: target.id,
+                  assignedBy: user.id,
+                  trainingType: formData.trainingType,
+                  focusAreas: formData.focusAreas,
+                  priority: formData.priority,
+                  targetCompletionDate: formData.targetCompletionDate || undefined,
+                  notes: formData.notes,
+                }).unwrap();
+              }
 
               setAssignToTrainerOpen(false);
               setSelectedInterviewForTraining(null);
+              setSelectedIds([]);
               refetchAssigned();
               refetchUpcoming();
               refetchStats();
+              if (skippedCount > 0) {
+                toast.success(
+                  `Assigned training to ${targetsWithoutAssignment.length} candidate${targetsWithoutAssignment.length === 1 ? '' : 's'}. ${skippedCount} already had an assignment and were skipped.`,
+                );
+              } else {
+                toast.success(`Assigned training to ${targetsWithoutAssignment.length} candidate${targetsWithoutAssignment.length === 1 ? '' : 's'}`);
+              }
             } catch (err: any) {
-              // preserve current behavior with toast
+              toast.error(err?.data?.message || "Failed to assign training");
             }
           }}
           isLoading={isCreatingTraining}

@@ -81,10 +81,10 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
 
   if (!role) return null;
 
-  // Local (UI-only) validation for modal (these fields are mandatory on this page/modal)
+  // Local (UI-only) validation for modal
   const localErrors = {
-    minExperienceMissing: role.minExperience == null,
-    maxExperienceMissing: role.maxExperience == null,
+    minExperienceMissing:
+      role.minExperience == null && role.maxExperience != null,
     experienceRangeInvalid:
       role.minExperience != null && role.maxExperience != null && role.minExperience > role.maxExperience,
     minAgeMissing: role.minAge == null,
@@ -144,7 +144,7 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               </Label>
               <Input
                 type="number"
-                value={role.minExperience || ""}
+                value={role.minExperience ?? ""}
                 onChange={(e) => updateRole("minExperience", e.target.value === "" ? undefined : parseInt(e.target.value))}
                 min="0"
                 placeholder="0"
@@ -172,21 +172,21 @@ export const RoleCriteriaModal: React.FC<RoleCriteriaModalProps> = ({
               </Label>
               <Input
                 type="number"
-                value={role.maxExperience || ""}
+                value={role.maxExperience ?? ""}
                 onChange={(e) => updateRole("maxExperience", e.target.value === "" ? undefined : parseInt(e.target.value))}
                 min="0"
-                placeholder="10"
-                aria-invalid={!!(roleErrors?.maxExperience || localErrors.maxExperienceMissing || localErrors.experienceRangeInvalid)}
+                placeholder="Max (optional)"
+                aria-invalid={!!(roleErrors?.maxExperience || localErrors.experienceRangeInvalid)}
                 className={cn(
                   "h-9 bg-white text-sm",
-                  (roleErrors?.maxExperience || localErrors.maxExperienceMissing || localErrors.experienceRangeInvalid)
+                  (roleErrors?.maxExperience || localErrors.experienceRangeInvalid)
                     ? "border-destructive focus-visible:ring-destructive"
                     : "border-slate-200"
                 )}
               />
-              {(roleErrors?.maxExperience || localErrors.maxExperienceMissing || localErrors.experienceRangeInvalid) && (
+              {(roleErrors?.maxExperience || localErrors.experienceRangeInvalid) && (
                 <p className="text-[10px] text-destructive font-medium">
-                  {roleErrors?.maxExperience?.message || (localErrors.experienceRangeInvalid ? "Minimum experience must be less than or equal to maximum experience" : "Maximum experience is required")}
+                  {roleErrors?.maxExperience?.message || "Minimum experience must be less than or equal to maximum experience"}
                 </p>
               )}
             </div>

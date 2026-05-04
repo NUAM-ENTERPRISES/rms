@@ -36,7 +36,6 @@ const scheduleSchema = z.object({
   sessionDate: z.string().min(1, "Session date & time is required"),
   duration: z.coerce.number().min(15).max(480),
   mode: z.enum(["video", "phone", "in_person"]),
-  topic: z.string().optional(),
   meetingLink: z.string().optional(),
 });
 
@@ -63,7 +62,6 @@ export default function ScheduleTrainingModal({
       sessionDate: "",
       duration: 60,
       mode: "video",
-      topic: "",
       meetingLink: "",
     },
   });
@@ -74,7 +72,6 @@ export default function ScheduleTrainingModal({
         sessionDate: "",
         duration: 60,
         mode: "video",
-        topic: "",
         meetingLink: "",
       });
     }
@@ -92,7 +89,6 @@ export default function ScheduleTrainingModal({
         sessionDate: new Date(values.sessionDate).toISOString(),
         duration: values.duration,
         mode: values.mode,
-        topic: values.topic,
         meetingLink: values.meetingLink,
       }).unwrap();
 
@@ -203,19 +199,6 @@ export default function ScheduleTrainingModal({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="topic"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Main Topic</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Behavioral Prep" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField

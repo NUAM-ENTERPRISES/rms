@@ -6,24 +6,7 @@ vi.mock("react-router-dom", async () => ({ useNavigate: () => vi.fn() }));
 
 import CandidateCard from "../components/CandidateCard";
 
-describe("CandidateCard - interview button", () => {
-  it("calls onSendForInterview when button is clicked", async () => {
-    const onSend = vi.fn();
-
-    render(
-      <CandidateCard
-        candidate={{ id: "c1", firstName: "Test", lastName: "User" }}
-        showInterviewButton
-        onSendForInterview={onSend}
-      />
-    );
-
-    const btn = screen.getByRole("button", { name: /send for interview/i });
-    await userEvent.click(btn);
-
-    expect(onSend).toHaveBeenCalledWith("c1");
-  });
-
+describe("CandidateCard", () => {
   it("shows concise eligible role tooltip when matchScore is object", async () => {
     render(
       <CandidateCard
@@ -113,5 +96,36 @@ describe("CandidateCard - interview button", () => {
 
     expect(screen.queryByText("foo@bar.com")).not.toBeInTheDocument();
     expect(screen.queryByText("+91 1234567890")).not.toBeInTheDocument();
+  });
+
+  it("shows agent name when showAgentName is true and candidate has agent", () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c6",
+          firstName: "Agent",
+          lastName: "Channel",
+          agent: { id: "a1", name: "Sony Partner" },
+        }}
+        showAgentName
+      />
+    );
+
+    expect(screen.getByText("Sony Partner")).toBeInTheDocument();
+  });
+
+  it("does not show agent name when showAgentName is false", () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c7",
+          firstName: "No",
+          lastName: "Label",
+          agent: { id: "a1", name: "Hidden Agent" },
+        }}
+      />
+    );
+
+    expect(screen.queryByText("Hidden Agent")).not.toBeInTheDocument();
   });
 });

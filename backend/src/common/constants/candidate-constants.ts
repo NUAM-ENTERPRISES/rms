@@ -58,6 +58,35 @@ export const CANDIDATE_ASSIGNMENT_TYPE = {
   CRE_CONVERTED: "cre_converted",
 } as const;
 
+/** Normalize legacy DB value `agents` to canonical `agent`. */
+export function normalizeCandidateSource(
+  source: string | null | undefined,
+): string | undefined {
+  if (!source) return undefined;
+  return source === 'agents' ? 'agent' : source;
+}
+
+export function isAgentCandidateSource(
+  source: string | null | undefined,
+): boolean {
+  return normalizeCandidateSource(source) === 'agent';
+}
+
+export const CANDIDATE_SOURCES = [
+  { id: 'manual', value: 'manual', label: 'Manual' },
+  { id: 'meta', value: 'meta', label: 'Meta' },
+  { id: 'agent', value: 'agent', label: 'Agent' },
+  { id: 'referral', value: 'referral', label: 'Referral' },
+  { id: 'direct_enquiry', value: 'direct_enquiry', label: 'Direct Enquiry' },
+  { id: 'hospital_visit', value: 'hospital_visit', label: 'Hospital Visit' },
+  { id: 'paid_ads', value: 'paid_ads', label: 'Paid Ads' },
+  { id: 'expo_event', value: 'expo_event', label: 'Expo/Event' },
+  { id: 'job_board', value: 'job_board', label: 'Job Board' },
+  { id: 'social_media', value: 'social_media', label: 'Social Media' },
+  { id: 'direct_application', value: 'direct_application', label: 'Direct Application' },
+  { id: 'internal', value: 'internal', label: 'Internal' }
+] as const;
+
 export const COMMON_SKILLS = [
   "Communication",
   "Teamwork",

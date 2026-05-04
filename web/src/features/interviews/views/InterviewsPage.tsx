@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,10 +28,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { motion } from "framer-motion";
 import { useCan } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import ProjectRoleFilter, { ProjectRoleFilterValue } from "@/components/molecules/ProjectRoleFilter";
+import {
+  ArrowUpRight,
+  SlidersHorizontal,
+} from "lucide-react";
 import {
   useGetInterviewsQuery,
   useUpdateClientDecisionMutation,
@@ -60,10 +65,7 @@ type TileDef = {
   key: string;
   label: string;
   icon: React.ElementType;
-  gradient: string;
-  bgGradient: string;
-  iconBg: string;
-  textColor: string;
+  accent: string;
 };
 
 const TILES: TileDef[] = [
@@ -71,129 +73,103 @@ const TILES: TileDef[] = [
     key: "shortlistPending",
     label: "Shortlist Pending",
     icon: Mail,
-    gradient: "from-amber-500 to-orange-500",
-    bgGradient: "from-amber-50 to-amber-100/50",
-    iconBg: "bg-amber-200/40",
-    textColor: "text-amber-600",
+    accent: "orange",
   },
   {
     key: "shortlisted",
     label: "Shortlisted",
     icon: CheckCircle2,
-    gradient: "from-teal-500 to-emerald-500",
-    bgGradient: "from-teal-50 to-teal-100/50",
-    iconBg: "bg-teal-200/40",
-    textColor: "text-teal-600",
+    accent: "teal",
   },
   {
     key: "shortlistRejected",
     label: "Shortlist Rejected",
     icon: X,
-    gradient: "from-rose-500 to-red-500",
-    bgGradient: "from-rose-50 to-red-100/50",
-    iconBg: "bg-rose-200/40",
-    textColor: "text-rose-600",
+    accent: "rose",
   },
   {
     key: "interviewScheduled",
     label: "Interview Scheduled",
     icon: Calendar,
-    gradient: "from-blue-500 to-indigo-500",
-    bgGradient: "from-blue-50 to-indigo-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-blue-600",
+    accent: "blue",
   },
   {
     key: "interviewCompleted",
     label: "Interview Completed",
     icon: ClipboardCheck,
-    gradient: "from-green-500 to-emerald-500",
-    bgGradient: "from-green-50 to-emerald-100/50",
-    iconBg: "bg-green-200/40",
-    textColor: "text-green-600",
+    accent: "emerald",
   },
   {
     key: "interviewPassed",
     label: "Interview Passed",
     icon: CheckCircle,
-    gradient: "from-emerald-500 to-green-500",
-    bgGradient: "from-emerald-50 to-green-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-emerald-600",
+    accent: "green",
   },
   {
     key: "interviewRejected",
     label: "Interview Rejected",
     icon: AlertTriangle,
-    gradient: "from-red-500 to-orange-500",
-    bgGradient: "from-red-50 to-orange-100/50",
-    iconBg: "bg-red-200/40",
-    textColor: "text-red-600",
+    accent: "red",
   },
   {
     key: "interviewBackout",
     label: "Interview Backout",
     icon: X,
-    gradient: "from-rose-500 to-fuchsia-500",
-    bgGradient: "from-rose-50 to-fuchsia-100/50",
-    iconBg: "bg-rose-200/40",
-    textColor: "text-rose-600",
+    accent: "fuchsia",
   },
   {
     key: "screeningAssigned",
     label: "Screening Assigned",
     icon: Send,
-    gradient: "from-indigo-500 to-blue-500",
-    bgGradient: "from-indigo-50 to-blue-100/50",
-    iconBg: "bg-indigo-200/40",
-    textColor: "text-indigo-600",
+    accent: "indigo",
   },
   {
     key: "screeningScheduled",
     label: "Screening Scheduled",
     icon: ClipboardCheck,
-    gradient: "from-purple-500 to-violet-500",
-    bgGradient: "from-purple-50 to-violet-100/50",
-    iconBg: "bg-purple-200/40",
-    textColor: "text-purple-600",
+    accent: "purple",
   },
   {
     key: "screeningTraining",
     label: "Screening Training",
     icon: Users,
-    gradient: "from-fuchsia-500 to-pink-500",
-    bgGradient: "from-fuchsia-50 to-pink-100/50",
-    iconBg: "bg-fuchsia-200/40",
-    textColor: "text-fuchsia-600",
+    accent: "pink",
   },
   {
     key: "screeningPassed",
     label: "Screening Passed",
     icon: CheckCircle2,
-    gradient: "from-cyan-500 to-blue-500",
-    bgGradient: "from-cyan-50 to-blue-100/50",
-    iconBg: "bg-cyan-200/40",
-    textColor: "text-cyan-600",
+    accent: "cyan",
   },
   {
     key: "screeningRejected",
     label: "Screening Rejected",
     icon: X,
-    gradient: "from-pink-500 to-rose-500",
-    bgGradient: "from-pink-50 to-rose-100/50",
-    iconBg: "bg-pink-200/40",
-    textColor: "text-pink-600",
+    accent: "rose",
   },
   {
     key: "onHold",
     label: "Screening On Hold",
     icon: Settings,
-    gradient: "from-slate-500 to-gray-500",
-    bgGradient: "from-slate-50 to-gray-100/50",
-    iconBg: "bg-slate-200/40",
-    textColor: "text-slate-600",
+    accent: "slate",
   },
 ];
+
+const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+  orange: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
+  teal: { card: "from-teal-50 via-white to-teal-50/30 border-teal-100", icon: "text-teal-600", iconBg: "bg-teal-100", value: "text-teal-700", ring: "ring-teal-400/50", dot: "bg-teal-500" },
+  rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
+  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+  green: { card: "from-green-50 via-white to-green-50/30 border-green-100", icon: "text-green-600", iconBg: "bg-green-100", value: "text-green-700", ring: "ring-green-400/50", dot: "bg-green-500" },
+  red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
+  fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
+  indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
+  purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+  pink: { card: "from-pink-50 via-white to-pink-50/30 border-pink-100", icon: "text-pink-600", iconBg: "bg-pink-100", value: "text-pink-700", ring: "ring-pink-400/50", dot: "bg-pink-500" },
+  cyan: { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100", icon: "text-cyan-600", iconBg: "bg-cyan-100", value: "text-cyan-700", ring: "ring-cyan-400/50", dot: "bg-cyan-500" },
+  slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
+};
 
 const STATUS_BADGE: Record<
   string,
@@ -269,6 +245,7 @@ export default function InterviewsPage() {
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
   const limit = 10;
 
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
@@ -277,6 +254,12 @@ export default function InterviewsPage() {
   });
 
   const projectId = projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId;
+
+  const handleTileClick = (filterKey: string) => {
+    setActiveFilter(filterKey);
+    setPage(1);
+    window.requestAnimationFrame(() => tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
   const roleCatalogId = projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId;
 
   // Date filter state
@@ -794,111 +777,84 @@ export default function InterviewsPage() {
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-              Welcome back, {user?.name || "Recruiter"}! 👋
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Orchestrate every panel with clarity and track candidate progress
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetch();
-              refetchStats();
-            }}
-            className="bg-white"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-        </div>
+        <TypedHeader 
+          userName={user?.name || "Recruiter"} 
+          subtitle="Orchestrate every panel with clarity and track candidate progress"
+        />
 
         {/* ── Status Tiles ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {TILES.map((tile, i) => {
+          {TILES.map((tile) => {
             const Icon = tile.icon;
             const isActive = activeFilter === tile.key;
             const countValue = counts[tile.key as keyof typeof counts];
+            const s = accentStyles[tile.accent];
 
             return (
-              <motion.div
+              <button
                 key={tile.key}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.05 }}
+                type="button"
+                onClick={() => handleTileClick(tile.key)}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive
+                    ? `ring-2 shadow-md ${s.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
-                <Card
-                  onClick={() => {
-                    setActiveFilter(tile.key);
-                    setPage(1);
-                  }}
-                  className={`h-full border-0 shadow-sm bg-gradient-to-br ${
-                    tile.bgGradient
-                  } backdrop-blur-sm transition-all duration-200 cursor-pointer hover:shadow-md transform hover:-translate-y-0.5 ${
-                    isActive ? "ring-2 ring-indigo-500/30 shadow-md scale-[1.02]" : ""
-                  }`}
-                >
-                  <CardContent className="py-2.5 px-3 h-full flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-600 mb-0.5 truncate uppercase tracking-wider">
-                          {tile.label}
-                        </p>
-                        <h3 className={`text-xl font-extrabold tracking-tight ${tile.textColor}`}>
-                          {tile.key === "passRate" ? `${Number(countValue).toFixed(1)}%` : countValue}
-                        </h3>
-                      </div>
-                      <div className={`p-1.5 rounded-lg shrink-0 shadow-sm ${tile.iconBg}`}>
-                        <Icon className={`h-4 w-4 ${tile.textColor}`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{countValue}</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <Icon className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
             );
           })}
         </div>
 
         {/* ── Candidates Table ── */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent className="pt-4 pb-4 border-b border-gray-100">
-            <div className="flex flex-col md:flex-row gap-4 mb-4">
-              <div className="relative group flex-1">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 p-1 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 shadow">
-                  <Search className="h-4 w-4 text-white" />
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <Input
+                    placeholder="Search candidates by name, project, or role..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
+                  />
                 </div>
-                <Input
-                  placeholder="Search candidates by name, project, or role..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
+                <ProjectRoleFilter
+                  value={projectRoleFilter}
+                  onChange={(value) => {
+                    setProjectRoleFilter(value);
                     setPage(1);
                   }}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all h-14"
+                  className="sm:w-72"
                 />
               </div>
-            </div>
 
-            <div className="mb-4">
-              <ProjectRoleFilter
-                value={projectRoleFilter}
-                onChange={(value) => {
-                  setProjectRoleFilter(value);
-                  setPage(1);
-                }}
-                className="max-w-[600px]"
-              />
-            </div>
-
-            <div className="border-t border-gray-100 pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1.5 mr-1">
-                  <CalendarDays className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-semibold text-gray-700">Filter By</span>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <div className="flex items-center gap-1.5 mr-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Filters</span>
                 </div>
                 {["all", "today", "this_week", "this_month"].map((preset) => (
                   <button
@@ -907,28 +863,32 @@ export default function InterviewsPage() {
                       setDateRange(preset);
                       setPage(1);
                     }}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                    className={cn(
+                      "px-3 py-1 text-xs font-medium rounded-full border transition-all",
                       dateRange === preset
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                    }`}
+                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                    )}
                   >
                     {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
                   </button>
                 ))}
               </div>
             </div>
-          </CardContent>
+          </div>
 
-          <CardHeader className="py-3 px-4">
+          <div className="px-6 py-4 border-b border-gray-200 bg-white">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-800">
-                  {getActiveTileLabel()}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
-                </CardDescription>
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Calendar className="h-5 w-5 text-white" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
+                  <p className="text-xs text-slate-500">
+                    {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
+                  </p>
+                </div>
               </div>
               {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && selectedBulkIds.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -1027,26 +987,10 @@ export default function InterviewsPage() {
                 </div>
               )}
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="p-0">
-            <div className="border border-gray-200 bg-white shadow-sm overflow-hidden">
-              <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2 shadow-lg shadow-blue-500/20">
-                    <Calendar className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-gray-900">
-                      {getActiveTileLabel()}
-                    </h4>
-                    <p className="text-[11px] text-gray-600 mt-0.5 font-medium">
-                      {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} in total
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+          <div className="p-0">
+            <div ref={tableRef} className="overflow-hidden">
               {isError ? (
                 <div className="flex flex-col items-center justify-center py-32 space-y-4">
                   <AlertTriangle className="h-12 w-12 text-red-500" />
@@ -1064,9 +1008,9 @@ export default function InterviewsPage() {
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                      <TableRow className="bg-slate-50/80 border-b border-gray-200">
                         {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
-                          <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
                             <Checkbox
                               id="select-all-candidates"
                               checked={candidates.length > 0 && candidates.every((it) => selectedBulkIds.includes(it.id))}
@@ -1080,34 +1024,37 @@ export default function InterviewsPage() {
                             />
                           </TableHead>
                         )}
-                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
-                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Current Stage</TableHead>
-                        <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project / Role</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Stage</TableHead>
+                        <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Role</TableHead>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
-                          <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Mode</TableHead>
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Mode</TableHead>
                         )}
                         {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected" || activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" || activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
                           <>
-                            <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Recruiter</TableHead>
+                            <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                             {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected") && (
                               <>
-                                <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Sent to Client</TableHead>
-                                <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Screening Details</TableHead>
+                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Sent to Client</TableHead>
+                                <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Screening Details</TableHead>
+                                {activeFilter === "shortlisted" && (
+                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
+                                )}
                                 {activeFilter === "shortlistRejected" && (
-                                  <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Rejection Reason</TableHead>
+                                  <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Rejection Reason</TableHead>
                                 )}
                               </>
                             )}
                             {(activeFilter === "screeningAssigned" || activeFilter === "screeningScheduled" || activeFilter === "screeningTraining" || activeFilter === "screeningPassed" || activeFilter === "screeningRejected" || activeFilter === "onHold") && (
-                              <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Trainer</TableHead>
+                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Trainer</TableHead>
                             )}
                             {(activeFilter !== "screeningAssigned" && activeFilter !== "interviewScheduled" && activeFilter !== "interviewCompleted" && activeFilter !== "interviewPassed" && activeFilter !== "interviewBackout" && activeFilter !== "interviewRejected" && activeFilter !== "shortlistPending" && activeFilter !== "shortlisted" && activeFilter !== "shortlistRejected") && (
-                              <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempts</TableHead>
+                              <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempts</TableHead>
                             )}
                           </>
                         )}
                         {(!["shortlistPending", "shortlisted", "shortlistRejected"].includes(activeFilter)) && (
-                          <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">
+                          <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
                             {activeFilter === "screeningAssigned"
                               ? "Assigned At"
                               : activeFilter === "screeningScheduled" || activeFilter === "interviewScheduled"
@@ -1194,10 +1141,31 @@ export default function InterviewsPage() {
                                   enableHoverPreview={false}
                                 />
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold text-slate-900 truncate">
-                                    {candidate?.firstName} {candidate?.lastName}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email}</p>
+                                  {[
+                                    "interviewScheduled",
+                                    "interviewCompleted",
+                                    "interviewPassed",
+                                    "interviewRejected",
+                                    "interviewBackout",
+                                  ].includes(activeFilter) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (item.id) {
+                                          navigate(`/interviews/detail/${item.id}`);
+                                        }
+                                      }}
+                                      className="text-sm font-bold text-slate-900 truncate text-left transition-colors hover:text-blue-600"
+                                    >
+                                      {candidate?.firstName} {candidate?.lastName}
+                                    </button>
+                                  ) : (
+                                    <p className="text-sm font-bold text-slate-900 truncate">
+                                      {candidate?.firstName} {candidate?.lastName}
+                                    </p>
+                                  )}
+                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email || "—"}</p>
+                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.mobileNumber || "—"}</p>
                                 </div>
                               </div>
                             </TableCell>
@@ -1334,6 +1302,13 @@ export default function InterviewsPage() {
                                         )}
                                       </div>
                                     </TableCell>
+                                    {activeFilter === "shortlisted" && (
+                                      <TableCell className="px-4 py-3">
+                                        <p className="text-[11px] text-slate-700 truncate">
+                                          {candidateProjectMap?.notes || '—'}
+                                        </p>
+                                      </TableCell>
+                                    )}
                                     {activeFilter === "shortlistRejected" && (
                                       <TableCell className="px-4 py-3">
                                         <p className="text-[11px] text-slate-700 truncate">
@@ -1563,8 +1538,8 @@ export default function InterviewsPage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <ClientDecisionModal

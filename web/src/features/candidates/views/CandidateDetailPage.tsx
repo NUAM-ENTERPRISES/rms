@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -31,9 +31,12 @@ import {
   useGetCandidateByIdQuery,
   useGetCandidateProjectsQuery,
   useGetDocumentsQuery,
+  useUploadDocumentMutation,
   useDeleteWorkExperienceMutation,
   useDeleteCandidateQualificationMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
@@ -56,6 +59,9 @@ import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
+const CandidateUploadDocumentModal = React.lazy(
+  () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
+);
 
 // Fallback avatar used when candidate has no profileImage
 const DEFAULT_PROFILE_IMAGE =
@@ -79,6 +85,7 @@ export default function CandidateDetailPage() {
   const [editData, setEditData] = useState<
     CandidateQualification | WorkExperience | undefined
   >();
+  const [editModalExistingDocs, setEditModalExistingDocs] = useState<any[]>([]);
 
   // Delete confirmation state
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -100,6 +107,10 @@ export default function CandidateDetailPage() {
   // Licensing update modal state
   const [isLicensingModalOpen, setIsLicensingModalOpen] = useState(false);
 
+  // Work experience document upload (link to a specific work experience)
+  const [isWorkExpDocModalOpen, setIsWorkExpDocModalOpen] = useState(false);
+  const [targetWorkExperienceId, setTargetWorkExperienceId] = useState<string | undefined>(undefined);
+
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
   // All roles can read candidate details
@@ -109,6 +120,9 @@ export default function CandidateDetailPage() {
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
   const [deleteQualification, { isLoading: isDeletingQual }] = useDeleteCandidateQualificationMutation();
+  const [uploadDocument, { isLoading: isUploadingDoc }] = useUploadDocumentMutation();
+  const [createDocument, { isLoading: isCreatingDoc }] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Fetch candidate data from API
   const {
@@ -132,7 +146,7 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 1 },
+    { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
 
@@ -157,6 +171,14 @@ export default function CandidateDetailPage() {
   ) => {
     setModalType(type);
     setEditData(data);
+    if (type === "workExperience") {
+      const linked = (documentsData?.data?.documents ?? []).filter(
+        (d: any) => d.workExperienceId === (data as WorkExperience).id
+      );
+      setEditModalExistingDocs(linked);
+    } else {
+      setEditModalExistingDocs([]);
+    }
     setIsModalOpen(true);
   };
 
@@ -189,6 +211,7 @@ export default function CandidateDetailPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditData(undefined);
+    setEditModalExistingDocs([]);
   };
 
   const handleModalSuccess = () => {
@@ -542,6 +565,7 @@ export default function CandidateDetailPage() {
             onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
+            workExperienceDocs={documentsData?.data?.documents ?? []}
           />
         </TabsContent>
 
@@ -614,8 +638,75 @@ export default function CandidateDetailPage() {
         candidateId={id!}
         type={modalType}
         editData={editData}
+        existingDocuments={editModalExistingDocs}
         onSuccess={handleModalSuccess}
       />
+
+      {/* Work experience certificate upload modal */}
+      <React.Suspense fallback={null}>
+        <CandidateUploadDocumentModal
+          isOpen={isWorkExpDocModalOpen}
+          initialDocType={DOCUMENT_TYPE.EXPERIENCE_LETTERS}
+          initialWorkExperienceId={targetWorkExperienceId}
+          workExperiences={candidate?.workExperiences}
+          isUploading={isUploadingDoc || isCreatingDoc}
+          onClose={() => {
+            setIsWorkExpDocModalOpen(false);
+            setTargetWorkExperienceId(undefined);
+          }}
+          onUpload={async (file, meta) => {
+            try {
+              const candidateId = id!;
+              const formData = new FormData();
+              formData.append("file", file);
+              formData.append("docType", meta.docType);
+
+              const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
+              const uploadData: any = uploadResp.data;
+              const uploadedDocument =
+                uploadData?.document && uploadData.document.id
+                  ? uploadData.document
+                  : uploadData?.id
+                    ? uploadData
+                    : null;
+
+              const desiredDocName =
+                (meta.docName && meta.docName.trim()) || "";
+
+              if (uploadedDocument) {
+                if (desiredDocName) {
+                  await updateDocument({
+                    id: uploadedDocument.id,
+                    docName: desiredDocName,
+                  }).unwrap();
+                }
+              } else {
+                await createDocument({
+                  candidateId,
+                  docType: meta.docType,
+                  docName: desiredDocName || undefined,
+                  fileName: uploadData.fileName,
+                  fileUrl: uploadData.fileUrl,
+                  fileSize: uploadData.fileSize,
+                  mimeType: uploadData.mimeType,
+                  notes: meta.notes,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+                  roleCatalogId: meta.roleCatalogId,
+                  workExperienceId: meta.workExperienceId,
+                }).unwrap();
+              }
+
+              toast.success("Experience certificate uploaded and linked");
+              setIsWorkExpDocModalOpen(false);
+              setTargetWorkExperienceId(undefined);
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to upload experience certificate");
+            }
+          }}
+        />
+      </React.Suspense>
 
       {/* Status update modal */}
       <StatusUpdateModal
@@ -655,11 +746,9 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
-          referralCompanyName: candidate.referralCompanyName,
-          referralEmail: candidate.referralEmail,
-          referralCountryCode: candidate.referralCountryCode,
-          referralPhone: candidate.referralPhone,
-          referralDescription: candidate.referralDescription,
+          addressCountryCode: candidate.addressCountryCode,
+          addressStateId: candidate.addressStateId,
+          address: candidate.address,
         }}
       />
 

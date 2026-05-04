@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,26 +25,51 @@ import {
     CheckCircle2,
     ClipboardList,
     Eye,
-    Activity,
     Search,
+    RefreshCw,
     Filter,
     X,
     ChevronLeft,
     ChevronRight,
     UserCheck,
     Mail,
-    Phone
+    Phone,
+    ArrowUpRight,
+    FilterX,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Can } from "@/components/auth/Can";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
+
+const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+    blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
+    indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
+    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+    amber: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
+    rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
+    slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
+    purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+};
 
 // This page is intentionally not wired to any API. It uses local dummy data
 // and is wrapped with <Can> so only admin/manager/system admin roles can view it.
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const tableRef = useRef<HTMLDivElement>(null);
+
+    const handleTileClick = (tile: any) => {
+        if (tile.type === "step") {
+            setStatusFilter("all");
+            setStepFilter((prev) => (prev === tile.key ? null : tile.key));
+        } else {
+            setStepFilter(null);
+            setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
+        }
+        setPage(1);
+    };
 
     // Local UI state (same as production page)
     const [search, setSearch] = useState("");
@@ -122,55 +146,32 @@ export default function ProcessingAdminDashboardPage() {
       { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
       { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
       { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
-      { type: "step", key: "eligibility", label: "Eligibility", gradient: "from-emerald-500 to-green-500" },
-      { type: "step", key: "prometric", label: "Licensing Exam", gradient: "from-amber-400 to-orange-500" },
-      { type: "step", key: "council_registration", label: "Council Registration", gradient: "from-teal-500 to-cyan-500" },
-      { type: "step", key: "document_attestation", label: "Document Attestation", gradient: "from-indigo-500 to-blue-500" },
-      { type: "step", key: "medical", label: "Medical", gradient: "from-emerald-500 to-lime-500" },
-      { type: "step", key: "biometrics", label: "Biometrics", gradient: "from-cyan-500 to-sky-500" },
-      { type: "step", key: "visa", label: "Visa", gradient: "from-cyan-600 to-blue-600" },
-      { type: "step", key: "emigration", label: "Emigration", gradient: "from-rose-500 to-pink-500" },
-      { type: "step", key: "ticket", label: "Ticket", gradient: "from-lime-500 to-emerald-500" },
+      { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
+      { type: "step", key: "prometric", label: "Licensing Exam", accent: "amber" },
+      { type: "step", key: "council_registration", label: "Council", accent: "emerald" },
+      { type: "step", key: "document_attestation", label: "Attestation", accent: "blue" },
+      { type: "step", key: "medical", label: "Medical", accent: "emerald" },
+      { type: "step", key: "biometrics", label: "Biometrics", accent: "blue" },
+      { type: "step", key: "visa", label: "Visa", accent: "indigo" },
+      { type: "step", key: "emigration", label: "Emigration", accent: "rose" },
+      { type: "step", key: "ticket", label: "Ticket", accent: "emerald" },
       {
         type: "status",
         label: "Completed",
         status: "completed",
+        accent: "emerald",
         icon: CheckCircle2,
-        color: "text-emerald-600",
-        gradient: "from-emerald-50 to-teal-100/50",
-        iconBg: "bg-emerald-200/40",
         value: counts?.completed || 0,
       },
       {
         type: "status",
         label: "Cancelled",
         status: "cancelled",
+        accent: "rose",
         icon: XCircle,
-        color: "text-rose-600",
-        gradient: "from-rose-50 to-fuchsia-100/50",
-        iconBg: "bg-fuchsia-200/40",
         value: counts?.cancelled || 0,
       },
     ];
-
-    const gradientMap: Record<string, { bg: string; iconBg: string; text: string }> = {
-      'from-indigo-500 to-violet-500': { bg: 'from-indigo-50 to-violet-100/50', iconBg: 'bg-indigo-200/40', text: 'text-indigo-600' },
-      'from-blue-500 to-cyan-500': { bg: 'from-blue-50 to-cyan-100/50', iconBg: 'bg-blue-200/40', text: 'text-blue-600' },
-      'from-yellow-400 to-amber-500': { bg: 'from-yellow-50 to-amber-100/50', iconBg: 'bg-amber-200/40', text: 'text-amber-600' },
-      'from-purple-500 to-violet-500': { bg: 'from-purple-50 to-violet-100/50', iconBg: 'bg-purple-200/40', text: 'text-purple-600' },
-      'from-pink-500 to-rose-500': { bg: 'from-pink-50 to-rose-100/50', iconBg: 'bg-pink-200/40', text: 'text-pink-600' },
-      'from-emerald-500 to-green-500': { bg: 'from-emerald-50 to-green-100/50', iconBg: 'bg-emerald-200/40', text: 'text-emerald-600' },
-      'from-amber-400 to-orange-500': { bg: 'from-amber-50 to-orange-100/50', iconBg: 'bg-orange-200/40', text: 'text-orange-600' },
-      'from-teal-500 to-cyan-500': { bg: 'from-teal-50 to-cyan-100/50', iconBg: 'bg-teal-200/40', text: 'text-teal-600' },
-      'from-indigo-500 to-blue-500': { bg: 'from-indigo-50 to-blue-100/50', iconBg: 'bg-indigo-200/40', text: 'text-indigo-600' },
-      'from-emerald-500 to-lime-500': { bg: 'from-emerald-50 to-lime-100/50', iconBg: 'bg-lime-200/40', text: 'text-emerald-600' },
-      'from-cyan-500 to-sky-500': { bg: 'from-cyan-50 to-sky-100/50', iconBg: 'bg-cyan-200/40', text: 'text-cyan-600' },
-      'from-cyan-600 to-blue-600': { bg: 'from-cyan-50 to-blue-100/50', iconBg: 'bg-cyan-200/40', text: 'text-cyan-600' },
-      'from-rose-500 to-pink-500': { bg: 'from-rose-50 to-pink-100/50', iconBg: 'bg-rose-200/40', text: 'text-rose-600' },
-      'from-lime-500 to-emerald-500': { bg: 'from-lime-50 to-emerald-100/50', iconBg: 'bg-lime-200/40', text: 'text-lime-600' },
-      'from-emerald-500 to-teal-500': { bg: 'from-emerald-50 to-teal-100/50', iconBg: 'bg-emerald-200/40', text: 'text-emerald-600' },
-      'from-rose-500 to-fuchsia-500': { bg: 'from-rose-50 to-fuchsia-100/50', iconBg: 'bg-fuchsia-200/40', text: 'text-fuchsia-600' },
-    };
 
     const getStatusBadge = (status: string) => {
         const styles: Record<string, string> = {
@@ -233,77 +234,64 @@ export default function ProcessingAdminDashboardPage() {
                         )}
                     </header>
 
-                    <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 mt-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
                         {processingTiles.map((tile) => {
                             const isStepTile = tile.type === "step";
                             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
                             const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
-                            const colors = isStepTile ? gradientMap[tile.gradient] : { bg: tile.gradient, iconBg: tile.iconBg, text: tile.color };
+                            const s = accentStyles[tile.accent || "blue"];
                             const Icon = isStepTile ? ClipboardList : tile.icon;
 
                             return (
-                                <Card
+                                <button
                                     key={`${tile.type}-${tile.label}`}
-                                    onClick={() => {
-                                        if (isStepTile) {
-                                            setStatusFilter('all');
-                                            setStepFilter(stepFilter === tile.key ? null : tile.key);
-                                        } else {
-                                            setStepFilter(null);
-                                            setStatusFilter(statusFilter === tile.status ? 'all' : tile.status);
-                                        }
-                                    }}
-                                    className={`border-0 shadow-sm bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 cursor-pointer ${isActive ? 'ring-2 ring-blue-400/60' : 'hover:-translate-y-[1px] hover:shadow-md'}`}
+                                    type="button"
+                                    onClick={() => handleTileClick(tile)}
+                                    className={cn(
+                                        "group relative text-left rounded-2xl border bg-gradient-to-br p-4 shadow-sm transition-all duration-200 focus:outline-none",
+                                        s.card,
+                                        isActive
+                                            ? `ring-2 shadow-md ${s.ring}`
+                                            : "hover:-translate-y-0.5 hover:shadow-md"
+                                    )}
                                 >
-                                    <CardContent className="pt-1 pb-1">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-slate-600 mb-0.5">{tile.label}</p>
-                                                <h3 className={`text-xl font-semibold ${colors.text}`}>{value}</h3>
-                                                {'subtitle' in tile && <p className="text-xs text-slate-500 mt-0.5">{tile.subtitle}</p>}
-                                            </div>
-                                            <div className={`p-1 ${colors.iconBg} rounded-full`}>
-                                                <Icon className={`h-4 w-4 ${colors.text}`} />
-                                            </div>
+                                    {isActive && (
+                                        <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                                    )}
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 line-clamp-1">{tile.label}</p>
+                                            <p className={cn("text-2xl font-bold tabular-nums", s.value)}>{value}</p>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                        <div className={cn("shrink-0 rounded-xl p-2 shadow-sm", s.iconBg)}>
+                                            <Icon className={cn("h-4 w-4", s.icon)} />
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-1 text-[10px] font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                                        <span>{isActive ? "Filtered" : "Filter"}</span>
+                                        <ArrowUpRight className="h-2.5 w-2.5" />
+                                    </div>
+                                </button>
                             );
                         })}
                     </div>
 
-                    <Card className="border-0 shadow-xl overflow-hidden bg-white">
-                        <CardHeader className="border-b border-slate-100 bg-white pb-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 p-2.5 shadow-lg">
-                                        <Users className="h-5 w-5 text-white" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-xl font-bold text-slate-900">Active Candidates</CardTitle>
-                                        <p className="text-sm text-slate-500">Admin quick list</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    {isFetching && <svg className="h-5 w-5 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>}
-                                    <Badge className="bg-violet-100 text-violet-700 border-0 px-4 py-2 text-sm font-bold self-start sm:self-center">{totalItems} Results</Badge>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-2xl border border-slate-100">
+                    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden" ref={tableRef}>
+                        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-6">
+                            <div className="flex flex-col gap-4">
                                 <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                                    <div className="relative flex-1 max-w-md">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-violet-100 rounded-lg p-1.5"><Search className="h-4 w-4 text-violet-600" /></div>
-                                        <Input placeholder="Search by name, email or project..." className="pl-14 h-11 bg-white border-slate-200 rounded-xl shadow-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
+                                    <div className="relative flex-1 group">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                        <Input
+                                            placeholder="Search by name, email or project..."
+                                            value={search}
+                                            onChange={(e) => setSearch(e.target.value)}
+                                            className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                                        />
                                     </div>
-
-                                    <div className="hidden lg:block w-px h-8 bg-slate-200" />
-
-                                    <div className="flex flex-wrap items-center gap-3">
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm"><Filter className="h-4 w-4 text-slate-400" /><span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters:</span></div>
-
+                                    <div className="flex items-center gap-2">
                                         <Select value={projectFilter} onValueChange={(val) => { setProjectFilter(val); setRoleFilter("all"); }}>
-                                            <SelectTrigger className="h-10 w-[220px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors">
+                                            <SelectTrigger className="h-11 w-[200px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
                                                 <SelectValue placeholder="All Projects" />
                                             </SelectTrigger>
                                             <SelectContent className="rounded-xl">
@@ -314,7 +302,7 @@ export default function ProcessingAdminDashboardPage() {
 
                                         {projectFilter !== "all" && (
                                             <Select value={roleFilter} onValueChange={setRoleFilter}>
-                                                <SelectTrigger className="h-10 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors">
+                                                <SelectTrigger className="h-11 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
                                                     <SelectValue placeholder="All Roles" />
                                                 </SelectTrigger>
                                                 <SelectContent className="rounded-xl">
@@ -326,27 +314,42 @@ export default function ProcessingAdminDashboardPage() {
                                             </Select>
                                         )}
 
-                                        {(search || projectFilter !== "all" || stepFilter || (statusFilter && statusFilter !== 'all')) && (
-                                            <Button variant="ghost" size="sm" className="h-10 px-4 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold gap-2 transition-all" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}>
-                                                <X className="h-4 w-4" /> Clear All
-                                            </Button>
-                                        )}
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="shrink-0 h-11 w-11 rounded-xl border-slate-200 hover:bg-slate-50"
+                                            onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}
+                                            title="Reset Filters"
+                                        >
+                                            <FilterX className="h-4 w-4 text-slate-500" />
+                                        </Button>
                                     </div>
                                 </div>
-
-                                {(stepFilter || (statusFilter && statusFilter !== 'all') || projectFilter !== "all" || roleFilter !== "all") && (
-                                    <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
-                                        <span className="text-xs font-semibold text-slate-500">Active:</span>
-                                        {stepFilter && (<Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">Step: {formatStep(stepFilter)}<button className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors" onClick={() => setStepFilter(null)}><X className="h-3 w-3" /></button></Badge>)}
-                                        {statusFilter && statusFilter !== 'all' && (<Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">Status: {displayStatus(statusFilter)}<button className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors" onClick={() => setStatusFilter('all')}><X className="h-3 w-3" /></button></Badge>)}
-                                        {projectFilter !== "all" && (<Badge className="bg-blue-100 text-blue-700 border-0 gap-1.5 pr-1.5 font-semibold">Project: {projects.find(p => p.id === projectFilter)?.title || projectFilter}<button className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors" onClick={() => { setProjectFilter("all"); setRoleFilter("all"); }}><X className="h-3 w-3" /></button></Badge>)}
-                                        {roleFilter !== "all" && (<Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1.5 pr-1.5 font-semibold">Role: {projects.find(p => p.id === projectFilter)?.rolesNeeded?.find((r: any) => r.roleCatalogId === roleFilter)?.designation || roleFilter}<button className="ml-1 hover:bg-emerald-200 rounded-full p-0.5 transition-colors" onClick={() => setRoleFilter("all")}><X className="h-3 w-3" /></button></Badge>)}
-                                    </div>
-                                )}
                             </div>
-                        </CardHeader>
+                        </div>
 
-                        <CardContent className="p-0">
+                        <div className="px-6 py-4 border-b border-gray-200 bg-white">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="shrink-0 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-500 p-2.5 shadow-md">
+                                        <Users className="h-5 w-5 text-white" aria-hidden />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-base font-bold text-gray-900">
+                                            {stepFilter ? formatStep(stepFilter) : (statusFilter !== 'all' ? displayStatus(statusFilter) : "Active Candidates")}
+                                        </h2>
+                                        <p className="text-xs text-slate-500">
+                                            <span className="font-semibold text-gray-900">{totalItems}</span> candidate{totalItems !== 1 ? "s" : ""} in processing
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {isFetching && <RefreshCw className="h-5 w-5 animate-spin text-violet-500" />}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-0">
                             <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
                                 <Table>
                                     <TableHeader>
@@ -456,8 +459,8 @@ export default function ProcessingAdminDashboardPage() {
                                     <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}><ChevronRight /></Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Can>

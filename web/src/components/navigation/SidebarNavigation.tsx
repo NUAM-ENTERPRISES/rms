@@ -15,6 +15,7 @@ import {
   Bell,
   User,
   Shield,
+  Handshake,
 } from "lucide-react";
 
 interface NavigationItem {
@@ -88,6 +89,12 @@ const navigationItems: NavigationItem[] = [
     href: "/notifications",
     icon: Bell,
     // Accessible to all roles - important for staying updated
+  },
+  {
+    label: "Agents",
+    href: "/agents",
+    icon: Handshake,
+    permissions: ["read:agents"],
   },
   {
     label: "Analytics",
