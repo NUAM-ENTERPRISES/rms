@@ -678,11 +678,9 @@ export class UsersService {
 
     // Build the where clause for sessions
     const sessionWhere: any = {};
-    // Important: admin UI "Active" is DERIVED (active && !idle). If the caller asks for active sessions,
-    // we can safely limit DB rows to active sessions. For inactive, we must include active-but-idle sessions too.
-    if (status === 'ACTIVE' || isActive === true) {
-      sessionWhere.isActive = true;
-    }
+    // NOTE: Do NOT filter by `isActive` here.
+    // Admin status (ACTIVE/IDLE/ENDED) is derived from `isActive` + idle computation.
+    // We compute stable `counts` across all derived statuses, then filter in-memory.
 
     // Build the where clause for the user relation
     const userWhere: any = {};
