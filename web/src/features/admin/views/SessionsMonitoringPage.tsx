@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Monitor,
@@ -253,6 +253,28 @@ export default function SessionsMonitoringPage() {
     refetchOnReconnect: true,
   });
 
+  // Keep tile counts stable: respect role/search but ignore status + pagination.
+  const countsQueryArgs: AdminSessionsQuery = useMemo(
+    () => ({
+      role: filters.role || undefined,
+      search: filters.search || undefined,
+      status: undefined,
+      page: 1,
+      limit: 1,
+    }),
+    [filters.role, filters.search]
+  );
+
+  const {
+    data: countsData,
+    isFetching: isFetchingCounts,
+    isError: isErrorCounts,
+    refetch: refetchCounts,
+  } = useGetAdminSessionsQuery(countsQueryArgs, {
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  });
+
   const sessions = data?.data ?? [];
   const total = data?.total ?? 0; // table total (changes with filters)
   const totalPages = data?.totalPages ?? 1;
@@ -288,11 +310,13 @@ export default function SessionsMonitoringPage() {
     setFilters((f) => ({ ...f, page: newPage }));
   }
 
-  // Stable counts for tiles: provided by API in a single response (optimization)
-  const allCount = data?.counts?.total ?? 0;
-  const activeCount = data?.counts?.active ?? 0;
-  const idleCount = data?.counts?.idle ?? 0;
-  const endedCount = data?.counts?.ended ?? 0;
+  const allCount = countsData?.counts?.total ?? 0;
+  const activeCount = countsData?.counts?.active ?? 0;
+  const idleCount = countsData?.counts?.idle ?? 0;
+  const endedCount = countsData?.counts?.ended ?? 0;
+
+  const isErrorAny = isError || isErrorCounts;
+  const isFetchingAny = isFetching || isFetchingCounts;
 
   const selectedTile: "all" | "active" | "idle" | "ended" =
     filters.status === "ACTIVE"
@@ -341,7 +365,7 @@ export default function SessionsMonitoringPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 pl-10">
               Monitor live and historical login sessions across all staff roles
             </p>
-            {isError && (
+            {isErrorAny && (
               <div className="pl-10 pt-1">
                 <div className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-300">
                   <WifiOff className="h-3.5 w-3.5" />
@@ -354,12 +378,15 @@ export default function SessionsMonitoringPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={() => {
+              refetch();
+              refetchCounts();
+            }}
+            disabled={isFetchingAny}
             className="shrink-0 gap-2 border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
           >
             <RefreshCw
-              className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+              className={`h-3.5 w-3.5 ${isFetchingAny ? "animate-spin" : ""}`}
             />
             Refresh
           </Button>
@@ -554,7 +581,7 @@ export default function SessionsMonitoringPage() {
             </div>
 
             {/* Role filter */}
-            <Select defaultValue="all" onValueChange={handleRoleChange}>
+            <Select value={filters.role ?? "all"} onValueChange={handleRoleChange}>
               <SelectTrigger className="h-9 w-[200px] text-sm border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -569,7 +596,18 @@ export default function SessionsMonitoringPage() {
             </Select>
 
             {/* Status filter */}
-            <Select defaultValue="all" onValueChange={handleStatusChange}>
+            <Select
+              value={
+                filters.status === "ACTIVE"
+                  ? "active"
+                  : filters.status === "IDLE"
+                    ? "idle"
+                    : filters.status === "ENDED"
+                      ? "ended"
+                      : "all"
+              }
+              onValueChange={handleStatusChange}
+            >
               <SelectTrigger className="h-9 w-[150px] text-sm border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
