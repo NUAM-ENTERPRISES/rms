@@ -47,6 +47,7 @@ import {
 } from "@/features/profile/api";
 import { CountrySelect } from "@/components/molecules/CountrySelect";
 import { StateSelect } from "@/components/molecules/StateSelect";
+import { useGetStatesByCountryCodeQuery } from "@/shared/hooks/useCountriesLookup";
 
 const profileSchema = {
   name: "",
@@ -83,6 +84,17 @@ export default function ProfilePage() {
   const sessions = sessionsData?.data?.sessions ?? [];
   const sessionsPagination = sessionsData?.data?.pagination;
   const sessionsTotalPages = sessionsPagination?.totalPages ?? 1;
+
+  const normalizedProfileCountry = (userData?.addressCountryCode ?? "").trim();
+  const { data: profileStates } = useGetStatesByCountryCodeQuery(
+    normalizedProfileCountry,
+    { skip: !normalizedProfileCountry }
+  );
+  const resolvedProfileStateName = useMemo(() => {
+    const stateId = userData?.addressStateId ?? "";
+    if (!normalizedProfileCountry || !stateId) return null;
+    return profileStates?.states?.find((s) => s.id === stateId)?.name ?? null;
+  }, [normalizedProfileCountry, profileStates?.states, userData?.addressStateId]);
 
   const sessionCountLabel = useMemo(() => {
     if (!sessionsData?.data?.pagination) return `${sessions.length}`;
@@ -683,7 +695,7 @@ export default function ProfilePage() {
                           : (
                             <div className="p-field-view">
                               <MapPinned size={14} color="#d1d5db" />
-                              {userData.addressStateId || "Not provided"}
+                              {resolvedProfileStateName || "Not provided"}
                             </div>
                           )}
                       </div>
