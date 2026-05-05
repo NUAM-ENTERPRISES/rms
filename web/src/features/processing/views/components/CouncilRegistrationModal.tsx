@@ -3,24 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit2 } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, RefreshCw, File, Eye, XCircle, Clock } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
-import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
-const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
 const ConfirmCouncilMetadataModal = React.lazy(() => import("../../components/ConfirmCouncilMetadataModal"));
-import { useGetCouncilRegistrationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { useGetCouncilRegistrationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CouncilRegistrationModalProps {
   isOpen: boolean;
@@ -42,15 +38,11 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
-  const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
   const [updateStepStatus, { isLoading: isUpdatingCouncil }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [cancelOpen, setCancelOpen] = useState(false);
-
-  // Submission date state
-  const [hrdSubmissionDate, setHrdSubmissionDate] = useState<Date | undefined>(undefined);
 
   // Council Certificate metadata state (new)
   const [councilIssuedDate, setCouncilIssuedDate] = useState<Date | undefined>(undefined);
@@ -73,11 +65,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
 
   // Confirmation modal state
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
-  // Submit date confirmation modal
-  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
-  // Edit existing submitted date modal
-  const [editSubmitOpen, setEditSubmitOpen] = useState(false);
-  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -387,12 +374,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
       return;
     }
 
-    // Require submittedAt to be set before allowing completion
-    if (!hasSubmittedAt) {
-      toast.error("Cannot complete — Submission date not set");
-      return;
-    }
-
     setCompleteModalOpen(true);
   };
 
@@ -438,34 +419,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
     } catch (err: any) {
       console.error("Cancel step failed", err);
       toast.error(err?.data?.message || err?.error || "Failed to cancel step");
-    }
-  };
-
-  const handleSubmitHrdDate = async (date?: Date): Promise<boolean> => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return false;
-    }
-
-    const payloadDate = date ?? hrdSubmissionDate;
-
-    if (!payloadDate) {
-      toast.error("Please select a date and time");
-      return false;
-    }
-
-    try {
-      await submitHrdDate({
-        stepId: activeStep.id,
-        submittedAt: payloadDate.toISOString(),
-      }).unwrap();
-      toast.success("Council registration submission date saved successfully");
-      await refetch();
-      return true;
-    } catch (err: any) {
-      console.error("Submit council registration date failed", err);
-      toast.error(err?.data?.message || "Failed to save council registration submission date");
-      return false;
     }
   };
 
@@ -534,15 +487,11 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
   const statVerified = apiCounts?.verifiedCount ?? computedStats.verified;
   const statMissing = apiCounts?.missingCount ?? missingDocs.length;
 
-  // Submitted date check: require a submittedAt date on the active step
-  const hasSubmittedAt = Boolean(activeStep?.submittedAt);
-
-  // Require all MANDATORY documents verified AND submitted date exists before allowing completion
+  // Require all MANDATORY documents verified before allowing completion
   // treat verifiedCount >= totalMandatory as satisfied (API may include optional docs in verifiedCount)
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt;
+  const canMarkComplete = allVerified;
 
-  const initialHasCouncilCertificate = Boolean(initialCouncilIssuedDate || initialCouncilValidDate);
   const currentHasCouncilCertificate = Boolean(councilIssuedDate || councilValidDate);
   const councilChanged =
     (councilIssuedDate?.toISOString() || "") !== (initialCouncilIssuedDate?.toISOString() || "") ||
@@ -615,91 +564,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
                   <div className="text-2xl font-black text-amber-600">{statMissing}</div>
                   <div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div>
-                </div>
-              </div>
-
-              {/* Submission Date Section (compact) */}
-              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Council Registration Submission Date & Time
-                  </h4>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
-
-                      {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
-                      {activeStep?.submittedAt ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
-                          </div>
-
-                          {/* Move edit to right edge and apply a circular 'nice' style */}
-                          {!isCouncilCompleted && !isStepCancelled && (
-                            <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
-                                onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
-                                title="Edit submission date"
-                              >
-                                <Edit2 className="h-4 w-4 text-slate-700" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <DatePicker
-                            value={hrdSubmissionDate}
-                            onChange={setHrdSubmissionDate}
-                            placeholder="Pick date and time"
-                            disabled={isCouncilCompleted}
-                            className="w-full sm:min-w-[220px] h-8"
-                            compact
-                          />
-
-                          {/* Validation / hint messages when no submittedAt */}
-                          {!activeStep?.submittedAt && (
-                            <div className="mt-1">
-                              {hrdSubmissionDate ? (
-                                <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
-                              ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete council registration</p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <div className="flex items-center">
-                      {/* Only show submit button when no submittedAt present and when step is not cancelled */}
-                      {!activeStep?.submittedAt && !isStepCancelled && (
-                        <Button
-                          size="sm"
-                          onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !hrdSubmissionDate || isCouncilCompleted || isStepCancelled}
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {isSubmittingDate ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Submit Date
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {isCouncilCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Council registration is completed. Submission date cannot be modified.</p>
-                  )}
                 </div>
               </div>
 
@@ -944,45 +808,7 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
               ) : (
-                // Show contextual tooltip when disabled: prefer verification requirement, then submission date
-                !allVerified ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button size="sm" disabled className="opacity-80" aria-disabled>
-                            {'Mark Council Registration Complete'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>All mandatory documents must be verified before marking council registration complete. Verified {statVerified}/{statTotal}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : !hasSubmittedAt ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button
-                            size="sm"
-                            onClick={handleMarkComplete}
-                            disabled={true}
-                            className="opacity-80"
-                            aria-disabled={true}
-                          >
-                            {'Mark Council Registration Complete'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Submission date required to complete council registration. Please select and submit a date.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                ) : (
-                  <Button
+                <Button
                     size="sm"
                     onClick={handleMarkComplete}
                     disabled={isCompletingStep || !canMarkComplete}
@@ -991,7 +817,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Council Registration Complete'}
                   </Button>
-                )
               )}
             </div>
           </div>
@@ -1020,34 +845,6 @@ export function CouncilRegistrationModal({ isOpen, onClose, processingId, candid
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
-        />
-      </React.Suspense>
-
-      {/* Confirm Submit Date Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmSubmitDateModal
-          isOpen={submitConfirmOpen}
-          onClose={() => setSubmitConfirmOpen(false)}
-          date={hrdSubmissionDate}
-          onConfirm={async () => {
-            const ok = await handleSubmitHrdDate();
-            if (ok) setSubmitConfirmOpen(false);
-          }}
-          isSubmitting={isSubmittingDate}
-        />
-      </React.Suspense>
-
-      {/* Edit Submit Date Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmEditSubmitDateModal
-          isOpen={editSubmitOpen}
-          onClose={() => setEditSubmitOpen(false)}
-          existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
-          onConfirm={async (newDate: Date) => {
-            const ok = await handleSubmitHrdDate(newDate);
-            return ok;
-          }}
-          isSubmitting={isSubmittingDate}
         />
       </React.Suspense>
 

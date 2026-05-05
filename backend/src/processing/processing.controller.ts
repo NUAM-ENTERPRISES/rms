@@ -35,8 +35,6 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { CompleteProcessingDto } from './dto/complete-processing.dto';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
-import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
-import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
@@ -46,8 +44,6 @@ import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-remin
 export class ProcessingController {
   constructor(
     private readonly processingService: ProcessingService,
-    private readonly hrdRemindersService: HrdRemindersService,
-    private readonly dataFlowRemindersService: DataFlowRemindersService,
   ) {}
 
   @Get('candidates-to-transfer')
@@ -115,6 +111,26 @@ export class ProcessingController {
       success: true,
       data,
       message: 'Admin processing candidates retrieved successfully',
+    };
+  }
+
+  @Get('reminders')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get active processing reminders for current user' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10, max: 50)' })
+  async getProcessingReminders(
+    @Req() req: any,
+    @Query('page') page = '1',
+    @Query('limit') limit = '10',
+  ) {
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+    const parsedLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+    const data = await this.processingService.getProcessingReminders(req.user.id, parsedPage, parsedLimit);
+    return {
+      success: true,
+      data,
+      message: 'Processing reminders retrieved successfully',
     };
   }
 
@@ -530,24 +546,6 @@ export class ProcessingController {
   async submitProcessingStepDate(@Param('stepId') stepId: string, @Body() body: SubmitProcessingStepDateDto, @Req() req: any) {
     const data = await this.processingService.submitProcessingStepDate(stepId, body, req.user.id);
     return { success: true, data, message: 'Processing step submitted date updated' };
-  }
-
-  @Post('steps/:stepId/hrd-trigger')
-  @Permissions(PERMISSIONS.WRITE_PROCESSING)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Trigger HRD reminder for a step (manual)' })
-  async triggerHrdReminder(@Param('stepId') stepId: string, @Req() req: any) {
-    const reminder = await this.hrdRemindersService.triggerHRDReminderNow(stepId, req.user.id);
-    return { success: true, data: reminder, message: 'HRD reminder triggered' };
-  }
-
-  @Post('steps/:stepId/data-flow-trigger')
-  @Permissions(PERMISSIONS.WRITE_PROCESSING)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Trigger Data Flow reminder for a step (manual)' })
-  async triggerDataFlowReminder(@Param('stepId') stepId: string, @Req() req: any) {
-    const reminder = await this.dataFlowRemindersService.triggerDataFlowReminderNow(stepId, req.user.id);
-    return { success: true, data: reminder, message: 'Data Flow reminder triggered' };
   }
 
   @Post('steps/:processingId/sync-status')

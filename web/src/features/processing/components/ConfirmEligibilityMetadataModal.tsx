@@ -10,6 +10,7 @@ interface Props {
   eligibilityIssuedDate?: Date | undefined;
   eligibilityValidDate?: Date | undefined;
   eligibilityDuration?: string;
+  eligibilityNumber?: string;
   isSubmitting?: boolean;
 }
 
@@ -20,6 +21,7 @@ export default function ConfirmEligibilityMetadataModal({
   eligibilityIssuedDate,
   eligibilityValidDate,
   eligibilityDuration,
+  eligibilityNumber,
   isSubmitting,
 }: Props) {
   return (
@@ -48,6 +50,10 @@ export default function ConfirmEligibilityMetadataModal({
             <div>
               <span className="font-semibold">Duration:</span>{' '}
               {eligibilityDuration || 'Not set'}
+            </div>
+            <div>
+              <span className="font-semibold">Eligibility Number:</span>{' '}
+              {eligibilityNumber || 'Not set'}
             </div>
           </div>
         </div>

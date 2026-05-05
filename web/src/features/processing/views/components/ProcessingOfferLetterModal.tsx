@@ -337,7 +337,7 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                           {formatFileSize(offerLetterDoc.fileSize)} • Uploaded {formatDate(offerLetterDoc.createdAt)}
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
-                          <span className="font-semibold">Received Date:</span>
+                          <span className="font-semibold">Original hardcopy received date:</span>
                           {isVerified ? (
                             <span className="px-2 py-1 bg-slate-100 rounded text-slate-700 font-medium">
                               {offerLetterReceivedAt
@@ -453,10 +453,10 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                     </Button>
                   </div>
                 )}
-                {/* Received Date – required for upload */}
+                {/* Original hardcopy received date – required for upload */}
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
                   <label htmlFor="upload-offer-letter-received-date" className="font-semibold">
-                    Received Date <span className="text-red-500">*</span>
+                    Original hardcopy received date <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="upload-offer-letter-received-date"

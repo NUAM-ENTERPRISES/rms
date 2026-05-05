@@ -54,6 +54,7 @@ export interface UpdateStepStatusRequest {
   assignedTo?: string;
   rejectionReason?: string;
   dueDate?: string;
+  isEmigrationCompleted?: boolean;
 }
 
 export interface ProcessingCandidateDetails {

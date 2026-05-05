@@ -62,9 +62,11 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const [eligibilityIssuedDate, setEligibilityIssuedDate] = useState<Date | undefined>(undefined);
   const [eligibilityValidDate, setEligibilityValidDate] = useState<Date | undefined>(undefined);
   const [eligibilityDuration, setEligibilityDuration] = useState<string>("");
+  const [eligibilityNumber, setEligibilityNumber] = useState<string>("");
   const [initialEligibilityIssuedDate, setInitialEligibilityIssuedDate] = useState<Date | undefined>(undefined);
   const [initialEligibilityValidDate, setInitialEligibilityValidDate] = useState<Date | undefined>(undefined);
   const [initialEligibilityDuration, setInitialEligibilityDuration] = useState<string>("");
+  const [initialEligibilityNumber, setInitialEligibilityNumber] = useState<string>("");
 
   // Submission date state
   const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
@@ -394,12 +396,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
       return;
     }
 
-    // Require submittedAt to be set before allowing completion
-    if (!hasSubmittedAt) {
-      toast.error("Cannot complete — Submission date not set");
-      return;
-    }
-
     setCompleteModalOpen(true);
   };
 
@@ -486,24 +482,27 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const hasSubmittedAt = Boolean(activeStep?.submittedAt);
 
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
-  const canMarkComplete = allVerified && hasSubmittedAt;
+  const canMarkComplete = allVerified;
 
   const initialHasEligibilityCertificate = Boolean(
     initialEligibilityIssuedDate ||
     initialEligibilityValidDate ||
-    (initialEligibilityDuration && initialEligibilityDuration.trim() !== "")
+    (initialEligibilityDuration && initialEligibilityDuration.trim() !== "") ||
+    (initialEligibilityNumber && initialEligibilityNumber.trim() !== "")
   );
 
   const currentHasEligibilityCertificate = Boolean(
     eligibilityIssuedDate ||
     eligibilityValidDate ||
-    (eligibilityDuration && eligibilityDuration.trim() !== "")
+    (eligibilityDuration && eligibilityDuration.trim() !== "") ||
+    (eligibilityNumber && eligibilityNumber.trim() !== "")
   );
 
   const eligibilityChanged =
     (eligibilityIssuedDate?.toISOString() || "") !== (initialEligibilityIssuedDate?.toISOString() || "") ||
     (eligibilityValidDate?.toISOString() || "") !== (initialEligibilityValidDate?.toISOString() || "") ||
-    (eligibilityDuration.trim() || "") !== (initialEligibilityDuration.trim() || "");
+    (eligibilityDuration.trim() || "") !== (initialEligibilityDuration.trim() || "") ||
+    (eligibilityNumber.trim() || "") !== (initialEligibilityNumber.trim() || "");
 
   const showCertificateButton = currentHasEligibilityCertificate && eligibilityChanged;
   const certificateButtonLabel = initialHasEligibilityCertificate ? "Update Certificate Info" : "Save Certificate Info";
@@ -513,14 +512,17 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
     const issued = activeStep.eligibilityIssuedAt ? new Date(activeStep.eligibilityIssuedAt) : undefined;
     const valid = activeStep.eligibilityValidAt ? new Date(activeStep.eligibilityValidAt) : undefined;
     const duration = activeStep.eligibilityDuration || "";
+    const number = activeStep.eligibilityNumber || "";
 
     setEligibilityIssuedDate(issued);
     setEligibilityValidDate(valid);
     setEligibilityDuration(duration);
+    setEligibilityNumber(number);
 
     setInitialEligibilityIssuedDate(issued);
     setInitialEligibilityValidDate(valid);
     setInitialEligibilityDuration(duration);
+    setInitialEligibilityNumber(number);
   }, [activeStep]);
 
   const saveEligibilityMetadata = async () => {
@@ -533,6 +535,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
     if (eligibilityIssuedDate) payload.eligibilityIssuedAt = eligibilityIssuedDate.toISOString();
     if (eligibilityValidDate) payload.eligibilityValidAt = eligibilityValidDate.toISOString();
     if (eligibilityDuration?.trim()) payload.eligibilityDuration = eligibilityDuration.trim();
+    if (eligibilityNumber?.trim()) payload.eligibilityNumber = eligibilityNumber.trim();
 
     if (Object.keys(payload).length === 0) {
       toast.error("No eligibility fields set to save. Please set at least one value");
@@ -636,87 +639,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                 </div>
               </div>
 
-              {/* Eligibility Submission Date Section (compact) */}
-              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
-                <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Eligibility Submission Date & Time
-                  </h4>
-                </div>
-                <div className="p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
-
-                      {activeStep?.submittedAt ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm font-semibold text-slate-800">{format(new Date(activeStep.submittedAt), "PPP 'at' p")}</div>
-                            <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
-                          </div>
-
-                          {!isEligibilityCompleted && !isStepCancelled && (
-                            <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
-                                onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
-                                title="Edit submission date"
-                              >
-                                <Edit2 className="h-4 w-4 text-slate-700" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <DatePicker
-                            value={submissionDate}
-                            onChange={setSubmissionDate}
-                            placeholder="Pick date and time"
-                            disabled={isEligibilityCompleted}
-                            className="w-full sm:min-w-[220px] h-8"
-                            compact
-                          />
-
-                          {!activeStep?.submittedAt && (
-                            <div className="mt-1">
-                              {submissionDate ? (
-                                <p className="text-xs text-slate-500">Click <span className="font-medium">Submit Date</span> to save the submission time.</p>
-                              ) : (
-                                <p className="text-xs text-rose-600 flex items-center gap-2"><XCircle className="h-3.5 w-3.5" /> Submission date is required to complete Eligibility</p>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <div className="flex items-center">
-                      {!activeStep?.submittedAt && !isStepCancelled && (
-                        <Button
-                          size="sm"
-                          onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !submissionDate || isEligibilityCompleted || isStepCancelled}
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {isSubmittingDate ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Submit Date
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  {isEligibilityCompleted && (
-                    <p className="text-xs text-slate-500 mt-2">Eligibility is completed. Submission date cannot be modified.</p>
-                  )}
-                </div>
-              </div>
-
               {/* Eligibility Certificate Metadata */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-cyan-50">
                 <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
@@ -725,7 +647,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                   </h4>
                 </div>
                 <div className="p-3 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Issued Date</Label>
                       <DatePicker
@@ -746,6 +668,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         compact
                       />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Duration</Label>
                       <input
@@ -753,6 +677,17 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         value={eligibilityDuration}
                         onChange={(e) => setEligibilityDuration(e.target.value)}
                         placeholder="e.g., 12 months"
+                        disabled={isEligibilityCompleted || isStepCancelled}
+                        className="w-full text-sm rounded border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-300"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Eligibility Number</Label>
+                      <input
+                        type="text"
+                        value={eligibilityNumber}
+                        onChange={(e) => setEligibilityNumber(e.target.value)}
+                        placeholder="Enter eligibility number"
                         disabled={isEligibilityCompleted || isStepCancelled}
                         className="w-full text-sm rounded border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-300"
                       />
@@ -984,27 +919,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : !hasSubmittedAt ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button
-                            size="sm"
-                            onClick={handleMarkComplete}
-                            disabled={true}
-                            className="opacity-80"
-                            aria-disabled={true}
-                          >
-                            {'Mark Eligibility Complete'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Submission date required to complete Eligibility. Please select and submit a date.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 ) : (
                   <Button
                     size="sm"
@@ -1084,6 +998,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
           eligibilityIssuedDate={eligibilityIssuedDate}
           eligibilityValidDate={eligibilityValidDate}
           eligibilityDuration={eligibilityDuration}
+          eligibilityNumber={eligibilityNumber}
           isSubmitting={isUpdatingEligibility}
         />
       </React.Suspense>

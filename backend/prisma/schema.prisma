@@ -88,8 +88,7 @@ model User {
 
   statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
   rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
-  hrdRemindersAssigned        HRDReminder[]
-  dataFlowRemindersAssigned   DataFlowReminder[]
+  processingRemindersAssigned ProcessingStepReminder[]
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
@@ -1704,8 +1703,9 @@ model RNRReminder {
   @@map("rnr_reminders")
 }
 
-model HRDReminder {
+model ProcessingStepReminder {
   id                    String   @id @default(cuid())
+  stepKey               String   // 'hrd' | 'data_flow' | etc.
   processingStepId      String
   processingCandidateId String
   assignedTo            String?  // Processing user to notify
@@ -1730,36 +1730,8 @@ model HRDReminder {
   @@index([scheduledFor, status])
   @@index([assignedTo, status])
   @@index([processingCandidateId])
-  @@map("hrd_reminders")
-}
-
-model DataFlowReminder {
-  id                    String   @id @default(cuid())
-  processingStepId      String
-  processingCandidateId String
-  assignedTo            String?  // Processing user to notify
-
-  scheduledFor DateTime // When to send reminder
-  sentAt       DateTime?
-
-  reminderCount    Int      @default(0) // Total reminders sent across all days
-  dailyCount       Int      @default(0) // How many sent today (resets each day)
-  daysCompleted    Int      @default(0) // How many days completed
-  lastReminderDate DateTime @default(now())
-
-  status String @default("pending") // pending, sent, completed, cancelled
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  processingStep      ProcessingStep      @relation(fields: [processingStepId], references: [id], onDelete: Cascade)
-  processingCandidate ProcessingCandidate @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
-  assignedUser        User?               @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
-
-  @@index([scheduledFor, status])
-  @@index([assignedTo, status])
-  @@index([processingCandidateId])
-  @@map("data_flow_reminders")
+  @@index([stepKey])
+  @@map("processing_step_reminders")
 }
 
 /// System-wide configuration settings
@@ -1893,25 +1865,32 @@ model ProcessingStep {
   biometricDate         DateTime?
   biometricLocation     String?
   ticketDate            DateTime?
+  flightTime            DateTime?
+  airportLocation       String?
   visaIssuedAt          DateTime?
   visaValidAt           DateTime?
   eligibilityIssuedAt   DateTime?
   eligibilityValidAt    DateTime?
   eligibilityDuration   String?
+  eligibilityNumber     String?
   councilIssuedAt       DateTime?
   councilValidAt        DateTime?
+  prometricPassedAt     DateTime?
+  prometricValidAt      DateTime?
+  medicalIssuedAt       DateTime?
+  medicalValidAt        DateTime?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?
   isMedicalPassed       Boolean?
+  isEmigrationCompleted Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   processingCandidate ProcessingCandidate      @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
   template            ProcessingStepTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
   documents           ProcessingStepDocument[]
-  hrdReminders        HRDReminder[]
-  dataFlowReminders   DataFlowReminder[]
+  processingReminders ProcessingStepReminder[]
 
   @@index([processingCandidateId])
   @@index([templateId])
@@ -1957,11 +1936,10 @@ model ProcessingCandidate {
 
   candidateProjectMap CandidateProjects @relation(fields: [candidateId, projectId, roleNeededId], references: [candidateId, projectId, roleNeededId], onDelete: Cascade)
 
-  assignedTo      User?               @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
-  processingSteps ProcessingStep[]
-  hrdReminders     HRDReminder[]
-  dataFlowReminders DataFlowReminder[]
-  history         ProcessingHistory[]
+  assignedTo          User?                  @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
+  processingSteps     ProcessingStep[]
+  processingReminders ProcessingStepReminder[]
+  history             ProcessingHistory[]
 
   @@unique([candidateId, projectId, roleNeededId])
   @@index([candidateId])
