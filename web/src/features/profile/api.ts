@@ -10,6 +10,9 @@ export interface UserProfile {
   countryCode: string;
   dateOfBirth?: string;
   profileImage?: string;
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
   location?: string;
   timezone?: string;
   roles: string[];
@@ -63,6 +66,9 @@ export interface UpdateProfileRequest {
   mobileNumber?: string;
   countryCode?: string;
   dateOfBirth?: string;
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
   location?: string;
   timezone?: string;
 }

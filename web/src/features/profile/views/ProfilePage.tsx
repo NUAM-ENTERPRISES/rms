@@ -31,6 +31,9 @@ import {
   AlertTriangle,
   Lock,
   Activity,
+  Flag,
+  MapPinned,
+  MapPin,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -48,6 +51,9 @@ const profileSchema = {
   mobileNumber: "",
   countryCode: "",
   dateOfBirth: "",
+  addressCountryCode: "",
+  addressStateId: "",
+  address: "",
 };
 
 export default function ProfilePage() {
@@ -94,6 +100,9 @@ export default function ProfilePage() {
       mobileNumber: userData.mobileNumber,
       countryCode: userData.countryCode,
       dateOfBirth: userData.dateOfBirth,
+      addressCountryCode: userData.addressCountryCode ?? "",
+      addressStateId: userData.addressStateId ?? "",
+      address: userData.address ?? "",
     });
   };
 
@@ -612,6 +621,60 @@ export default function ProfilePage() {
                           ? <Input id="dob" type="date" {...form.register("dateOfBirth")} className="p-input" />
                           : <div className="p-field-view"><Calendar size={14} color="#d1d5db" />{formatDate(userData.dateOfBirth)}</div>
                         }
+                      </div>
+                      <div>
+                        <p className="p-field-label">Address Country Code</p>
+                        {isEditing
+                          ? (
+                            <Input
+                              id="addressCountryCode"
+                              {...form.register("addressCountryCode")}
+                              placeholder="e.g. IN"
+                              className="p-input"
+                            />
+                          )
+                          : (
+                            <div className="p-field-view">
+                              <Flag size={14} color="#d1d5db" />
+                              {userData.addressCountryCode || "Not provided"}
+                            </div>
+                          )}
+                      </div>
+                      <div>
+                        <p className="p-field-label">State</p>
+                        {isEditing
+                          ? (
+                            <Input
+                              id="addressStateId"
+                              {...form.register("addressStateId")}
+                              placeholder="Enter state"
+                              className="p-input"
+                            />
+                          )
+                          : (
+                            <div className="p-field-view">
+                              <MapPinned size={14} color="#d1d5db" />
+                              {userData.addressStateId || "Not provided"}
+                            </div>
+                          )}
+                      </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <p className="p-field-label">Address</p>
+                        {isEditing
+                          ? (
+                            <Input
+                              id="address"
+                              {...form.register("address")}
+                              placeholder="Enter address"
+                              className="p-input"
+                            />
+                          )
+                          : (
+                            <div className="p-field-view">
+                              <MapPin size={14} color="#d1d5db" />
+                              {userData.address || "Not provided"}
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
