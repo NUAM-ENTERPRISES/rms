@@ -40,11 +40,11 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     if (!socket) return;
 
     if (socket.auth && typeof socket.auth === "object") {
-      socket.auth.token = token;
+      (socket.auth as any).token = token;
     }
 
-    if (socket.io?.opts?.auth && typeof socket.io.opts.auth === "object") {
-      socket.io.opts.auth.token = token;
+    if (socket.io?.opts && "auth" in socket.io.opts) {
+      (socket.io.opts as any).auth.token = token;
     }
   };
 
@@ -144,7 +144,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       const errorMessage =
         typeof error === "string"
           ? error
-          : error?.message || error?.data?.message || "Unknown socket error";
+          : error?.message || (error as any)?.data?.message || "Unknown socket error";
 
       console.error("[Socket] CONNECTION ERROR:", errorMessage);
 
