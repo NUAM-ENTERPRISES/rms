@@ -136,6 +136,58 @@ export class DocumentsService {
       this.logger.warn(`Expiry date missing for ${createDocumentDto.docType}; continuing without expiryDate.`);
     }
 
+    const explicitRoleCatalogId =
+      createDocumentDto.roleCatalog ||
+      createDocumentDto.roleCatalogId ||
+      createDocumentDto.roleCatelogId ||
+      null;
+
+    // Some document types are role-scoped in the UI (e.g. experience letters).
+    // If caller didn't send `roleCatalogId`, default to the candidate's roleCatalogId when available.
+    let resolvedRoleCatalogId: string | null = explicitRoleCatalogId;
+    if (!resolvedRoleCatalogId && createDocumentDto.docType === 'experience_letters') {
+      // Prefer the linked work-experience role when present (most accurate).
+      if (createDocumentDto.workExperienceId) {
+        const we = await this.prisma.workExperience.findFirst({
+          where: {
+            id: createDocumentDto.workExperienceId,
+            candidateId: createDocumentDto.candidateId,
+          },
+          select: { roleCatalogId: true },
+        });
+        resolvedRoleCatalogId = we?.roleCatalogId ?? null;
+      }
+
+      // Fall back to the candidate's roleCatalogId (if your Candidate model stores it).
+      if (!resolvedRoleCatalogId) {
+        resolvedRoleCatalogId = (candidate as any).roleCatalogId ?? null;
+      }
+
+      // Fall back to most recent role-scoped document (e.g. resume).
+      if (!resolvedRoleCatalogId) {
+        const recentRoleDoc = await this.prisma.document.findFirst({
+          where: {
+            candidateId: createDocumentDto.candidateId,
+            roleCatalogId: { not: null },
+            isDeleted: false,
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { roleCatalogId: true },
+        });
+        resolvedRoleCatalogId = (recentRoleDoc?.roleCatalogId as string | null) ?? null;
+      }
+
+      // Final fallback: most recent candidate-project roleNeeded roleCatalogId.
+      if (!resolvedRoleCatalogId) {
+        const recentAssignment = await this.prisma.candidateProjects.findFirst({
+          where: { candidateId: createDocumentDto.candidateId },
+          orderBy: { createdAt: 'desc' },
+          select: { roleNeeded: { select: { roleCatalogId: true } } },
+        });
+        resolvedRoleCatalogId = recentAssignment?.roleNeeded?.roleCatalogId ?? null;
+      }
+    }
+
     // Create document
     const document = await this.prisma.document.create({
       data: {
@@ -151,8 +203,7 @@ export class DocumentsService {
           : null,
         documentNumber: createDocumentDto.documentNumber,
         notes: createDocumentDto.notes,
-        roleCatalogId:
-          createDocumentDto.roleCatalog || createDocumentDto.roleCatalogId || createDocumentDto.roleCatelogId || null,
+        roleCatalogId: resolvedRoleCatalogId,
         workExperienceId: createDocumentDto.workExperienceId ?? null,
         uploadedBy: userId,
         status: DOCUMENT_STATUS.PENDING,

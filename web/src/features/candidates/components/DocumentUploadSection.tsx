@@ -270,24 +270,33 @@ export function DocumentUploadSection({
             >
               {completion.completedCount}/{completion.requiredCount} types present
             </Badge>
-            <Badge
-              variant="outline"
-              className="rounded-md border-destructive/25 bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive"
-            >
-              {completion.typeMissingCount} missing
-            </Badge>
+            {completion.typeMissingCount === 0 ? (
+              <Badge
+                variant="outline"
+                className="rounded-md border-emerald-200/70 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+              >
+                All complete
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="rounded-md border-destructive/25 bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive"
+              >
+                {completion.typeMissingCount} missing
+              </Badge>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-3 p-4 sm:p-6">
+        <CardContent className="space-y-3 p-3 sm:p-4">
           <ul
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
             aria-label="Mandatory document types checklist"
           >
             {repositorySlots.map((slot) => (
               <li
                 key={slot.key}
                 className={cn(
-                  "flex h-full flex-col gap-4 rounded-2xl border p-4 transition-colors",
+                  "flex h-full flex-col gap-3 rounded-xl border p-3 transition-colors",
                   slot.satisfied
                     ? "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
                     : "border-border bg-muted/20"
@@ -295,7 +304,7 @@ export function DocumentUploadSection({
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="font-semibold text-foreground">{slot.label}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {slot.satisfied
                       ? "Document on file for this type"
                       : "Mandatory document missing"}
@@ -304,26 +313,26 @@ export function DocumentUploadSection({
                 <div className="mt-auto flex shrink-0 justify-end">
                   {slot.satisfied ? (
                     <div
-                      className="inline-flex w-full items-center justify-center gap-2.5 rounded-full border-2 border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-5 py-2.5 text-sm font-bold tracking-wide text-emerald-950 shadow-md ring-2 ring-emerald-500/15"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3 py-2 text-xs font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
                       role="status"
                       aria-label={`${slot.label}: uploaded`}
                     >
                       <span
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-primary-foreground shadow-inner"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-primary-foreground shadow-inner"
                         aria-hidden
                       >
-                        <Check className="h-4 w-4 stroke-[3]" />
+                        <Check className="h-3.5 w-3.5 stroke-[3]" />
                       </span>
                       <span className="uppercase tracking-wider">Uploaded</span>
                     </div>
                   ) : (
                     <Button
                       type="button"
-                      size="default"
-                      className="w-full gap-2 font-semibold shadow-sm"
+                      size="sm"
+                      className="h-2 w-fit gap-1.5 px-3 text-xs font-semibold shadow-sm"
                       onClick={() => openUploadModal(slot.uploadDocType)}
                     >
-                      <Upload className="h-4 w-4 shrink-0" aria-hidden />
+                      <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       <span>Upload {slot.label}</span>
                     </Button>
                   )}
@@ -416,7 +425,9 @@ export function DocumentUploadSection({
                       {DOCUMENT_TYPES.find((t) => t.value === doc.docType)?.label ||
                         doc.docType}
                     </Badge>
-                    {doc.docType === "resume" && doc.roleCatalog?.label && (
+                    {(doc.docType === "resume" ||
+                      doc.docType === "experience_letters") &&
+                      doc.roleCatalog?.label && (
                       <span className="text-xs text-slate-500 font-medium px-1">
                         {doc.roleCatalog.label}
                       </span>
