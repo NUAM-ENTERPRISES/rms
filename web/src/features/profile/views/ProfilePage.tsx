@@ -48,6 +48,7 @@ import {
 import { CountrySelect } from "@/components/molecules/CountrySelect";
 import { StateSelect } from "@/components/molecules/StateSelect";
 import { useGetStatesByCountryCodeQuery } from "@/shared/hooks/useCountriesLookup";
+import { FlagIcon } from "@/shared";
 
 const profileSchema = {
   name: "",
@@ -665,7 +666,15 @@ export default function ProfilePage() {
                           )
                           : (
                             <div className="p-field-view">
-                              <Flag size={14} color="#d1d5db" />
+                              {userData.addressCountryCode ? (
+                                <FlagIcon
+                                  countryCode={userData.addressCountryCode}
+                                  size="sm"
+                                  className="shrink-0"
+                                />
+                              ) : (
+                                <Flag size={14} color="#d1d5db" />
+                              )}
                               {userData.addressCountryCode || "Not provided"}
                             </div>
                           )}
