@@ -148,9 +148,13 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       return;
     }
 
-    // If resume, ensure roleCatalogId selected
-    if (docType === DOCUMENT_TYPE.RESUME && !roleCatalogId) {
-      toast.error("Please select a role for Resume uploads");
+    // Role-scoped documents: ensure roleCatalogId selected
+    if (
+      (docType === DOCUMENT_TYPE.RESUME ||
+        docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) &&
+      !roleCatalogId
+    ) {
+      toast.error("Please select a role for this document");
       return;
     }
 
@@ -172,6 +176,16 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       toast.error("Upload failed");
     }
   };
+
+  React.useEffect(() => {
+    if (docType !== DOCUMENT_TYPE.EXPERIENCE_LETTERS) return;
+    if (!selectedWorkExperienceId || !workExperiences?.length) return;
+    const exp = workExperiences.find((we) => we.id === selectedWorkExperienceId);
+    if (exp?.roleCatalogId) {
+      setRoleCatalogId(exp.roleCatalogId);
+      // We don't always have role label available here; keep existing label if set.
+    }
+  }, [docType, selectedWorkExperienceId, workExperiences]);
 
   const docTypeConfig = docType
     ? DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]
@@ -287,7 +301,8 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
             </div>
           </div>
 
-          {docType === DOCUMENT_TYPE.RESUME && (
+          {(docType === DOCUMENT_TYPE.RESUME ||
+            docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) && (
             <div className="grid grid-cols-1 gap-x-3 gap-y-3 md:grid-cols-2 md:gap-y-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Department</Label>
@@ -316,8 +331,15 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                   }}
                   departmentId={departmentId}
                   placeholder="Select a role"
-                  disabled={docType === DOCUMENT_TYPE.RESUME && !departmentId}
-                  required={docType === DOCUMENT_TYPE.RESUME}
+                  disabled={
+                    (docType === DOCUMENT_TYPE.RESUME ||
+                      docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) &&
+                    !departmentId
+                  }
+                  required={
+                    docType === DOCUMENT_TYPE.RESUME ||
+                    docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS
+                  }
                 />
               </div>
             </div>
@@ -370,7 +392,12 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
             <Button
               onClick={handleUploadClick}
               className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={isUploading || (docType === DOCUMENT_TYPE.RESUME && !roleCatalogId)}
+              disabled={
+                isUploading ||
+                ((docType === DOCUMENT_TYPE.RESUME ||
+                  docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) &&
+                  !roleCatalogId)
+              }
             >
               {isUploading ? "Uploading..." : "Upload"}
             </Button>

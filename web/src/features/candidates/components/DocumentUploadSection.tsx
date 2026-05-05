@@ -313,27 +313,33 @@ export function DocumentUploadSection({
                 <div className="mt-auto flex shrink-0 justify-end">
                   {slot.satisfied ? (
                     <div
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3 py-2 text-xs font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
                       role="status"
                       aria-label={`${slot.label}: uploaded`}
                     >
                       <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-primary-foreground shadow-inner"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-primary-foreground shadow-inner"
                         aria-hidden
                       >
-                        <Check className="h-3.5 w-3.5 stroke-[3]" />
+                        <Check className="h-3 w-3 stroke-[3]" />
                       </span>
                       <span className="uppercase tracking-wider">Uploaded</span>
                     </div>
                   ) : (
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
-                      className="h-2 w-fit gap-1.5 px-3 text-xs font-semibold shadow-sm"
+                      className="h-7 w-fit max-w-full gap-2 rounded-full border-indigo-200 bg-indigo-50/60 px-2.5 text-[11px] font-bold tracking-wide text-indigo-800 shadow-sm hover:bg-indigo-100 hover:text-indigo-900"
                       onClick={() => openUploadModal(slot.uploadDocType)}
                     >
-                      <Upload className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      <span>Upload {slot.label}</span>
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-primary-foreground shadow-inner"
+                        aria-hidden
+                      >
+                        <Upload className="h-3 w-3" />
+                      </span>
+                      <span className="truncate uppercase tracking-wider">Upload</span>
                     </Button>
                   )}
                 </div>
