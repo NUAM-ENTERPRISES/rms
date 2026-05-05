@@ -16,6 +16,7 @@ export interface Project {
   teamId: string | null;
   countryCode: string | null;
   projectType: "private" | "ministry";
+  sector?: "healthcare" | "non-healthcare";
   client: {
     id: string;
     name: string;

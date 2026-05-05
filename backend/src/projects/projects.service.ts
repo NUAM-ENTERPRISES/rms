@@ -19,6 +19,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { PROJECT_SECTOR } from './constants';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -190,6 +191,7 @@ export class ProjectsService {
           // New project-level fields
           projectType: createProjectDto.projectType || 'private',
           resumeEditable: createProjectDto.resumeEditable ?? true,
+          sector: createProjectDto.sector || PROJECT_SECTOR.HEALTHCARE,
           groomingRequired: createProjectDto.groomingRequired || 'formal',
           hideContactInfo: createProjectDto.hideContactInfo ?? true,
           requiredScreening: createProjectDto.requiredScreening ?? false,
@@ -829,6 +831,8 @@ export class ProjectsService {
       updateData.projectType = updateProjectDto.projectType;
     if (updateProjectDto.resumeEditable !== undefined)
       updateData.resumeEditable = updateProjectDto.resumeEditable;
+    if (updateProjectDto.sector !== undefined)
+      updateData.sector = updateProjectDto.sector;
     if (updateProjectDto.groomingRequired !== undefined)
       updateData.groomingRequired = updateProjectDto.groomingRequired;
     if (updateProjectDto.hideContactInfo !== undefined)

@@ -9,6 +9,7 @@ export const projectFormSchema = z.object({
   deadline: z.date({ message: "Deadline is required" }),
   priority: z.enum(["low", "medium", "high", "urgent"]),
   projectType: z.enum(["private", "ministry"]),
+  sector: z.enum(["healthcare", "non-healthcare"]),
   resumeEditable: z.boolean(),
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),

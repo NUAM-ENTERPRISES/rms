@@ -16,6 +16,7 @@ import { Type } from 'class-transformer';
 import { EducationRequirementDto } from './education-requirement.dto';
 import { CreateDocumentRequirementDto } from './document-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PROJECT_SECTOR } from '../constants';
 
 export class CreateRoleNeededDto {
   @ApiPropertyOptional({
@@ -474,6 +475,15 @@ export class CreateProjectDto {
   })
   @IsOptional()
   resumeEditable?: boolean = true;
+
+  @ApiPropertyOptional({
+    description: 'Project sector',
+    enum: Object.values(PROJECT_SECTOR),
+    default: PROJECT_SECTOR.HEALTHCARE,
+  })
+  @IsOptional()
+  @IsEnum(PROJECT_SECTOR)
+  sector?: string = PROJECT_SECTOR.HEALTHCARE;
 
   @ApiPropertyOptional({
     description: 'Grooming requirements',
