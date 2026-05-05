@@ -60,6 +60,7 @@ import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidate
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
+import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -624,6 +625,9 @@ export default function CandidateOverviewPage() {
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       {isWorkflowActive ? "Projects" : "Status"}
                     </TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Profile
+                    </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</TableHead>
                     <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Actions</TableHead>
@@ -633,12 +637,12 @@ export default function CandidateOverviewPage() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={canTransferCandidates ? 8 : 7} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 9 : 8} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canTransferCandidates ? 8 : 7} className="h-64 text-center">
+                      <TableCell colSpan={canTransferCandidates ? 9 : 8} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                             <UserCheck className="h-8 w-8 text-slate-300" />
@@ -810,6 +814,10 @@ export default function CandidateOverviewPage() {
                                 </Badge>
                               </div>
                             )}
+                          </TableCell>
+
+                          <TableCell className="px-2 py-3 w-[4.5rem] text-center">
+                            <CandidateProfileCompletionCell candidate={candidate} />
                           </TableCell>
 
                           {/* Last Updated */}

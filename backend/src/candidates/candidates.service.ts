@@ -56,6 +56,10 @@ import {
   assertAgentCandidateLinkedToAgentProject,
   agentSourceConsolidatedCandidateWhere,
 } from '../common/agent-project-candidate-scope';
+import {
+  computeCandidateProfileCompletion,
+  withProfileCompletion,
+} from './utils/profile-completion.util';
 
 @Injectable()
 export class CandidatesService {
@@ -967,7 +971,11 @@ export class CandidatesService {
               },
             },
           }
-        }
+        },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
     });
 
@@ -988,8 +996,13 @@ export class CandidatesService {
         (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
       );
 
+      const { documents, ...rest } = candidate;
+      const merged = withProfileCompletion({
+        ...rest,
+        documents: documents ?? [],
+      });
       return {
-        ...candidate,
+        ...merged,
         isHandledByCRE,
         isCREReassigned,
         creHandler: creAssignment ? {
@@ -1968,6 +1981,10 @@ export class CandidatesService {
           },
           orderBy: { assignedAt: 'asc' },
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
     });
 
@@ -1982,9 +1999,11 @@ export class CandidatesService {
       firstAssignment?.assignedByUser ||
       null;
 
+    const base = withProfileCompletion(candidate as any);
+
     // Pipeline data removed from response to reduce payload
     return {
-      ...candidate,
+      ...base,
       createdBy,
     } as any;
   }
@@ -2284,7 +2303,15 @@ export class CandidatesService {
       message: `Candidate ${candidate.firstName} ${candidate.lastName} updated`,
     });
 
-    return candidate;
+    const docs = await this.prisma.document.findMany({
+      where: { candidateId: id, isDeleted: false },
+      select: { docType: true },
+    });
+
+    return {
+      ...candidate,
+      profileCompletion: computeCandidateProfileCompletion(candidate, docs),
+    } as any;
   }
 
   async remove(
@@ -4659,6 +4686,10 @@ export class CandidatesService {
           orderBy: { statusUpdatedAt: 'asc' },
           take: 1,
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4672,10 +4703,17 @@ export class CandidatesService {
       const latestProject = c.projects?.[0] as any;
       
       // Destructure to remove projects array from the final response object
-      const { projects, ...candidateRest } = c;
+      const { projects, documents, ...candidateRest } = c as typeof c & {
+        documents?: Array<{ docType: string }>;
+      };
+
+      const withCompletion = withProfileCompletion({
+        ...candidateRest,
+        documents: documents ?? [],
+      });
 
       return {
-        ...candidateRest,
+        ...withCompletion,
         recruiter: activeAssignment?.recruiter || null,
         createdBy: 
           firstStatusChange?.changedBy || 

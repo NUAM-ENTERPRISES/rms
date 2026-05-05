@@ -1,5 +1,5 @@
-
 import { baseApi } from "@/app/api/baseApi";
+import type { CandidateProfileCompletionPayload } from "./profileCompletion";
 
 // Document types
 export interface Document {
@@ -118,6 +118,8 @@ export interface Candidate {
   matchScore?: number;
   createdAt: string;
   updatedAt: string;
+  /** Present when the API includes profile scoring (list + detail). */
+  profileCompletion?: CandidateProfileCompletionPayload;
   recruiter?: {
     id: string;
     name: string;

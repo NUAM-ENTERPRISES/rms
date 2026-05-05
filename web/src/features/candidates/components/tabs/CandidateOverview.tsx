@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardHeader,
@@ -7,6 +7,13 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   User,
@@ -68,6 +75,46 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 }) => {
   const age = getAge(candidate.dateOfBirth);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string; isPdf: boolean } | null>(null);
+
+  const QUAL_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
+  const WORK_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
+
+  const [qualificationsPage, setQualificationsPage] = useState(1);
+  const [qualificationsLimit, setQualificationsLimit] = useState(3);
+  const [workExperiencePage, setWorkExperiencePage] = useState(1);
+  const [workExperienceLimit, setWorkExperienceLimit] = useState(3);
+
+  const clampPageSize = (value: number) => Math.min(3, Math.max(1, value));
+
+  const qualifications = candidate.qualifications ?? [];
+  const workExperiences = candidate.workExperiences ?? [];
+
+  const qualificationsTotalPages = Math.max(
+    1,
+    Math.ceil(qualifications.length / qualificationsLimit)
+  );
+  const workExperiencesTotalPages = Math.max(
+    1,
+    Math.ceil(workExperiences.length / workExperienceLimit)
+  );
+
+  useEffect(() => {
+    setQualificationsPage((p) => Math.min(p, qualificationsTotalPages));
+  }, [qualificationsTotalPages]);
+
+  useEffect(() => {
+    setWorkExperiencePage((p) => Math.min(p, workExperiencesTotalPages));
+  }, [workExperiencesTotalPages]);
+
+  const pagedQualifications = useMemo(() => {
+    const start = (qualificationsPage - 1) * qualificationsLimit;
+    return qualifications.slice(start, start + qualificationsLimit);
+  }, [qualifications, qualificationsLimit, qualificationsPage]);
+
+  const pagedWorkExperiences = useMemo(() => {
+    const start = (workExperiencePage - 1) * workExperienceLimit;
+    return workExperiences.slice(start, start + workExperienceLimit);
+  }, [workExperiences, workExperienceLimit, workExperiencePage]);
 
   return (
     <div className="space-y-6">
@@ -545,24 +592,25 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         <GraduationCap className="h-5 w-5 text-blue-600" />
                         Educational Qualifications
                       </h3>
-                      {canWriteCandidates && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openAddModal("qualification")}
-                          className="h-8 flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canWriteCandidates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAddModal("qualification")}
+                            className="h-8 flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
-                    {candidate.qualifications &&
-                    candidate.qualifications.length > 0 ? (
+                    {qualifications.length > 0 ? (
                       <div className="space-y-4">
                         <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
-                        {candidate.qualifications.map((qual) => (
+                        {pagedQualifications.map((qual) => (
                           <div
                             key={qual.id}
                             className="group relative ml-8 bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-blue-300 hover:shadow-md hover:shadow-blue-100/20"
@@ -643,6 +691,72 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           </div>
                         ))}
                         </div>
+                        {qualifications.length > qualificationsLimit ? (
+                          <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>
+                                Showing{" "}
+                                {(qualificationsPage - 1) * qualificationsLimit + 1}–
+                                {Math.min(
+                                  qualificationsPage * qualificationsLimit,
+                                  qualifications.length
+                                )}{" "}
+                                of {qualifications.length}
+                              </span>
+                              <span>
+                                Page {qualificationsPage} of {qualificationsTotalPages}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <Select
+                                value={String(qualificationsLimit)}
+                                onValueChange={(v) => {
+                                  setQualificationsLimit(clampPageSize(Number(v)));
+                                  setQualificationsPage(1);
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[110px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {QUAL_PAGE_SIZE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt} value={String(opt)}>
+                                      {opt} / page
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() =>
+                                    setQualificationsPage((p) => Math.max(1, p - 1))
+                                  }
+                                  disabled={qualificationsPage <= 1}
+                                >
+                                  Prev
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() =>
+                                    setQualificationsPage((p) =>
+                                      Math.min(qualificationsTotalPages, p + 1)
+                                    )
+                                  }
+                                  disabled={qualificationsPage >= qualificationsTotalPages}
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
@@ -660,21 +774,22 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         <Briefcase className="h-5 w-5 text-emerald-600" />
                         Work Experience
                       </h3>
-                      {canWriteCandidates && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openAddModal("workExperience")}
-                          className="h-8 flex items-center gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {canWriteCandidates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAddModal("workExperience")}
+                            className="h-8 flex items-center gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
-                    {candidate.workExperiences &&
-                    candidate.workExperiences.length > 0 ? (
+                    {workExperiences.length > 0 ? (
                       <div className="space-y-4">
                         {/* Total Experience Summary */}
                         <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
@@ -686,7 +801,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Experience</p>
                               <p className="text-xl font-bold text-slate-900">
                                 {(() => {
-                                  const { years, months } = DateUtils.calculateTotalExperience(candidate.workExperiences);
+                                  const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
                                   return DateUtils.formatDuration(years, months);
                                 })()}
                               </p>
@@ -694,12 +809,12 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           </div>
                           <div className="text-right">
                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Positions</p>
-                             <p className="text-xl font-bold text-slate-700">{candidate.workExperiences.length}</p>
+                             <p className="text-xl font-bold text-slate-700">{workExperiences.length}</p>
                           </div>
                         </div>
 
                         <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
-                        {candidate.workExperiences.map((exp) => {
+                        {pagedWorkExperiences.map((exp) => {
                           const duration = DateUtils.calculateDuration(exp.startDate, exp.endDate, exp.isCurrent);
                           const expDocs = (workExperienceDocs ?? []).filter(
                             (d) => d.workExperienceId === exp.id
@@ -913,6 +1028,72 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                           );
                         })}
                         </div>
+                        {workExperiences.length > workExperienceLimit ? (
+                          <div className="flex flex-col gap-2 pt-1">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>
+                                Showing{" "}
+                                {(workExperiencePage - 1) * workExperienceLimit + 1}–
+                                {Math.min(
+                                  workExperiencePage * workExperienceLimit,
+                                  workExperiences.length
+                                )}{" "}
+                                of {workExperiences.length}
+                              </span>
+                              <span>
+                                Page {workExperiencePage} of {workExperiencesTotalPages}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <Select
+                                value={String(workExperienceLimit)}
+                                onValueChange={(v) => {
+                                  setWorkExperienceLimit(clampPageSize(Number(v)));
+                                  setWorkExperiencePage(1);
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[110px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {WORK_PAGE_SIZE_OPTIONS.map((opt) => (
+                                    <SelectItem key={opt} value={String(opt)}>
+                                      {opt} / page
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() =>
+                                    setWorkExperiencePage((p) => Math.max(1, p - 1))
+                                  }
+                                  disabled={workExperiencePage <= 1}
+                                >
+                                  Prev
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 px-2"
+                                  onClick={() =>
+                                    setWorkExperiencePage((p) =>
+                                      Math.min(workExperiencesTotalPages, p + 1)
+                                    )
+                                  }
+                                  disabled={workExperiencePage >= workExperiencesTotalPages}
+                                >
+                                  Next
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     ) : (
                       <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">

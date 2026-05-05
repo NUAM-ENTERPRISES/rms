@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
-  useGetSessionsQuery,
   useSetSessionAvailabilityMutation,
 } from "@/features/profile/api";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -68,15 +67,13 @@ export default function SessionAvailabilityToggles() {
   const { hasRole } = usePermissions();
   const isLeadership = hasRole([...LEADERSHIP_ROLES]);
 
-  const { data: sessionsData } = useGetSessionsQuery();
   const [setAvailability, { isLoading }] = useSetSessionAvailabilityMutation();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState<PendingAvailability | null>(null);
 
-  const currentSession = sessionsData?.data?.find((s) => s.isCurrent);
-  const availability: SessionAvailability =
-    currentSession?.availability ?? "ACTIVE";
+  const [availability, setAvailabilityState] =
+    useState<SessionAvailability>("ACTIVE");
 
   if (isLeadership) {
     return null;
@@ -100,6 +97,7 @@ export default function SessionAvailabilityToggles() {
   const handleConfirm = async () => {
     if (!pending) return;
     await setAvailability({ availability: pending.next }).unwrap();
+    setAvailabilityState(pending.next);
     setConfirmOpen(false);
     setPending(null);
   };

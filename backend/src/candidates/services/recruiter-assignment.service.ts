@@ -8,6 +8,7 @@ import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
+import { withProfileCompletion } from '../utils/profile-completion.util';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
 
@@ -995,6 +996,10 @@ export class RecruiterAssignmentService {
             },
           },
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -1018,8 +1023,10 @@ export class RecruiterAssignmentService {
       // Check if this recruiter assignment was handed back from a CRE
       const isCREReassigned = recruiterAssignment?.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
 
+      const merged = withProfileCompletion(candidate as any);
+
       return {
-        ...candidate,
+        ...merged,
         isHandledByCRE,
         isCREReassigned,
         creHandler: creAssignment ? {

@@ -313,7 +313,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { rfi } = req.cookies ?? {};
-    await this.authService.revokeFamilyByTokenId(rfi);
+    const userId = (req as any).user?.id as string | undefined;
+    const sessionId = (req as any).user?.sid as string | undefined;
+
+    await this.authService.logoutCurrentSession({
+      userId,
+      sessionId,
+      refreshTokenId: rfi,
+    });
     res.clearCookie('rfi', { path: '/api/v1/auth' });
     res.clearCookie('rft', { path: '/api/v1/auth' });
     return { success: true, message: 'Logged out' };

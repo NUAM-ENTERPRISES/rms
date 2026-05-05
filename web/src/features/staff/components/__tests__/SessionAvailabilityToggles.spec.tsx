@@ -17,26 +17,6 @@ vi.mock("@/shared/hooks/usePermissions", () => ({
 }));
 
 vi.mock("@/features/profile/api", () => ({
-  useGetSessionsQuery: () => ({
-    data: {
-      success: true,
-      data: [
-        {
-          id: "sess-1",
-          ipAddress: null,
-          userAgent: null,
-          browser: null,
-          os: null,
-          deviceType: null,
-          loginAt: new Date().toISOString(),
-          isActive: true,
-          isCurrent: true,
-          availability: "ACTIVE" as const,
-        },
-      ],
-    },
-    isFetching: false,
-  }),
   useSetSessionAvailabilityMutation: () => {
     const trigger = (args: { availability: string }) => ({
       unwrap: () => mockSetAvailability(args) as Promise<unknown>,

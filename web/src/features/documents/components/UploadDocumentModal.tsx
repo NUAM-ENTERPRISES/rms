@@ -17,12 +17,14 @@ import { cn } from "@/lib/utils";
 interface UploadDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (file: File, meta: { docName?: string }) => Promise<void>;
   projectTitle: string;
   roleDesignation: string;
   docType: string;
   /** Catalog display name for doc type (shown instead of raw docType when provided) */
   docTypeLabel?: string;
+  /** Optional helper text shown under the document type label */
+  docTypeDescription?: string;
   isMandatory?: boolean;
   isUploading?: boolean;
   /** When set, UI switches to re-upload styling (same API flow as project docs). */
@@ -39,12 +41,14 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   roleDesignation,
   docType,
   docTypeLabel,
+  docTypeDescription,
   isMandatory = false,
   isUploading = false,
   variant = "upload",
   previousFileName,
 }) => {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
+  const [docName, setDocName] = React.useState("");
   const isReupload = variant === "reupload";
   const typeDisplay = docTypeLabel?.trim() || docType;
 
@@ -54,12 +58,13 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
 
   const handleUpload = async () => {
     if (!uploadFile) return;
-    await onUpload(uploadFile);
+    await onUpload(uploadFile, { docName: docName.trim() || undefined });
   };
 
   React.useEffect(() => {
     if (!isOpen) {
       setUploadFile(null);
+      setDocName("");
     }
   }, [isOpen]);
 
@@ -133,23 +138,46 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
               <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wider">
                 Document type
               </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 max-w-full font-semibold text-foreground break-words">
-                  {typeDisplay}
-                </span>
-                <span className="max-w-full break-all text-[11px] font-mono text-muted-foreground rounded-md bg-muted/80 px-1.5 py-0.5">
-                  {docType}
-                </span>
-                {isMandatory && (
-                  <Badge
-                    variant="destructive"
-                    className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
-                  >
-                    Mandatory
-                  </Badge>
-                )}
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="min-w-0 max-w-full font-semibold text-foreground break-words">
+                    {typeDisplay}
+                  </span>
+                  {isMandatory && (
+                    <Badge
+                      variant="destructive"
+                      className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
+                    >
+                      Required
+                    </Badge>
+                  )}
+                </div>
+                {docTypeDescription ? (
+                  <p className="text-xs text-muted-foreground">
+                    {docTypeDescription}
+                  </p>
+                ) : null}
               </div>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label
+              htmlFor="project-doc-name"
+              className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+            >
+              Document name
+            </Label>
+            <Input
+              id="project-doc-name"
+              value={docName}
+              onChange={(e) => setDocName(e.target.value)}
+              placeholder="e.g., Updated resume/CV"
+              className="h-9"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              This is shown as the document name in recruiter documents.
+            </p>
           </div>
 
           {isReupload && previousFileName ? (

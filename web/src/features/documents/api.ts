@@ -262,6 +262,7 @@ export interface RequestResubmissionRequest {
 
 export interface ReuploadDocumentRequest {
   candidateProjectMapId: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -599,6 +600,10 @@ export const documentsApi = baseApi.injectEndpoints({
         "Document",
         "DocumentStats",
         "DocumentSummary",
+        // docName changes must reflect in recruiter/project verification views
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
       ],
     }),
 
