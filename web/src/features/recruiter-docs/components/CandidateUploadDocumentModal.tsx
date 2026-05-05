@@ -173,7 +173,13 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     }
   };
 
-  const allowedFormats = docType ? (DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.allowedFormats || []).map(f => `.${f}`).join(",") : "";
+  const docTypeConfig = docType
+    ? DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]
+    : undefined;
+
+  const allowedFormats = docTypeConfig
+    ? docTypeConfig.allowedFormats.map((f) => `.${f}`).join(",")
+    : "";
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -240,9 +246,10 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 accept={allowedFormats || undefined}
                 className="h-9 cursor-pointer bg-background"
               />
-              {docType && (
+              {docTypeConfig && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Allowed: {getAllowedFormatsString(docType as any)} · Max {DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.maxSizeMB} MB
+                  Allowed: {getAllowedFormatsString(docType as any)} · Max{" "}
+                  {docTypeConfig.maxSizeMB} MB
                 </p>
               )}
               {selectedFile && (

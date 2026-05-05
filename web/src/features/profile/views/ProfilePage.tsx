@@ -1,17 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+// (ProfilePage uses custom `p-card` layout; no shadcn Card here)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -33,7 +26,11 @@ import {
   Save,
   X,
   Camera,
-  Bell,
+  Monitor,
+  Smartphone,
+  AlertTriangle,
+  Lock,
+  Activity,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -57,18 +54,31 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
+  const [sessionsPage, setSessionsPage] = useState(1);
+  const sessionsLimit = 10;
 
-  // API calls
   const { data: profileData, isLoading, error } = useGetProfileQuery();
-  const { data: sessionsData, isLoading: isLoadingSessions } = useGetSessionsQuery();
+  const { data: sessionsData, isLoading: isLoadingSessions } = useGetSessionsQuery(
+    { page: sessionsPage, limit: sessionsLimit },
+    // Only runs while ProfilePage is mounted.
+    // We show sessions in both Personal and Security tabs.
+    { skip: false }
+  );
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
-  const [changePassword, { isLoading: isChangingPassword }] =
-    useChangePasswordMutation();
+  const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation();
   const [deleteAccount, { isLoading: isDeleting }] = useDeleteAccountMutation();
-  const [uploadProfileImage, { isLoading: isUploading }] =
-    useUploadProfileImageMutation();
+  const [uploadProfileImage, { isLoading: isUploading }] = useUploadProfileImageMutation();
 
   const userData = profileData?.data;
+  const sessions = sessionsData?.data?.sessions ?? [];
+  const sessionsPagination = sessionsData?.data?.pagination;
+  const sessionsTotalPages = sessionsPagination?.totalPages ?? 1;
+
+  const sessionCountLabel = useMemo(() => {
+    if (!sessionsData?.data?.pagination) return `${sessions.length}`;
+    return `${sessionsPagination?.total ?? sessions.length}`;
+  }, [sessions.length, sessionsData?.data?.pagination, sessionsPagination?.total]);
 
   const form = useForm({
     defaultValues: profileSchema,
@@ -105,8 +115,6 @@ export default function ProfilePage() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Convert to base64 for API
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
@@ -157,618 +165,783 @@ export default function ProfilePage() {
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-slate-600">Loading profile...</p>
-            </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="relative w-10 h-10 mx-auto">
+            <div className="absolute inset-0 rounded-full border-2 border-indigo-100" />
+            <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin" />
           </div>
+          <p className="text-gray-400 text-sm">Loading profile...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="text-red-600 mb-4">
-                <Shield className="h-12 w-12 mx-auto" />
-              </div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                Failed to load profile
-              </h2>
-              <p className="text-slate-600 mb-4">
-                There was an error loading your profile information.
-              </p>
-              <Button onClick={() => window.location.reload()}>
-                Try Again
-              </Button>
-            </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+            <Shield className="h-7 w-7 text-red-400" />
           </div>
+          <h2 className="text-lg font-semibold text-gray-900">Failed to load profile</h2>
+          <p className="text-gray-500 text-sm">There was an error loading your profile information.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
   }
 
-  // No data state
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="text-slate-400 mb-4">
-                <User className="h-12 w-12 mx-auto" />
-              </div>
-              <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                No profile data
-              </h2>
-              <p className="text-slate-600">
-                Unable to load your profile information.
-              </p>
-            </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
+            <User className="h-7 w-7 text-gray-400" />
           </div>
+          <h2 className="text-lg font-semibold text-gray-900">No profile data</h2>
+          <p className="text-gray-500 text-sm">Unable to load your profile information.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Profile</h1>
-            <p className="text-slate-600">
-              Manage your personal information and preferences
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {!isEditing ? (
-              <Button
-                onClick={handleEdit}
-                className="flex items-center space-x-2"
-              >
-                <Edit className="h-4 w-4" />
-                <span>Edit Profile</span>
-              </Button>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button variant="outline" onClick={handleCancel}>
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={form.handleSubmit(handleSave)}
-                  disabled={isUpdating}
-                >
-                  {isUpdating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile Overview */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Profile Card */}
-            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="text-center space-y-4">
-                  <div className="relative inline-block">
-                    <Avatar className="h-24 w-24 mx-auto">
-                      <AvatarImage src={userData.profileImage || ""} />
-                      <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                        {userData.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
+        .p-root { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        .p-card {
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        .p-field-view {
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          padding: 11px 14px;
+          color: #111827;
+          font-size: 0.875rem;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          font-weight: 500;
+        }
+
+        .p-field-label {
+          font-size: 0.7rem;
+          font-weight: 700;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: #9ca3af;
+          margin-bottom: 5px;
+        }
+
+        .p-input {
+          background: #ffffff !important;
+          border: 1.5px solid #d1d5db !important;
+          border-radius: 10px !important;
+          color: #111827 !important;
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
+          font-size: 0.875rem !important;
+          height: 42px !important;
+          transition: border-color 0.15s, box-shadow 0.15s !important;
+        }
+        .p-input:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important;
+          outline: none !important;
+        }
+        .p-input::placeholder { color: #9ca3af !important; }
+
+        .p-tab-list {
+          background: #f3f4f6 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 12px !important;
+          padding: 4px !important;
+        }
+        .p-tab-trigger {
+          color: #6b7280 !important;
+          border-radius: 9px !important;
+          font-family: 'Plus Jakarta Sans', sans-serif !important;
+          font-weight: 600 !important;
+          font-size: 0.82rem !important;
+          transition: all 0.15s !important;
+        }
+        .p-tab-trigger[data-state="active"] {
+          background: #ffffff !important;
+          color: #111827 !important;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+        }
+
+        .p-btn-primary {
+          background: #4f46e5;
+          border: none;
+          border-radius: 10px;
+          color: white;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-weight: 600;
+          font-size: 0.84rem;
+          padding: 9px 18px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          transition: all 0.15s;
+        }
+        .p-btn-primary:hover { background: #4338ca; }
+        .p-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .p-btn-outline {
+          background: #ffffff;
+          border: 1.5px solid #d1d5db;
+          border-radius: 10px;
+          color: #374151;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-weight: 600;
+          font-size: 0.84rem;
+          padding: 9px 18px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          transition: all 0.15s;
+        }
+        .p-btn-outline:hover { background: #f9fafb; border-color: #9ca3af; }
+        .p-btn-outline:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .p-btn-danger {
+          background: #ef4444;
+          border: none;
+          border-radius: 10px;
+          color: white;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-weight: 600;
+          font-size: 0.84rem;
+          padding: 9px 18px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          transition: all 0.15s;
+        }
+        .p-btn-danger:hover { background: #dc2626; }
+        .p-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+        .p-session-row { transition: background 0.1s; }
+        .p-session-row:hover { background: #f9fafb; }
+
+        .p-badge-role {
+          background: #eef2ff;
+          color: #4f46e5;
+          border-radius: 6px;
+          padding: 2px 9px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .p-badge-active {
+          background: #f0fdf4;
+          color: #16a34a;
+          border: 1px solid #bbf7d0;
+          border-radius: 6px;
+          padding: 2px 9px;
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
+
+        .p-badge-inactive {
+          background: #f3f4f6;
+          color: #9ca3af;
+          border: 1px solid #e5e7eb;
+          border-radius: 6px;
+          padding: 2px 9px;
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
+
+        .p-divider { height: 1px; background: #f3f4f6; }
+
+        .p-spin { animation: p-spin 0.8s linear infinite; }
+        @keyframes p-spin { to { transform: rotate(360deg); } }
+
+        .p-avatar-wrap {
+          width: 80px; height: 80px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          padding: 2.5px;
+          display: inline-block;
+        }
+        .p-avatar-inner {
+          background: white;
+          border-radius: 50%;
+          padding: 2px;
+          width: 100%; height: 100%;
+        }
+
+        .p-section-icon {
+          width: 34px; height: 34px;
+          border-radius: 9px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .p-status-dot {
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: #22c55e;
+          box-shadow: 0 0 0 2px #dcfce7;
+          display: inline-block;
+        }
+      `}</style>
+
+      <div
+        className="p-root"
+        style={{ background: "#f5f6fa", minHeight: "100vh", padding: "2rem 1.25rem" }}
+      >
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
+            <div>
+              <h1 style={{ color: "#111827", fontSize: "1.6rem", fontWeight: 800, margin: 0 }}>
+                My Profile
+              </h1>
+              <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: "4px 0 0" }}>
+                Manage your personal information and preferences
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {!isEditing ? (
+                <button className="p-btn-primary" onClick={handleEdit}>
+                  <Edit size={14} /> Edit Profile
+                </button>
+              ) : (
+                <>
+                  <button className="p-btn-outline" onClick={handleCancel}>
+                    <X size={14} /> Cancel
+                  </button>
+                  <button className="p-btn-primary" onClick={form.handleSubmit(handleSave)} disabled={isUpdating}>
+                    {isUpdating
+                      ? <><div style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white" }} className="p-spin" /> Saving...</>
+                      : <><Save size={14} /> Save Changes</>
+                    }
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Main Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: "1.25rem", alignItems: "start" }}>
+
+            {/* Left */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+              {/* Profile Card */}
+              <div className="p-card" style={{ padding: "1.75rem", textAlign: "center" }}>
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "1rem" }}>
+                  <div style={{ position: "relative" }}>
+                    <div className="p-avatar-wrap">
+                      <div className="p-avatar-inner">
+                        <Avatar style={{ width: 70, height: 70 }}>
+                          <AvatarImage src={userData.profileImage || ""} />
+                          <AvatarFallback style={{
+                            background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                            color: "white", fontSize: "1.4rem", fontWeight: 700,
+                            width: 70, height: 70,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            borderRadius: "50%"
+                          }}>
+                            {userData.name.split(" ").map((n: string) => n[0]).join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </div>
                     <Label
                       htmlFor="profile-image-upload"
-                      className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-secondary flex items-center justify-center cursor-pointer hover:bg-secondary/80 transition-colors shadow-sm border border-slate-200"
+                      style={{
+                        position: "absolute", bottom: 1, right: 1,
+                        width: 26, height: 26, borderRadius: "50%",
+                        background: "#4f46e5",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer", border: "2px solid white",
+                      }}
                     >
-                      {isUploading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                      ) : (
-                        <Camera className="h-4 w-4" />
-                      )}
+                      {isUploading
+                        ? <div style={{ width: 11, height: 11, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white" }} className="p-spin" />
+                        : <Camera size={11} color="white" />
+                      }
                     </Label>
-                    <Input
-                      id="profile-image-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      disabled={isUploading}
-                    />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-semibold text-slate-900">
-                      {userData.name}
-                    </h2>
-                    <p className="text-slate-600">{userData.email}</p>
-                    <div className="flex items-center justify-center space-x-2 mt-2">
-                      {userData.roles.map((role) => (
-                        <Badge
-                          key={role}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {role}
-                        </Badge>
-                      ))}
-                    </div>
+                    <Input id="profile-image-upload" type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} style={{ display: "none" }} />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
 
-          {/* Right Column - Profile Details */}
-          <div className="lg:col-span-2 space-y-6">
-            <Tabs defaultValue="personal" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="personal">Personal</TabsTrigger>
-                <TabsTrigger value="security">Security</TabsTrigger>
-              </TabsList>
+                <h2 style={{ color: "#111827", fontWeight: 700, fontSize: "1.05rem", margin: "0 0 3px" }}>{userData.name}</h2>
+                <p style={{ color: "#9ca3af", fontSize: "0.82rem", margin: "0 0 12px" }}>{userData.email}</p>
+                <div style={{ display: "flex", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
+                  {userData.roles.map((role: string) => (
+                    <span key={role} className="p-badge-role">{role}</span>
+                  ))}
+                </div>
+              </div>
 
-              {/* Personal Information Tab */}
-              <TabsContent value="personal" className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <span>Personal Information</span>
-                    </CardTitle>
-                    <CardDescription>
-                      Your personal details and contact information
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
-                        {isEditing ? (
-                          <Input
-                            id="name"
-                            {...form.register("name")}
-                            placeholder="Enter your full name"
-                          />
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg">
-                            <span className="font-medium">{userData.name}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email Address</Label>
-                        {isEditing ? (
-                          <Input
-                            id="email"
-                            type="email"
-                            {...form.register("email")}
-                            placeholder="Enter your email"
-                          />
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Mail className="h-4 w-4 text-slate-400" />
-                            <span>{userData.email}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="mobile">Mobile Number</Label>
-                        {isEditing ? (
-                          <div className="flex space-x-2">
-                            <Input
-                              id="countryCode"
-                              {...form.register("countryCode")}
-                              placeholder="+1"
-                              className="w-20"
-                            />
-                            <Input
-                              id="mobileNumber"
-                              {...form.register("mobileNumber")}
-                              placeholder="1234567890"
-                            />
-                          </div>
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Phone className="h-4 w-4 text-slate-400" />
-                            <span>
-                              {userData.countryCode} {userData.mobileNumber}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dob">Date of Birth</Label>
-                        {isEditing ? (
-                          <Input
-                            id="dob"
-                            type="date"
-                            {...form.register("dateOfBirth")}
-                          />
-                        ) : (
-                          <div className="p-3 bg-slate-50 rounded-lg flex items-center space-x-2">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            <span>{formatDate(userData.dateOfBirth)}</span>
-                          </div>
-                        )}
-                      </div>
+              {/* Account Status */}
+              <div className="p-card" style={{ padding: "1.25rem" }}>
+                <p style={{ color: "#9ca3af", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 12px" }}>
+                  Account Status
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#6b7280", fontSize: "0.82rem" }}>Status</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className="p-status-dot" />
+                      <span style={{ color: "#16a34a", fontSize: "0.82rem", fontWeight: 600 }}>Active</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                  <div className="p-divider" />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#6b7280", fontSize: "0.82rem" }}>Sessions</span>
+                    <span style={{ color: "#4f46e5", fontSize: "0.82rem", fontWeight: 600 }}>
+                      {sessions.length || 0} active
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-              {/* Professional Information Tab */}
-              {/* <TabsContent value="professional" className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Briefcase className="h-5 w-5 text-green-600" />
-                      <span>Professional Information</span>
-                    </CardTitle>
-                    <CardDescription>
-                      Your role, permissions, and professional details
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-slate-700">
-                          Roles
-                        </Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {userData.roles.map((role) => (
-                            <Badge
-                              key={role}
-                              variant="secondary"
-                              className="text-sm"
-                            >
-                              {role}
-                            </Badge>
-                          ))}
-                        </div>
+              {/* Quick Security Action */}
+              <div className="p-card p-5">
+  <p className="text-gray-400 text-[11px] font-bold tracking-wider uppercase mb-3">
+    Quick Security
+  </p>
+
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#fafafa] border border-gray-200 rounded-xl p-4">
+
+    {/* Button */}
+    <button
+      className="p-btn-outline flex items-center justify-center gap-1 w-full sm:w-auto px-3 py-2 text-xs whitespace-normal sm:whitespace-nowrap"
+      onClick={() => setShowPasswordDialog(true)}
+    >
+      <Key size={13} />
+      Change Password
+    </button>
+
+  </div>
+</div>
+            </div>
+
+            {/* Right */}
+            <div>
+              <Tabs
+                value={activeTab}
+                onValueChange={(v) => {
+                  setActiveTab(v as any);
+                  setSessionsPage(1);
+                }}
+                defaultValue="personal"
+              >
+                <TabsList
+                  className="p-tab-list"
+                  style={{
+                    display: "grid", gridTemplateColumns: "1fr 1fr",
+                    background: "#f3f4f6", border: "1px solid #e5e7eb",
+                    borderRadius: 12, padding: 4, width: "100%", marginBottom: "1.1rem"
+                  }}
+                >
+                <TabsTrigger value="personal" className="p-tab-trigger">Personal</TabsTrigger>
+                <TabsTrigger value="security" className="p-tab-trigger">Security</TabsTrigger>
+                </TabsList>
+
+                {/* Personal Tab */}
+                <TabsContent value="personal">
+                  <div className="p-card" style={{ padding: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                        <User size={16} color="#4f46e5" />
                       </div>
                       <div>
-                        <Label className="text-sm font-medium text-slate-700">
-                          Permissions
-                        </Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {userData.permissions.map((permission) => (
-                            <Badge
-                              key={permission}
-                              variant="outline"
-                              className="text-xs"
-                            >
-                              {permission}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
-                            Member Since
-                          </Label>
-                          <div className="p-3 bg-slate-50 rounded-lg">
-                            <span className="text-sm">
-                              {formatDate(userData.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-700">
-                            Last Login
-                          </Label>
-                          <div className="p-3 bg-slate-50 rounded-lg">
-                            <span className="text-sm">
-                              {formatDateTime(userData.lastLogin)}
-                            </span>
-                          </div>
-                        </div>
+                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Personal Information</h3>
+                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your personal details and contact information</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent> */}
+                    <div className="p-divider" style={{ marginBottom: "1.25rem" }} />
 
-              {/* Security Tab */}
-              <TabsContent value="security" className="space-y-6">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Shield className="h-5 w-5 text-red-600" />
-                      <span>Security Settings</span>
-                    </CardTitle>
-                    <CardDescription>
-                      Manage your account security and privacy
-                    </CardDescription>
-                  </CardHeader>
-                  {/* <CardContent className="space-y-4">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Key className="h-5 w-5 text-slate-600" />
-                          <div>
-                            <p className="font-medium">Password</p>
-                            <p className="text-sm text-slate-600">
-                              Last changed 30 days ago
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowPasswordDialog(true)}
-                        >
-                          Change
-                        </Button>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.1rem" }}>
+                      <div>
+                        <p className="p-field-label">Full Name</p>
+                        {isEditing
+                          ? <Input id="name" {...form.register("name")} placeholder="Enter your full name" className="p-input" />
+                          : <div className="p-field-view"><User size={14} color="#d1d5db" />{userData.name}</div>
+                        }
                       </div>
-                      <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Bell className="h-5 w-5 text-slate-600" />
-                          <div>
-                            <p className="font-medium">
-                              Two-Factor Authentication
-                            </p>
-                            <p className="text-sm text-slate-600">
-                              Add an extra layer of security
-                            </p>
+                      <div>
+                        <p className="p-field-label">Email Address</p>
+                        {isEditing
+                          ? <Input id="email" type="email" {...form.register("email")} placeholder="Enter your email" className="p-input" />
+                          : <div className="p-field-view"><Mail size={14} color="#d1d5db" />{userData.email}</div>
+                        }
+                      </div>
+                      <div>
+                        <p className="p-field-label">Mobile Number</p>
+                        {isEditing ? (
+                          <div style={{ display: "flex", gap: 7 }}>
+                            <Input id="countryCode" {...form.register("countryCode")} placeholder="+1" className="p-input" style={{ width: 68 }} />
+                            <Input id="mobileNumber" {...form.register("mobileNumber")} placeholder="1234567890" className="p-input" style={{ flex: 1 }} />
                           </div>
-                        </div>
-                        <Button variant="outline">Enable</Button>
+                        ) : (
+                          <div className="p-field-view"><Phone size={14} color="#d1d5db" />{userData.countryCode} {userData.mobileNumber}</div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="p-field-label">Date of Birth</p>
+                        {isEditing
+                          ? <Input id="dob" type="date" {...form.register("dateOfBirth")} className="p-input" />
+                          : <div className="p-field-view"><Calendar size={14} color="#d1d5db" />{formatDate(userData.dateOfBirth)}</div>
+                        }
                       </div>
                     </div>
-                  </CardContent> */}
-                </Card>
-              </TabsContent>
-            </Tabs>
+                  </div>
+
+                  {/* Login Sessions (shown on Personal tab too) */}
+                  <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                        <Activity size={16} color="#4f46e5" />
+                      </div>
+                      <div>
+                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
+                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
+                      </div>
+                    </div>
+                    <div className="p-divider" style={{ marginBottom: "1.1rem" }} />
+
+                    {isLoadingSessions ? (
+                      <div style={{ display: "flex", justifyContent: "center", padding: "2.5rem" }}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #e0e7ff", borderTopColor: "#4f46e5" }} className="p-spin" />
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb" }}>
+                              {["Device", "IP Address", "Login Time", "Status"].map(col => (
+                                <th key={col} style={{
+                                  textAlign: "left", padding: "9px 14px",
+                                  color: "#9ca3af", fontSize: "0.69rem",
+                                  fontWeight: 700, letterSpacing: "0.07em",
+                                  textTransform: "uppercase",
+                                  borderBottom: "1px solid #f3f4f6",
+                                }}>{col}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sessions.length ? (
+                              sessions.map((session: any) => {
+                                const isMobile = session.deviceType === "mobile";
+                                const isTablet = session.deviceType === "tablet";
+                                const DeviceIcon = isMobile || isTablet ? Smartphone : Monitor;
+                                const deviceLabel = isMobile ? "Mobile Device" : isTablet ? "Tablet" : "Desktop";
+                                const deviceName = session.browser && session.os
+                                  ? `${session.browser} on ${session.os}`
+                                  : session.userAgent?.slice(0, 40) || "Unknown Device";
+
+                                return (
+                                  <tr key={session.id} className="p-session-row">
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                                        <div style={{
+                                          width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                                          background: session.isCurrent ? "#eef2ff" : "#f9fafb",
+                                          border: `1px solid ${session.isCurrent ? "#c7d2fe" : "#e5e7eb"}`,
+                                          display: "flex", alignItems: "center", justifyContent: "center"
+                                        }}>
+                                          <DeviceIcon size={15} color={session.isCurrent ? "#4f46e5" : "#9ca3af"} />
+                                        </div>
+                                        <div>
+                                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
+                                          <p style={{ color: session.isCurrent ? "#4f46e5" : "#9ca3af", fontSize: "0.74rem", margin: 0, fontWeight: 500 }}>
+                                            {session.isCurrent ? "Current Session" : deviceLabel}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6", fontFamily: "monospace" }}>
+                                      {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1" ? "localhost" : session.ipAddress || "—"}
+                                    </td>
+                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6" }}>
+                                      {formatDateTime(session.loginAt)}
+                                    </td>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                      {session.isActive
+                                        ? <span className="p-badge-active">Active</span>
+                                        : <span className="p-badge-inactive">Inactive</span>
+                                      }
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+                                  No login sessions found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pagination */}
+                    {sessionsTotalPages > 1 && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem" }}>
+                        <p style={{ color: "#6b7280", fontSize: "0.82rem", margin: 0 }}>
+                          Page <b style={{ color: "#111827" }}>{sessionsPage}</b> of{" "}
+                          <b style={{ color: "#111827" }}>{sessionsTotalPages}</b>{" "}
+                          · <b style={{ color: "#111827" }}>{sessionCountLabel}</b> total
+                        </p>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={sessionsPage <= 1 || isLoadingSessions}
+                            onClick={() => setSessionsPage((p) => Math.max(1, p - 1))}
+                          >
+                            Prev
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={sessionsPage >= sessionsTotalPages || isLoadingSessions}
+                            onClick={() => setSessionsPage((p) => Math.min(sessionsTotalPages, p + 1))}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Security Tab */}
+                <TabsContent value="security">
+                  <div className="p-card" style={{ padding: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                      <div className="p-section-icon" style={{ background: "#fef2f2" }}>
+                        <Shield size={16} color="#ef4444" />
+                      </div>
+                      <div>
+                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Security Settings</h3>
+                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Manage your account security and privacy</p>
+                      </div>
+                    </div>
+                    <div className="p-divider" style={{ marginBottom: "1.25rem" }} />
+                    <div style={{
+                      background: "#fafafa",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 12,
+                      padding: "1rem 1.25rem",
+                      display: "flex", alignItems: "center", justifyContent: "space-between"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 9, background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Key size={15} color="#4f46e5" />
+                        </div>
+                        <div>
+                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>Password</p>
+                          <p style={{ color: "#9ca3af", fontSize: "0.75rem", margin: 0 }}>Change your account password</p>
+                        </div>
+                      </div>
+                      <button className="p-btn-outline" style={{ padding: "6px 14px", fontSize: "0.78rem" }} onClick={() => setShowPasswordDialog(true)}>
+                        Change
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Sessions Table (only when Security tab is active) */}
+                  <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                        <Activity size={16} color="#4f46e5" />
+                      </div>
+                      <div>
+                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>Login Sessions</h3>
+                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>Your recent login sessions and security information</p>
+                      </div>
+                    </div>
+                    <div className="p-divider" style={{ marginBottom: "1.1rem" }} />
+
+                    {isLoadingSessions ? (
+                      <div style={{ display: "flex", justifyContent: "center", padding: "2.5rem" }}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid #e0e7ff", borderTopColor: "#4f46e5" }} className="p-spin" />
+                      </div>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb" }}>
+                              {["Device", "IP Address", "Login Time", "Status"].map(col => (
+                                <th key={col} style={{
+                                  textAlign: "left", padding: "9px 14px",
+                                  color: "#9ca3af", fontSize: "0.69rem",
+                                  fontWeight: 700, letterSpacing: "0.07em",
+                                  textTransform: "uppercase",
+                                  borderBottom: "1px solid #f3f4f6",
+                                }}>{col}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sessions.length ? (
+                              sessions.map((session: any) => {
+                                const isMobile = session.deviceType === "mobile";
+                                const isTablet = session.deviceType === "tablet";
+                                const DeviceIcon = isMobile || isTablet ? Smartphone : Monitor;
+                                const deviceLabel = isMobile ? "Mobile Device" : isTablet ? "Tablet" : "Desktop";
+                                const deviceName = session.browser && session.os
+                                  ? `${session.browser} on ${session.os}`
+                                  : session.userAgent?.slice(0, 40) || "Unknown Device";
+
+                                return (
+                                  <tr key={session.id} className="p-session-row">
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                                        <div style={{
+                                          width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                                          background: session.isCurrent ? "#eef2ff" : "#f9fafb",
+                                          border: `1px solid ${session.isCurrent ? "#c7d2fe" : "#e5e7eb"}`,
+                                          display: "flex", alignItems: "center", justifyContent: "center"
+                                        }}>
+                                          <DeviceIcon size={15} color={session.isCurrent ? "#4f46e5" : "#9ca3af"} />
+                                        </div>
+                                        <div>
+                                          <p style={{ color: "#111827", fontWeight: 600, fontSize: "0.84rem", margin: 0 }}>{deviceName}</p>
+                                          <p style={{ color: session.isCurrent ? "#4f46e5" : "#9ca3af", fontSize: "0.74rem", margin: 0, fontWeight: 500 }}>
+                                            {session.isCurrent ? "Current Session" : deviceLabel}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6", fontFamily: "monospace" }}>
+                                      {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1" ? "localhost" : session.ipAddress || "—"}
+                                    </td>
+                                    <td style={{ padding: "13px 14px", color: "#6b7280", fontSize: "0.84rem", borderBottom: "1px solid #f3f4f6" }}>
+                                      {formatDateTime(session.loginAt)}
+                                    </td>
+                                    <td style={{ padding: "13px 14px", borderBottom: "1px solid #f3f4f6" }}>
+                                      {session.isActive
+                                        ? <span className="p-badge-active">Active</span>
+                                        : <span className="p-badge-inactive">Inactive</span>
+                                      }
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan={4} style={{ padding: "2.5rem", textAlign: "center", color: "#9ca3af", fontSize: "0.875rem" }}>
+                                  No login sessions found
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Pagination */}
+                    {sessionsTotalPages > 1 && (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "1rem" }}>
+                        <p style={{ color: "#6b7280", fontSize: "0.82rem", margin: 0 }}>
+                          Page <b style={{ color: "#111827" }}>{sessionsPage}</b> of{" "}
+                          <b style={{ color: "#111827" }}>{sessionsTotalPages}</b>{" "}
+                          · <b style={{ color: "#111827" }}>{sessionCountLabel}</b> total
+                        </p>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={sessionsPage <= 1 || isLoadingSessions}
+                            onClick={() => setSessionsPage((p) => Math.max(1, p - 1))}
+                          >
+                            Prev
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={sessionsPage >= sessionsTotalPages || isLoadingSessions}
+                            onClick={() => setSessionsPage((p) => Math.min(sessionsTotalPages, p + 1))}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
           </div>
         </div>
 
-        {/* Login Sessions Table */}
-        <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-blue-600" />
-              <span>Login Sessions</span>
-            </CardTitle>
-            <CardDescription>
-              Your recent login sessions and security information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingSessions ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-slate-200">
-                      <th className="text-left py-3 px-4 font-medium text-slate-700">
-                        Device
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-700">
-                        IP Address
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-700">
-                        Login Time
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-slate-700">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessionsData?.data?.length ? (
-                      sessionsData.data.map((session) => {
-                        const isMobile = session.deviceType === "mobile";
-                        const isTablet = session.deviceType === "tablet";
-                        const deviceIcon = isMobile ? "📱" : isTablet ? "📱" : "💻";
-                        const deviceLabel = isMobile
-                          ? "Mobile Device"
-                          : isTablet
-                          ? "Tablet"
-                          : "Desktop";
-                        const deviceName =
-                          session.browser && session.os
-                            ? `${session.browser} on ${session.os}`
-                            : session.userAgent?.slice(0, 40) || "Unknown Device";
-
-                        return (
-                          <tr
-                            key={session.id}
-                            className="border-b border-slate-100"
-                          >
-                            <td className="py-3 px-4">
-                              <div className="flex items-center space-x-2">
-                                <div
-                                  className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                    session.isCurrent
-                                      ? "bg-blue-100"
-                                      : "bg-gray-100"
-                                  }`}
-                                >
-                                  <span
-                                    className={`text-sm ${
-                                      session.isCurrent
-                                        ? "text-blue-600"
-                                        : "text-gray-600"
-                                    }`}
-                                  >
-                                    {deviceIcon}
-                                  </span>
-                                </div>
-                                <div>
-                                  <div className="font-medium text-slate-900">
-                                    {deviceName}
-                                  </div>
-                                  <div className="text-sm text-slate-500">
-                                    {session.isCurrent
-                                      ? "Current Session"
-                                      : deviceLabel}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-slate-600">
-                              {session.ipAddress === "::1" || session.ipAddress === "127.0.0.1"
-                                ? "localhost"
-                                : session.ipAddress || "—"}
-                            </td>
-                            <td className="py-3 px-4 text-slate-600">
-                              {formatDateTime(session.loginAt)}
-                            </td>
-                            <td className="py-3 px-4">
-                              {session.isActive ? (
-                                <Badge
-                                  variant="default"
-                                  className="bg-green-100 text-green-800"
-                                >
-                                  Active
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Inactive</Badge>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-8 text-center text-slate-500"
-                        >
-                          No login sessions found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-slate-900">
-                    Security Notice
-                  </h4>
-                  <p className="text-sm text-slate-600">
-                    If you notice any suspicious activity, please change your
-                    password immediately.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPasswordDialog(true)}
-                >
-                  <Key className="h-4 w-4 mr-2" />
-                  Change Password
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Password Change Dialog */}
+        {/* Password Dialog */}
         <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent style={{ background: "#ffffff", border: "1px solid #e5e7eb", borderRadius: 18, maxWidth: 420 }}>
             <DialogHeader>
-              <DialogTitle>Change Password</DialogTitle>
-              <DialogDescription>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Lock size={15} color="#4f46e5" />
+                </div>
+                <DialogTitle style={{ color: "#111827", fontWeight: 700 }}>Change Password</DialogTitle>
+              </div>
+              <DialogDescription style={{ color: "#9ca3af", fontSize: "0.84rem" }}>
                 Enter your current password and choose a new one.
               </DialogDescription>
             </DialogHeader>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const data = {
-                  currentPassword: formData.get("currentPassword") as string,
-                  newPassword: formData.get("newPassword") as string,
-                  confirmPassword: formData.get("confirmPassword") as string,
-                };
-                handlePasswordChange(data);
-              }}
-            >
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <Input
-                    id="currentPassword"
-                    name="currentPassword"
-                    type="password"
-                    placeholder="Enter current password"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">New Password</Label>
-                  <Input
-                    id="newPassword"
-                    name="newPassword"
-                    type="password"
-                    placeholder="Enter new password"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    placeholder="Confirm new password"
-                    required
-                  />
-                </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              handlePasswordChange({
+                currentPassword: formData.get("currentPassword") as string,
+                newPassword: formData.get("newPassword") as string,
+                confirmPassword: formData.get("confirmPassword") as string,
+              });
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", padding: "0.75rem 0" }}>
+                {[
+                  { id: "currentPassword", label: "Current Password", placeholder: "Enter current password" },
+                  { id: "newPassword", label: "New Password", placeholder: "Enter new password" },
+                  { id: "confirmPassword", label: "Confirm New Password", placeholder: "Confirm new password" },
+                ].map(f => (
+                  <div key={f.id}>
+                    <p className="p-field-label">{f.label}</p>
+                    <Input id={f.id} name={f.id} type="password" placeholder={f.placeholder} required className="p-input" />
+                  </div>
+                ))}
               </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowPasswordDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isChangingPassword}>
-                  {isChangingPassword ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Changing...
-                    </>
-                  ) : (
-                    "Change Password"
-                  )}
-                </Button>
+              <DialogFooter style={{ gap: 8, marginTop: 4 }}>
+                <button type="button" className="p-btn-outline" onClick={() => setShowPasswordDialog(false)}>Cancel</button>
+                <button type="submit" className="p-btn-primary" disabled={isChangingPassword}>
+                  {isChangingPassword
+                    ? <><div style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white" }} className="p-spin" /> Changing...</>
+                    : "Change Password"
+                  }
+                </button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -776,48 +949,35 @@ export default function ProfilePage() {
 
         {/* Delete Account Dialog */}
         <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent style={{ background: "#ffffff", border: "1px solid #fecaca", borderRadius: 18, maxWidth: 420 }}>
             <DialogHeader>
-              <DialogTitle className="text-red-600">Delete Account</DialogTitle>
-              <DialogDescription>
-                This action cannot be undone. This will permanently delete your
-                account and remove all data.
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <AlertTriangle size={15} color="#ef4444" />
+                </div>
+                <DialogTitle style={{ color: "#ef4444", fontWeight: 700 }}>Delete Account</DialogTitle>
+              </div>
+              <DialogDescription style={{ color: "#9ca3af", fontSize: "0.84rem" }}>
+                This action cannot be undone. This will permanently delete your account and remove all data.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="p-4 bg-red-50 rounded-lg">
-                <p className="text-sm text-red-800">
-                  <strong>Warning:</strong> This will permanently delete your
-                  account and all associated data.
-                </p>
-              </div>
+            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "0.9rem 1rem" }}>
+              <p style={{ color: "#b91c1c", fontSize: "0.84rem", margin: 0 }}>
+                <strong>Warning:</strong> This will permanently delete your account and all associated data.
+              </p>
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete Account"
-                )}
-              </Button>
+            <DialogFooter style={{ gap: 8, marginTop: 4 }}>
+              <button className="p-btn-outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>Cancel</button>
+              <button className="p-btn-danger" onClick={handleDeleteAccount} disabled={isDeleting}>
+                {isDeleting
+                  ? <><div style={{ width: 13, height: 13, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "white" }} className="p-spin" /> Deleting...</>
+                  : "Delete Account"
+                }
+              </button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </>
   );
 }

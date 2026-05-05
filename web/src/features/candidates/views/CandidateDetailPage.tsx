@@ -10,23 +10,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import {
   ArrowLeft,
-  Edit,
-  Trash2,
   AlertTriangle,
   Target,
   Briefcase,
   FileText,
   TrendingUp,
+  ArrowUpRight,
   Clock,
   RefreshCw,
   Calendar,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
   useGetCandidateProjectsQuery,
@@ -116,7 +115,6 @@ export default function CandidateDetailPage() {
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
-  const canManageCandidates = useCan("write:candidates");
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -147,17 +145,9 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 100 },
+    { candidateId: id!, page: 1, limit: 10 },
     { skip: !id }
   );
-
-  const handleEdit = () => {
-    navigate(`/candidates/${id}/edit`);
-  };
-
-  const handleDelete = () => {
-    toast.error("Delete functionality coming soon");
-  };
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -290,61 +280,58 @@ export default function CandidateDetailPage() {
   const isFuture =
     candidate?.currentStatus?.statusName?.toLowerCase() === "future";
 
-  // Derive on-hold pipeline step for duration / enteredAt (loaded separately)
-  const onHoldStep = pipelineData?.data?.pipeline?.find(
-    (step: any) =>
-      step.isCurrentStatus &&
-      (step.statusName?.toLowerCase().includes("hold") ||
-        step.statusName?.toLowerCase() === "onhold" ||
-        step.statusName?.toLowerCase() === "backout")
-  );
+  type Stat = {
+    label: string;
+    value: number;
+    subtitle: string;
+    icon: any;
+    tab: "overview" | "projects" | "documents" | "history" | "metrics";
+    accent: "emerald" | "blue" | "purple" | "orange";
+  };
 
-  const stats = [
+  const stats: Stat[] = [
+    {
+      label: "Overview",
+      value: candidate.profileCompletion?.percent ?? 0,
+      subtitle: "Profile ready",
+      icon: Target,
+      tab: "overview",
+      accent: "emerald",
+    },
     {
       label: "Projects Assigned",
       value: projectsData?.meta?.total ?? 0,
       subtitle: "Assigned tasks",
       icon: Briefcase,
-      color: "from-blue-500 to-cyan-500",
       tab: "projects",
+      accent: "blue",
     },
     {
       label: "Total Documents",
       value: documentsData?.data?.pagination?.total ?? 0,
       subtitle: "Verified files",
       icon: FileText,
-      color: "from-purple-500 to-pink-500",
       tab: "documents",
+      accent: "purple",
     },
     {
       label: "Status History",
       value: pipelineData?.data?.pipeline?.length ?? 0,
       subtitle: "Status changes",
       icon: TrendingUp,
-      color: "from-orange-500 to-red-500",
       tab: "history",
+      accent: "orange",
     },
   ];
 
-  const gradientMap: Record<
-    string,
-    { bg: string; iconBg: string; text: string }
+  const accentStyles: Record<
+    Stat["accent"],
+    { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
   > = {
-    "from-blue-500 to-cyan-500": {
-      bg: "from-blue-50 to-blue-100/50",
-      iconBg: "bg-blue-200/40",
-      text: "text-blue-600",
-    },
-    "from-purple-500 to-pink-500": {
-      bg: "from-purple-50 to-purple-100/50",
-      iconBg: "bg-purple-200/40",
-      text: "text-purple-600",
-    },
-    "from-orange-500 to-red-500": {
-      bg: "from-orange-50 to-orange-100/50",
-      iconBg: "bg-orange-200/40",
-      text: "text-orange-600",
-    },
+    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+    blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
+    purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",  iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
+    orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",  iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
   };
 
   return (
@@ -487,42 +474,47 @@ export default function CandidateDetailPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
-          const colors = gradientMap[stat.color];
+          const s = accentStyles[stat.accent];
+          const isActive = activeTab === stat.tab;
           return (
-            <motion.div
+            <motion.button
               key={i}
-              onClick={() => stat.tab && setActiveTab(stat.tab)}
-              className="cursor-pointer"
+              type="button"
+              onClick={() => setActiveTab(stat.tab)}
+              className={cn(
+                "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                s.card,
+                isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+              )}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
             >
-              <Card
-                className={`border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
-              >
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${colors.iconBg}`}>
-                    <Icon className={`h-6 w-6 ${colors.text}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {stat.label}
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-2xl font-bold text-slate-900">
-                        {stat.value}
-                      </h3>
-                      <span className="text-xs text-slate-400 font-normal">
-                        {stat.subtitle}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              {isActive && (
+                <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+              )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {stat.label}
+                  </p>
+                  <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
+                    {stat.label === "Overview" ? `${stat.value}%` : stat.value}
+                  </p>
+                  <p className="text-xs text-slate-500">{stat.subtitle}</p>
+                </div>
+                <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                  <Icon className={cn("h-5 w-5", s.icon)} />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                <span>{isActive ? "Viewing now" : "Click to open"}</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </div>
+            </motion.button>
           );
         })}
       </div>
@@ -533,13 +525,11 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2">
+        {/* <TabsList className="grid w-full grid-cols-2 gap-1 md:grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          {/* <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger> */}
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">

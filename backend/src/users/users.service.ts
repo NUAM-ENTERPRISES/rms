@@ -643,14 +643,27 @@ export class UsersService {
     return profile;
   }
 
-  async getUserSessions(userId: string, currentSessionId?: string) {
-    const sessions = await (this.prisma as any).userSession.findMany({
-      where: { userId },
-      orderBy: { loginAt: 'desc' },
-      take: 20,
-    });
+  async getUserSessions(
+    userId: string,
+    currentSessionId?: string,
+    query?: { page?: number; limit?: number },
+  ) {
+    const page = Math.max(1, Number(query?.page ?? 1));
+    const limitRaw = Number(query?.limit ?? 10);
+    const limit = Math.min(10, Math.max(1, limitRaw));
+    const skip = (page - 1) * limit;
 
-    return sessions.map((s: any) => ({
+    const [total, sessions] = await Promise.all([
+      (this.prisma as any).userSession.count({ where: { userId } }),
+      (this.prisma as any).userSession.findMany({
+        where: { userId },
+        orderBy: { loginAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const rows = sessions.map((s: any) => ({
       id: s.id,
       ipAddress: s.ipAddress,
       userAgent: s.userAgent,
@@ -664,6 +677,16 @@ export class UsersService {
       availabilityUpdatedAt: s.availabilityUpdatedAt ?? null,
       isCurrent: currentSessionId ? s.id === currentSessionId : false,
     }));
+
+    return {
+      sessions: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
   }
 
   async getAdminSessions(query: {

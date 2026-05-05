@@ -23,8 +23,7 @@ export function useSessionActivityTracker(enabled: boolean) {
 
       const now = Date.now();
       const shouldPing =
-        force ||
-        now - lastPingRef.current >= ACTIVITY_PING_INTERVAL_MS;
+        force || now - lastPingRef.current >= ACTIVITY_PING_INTERVAL_MS;
       if (!shouldPing) {
         return;
       }

@@ -60,6 +60,49 @@ const REQUIRED_DOC_LABELS: Record<CandidateProfileRequiredDocumentId, string> = 
   registration_certificate: "Registration certificate",
 };
 
+/** Display labels on the Document Repository tab (document-only scoring). */
+export const DOCUMENT_REPOSITORY_LABELS: Record<
+  CandidateProfileRequiredDocumentId,
+  string
+> = {
+  resume: "Resume",
+  degree: "Degree Certificate",
+  photo: "Passport Size Photo",
+  passport: "Passport Copy",
+  aadhaar: "Aadhaar Card",
+  registration_certificate: "Registration Certificate",
+};
+
+/** `docType` value to send when uploading a slot (matches `DOCUMENT_TYPE` / upload API). */
+export const DOCUMENT_REPOSITORY_UPLOAD_TYPE: Record<
+  CandidateProfileRequiredDocumentId,
+  string
+> = {
+  resume: "resume",
+  degree: "degree_certificate",
+  photo: "passport_photo",
+  passport: "passport_copy",
+  aadhaar: "aadhaar",
+  registration_certificate: "registration_certificate",
+};
+
+export type DocumentRepositoryMissingItem = {
+  key: CandidateProfileRequiredDocumentId;
+  label: string;
+  uploadDocType: string;
+};
+
+export type DocumentRepositoryCompletion = {
+  percent: number;
+  requiredCount: number;
+  completedCount: number;
+  missing: DocumentRepositoryMissingItem[];
+  /** Types present (at least one file per slot). */
+  typeSatisfiedCount: number;
+  /** Types still missing. */
+  typeMissingCount: number;
+};
+
 function hasEmail(email?: string | null): boolean {
   return Boolean(email && String(email).trim().length > 0);
 }
@@ -86,7 +129,7 @@ function collectUploadedDocTypes(
   const set = new Set<string>();
   for (const d of documents) {
     const t = d?.docType;
-    if (t) set.add(String(t).trim());
+    if (t) set.add(String(t).trim().toLowerCase());
   }
   return set;
 }
@@ -96,7 +139,65 @@ function hasRequiredDocument(
   canonicalId: CandidateProfileRequiredDocumentId
 ): boolean {
   const satisfiers = PROFILE_DOCUMENT_SATISFIERS[canonicalId] ?? [canonicalId];
-  return satisfiers.some((t) => uploaded.has(t));
+  return satisfiers.some((t) => uploaded.has(String(t).toLowerCase()));
+}
+
+/**
+ * Document Repository tab only: six mandatory **document** slots, independent of
+ * personal fields and of per-file workflow status (pending/verified).
+ */
+export function getCandidateProfileCompletion(
+  documents: Array<{ docType?: string }> | undefined
+): DocumentRepositoryCompletion {
+  const uploaded = collectUploadedDocTypes(documents ?? []);
+
+  const missing: DocumentRepositoryMissingItem[] = [];
+  for (const id of CANDIDATE_PROFILE_REQUIRED_DOCUMENTS) {
+    if (!hasRequiredDocument(uploaded, id)) {
+      missing.push({
+        key: id,
+        label: DOCUMENT_REPOSITORY_LABELS[id],
+        uploadDocType: DOCUMENT_REPOSITORY_UPLOAD_TYPE[id],
+      });
+    }
+  }
+
+  const requiredCount = CANDIDATE_PROFILE_REQUIRED_DOCUMENTS.length;
+  const completedCount = requiredCount - missing.length;
+  const percent =
+    requiredCount > 0
+      ? Math.round((completedCount / requiredCount) * 100)
+      : 0;
+
+  return {
+    percent,
+    requiredCount,
+    completedCount,
+    missing,
+    typeSatisfiedCount: completedCount,
+    typeMissingCount: missing.length,
+  };
+}
+
+export type DocumentRepositorySlotRow = {
+  key: CandidateProfileRequiredDocumentId;
+  label: string;
+  uploadDocType: string;
+  /** At least one document of this type (or an accepted alias) is on file. */
+  satisfied: boolean;
+};
+
+/** All six mandatory slots in fixed order, for checklist UI. */
+export function getDocumentRepositorySlots(
+  documents: Array<{ docType?: string }> | undefined
+): DocumentRepositorySlotRow[] {
+  const uploaded = collectUploadedDocTypes(documents ?? []);
+  return CANDIDATE_PROFILE_REQUIRED_DOCUMENTS.map((id) => ({
+    key: id,
+    label: DOCUMENT_REPOSITORY_LABELS[id],
+    uploadDocType: DOCUMENT_REPOSITORY_UPLOAD_TYPE[id],
+    satisfied: hasRequiredDocument(uploaded, id),
+  }));
 }
 
 type ProfileInput = {

@@ -8,7 +8,8 @@
 
 export const DOCUMENT_TYPE = {
   // Identity Documents
-  PASSPORT: "passport",
+  /** Backend canonical: `passport_copy` (legacy rows may still be `passport`). */
+  PASSPORT: "passport_copy",
   AADHAAR: "aadhaar",
   PAN_CARD: "pan_card",
   DRIVING_LICENSE: "driving_license",
@@ -38,7 +39,8 @@ export const DOCUMENT_TYPE = {
   ELIGIBILITY_LETTER: 'eligibility_letter',
 
   // Educational Documents
-  DEGREE: "degree",
+  /** Backend canonical: `degree_certificate` (legacy rows may still be `degree`). */
+  DEGREE: "degree_certificate",
   DIPLOMA: "diploma",
   CERTIFICATE: "certificate",
   TRANSCRIPT: "transcript",
@@ -683,6 +685,7 @@ export function isValidFileExtension(
 ): boolean {
   const extension = filename.split(".").pop()?.toLowerCase() ?? "";
   const config = getDocumentTypeConfig(docType);
+  if (!config) return false;
   return config.allowedFormats.includes(extension);
 }
 
@@ -694,6 +697,7 @@ export function isValidFileSize(
   sizeMB: number
 ): boolean {
   const config = getDocumentTypeConfig(docType);
+  if (!config) return false;
   return sizeMB <= config.maxSizeMB;
 }
 
@@ -702,5 +706,6 @@ export function isValidFileSize(
  */
 export function getAllowedFormatsString(docType: DocumentType): string {
   const config = getDocumentTypeConfig(docType);
+  if (!config) return "";
   return config.allowedFormats.map((f) => f.toUpperCase()).join(", ");
 }

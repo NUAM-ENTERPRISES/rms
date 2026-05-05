@@ -34,8 +34,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
-// (kept controller consistent with existing query parsing; no DTO needed here)
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { UserWithRoles, PaginatedUsers } from './types';
@@ -288,15 +288,21 @@ export class UsersController {
     summary: 'Get current user login sessions',
     description: 'Retrieve recent login sessions for the current user.',
   })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ApiResponse({ status: 200, description: 'Sessions retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getSessions(@Request() req) {
+  async getSessions(@Request() req, @Query() query: QueryProfileSessionsDto) {
     const userId = req.user.id;
     const currentSessionId = req.user.sid ?? undefined;
-    const sessions = await this.usersService.getUserSessions(userId, currentSessionId);
+    const result = await this.usersService.getUserSessions(
+      userId,
+      currentSessionId,
+      query,
+    );
     return {
       success: true,
-      data: sessions,
+      data: result,
       message: 'Sessions retrieved successfully',
     };
   }

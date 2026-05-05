@@ -18,9 +18,10 @@ type Props = {
 };
 
 function ringGeom(variant: "circular" | "compact") {
-  const r = variant === "compact" ? 14 : 20;
-  const px = variant === "compact" ? 36 : 56;
-  const vb = variant === "compact" ? 36 : 56;
+  // compact is used inside dense tables — slightly larger to avoid being cramped
+  const r = variant === "compact" ? 19 : 20;
+  const px = variant === "compact" ? 52 : 56;
+  const vb = variant === "compact" ? 52 : 56;
   return { r, c: 2 * Math.PI * r, px, vb };
 }
 
@@ -48,6 +49,7 @@ export function CandidateProfileCompletion({
   const { r, c, px, vb } = ringGeom(variant);
   const offset = c - (percent / 100) * c;
   const aria = buildAriaLabel(percent, missing.length);
+  const hasMissing = missing.length > 0;
 
   const missingPreview = missing.slice(0, 8);
   const more = missing.length - missingPreview.length;
@@ -82,14 +84,17 @@ export function CandidateProfileCompletion({
             cy={vb / 2}
             r={r}
             className="fill-none stroke-border"
-            strokeWidth={variant === "compact" ? 3 : 4}
+            strokeWidth={variant === "compact" ? 5 : 4}
           />
           <circle
             cx={vb / 2}
             cy={vb / 2}
             r={r}
-            className="fill-none stroke-primary transition-[stroke-dashoffset] duration-500"
-            strokeWidth={variant === "compact" ? 3 : 4}
+            className={cn(
+              "fill-none transition-[stroke-dashoffset] duration-500",
+              hasMissing ? "stroke-rose-500" : "stroke-emerald-500"
+            )}
+            strokeWidth={variant === "compact" ? 5 : 4}
             strokeLinecap="round"
             strokeDasharray={c}
             strokeDashoffset={offset}
@@ -97,8 +102,9 @@ export function CandidateProfileCompletion({
         </svg>
         <span
           className={cn(
-            "pointer-events-none absolute inset-0 flex items-center justify-center font-semibold tabular-nums text-foreground",
-            variant === "compact" ? "text-[10px]" : "text-xs"
+            "pointer-events-none absolute inset-0 flex items-center justify-center font-semibold tabular-nums",
+            hasMissing ? "text-rose-600" : "text-emerald-600",
+            variant === "compact" ? "text-xs" : "text-xs"
           )}
         >
           {percent}%
