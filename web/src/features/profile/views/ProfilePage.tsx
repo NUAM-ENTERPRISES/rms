@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 // (ProfilePage uses custom `p-card` layout; no shadcn Card here)
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -44,6 +45,8 @@ import {
   useUploadProfileImageMutation,
   useGetSessionsQuery,
 } from "@/features/profile/api";
+import { CountrySelect } from "@/components/molecules/CountrySelect";
+import { StateSelect } from "@/components/molecules/StateSelect";
 
 const profileSchema = {
   name: "",
@@ -90,6 +93,15 @@ export default function ProfilePage() {
     defaultValues: profileSchema,
     mode: "onChange",
   });
+
+  const addressCountryCode = (form.watch("addressCountryCode") ?? "").trim();
+  const prevAddressCountryCodeRef = useRef<string>(addressCountryCode);
+  useEffect(() => {
+    if (prevAddressCountryCodeRef.current !== addressCountryCode) {
+      form.setValue("addressStateId", "");
+      prevAddressCountryCodeRef.current = addressCountryCode;
+    }
+  }, [addressCountryCode, form]);
 
   const handleEdit = () => {
     if (!userData) return;
@@ -420,9 +432,9 @@ export default function ProfilePage() {
 
       <div
         className="p-root"
-        style={{ background: "#f5f6fa", minHeight: "100vh", padding: "2rem 1.25rem" }}
+        style={{ background: "#f5f6fa", minHeight: "100vh", padding: "1.25rem" }}
       >
-        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+        <div style={{ width: "100%" }}>
 
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
@@ -456,7 +468,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Main Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: "1.25rem", alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "270px 1fr", gap: "0.75rem", alignItems: "start" }}>
 
             {/* Left */}
             <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
@@ -626,11 +638,17 @@ export default function ProfilePage() {
                         <p className="p-field-label">Address Country Code</p>
                         {isEditing
                           ? (
-                            <Input
-                              id="addressCountryCode"
-                              {...form.register("addressCountryCode")}
-                              placeholder="e.g. IN"
-                              className="p-input"
+                            <Controller
+                              name="addressCountryCode"
+                              control={form.control}
+                              render={({ field }) => (
+                                <CountrySelect
+                                  value={field.value ?? ""}
+                                  onValueChange={field.onChange}
+                                  placeholder="Select country…"
+                                  allowEmpty
+                                />
+                              )}
                             />
                           )
                           : (
@@ -644,11 +662,22 @@ export default function ProfilePage() {
                         <p className="p-field-label">State</p>
                         {isEditing
                           ? (
-                            <Input
-                              id="addressStateId"
-                              {...form.register("addressStateId")}
-                              placeholder="Enter state"
-                              className="p-input"
+                            <Controller
+                              name="addressStateId"
+                              control={form.control}
+                              render={({ field }) => (
+                                <StateSelect
+                                  value={field.value ?? ""}
+                                  onValueChange={field.onChange}
+                                  countryCode={addressCountryCode}
+                                  placeholder={
+                                    addressCountryCode
+                                      ? "Select state…"
+                                      : "Select country first…"
+                                  }
+                                  allowEmpty
+                                />
+                              )}
                             />
                           )
                           : (
@@ -662,11 +691,18 @@ export default function ProfilePage() {
                         <p className="p-field-label">Address</p>
                         {isEditing
                           ? (
-                            <Input
-                              id="address"
-                              {...form.register("address")}
-                              placeholder="Enter address"
-                              className="p-input"
+                            <Controller
+                              name="address"
+                              control={form.control}
+                              render={({ field }) => (
+                                <Textarea
+                                  {...field}
+                                  value={field.value ?? ""}
+                                  rows={3}
+                                  placeholder="Enter address"
+                                  className="p-input min-h-[88px]"
+                                />
+                              )}
                             />
                           )
                           : (
