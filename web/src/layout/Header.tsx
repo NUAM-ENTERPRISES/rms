@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/organisms/NotificationBell";
 import UserMenu from "@/components/organisms/UserMenu";
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
-import { HRDReminderBadge } from "@/features/processing/components/HRDReminderBadge";
-import { DataFlowReminderBadge } from "@/features/processing/components/DataFlowReminderBadge";
+import { ProcessingRemindersBadge } from "@/features/processing/components/ProcessingRemindersBadge";
 import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
 import SessionAvailabilityToggles from "@/features/staff/components/SessionAvailabilityToggles";
 
@@ -31,9 +30,8 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
 
         <div className="flex items-center gap-3">
           <RNRReminderBadge />
-          {/* Processing team badges */}
-          <DataFlowReminderBadge />
-          <HRDReminderBadge />
+          {/* Processing team unified badge */}
+          <ProcessingRemindersBadge />
           <SessionAvailabilityToggles />
           <IdleUsersNotification />
           <NotificationBell />

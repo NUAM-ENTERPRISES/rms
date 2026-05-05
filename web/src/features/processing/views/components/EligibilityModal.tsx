@@ -919,27 +919,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                ) : !hasSubmittedAt ? (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div>
-                          <Button
-                            size="sm"
-                            onClick={handleMarkComplete}
-                            disabled={true}
-                            className="opacity-80"
-                            aria-disabled={true}
-                          >
-                            {'Mark Eligibility Complete'}
-                          </Button>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Submission date required to complete Eligibility. Please select and submit a date.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
                 ) : (
                   <Button
                     size="sm"

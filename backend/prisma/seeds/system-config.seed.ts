@@ -44,22 +44,17 @@ export async function seedSystemConfig() {
   });
 
   // HRD Settings (new)
-  // For testing: schedule first HRD reminder ~1 minute from now
-  const now = new Date();
-  const oneMinuteLater = new Date(now.getTime() + 60 * 1000);
-  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-  const hhmm = `${pad(oneMinuteLater.getHours())}:${pad(oneMinuteLater.getMinutes())}`;
-
   const hrdSettings = {
-    // Production defaults: start reminders 15 days after submittedAt
-    daysAfterSubmission: 15,
+    // Testing mode: start reminders 1 minute after submittedAt
+    daysAfterSubmission: 0,
     remindersPerDay: 1,
     dailyTimes: ['09:00'], // times in HH:mm (office morning)
-    totalDays: 3, // send reminders for 3 consecutive days (first + 2 follow-ups)
-    delayBetweenReminders: 60 * 24, // minutes (1 day) - fallback for repeating daily reminders
+    totalDays: 3, 
+    delayBetweenReminders: 1, // 1 minute delay for testing
     officeHours: {
-      start: '09:00',
-      end: '18:00',
+      enabled: false, // Disabled for testing common flows
+      start: '00:00',
+      end: '23:59',
     },
     escalate: {
       enabled: false,
@@ -88,12 +83,28 @@ export async function seedSystemConfig() {
     },
   });
 
-  // DATA FLOW Settings (same defaults as HRD) — enable test mode for quick verification
+  // DATA FLOW Settings
   const dataFlowSettings = {
-    ...hrdSettings,
-    // For testing: schedule first reminder immediately
+    // Testing mode: start reminders 1 minute after submittedAt
     daysAfterSubmission: 0,
-    testMode: { ...hrdSettings.testMode, enabled: true, immediateDelayMinutes: 1 },
+    remindersPerDay: 1,
+    dailyTimes: ['09:00'],
+    totalDays: 3,
+    delayBetweenReminders: 1, // 1 minute delay for testing
+    officeHours: {
+      enabled: false,
+      start: '00:00',
+      end: '23:59',
+    },
+    escalate: {
+      enabled: false,
+      afterDays: 3,
+      assignmentStrategy: 'round_robin',
+    },
+    testMode: {
+      enabled: true,
+      immediateDelayMinutes: 1,
+    },
   };
 
   await prisma.systemConfig.upsert({
@@ -111,6 +122,54 @@ export async function seedSystemConfig() {
       isActive: true,
     },
   });
+
+  // Common settings for other processing steps (15 days)
+  const defaultProcessingSettings = (key: string, description: string) => {
+    const settings = {
+      daysAfterSubmission: 15,
+      remindersPerDay: 1,
+      dailyTimes: ['09:00'],
+      totalDays: 3,
+      delayBetweenReminders: 60 * 24,
+      officeHours: {
+        enabled: true,
+        start: '09:00',
+        end: '18:00',
+      },
+      escalate: {
+        enabled: false,
+        afterDays: 3,
+        assignmentStrategy: 'round_robin',
+      },
+      testMode: {
+        enabled: false,
+        immediateDelayMinutes: 1,
+      },
+    };
+
+    return prisma.systemConfig.upsert({
+      where: { key },
+      update: {
+        value: settings,
+        description,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+      create: {
+        key,
+        value: settings,
+        description,
+        isActive: true,
+      },
+    });
+  };
+
+  await Promise.all([
+    defaultProcessingSettings('MEDICAL_SETTINGS', 'Medical reminder system configuration'),
+    defaultProcessingSettings('BIOMETRIC_SETTINGS', 'Biometric reminder system configuration'),
+    defaultProcessingSettings('EMIGRATION_SETTINGS', 'Emigration reminder system configuration'),
+    defaultProcessingSettings('DOCUMENT_RECEIVED_SETTINGS', 'Document Received / Council Registration reminder system configuration'),
+  ]);
 
   // State code → ordered language codes for recruiter auto-assignment
   const stateRecruitmentLanguages: Record<string, string[]> = {

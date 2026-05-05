@@ -209,26 +209,35 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     socket.on("notification:new", (notification: any) => {
       console.log("[Socket] Notif Received:", notification);
       
-      // Notify components to refresh data and open bell
-      window.dispatchEvent(new CustomEvent("notifications:refresh"));
-      window.dispatchEvent(new CustomEvent("notifications:open"));
-      
-      dispatch(baseApi.util.invalidateTags([
-        { type: "NotificationBadge" },
-        { type: "Notification", id: "LIST" }
-      ]));
+      const isProcessingReminder = 
+        notification.type === "processing.reminder" || 
+        notification.type?.endsWith("_REMINDER") ||
+        notification.isSilent;
 
-      // play sound if not muted and this is a new notification
-      if (!mutedRef.current) {
-        if (audioRef.current) {
-          audioRef.current.play()
-            .then(() => {
-              unlockedRef.current = true;
-            })
-            .catch((err) => {
-              // If failed, try to unlock it now by force on the next user interaction
-              console.warn("Notification sound play failed, browser blocked it", err);
-            });
+      // Notify components to refresh data
+      window.dispatchEvent(new CustomEvent("notifications:refresh"));
+      
+      // Only open bell and invalidate badge if it's NOT a silent processing reminder
+      if (!isProcessingReminder) {
+        window.dispatchEvent(new CustomEvent("notifications:open"));
+        
+        dispatch(baseApi.util.invalidateTags([
+          { type: "NotificationBadge" },
+          { type: "Notification", id: "LIST" }
+        ]));
+
+        // play sound if not muted and this is a new notification
+        if (!mutedRef.current) {
+          if (audioRef.current) {
+            audioRef.current.play()
+              .then(() => {
+                unlockedRef.current = true;
+              })
+              .catch((err) => {
+                // If failed, try to unlock it now by force on the next user interaction
+                console.warn("Notification sound play failed, browser blocked it", err);
+              });
+          }
         }
       }
 
@@ -239,8 +248,19 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         }));
       }
 
+      // Dispatch a specific event for processing reminders so the processing followup modal opens
+      if (notification.type === "processing.reminder" || isProcessingReminder) {
+        window.dispatchEvent(new CustomEvent("processing:reminder", {
+          detail: { reminder: notification.payload || notification, show: true }
+        }));
+      }
+
       // Only show toast if it's NOT a verification notification (which triggers the bell animation)
-      if (notification.type !== "candidate_sent_for_verification") {
+      if (
+        notification.type !== "candidate_sent_for_verification" &&
+        notification.type !== "processing.reminder" &&
+        !notification.type?.endsWith("_REMINDER")
+      ) {
         toast(notification.title || "New Notification", {
           description: notification.message || ""
         });
