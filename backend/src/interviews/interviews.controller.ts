@@ -149,12 +149,6 @@ export class InterviewsController {
     description: 'Search term for candidate name or project title',
   })
   @ApiQuery({
-    name: 'type',
-    required: false,
-    description: 'Filter by interview type',
-    enum: ['technical', 'hr', 'managerial', 'final'],
-  })
-  @ApiQuery({
     name: 'mode',
     required: false,
     description: 'Filter by interview mode',
@@ -216,12 +210,10 @@ export class InterviewsController {
                   id: { type: 'string' },
                   scheduledTime: { type: 'string', format: 'date-time' },
                   duration: { type: 'number' },
-                  type: { type: 'string' },
                   mode: { type: 'string' },
                   meetingLink: { type: 'string' },
                   // Example meeting link (optional)
                   // meetingLink: { type: 'string', example: 'https://meet.affiniks.com/abc123' },
-                  interviewer: { type: 'string' },
                   interviewerEmail: { type: 'string' },
                   expired: { type: 'boolean' },
                   outcome: { type: 'string' },
@@ -417,10 +409,8 @@ export class InterviewsController {
                   id: { type: 'string' },
                   scheduledTime: { type: 'string', format: 'date-time' },
                   duration: { type: 'number' },
-                  type: { type: 'string' },
                   mode: { type: 'string' },
                   meetingLink: { type: 'string' },
-                  interviewer: { type: 'string' },
                   interviewerEmail: { type: 'string' },
                   outcome: { type: 'string' },
                   notes: { type: 'string' },

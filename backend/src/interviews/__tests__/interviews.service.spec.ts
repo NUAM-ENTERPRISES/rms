@@ -212,14 +212,12 @@ describe('InterviewsService - client decision flows', () => {
       candidateProjectMapId: 'cpm-1',
       scheduledTime: '2026-03-28T10:00:00Z',
       duration: 60,
-      type: 'technical',
       mode: 'video',
     } as any, 'user-1');
 
     expect(mockPrisma.interview.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         outcome: 'scheduled',
-        interviewer: 'user-1',
       }),
     }));
 

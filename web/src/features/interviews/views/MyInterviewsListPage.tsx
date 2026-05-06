@@ -108,7 +108,6 @@ export default function MyInterviewsListPage() {
     status: filters.status !== "all" ? filters.status : undefined,
     projectId: filters.projectId !== "all" ? filters.projectId : undefined,
     roleCatalogId: filters.roleCatalogId !== "all" ? filters.roleCatalogId : undefined,
-    type: searchParams.get("type") || undefined,
     mode: searchParams.get("mode") || undefined,
     page: 1,
     limit: 15,
@@ -134,11 +133,9 @@ export default function MyInterviewsListPage() {
   const myInterviews = useMemo(() => {
     if (!currentUser) return interviews;
     return interviews.filter((i) => {
-      const interviewerId = i.interviewer;
-      const interviewerEmail = i.interviewerEmail || i.interviewer?.email;
+      const interviewerEmail = i.interviewerEmail;
       const candidateId = i.candidateProjectMap?.candidate?.id || i.candidate?.id;
       const isInterviewer =
-        (currentUser.id && interviewerId === currentUser.id) ||
         (currentUser.email && interviewerEmail === currentUser.email);
       const isCandidate = currentUser.id && candidateId === currentUser.id;
       return isInterviewer || isCandidate;

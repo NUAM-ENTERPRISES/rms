@@ -28,6 +28,7 @@ import {
 import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
+import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import EditInterviewDialog from "../components/EditInterviewDialog";
 import { ImageViewer } from "@/components/molecules";
@@ -84,6 +85,7 @@ export default function InterviewDetailPage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useGetInterviewQuery(id ?? "", { skip: !id });
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isCompleteOpen, setIsCompleteOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyLimit, setHistoryLimit] = useState(10);
@@ -145,6 +147,16 @@ export default function InterviewDetailPage() {
       setIsReviewOpen(false);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
+    }
+  };
+
+  const handleCompleteSubmit = async (updates: { id: string; interviewStatus: string; subStatus?: string; reason?: string }[]) => {
+    try {
+      await updateBulkInterviewStatus({ updates: updates as any }).unwrap();
+      toast.success(`${updates.length} interview(s) marked completed`);
+      setIsCompleteOpen(false);
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to complete interview");
     }
   };
 
@@ -247,11 +259,6 @@ export default function InterviewDetailPage() {
                   <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Role</p>
                   <p className="text-[11px] font-bold text-slate-700 truncate max-w-[150px]">{role?.designation || "N/A"}</p>
                 </div>
-                <div className="h-6 w-px bg-slate-200" />
-                <div>
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-1">Type</p>
-                  <p className="text-[11px] font-bold text-slate-700 capitalize">{selected.type || "N/A"}</p>
-                </div>
               </div>
 
               {selected.outcome === "completed" ||
@@ -269,7 +276,7 @@ export default function InterviewDetailPage() {
               ) : (
                 <Button
                   size="sm"
-                  onClick={() => setIsReviewOpen(true)}
+                  onClick={() => setIsCompleteOpen(true)}
                   className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm px-4 text-xs font-semibold"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
@@ -569,6 +576,13 @@ export default function InterviewDetailPage() {
       </div>
 
       {/* Modals */}
+      <CompleteInterviewModal
+        isOpen={isCompleteOpen}
+        onClose={() => setIsCompleteOpen(false)}
+        interview={selected}
+        onSubmit={handleCompleteSubmit}
+      />
+
       <ReviewInterviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}

@@ -6,7 +6,6 @@ export interface Interview {
   id: string;
   scheduledTime: string;
   duration: number;
-  type: string;
   mode: string;
   // Server includes a convenience flag when an interview is past due
   expired?: boolean;
@@ -15,7 +14,6 @@ export interface Interview {
   airTicketUp?: boolean;
   airTicketDown?: boolean;
   accommodation?: boolean;
-  interviewer?: string;
   interviewerEmail?: string;
   outcome?: string;
   notes?: string;
@@ -104,7 +102,6 @@ export interface CreateInterviewRequest {
   projectId?: string;
   scheduledTime: string;
   duration?: number;
-  type?: string;
   mode?: string;
   location?: string;
   meetingLink?: string;
@@ -115,7 +112,6 @@ export interface CreateInterviewRequest {
 export interface UpdateInterviewRequest {
   scheduledTime?: string;
   duration?: number;
-  type?: string;
   mode?: string;
   meetingLink?: string;
   interviewerEmail?: string;
@@ -125,7 +121,6 @@ export interface UpdateInterviewRequest {
 
 export interface QueryInterviewsRequest {
   search?: string;
-  type?: string;
   mode?: string;
   status?: string;
   projectId?: string;

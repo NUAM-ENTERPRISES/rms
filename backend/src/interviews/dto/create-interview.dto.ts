@@ -6,7 +6,6 @@ import {
   IsNumber,
   IsOptional,
   IsEnum,
-  IsEmail,
   IsBoolean,
 } from 'class-validator';
 
@@ -49,24 +48,6 @@ export class CreateInterviewDto {
   @IsNumber()
   @IsOptional()
   duration?: number = 60;
-
-  @ApiPropertyOptional({
-    description: 'Interview type',
-    example: 'technical',
-    default: 'technical',
-  })
-  @IsString()
-  @IsOptional()
-  type?: string;
-
-  @ApiPropertyOptional({
-    description: 'Interviewer name',
-    example: 'John Doe',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  interviewer?: string;
 
   @ApiPropertyOptional({
     description: 'Interview mode',
