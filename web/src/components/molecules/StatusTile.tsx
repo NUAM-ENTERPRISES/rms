@@ -16,6 +16,8 @@ type StatusTileProps = {
   scrollOnClick?: boolean;
   className?: string;
   ariaLabel?: string;
+  /** Rendered below the main row (e.g. action button); stops click propagation so parent onClick does not fire */
+  footer?: React.ReactNode;
 };
 
 export function StatusTile({
@@ -32,6 +34,7 @@ export function StatusTile({
   scrollOnClick = false,
   className,
   ariaLabel,
+  footer,
 }: StatusTileProps) {
   const handleActivate = () => {
     onClick?.();
@@ -83,6 +86,14 @@ export function StatusTile({
             <Icon className={cn("h-3.5 w-3.5", textColor)} />
           </div>
         </div>
+        {footer ? (
+          <div
+            className="mt-2 pt-2 border-t border-slate-200/50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {footer}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

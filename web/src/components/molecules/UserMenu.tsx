@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useLogoutMutation } from "@/services/authApi";
 import { clearCredentials } from "@/features/auth/authSlice";
+import { baseApi } from "@/app/api/baseApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,11 +32,13 @@ export default function UserMenu() {
     try {
       await logout().unwrap();
       dispatch(clearCredentials());
+      dispatch(baseApi.util.resetApiState());
       toast.success("Logged out successfully");
       navigate("/login");
     } catch (error) {
       // Even if logout API fails, clear local state
       dispatch(clearCredentials());
+      dispatch(baseApi.util.resetApiState());
       toast.success("Logged out successfully");
       navigate("/login");
     }

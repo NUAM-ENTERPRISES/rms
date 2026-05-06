@@ -26,6 +26,7 @@ import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
+import { PROJECT_SECTOR } from "@/entities/project/constants";
 
 interface PreviewStepProps {
   watch: UseFormWatch<ProjectFormData>;
@@ -165,6 +166,22 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                   ? "Private Sector"
                   : "Ministry/Government"}
               </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600">Project Sector</p>
+              <div className="flex items-center gap-1.5 font-medium text-slate-800">
+                {formData.sector === PROJECT_SECTOR.HEALTHCARE ? (
+                  <>
+                    <Heart className="h-3.5 w-3.5 text-emerald-600" />
+                    Healthcare
+                  </>
+                ) : (
+                  <>
+                    <Target className="h-3.5 w-3.5 text-indigo-600" />
+                    Non-Healthcare
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum SessionAvailability {
+  ACTIVE
+  BREAK
+  ON_CALL
+}
+
 model RefreshToken {
   id        String    @id @default(cuid())
   familyId  String
@@ -21,6 +27,27 @@ model RefreshToken {
   @@index([familyId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+model UserSession {
+  id                    String              @id @default(cuid())
+  userId                String
+  refreshTokenId        String?
+  ipAddress             String?
+  userAgent             String?
+  browser               String?
+  os                    String?
+  deviceType            String?
+  loginAt               DateTime            @default(now())
+  lastActivityAt        DateTime            @default(now())
+  isActive              Boolean             @default(true)
+  availability          SessionAvailability @default(ACTIVE)
+  availabilityUpdatedAt DateTime?
+  user                  User                @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([refreshTokenId])
+  @@map("user_sessions")
 }
 
 model User {
@@ -40,6 +67,7 @@ model User {
   notifications                    Notification[]
   createdProjects                  Project[]                      @relation("ProjectCreator")
   refreshTokens                    RefreshToken[]
+  sessions                         UserSession[]
   transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
   transferRequestsRequested        TeamTransferRequest[]          @relation("TransferRequester")
   transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
@@ -60,17 +88,27 @@ model User {
 
   statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
   rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
-  hrdRemindersAssigned        HRDReminder[]
-  dataFlowRemindersAssigned   DataFlowReminder[]
+  processingRemindersAssigned ProcessingStepReminder[]
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                   @relation("ScreeningCoordinator")
 
+  addressCountryCode          String?
+  addressStateId              String?
+  address                     String?
+  addressCountry              Country?                      @relation("PhysicalAddressCountryUser", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState                State?                        @relation("PhysicalAddressStateUser", fields: [addressStateId], references: [id], onDelete: SetNull)
+
+  userLanguages        UserLanguage[]
+  userCountryCoverages UserCountryCoverage[]
+
   @@unique([countryCode, mobileNumber])
   @@index([email])
   @@index([countryCode, mobileNumber])
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@index([createdAt])
   @@map("users")
 }
@@ -178,9 +216,34 @@ model Client {
   specialties       Json                    @default("[]")
   taxId             String?
   type              ClientType
+  addressCountryCode String?
+  addressStateId    String?
+  addressCountry    Country?                  @relation("PhysicalAddressCountryClient", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState      State?                    @relation("PhysicalAddressStateClient", fields: [addressStateId], references: [id], onDelete: SetNull)
   projects          Project[]
+  subClientLinks    ClientSubClient[]         @relation("ClientSubClientParent")
+  parentClientLinks ClientSubClient[]         @relation("ClientSubClientChild")
 
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@map("clients")
+}
+
+/// Parent intermediary (SUB_AGENT | FREELANCE) → child end client (typically DIRECT_CLIENT).
+model ClientSubClient {
+  id             String                   @id @default(cuid())
+  parentClientId String
+  childClientId  String
+  linkType       ClientSubClientLinkType
+  createdAt      DateTime                 @default(now())
+
+  parent Client @relation("ClientSubClientParent", fields: [parentClientId], references: [id], onDelete: Cascade)
+  child  Client @relation("ClientSubClientChild", fields: [childClientId], references: [id], onDelete: Cascade)
+
+  @@unique([parentClientId, childClientId])
+  @@index([parentClientId])
+  @@index([childClientId])
+  @@map("client_sub_clients")
 }
 
 model Country {
@@ -200,6 +263,10 @@ model Country {
   countryDocumentRequirements   CountryDocumentRequirement[]
   processingCountrySteps        ProcessingCountryStep[]
   candidatePreferences          CandidatePreferredCountry[]
+  clientsPhysicalAddress        Client[]                      @relation("PhysicalAddressCountryClient")
+  usersPhysicalAddress          User[]                        @relation("PhysicalAddressCountryUser")
+  candidatesPhysicalAddress     Candidate[]                 @relation("PhysicalAddressCountryCandidate")
+  userCountryCoverages          UserCountryCoverage[]
 
   @@map("countries")
 }
@@ -221,6 +288,7 @@ model Project {
   countryCode          String?
   projectType          String                @default("private") // "private" or "ministry"
   resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
+  sector               String                @default("healthcare") // "healthcare" or "non-healthcare"
   groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
   hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
   
@@ -240,6 +308,8 @@ model Project {
   processingTasks      ProcessingCandidate[]
   mergedDocuments      MergedDocument[]
   documentForwards     DocumentForwardHistory[]
+  agentProjects        AgentProject[]
+  agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
 
   @@map("projects")
 }
@@ -305,6 +375,8 @@ model Candidate {
   id                   String                         @id @default(cuid())
   email                String?
   source               String                         @default("manual")
+  agentId              String?
+  agent                Agent?                         @relation("AgentToCandidate", fields: [agentId], references: [id])
   dateOfBirth          DateTime?
   gender               Gender?
   currentStatusId      Int?
@@ -374,14 +446,79 @@ model Candidate {
   mergedDocuments      MergedDocument[]
   documentForwards     DocumentForwardHistory[]
 
+  /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
+  agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
+
+  addressCountryCode             String?
+  addressStateId                 String?
+  address                        String?
+  addressCountry                 Country?                      @relation("PhysicalAddressCountryCandidate", fields: [addressCountryCode], references: [code], onDelete: SetNull)
+  addressState                   State?                        @relation("PhysicalAddressStateCandidate", fields: [addressStateId], references: [id], onDelete: SetNull)
+
   @@unique([countryCode, mobileNumber])
   @@index([teamId])
   @@index([currentStatusId])
+  @@index([addressCountryCode])
+  @@index([addressStateId])
   @@index([countryCode, mobileNumber])
   @@index([createdAt])
   @@index([source])
+  @@index([agentId])
   @@index([gender])
   @@map("candidates")
+}
+
+model Agent {
+  id           String      @id @default(cuid())
+  name         String
+  email        String?     @unique
+  mobileNumber String?
+  companyName  String?
+  agentType    String?
+  profileImage String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  candidates   Candidate[] @relation("AgentToCandidate")
+  agentProjects AgentProject[]
+
+  @@map("agents")
+}
+
+model AgentProject {
+  id        String   @id @default(cuid())
+  agentId   String
+  projectId String
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent   Agent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, projectId])
+  @@index([agentId])
+  @@index([projectId])
+  @@map("agent_projects")
+}
+
+/// Optional intent: which client projects an agent-supplied candidate is scoped to, before nomination.
+model AgentCandidateDeclaredProject {
+  id          String   @id @default(cuid())
+  candidateId String
+  projectId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, projectId])
+  @@index([candidateId])
+  @@index([projectId])
+  @@map("agent_candidate_declared_projects")
 }
 
 model CandidatePreferredCountry {
@@ -426,6 +563,8 @@ model WorkExperience {
   updatedAt     DateTime     @updatedAt
   candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+
+  documents     Document[]
 
   @@index([candidateId])
   @@index([roleCatalogId])
@@ -504,6 +643,8 @@ model Document {
   id          String  @id @default(cuid())
   candidateId String
   docType     String
+  /// Human-friendly display name for the document (e.g., "Aster", "ABC Hospital")
+  docName     String?
   fileName    String
   fileUrl     String
   uploadedBy  String
@@ -522,21 +663,25 @@ model Document {
   expiryDate     DateTime?
   fileSize       Int?
   mimeType       String?
-  roleCatalogId  String?
+  roleCatalogId    String?
+  workExperienceId String?
 
   rejectedAt      DateTime?
   rejectedBy      String?
   rejectionReason String?
   verifiedAt      DateTime?
 
-  verifications CandidateProjectDocumentVerification[]
-  candidate     Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  roleCatalog   RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+  verifications  CandidateProjectDocumentVerification[]
+  candidate      Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog    RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+  workExperience WorkExperience?                        @relation(fields: [workExperienceId], references: [id], onDelete: SetNull)
 
   @@index([candidateId])
   @@index([docType])
+  @@index([docName])
   @@index([status])
   @@index([roleCatalogId])
+  @@index([workExperienceId])
   @@map("documents")
 }
 
@@ -544,10 +689,8 @@ model Interview {
   id                    String             @id @default(cuid())
   scheduledTime         DateTime
   duration              Int                @default(60)
-  type                  String             @default("technical")
   outcome               String?
   notes                 String?
-  interviewer           String?
   location              String?
   airTicket             String?
   accommodation         Boolean            @default(false)
@@ -1224,10 +1367,14 @@ model AllocationCursor {
 }
 
 enum ClientType {
-  INDIVIDUAL
-  SUB_AGENCY
-  HEALTHCARE_ORGANIZATION
-  EXTERNAL_SOURCE
+  DIRECT_CLIENT
+  SUB_AGENT
+  FREELANCE
+}
+
+enum ClientSubClientLinkType {
+  SUB_AGENT
+  FREELANCE
 }
 
 enum IndividualRelationship {
@@ -1320,7 +1467,69 @@ model State {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  clientsPhysicalAddress    Client[]     @relation("PhysicalAddressStateClient")
+  usersPhysicalAddress      User[]       @relation("PhysicalAddressStateUser")
+  candidatesPhysicalAddress Candidate[]  @relation("PhysicalAddressStateCandidate")
+
   @@map("states")
+}
+
+enum LanguageProficiency {
+  PRIMARY
+  SECONDARY
+  TERTIARY
+}
+
+enum RecruiterCountrySectorScope {
+  HEALTHCARE
+  NON_HEALTH_CARE
+}
+
+model Language {
+  code      String   @id
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userLanguages UserLanguage[]
+
+  @@index([isActive])
+  @@map("languages")
+}
+
+model UserLanguage {
+  id           String              @id @default(cuid())
+  userId       String
+  languageCode String
+  proficiency  LanguageProficiency
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageCode], references: [code], onDelete: Restrict)
+
+  @@unique([userId, languageCode])
+  @@index([userId])
+  @@index([languageCode])
+  @@map("user_languages")
+}
+
+model UserCountryCoverage {
+  id           String                         @id @default(cuid())
+  userId       String
+  countryCode  String
+  sectorScopes RecruiterCountrySectorScope[]
+  createdAt    DateTime                       @default(now())
+  updatedAt    DateTime                       @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryCode], references: [code], onDelete: Cascade)
+
+  @@unique([userId, countryCode])
+  @@index([userId])
+  @@index([countryCode])
+  @@map("user_country_coverage")
 }
 
 model CandidateRecruiterAssignment {
@@ -1493,8 +1702,9 @@ model RNRReminder {
   @@map("rnr_reminders")
 }
 
-model HRDReminder {
+model ProcessingStepReminder {
   id                    String   @id @default(cuid())
+  stepKey               String   // 'hrd' | 'data_flow' | etc.
   processingStepId      String
   processingCandidateId String
   assignedTo            String?  // Processing user to notify
@@ -1519,36 +1729,8 @@ model HRDReminder {
   @@index([scheduledFor, status])
   @@index([assignedTo, status])
   @@index([processingCandidateId])
-  @@map("hrd_reminders")
-}
-
-model DataFlowReminder {
-  id                    String   @id @default(cuid())
-  processingStepId      String
-  processingCandidateId String
-  assignedTo            String?  // Processing user to notify
-
-  scheduledFor DateTime // When to send reminder
-  sentAt       DateTime?
-
-  reminderCount    Int      @default(0) // Total reminders sent across all days
-  dailyCount       Int      @default(0) // How many sent today (resets each day)
-  daysCompleted    Int      @default(0) // How many days completed
-  lastReminderDate DateTime @default(now())
-
-  status String @default("pending") // pending, sent, completed, cancelled
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  processingStep      ProcessingStep      @relation(fields: [processingStepId], references: [id], onDelete: Cascade)
-  processingCandidate ProcessingCandidate @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
-  assignedUser        User?               @relation(fields: [assignedTo], references: [id], onDelete: SetNull)
-
-  @@index([scheduledFor, status])
-  @@index([assignedTo, status])
-  @@index([processingCandidateId])
-  @@map("data_flow_reminders")
+  @@index([stepKey])
+  @@map("processing_step_reminders")
 }
 
 /// System-wide configuration settings
@@ -1682,25 +1864,32 @@ model ProcessingStep {
   biometricDate         DateTime?
   biometricLocation     String?
   ticketDate            DateTime?
+  flightTime            DateTime?
+  airportLocation       String?
   visaIssuedAt          DateTime?
   visaValidAt           DateTime?
   eligibilityIssuedAt   DateTime?
   eligibilityValidAt    DateTime?
   eligibilityDuration   String?
+  eligibilityNumber     String?
   councilIssuedAt       DateTime?
   councilValidAt        DateTime?
+  prometricPassedAt     DateTime?
+  prometricValidAt      DateTime?
+  medicalIssuedAt       DateTime?
+  medicalValidAt        DateTime?
   rejectionReason       String?
   meta                  Json?
   mofaNumber            String?
   isMedicalPassed       Boolean?
+  isEmigrationCompleted Boolean   @default(false)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   processingCandidate ProcessingCandidate      @relation(fields: [processingCandidateId], references: [id], onDelete: Cascade)
   template            ProcessingStepTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
   documents           ProcessingStepDocument[]
-  hrdReminders        HRDReminder[]
-  dataFlowReminders   DataFlowReminder[]
+  processingReminders ProcessingStepReminder[]
 
   @@index([processingCandidateId])
   @@index([templateId])
@@ -1746,11 +1935,10 @@ model ProcessingCandidate {
 
   candidateProjectMap CandidateProjects @relation(fields: [candidateId, projectId, roleNeededId], references: [candidateId, projectId, roleNeededId], onDelete: Cascade)
 
-  assignedTo      User?               @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
-  processingSteps ProcessingStep[]
-  hrdReminders     HRDReminder[]
-  dataFlowReminders DataFlowReminder[]
-  history         ProcessingHistory[]
+  assignedTo          User?                  @relation("AssignedToProcessing", fields: [assignedProcessingTeamUserId], references: [id])
+  processingSteps     ProcessingStep[]
+  processingReminders ProcessingStepReminder[]
+  history             ProcessingHistory[]
 
   @@unique([candidateId, projectId, roleNeededId])
   @@index([candidateId])

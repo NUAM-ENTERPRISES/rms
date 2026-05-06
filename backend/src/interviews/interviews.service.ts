@@ -145,7 +145,6 @@ export class InterviewsService {
           candidateProjectMapId: createInterviewDto.candidateProjectMapId,
           scheduledTime: new Date(createInterviewDto.scheduledTime),
           duration: createInterviewDto.duration ?? 60,
-          type: createInterviewDto.type ?? 'technical',
           mode: createInterviewDto.mode ?? 'video',
           location: createInterviewDto.location,
           meetingLink: meetingLinkToUse,
@@ -153,7 +152,6 @@ export class InterviewsService {
           airTicket: airTicketValue,
           accommodation: createInterviewDto.accommodation ?? false,
           outcome: 'scheduled',
-          interviewer: scheduledBy,
         },
         include: {
           candidateProjectMap: {
@@ -313,7 +311,6 @@ export class InterviewsService {
     const limit = Number(query.limit) || 10;
     const {
       search,
-      type,
       mode,
       status,
       projectId,
@@ -325,10 +322,6 @@ export class InterviewsService {
     const where: any = {};
 
     // Apply filters
-    if (type) {
-      where.type = type;
-    }
-
     if (mode) {
       where.mode = mode;
     }
@@ -1238,7 +1231,9 @@ export class InterviewsService {
         ? `Client shortlisted ${candidateName} for ${projectTitle}`
         : `Client did not shortlist ${candidateName} for ${projectTitle}`;
 
-      const link = `/interviews?candidateProjectMapId=${result.id}`;
+      const link = result.candidate?.id
+        ? `/candidates/${result.candidate.id}`
+        : `/interviews?candidateProjectMapId=${result.id}`;
 
       // best-effort publish (async) — don't block return on failure
       try {

@@ -1,55 +1,139 @@
-import React from "react";
-import { render, fireEvent, screen, act } from "@testing-library/react";
+import { render, fireEvent, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
-import { store } from "@/app/store/store";
-import NotificationsBell from "@/features/notifications/components/NotificationsBell";
+import { vi, beforeEach } from "vitest";
+import { store } from "@/app/store";
+import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
+import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
 
 // we want to mock toast to avoid real popup
-jest.mock("sonner", () => ({
-  toast: {
-    __esModule: true,
-    success: jest.fn(),
-    info: jest.fn(),
-    // fallback function for when called directly
-    default: jest.fn(),
-  },
+vi.mock("sonner", () => {
+  const toastFn = Object.assign(vi.fn(), {
+    success: vi.fn(),
+    info: vi.fn(),
+  });
+  return { toast: toastFn };
+});
+
+vi.mock("@/shared/hooks/usePermissions", () => ({
+  usePermissions: () => ({
+    hasRole: (roles: string | string[]) => {
+      const r = Array.isArray(roles) ? roles : [roles];
+      return r.includes("Manager") || r.includes("System Admin");
+    },
+  }),
 }));
 
-// stub RTK Query hooks used by the notifications feature
-jest.mock("../data/notifications.endpoints", () => {
-  const actual = jest.requireActual("../data/notifications.endpoints");
+vi.mock("@/features/admin/api", async () => {
+  const actual = await vi.importActual<typeof import("@/features/admin/api")>(
+    "@/features/admin/api"
+  );
   return {
     ...actual,
-    notificationsApi: {
-      ...actual.notificationsApi,
-      useGetSettingsQuery: () => ({ data: { data: { muted: false } } }),
-      useUpdateSettingsMutation: () => [jest.fn()],
-    },
+    useGetAdminIdleSessionsSummaryQuery: () => ({
+      data: {
+        success: true,
+        data: {
+          idleCount: 2,
+          sessions: [
+            {
+              id: "s1",
+              userId: "u1",
+              userName: "Idle One",
+              userEmail: "idle1@example.com",
+              roles: ["Recruiter"],
+              ipAddress: "127.0.0.1",
+              browser: "Chrome",
+              os: "macOS",
+              deviceType: "desktop",
+              loginAt: new Date().toISOString(),
+              lastActivityAt: new Date().toISOString(),
+              isActive: true,
+              isIdle: true,
+            },
+            {
+              id: "s2",
+              userId: "u2",
+              userName: "Idle Two",
+              userEmail: "idle2@example.com",
+              roles: ["Recruiter"],
+              ipAddress: "127.0.0.1",
+              browser: "Safari",
+              os: "macOS",
+              deviceType: "desktop",
+              loginAt: new Date().toISOString(),
+              lastActivityAt: new Date().toISOString(),
+              isActive: true,
+              isIdle: true,
+            },
+          ],
+        },
+        message: "ok",
+      },
+      isFetching: false,
+    }),
   };
 });
 
 describe("NotificationsBell", () => {
-  it("renders and toggles mute state", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    store.dispatch(clearCredentials());
+    store.dispatch(
+      setCredentials({
+        user: {
+          id: "test-admin",
+          name: "Admin",
+          email: "admin@test.com",
+          roles: ["Manager"],
+          permissions: ["read:users"],
+        },
+        accessToken: "at",
+        refreshToken: "rt",
+      })
+    );
+  });
+
+  it("shows idle users notification icon for manager/admin", () => {
     render(
       <Provider store={store}>
-        <NotificationsBell />
+        <IdleUsersNotification />
       </Provider>
     );
 
-    // open popover by clicking bell
-    const bell = screen.getByLabelText(/notifications/i);
-    fireEvent.click(bell);
-    // find mute button
-    const muteButton = screen.getByTitle(/mute notifications/i);
-    expect(muteButton).toBeInTheDocument();
+    expect(screen.getByLabelText(/idle users/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/idle users/i));
+    expect(screen.getByText(/idle users/i)).toBeInTheDocument();
+    expect(screen.getByText("2 Idle")).toBeInTheDocument();
+    expect(screen.getByText("Idle One")).toBeInTheDocument();
+  });
 
-    // click to mute
-    fireEvent.click(muteButton);
-    // after clicking, title should change to unmute
-    expect(muteButton).toHaveAttribute("title", "Unmute notifications");
+  it("marks a single idle row as read", () => {
+    render(
+      <Provider store={store}>
+        <IdleUsersNotification />
+      </Provider>
+    );
 
-    // click again to unmute
-    fireEvent.click(muteButton);
-    expect(muteButton).toHaveAttribute("title", "Mute notifications");
+    fireEvent.click(screen.getByLabelText(/idle users/i));
+    fireEvent.click(screen.getByLabelText(/Mark Idle One as read/i));
+
+    expect(screen.queryByText("Idle One")).not.toBeInTheDocument();
+    expect(screen.getByText("Idle Two")).toBeInTheDocument();
+    expect(screen.getByText("1 Idle")).toBeInTheDocument();
+  });
+
+  it("marks all idle rows as read", () => {
+    render(
+      <Provider store={store}>
+        <IdleUsersNotification />
+      </Provider>
+    );
+
+    fireEvent.click(screen.getByLabelText(/idle users/i));
+    fireEvent.click(screen.getByLabelText(/Mark all idle users as read/i));
+
+    expect(screen.queryByText("Idle One")).not.toBeInTheDocument();
+    expect(screen.getByText(/All idle alerts marked as read/i)).toBeInTheDocument();
+    expect(screen.getByText("0 Idle")).toBeInTheDocument();
   });
 });

@@ -82,6 +82,12 @@ export const PERMISSIONS = {
   WRITE_ROLES: 'write:roles',
   MANAGE_ROLES: 'manage:roles',
 
+  // Agent management
+  READ_AGENTS: 'read:agents',
+  WRITE_AGENTS: 'write:agents',
+  EDIT_AGENTS: 'edit:agents',
+  DELETE_AGENTS: 'delete:agents',
+
   // Client management
   READ_CLIENTS: 'read:clients',
   WRITE_CLIENTS: 'write:clients',
@@ -202,6 +208,12 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.MANAGE_CRE,
     PERMISSIONS.ASSIGN_CRE,
     PERMISSIONS.HANDLE_RNR_CANDIDATES,
+  ],
+  AGENT: [
+    PERMISSIONS.READ_AGENTS,
+    PERMISSIONS.WRITE_AGENTS,
+    PERMISSIONS.EDIT_AGENTS,
+    PERMISSIONS.DELETE_AGENTS,
   ],
   ADMIN_DASHBOARD: [
     PERMISSIONS.READ_ADMIN_DASHBOARD,

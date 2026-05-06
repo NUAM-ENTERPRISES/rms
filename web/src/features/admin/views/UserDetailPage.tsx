@@ -22,7 +22,10 @@ import {
   ClipboardCheck,
   Cog,
   Lock,
+  MapPin,
   CheckCircle2,
+  Languages,
+  Globe2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +48,7 @@ import {
   useDeleteUserMutation,
   useUpdateUserPasswordMutation,
 } from "@/features/admin/api";
+import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 
 // Permission display mapping
 const PERMISSION_LABELS: Record<string, { label: string; description?: string }> = {
@@ -97,6 +101,10 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "read:roles": { label: "View Roles" },
   "write:roles": { label: "Edit Roles" },
   "manage:roles": { label: "Manage Roles" },
+  "read:agents": { label: "View Agents" },
+  "write:agents": { label: "Create Agents" },
+  "edit:agents": { label: "Edit Agents" },
+  "delete:agents": { label: "Delete Agents" },
   "read:clients": { label: "View Clients" },
   "write:clients": { label: "Edit Clients" },
   "manage:clients": { label: "Manage Clients" },
@@ -170,6 +178,16 @@ function groupPermissions(permissions: string[]) {
   return grouped;
 }
 
+function formatSectorScopeLabel(scope: string) {
+  if (scope === "HEALTHCARE") return "Healthcare";
+  if (scope === "NON_HEALTH_CARE") return "Non-healthcare";
+  return scope.replace(/_/g, " ");
+}
+
+function formatProficiencyLabel(p: string) {
+  return p.charAt(0) + p.slice(1).toLowerCase();
+}
+
 export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -190,6 +208,10 @@ export default function UserDetailPage() {
   const user = userData?.data;
   const roles = user?.userRoles?.map((userRole) => userRole.role.name) || [];
   const permissions = permissionsData?.data || [];
+
+  const showRecruiterCapabilities = Boolean(
+    user?.userRoles?.some((ur) => roleNameHasRecruiterCapabilities(ur.role.name))
+  );
 
   const groupedPermissions = useMemo(() => groupPermissions(permissions), [permissions]);
 
@@ -433,10 +455,10 @@ export default function UserDetailPage() {
                   {user.mobileNumber && (
                     <div className="space-y-1">
                       <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                        Mobile Number
+                        Contact number
                       </p>
                       <p className="text-sm text-slate-800 flex items-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
+                        <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         {user.countryCode && user.countryCode !== "N/A"
                           ? `${user.countryCode} `
                           : ""}
@@ -456,6 +478,38 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   )}
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        Country
+                      </p>
+                      <p className="text-sm text-slate-800 flex items-start gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" aria-hidden />
+                        {user.addressCountry?.name?.trim() ||
+                          user.addressCountryCode?.trim() ||
+                          "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        State / province
+                      </p>
+                      <p className="text-sm text-slate-800">
+                        {user.addressState?.name ?? "N/A"}
+                      </p>
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                        Street address
+                      </p>
+                      <p className="text-sm text-slate-800 whitespace-pre-wrap">
+                        {user.address?.trim() ? user.address : "N/A"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <Separator className="my-4" />
@@ -483,6 +537,79 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {showRecruiterCapabilities && (
+              <Card className="border border-slate-200 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                    <Languages className="h-4 w-4 text-blue-600" />
+                    Languages &amp; country coverage
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Shown for users with the Recruiter or Manager role.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">
+                      Languages
+                    </p>
+                    {user.userLanguages && user.userLanguages.length > 0 ? (
+                      <ul className="space-y-2">
+                        {user.userLanguages.map((row) => (
+                          <li
+                            key={row.id}
+                            className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+                          >
+                            <span className="font-medium text-slate-800">
+                              {row.language?.name ?? row.languageCode}
+                            </span>
+                            <Badge variant="outline" className="text-xs font-normal">
+                              {formatProficiencyLabel(row.proficiency)}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-slate-500">No languages on file.</p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <Globe2 className="h-3.5 w-3.5 text-slate-400" />
+                      Country coverage
+                    </p>
+                    {user.userCountryCoverages && user.userCountryCoverages.length > 0 ? (
+                      <ul className="space-y-2">
+                        {user.userCountryCoverages.map((row) => (
+                          <li
+                            key={row.id}
+                            className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+                          >
+                            <span className="font-medium text-slate-800">
+                              {row.country?.name ?? row.countryCode}
+                            </span>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {row.sectorScopes?.map((scope) => (
+                                <Badge
+                                  key={scope}
+                                  variant="secondary"
+                                  className="text-xs font-normal"
+                                >
+                                  {formatSectorScopeLabel(scope)}
+                                </Badge>
+                              ))}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-slate-500">No country coverage on file.</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Permissions Card - Grouped & Human-Readable */}
             <Card className="border border-slate-200 shadow-sm">

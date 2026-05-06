@@ -11,6 +11,7 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -32,12 +33,17 @@ describe('ProjectsService', () => {
     },
     candidate: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
+    },
+    agentProject: {
+      findUnique: jest.fn(),
     },
     candidateProjects: {
       findUnique: jest.fn(),
       create: jest.fn(),
       findMany: jest.fn(),
       findFirst: jest.fn(),
+      count: jest.fn(),
     },
     roleNeeded: {
       create: jest.fn(),
@@ -78,6 +84,10 @@ describe('ProjectsService', () => {
         {
           provide: require('../../qualifications/qualifications.service').QualificationsService,
           useValue: { validateQualificationIds: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() },
         },
       ],
     }).compile();
@@ -256,14 +266,140 @@ describe('ProjectsService', () => {
         }),
       );
     });
+
+    it('should return summary rows when summary=true', async () => {
+      const created = new Date('2026-01-15T10:00:00.000Z');
+      const deadline = new Date('2026-06-01T00:00:00.000Z');
+      const slimRows = [
+        {
+          id: 'proj-1',
+          title: 'Nursing',
+          deadline,
+          status: 'active',
+          priority: 'high',
+          createdAt: created,
+          projectType: 'private',
+          countryCode: 'AE',
+          country: { code: 'AE', name: 'United Arab Emirates' },
+        },
+      ];
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(slimRows as any);
+
+      const result = await service.findAll({
+        clientId: 'client-1',
+        page: 1,
+        limit: 10,
+        summary: true,
+      });
+
+      expect('projects' in result && result.projects[0]).toEqual({
+        id: 'proj-1',
+        title: 'Nursing',
+        deadline: deadline.toISOString(),
+        status: 'active',
+        priority: 'high',
+        createdAt: created.toISOString(),
+        projectType: 'private',
+        countryCode: 'AE',
+        country: { code: 'AE', name: 'United Arab Emirates' },
+      });
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            id: true,
+            title: true,
+            deadline: true,
+            status: true,
+            priority: true,
+            createdAt: true,
+            projectType: true,
+            countryCode: true,
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('findPickerList', () => {
+    it('should return minimal project rows with pagination', async () => {
+      const deadline = new Date('2026-12-01T00:00:00.000Z');
+      const slim = [
+        {
+          id: 'p1',
+          title: 'Alpha',
+          status: 'active',
+          deadline,
+          client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
+        },
+      ];
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(slim as any);
+
+      const result = await service.findPickerList({ page: 1, limit: 10 });
+
+      expect(result.pagination).toEqual({
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      });
+      expect(result.projects).toHaveLength(1);
+      expect(result.projects[0]).toEqual({
+        id: 'p1',
+        title: 'Alpha',
+        status: 'active',
+        deadline: deadline.toISOString(),
+        client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
+      });
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            id: true,
+            title: true,
+            status: true,
+            deadline: true,
+            client: { select: { id: true, name: true, type: true } },
+          }),
+        }),
+      );
+    });
+
+    it('should filter by title search and default status active', async () => {
+      prismaService.project.count.mockResolvedValue(0);
+      prismaService.project.findMany.mockResolvedValue([]);
+
+      await service.findPickerList({ search: '  nursing  ' });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'active',
+            title: { contains: 'nursing', mode: 'insensitive' },
+          },
+        }),
+      );
+    });
   });
 
   describe('getEligibleCandidates & getNominatedCandidates - qualification search', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
         id: 'proj-1',
+        licensingExam: null,
+        eligibility: false,
         rolesNeeded: [
-          { id: 'r1', designation: 'Any', roleCatalogId: 'role-1', minExperience: null, maxExperience: null, genderRequirement: 'all', educationRequirementsList: [] },
+          {
+            id: 'r1',
+            designation: 'Any',
+            roleCatalogId: 'role-1',
+            minAge: 18,
+            maxAge: 65,
+            minExperience: null,
+            maxExperience: null,
+            genderRequirement: 'all',
+            educationRequirementsList: [],
+          },
         ],
       } as any;
 
@@ -271,7 +407,12 @@ describe('ProjectsService', () => {
         id: 'c1',
         firstName: 'Alice',
         lastName: 'Qualified',
+        dateOfBirth: '1995-06-01',
+        gender: 'female',
         totalExperience: 3,
+        workExperiences: [
+          { roleCatalogId: 'role-1', startDate: '2020-01-01', endDate: '2024-01-01' },
+        ],
         qualifications: [
           { id: 'cq1', qualification: { id: 'qual-bsc', name: 'Bachelor of Science', shortName: 'BSc', field: 'Computer Science' }, university: 'XYZ University' },
         ],
@@ -308,6 +449,57 @@ describe('ProjectsService', () => {
             }),
           }),
         }),
+      );
+    });
+
+    it('getEligibleCandidates applies recruiterAssignments filter for Client Coordinator', async () => {
+      const project = {
+        id: 'proj-1',
+        rolesNeeded: [
+          {
+            id: 'r1',
+            designation: 'Any',
+            roleCatalogId: 'role-1',
+            minExperience: null,
+            maxExperience: null,
+            genderRequirement: 'all',
+            educationRequirementsList: [],
+          },
+        ],
+      } as any;
+
+      prismaService.project.findUnique.mockResolvedValue(project);
+      prismaService.candidate.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.getEligibleCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+
+      expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            recruiterAssignments: {
+              some: { recruiterId: 'cc-user', isActive: true },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('getNominatedCandidates scopes to user for Client Coordinator', async () => {
+      const project = { id: 'proj-1', rolesNeeded: [] } as any;
+      prismaService.project.findUnique.mockResolvedValue(project);
+      prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
+      prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
+
+      await service.getNominatedCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+
+      const findWhere = (prismaService.candidateProjects.findMany as jest.Mock).mock.calls[0][0]?.where;
+      expect(findWhere.projectId).toBe('proj-1');
+      expect(findWhere.AND).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            OR: expect.arrayContaining([{ recruiterId: 'cc-user' }]),
+          }),
+        ]),
       );
     });
   });
@@ -509,6 +701,23 @@ describe('ProjectsService', () => {
       ).rejects.toThrow(
         new NotFoundException('Candidate with ID candidate123 not found'),
       );
+    });
+
+    it('should throw BadRequestException when agent-sourced candidate lacks AgentProject link', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+      } as any);
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        source: 'agent',
+        agentId: 'agent1',
+      } as any);
+      prismaService.candidateProjects.findFirst.mockResolvedValue(null);
+      prismaService.agentProject.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.assignCandidate('project123', assignCandidateDto, 'user123'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException when candidate is already assigned', async () => {

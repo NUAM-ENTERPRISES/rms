@@ -13,6 +13,7 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  MaxLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -31,7 +32,7 @@ export class CreateCandidateDto {
     minLength: 1,
   })
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @ApiProperty({
     description: 'Candidate last name',
@@ -39,7 +40,7 @@ export class CreateCandidateDto {
     minLength: 1,
   })
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @ApiProperty({
     description: 'Country calling code',
@@ -49,7 +50,7 @@ export class CreateCandidateDto {
   @Matches(/^\+[1-9]\d{0,3}$/, {
     message: 'Please provide a valid country code (e.g., +91, +1, +44)',
   })
-  countryCode: string;
+  countryCode!: string;
 
   @ApiProperty({
     description:
@@ -60,7 +61,7 @@ export class CreateCandidateDto {
   @Matches(/^\d{6,15}$/, {
     message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  mobileNumber: string;
+  mobileNumber!: string;
 
   @ApiPropertyOptional({
     description: 'Email address',
@@ -81,13 +82,65 @@ export class CreateCandidateDto {
   profileImage?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Physical / mailing country (`countries.code`). Distinct from phone `countryCode` (dial code).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  addressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical / mailing state (`states.id`)',
+  })
+  @IsOptional()
+  @IsString()
+  addressStateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Street or full mailing address line',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
+  @ApiPropertyOptional({
     description: 'Source of the candidate',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event'],
     default: 'manual',
   })
   @IsOptional()
-  @IsEnum(['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'])
+  @IsEnum([
+    'manual',
+    'meta',
+    'direct_enquiry',
+    'referral',
+    'paid_ads',
+    'agent',
+    'hospital_visit',
+    'expo_event',
+  ])
   source?: string = 'manual';
+
+  @ApiPropertyOptional({
+    description: 'Linked Agent row when source is agent',
+    example: 'clxxxxxxxx',
+  })
+  @IsOptional()
+  @IsString()
+  agentId?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When source is agent: optional project IDs (from the agent\'s linked client projects only) declaring where this supply is intended — does not nominate the candidate',
+    type: [String],
+    isArray: true,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  declaredProjectIds?: string[];
 
   @ApiPropertyOptional({
     description: 'Referral company name (only if source is referral)',
@@ -454,7 +507,7 @@ export class CandidateQualificationDto {
     example: 'qual123',
   })
   @IsString()
-  qualificationId: string;
+  qualificationId!: string;
 
   @ApiPropertyOptional({
     description: 'University/Institution name',
@@ -514,7 +567,7 @@ export class CandidateWorkExperienceDto {
     minLength: 2,
   })
   @IsString()
-  companyName: string;
+  companyName!: string;
 
   @ApiProperty({
     description: 'Job title/position',
@@ -522,14 +575,14 @@ export class CandidateWorkExperienceDto {
     minLength: 2,
   })
   @IsString()
-  jobTitle: string;
+  jobTitle!: string;
 
   @ApiProperty({
     description: 'Start date of employment',
     example: '2020-01-15T00:00:00.000Z',
   })
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @ApiPropertyOptional({
     description: 'End date of employment (leave empty if current)',

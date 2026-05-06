@@ -8,7 +8,10 @@
 
 export const DOCUMENT_TYPE = {
   // Identity Documents
-  PASSPORT: "passport",
+  /** Backend canonical: `passport_copy` (legacy rows may still be `passport`). */
+  PASSPORT: "passport_copy",
+  /** Passport size photo (legacy rows may still be `photo`). */
+  PASSPORT_PHOTO: "passport_photo",
   AADHAAR: "aadhaar",
   PAN_CARD: "pan_card",
   DRIVING_LICENSE: "driving_license",
@@ -38,7 +41,8 @@ export const DOCUMENT_TYPE = {
   ELIGIBILITY_LETTER: 'eligibility_letter',
 
   // Educational Documents
-  DEGREE: "degree",
+  /** Backend canonical: `degree_certificate` (legacy rows may still be `degree`). */
+  DEGREE: "degree_certificate",
   DIPLOMA: "diploma",
   CERTIFICATE: "certificate",
   TRANSCRIPT: "transcript",
@@ -48,6 +52,7 @@ export const DOCUMENT_TYPE = {
   RESUME: "resume",
   CV: "cv",
   EXPERIENCE_LETTER: "experience_letter",
+  EXPERIENCE_LETTERS: "experience_letters",
   RELIEVING_LETTER: "relieving_letter",
   SALARY_SLIP: "salary_slip",
   APPOINTMENT_LETTER: "appointment_letter",
@@ -107,6 +112,17 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     maxSizeMB: 5,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PASSPORT_PHOTO]: {
+    displayName: "Passport Photo",
+    description: "Passport size photo (white background)",
+    category: "identity",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 1,
+    allowedFormats: ["jpg", "jpeg", "png"],
+    icon: "User",
     commonlyRequired: true,
   },
   [DOCUMENT_TYPE.AADHAAR]: {
@@ -450,6 +466,17 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     icon: "Briefcase",
     commonlyRequired: false,
   },
+  [DOCUMENT_TYPE.EXPERIENCE_LETTERS]: {
+    displayName: "Experience Letter",
+    description: "Previous employment experience letter",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Briefcase",
+    commonlyRequired: false,
+  },
   [DOCUMENT_TYPE.RELIEVING_LETTER]: {
     displayName: "Relieving Letter",
     description: "Relieving letter from previous employer",
@@ -671,6 +698,7 @@ export function isValidFileExtension(
 ): boolean {
   const extension = filename.split(".").pop()?.toLowerCase() ?? "";
   const config = getDocumentTypeConfig(docType);
+  if (!config) return false;
   return config.allowedFormats.includes(extension);
 }
 
@@ -682,6 +710,7 @@ export function isValidFileSize(
   sizeMB: number
 ): boolean {
   const config = getDocumentTypeConfig(docType);
+  if (!config) return false;
   return sizeMB <= config.maxSizeMB;
 }
 
@@ -690,5 +719,6 @@ export function isValidFileSize(
  */
 export function getAllowedFormatsString(docType: DocumentType): string {
   const config = getDocumentTypeConfig(docType);
+  if (!config) return "";
   return config.allowedFormats.map((f) => f.toUpperCase()).join(", ");
 }

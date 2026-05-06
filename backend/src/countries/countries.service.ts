@@ -108,6 +108,29 @@ export class CountriesService {
   }
 
   /**
+   * Active states / provinces for a country (for physical address FKs).
+   */
+  async findActiveStatesForCountry(
+    countryCode: string,
+  ): Promise<Array<{ id: string; name: string; code: string }>> {
+    const normalized = countryCode.trim().toUpperCase();
+    const country = await this.prisma.country.findUnique({
+      where: { code: normalized },
+      select: { code: true },
+    });
+    if (!country) {
+      throw new NotFoundException(
+        `Country with code '${normalized}' not found`,
+      );
+    }
+    return this.prisma.state.findMany({
+      where: { countryCode: normalized, isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, code: true },
+    });
+  }
+
+  /**
    * Validate if a country code exists and is active
    */
   async validateCountryCode(code: string): Promise<boolean> {

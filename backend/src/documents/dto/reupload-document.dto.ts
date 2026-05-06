@@ -30,6 +30,14 @@ export class ReuploadDocumentDto {
   fileUrl: string;
 
   @ApiPropertyOptional({
+    description: 'User-provided document name override (shown in recruiter documents)',
+    example: 'Updated resume/CV',
+  })
+  @IsOptional()
+  @IsString()
+  docName?: string;
+
+  @ApiPropertyOptional({
     description: 'File size in bytes',
     example: 1024000,
     minimum: 0,

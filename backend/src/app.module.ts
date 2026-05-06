@@ -44,9 +44,11 @@ import { CandidateProjectStatusModule } from './candidate-project-status/candida
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
 import { ScreeningCoordinationModule } from './screening-coordination/screening-coordination.module';
 import { ProcessingModule } from './processing/processing.module';
+import { ProcessingRemindersModule } from './processing-reminders/processing-reminders.module';
 import { GoogleDriveModule } from './google-drive/google-drive.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analytics.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -96,9 +98,11 @@ import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analyt
     CandidateProjectStatusHistoryModule,
     ScreeningCoordinationModule,
     ProcessingModule,
+    ProcessingRemindersModule,
     GoogleDriveModule,
     AdminDashboardModule,
     RecruiterAnalyticsModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [

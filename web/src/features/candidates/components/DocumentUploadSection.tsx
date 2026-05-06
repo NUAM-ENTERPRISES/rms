@@ -1,8 +1,5 @@
 import React, { useState } from "react";
 const CandidateUploadDocumentModal = React.lazy(() => import("../../recruiter-docs/components/CandidateUploadDocumentModal"));
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Card,
   CardContent,
@@ -10,22 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,25 +21,32 @@ import {
   Upload,
   FileText,
   Download,
-  Trash2,
   Eye,
   Calendar,
-  User,
   AlertCircle,
   CheckCircle,
+  Check,
   Clock,
   X,
   Plus,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useGetDocumentsQuery, useUploadDocumentMutation } from "../api";
-import { useCreateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+import {
+  getCandidateProfileCompletion,
+  getDocumentRepositorySlots,
+} from "../profileCompletion";
+import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 
 // Document type options based on backend constants
 const DOCUMENT_TYPES = [
   { value: "passport", label: "Passport", category: "identity" },
+  { value: "passport_copy", label: "Passport Copy", category: "identity" },
+  { value: "passport_photo", label: "Passport Photo", category: "other" },
   { value: "aadhaar", label: "Aadhaar Card", category: "identity" },
   { value: "pan_card", label: "PAN Card", category: "identity" },
   { value: "driving_license", label: "Driving License", category: "identity" },
@@ -84,6 +72,11 @@ const DOCUMENT_TYPES = [
     category: "professional",
   },
   { value: "degree", label: "Degree Certificate", category: "educational" },
+  {
+    value: "degree_certificate",
+    label: "Degree Certificate",
+    category: "educational",
+  },
   { value: "diploma", label: "Diploma Certificate", category: "educational" },
   { value: "certificate", label: "Certificate", category: "educational" },
   { value: "transcript", label: "Transcript", category: "educational" },
@@ -91,7 +84,7 @@ const DOCUMENT_TYPES = [
   { value: "resume", label: "Resume", category: "employment" },
   { value: "cv", label: "Curriculum Vitae", category: "employment" },
   {
-    value: "experience_letter",
+    value: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
     label: "Experience Letter",
     category: "employment",
   },
@@ -153,21 +146,12 @@ const DOCUMENT_TYPES = [
   { value: "other", label: "Other Document", category: "other" },
 ];
 
-const uploadSchema = z.object({
-  docType: z.string().min(1, "Document type is required"),
-  file: z.custom<File>((value) => value instanceof File, {
-    message: "File is required",
-  }),
-  documentNumber: z.string().optional(),
-  expiryDate: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-type UploadFormData = z.infer<typeof uploadSchema>;
-
 interface DocumentUploadSectionProps {
   candidateId: string;
+  /** Rows for the table (may be paginated). */
   data?: any[];
+  /** All documents used only for mandatory-type completion (omit to derive from `data` / local fetch). */
+  completionSourceDocuments?: any[];
   isLoading?: boolean;
   onRefresh?: () => void;
 }
@@ -175,12 +159,14 @@ interface DocumentUploadSectionProps {
 export function DocumentUploadSection({
   candidateId,
   data: externalDocuments,
+  completionSourceDocuments,
   isLoading: isExternalLoading,
   onRefresh,
 }: DocumentUploadSectionProps) {
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadModalDocType, setUploadModalDocType] = useState<
+    string | undefined
+  >(undefined);
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
 
@@ -193,7 +179,7 @@ export function DocumentUploadSection({
     {
       candidateId,
       page: 1,
-      limit: 100,
+      limit: 10,
     },
     { skip: !!externalDocuments }
   );
@@ -201,63 +187,16 @@ export function DocumentUploadSection({
   const documents = externalDocuments || documentsData?.data?.documents || [];
   const isLoading = isExternalLoading || isLocalLoading;
 
+  const completionDocs =
+    completionSourceDocuments ?? documents;
+  const completion = getCandidateProfileCompletion(completionDocs);
+  const repositorySlots = getDocumentRepositorySlots(completionDocs);
+
+  const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
+
   const [uploadDocument] = useUploadDocumentMutation();
   const [createDocument] = useCreateDocumentMutation();
-
-  const form = useForm<UploadFormData>({
-    resolver: zodResolver(uploadSchema),
-    defaultValues: {
-      docType: "",
-      documentNumber: "",
-      expiryDate: "",
-      notes: "",
-    },
-  });
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      form.setValue("file", file);
-    }
-  };
-
-  const onSubmit = async (data: UploadFormData) => {
-    if (!selectedFile) {
-      toast.error("Please select a file");
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("docType", data.docType);
-      if (data.documentNumber)
-        formData.append("documentNumber", data.documentNumber);
-      if (data.expiryDate) formData.append("expiryDate", data.expiryDate);
-      if (data.notes) formData.append("notes", data.notes);
-
-      await uploadDocument({
-        candidateId,
-        formData,
-      }).unwrap();
-
-      toast.success("Document uploaded successfully");
-      form.reset();
-      setSelectedFile(null);
-      if (onRefresh) {
-        onRefresh();
-      } else {
-        refetch();
-      }
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("Failed to upload document");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  const [updateDocument] = useUpdateDocumentMutation();
 
   const getStatusIcon = (status: string) => {
     const normalized = (status || "").toLowerCase();
@@ -303,17 +242,120 @@ export function DocumentUploadSection({
     }
   };
 
+  const openUploadModal = (presetDocType?: string) => {
+    setUploadModalDocType(presetDocType);
+    setShowUploadModal(true);
+  };
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false);
+    setUploadModalDocType(undefined);
+  };
+
   return (
     <div className="space-y-8">
-
+      {/* ===== REQUIRED DOCUMENTS STATUS ===== */}
+      <Card className="overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
+        <CardHeader className="border-b border-border bg-muted/40">
+          <CardTitle className="text-lg font-bold tracking-tight text-foreground">
+            Required Documents Status
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Upload the missing files below to complete the candidate profile.
+          </CardDescription>
+          <div className="flex flex-wrap items-center gap-2 pt-3">
+            <Badge
+              variant="secondary"
+              className="rounded-md px-3 py-1 text-xs font-semibold tabular-nums"
+            >
+              {completion.completedCount}/{completion.requiredCount} types present
+            </Badge>
+            {completion.typeMissingCount === 0 ? (
+              <Badge
+                variant="outline"
+                className="rounded-md border-emerald-200/70 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+              >
+                All complete
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="rounded-md border-destructive/25 bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive"
+              >
+                {completion.typeMissingCount} missing
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3 p-3 sm:p-4">
+          <ul
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
+            aria-label="Mandatory document types checklist"
+          >
+            {repositorySlots.map((slot) => (
+              <li
+                key={slot.key}
+                className={cn(
+                  "flex h-full flex-col gap-3 rounded-xl border p-3 transition-colors",
+                  slot.satisfied
+                    ? "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
+                    : "border-border bg-muted/20"
+                )}
+              >
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="font-semibold text-foreground">{slot.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {slot.satisfied
+                      ? "Document on file for this type"
+                      : "Mandatory document missing"}
+                  </p>
+                </div>
+                <div className="mt-auto flex shrink-0 justify-end">
+                  {slot.satisfied ? (
+                    <div
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
+                      role="status"
+                      aria-label={`${slot.label}: uploaded`}
+                    >
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-primary-foreground shadow-inner"
+                        aria-hidden
+                      >
+                        <Check className="h-3 w-3 stroke-[3]" />
+                      </span>
+                      <span className="uppercase tracking-wider">Uploaded</span>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-fit max-w-full gap-2 rounded-full border-indigo-200 bg-indigo-50/60 px-2.5 text-[11px] font-bold tracking-wide text-indigo-800 shadow-sm hover:bg-indigo-100 hover:text-indigo-900"
+                      onClick={() => openUploadModal(slot.uploadDocType)}
+                    >
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-primary-foreground shadow-inner"
+                        aria-hidden
+                      >
+                        <Upload className="h-3 w-3" />
+                      </span>
+                      <span className="truncate uppercase tracking-wider">Upload</span>
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
   {/* ===== UPLOADED DOCUMENTS LIST ===== */}
-  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md rounded-2xl overflow-hidden">
-    <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-slate-100">
-      <div className="flex items-center w-full justify-between">
+  <Card className="overflow-hidden rounded-2xl border-0 bg-white/90 shadow-xl backdrop-blur-md">
+    <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-gray-50">
+      <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle className="flex items-center gap-3 text-xl font-bold text-slate-800">
-            <div className="p-2 bg-gray-100 rounded-xl">
+            <div className="rounded-xl bg-gray-100 p-2">
               <FileText className="h-6 w-6 text-gray-700" />
             </div>
             Uploaded Documents
@@ -326,10 +368,9 @@ export function DocumentUploadSection({
           <Button
             variant="default"
             size="sm"
-            onClick={() => setShowUploadModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => openUploadModal(undefined)}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Upload New Document
           </Button>
         </div>
@@ -390,7 +431,9 @@ export function DocumentUploadSection({
                       {DOCUMENT_TYPES.find((t) => t.value === doc.docType)?.label ||
                         doc.docType}
                     </Badge>
-                    {doc.docType === "resume" && doc.roleCatalog?.label && (
+                    {(doc.docType === "resume" ||
+                      doc.docType === "experience_letters") &&
+                      doc.roleCatalog?.label && (
                       <span className="text-xs text-slate-500 font-medium px-1">
                         {doc.roleCatalog.label}
                       </span>
@@ -459,7 +502,8 @@ export function DocumentUploadSection({
   <React.Suspense fallback={null}>
     <CandidateUploadDocumentModal
       isOpen={showUploadModal}
-      onClose={() => setShowUploadModal(false)}
+      initialDocType={uploadModalDocType}
+      onClose={closeUploadModal}
       onUpload={async (file: File, meta: any) => {
         try {
           const formData = new FormData();
@@ -467,30 +511,55 @@ export function DocumentUploadSection({
           formData.append("docType", meta.docType);
 
           const response = await uploadDocument({ candidateId, formData }).unwrap();
-          const uploadData = response.data;
+          const uploadData: any = response.data;
+          const uploadedDocument =
+            uploadData?.document && uploadData.document.id
+              ? uploadData.document
+              : uploadData?.id
+                ? uploadData
+                : null;
 
-          await createDocument({
-            candidateId,
-            docType: meta.docType,
-            fileName: uploadData.fileName,
-            fileUrl: uploadData.fileUrl,
-            fileSize: uploadData.fileSize,
-            mimeType: uploadData.mimeType,
-            documentNumber: meta.documentNumber,
-            expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
-            notes: meta.notes,
-            roleCatalogId: meta.roleCatalogId,
-          }).unwrap();
+          const desiredDocName = (meta.docName && meta.docName.trim()) || "";
+
+          if (uploadedDocument) {
+            if (desiredDocName) {
+              await updateDocument({
+                id: uploadedDocument.id,
+                docName: desiredDocName,
+              }).unwrap();
+            }
+          } else {
+            await createDocument({
+              candidateId,
+              docType: meta.docType,
+              docName: desiredDocName || undefined,
+              fileName: uploadData.fileName,
+              fileUrl: uploadData.fileUrl,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              documentNumber: meta.documentNumber,
+              expiryDate: meta.expiryDate
+                ? new Date(meta.expiryDate).toISOString()
+                : undefined,
+              notes: meta.notes,
+              roleCatalogId: meta.roleCatalogId,
+              workExperienceId: meta.workExperienceId,
+            }).unwrap();
+          }
 
           toast.success("Document uploaded successfully");
           setShowUploadModal(false);
-          refetch();
+          if (onRefresh) {
+            onRefresh();
+          } else {
+            refetch();
+          }
         } catch (error) {
           console.error("Upload error:", error);
           toast.error("Failed to upload document");
         }
       }}
-      isUploading={isUploading}
+      workExperiences={workExperiences}
     />
   </React.Suspense>
 

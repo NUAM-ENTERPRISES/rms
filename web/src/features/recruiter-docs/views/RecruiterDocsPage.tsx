@@ -24,6 +24,7 @@ import {
   XCircle,
   RotateCcw,
   ChevronDown,
+  ArrowUpRight,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -171,168 +172,112 @@ const RecruiterDocsPage: React.FC = () => {
       </div>
 
       {/* Dashboard Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Upload Pending Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          <Card
-            className={cn(
-              "border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "pending_documents" && !showScreeningOnly ? "ring-2 ring-amber-300" : ""
-            )}
-            onClick={() => {
-              setStatusFilter("pending_documents");
-              setShowScreeningOnly(false);
-              setPage(1);
-            }}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">Upload Pending</p>
-                  <h3 className="text-3xl font-bold text-amber-600">
-                    {stats?.pendingDocuments || 0}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-2">Awaiting upload</p>
-                </div>
-                <div className="p-3 bg-amber-200/40 rounded-full">
-                  <Clock className="h-6 w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Screening Card - Commented Out
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-        >
-          <Card
-            className={cn(
-              "border-0 shadow-lg bg-gradient-to-br from-indigo-50 to-indigo-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              showScreeningOnly ? "ring-2 ring-indigo-300" : ""
-            )}
-            onClick={() => {
-              setShowScreeningOnly(true);
-              setPage(1);
-            }}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">In Screening</p>
-                  <h3 className="text-3xl font-bold text-indigo-600">
-                    {stats?.inScreening || 0}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-2">Screening phase</p>
-                </div>
-                <div className="p-3 bg-indigo-200/40 rounded-full">
-                  <Filter className="h-6 w-6 text-indigo-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        */}
-
-        {/* Verified Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <Card
-            className={cn(
-              "border-0 shadow-lg bg-gradient-to-br from-green-50 to-green-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "documents_verified" && !showScreeningOnly ? "ring-2 ring-green-300" : ""
-            )}
-            onClick={() => {
-              setStatusFilter("documents_verified");
-              setShowScreeningOnly(false);
-              setPage(1);
-            }}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">Verified</p>
-                  <h3 className="text-3xl font-bold text-green-600">
-                    {stats?.verifiedDocuments || 0}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-2">Approved</p>
-                </div>
-                <div className="p-3 bg-green-200/40 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Rejected Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <Card
-            className={cn(
-              "border-0 shadow-lg bg-gradient-to-br from-red-50 to-red-100/50 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer",
-              statusFilter === "rejected_documents" && !showScreeningOnly ? "ring-2 ring-red-300" : ""
-            )}
-            onClick={() => {
-              setStatusFilter("rejected_documents");
-              setShowScreeningOnly(false);
-              setPage(1);
-            }}
-          >
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600 mb-1">Rejected</p>
-                  <h3 className="text-3xl font-bold text-red-600">
-                    {stats?.rejectedDocuments || 0}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-2">Action required</p>
-                </div>
-                <div className="p-3 bg-red-200/40 rounded-full">
-                  <XCircle className="h-6 w-6 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+      {(() => {
+        const tileCards = [
+          {
+            label: "Upload Pending",
+            value: stats?.pendingDocuments || 0,
+            subtitle: "Awaiting upload",
+            icon: Clock,
+            accent: "amber",
+            isActive: statusFilter === "pending_documents" && !showScreeningOnly,
+            onClick: () => { setStatusFilter("pending_documents"); setShowScreeningOnly(false); setPage(1); },
+          },
+          {
+            label: "Verified",
+            value: stats?.verifiedDocuments || 0,
+            subtitle: "Approved documents",
+            icon: CheckCircle,
+            accent: "emerald",
+            isActive: statusFilter === "documents_verified" && !showScreeningOnly,
+            onClick: () => { setStatusFilter("documents_verified"); setShowScreeningOnly(false); setPage(1); },
+          },
+          {
+            label: "Rejected",
+            value: stats?.rejectedDocuments || 0,
+            subtitle: "Action required",
+            icon: XCircle,
+            accent: "red",
+            isActive: statusFilter === "rejected_documents" && !showScreeningOnly,
+            onClick: () => { setStatusFilter("rejected_documents"); setShowScreeningOnly(false); setPage(1); },
+          },
+        ] as const;
+        const accentMap: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+          amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+          emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+          red:     { card: "from-red-50 via-white to-red-50/30 border-red-100",         icon: "text-red-600",     iconBg: "bg-red-100",     value: "text-red-700",     ring: "ring-red-400/50",     dot: "bg-red-500"     },
+        };
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {tileCards.map((tile, i) => {
+              const Icon = tile.icon;
+              const s = accentMap[tile.accent];
+              return (
+                <motion.button
+                  key={tile.label}
+                  type="button"
+                  onClick={tile.onClick}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 + i * 0.08 }}
+                  className={cn(
+                    "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                    s.card,
+                    tile.isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                  )}
+                >
+                  {tile.isActive && (
+                    <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                  )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                      <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
+                      <p className="text-xs text-slate-500">{tile.subtitle}</p>
+                    </div>
+                    <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                      <Icon className={cn("h-5 w-5", s.icon)} />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                    <span>{tile.isActive ? "Viewing now" : "Click to filter"}</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Project Documents Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
-            <div className="space-y-1">
-              <CardTitle className="text-xl">
-                {showScreeningOnly ? "In Screening Documents" :
-                 statusFilter === "all" ? "All Project Documents" :
-                 statusFilter === "pending_documents" ? "Upload Pending Documents" :
-                 statusFilter === "documents_verified" ? "Verified Documents" :
-                 statusFilter === "rejected_documents" ? "Rejected Documents" :
-                 "Project Documents Status"}
-              </CardTitle>
-              <CardDescription>
-                {showScreeningOnly ? "Candidates currently in screening phase who have pending documents." :
-                 statusFilter === "all" ? "Track document submission progress for each of your projects." :
-                 statusFilter === "pending_documents" ? "Candidates with pending document uploads." :
-                 statusFilter === "documents_verified" ? "Candidates with all documents successfully verified." :
-                 statusFilter === "rejected_documents" ? "Candidates with rejected documents requiring action." :
-                 "Track document submission progress for each of your projects."}
-              </CardDescription>
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Table Header Bar */}
+        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900 truncate">
+                  {showScreeningOnly ? "In Screening Documents" :
+                   statusFilter === "pending_documents" ? "Upload Pending Documents" :
+                   statusFilter === "documents_verified" ? "Verified Documents" :
+                   statusFilter === "rejected_documents" ? "Rejected Documents" :
+                   "All Project Documents"}
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {showScreeningOnly ? "Candidates currently in screening phase." :
+                   statusFilter === "pending_documents" ? "Candidates with pending document uploads." :
+                   statusFilter === "documents_verified" ? "Candidates with all documents verified." :
+                   statusFilter === "rejected_documents" ? "Candidates with rejected documents." :
+                   "Track document submission progress."}
+                </p>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-4 w-full xl:w-auto">
+            <div className="flex flex-col gap-3 w-full xl:w-auto">
               {/* Filters Row */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center space-x-2 bg-slate-100/80 px-3 py-2 rounded-lg border border-slate-200 shadow-sm">
@@ -475,11 +420,11 @@ const RecruiterDocsPage: React.FC = () => {
 
               {/* Search and Clear Row */}
               <div className="flex items-center gap-3">
-                <div className="relative flex-1 md:w-80">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="relative flex-1 xl:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                   <Input
                     placeholder="Search projects or candidates..."
-                    className="pl-8 bg-white border-slate-200 h-9 shadow-sm focus-visible:ring-primary"
+                    className="pl-9 h-9 text-sm border-slate-200 bg-white focus:ring-2 focus:ring-blue-100"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -488,45 +433,47 @@ const RecruiterDocsPage: React.FC = () => {
                   />
                 </div>
                 <Button 
-                  variant="ghost" 
+                  variant="outline"
                   size="sm" 
-                  className="h-9 px-3 text-slate-500 hover:text-rose-600 hover:bg-rose-50 gap-2 transition-colors border border-transparent hover:border-rose-100"
+                  className="h-9 px-3 text-slate-500 hover:text-rose-600 hover:bg-rose-50 gap-2 transition-colors border-slate-200"
                   onClick={handleClearFilters}
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">Clear Filters</span>
+                  <span className="text-xs font-medium">Clear</span>
                 </Button>
               </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border border-muted/60 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead className="font-semibold">Candidate</TableHead>
-                  <TableHead className="font-semibold">Project Name</TableHead>
-                  <TableHead className="font-semibold">Project Role</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Progress</TableHead>
-                  <TableHead className="text-right w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
+        </div>
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-200 border-t-blue-600" />
+            <p className="text-sm font-medium">Loading documents…</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+            <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+              <FileText className="h-8 w-8 text-slate-300" />
+            </div>
+            <p className="font-semibold text-slate-600">No documents found</p>
+            <p className="text-sm text-slate-400 text-center max-w-xs">Try adjusting your filters or search query.</p>
+          </div>
+        ) : (
+          <>
+          <Table>
+            <TableHeader className="bg-slate-50/80 border-b border-gray-200">
+              <TableRow className="hover:bg-slate-50/80">
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Name</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Role</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Progress</TableHead>
+                <TableHead className="h-10 px-4 text-right w-[80px]"></TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">
-                    Loading documents...
-                  </TableCell>
-                </TableRow>
-              ) : items.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10">
-                    No documents found.
-                  </TableCell>
-                </TableRow>
-              ) : (
+              {(
                 items.map((item) => {
                   const statusConfig = getStatusConfig(item.status.main as CandidateProjectStatus);
                   const StatusIcon = (Icons as any)[statusConfig.icon] || Icons.HelpCircle;
@@ -546,42 +493,39 @@ const RecruiterDocsPage: React.FC = () => {
                     <TableRow 
                       key={item.candidateProjectMapId}
                       className={cn(
-                        "cursor-pointer transition-colors",
-                        isInScreening ? "bg-red-200 hover:bg-red-300/60" :
+                        "cursor-pointer border-b border-gray-100 transition-colors last:border-b-0 group",
+                        isInScreening ? "bg-red-50/70 hover:bg-red-100/60" :
                         statusFilter === "documents_verified" ? "bg-emerald-50/50 hover:bg-emerald-100/50" :
                         statusFilter === "rejected_documents" ? "bg-rose-50/50 hover:bg-rose-100/50" :
                         hasResubmission ? "bg-amber-100/50 hover:bg-amber-200/50" : 
-                        "hover:bg-muted/50"
+                        "hover:bg-blue-50/30"
                       )}
                       onClick={() => navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`)}
                     >
-                      <TableCell className="font-medium">
+                      <TableCell className="px-4 py-3 font-medium">
                         <div className="flex items-center gap-3">
                           <ImageViewer
                             src={item.candidate.profileImage || null}
                             title={`${item.candidate.firstName || ''} ${item.candidate.lastName || ''}`}
-                            className="h-9 w-9"
+                            className="h-9 w-9 rounded-full ring-2 ring-white shadow-sm shrink-0"
                             ariaLabel={`View profile image for ${item.candidate.firstName || ''} ${item.candidate.lastName || ''}`}
                             enableHoverPreview={true}
                           />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-semibold">{item.candidate.firstName} {item.candidate.lastName}</span>
-                            <span className="text-xs text-muted-foreground">{item.candidate.email}</span>
+                          <div className="min-w-0">
+                            <span className="text-sm font-semibold text-gray-900 truncate block max-w-[160px]">{item.candidate.firstName} {item.candidate.lastName}</span>
+                            <span className="text-xs text-slate-400 mt-0.5 truncate block">{item.candidate.email}</span>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-primary hover:underline">{item.project.title}</span>
-                          {/* <span className="text-[10px] text-muted-foreground uppercase tracking-wider">ID: {item.project.id.slice(-8)}</span> */}
-                        </div>
+                      <TableCell className="px-4 py-3">
+                        <span className="text-sm font-medium text-slate-800 truncate block max-w-[160px]">{item.project.title}</span>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-normal">
+                      <TableCell className="px-4 py-3">
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-normal text-xs">
                           {item.project.role?.designation || "N/A"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-4 py-3">
                         <div className="flex flex-col gap-1.5">
                           <Badge className={`${statusConfig.badgeClass} flex items-center gap-1 w-fit px-2 py-0.5 text-[11px] font-medium capitalize`}>
                             <StatusIcon className="h-3 w-3" />
@@ -601,7 +545,7 @@ const RecruiterDocsPage: React.FC = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-4 py-3">
                         <div className="flex flex-col gap-1.5 min-w-[120px]">
                           <div className="flex items-center justify-between text-[10px] font-medium">
                             <span className="text-muted-foreground">{item.progress.docsUploaded} / {item.progress.totalDocsToUpload} docs</span>
@@ -617,16 +561,16 @@ const RecruiterDocsPage: React.FC = () => {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="px-4 py-3 text-right">
                         <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             title="View Details"
                             onClick={() => navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`)}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -636,41 +580,60 @@ const RecruiterDocsPage: React.FC = () => {
               )}
             </TableBody>
           </Table>
-          </div>
+          </>
+        )}
 
-          {/* Pagination */}
-          {pagination && pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {((Number(pagination.page) - 1) * limit) + 1} to {Math.min(Number(pagination.page) * limit, pagination.total)} of {pagination.total} entries
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+            <p className="text-xs text-slate-500">
+              Showing <span className="font-semibold text-slate-700">{((Number(pagination.page) - 1) * limit) + 1}–{Math.min(Number(pagination.page) * limit, pagination.total)}</span> of{" "}
+              <span className="font-semibold text-slate-700">{pagination.total}</span> entries
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={Number(pagination.page) === 1}
+                className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Prev
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((n) => {
+                  const curPage = Number(pagination.page);
+                  if (pagination.totalPages <= 7 || n === 1 || n === pagination.totalPages || (n >= curPage - 1 && n <= curPage + 1)) {
+                    return (
+                      <Button
+                        key={n}
+                        variant={curPage === n ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setPage(n)}
+                        className={cn("h-8 w-8 p-0 text-xs", curPage === n ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                      >
+                        {n}
+                      </Button>
+                    );
+                  } else if (n === curPage - 2 || n === curPage + 2) {
+                    return <span key={n} className="text-slate-300 text-xs px-0.5">…</span>;
+                  }
+                  return null;
+                })}
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={Number(pagination.page) === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
-                </Button>
-                <div className="text-sm font-medium">
-                  Page {pagination.page} of {pagination.totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                  disabled={Number(pagination.page) === pagination.totalPages}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                disabled={Number(pagination.page) === pagination.totalPages}
+                className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Recent Activity or Notifications */}
       <div className="grid gap-6 md:grid-cols-2">

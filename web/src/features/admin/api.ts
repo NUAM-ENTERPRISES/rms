@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import type { SessionAvailability } from "@/shared/types/session-availability";
 
 // API Response wrapper type
 interface ApiResponse<T> {
@@ -27,6 +28,24 @@ export interface UserWithRoles {
   userRoles: Array<{
     role: UserRole;
   }>;
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+  addressCountry?: { code: string; name: string } | null;
+  addressState?: { id: string; name: string; code: string } | null;
+
+  userLanguages?: Array<{
+    id: string;
+    languageCode: string;
+    proficiency: string;
+    language?: { code: string; name: string } | null;
+  }>;
+  userCountryCoverages?: Array<{
+    id: string;
+    countryCode: string;
+    sectorScopes: string[];
+    country?: { code: string; name: string } | null;
+  }>;
 }
 
 export interface PaginatedUsersData {
@@ -45,6 +64,9 @@ export interface CreateUserRequest {
   mobileNumber: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string;
+  addressStateId?: string;
+  address?: string;
 }
 
 export interface UpdateUserRequest {
@@ -54,6 +76,69 @@ export interface UpdateUserRequest {
   mobileNumber?: string;
   dateOfBirth?: string;
   roleIds?: string[]; // Array of role IDs as expected by backend
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+  address?: string | null;
+}
+
+export type LanguageProficiencyApi = "PRIMARY" | "SECONDARY" | "TERTIARY";
+export type RecruiterCountrySectorScopeApi = "HEALTHCARE" | "NON_HEALTH_CARE";
+
+export interface RecruiterCapabilityLanguageItem {
+  languageCode: string;
+  proficiency: LanguageProficiencyApi;
+}
+
+export interface RecruiterCapabilityCountryItem {
+  countryCode: string;
+  sectorScopes: RecruiterCountrySectorScopeApi[];
+}
+
+export interface UpdateRecruiterCapabilitiesRequest {
+  languages: RecruiterCapabilityLanguageItem[];
+  countryCoverages: RecruiterCapabilityCountryItem[];
+}
+
+export interface UserLanguagesResponse {
+  success: boolean;
+  data: { code: string; name: string }[];
+  message: string;
+}
+
+export interface AdminSession {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userEmail: string | null;
+  roles: string[];
+  ipAddress: string | null;
+  browser: string | null;
+  os: string | null;
+  deviceType: string | null;
+  loginAt: string;
+  lastActivityAt: string;
+  isActive: boolean;
+  isIdle: boolean;
+  availability?: SessionAvailability;
+}
+
+export interface AdminSessionsQuery {
+  role?: string;
+  search?: string;
+  isActive?: boolean;
+  status?: "ACTIVE" | "IDLE" | "ENDED";
+  availability?: "ACTIVE" | "BREAK" | "ON_CALL";
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminIdleSessionsSummaryResponse {
+  success: boolean;
+  data: {
+    idleCount: number;
+    sessions: AdminSession[];
+  };
+  message: string;
 }
 
 export interface QueryUsersRequest {
@@ -122,6 +207,25 @@ export const usersApi = baseApi.injectEndpoints({
       invalidatesTags: ["User"],
     }),
 
+    listUserLanguages: builder.query<UserLanguagesResponse, void>({
+      query: () => ({
+        url: "/users/languages",
+        method: "GET",
+      }),
+    }),
+
+    updateRecruiterCapabilities: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateRecruiterCapabilitiesRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/recruiter-capabilities`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
     // Update existing user
     updateUser: builder.mutation<
       UserResponse,
@@ -178,6 +282,16 @@ export const usersApi = baseApi.injectEndpoints({
         body: { ...(currentPassword ? { currentPassword } : {}), newPassword },
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }],
+    }),
+
+    pingCurrentSessionActivity: builder.mutation<
+      { success: boolean; data: null; message: string },
+      void
+    >({
+      query: () => ({
+        url: "/users/profile/session/activity",
+        method: "PUT",
+      }),
     }),
 
     // Get recruiter statistics for analytics
@@ -272,6 +386,58 @@ export const usersApi = baseApi.injectEndpoints({
       providesTags: ['User'],
     }),
 
+    // Admin: all user sessions with role/search/active filter
+    getAdminSessions: builder.query<
+      {
+        success: boolean;
+        data: AdminSession[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+        counts?: {
+          total: number;
+          active: number;
+          idle: number;
+          ended: number;
+          onBreak: number;
+          onCall: number;
+        };
+        message: string;
+      },
+      AdminSessionsQuery | void
+    >({
+      query: (params) => {
+        const searchParams = new URLSearchParams();
+        if (params) {
+          if (params.role) searchParams.set('role', params.role);
+          if (params.search) searchParams.set('search', params.search);
+          if (params.status) searchParams.set('status', params.status);
+          if (params.availability)
+            searchParams.set('availability', params.availability);
+          if (typeof params.isActive === 'boolean')
+            searchParams.set('isActive', String(params.isActive));
+          if (params.page) searchParams.set('page', String(params.page));
+          if (params.limit) searchParams.set('limit', String(params.limit));
+        }
+        return { url: `/users/sessions/admin?${searchParams.toString()}`, method: 'GET' };
+      },
+      providesTags: ['User'],
+    }),
+
+    // Admin: idle sessions summary for header notification
+    getAdminIdleSessionsSummary: builder.query<
+      AdminIdleSessionsSummaryResponse,
+      { role?: string; search?: string; limit?: number } | void
+    >({
+      query: (params) => ({
+        url: '/users/sessions/admin/idle',
+        method: 'GET',
+        params: params || undefined,
+      }),
+      providesTags: ['User'],
+    }),
+
   }),
 });
 
@@ -280,6 +446,8 @@ export const {
   useGetUsersQuery,
   useGetUserQuery,
   useCreateUserMutation,
+  useListUserLanguagesQuery,
+  useUpdateRecruiterCapabilitiesMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
   useGetUserRolesQuery,
@@ -287,6 +455,10 @@ export const {
   useUpdateUserPasswordMutation,
   useGetRecruiterStatsQuery,
   useGetRecruiterPerformanceQuery,
+  usePingCurrentSessionActivityMutation,
+  useGetAdminSessionsQuery,
+  useLazyGetAdminSessionsQuery,
+  useGetAdminIdleSessionsSummaryQuery,
 } = usersApi;
 
 // Export roles API

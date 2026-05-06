@@ -1,16 +1,15 @@
 import { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";
-import { HRDReminderProvider } from "@/app/providers/hrd-reminder.provider";
-import { DataFlowReminderProvider } from "@/app/providers/data-flow-reminder.provider";
+import { ProcessingReminderProvider } from "@/app/providers/processing-reminder.provider";
 import ProtectedRoute from "@/app/router/protected-route";
+import { RoleBasedRedirect } from "@/app/router/RoleBasedRedirect";
 import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
-import { useAppSelector } from "@/app/hooks";
 import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
 
 // Lazy load pages
@@ -98,6 +97,9 @@ const CreateClientPage = lazy(
 const EditClientPage = lazy(
   () => import("@/features/clients/views/EditClientPage")
 );
+
+const AgentsPage = lazy(() => import("@/features/agents/views/AgentsPage"));
+const AgentDetailsPage = lazy(() => import("@/features/agents/views/AgentDetailsPage"));
 
 const InterviewsPage = lazy(
   () => import("@/features/interviews/views/InterviewsPage")
@@ -229,6 +231,9 @@ const EditUserPage = lazy(() => import("@/features/admin/views/EditUserPage"));
 const SystemSettingsPage = lazy(
   () => import("@/features/admin/views/SystemSettingsPage")
 );
+const SessionsMonitoringPage = lazy(
+  () => import("@/features/admin/views/SessionsMonitoringPage")
+);
 
 const NotificationsPage = lazy(
   () => import("@/features/notifications/views/NotificationsPage")
@@ -247,85 +252,15 @@ const DocumentVerificationDashboard = lazy(
   () => import("@/pages/DocumentVerificationDashboard")
 );
 
-// Role-based redirect component
-function RoleBasedRedirect() {
-  const { user } = useAppSelector((state) => state.auth);
-
-  // CRE role gets their own dashboard
-  if (user?.roles.some((role) => role === "CRE")) {
-    return (
-      <AppLayout>
-        <CREDashboardPage />
-      </AppLayout>
-    );
-  }
-
-  // Processing Executive role gets their own dashboard
-  if (user?.roles.some((role) => role === "Processing Executive")) {
-    return (
-      <AppLayout>
-        <ProcessingDashboardPage />
-      </AppLayout>
-    );
-  }
-
-  // Recruiters, Team Heads and Team Leads should land on Candidate Overview
-  if (user?.roles.some((role) => ["Recruiter", "Team Head", "Team Lead"].includes(role))) {
-    return (
-      <AppLayout>
-        <CandidateOverviewPage />
-      </AppLayout>
-    );
-  }
-
-  // Only Manager, Director, and CEO can access admin dashboard
-  if (
-    user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
-  ) {
-    return (
-      <AppLayout>
-        <AdminDashboardPage />
-      </AppLayout>
-    );
-  }
-
-  // Screening Trainers should land on the screenings dashboard
-  if (user?.roles.includes("Screening Trainer")) {
-    return <Navigate to="/screenings" replace />;
-  }
-
-  // Interview coordinators should land on the interviews workspace
-  if (user?.roles.includes("Interview Coordinator")) {
-    return <Navigate to="/interviews" replace />;
-  }
-
-  // Documentation Executives should land on the document verification workspace
-  if (user?.roles.includes("Documentation Executive")) {
-    return (
-      <AppLayout>
-        <DocumentVerificationPage />
-      </AppLayout>
-    );
-  }
-
-  // All other roles (Recruiter, Team Head, Team Lead, etc.) go to projects page
-  return (
-    <AppLayout>
-      <ProjectsPage />
-    </AppLayout>
-  );
-}
-
 function App() {
   return (
     <Router>
       <AuthProvider>
         <NotificationsSocketProvider>
           <RNRReminderProvider>
-            <HRDReminderProvider>
-              <DataFlowReminderProvider>
-                <div className="min-h-screen bg-background">
-                <Suspense fallback={<LoadingScreen />}>
+            <ProcessingReminderProvider>
+              <div className="min-h-screen bg-background">
+                  <Suspense fallback={<LoadingScreen />}>
                   <Routes>
                   {/* Public routes */}
                   <Route
@@ -469,7 +404,11 @@ function App() {
                     path="/recruiter-docs"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsPage />
                           </AppLayout>
@@ -482,7 +421,11 @@ function App() {
                     path="/recruiter-docs/:projectId"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
                           </AppLayout>
@@ -496,7 +439,11 @@ function App() {
                     path="/recruiter-docs/:projectId/:candidateId"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["Recruiter", "System Admin"]}>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          permissions={["nominate:candidates"]}
+                        >
                           <AppLayout>
                             <RecruiterDocsDetailPage />
                           </AppLayout>
@@ -1146,6 +1093,32 @@ function App() {
                   />
 
                   <Route
+                    path="/agents"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:agents"]}>
+                          <AppLayout>
+                            <AgentsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/agents/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:agents"]}>
+                          <AppLayout>
+                            <AgentDetailsPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
                     path="/analytics"
                     element={
                       <RouteErrorBoundary>
@@ -1175,6 +1148,22 @@ function App() {
                                 Application settings page
                               </p>
                             </div>
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/admin/sessions"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute
+                          roles={["CEO", "Director", "Manager", "System Admin"]}
+                          permissions={["read:users"]}
+                        >
+                          <AppLayout>
+                            <SessionsMonitoringPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>
@@ -1354,9 +1343,8 @@ function App() {
                 richColors
                 duration={3000}
               />
-                </div>
-              </DataFlowReminderProvider>
-            </HRDReminderProvider>
+            </div>
+            </ProcessingReminderProvider>
           </RNRReminderProvider>
         </NotificationsSocketProvider>
       </AuthProvider>

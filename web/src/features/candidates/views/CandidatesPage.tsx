@@ -1,12 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +36,6 @@ import {
   Trash2,
   UserCheck,
   Calendar,
-  CalendarDays,
   Phone,
   Mail,
   Briefcase,
@@ -51,13 +44,11 @@ import {
   XCircle,
   AlertCircle,
   Users,
-  X,
-  ArrowRight,
+  ArrowUpRight,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { ImageViewer, DatePicker } from "@/components/molecules";
-import { StatusTile } from "@/components/molecules/StatusTile";
-import { parseISO, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
+import { ImageViewer } from "@/components/molecules";
+import { parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
@@ -69,6 +60,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
 
 
@@ -474,18 +466,10 @@ export default function CandidatesPage() {
 
   if (!canReadCandidates) {
     return (
-      <div className="min-h-screen   p-6">
-        <div className="max-w-4xl mx-auto">
-          <Card className="border-0 shadow-lg bg-white/90">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-slate-800">
-                Access Denied
-              </CardTitle>
-              <CardDescription className="text-slate-600">
-                You don't have permission to view candidates.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-8 text-center max-w-md">
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Access Denied</h2>
+          <p className="text-slate-600 text-sm">You don't have permission to view candidates.</p>
         </div>
       </div>
     );
@@ -616,7 +600,6 @@ export default function CandidatesPage() {
     const rnrCount = recruiterCounts?.rnr ?? 0;
     const onHoldCount = recruiterCounts?.onHold ?? 0;
     const interestedCount = recruiterCounts?.interested ?? 0;
-    const qualifiedCount = recruiterCounts?.qualified ?? 0;
     const futureCount = recruiterCounts?.future ?? 0;
     const workingCount = recruiterCounts?.working ?? 0;
     const notInterestedCount = recruiterCounts?.notInterested ?? 0;
@@ -706,7 +689,6 @@ export default function CandidatesPage() {
       const rnrCount = allCounts?.rnr ?? 0;
       const onHoldCount = allCounts?.onHold ?? 0;
       const interestedCount = allCounts?.interested ?? 0;
-      const qualifiedCount = allCounts?.qualified ?? 0;
       const futureCount = allCounts?.future ?? 0;
       const workingCount = allCounts?.working ?? 0;
       const notInterestedCount = allCounts?.notInterested ?? 0;
@@ -865,551 +847,162 @@ export default function CandidatesPage() {
   return (
     <div className="min-h-screen ">
       <div className="w-full mx-auto space-y-6 mt-2">
-        {/* Search & Filters Section */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardContent>
-            <div className="space-y-6">
-              {/* Premium Search Bar with Enhanced Styling */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${filters.search ? "text-blue-600" : "text-gray-400"
-                    }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${filters.search ? "scale-110" : "scale-100"
-                      }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search candidates by name, skills, or email..."
-                  value={filters.search}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${filters.search ? "ring-2 ring-blue-500/20" : ""
-                    }`}
-                />
-              </div>
-
-              {/* Filters Row */}
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Source Filter */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Source
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.source}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        source: value,
-                        page: 1,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
-                      <SelectValue placeholder="All Sources" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-                      <SelectItem
-                        value="all"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          All Sources
-                        </div>
-                      </SelectItem>
-                      {[
-                        { value: "meta", label: "Meta", color: "green" },
-                        { value: "direct_enquiry", label: "Direct Enquiry", color: "teal" },
-                        { value: "referral", label: "Referral", color: "purple" },
-                        { value: "paid_ads", label: "Paid Ads", color: "orange" },
-                        { value: "agents", label: "Agents", color: "indigo" },
-                        { value: "hospital_visit", label: "Hospital Visit", color: "red" },
-                        { value: "expo_event", label: "Expo / Event", color: "yellow" },
-                      ].map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-lg hover:bg-blue-50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 bg-${option.color}-500 rounded-full`}
-                            ></div>
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Status Filter */}
-                {/* <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Status
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        status: value,
-                        page: 1,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 focus:from-white focus:to-white focus:ring-2 focus:ring-emerald-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
-                      <SelectValue placeholder="All Status" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-                      <SelectItem
-                        value="all"
-                        className="rounded-lg hover:bg-emerald-50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          All Status
-                        </div>
-                      </SelectItem>
-                      {[
-                        { value: "active", label: "Active", color: "blue" },
-                        {
-                          value: "interviewing",
-                          label: "Interviewing",
-                          color: "orange",
-                        },
-                        { value: "placed", label: "Placed", color: "green" },
-                        { value: "rejected", label: "Rejected", color: "red" },
-                      ].map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-lg hover:bg-emerald-50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 bg-${option.color}-500 rounded-full`}
-                            ></div>
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-
-                {/* Experience Filter */}
-                {/* <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-semibold text-gray-700 tracking-wide">
-                      Experience
-                    </span>
-                  </div>
-                  <Select
-                    value={filters.experience}
-                    onValueChange={(value) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        experience: value,
-                        page: 1,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-11 px-4 border-0 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl shadow-sm hover:shadow-md min-w-[140px]">
-                      <SelectValue placeholder="All Experience" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-                      <SelectItem
-                        value="all"
-                        className="rounded-lg hover:bg-blue-50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          All Experience
-                        </div>
-                      </SelectItem>
-                      {[
-                        { value: "0-2", label: "0-2 years", color: "blue" },
-                        { value: "3-5", label: "3-5 years", color: "green" },
-                        { value: "6-8", label: "6-8 years", color: "orange" },
-                        { value: "9+", label: "9+ years", color: "purple" },
-                      ].map((option) => (
-                        <SelectItem
-                          key={option.value}
-                          value={option.value}
-                          className="rounded-lg hover:bg-blue-50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-2 h-2 bg-${option.color}-500 rounded-full`}
-                            ></div>
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div> */}
-
-                {/* Add New Candidate Button */}
-                {canWriteCandidates && (
-                  <Button
-                    onClick={() => navigate("/candidates/create")}
-                    className="h-10 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 gap-2 text-sm"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Add New Candidate
-                  </Button>
-                )}
-              </div>
-
-              {/* ── Date Filter Section ── */}
-              <div className="border-t border-gray-100 pt-4">
-                {/* Row 1: Label + Quick Presets */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-1.5 mr-1">
-                    <CalendarDays className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm font-semibold text-gray-700">Date Added</span>
-                  </div>
-
-                  {/* Quick preset pills */}
-                  {[
-                    { key: "all", label: "All" },
-                    { key: "today", label: "Today" },
-                    { key: "yesterday", label: "Yesterday" },
-                    { key: "last7", label: "Last 7 days" },
-                    { key: "last30", label: "Last 30 days" },
-                    { key: "thisWeek", label: "This week" },
-                    { key: "lastWeek", label: "Last week" },
-                    { key: "thisMonth", label: "This month" },
-                    { key: "custom", label: "Custom" },
-                  ].map((preset) => {
-                    const isActive = filters.dateRange === preset.key;
-                    return (
-                      <button
-                        key={preset.key}
-                        onClick={() => {
-                          const today = new Date();
-                          let from: Date | undefined = undefined;
-                          let to: Date | undefined = undefined;
-                          switch (preset.key) {
-                            case "today":
-                              from = startOfDay(today); to = endOfDay(today); break;
-                            case "yesterday": {
-                              const y = subDays(today, 1);
-                              from = startOfDay(y); to = endOfDay(y); break;
-                            }
-                            case "thisWeek":
-                              from = startOfWeek(today); to = endOfWeek(today); break;
-                            case "lastWeek": {
-                              const lw = subDays(today, 7);
-                              from = startOfWeek(lw); to = endOfWeek(lw); break;
-                            }
-                            case "last7":
-                              from = startOfDay(subDays(today, 6)); to = endOfDay(today); break;
-                            case "last30":
-                              from = startOfDay(subDays(today, 29)); to = endOfDay(today); break;
-                            case "thisMonth":
-                              from = startOfMonth(today); to = endOfMonth(today); break;
-                            case "custom":
-                              from = filters.dateFrom; to = filters.dateTo; break;
-                            case "all":
-                            default:
-                              from = undefined; to = undefined; break;
-                          }
-                          setFilters((prev) => ({ ...prev, dateRange: preset.key, dateFrom: from, dateTo: to, page: 1 }));
-                        }}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 ${
-                          isActive
-                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Row 2: Custom date pickers (shown when "custom" is selected) + Active range badge */}
-                <div className="flex flex-wrap items-center gap-3 mt-3">
-                  {/* From / To date pickers — always visible but highlighted when custom */}
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200 ${
-                    filters.dateRange === "custom" ? "border-blue-300 bg-blue-50/50" : "border-gray-200 bg-gray-50/50"
-                  }`}>
-                    <span className="text-xs font-medium text-gray-500 min-w-[32px]">From</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={filters.dateFrom}
-                        showTime={false}
-                        onChange={(d) =>
-                          setFilters((prev) => {
-                            let newFrom = d;
-                            let newTo = prev.dateTo;
-                            if (newFrom && newTo && newFrom > newTo) {
-                              newTo = newFrom;
-                            }
-                            const newRange = newFrom || newTo ? "custom" : "all";
-                            return { ...prev, dateFrom: newFrom, dateTo: newTo, dateRange: newRange, page: 1 };
-                          })
-                        }
-                        placeholder="Start date"
-                        compact
-                      />
-                    </div>
-
-                    <ArrowRight className="h-3.5 w-3.5 text-gray-400 mx-1" />
-
-                    <span className="text-xs font-medium text-gray-500 min-w-[20px]">To</span>
-                    <div className="w-36">
-                      <DatePicker
-                        value={filters.dateTo}
-                        showTime={false}
-                        onChange={(d) =>
-                          setFilters((prev) => {
-                            let newTo = d;
-                            let newFrom = prev.dateFrom;
-                            if (newFrom && newTo && newTo < newFrom) {
-                              newFrom = newTo;
-                            }
-                            const newRange = newFrom || newTo ? "custom" : "all";
-                            return { ...prev, dateFrom: newFrom, dateTo: newTo, dateRange: newRange, page: 1 };
-                          })
-                        }
-                        placeholder="End date"
-                        compact
-                        disabled={!filters.dateFrom}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Active range badge */}
-                  {filters.dateRange !== "all" && filters.dateFrom && filters.dateTo && (
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">
-                        {format(filters.dateFrom, "dd MMM yyyy")} — {format(filters.dateTo, "dd MMM yyyy")}
-                      </span>
-                      <button
-                        onClick={() =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            dateFrom: undefined,
-                            dateTo: undefined,
-                            dateRange: "all",
-                            page: 1,
-                          }))
-                        }
-                        className="p-0.5 rounded-full hover:bg-blue-100 transition-colors"
-                      >
-                          <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
+        {/* Search & Filter Bar */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search candidates by name, skills, or email…"
+                value={filters.search}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+              />
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Candidate Dashboard (uses real data, not mocks) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 gap-2">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
-            const gradientMap: Record<
-              string,
-              { bg: string; iconBg: string; text: string }
-            > = {
-              "from-blue-500 to-cyan-500": {
-                bg: "from-blue-50 to-blue-100/50",
-                iconBg: "bg-blue-200/40",
-                text: "text-blue-600",
-              },
-              "from-emerald-500 to-teal-500": {
-                bg: "from-emerald-50 to-emerald-100/50",
-                iconBg: "bg-emerald-200/40",
-                text: "text-emerald-600",
-              },
-              "from-purple-500 to-pink-500": {
-                bg: "from-purple-50 to-purple-100/50",
-                iconBg: "bg-purple-200/40",
-                text: "text-purple-600",
-              },
-              "from-orange-500 to-red-500": {
-                bg: "from-orange-50 to-orange-100/50",
-                iconBg: "bg-orange-200/40",
-                text: "text-orange-600",
-              },
-              "from-lime-400 to-green-500": {
-                bg: "from-lime-50 to-green-100/50",
-                iconBg: "bg-lime-200/40",
-                text: "text-lime-700",
-              },
-              "from-emerald-600 to-teal-400": {
-                bg: "from-emerald-50 to-teal-100/50",
-                iconBg: "bg-emerald-200/40",
-                text: "text-emerald-700",
-              },
-              "from-indigo-500 to-violet-500": {
-                bg: "from-indigo-50 to-violet-100/50",
-                iconBg: "bg-indigo-200/40",
-                text: "text-indigo-700",
-              },
-              "from-fuchsia-500 to-pink-400": {
-                bg: "from-fuchsia-50 to-pink-100/50",
-                iconBg: "bg-fuchsia-200/40",
-                text: "text-fuchsia-700",
-              },
-              "from-slate-500 to-stone-400": {
-                bg: "from-slate-50 to-stone-100/50",
-                iconBg: "bg-slate-200/40",
-                text: "text-slate-700",
-              },
-              "from-yellow-400 to-amber-400": {
-                bg: "from-yellow-50 to-amber-100/50",
-                iconBg: "bg-yellow-200/40",
-                text: "text-amber-700",
-              },
-              "from-green-500 to-emerald-500": {
-                bg: "from-green-50 to-emerald-100/50",
-                iconBg: "bg-green-200/40",
-                text: "text-emerald-700",
-              },
-              "from-teal-500 to-emerald-500": {
-                bg: "from-teal-50 to-emerald-100/50",
-                iconBg: "bg-teal-200/40",
-                text: "text-teal-700",
-              },
-              "from-indigo-500 to-purple-500": {
-                bg: "from-indigo-50 to-purple-100/50",
-                iconBg: "bg-indigo-200/40",
-                text: "text-indigo-700",
-              },
-              "from-emerald-500 to-lime-500": {
-                bg: "from-emerald-50 to-lime-100/50",
-                iconBg: "bg-emerald-200/40",
-                text: "text-emerald-700",
-              },
-            };
-            const colors = gradientMap[stat.color];
-
-            const isInteractive = Boolean(stat.statusFilter);
-            const isActive = isInteractive && filters.status === stat.statusFilter;
-
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.05 + i * 0.08 }}
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <Select
+                value={filters.source}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, source: value, page: 1 }))}
               >
-                <StatusTile
-                  label={stat.label}
-                  value={stat.value}
-                  subtitle={stat.subtitle}
-                  icon={Icon}
-                  bgGradient={colors.bg}
-                  iconBg={colors.iconBg}
-                  textColor={colors.text}
-                  active={isActive}
-                  onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
-                  scrollTargetRef={tableRef}
-                  scrollOnClick={isInteractive}
-                  ariaLabel={`Filter candidates by ${stat.label}`}
-                  className="h-full backdrop-blur-sm transition-all duration-200"
-                />
-              </motion.div>
-            );
-          })}
+                <SelectTrigger className="h-9 text-sm border-slate-200 rounded-xl bg-white min-w-[130px]">
+                  <SelectValue placeholder="All Sources" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl shadow-xl">
+                  <SelectItem value="all">All Sources</SelectItem>
+                  <SelectItem value="meta">Meta</SelectItem>
+                  <SelectItem value="direct_enquiry">Direct Enquiry</SelectItem>
+                  <SelectItem value="referral">Referral</SelectItem>
+                  <SelectItem value="paid_ads">Paid Ads</SelectItem>
+                  <SelectItem value="agents">Agents</SelectItem>
+                  <SelectItem value="hospital_visit">Hospital Visit</SelectItem>
+                  <SelectItem value="expo_event">Expo / Event</SelectItem>
+                </SelectContent>
+              </Select>
+              {canWriteCandidates && (
+                <Button
+                  onClick={() => navigate("/candidates/create")}
+                  size="sm"
+                  className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5 shrink-0"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Candidate
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Candidates Table */}
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-semibold text-slate-800">
-                  {getTableTitle()}
-                </CardTitle>
-                <CardDescription>
-                  {getTableSubtitle()} • {totalCount} candidates found
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            {/* Premium Table Container */}
-            <div ref={tableRef} className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-              {/* Beautiful Header */}
-              <div className="border-b border-gray-200 bg-gray-50/70 px-6 py-4">
-                <div className="flex items-center gap-4">
-                  {/* Colorful Gradient Icon Background */}
-                  <div className="rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-3 shadow-lg shadow-purple-500/20">
-                    <Users className="h-7 w-7 text-white" />
-                  </div>
-
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      {getTableTitle()}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1 font-medium">
-                      {getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""} in
-                      total
-                    </p>
-                  </div>
-
-                  {/* Active date badge (quick reference in table header) */}
-                  {filters.dateRange !== "all" && filters.dateFrom && filters.dateTo && (
-                    <div className="ml-auto hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      <span className="text-xs font-medium">
-                        {format(filters.dateFrom, "dd MMM")} — {format(filters.dateTo, "dd MMM yyyy")}
-                      </span>
+        {/* Candidate Dashboard Tiles */}
+        {(() => {
+          const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+            blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
+            emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+            orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",   iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
+            purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",   iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
+            lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
+            indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",   iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
+            teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
+            slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",    icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
+            amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+          };
+          const statusToAccent: Record<string, string> = {
+            all: "blue", untouched: "emerald", rnr: "orange", on_hold: "purple",
+            interested: "lime", future: "indigo", deployed: "teal",
+            not_interested: "slate", other_enquiry: "amber",
+          };
+          return (
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+              {stats.map((stat, i) => {
+                const Icon = stat.icon;
+                const accent = statusToAccent[stat.statusFilter ?? ""] ?? "blue";
+                const s = accentStyles[accent];
+                const isInteractive = Boolean(stat.statusFilter);
+                const isActive = isInteractive && filters.status === stat.statusFilter;
+                return (
+                  <motion.button
+                    key={stat.label}
+                    type="button"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    onClick={() => isInteractive && handleTileClick(stat.statusFilter)}
+                    className={cn(
+                      "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                      s.card,
+                      isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                    )}
+                  >
+                    {isActive && <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{stat.label}</p>
+                        <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{stat.value}</p>
+                        <p className="text-xs text-slate-500">{stat.subtitle}</p>
+                      </div>
+                      <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                        <Icon className={cn("h-5 w-5", s.icon)} />
+                      </div>
                     </div>
-                  )}
+                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                      <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* Candidates Table */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          {/* Table Header Bar */}
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900 truncate">{getTableTitle()}</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">{getTableSubtitle()} — {totalCount} candidate{totalCount !== 1 ? "s" : ""}</p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Premium Table Container */}
+          <div ref={tableRef} className="overflow-hidden">
 
               {/* Table */}
               <Table>
                 <TableHeader className="sticky">
-                  <TableRow className="bg-gray-50/50 border-b border-gray-200">
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                  <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Candidate
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Recruiter
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Created By
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Created At
                     </TableHead>
                     {/* Skills column removed */}
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Status
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-left text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Profile
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Last Updated
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-center text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Contact
                     </TableHead>
-                    <TableHead className="h-9 px-4 text-right text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                    <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -1431,7 +1024,7 @@ export default function CandidatesPage() {
                       return (
                         <TableRow
                           key={candidate.id}
-                          className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0"
+                          className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
                           <TableCell className="px-4 py-3">
@@ -1580,6 +1173,10 @@ export default function CandidatesPage() {
                             </div>
                           </TableCell>
 
+                          <TableCell className="px-2 py-3 w-[4.5rem] text-center">
+                            <CandidateProfileCompletionCell candidate={candidate} />
+                          </TableCell>
+
                           {/* Last Updated */}
                           <TableCell className="px-4 py-3">
                             <div className="flex items-center gap-1.5 text-xs text-gray-600">
@@ -1688,134 +1285,81 @@ export default function CandidatesPage() {
                 </TableBody>
               </Table>
 
-              {/* Empty State - Your Original */}
+              {/* Empty State */}
               {pageItems.length === 0 && totalCount === 0 && (
-                  <div className="text-center py-12">
-                    <UserCheck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-600 mb-2">
-                      No candidates found
-                    </h3>
-                    <p className="text-slate-500 mb-6">
-                      {filters.search ||
-                        filters.status !== "all" ||
-                        filters.experience !== "all"
-                        ? "Try adjusting your search criteria or filters."
-                        : "Get started by adding your first candidate."}
-                    </p>
-                    {!filters.search &&
-                      filters.status === "all" &&
-                      filters.experience === "all" &&
-                      canWriteCandidates && (
-                        <Button
-                          onClick={() => navigate("/candidates/create")}
-                          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Your First Candidate
-                        </Button>
-                      )}
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                  <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                    <UserCheck className="h-8 w-8 text-slate-300" />
                   </div>
-                )}
+                  <p className="font-semibold text-slate-600">No candidates found</p>
+                  <p className="text-sm text-slate-400 text-center max-w-xs">
+                    {filters.search || filters.status !== "all" || filters.source !== "all"
+                      ? "Try adjusting your search criteria or filters."
+                      : "Get started by adding your first candidate."}
+                  </p>
+                  {!filters.search && filters.status === "all" && canWriteCandidates && (
+                    <Button
+                      onClick={() => navigate("/candidates/create")}
+                      size="sm"
+                      className="mt-1 h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl gap-1.5"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add First Candidate
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Pagination - Your Original */}
+            {/* Pagination */}
             {totalCount > 0 && (
-                <Card className="mt-4 border-0 shadow-lg bg-white/90">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-slate-600">
-                        Showing {(filters.page - 1) * filters.limit + 1} to{" "}
-                        {Math.min(filters.page * filters.limit, totalCount)} of{" "}
-                        {totalCount} candidates
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              page: Math.max(1, prev.page - 1),
-                            }))
-                          }
-                          disabled={filters.page === 1}
-                          className="h-9 px-3"
-                        >
-                          Previous
-                        </Button>
-
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1)
-                            .filter((pageNum) => {
-                              return (
-                                pageNum === 1 ||
-                                pageNum === totalPages ||
-                                (pageNum >= filters.page - 1 &&
-                                  pageNum <= filters.page + 1)
-                              );
-                            })
-                            .map((pageNum, idx, arr) => {
-                              const prevPageNum = arr[idx - 1];
-                              const showEllipsis =
-                                prevPageNum && pageNum - prevPageNum > 1;
-
-                              return (
-                                <div
-                                  key={pageNum}
-                                  className="flex items-center"
-                                >
-                                  {showEllipsis && (
-                                    <span className="px-2 text-slate-400">
-                                      ...
-                                    </span>
-                                  )}
-                                  <Button
-                                    variant={
-                                      filters.page === pageNum
-                                        ? "default"
-                                        : "outline"
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                      setFilters((prev) => ({
-                                        ...prev,
-                                        page: pageNum,
-                                      }))
-                                    }
-                                    className={`h-9 w-9 p-0 ${filters.page === pageNum
-                                      ? "bg-blue-600 hover:bg-blue-700"
-                                      : ""
-                                      }`}
-                                  >
-                                    {pageNum}
-                                  </Button>
-                                </div>
-                              );
-                            })}
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              page: Math.min(totalPages, prev.page + 1),
-                            }))
-                          }
-                          disabled={filters.page >= totalPages}
-                          className="h-9 px-3"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-          </CardContent>
-        </Card>
-      </div>
+              <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
+                <p className="text-xs text-slate-500">
+                  Showing <span className="font-semibold text-slate-700">{(filters.page - 1) * filters.limit + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(filters.page * filters.limit, totalCount)}</span> of <span className="font-semibold text-slate-700">{totalCount}</span> candidates
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
+                    disabled={filters.page === 1}
+                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  >
+                    Prev
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                      if (totalPages <= 7 || p === 1 || p === totalPages || (p >= filters.page - 1 && p <= filters.page + 1)) {
+                        return (
+                          <Button
+                            key={p}
+                            variant={filters.page === p ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setFilters((prev) => ({ ...prev, page: p }))}
+                            className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? "bg-blue-600 hover:bg-blue-700 shadow-sm" : "text-slate-500 hover:bg-slate-100")}
+                          >
+                            {p}
+                          </Button>
+                        );
+                      } else if (p === filters.page - 2 || p === filters.page + 2) {
+                        return <span key={p} className="text-slate-300 text-xs px-0.5">…</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFilters((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
+                    disabled={filters.page >= totalPages}
+                    className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
       {/* Transfer Candidate Dialog */}
       {transferDialog.isOpen && transferDialog.candidateId && (
@@ -1828,8 +1372,6 @@ export default function CandidatesPage() {
           isLoading={isTransferring}
         />
       )}
-
-  
     </div>
   );
 }

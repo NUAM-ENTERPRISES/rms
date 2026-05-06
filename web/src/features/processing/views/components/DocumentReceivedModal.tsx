@@ -444,13 +444,13 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Submission Date & Time
+                    Agency Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select submission date and time</Label>
+                      <Label className="text-xs text-slate-600 mb-1 block">Select hard copy received date and time</Label>
 
                       {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
                       {activeStep?.submittedAt ? (
@@ -475,7 +475,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
                           {/* Only show submit button when no submittedAt present and when step is not completed */}
                           {!activeStep?.submittedAt && !activeStep?.completedAt && (
-                            <div className="text-xs text-slate-500 mt-2">Please set a submission date before marking this step complete.</div>
+                            <div className="text-xs text-slate-500 mt-2">Please set a hard copy received date before marking this step complete.</div>
                           )}
                         </>
                       )}
@@ -494,7 +494,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                           ) : (
                             <Send className="h-3.5 w-3.5 mr-1" />
                           )}
-                          Submit Date
+                          Submit Hard Copy Received Date
                         </Button>
                       )}
                     </div>
@@ -546,9 +546,9 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                           </div>
                           {(hasCandidate || hasProcessing) && (
                             <div className="flex items-center gap-1 text-xs text-slate-500">
-                              <span>Received: {existingReceivedAt ? format(new Date(existingReceivedAt), 'PPP') : 'Not set'}</span>
+                              <span>Original hardcopy received date: {existingReceivedAt ? format(new Date(existingReceivedAt), 'PPP') : 'Not set'}</span>
                               {verificationId && (
-                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)} title="Edit received date">
+                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)} title="Edit Original hardcopy received date">
                                   <Edit3 className="h-2 w-2" />
                                 </Button>
                               )}

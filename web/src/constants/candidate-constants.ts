@@ -68,6 +68,21 @@ export const SMARTNESS_LEVELS = [
   "Below Average",
 ] as const;
 
+export const CANDIDATE_SOURCES = [
+  { id: 'manual', value: 'manual', label: 'Manual' },
+  { id: 'meta', value: 'meta', label: 'Meta' },
+  { id: 'agent', value: 'agent', label: 'Agent' },
+  { id: 'referral', value: 'referral', label: 'Referral' },
+  { id: 'direct_enquiry', value: 'direct_enquiry', label: 'Direct Enquiry' },
+  { id: 'hospital_visit', value: 'hospital_visit', label: 'Hospital Visit' },
+  { id: 'paid_ads', value: 'paid_ads', label: 'Paid Ads' },
+  { id: 'expo_event', value: 'expo_event', label: 'Expo/Event' },
+  { id: 'job_board', value: 'job_board', label: 'Job Board' },
+  { id: 'social_media', value: 'social_media', label: 'Social Media' },
+  { id: 'direct_application', value: 'direct_application', label: 'Direct Application' },
+  { id: 'internal', value: 'internal', label: 'Internal' }
+] as const;
+
 export const COMMON_SKILLS = [
   "Communication",
   "Teamwork",

@@ -2,8 +2,8 @@ import { Test } from '@nestjs/testing';
 import { ProcessingService } from '../processing.service';
 import { PrismaService } from '../../database/prisma.service';
 import { OutboxService } from '../../notifications/outbox.service';
-import { HrdRemindersService } from '../../hrd-reminders/hrd-reminders.service';
-import { DataFlowRemindersService } from '../../data-flow-reminders/data-flow-reminders.service';
+import { ProcessingRemindersService } from '../../processing-reminders/processing-reminders.service';
+import { PROJECT_SECTOR } from '../../projects/constants';
 
 describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
   let service: ProcessingService;
@@ -15,8 +15,7 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
         ProcessingService,
         PrismaService,
         { provide: OutboxService, useValue: {} },
-        { provide: HrdRemindersService, useValue: {} },
-        { provide: DataFlowRemindersService, useValue: {} },
+        { provide: ProcessingRemindersService, useValue: {} },
       ],
     }).compile();
 
@@ -29,24 +28,67 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
 
     // Mock candidate list (two processing candidates)
     const candidates = [
-      { id: 'pc-1', project: { country: { code: 'US', name: 'United States' } }, updatedAt: new Date() },
-      { id: 'pc-2', project: { country: { code: 'NG', name: 'Nigeria' } }, updatedAt: new Date() },
+      {
+        id: 'pc-1',
+        project: { country: { code: 'US', name: 'United States' }, sector: PROJECT_SECTOR.HEALTHCARE },
+        updatedAt: new Date(),
+      },
+      {
+        id: 'pc-2',
+        project: { country: { code: 'NG', name: 'Nigeria' }, sector: PROJECT_SECTOR.HEALTHCARE },
+        updatedAt: new Date(),
+      },
     ];
 
     jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue(candidates);
     jest.spyOn(prisma.processingCandidate, 'count' as any).mockResolvedValue(2);
     jest.spyOn(prisma.processingCandidate, 'groupBy' as any).mockResolvedValue([]);
 
-    // Mock processingStep groupBy totals and completed
-    jest.spyOn(prisma.processingStep, 'groupBy' as any)
-      .mockImplementationOnce(async () => [
-        { processingCandidateId: 'pc-1', _count: { _all: 10 } },
-        { processingCandidateId: 'pc-2', _count: { _all: 8 } },
-      ])
-      .mockImplementationOnce(async () => [
-        { processingCandidateId: 'pc-1', _count: { _all: 5 } },
-        { processingCandidateId: 'pc-2', _count: { _all: 2 } },
-      ]);
+    jest.spyOn(prisma.processingStep, 'findMany' as any).mockImplementation(async (args: any) => {
+      const ids: string[] = args.where.processingCandidateId.in;
+      const out: any[] = [];
+      if (ids.includes('pc-1')) {
+        const keys = [
+          'offer_letter',
+          'hrd',
+          'data_flow',
+          'eligibility',
+          'prometric',
+          'council_registration',
+          'document_attestation',
+          'medical',
+          'biometrics',
+          'visa',
+        ];
+        keys.forEach((key, i) => {
+          out.push({
+            processingCandidateId: 'pc-1',
+            status: i < 5 ? 'completed' : 'pending',
+            template: { key },
+          });
+        });
+      }
+      if (ids.includes('pc-2')) {
+        const keys = [
+          'offer_letter',
+          'hrd',
+          'data_flow',
+          'eligibility',
+          'prometric',
+          'council_registration',
+          'document_attestation',
+          'medical',
+        ];
+        keys.forEach((key, i) => {
+          out.push({
+            processingCandidateId: 'pc-2',
+            status: i < 2 ? 'completed' : 'pending',
+            template: { key },
+          });
+        });
+      }
+      return out;
+    });
 
     const result = await service.getAllProcessingCandidates(query as any);
 
@@ -226,15 +268,26 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     const query: any = { page: 1, limit: 10 };
 
     // Simulate one candidate that would otherwise show ~91.7% (11/12) but processingStatus is 'completed'
-    const candidates = [{ id: 'pc-1', processingStatus: 'completed', project: { country: { code: 'US', name: 'United States' } }, updatedAt: new Date() }];
+    const candidates = [
+      {
+        id: 'pc-1',
+        processingStatus: 'completed',
+        project: { country: { code: 'US', name: 'United States' }, sector: PROJECT_SECTOR.HEALTHCARE },
+        updatedAt: new Date(),
+      },
+    ];
 
     jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue(candidates);
-    jest.spyOn(prisma.processingCandidate, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.processingCandidate, 'count' as any)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0);
     jest.spyOn(prisma.processingCandidate, 'groupBy' as any).mockResolvedValue([]);
 
-    jest.spyOn(prisma.processingStep, 'groupBy' as any)
-      .mockImplementationOnce(async () => [ { processingCandidateId: 'pc-1', _count: { _all: 12 } } ])
-      .mockImplementationOnce(async () => [ { processingCandidateId: 'pc-1', _count: { _all: 11 } } ]);
+    jest.spyOn(prisma.processingStep, 'findMany' as any).mockResolvedValue([
+      { processingCandidateId: 'pc-1', status: 'completed', template: { key: 'offer_letter' } },
+      { processingCandidateId: 'pc-1', status: 'pending', template: { key: 'hrd' } },
+    ]);
 
     const res = await service.getAllProcessingCandidatesAdmin(query as any);
     expect(res.candidates).toHaveLength(1);

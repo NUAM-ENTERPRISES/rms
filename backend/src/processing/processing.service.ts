@@ -9,8 +9,13 @@ import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dt
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
 import { UpdateProcessingCandidateDto } from './dto/update-processing-candidate.dto';
 import { OutboxService } from '../notifications/outbox.service';
-import { HrdRemindersService } from '../hrd-reminders/hrd-reminders.service';
-import { DataFlowRemindersService } from '../data-flow-reminders/data-flow-reminders.service';
+import { ProcessingRemindersService } from '../processing-reminders/processing-reminders.service';
+import {
+  allowedTemplateKeysForSector,
+  computeApplicableStepProgress,
+  filterProcessingStepsForSector,
+  PROCESSING_STEP_SECTOR_MISMATCH_REASON,
+} from './processing-sector-steps';
 
 @Injectable()
 export class ProcessingService {
@@ -19,9 +24,36 @@ export class ProcessingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
-    private readonly hrdRemindersService: HrdRemindersService,
-    private readonly dataFlowRemindersService: DataFlowRemindersService,
+    private readonly processingRemindersService: ProcessingRemindersService,
   ) {}
+
+  /** Progress + merge with processingStatus completed → 100% (matches previous list behavior). */
+  private async mergeSectorAwareProgress(candidatesWithCountry: any[]): Promise<any[]> {
+    const ids = candidatesWithCountry.map((c: any) => c.id);
+    if (ids.length === 0) {
+      return candidatesWithCountry.map((c: any) => ({ ...c, progressCount: 0 }));
+    }
+    const allRows = await this.prisma.processingStep.findMany({
+      where: { processingCandidateId: { in: ids } },
+      select: { processingCandidateId: true, status: true, template: { select: { key: true } } },
+    });
+    const byPc = new Map<string, { status: string; template: { key: string } }[]>();
+    for (const r of allRows) {
+      const list = byPc.get(r.processingCandidateId) ?? [];
+      list.push({ status: r.status, template: r.template });
+      byPc.set(r.processingCandidateId, list);
+    }
+    return candidatesWithCountry.map((c: any) => {
+      const steps = byPc.get(c.id) ?? [];
+      const sector = c.project?.sector ?? null;
+      const { percent } = computeApplicableStepProgress(steps, sector);
+      let progressCount = percent;
+      if (c.processingStatus === 'completed') {
+        progressCount = 100;
+      }
+      return { ...c, progressCount };
+    });
+  }
 
   /**
    * Transfer candidates to the processing team
@@ -232,6 +264,9 @@ export class ProcessingService {
     });
     if (!processingCandidate) throw new Error('Processing candidate not found');
 
+    const projectSector = processingCandidate.project?.sector ?? null;
+    const allowedKeys = allowedTemplateKeysForSector(projectSector);
+
     const country = processingCandidate.project?.countryCode || processingCandidate.candidate?.countryCode || null;
 
     // Fetch country-specific plan
@@ -249,6 +284,44 @@ export class ProcessingService {
     if (plan.length === 0) {
       const templates = await prismaTx.processingStepTemplate.findMany({ orderBy: { order: 'asc' } });
       plan = templates.map((t) => ({ stepTemplateId: t.id, stepTemplate: t, order: t.order }));
+    }
+
+    plan = plan.filter((p) => p.stepTemplate && allowedKeys.has(p.stepTemplate.key));
+
+    const existingStepsForCandidate = await prismaTx.processingStep.findMany({
+      where: { processingCandidateId },
+      include: { template: true },
+    });
+    for (const s of existingStepsForCandidate) {
+      if (
+        !allowedKeys.has(s.template.key) &&
+        (s.status === 'pending' || s.status === 'in_progress')
+      ) {
+        await prismaTx.processingStep.update({
+          where: { id: s.id },
+          data: {
+            status: 'cancelled',
+            rejectionReason: PROCESSING_STEP_SECTOR_MISMATCH_REASON,
+          },
+        });
+      }
+    }
+
+    // Re-open steps that were only cancelled due to a previous sector allowlist (code deploy), now allowed again
+    for (const s of existingStepsForCandidate) {
+      if (
+        s.status === 'cancelled' &&
+        s.rejectionReason === PROCESSING_STEP_SECTOR_MISMATCH_REASON &&
+        allowedKeys.has(s.template.key)
+      ) {
+        await prismaTx.processingStep.update({
+          where: { id: s.id },
+          data: {
+            status: 'pending',
+            rejectionReason: null,
+          },
+        });
+      }
     }
 
     // Create missing steps idempotently
@@ -404,7 +477,7 @@ export class ProcessingService {
       return rest;
     });
 
-    return stepsWithoutDocs;
+    return filterProcessingStepsForSector(stepsWithoutDocs as any, pc?.project?.sector);
   }
 
   // -----------------
@@ -2844,7 +2917,7 @@ export class ProcessingService {
 
   async updateProcessingStep(stepId: string, data: any, userId: string) {
     // Allowed updates: status, assignedTo, rejectionReason, dueDate, biometric/visa/eligibility/council fields
-    const { status, assignedTo, rejectionReason, dueDate, biometricDate, biometricLocation, ticketDate, visaIssuedAt, visaValidAt, eligibilityIssuedAt, eligibilityValidAt, eligibilityDuration, councilIssuedAt, councilValidAt } = data;
+    const { status, assignedTo, rejectionReason, dueDate, biometricDate, biometricLocation, ticketDate, flightTime, airportLocation, visaIssuedAt, visaValidAt, eligibilityIssuedAt, eligibilityValidAt, eligibilityDuration, eligibilityNumber, councilIssuedAt, councilValidAt, prometricPassedAt, prometricValidAt, medicalIssuedAt, medicalValidAt, isEmigrationCompleted } = data;
 
     const step = await this.prisma.processingStep.findUnique({
       where: { id: stepId },
@@ -2867,13 +2940,21 @@ export class ProcessingService {
     if (biometricDate) updates.biometricDate = new Date(biometricDate);
     if (biometricLocation) updates.biometricLocation = biometricLocation;
     if (ticketDate) updates.ticketDate = new Date(ticketDate);
+    if (flightTime) updates.flightTime = new Date(flightTime);
+    if (airportLocation !== undefined) updates.airportLocation = airportLocation || null;
     if (visaIssuedAt) updates.visaIssuedAt = new Date(visaIssuedAt);
     if (visaValidAt) updates.visaValidAt = new Date(visaValidAt);
     if (eligibilityIssuedAt) updates.eligibilityIssuedAt = new Date(eligibilityIssuedAt);
     if (eligibilityValidAt) updates.eligibilityValidAt = new Date(eligibilityValidAt);
     if (eligibilityDuration) updates.eligibilityDuration = eligibilityDuration;
+    if (eligibilityNumber) updates.eligibilityNumber = eligibilityNumber;
     if (councilIssuedAt) updates.councilIssuedAt = new Date(councilIssuedAt);
     if (councilValidAt) updates.councilValidAt = new Date(councilValidAt);
+    if (prometricPassedAt) updates.prometricPassedAt = new Date(prometricPassedAt);
+    if (prometricValidAt) updates.prometricValidAt = new Date(prometricValidAt);
+    if (medicalIssuedAt) updates.medicalIssuedAt = new Date(medicalIssuedAt);
+    if (medicalValidAt) updates.medicalValidAt = new Date(medicalValidAt);
+    if (typeof isEmigrationCompleted === 'boolean') updates.isEmigrationCompleted = isEmigrationCompleted;
 
     await this.prisma.$transaction(async (tx) => {
       await tx.processingStep.update({ where: { id: stepId }, data: updates });
@@ -2970,19 +3051,82 @@ export class ProcessingService {
       });
     });
 
-    // If this is an HRD step, schedule HRD reminder
+    // Schedule unified reminder
     try {
-      if (step.template?.key === 'hrd') {
-        await this.hrdRemindersService.createHRDReminder(step.id, step.processingCandidateId, step.assignedTo || null, newSubmittedAt);
-      }
-      if (step.template?.key === 'data_flow') {
-        await this.dataFlowRemindersService.createDataFlowReminder(step.id, step.processingCandidateId, step.assignedTo || null, newSubmittedAt);
-      }
+      await this.processingRemindersService.scheduleReminder(step.id, userId);
     } catch (error) {
       this.logger.error(`Failed to schedule reminder for step ${stepId}:`, error);
     }
 
     return { success: true };
+  }
+
+  /**
+   * Get active reminders for a user with pagination
+   */
+  async getProcessingReminders(userId: string, page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const [reminders, total] = await Promise.all([
+      this.prisma.processingStepReminder.findMany({
+        where: {
+          assignedTo: userId,
+          status: { in: ['sent', 'pending'] },
+        },
+        include: {
+          processingStep: {
+            include: {
+              template: true,
+            },
+          },
+          processingCandidate: {
+            include: {
+              candidate: true,
+              project: true,
+            },
+          },
+        },
+        orderBy: { lastReminderDate: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.processingStepReminder.count({
+        where: {
+          assignedTo: userId,
+          status: { in: ['sent', 'pending'] },
+        },
+      }),
+    ]);
+
+    return {
+      items: reminders.map((r) => {
+        const candidate = r.processingCandidate?.candidate;
+        const candidateName = candidate ? `${candidate.firstName} ${candidate.lastName}` : 'Candidate';
+        const projectName = r.processingCandidate?.project?.title || 'Project';
+        const typeLabel = r.stepKey.toUpperCase().replace('_', ' ');
+
+        return {
+          id: r.id,
+          processingStepId: r.processingStepId,
+          stepKey: r.stepKey,
+          candidateName,
+          projectName,
+          title: `${typeLabel} Follow-up required`,
+          message: `${typeLabel} step for ${candidateName} (${projectName}) requires attention.`,
+          route: `/processingCandidateDetails/${r.processingCandidateId}`,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+          sentAt: r.sentAt,
+          reminderCount: r.reminderCount,
+          submittedAt: r.processingStep?.submittedAt ?? null,
+          templateName: r.processingStep?.template?.label ?? null,
+        };
+      }),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   /**
@@ -3175,12 +3319,7 @@ export class ProcessingService {
 
     // After transaction commit: if this was an HRD step, cancel HRD reminders
     try {
-      if (step.template?.key === 'hrd') {
-        await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
-      }
-      if (step.template?.key === 'data_flow') {
-        await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(stepId);
-      }
+      await this.processingRemindersService.cancelReminder(stepId);
     } catch (err) {
       this.logger.error(`Failed to cancel reminders after completing step ${stepId}:`, err);
     }
@@ -3286,25 +3425,15 @@ export class ProcessingService {
     // After transaction: cancel reminders for this step and for any other steps belonging to the processingCandidate
     try {
       // cancel for the specific step (existing behaviour)
-      if (step.template?.key === 'hrd') {
-        await this.hrdRemindersService.cancelHRDRemindersForStep(stepId);
-      }
-      if (step.template?.key === 'data_flow') {
-        await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(stepId);
-      }
+      await this.processingRemindersService.cancelReminder(stepId);
 
       // cancel reminders for all steps of this processing candidate (if any)
       const otherSteps = await this.prisma.processingStep.findMany({ where: { processingCandidateId: step.processingCandidateId } });
       for (const s of otherSteps) {
         try {
-          await this.hrdRemindersService.cancelHRDRemindersForStep(s.id);
+          await this.processingRemindersService.cancelReminder(s.id);
         } catch (err) {
-          this.logger.error(`Failed to cancel HRD reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
-        }
-        try {
-          await this.dataFlowRemindersService.cancelDataFlowRemindersForStep(s.id);
-        } catch (err) {
-          this.logger.error(`Failed to cancel Data Flow reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
+          this.logger.error(`Failed to cancel reminders for step ${s.id} while cancelling processing ${step.processingCandidateId}:`, err);
         }
       }
     } catch (err) {
@@ -3753,14 +3882,11 @@ export class ProcessingService {
       return { success: true, verificationId: verification.id };
     });
 
-    // If this verification is related to HRD step, cancel HRD reminders for that step
+    // Cancel pending reminders after verification
     try {
-      const stepWithTemplate = await this.prisma.processingStep.findUnique({ where: { id: processingStepId }, include: { template: true } });
-      if (stepWithTemplate?.template?.key === 'hrd') {
-        await this.hrdRemindersService.cancelHRDRemindersForStep(processingStepId);
-      }
+      await this.processingRemindersService.cancelReminder(processingStepId);
     } catch (err) {
-      this.logger.error(`Failed to cancel HRD reminders after verification for step ${processingStepId}:`, err);
+      this.logger.error(`Failed to cancel reminders after verification for step ${processingStepId}:`, err);
     }
 
     return txResult;
@@ -3971,6 +4097,13 @@ export class ProcessingService {
                   profileImage: true,
                   dateOfBirth: true,
                   gender: true,
+                  agent: {
+                    select: {
+                      id: true,
+                      name: true,
+                      agentType: true,
+                    },
+                  },
                   qualifications: {
                     include: {
                       qualification: true,
@@ -4056,6 +4189,8 @@ export class ProcessingService {
       isTransferredToProcessing: !!itv.candidateProjectMap?.processing,
       offerLetterData: itv.candidateProjectMap?.documentVerifications?.[0] || null,
       isOfferLetterUploaded: (itv.candidateProjectMap?.documentVerifications?.length || 0) > 0,
+      agentName: itv.candidateProjectMap?.candidate?.agent?.name || null,
+      agentType: itv.candidateProjectMap?.candidate?.agent?.agentType || null,
     }));
 
     return {
@@ -4155,12 +4290,20 @@ export class ProcessingService {
               countryCode: true,
               experience: true,
               highestEducation: true,
+              agent: {
+                select: {
+                  id: true,
+                  name: true,
+                  agentType: true,
+                },
+              },
             },
           },
           project: {
             select: {
               id: true,
               title: true,
+              sector: true,
               country: { select: { code: true, name: true } },
             },
           },
@@ -4263,43 +4406,7 @@ export class ProcessingService {
       return c;
     });
 
-    // Compute progress percentage for each candidate based on processing steps
-    const processingCandidateIds = candidatesWithCountry.map((c: any) => c.id);
-
-    const stepTotalsMap: Record<string, number> = {};
-    const completedStepsMap: Record<string, number> = {};
-
-    if (processingCandidateIds.length > 0) {
-      const [totals, completed] = await Promise.all([
-        this.prisma.processingStep.groupBy({
-          by: ['processingCandidateId'],
-          where: { processingCandidateId: { in: processingCandidateIds } },
-          _count: { _all: true },
-        }),
-        this.prisma.processingStep.groupBy({
-          by: ['processingCandidateId'],
-          where: { processingCandidateId: { in: processingCandidateIds }, status: 'completed' },
-          _count: { _all: true },
-        }),
-      ]);
-
-      totals.forEach((t: any) => {
-        stepTotalsMap[t.processingCandidateId] = t._count._all;
-      });
-      completed.forEach((c: any) => {
-        completedStepsMap[c.processingCandidateId] = c._count._all;
-      });
-    }
-
-    const candidatesWithProgress = candidatesWithCountry.map((c: any) => {
-      const total = stepTotalsMap[c.id] || 0;
-      const completed = completedStepsMap[c.id] || 0;
-      const progressCount = total === 0 ? 0 : Math.round((completed / total) * 100);
-      return {
-        ...c,
-        progressCount,
-      };
-    });
+    const candidatesWithProgress = await this.mergeSectorAwareProgress(candidatesWithCountry);
 
     const finalCandidates = candidatesWithProgress.map((c: any) => {
       if (c.processingStatus === 'completed' && c.progressCount !== 100) {
@@ -4422,12 +4529,20 @@ export class ProcessingService {
               countryCode: true,
               experience: true,
               highestEducation: true,
+              agent: {
+                select: {
+                  id: true,
+                  name: true,
+                  agentType: true,
+                },
+              },
             },
           },
           project: {
             select: {
               id: true,
               title: true,
+              sector: true,
               country: { select: { code: true, name: true } },
             },
           },
@@ -4552,43 +4667,7 @@ export class ProcessingService {
       return c;
     });
 
-    // Compute progress percentage for each candidate based on processing steps
-    const processingCandidateIds = candidatesWithCountry.map((c: any) => c.id);
-
-    const stepTotalsMap: Record<string, number> = {};
-    const completedStepsMap: Record<string, number> = {};
-
-    if (processingCandidateIds.length > 0) {
-      const [totals, completed] = await Promise.all([
-        this.prisma.processingStep.groupBy({
-          by: ['processingCandidateId'],
-          where: { processingCandidateId: { in: processingCandidateIds } },
-          _count: { _all: true },
-        }),
-        this.prisma.processingStep.groupBy({
-          by: ['processingCandidateId'],
-          where: { processingCandidateId: { in: processingCandidateIds }, status: 'completed' },
-          _count: { _all: true },
-        }),
-      ]);
-
-      totals.forEach((t: any) => {
-        stepTotalsMap[t.processingCandidateId] = t._count._all;
-      });
-      completed.forEach((c: any) => {
-        completedStepsMap[c.processingCandidateId] = c._count._all;
-      });
-    }
-
-    const candidatesWithProgress = candidatesWithCountry.map((c: any) => {
-      const total = stepTotalsMap[c.id] || 0;
-      const completed = completedStepsMap[c.id] || 0;
-      const progressCount = total === 0 ? 0 : Math.round((completed / total) * 100);
-      return {
-        ...c,
-        progressCount,
-      };
-    });
+    const candidatesWithProgress = await this.mergeSectorAwareProgress(candidatesWithCountry);
 
     const finalCandidates = candidatesWithProgress.map((c: any) => {
       if (c.processingStatus === 'completed' && c.progressCount !== 100) {
@@ -4777,6 +4856,13 @@ export class ProcessingService {
       include: {
         candidate: {
           include: {
+            agent: {
+              select: {
+                id: true,
+                name: true,
+                agentType: true,
+              },
+            },
             qualifications: {
               include: {
                 qualification: true,
@@ -4799,6 +4885,7 @@ export class ProcessingService {
             priority: true,
             countryCode: true,
             projectType: true,
+            sector: true,
             resumeEditable: true,
             groomingRequired: true,
             hideContactInfo: true,
@@ -4872,15 +4959,18 @@ export class ProcessingService {
       (processingCandidate.project as any).genderRequirement = (processingCandidate.role as any).genderRequirement;
     }
 
-    // Compute progress percentage for this processing candidate
-    const [totalSteps, completedSteps] = await Promise.all([
-      this.prisma.processingStep.count({ where: { processingCandidateId: id } }),
-      this.prisma.processingStep.count({ where: { processingCandidateId: id, status: 'completed' } }),
-    ]);
-
-    let progressCount = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
-    // If the processing flow is marked completed, force 100% for progress
-    if ((processingCandidate as any).processingStatus === 'completed' && totalSteps > 0) {
+    // Compute progress for steps applicable to project sector only
+    const projectSector = processingCandidate.project?.sector ?? null;
+    const allStepsForProgress = await this.prisma.processingStep.findMany({
+      where: { processingCandidateId: id },
+      select: { status: true, template: { select: { key: true } } },
+    });
+    const { percent: progressPercent } = computeApplicableStepProgress(
+      allStepsForProgress as { status: string; template: { key: string } }[],
+      projectSector,
+    );
+    let progressCount = progressPercent;
+    if ((processingCandidate as any).processingStatus === 'completed') {
       progressCount = 100;
     }
 

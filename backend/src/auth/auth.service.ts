@@ -21,6 +21,45 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
 
+interface SessionMeta {
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+function normalizeIp(ip?: string): string | null {
+  if (!ip) return null;
+  // IPv6 loopback → localhost
+  if (ip === '::1') return '127.0.0.1';
+  // IPv4-mapped IPv6 (e.g. ::ffff:192.168.1.1) → plain IPv4
+  if (ip.startsWith('::ffff:')) return ip.slice(7);
+  return ip;
+}
+
+function parseUserAgent(ua?: string): { browser: string; os: string; deviceType: string } {
+  if (!ua) return { browser: 'Unknown', os: 'Unknown', deviceType: 'desktop' };
+
+  let browser = 'Unknown';
+  if (/OPR\/|Opera/.test(ua)) browser = 'Opera';
+  else if (/Edg\/|Edge\//.test(ua)) browser = 'Edge';
+  else if (/Chrome/.test(ua) && !/Chromium/.test(ua)) browser = 'Chrome';
+  else if (/Firefox/.test(ua)) browser = 'Firefox';
+  else if (/Safari/.test(ua) && !/Chrome/.test(ua)) browser = 'Safari';
+
+  let os = 'Unknown';
+  if (/Windows NT/.test(ua)) os = 'Windows';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/iPhone/.test(ua)) os = 'iOS';
+  else if (/iPad/.test(ua)) os = 'iPadOS';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  let deviceType = 'desktop';
+  if (/Mobile|iPhone|Android/.test(ua)) deviceType = 'mobile';
+  else if (/iPad|Tablet/.test(ua)) deviceType = 'tablet';
+
+  return { browser, os, deviceType };
+}
+
 function newId() {
   return (
     globalThis.crypto?.randomUUID?.() ??
@@ -111,7 +150,7 @@ export class AuthService {
     return null;
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, meta?: SessionMeta) {
     const user = await this.validateUser(
       loginDto.countryCode,
       loginDto.mobileNumber,
@@ -121,8 +160,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const accessToken = this.issueAccess({ id: user.id, email: user.email });
     const refresh = await this.issueRefresh(user.id); // { id, value, maxAgeMs }
+
+    // Create session record
+    const sessionId = await this.createSession(user.id, refresh.id, meta);
+    const accessToken = this.issueAccess({ id: user.id, email: user.email }, sessionId);
 
     // Audit log the login
     await this.auditService.logAuthAction('login', user.id, {
@@ -181,10 +223,21 @@ export class AuthService {
     // Rotate within a transaction
     const next = await this.rotateInTx(row);
 
-    const accessToken = this.issueAccess({
-      id: row.userId,
-      email: row.user.email,
+    // Find the active session for this token and update its refreshTokenId to the new one
+    const session = await (this.prisma as any).userSession.findFirst({
+      where: { refreshTokenId: row.id, isActive: true },
     });
+    if (session) {
+      await (this.prisma as any).userSession.update({
+        where: { id: session.id },
+        data: { refreshTokenId: next.id },
+      });
+    }
+
+    const accessToken = this.issueAccess(
+      { id: row.userId, email: row.user.email },
+      session?.id,
+    );
     return {
       accessToken,
       user: this.toUserDTO(row.user),
@@ -197,7 +250,42 @@ export class AuthService {
     const row = await (this.prisma as any).refreshToken.findUnique({
       where: { id: rfi },
     });
-    if (row) await this.revokeFamily(row.familyId);
+    if (row) {
+      await this.revokeFamily(row.familyId);
+      await (this.prisma as any).userSession.updateMany({
+        where: { refreshTokenId: rfi },
+        data: { isActive: false },
+      });
+    }
+  }
+
+  async logoutCurrentSession(params: {
+    userId?: string;
+    sessionId?: string;
+    refreshTokenId?: string;
+  }) {
+    const { userId, sessionId, refreshTokenId } = params;
+
+    // Best-effort: revoke refresh family (cookie-based web flow)
+    await this.revokeFamilyByTokenId(refreshTokenId);
+
+    // Reliable: end the current session by JWT sid (per LOGIN_SESSION_IMPLEMENTATION)
+    if (userId && sessionId) {
+      await (this.prisma as any).userSession.updateMany({
+        where: { id: sessionId, userId },
+        data: { isActive: false },
+      });
+    }
+
+    if (userId) {
+      await this.auditService.logAuthAction('logout', userId, {
+        action: 'user_logout',
+        timestamp: new Date(),
+        ...(sessionId ? { sessionId } : {}),
+      });
+    }
+
+    return { success: true, message: 'Logout successful' };
   }
 
 
@@ -279,7 +367,7 @@ export class AuthService {
     return true;
   }
 
-  async verifyOtp(verifyOtpDto: VerifyOtpDto) {
+  async verifyOtp(verifyOtpDto: VerifyOtpDto, meta?: SessionMeta) {
     const { countryCode, mobileNumber, otp } = verifyOtpDto;
     // Find user by country code and phone
     const user = await (this.prisma as any).user.findUnique({
@@ -340,8 +428,11 @@ export class AuthService {
     }
 
     // Issue tokens upon successful OTP verification
-    const accessToken = this.issueAccess({ id: fullUser.id, email: fullUser.email });
     const refresh = await this.issueRefresh(fullUser.id); // { id, value, maxAgeMs }
+
+    // Create session record
+    const sessionId = await this.createSession(fullUser.id, refresh.id, meta);
+    const accessToken = this.issueAccess({ id: fullUser.id, email: fullUser.email }, sessionId);
 
     return {
       accessToken,
@@ -451,6 +542,12 @@ export class AuthService {
     // Revoke all refresh tokens for the user
     await this.revokeRefreshTokenFamily(userId);
 
+    // Deactivate all sessions for the user
+    await (this.prisma as any).userSession.updateMany({
+      where: { userId },
+      data: { isActive: false },
+    });
+
     // Audit log the logout
     await this.auditService.logAuthAction('logout', userId, {
       action: 'user_logout',
@@ -463,9 +560,9 @@ export class AuthService {
     };
   }
 
-  private issueAccess(user: { id: string; email: string }) {
+  private issueAccess(user: { id: string; email: string }, sessionId?: string) {
     return this.jwtService.sign(
-      { sub: user.id, email: user.email },
+      { sub: user.id, email: user.email, ...(sessionId ? { sid: sessionId } : {}) },
       {
         secret: this.configService.get<string>('JWT_SECRET'),
         expiresIn: this.configService.get<string>('JWT_EXPIRES_IN'),
@@ -604,10 +701,21 @@ export class AuthService {
     // Rotate the token
     const next = await this.rotateInTx(matchedToken);
 
-    const accessToken = this.issueAccess({
-      id: matchedToken.userId,
-      email: matchedToken.user.email,
+    // Find the active session for this token and update its refreshTokenId to the new one
+    const session = await (this.prisma as any).userSession.findFirst({
+      where: { refreshTokenId: matchedToken.id, isActive: true },
     });
+    if (session) {
+      await (this.prisma as any).userSession.update({
+        where: { id: session.id },
+        data: { refreshTokenId: next.id },
+      });
+    }
+
+    const accessToken = this.issueAccess(
+      { id: matchedToken.userId, email: matchedToken.user.email },
+      session?.id,
+    );
 
     return {
       accessToken,
@@ -641,7 +749,29 @@ export class AuthService {
 
     if (matchedToken) {
       await this.revokeFamily(matchedToken.familyId);
+      await (this.prisma as any).userSession.updateMany({
+        where: { refreshTokenId: matchedToken.id },
+        data: { isActive: false },
+      });
     }
+  }
+
+  private async createSession(userId: string, refreshTokenId: string, meta?: SessionMeta): Promise<string> {
+    const { browser, os, deviceType } = parseUserAgent(meta?.userAgent);
+    const session = await (this.prisma as any).userSession.create({
+      data: {
+        userId,
+        refreshTokenId,
+        ipAddress: normalizeIp(meta?.ipAddress),
+        userAgent: meta?.userAgent ?? null,
+        browser,
+        os,
+        deviceType,
+        lastActivityAt: new Date(),
+        isActive: true,
+      },
+    });
+    return session.id;
   }
 
   private toUserDTO(user: any) {

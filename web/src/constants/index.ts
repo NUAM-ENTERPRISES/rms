@@ -10,4 +10,4 @@ export const IS_PROD = import.meta.env.PROD;
 export * from "./statuses";
 export * from "./candidate-constants";
 export * from "./document-types";
-export * from "./document-types";
+export * from "./agent-types";

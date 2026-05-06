@@ -25,7 +25,8 @@ import { Badge } from "@/components/ui/badge";
 import { CountrySelect, DatePicker, ClientSelect, JobTitleSelect } from "@/components/molecules";
 import { FlagWithName } from "@/shared";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
-import { Plus, X, Building2, Target, Save } from "lucide-react";
+import { Plus, X, Building2, Target, Save, CheckCircle } from "lucide-react";
+import { PROJECT_SECTOR } from "@/entities/project/constants";
 import {
   useGetProjectQuery,
   useUpdateProjectMutation,
@@ -108,6 +109,10 @@ export default function EditProjectPage() {
         priority:
           (project.priority as "low" | "medium" | "high" | "urgent") ??
           "medium",
+        sector:
+          ((project as any).sector === "healthcare" || (project as any).sector === "non-healthcare")
+            ? ((project as any).sector as "healthcare" | "non-healthcare")
+            : "healthcare",
         rolesNeeded: project.rolesNeeded.map((role) => ({
           designation: role.designation,
           // Ensure quantity is numeric and fallback to 1 if null/invalid
@@ -514,6 +519,49 @@ export default function EditProjectPage() {
                     <span className="text-sm text-red-600">
                       {errors.priority.message}
                     </span>
+                  )}
+                </div>
+
+                {/* Project Sector */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="sector"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Project Sector *
+                  </Label>
+                  <Controller
+                    name="sector"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                      >
+                        <SelectTrigger className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
+                          <SelectValue placeholder="Select a sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={PROJECT_SECTOR.HEALTHCARE}>
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
+                              Healthcare
+                            </div>
+                          </SelectItem>
+                          <SelectItem value={PROJECT_SECTOR.NON_HEALTHCARE}>
+                            <div className="flex items-center gap-2">
+                              <Target className="h-4 w-4 text-indigo-600" />
+                              Non-Healthcare
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.sector && (
+                    <p className="text-sm text-red-600">
+                      {errors.sector.message}
+                    </p>
                   )}
                 </div>
 

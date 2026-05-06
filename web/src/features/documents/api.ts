@@ -7,6 +7,10 @@ export interface Document {
   id: string;
   candidateId: string;
   docType: DocumentType;
+  /** From API: catalog name when docName is empty */
+  documentDisplayName?: string;
+  documentType?: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -27,6 +31,7 @@ export interface Document {
     name: string;
     label: string;
   };
+  workExperienceId?: string;
   createdAt: string;
   updatedAt: string;
   candidate: {
@@ -217,6 +222,7 @@ export interface RecruiterVerifiedRejectedDocumentsResponse {
 export interface CreateDocumentRequest {
   candidateId: string;
   docType: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -225,9 +231,11 @@ export interface CreateDocumentRequest {
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
+  workExperienceId?: string;
 }
 
 export interface UpdateDocumentRequest {
+  docName?: string;
   fileName?: string;
   fileUrl?: string;
   fileSize?: number;
@@ -254,6 +262,7 @@ export interface RequestResubmissionRequest {
 
 export interface ReuploadDocumentRequest {
   candidateProjectMapId: string;
+  docName?: string;
   fileName: string;
   fileUrl: string;
   fileSize?: number;
@@ -591,6 +600,10 @@ export const documentsApi = baseApi.injectEndpoints({
         "Document",
         "DocumentStats",
         "DocumentSummary",
+        // docName changes must reflect in recruiter/project verification views
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
       ],
     }),
 
@@ -624,6 +637,18 @@ export const documentsApi = baseApi.injectEndpoints({
         body: requestData,
       }),
       invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments"],
+    }),
+
+    requestClientReupload: builder.mutation<
+      { success: boolean; data: any; message: string },
+      { candidateProjectMapId: string; reason: string }
+    >({
+      query: (data) => ({
+        url: `/documents/request-client-reupload`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Document", "DocumentSummary", "CandidateProject"],
     }),
 
     reuploadDocument: builder.mutation<
@@ -758,7 +783,7 @@ export const documentsApi = baseApi.injectEndpoints({
       string
     >({
       query: (candidateId) => `/documents/candidates/${candidateId}/projects`,
-      providesTags: (result, error, candidateId) => [
+      providesTags: (_, __, candidateId) => [
         // tag by candidate so we can invalidate only the relevant cache
         { type: "DocumentVerification", id: candidateId },
       ],
@@ -770,7 +795,7 @@ export const documentsApi = baseApi.injectEndpoints({
     >({
       query: ({ candidateId, projectId }) =>
         `/documents/candidates/${candidateId}/projects/${projectId}/requirements`,
-      providesTags: (result, error, { candidateId }) => [
+      providesTags: (_, __, { candidateId }) => [
         { type: "DocumentVerification", id: candidateId },
       ],
     }),
@@ -971,4 +996,5 @@ export const {
   useGetForwardingHistoryQuery,
   useForwardToClientMutation,
   useBulkForwardToClientMutation,
+  useRequestClientReuploadMutation,
 } = documentsApi;

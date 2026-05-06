@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 
-// DataFlowSettings uses same structure as HRDSettings but kept as a distinct alias for clarity
-export type DataFlowSettings = HRDSettings;
-
 /**
  * System Configuration Service
  * Manages system-wide configuration settings stored in database
@@ -151,6 +148,42 @@ export class SystemConfigService {
   }
 
   /**
+   * Get Medical reminder settings
+   */
+  async getMedicalSettings(): Promise<MedicalSettings> {
+    const config = await this.getConfig('MEDICAL_SETTINGS');
+    if (!config) return this.getDefaultMedicalSettings();
+    return config as MedicalSettings;
+  }
+
+  /**
+   * Get Biometric reminder settings
+   */
+  async getBiometricSettings(): Promise<BiometricSettings> {
+    const config = await this.getConfig('BIOMETRIC_SETTINGS');
+    if (!config) return this.getDefaultBiometricSettings();
+    return config as BiometricSettings;
+  }
+
+  /**
+   * Get Emigration reminder settings
+   */
+  async getEmigrationSettings(): Promise<EmigrationSettings> {
+    const config = await this.getConfig('EMIGRATION_SETTINGS');
+    if (!config) return this.getDefaultEmigrationSettings();
+    return config as EmigrationSettings;
+  }
+
+  /**
+   * Get Document Received reminder settings
+   */
+  async getDocumentReceivedSettings(): Promise<DocumentReceivedSettings> {
+    const config = await this.getConfig('DOCUMENT_RECEIVED_SETTINGS');
+    if (!config) return this.getDefaultDocumentReceivedSettings();
+    return config as DocumentReceivedSettings;
+  }
+
+  /**
    * Get HRD reminder settings
    */
   async getHRDSettings(): Promise<HRDSettings> {
@@ -206,11 +239,6 @@ export class SystemConfigService {
     );
   }
 
-  private getDefaultDataFlowSettings(): DataFlowSettings {
-    // Reuse HRD default but label/values can be adjusted if needed
-    return this.getDefaultHRDSettings();
-  }
-
   /**
    * Get default RNR settings (TESTING: 0-day escalation)
    */
@@ -241,7 +269,7 @@ export class SystemConfigService {
     const dailyTimes = ['09:00'];
 
     return {
-      daysAfterSubmission: 2, // days after submittedAt to send first reminder
+      daysAfterSubmission: 15, // production default
       remindersPerDay: dailyTimes.length,
       dailyTimes, // Array of times (HH:mm) when reminders should be sent each day
       totalDays: 3,
@@ -257,6 +285,73 @@ export class SystemConfigService {
         assignmentStrategy: 'round_robin',
       },
       // Test mode: when enabled, HRD reminders run shortly after scheduling (useful for testing)
+      testMode: {
+        enabled: false,
+        immediateDelayMinutes: 1,
+      },
+    };
+  }
+
+  private getDefaultDataFlowSettings(): DataFlowSettings {
+    const dailyTimes = ['09:00'];
+
+    return {
+      daysAfterSubmission: 30, // production default for data flow
+      remindersPerDay: dailyTimes.length,
+      dailyTimes,
+      totalDays: 3,
+      delayBetweenReminders: 60 * 24,
+      officeHours: {
+        enabled: true,
+        start: '09:00',
+        end: '18:00',
+      },
+      escalate: {
+        enabled: false,
+        afterDays: 3,
+        assignmentStrategy: 'round_robin',
+      },
+      testMode: {
+        enabled: false,
+        immediateDelayMinutes: 1,
+      },
+    };
+  }
+
+  private getDefaultMedicalSettings(): MedicalSettings {
+    return this.getDefaultProcessingSettings(15);
+  }
+
+  private getDefaultBiometricSettings(): BiometricSettings {
+    return this.getDefaultProcessingSettings(15);
+  }
+
+  private getDefaultEmigrationSettings(): EmigrationSettings {
+    return this.getDefaultProcessingSettings(15);
+  }
+
+  private getDefaultDocumentReceivedSettings(): DocumentReceivedSettings {
+    return this.getDefaultProcessingSettings(15);
+  }
+
+  private getDefaultProcessingSettings(days: number): ProcessingStepSettings {
+    const dailyTimes = ['09:00'];
+    return {
+      daysAfterSubmission: days,
+      remindersPerDay: dailyTimes.length,
+      dailyTimes,
+      totalDays: 3,
+      delayBetweenReminders: 60 * 24,
+      officeHours: {
+        enabled: true,
+        start: '09:00',
+        end: '18:00',
+      },
+      escalate: {
+        enabled: false,
+        afterDays: 3,
+        assignmentStrategy: 'round_robin',
+      },
       testMode: {
         enabled: false,
         immediateDelayMinutes: 1,
@@ -286,24 +381,32 @@ export interface RNRSettings {
   };
 }
 
-export interface HRDSettings {
-  daysAfterSubmission: number; // number of days after submittedAt to send first reminder
-  remindersPerDay: number; // how many reminders per day (usually equal to dailyTimes.length)
-  dailyTimes: string[]; // times in HH:mm format when reminders should be sent across the day
-  totalDays: number; // total number of days to continue reminders
-  delayBetweenReminders: number; // in minutes (fallback)
+export interface ProcessingStepSettings {
+  daysAfterSubmission: number;
+  remindersPerDay: number;
+  dailyTimes: string[];
+  totalDays: number;
+  delayBetweenReminders: number;
   officeHours: {
     enabled?: boolean;
-    start: string; // HH:mm
-    end: string; // HH:mm
+    start: string;
+    end: string;
   };
   escalate: {
     enabled: boolean;
-    afterDays: number; // days after which to escalate
+    afterDays: number;
     assignmentStrategy: 'round_robin' | 'least_loaded' | 'manual';
   };
   testMode?: {
-    enabled: boolean; // If true, reminder will be scheduled to run after immediateDelayMinutes instead of the configured dailyTimes
-    immediateDelayMinutes: number; // minutes to delay in test mode
+    enabled: boolean;
+    immediateDelayMinutes: number;
   };
-} 
+}
+
+export type HRDSettings = ProcessingStepSettings;
+export type DataFlowSettings = ProcessingStepSettings;
+export type MedicalSettings = ProcessingStepSettings;
+export type BiometricSettings = ProcessingStepSettings;
+export type EmigrationSettings = ProcessingStepSettings;
+export type DocumentReceivedSettings = ProcessingStepSettings;
+ 

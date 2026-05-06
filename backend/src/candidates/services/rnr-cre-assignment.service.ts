@@ -15,7 +15,6 @@ export class RnrCreAssignmentService {
 
   /**
    * Run every minute to check for RNR candidates that need CRE assignment
-   * (Testing: Changed from CronExpression.EVERY_HOUR to CronExpression.EVERY_MINUTE)
    */
   @Cron(CronExpression.EVERY_MINUTE)
   async handleRnrCreAssignment() {

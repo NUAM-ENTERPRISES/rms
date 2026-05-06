@@ -5,7 +5,6 @@ import {
   IsNumber,
   IsOptional,
   IsEnum,
-  IsEmail,
   IsBoolean,
 } from 'class-validator';
 
@@ -27,24 +26,6 @@ export class UpdateInterviewDto {
   @IsNumber()
   @IsOptional()
   duration?: number;
-
-  @ApiPropertyOptional({
-    description: 'Interview type',
-    example: 'technical',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  type?: string;
-
-  @ApiPropertyOptional({
-    description: 'Interviewer name',
-    example: 'John Doe',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  interviewer?: string;
 
   @ApiPropertyOptional({
     description: 'Interview mode',

@@ -131,6 +131,15 @@ export default function ProjectCard({
                   <StatusIcon className="w-3 h-3 mr-1" />
                   {project.status}
                 </Badge>
+
+                {project.sector && (
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-slate-100 text-slate-600 border-slate-200 capitalize font-medium"
+                  >
+                    {project.sector}
+                  </Badge>
+                )}
               </div>
             </div>
 

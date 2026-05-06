@@ -6,18 +6,16 @@ import { Label } from "@/components/ui/label";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Copy, Eye, Calendar, Send, Edit2 } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
-const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmMedicalModal = React.lazy(() => import("./ConfirmMedicalModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetMedicalRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation } from "@/services/processingApi";
+import { useGetMedicalRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
@@ -44,6 +42,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitMedicalDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [updateStepStatus, { isLoading: isUpdatingMedicalDates }] = useUpdateStepStatusMutation();
 
   // Cancel step mutation + UI state
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
@@ -51,6 +50,12 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
 
   // Medical submission date state
   const [medicalSubmissionDate, setMedicalSubmissionDate] = useState<Date | undefined>(undefined);
+
+  // Medical issued/valid dates
+  const [medicalIssuedAt, setMedicalIssuedAt] = useState<Date | undefined>(undefined);
+  const [medicalValidAt, setMedicalValidAt] = useState<Date | undefined>(undefined);
+  const [initialMedicalIssuedAt, setInitialMedicalIssuedAt] = useState<Date | undefined>(undefined);
+  const [initialMedicalValidAt, setInitialMedicalValidAt] = useState<Date | undefined>(undefined);
 
   // Medical result + MOFA + notes
   // isMedicalPassed: null = not selected, true = passed, false = failed
@@ -96,7 +101,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
 
   // Initialize form state from API when modal opens (only once per open — preserves user edits during session)
   const initializedRef = React.useRef(false);
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isOpen) {
       // Reset initialization flag when modal closes so next open rehydrates from API
       initializedRef.current = false;
@@ -110,6 +115,14 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
     setIsMedicalPassed(apiPassed ?? null);
     setMofaNumber(data?.step?.mofaNumber ?? data?.mofaNumber ?? "");
     setMedicalNotes(data?.step?.notes ?? data?.notes ?? "");
+
+    // Initialize medical dates
+    const issued = data?.step?.medicalIssuedAt ? new Date(data.step.medicalIssuedAt) : undefined;
+    const valid = data?.step?.medicalValidAt ? new Date(data.step.medicalValidAt) : undefined;
+    setMedicalIssuedAt(issued);
+    setMedicalValidAt(valid);
+    setInitialMedicalIssuedAt(issued);
+    setInitialMedicalValidAt(valid);
 
     initializedRef.current = true;
   }, [isOpen, data]);
@@ -323,10 +336,10 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
 
       const documentId = createResp.data.id;
       try {
-        await reuseDocument({ 
-          documentId, 
-          projectId: candidate.project?.id || "", 
-          roleCatalogId: selectedRoleCatalog || "" 
+        await reuseDocument({
+          documentId,
+          projectId: candidate.project?.id || "",
+          roleCatalogId: selectedRoleCatalog || ""
         }).unwrap();
         toast.success("File uploaded and reused successfully");
       } catch (reuseErr: any) {
@@ -366,7 +379,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
     if (!activeStep?.id) return;
 
     if (statMissing > 0) {
-      const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0,2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
+      const missingSummary = missingDocs.length > 2 ? `${missingDocs.slice(0, 2).join(', ')} +${missingDocs.length - 2} more` : missingDocs.join(', ');
       toast.error(`Cannot complete — Missing: ${missingSummary}`);
       return;
     }
@@ -493,7 +506,32 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
       console.error("Copy MOFA failed", err);
       toast.error("Failed to copy MOFA");
     }
-  }; 
+  };
+
+  const handleUpdateMedicalDates = async () => {
+    if (!activeStep?.id) {
+      toast.error("No active step found");
+      return;
+    }
+
+    const payload: any = {};
+    if (medicalIssuedAt) payload.medicalIssuedAt = medicalIssuedAt.toISOString();
+    if (medicalValidAt) payload.medicalValidAt = medicalValidAt.toISOString();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Please select at least one date");
+      return;
+    }
+
+    try {
+      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+      toast.success("Medical dates updated successfully");
+      await refetch();
+    } catch (err: any) {
+      console.error("Update medical dates failed", err);
+      toast.error(err?.data?.message || "Failed to update medical dates");
+    }
+  };
 
   const apiCounts = data?.counts;
   const computedStats = getDocStats();
@@ -507,6 +545,11 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
 
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const canMarkComplete = allVerified && hasSubmittedAt && isMedicalPassed !== null;
+
+  const medicalDatesChanged =
+    (medicalIssuedAt?.toISOString() || "") !== (initialMedicalIssuedAt?.toISOString() || "") ||
+    (medicalValidAt?.toISOString() || "") !== (initialMedicalValidAt?.toISOString() || "");
+  const showSaveDatesButton = (medicalIssuedAt || medicalValidAt) && medicalDatesChanged;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -582,7 +625,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Medical Submission Date & Time
+                    Medical Agency Submission Date & Time
                   </h4>
                 </div>
                 <div className="p-3">
@@ -660,6 +703,61 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                 </div>
               </div>
 
+              {/* Medical Issued/Validity Dates Section */}
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-teal-50 to-emerald-50 mt-3">
+                <div className="bg-teal-100 px-3 py-1 border-b border-teal-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Medical Report Details
+                  </h4>
+                </div>
+                <div className="p-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Medical Issued Date</Label>
+                      <DatePicker
+                        value={medicalIssuedAt}
+                        onChange={setMedicalIssuedAt}
+                        showTime={false}
+                        placeholder="Issued date"
+                        disabled={isMedicalCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-600 mb-1 block">Medical Validity Date</Label>
+                      <DatePicker
+                        value={medicalValidAt}
+                        onChange={setMedicalValidAt}
+                        showTime={false}
+
+                        placeholder="Validity date"
+                        disabled={isMedicalCompleted || isStepCancelled}
+                        compact
+                      />
+                    </div>
+                  </div>
+
+                  {showSaveDatesButton && !isMedicalCompleted && !isStepCancelled && (
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={handleUpdateMedicalDates}
+                        disabled={isUpdatingMedicalDates}
+                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        {isUpdatingMedicalDates ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        Save Medical Dates
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* MOFA number panel (left-aligned, outside Submission Date) */}
               <div className="mt-3">
                 <div className="w-full sm:w-1/2">
@@ -686,7 +784,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                       />
                       <p className="text-xs text-amber-600 mt-1">Required — MOFA number is required for both Passed and Failed results.</p>
                     </div>
-                  )} 
+                  )}
                 </div>
               </div>
 
@@ -697,7 +795,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                 </div>
 
                 {/* Show persisted/read-only result when API contains an explicit boolean OR step is completed/cancelled */}
-                {( (data?.step?.isMedicalPassed === true || data?.step?.isMedicalPassed === false) || isMedicalCompleted || isStepCancelled) ? (
+                {((data?.step?.isMedicalPassed === true || data?.step?.isMedicalPassed === false) || isMedicalCompleted || isStepCancelled) ? (
                   <div className="p-3">
                     <div className="flex items-center gap-3">
                       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold ${isMedicalPassed ? 'bg-emerald-600 text-white' : 'bg-rose-100 text-rose-700'}`}>
@@ -757,9 +855,9 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                       <div className="ml-auto text-xs text-slate-500">Required — select Passed or Failed before completing</div>
                     </div>
 
-                      {isMedicalPassed === false && (
-                        <div className="text-sm text-rose-600 font-medium">Marking as <span className="font-black">Failed</span> will cancel processing for this candidate.</div>
-                      )}
+                    {isMedicalPassed === false && (
+                      <div className="text-sm text-rose-600 font-medium">Marking as <span className="font-black">Failed</span> will cancel processing for this candidate.</div>
+                    )}
                   </div>
                 )}
               </div>
@@ -789,13 +887,12 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                     return (
                       <div key={req.docType} className={`flex items-center gap-4 px-4 py-3 ${processingVerified ? 'bg-emerald-50/50' : hasRejected ? 'bg-red-50/30' : ''}`}>
                         {/* Status Icon */}
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                          processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'
-                        }`}>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || candidateVerified ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'
+                          }`}>
                           {processingVerified || candidateVerified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
-                           hasPending ? <Clock className="h-4 w-4 text-blue-600" /> :
-                           hasRejected ? <XCircle className="h-4 w-4 text-red-500" /> :
-                           <Upload className="h-4 w-4 text-slate-400" />}
+                            hasPending ? <Clock className="h-4 w-4 text-blue-600" /> :
+                              hasRejected ? <XCircle className="h-4 w-4 text-red-500" /> :
+                                <Upload className="h-4 w-4 text-slate-400" />}
                         </div>
 
                         {/* Doc Info */}
@@ -1029,7 +1126,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
                     size="sm"
                     onClick={handleMarkComplete}
                     disabled={isCompletingStep || !canMarkComplete}
-                    title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
+                    title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0, 2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
                     aria-disabled={isCompletingStep || !canMarkComplete}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Medical Complete'}
@@ -1044,13 +1141,13 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
       {/* Upload Document Modal */}
       <React.Suspense fallback={<div className="p-4">Loading...</div>}>
         <UploadDocumentModal
-            isOpen={uploadModalOpen}
-            onClose={() => setUploadModalOpen(false)}
-            docType={selectedDocType}
-            docLabel={selectedDocLabel}
-            roleCatalog={selectedRoleCatalog}            roleLabel={selectedRoleLabel}            onUpload={handleUploadFile}
-            isUploading={isUploading || isReusing || isReuploadingProcessing}
-          />
+          isOpen={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          docType={selectedDocType}
+          docLabel={selectedDocLabel}
+          roleCatalog={selectedRoleCatalog} roleLabel={selectedRoleLabel} onUpload={handleUploadFile}
+          isUploading={isUploading || isReusing || isReuploadingProcessing}
+        />
       </React.Suspense>
 
       {/* Verify Document Modal */}
@@ -1116,7 +1213,7 @@ export function MedicalModal({ isOpen, onClose, processingId, candidateProjectMa
           isSubmitting={isCompletingStep}
           onConfirm={handleConfirmComplete}
         />
-      </React.Suspense> 
+      </React.Suspense>
 
       {/* Inline Viewer: PDF or Image */}
       {viewerUrl && viewerMimeType && viewerMimeType.includes("pdf") && (

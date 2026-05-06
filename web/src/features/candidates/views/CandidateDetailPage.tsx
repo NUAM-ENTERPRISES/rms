@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 
 import {
   ArrowLeft,
@@ -19,19 +19,23 @@ import {
   Briefcase,
   FileText,
   TrendingUp,
+  ArrowUpRight,
   Clock,
   RefreshCw,
   Calendar,
 } from "lucide-react";
 import { useCan } from "@/hooks/useCan";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
   useGetCandidateProjectsQuery,
   useGetDocumentsQuery,
+  useUploadDocumentMutation,
   useDeleteWorkExperienceMutation,
   useDeleteCandidateQualificationMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
@@ -54,6 +58,10 @@ import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
+import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
+const CandidateUploadDocumentModal = React.lazy(
+  () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
+);
 
 // Fallback avatar used when candidate has no profileImage
 const DEFAULT_PROFILE_IMAGE =
@@ -77,6 +85,7 @@ export default function CandidateDetailPage() {
   const [editData, setEditData] = useState<
     CandidateQualification | WorkExperience | undefined
   >();
+  const [editModalExistingDocs, setEditModalExistingDocs] = useState<any[]>([]);
 
   // Delete confirmation state
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -98,15 +107,21 @@ export default function CandidateDetailPage() {
   // Licensing update modal state
   const [isLicensingModalOpen, setIsLicensingModalOpen] = useState(false);
 
+  // Work experience document upload (link to a specific work experience)
+  const [isWorkExpDocModalOpen, setIsWorkExpDocModalOpen] = useState(false);
+  const [targetWorkExperienceId, setTargetWorkExperienceId] = useState<string | undefined>(undefined);
+
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
   // All roles can read candidate details
   const canWriteCandidates = useCan("write:candidates");
-  const canManageCandidates = useCan("write:candidates");
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
   const [deleteQualification, { isLoading: isDeletingQual }] = useDeleteCandidateQualificationMutation();
+  const [uploadDocument, { isLoading: isUploadingDoc }] = useUploadDocumentMutation();
+  const [createDocument, { isLoading: isCreatingDoc }] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Fetch candidate data from API
   const {
@@ -130,17 +145,9 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 1 },
+    { candidateId: id!, page: 1, limit: 10 },
     { skip: !id }
   );
-
-  const handleEdit = () => {
-    navigate(`/candidates/${id}/edit`);
-  };
-
-  const handleDelete = () => {
-    toast.error("Delete functionality coming soon");
-  };
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -155,6 +162,14 @@ export default function CandidateDetailPage() {
   ) => {
     setModalType(type);
     setEditData(data);
+    if (type === "workExperience") {
+      const linked = (documentsData?.data?.documents ?? []).filter(
+        (d: any) => d.workExperienceId === (data as WorkExperience).id
+      );
+      setEditModalExistingDocs(linked);
+    } else {
+      setEditModalExistingDocs([]);
+    }
     setIsModalOpen(true);
   };
 
@@ -187,6 +202,7 @@ export default function CandidateDetailPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditData(undefined);
+    setEditModalExistingDocs([]);
   };
 
   const handleModalSuccess = () => {
@@ -264,61 +280,58 @@ export default function CandidateDetailPage() {
   const isFuture =
     candidate?.currentStatus?.statusName?.toLowerCase() === "future";
 
-  // Derive on-hold pipeline step for duration / enteredAt (loaded separately)
-  const onHoldStep = pipelineData?.data?.pipeline?.find(
-    (step: any) =>
-      step.isCurrentStatus &&
-      (step.statusName?.toLowerCase().includes("hold") ||
-        step.statusName?.toLowerCase() === "onhold" ||
-        step.statusName?.toLowerCase() === "backout")
-  );
+  type Stat = {
+    label: string;
+    value: number;
+    subtitle: string;
+    icon: any;
+    tab: "overview" | "projects" | "documents" | "history" | "metrics";
+    accent: "emerald" | "blue" | "purple" | "orange";
+  };
 
-  const stats = [
+  const stats: Stat[] = [
+    {
+      label: "Overview",
+      value: candidate.profileCompletion?.percent ?? 0,
+      subtitle: "Profile ready",
+      icon: Target,
+      tab: "overview",
+      accent: "emerald",
+    },
     {
       label: "Projects Assigned",
       value: projectsData?.meta?.total ?? 0,
       subtitle: "Assigned tasks",
       icon: Briefcase,
-      color: "from-blue-500 to-cyan-500",
       tab: "projects",
+      accent: "blue",
     },
     {
       label: "Total Documents",
       value: documentsData?.data?.pagination?.total ?? 0,
       subtitle: "Verified files",
       icon: FileText,
-      color: "from-purple-500 to-pink-500",
       tab: "documents",
+      accent: "purple",
     },
     {
       label: "Status History",
       value: pipelineData?.data?.pipeline?.length ?? 0,
       subtitle: "Status changes",
       icon: TrendingUp,
-      color: "from-orange-500 to-red-500",
       tab: "history",
+      accent: "orange",
     },
   ];
 
-  const gradientMap: Record<
-    string,
-    { bg: string; iconBg: string; text: string }
+  const accentStyles: Record<
+    Stat["accent"],
+    { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
   > = {
-    "from-blue-500 to-cyan-500": {
-      bg: "from-blue-50 to-blue-100/50",
-      iconBg: "bg-blue-200/40",
-      text: "text-blue-600",
-    },
-    "from-purple-500 to-pink-500": {
-      bg: "from-purple-50 to-purple-100/50",
-      iconBg: "bg-purple-200/40",
-      text: "text-purple-600",
-    },
-    "from-orange-500 to-red-500": {
-      bg: "from-orange-50 to-orange-100/50",
-      iconBg: "bg-orange-200/40",
-      text: "text-orange-600",
-    },
+    emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+    blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
+    purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",  iconBg: "bg-purple-100",  value: "text-purple-700",  ring: "ring-purple-400/50",  dot: "bg-purple-500"  },
+    orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",  iconBg: "bg-orange-100",  value: "text-orange-700",  ring: "ring-orange-400/50",  dot: "bg-orange-500"  },
   };
 
   return (
@@ -438,25 +451,13 @@ export default function CandidateDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 mt-1 bg-slate-50/50 p-1.5 px-2.5 rounded-2xl border border-slate-100/50 w-fit">
-          {/* <div   onClick={() => setIsStatusModalOpen(true)} className=" cursor-pointer flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Candidate Status</span>
-            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-          </div> */}
-          
-          <div className="h-4 w-[1px] bg-slate-200 mx-1" />
-
-          {/* {canWriteCandidates && (
-            <button
-              onClick={() => setIsStatusModalOpen(true)}
-              className="group relative flex items-center gap-2.5 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/60 rounded-full shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-300"
-            >
-              <Edit className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-500 transition-transform group-hover:rotate-12" />
-              <span className="text-[10px] font-black text-slate-500 group-hover:text-blue-700 uppercase tracking-widest">
-                Update Status
-              </span>
-            </button>
-          )} */}
+        <div className="flex flex-col items-end gap-2 shrink-0 self-start">
+          <CandidateProfileCompletion
+            candidate={candidate}
+            documents={documentsData?.data?.documents}
+            variant="circular"
+            onNavigateToOverview={() => setActiveTab("overview")}
+          />
         </div>
         {/* <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleEdit}>
@@ -473,42 +474,47 @@ export default function CandidateDetailPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
-          const colors = gradientMap[stat.color];
+          const s = accentStyles[stat.accent];
+          const isActive = activeTab === stat.tab;
           return (
-            <motion.div
+            <motion.button
               key={i}
-              onClick={() => stat.tab && setActiveTab(stat.tab)}
-              className="cursor-pointer"
+              type="button"
+              onClick={() => setActiveTab(stat.tab)}
+              className={cn(
+                "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                s.card,
+                isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+              )}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: i * 0.1 }}
             >
-              <Card
-                className={`border-0 shadow-md bg-gradient-to-br ${colors.bg} backdrop-blur-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}
-              >
-                <CardContent className="p-5 flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${colors.iconBg}`}>
-                    <Icon className={`h-6 w-6 ${colors.text}`} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      {stat.label}
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-2xl font-bold text-slate-900">
-                        {stat.value}
-                      </h3>
-                      <span className="text-xs text-slate-400 font-normal">
-                        {stat.subtitle}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              {isActive && (
+                <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+              )}
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {stat.label}
+                  </p>
+                  <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
+                    {stat.label === "Overview" ? `${stat.value}%` : stat.value}
+                  </p>
+                  <p className="text-xs text-slate-500">{stat.subtitle}</p>
+                </div>
+                <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                  <Icon className={cn("h-5 w-5", s.icon)} />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                <span>{isActive ? "Viewing now" : "Click to open"}</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </div>
+            </motion.button>
           );
         })}
       </div>
@@ -519,13 +525,11 @@ export default function CandidateDetailPage() {
         onValueChange={setActiveTab}
         className="space-y-6"
       >
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-2">
+        {/* <TabsList className="grid w-full grid-cols-2 gap-1 md:grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          {/* <TabsTrigger value="projects">Projects</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger> */}
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
-        </TabsList>
+        </TabsList> */}
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
@@ -540,6 +544,7 @@ export default function CandidateDetailPage() {
             onEditPersonalInfo={() => setIsPersonalInfoModalOpen(true)}
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
+            workExperienceDocs={documentsData?.data?.documents ?? []}
           />
         </TabsContent>
 
@@ -612,8 +617,75 @@ export default function CandidateDetailPage() {
         candidateId={id!}
         type={modalType}
         editData={editData}
+        existingDocuments={editModalExistingDocs}
         onSuccess={handleModalSuccess}
       />
+
+      {/* Work experience certificate upload modal */}
+      <React.Suspense fallback={null}>
+        <CandidateUploadDocumentModal
+          isOpen={isWorkExpDocModalOpen}
+          initialDocType={DOCUMENT_TYPE.EXPERIENCE_LETTERS}
+          initialWorkExperienceId={targetWorkExperienceId}
+          workExperiences={candidate?.workExperiences}
+          isUploading={isUploadingDoc || isCreatingDoc}
+          onClose={() => {
+            setIsWorkExpDocModalOpen(false);
+            setTargetWorkExperienceId(undefined);
+          }}
+          onUpload={async (file, meta) => {
+            try {
+              const candidateId = id!;
+              const formData = new FormData();
+              formData.append("file", file);
+              formData.append("docType", meta.docType);
+
+              const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
+              const uploadData: any = uploadResp.data;
+              const uploadedDocument =
+                uploadData?.document && uploadData.document.id
+                  ? uploadData.document
+                  : uploadData?.id
+                    ? uploadData
+                    : null;
+
+              const desiredDocName =
+                (meta.docName && meta.docName.trim()) || "";
+
+              if (uploadedDocument) {
+                if (desiredDocName) {
+                  await updateDocument({
+                    id: uploadedDocument.id,
+                    docName: desiredDocName,
+                  }).unwrap();
+                }
+              } else {
+                await createDocument({
+                  candidateId,
+                  docType: meta.docType,
+                  docName: desiredDocName || undefined,
+                  fileName: uploadData.fileName,
+                  fileUrl: uploadData.fileUrl,
+                  fileSize: uploadData.fileSize,
+                  mimeType: uploadData.mimeType,
+                  notes: meta.notes,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+                  roleCatalogId: meta.roleCatalogId,
+                  workExperienceId: meta.workExperienceId,
+                }).unwrap();
+              }
+
+              toast.success("Experience certificate uploaded and linked");
+              setIsWorkExpDocModalOpen(false);
+              setTargetWorkExperienceId(undefined);
+            } catch (e) {
+              console.error(e);
+              toast.error("Failed to upload experience certificate");
+            }
+          }}
+        />
+      </React.Suspense>
 
       {/* Status update modal */}
       <StatusUpdateModal
@@ -653,11 +725,9 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
-          referralCompanyName: candidate.referralCompanyName,
-          referralEmail: candidate.referralEmail,
-          referralCountryCode: candidate.referralCountryCode,
-          referralPhone: candidate.referralPhone,
-          referralDescription: candidate.referralDescription,
+          addressCountryCode: candidate.addressCountryCode,
+          addressStateId: candidate.addressStateId,
+          address: candidate.address,
         }}
       />
 

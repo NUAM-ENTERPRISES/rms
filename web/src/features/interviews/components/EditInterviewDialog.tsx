@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 import { DatePicker } from "@/components/molecules";
 import { Input } from "@/components/ui/input";
-import { MapPin, Video, PhoneCall, Save, Calendar, Clock, FileText, Plane, Home } from "lucide-react";
+import { MapPin, Video, PhoneCall, Save, Calendar, Clock, Plane, Home } from "lucide-react";
 import { useGetInterviewQuery, useUpdateInterviewMutation } from "../api";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -40,9 +40,7 @@ const editInterviewSchema = z
     }),
     mode: z.enum(["video", "phone", "in-person"]),
     accommodation: z.boolean(),
-    type: z.string().optional(),
     duration: z.coerce.number().min(5).max(480).optional(),
-    interviewer: z.string().optional(),
     notes: z.string().optional(),
     meetingLink: z.string().optional(),
     airTicket: z.enum(["none", "up-and-down", "up-only", "down-only"]).optional(),
@@ -85,9 +83,7 @@ export default function EditInterviewDialog({
     defaultValues: {
       scheduledTime: undefined,
       mode: "video",
-      type: undefined,
       duration: 30,
-      interviewer: "",
       notes: "",
       meetingLink: "",
       accommodation: false,
@@ -104,9 +100,7 @@ export default function EditInterviewDialog({
       form.reset({
         scheduledTime: scheduledDate,
         mode: (interview.mode as "video" | "phone" | "in-person") || "video",
-        type: interview.type || undefined,
         duration: interview.duration || 30,
-        interviewer: interview.interviewer || "",
         notes: interview.notes || "",
         meetingLink: interview.meetingLink || "",
         accommodation: !!interview.accommodation,
@@ -128,9 +122,7 @@ export default function EditInterviewDialog({
       const interviewUpdateData = {
         scheduledTime: data.scheduledTime.toISOString(),
         mode: data.mode,
-        type: data.type,
         duration: data.duration,
-        interviewer: data.interviewer,
         notes: data.notes,
         meetingLink: data.meetingLink?.trim() || undefined,
         accommodation: data.accommodation,
@@ -196,37 +188,6 @@ export default function EditInterviewDialog({
                         placeholder="Select interview date and time"
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Interview Type */}
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2 text-slate-700">
-                      <FileText className="h-4 w-4 text-slate-500" />
-                      Interview Type
-                    </FormLabel>
-                    <Select onValueChange={(val) => field.onChange(val === 'none' ? undefined : val)} value={field.value ?? 'none'}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type (optional)" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Not Specified</SelectItem>
-                        <SelectItem value="first_round">First Round</SelectItem>
-                        <SelectItem value="technical">Technical</SelectItem>
-                        <SelectItem value="final">Final Round</SelectItem>
-                        <SelectItem value="hr">HR Round</SelectItem>
-                        <SelectItem value="client">Client Interview</SelectItem>
-                        <SelectItem value="medical">Medical Check</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

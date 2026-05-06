@@ -7,7 +7,8 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
     "candidate_transferred_to_processing",
     "processing_assignment",  // <--- EVENT from transfer-to-processing outbox
     "candidate_hired",
-    "processing_step_updated"
+    "processing_step_updated",
+    "processing.reminder"
   ];
 
   if (!processingNotificationTypes.includes(notification.type)) return false;
@@ -22,6 +23,9 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
     { type: "ProcessingSummary", id: "LIST" },
     { type: "Processing", id: "LIST" }
   ]));
+
+  // Dispatch a global event to refresh badges
+  window.dispatchEvent(new CustomEvent("notifications:refresh"));
 
   return true;
 };

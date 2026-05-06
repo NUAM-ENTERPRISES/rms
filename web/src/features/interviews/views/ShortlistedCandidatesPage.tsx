@@ -132,7 +132,6 @@ export default function ShortlistedCandidatesPage() {
           candidateProjectMapId: s.candidateProjectMapId,
           scheduledTime: s.scheduledTime.toISOString(),
           duration: s.duration,
-          type: s.type,
           mode: s.mode,
           meetingLink: s.meetingLink,
           notes: s.notes,

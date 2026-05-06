@@ -89,6 +89,11 @@ export interface ProcessingCandidate {
     email?: string | null;
     mobileNumber?: string | null;
     profileImage?: string | null;
+    agent?: {
+      id: string;
+      name: string;
+      agentType?: string | null;
+    } | null;
   };
   role: {
     id: string;

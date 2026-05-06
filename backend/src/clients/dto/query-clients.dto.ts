@@ -1,12 +1,16 @@
-import { IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ClientType } from '@prisma/client';
 
 export class QueryClientsDto {
-  @ApiPropertyOptional({ description: 'Filter by client type' })
+  @ApiPropertyOptional({
+    description: 'Filter by client type',
+    enum: ClientType,
+  })
   @IsOptional()
-  @IsString()
-  type?: string;
+  @IsEnum(ClientType)
+  type?: ClientType;
 
   @ApiPropertyOptional({
     description: 'Search term for name, email, or organization',

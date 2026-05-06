@@ -38,7 +38,19 @@ export default function NotificationItem({
 
     // Navigate if link exists
     if (notification.link) {
-      navigate(notification.link);
+      const candidateId = notification.meta?.candidateId as string | undefined;
+      const link = notification.link;
+
+      if (
+        candidateId &&
+        (link.startsWith('/interviews') || link.startsWith('/candidate-projects'))
+      ) {
+        navigate(`/candidates/${candidateId}`);
+      } else {
+        navigate(link);
+      }
+    } else if (notification.meta?.candidateId) {
+      navigate(`/candidates/${notification.meta.candidateId as string}`);
     }
   };
 

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { toast } from "sonner";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
@@ -10,14 +10,31 @@ interface ProtectedRouteProps {
   children: ReactNode;
   roles?: string[];
   permissions?: string[];
+  /**
+   * When set, grants access if the user matches ANY of `roles` OR ANY of `permissions`.
+   * (Default behavior runs role check and permission checks separately when both are set,
+   * which incorrectly requires BOTH.) Use for routes like recruiter docs where coordinators
+   * share recruiter-style permissions (`nominate:candidates`) alongside named roles.
+   */
+  matchRolesOrPermissions?: boolean;
+}
+
+function userHasWildcardPermission(user: {
+  permissions: string[];
+}): boolean {
+  return (
+    user.permissions.includes("*") ||
+    user.permissions.includes("manage:all") ||
+    user.permissions.includes("read:all")
+  );
 }
 
 export default function ProtectedRoute({
   children,
   roles,
   permissions,
+  matchRolesOrPermissions,
 }: ProtectedRouteProps) {
-  const location = useLocation();
   const dispatch = useAppDispatch();
   const { status, user, userVersion, accessToken, refreshToken } =
     useAppSelector((state) => state.auth);
@@ -54,18 +71,51 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
+  function denyAccessToastAndRedirect(): React.ReactElement {
+    toast.error("Insufficient permissions to access this page");
+    if (
+      user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+    ) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <Navigate to="/projects" replace />;
+  }
+
+  // Match EITHER roles OR permissions (same route as recruiter tools + coordinators)
+  if (matchRolesOrPermissions && user) {
+    const hasRoleMatch =
+      roles && roles.length > 0
+        ? roles.some((role) => user.roles.includes(role))
+        : false;
+    const hasPermMatch =
+      permissions && permissions.length > 0
+        ? permissions.some(
+            (permission) =>
+              user.permissions.includes(permission) ||
+              userHasWildcardPermission(user),
+          )
+        : false;
+
+    let allowed = true;
+    if (roles?.length && permissions?.length) {
+      allowed = hasRoleMatch || hasPermMatch;
+    } else if (roles?.length) {
+      allowed = hasRoleMatch;
+    } else if (permissions?.length) {
+      allowed = hasPermMatch;
+    }
+
+    if (!allowed) {
+      return denyAccessToastAndRedirect();
+    }
+    return <>{children}</>;
+  }
+
   // Check role requirements
   if (roles && roles.length > 0 && user) {
     const hasRequiredRole = roles.some((role) => user.roles.includes(role));
     if (!hasRequiredRole) {
-      toast.error("Insufficient permissions to access this page");
-      // Redirect based on user role - only Manager+ go to dashboard, others to projects
-      if (
-        user.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
-      ) {
-        return <Navigate to="/dashboard" replace />;
-      }
-      return <Navigate to="/projects" replace />;
+      return denyAccessToastAndRedirect();
     }
   }
 
@@ -73,17 +123,11 @@ export default function ProtectedRoute({
   if (permissions && permissions.length > 0 && user) {
     const hasRequiredPermission = permissions.some(
       (permission) =>
-        user.permissions.includes(permission) || user.permissions.includes("*")
+        user.permissions.includes(permission) ||
+        userHasWildcardPermission(user),
     );
     if (!hasRequiredPermission) {
-      toast.error("Insufficient permissions to access this page");
-      // Redirect based on user role - only Manager+ go to dashboard, others to projects
-      if (
-        user.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
-      ) {
-        return <Navigate to="/dashboard" replace />;
-      }
-      return <Navigate to="/projects" replace />;
+      return denyAccessToastAndRedirect();
     }
   }
 

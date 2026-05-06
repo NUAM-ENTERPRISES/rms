@@ -17,14 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  ArrowUpRight,
+  FilterX,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,8 +58,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { UpdateScreeningTrainingModal } from "../components/UpdateScreeningTrainingModal";
-import { motion } from "framer-motion";
-import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue, StatusTile } from "@/components/molecules";
+import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
@@ -87,10 +81,7 @@ interface TileConfig {
   icon: React.ElementType;
   value: number | string;
   hint: string;
-  gradient: string;
-  bgGradient: string;
-  iconBg: string;
-  textColor: string;
+  accent: string;
 }
 
 const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): TileConfig[] => [
@@ -100,10 +91,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: ClipboardCheck,
     value: assigned,
     hint: "Screenings assigned to you",
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-blue-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-blue-600",
+    accent: "blue",
   },
   {
     key: "scheduled",
@@ -111,10 +99,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Calendar,
     value: scheduled,
     hint: "Upcoming scheduled screenings",
-    gradient: "from-indigo-500 to-blue-500",
-    bgGradient: "from-indigo-50 to-blue-100/50",
-    iconBg: "bg-indigo-200/40",
-    textColor: "text-indigo-600",
+    accent: "indigo",
   },
   {
     key: "training_assigned",
@@ -122,10 +107,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Calendar,
     value: stats?.byDecision?.trainingAssigned ?? 0,
     hint: "Candidates with training already assigned",
-    gradient: "from-blue-500 to-cyan-500",
-    bgGradient: "from-blue-50 to-cyan-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-blue-600",
+    accent: "blue",
   },
   {
     key: "training_scheduled",
@@ -133,10 +115,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Clock,
     value: stats?.byDecision?.trainingScheduled ?? 0,
     hint: "Candidates with scheduled training",
-    gradient: "from-blue-400 to-indigo-500",
-    bgGradient: "from-blue-50 to-indigo-100/50",
-    iconBg: "bg-blue-200/40",
-    textColor: "text-indigo-600",
+    accent: "indigo",
   },
   {
     key: "training_completed",
@@ -144,10 +123,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: CheckCircle2,
     value: stats?.byDecision?.trainingCompleted ?? 0,
     hint: "Candidates who completed training",
-    gradient: "from-emerald-400 to-teal-500",
-    bgGradient: "from-emerald-50 to-teal-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-teal-600",
+    accent: "emerald",
   },
   {
     key: "passed",
@@ -155,10 +131,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: CheckCircle2,
     value: stats?.byDecision?.approved ?? 0,
     hint: "Candidates with passed decision",
-    gradient: "from-emerald-500 to-green-500",
-    bgGradient: "from-emerald-50 to-green-100/50",
-    iconBg: "bg-emerald-200/40",
-    textColor: "text-emerald-600",
+    accent: "emerald",
   },
   {
     key: "rejected",
@@ -166,10 +139,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Shield,
     value: stats?.byDecision?.rejected ?? 0,
     hint: "Candidates rejected",
-    gradient: "from-orange-500 to-red-500",
-    bgGradient: "from-orange-50 to-red-100/50",
-    iconBg: "bg-orange-200/40",
-    textColor: "text-orange-600",
+    accent: "orange",
   },
   {
     key: "on_hold",
@@ -177,10 +147,7 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: Clock,
     value: stats?.byDecision?.onHold ?? 0,
     hint: "Candidates on hold",
-    gradient: "from-slate-500 to-slate-700",
-    bgGradient: "from-slate-50 to-slate-100/50",
-    iconBg: "bg-slate-200/40",
-    textColor: "text-slate-600",
+    accent: "slate",
   },
   {
     key: "pass_rate",
@@ -188,12 +155,18 @@ const TILE_DEFINITIONS = (stats: any, assigned: number, scheduled: number): Tile
     icon: TrendingUp,
     value: `${stats?.passRate ?? stats?.approvalRate ?? 0}%`,
     hint: "Percentage of passed interviews",
-    gradient: "from-purple-500 to-violet-500",
-    bgGradient: "from-purple-50 to-violet-100/50",
-    iconBg: "bg-purple-200/40",
-    textColor: "text-purple-600",
+    accent: "purple",
   },
 ];
+
+const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+  blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
+  indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
+  emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
+  orange: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
+  slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
+  purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+};
 
 export default function ScreeningsDashboardPage() {
   const navigate = useNavigate();
@@ -513,168 +486,162 @@ export default function ScreeningsDashboardPage() {
 
         {/* ── Status Tiles ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {allStats.map((tile, i) => {
+          {allStats.map((tile) => {
+            const Icon = tile.icon;
             const isActive = activeTile === tile.key;
+            const s = accentStyles[tile.accent];
 
             return (
-              <motion.div
+              <button
                 key={tile.key}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: i * 0.05 }}
+                type="button"
+                onClick={() => handleTileClick(tile)}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive
+                    ? `ring-2 shadow-md ${s.ring}`
+                    : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
               >
-                <StatusTile
-                  label={tile.label}
-                  value={tile.value}
-                  icon={tile.icon}
-                  bgGradient={tile.bgGradient}
-                  iconBg={tile.iconBg}
-                  textColor={tile.textColor}
-                  active={isActive}
-                  onClick={() => handleTileClick(tile)}
-                  scrollTargetRef={tableRef}
-                  scrollOnClick={true}
-                  className="h-full"
-                  ariaLabel={`Filter screenings by ${tile.label}`}
-                />
-              </motion.div>
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{tile.label}</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{tile.value}</p>
+                    <p className="text-xs text-slate-500">{tile.hint}</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <Icon className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
             );
           })}
         </div>
 
-        <Card className="border-0 shadow-lg bg-white/90">
-          <CardHeader className="py-3 px-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-slate-800">
-                  {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {tableItems.length} record{tableItems.length === 1 ? "" : "s"} found
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-4">
-                <ProjectRoleFilter
-                  value={filter}
-                  onChange={(newFilter) => setFilter(newFilter)}
-                  className="w-auto min-w-[300px]"
-                />
-                <div className="relative group w-64">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                    <Search className="h-4 w-4 text-slate-400" />
-                  </div>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <Input
                     placeholder="Search in list..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-9 text-xs border-slate-200 bg-slate-50 focus:bg-white transition-all rounded-xl"
+                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
                   />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActiveTile("assigned");
-                    setFilter({ projectId: "all", roleCatalogId: "all" });
-                    setSearch("");
-                  }}
-                >
-                  Reset
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div ref={tableRef} className="border border-gray-200 bg-white">
-              <div className="border-b border-gray-200 bg-gray-50/70 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-2 shadow-lg shadow-purple-500/20">
-                    <ClipboardCheck className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-base font-semibold text-gray-900">
-                      {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
-                    </h4>
-                    <p className="text-xs text-gray-600 mt-0.5 font-medium">
-                      {tableItems.length} candidate{tableItems.length !== 1 ? "s" : ""} in total
-                    </p>
-                  </div>
-                  {activeTile === "assigned" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
-                        onClick={() => setIsBulkScheduleOpen(true)}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Bulk Schedule ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
-                  {activeTile === "training_assigned" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md animate-in fade-in slide-in-from-right-2 mr-2"
-                        onClick={() => {
-                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
-                          setSelectedAssignmentsForTraining(
-                            selected
-                              .map((s: any) => s.trainingAssignment)
-                              .filter(Boolean)
-                          );
-                          setIsScheduleTrainingOpen(true);
-                        }}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Schedule Bulk Training ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
-                  {activeTile === "training_scheduled" && selectedIds.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md animate-in fade-in slide-in-from-right-2"
-                        onClick={() => {
-                          const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
-                          navigate("/screening-coordination/training/conduct", { 
-                            state: { 
-                              assignments: selected.map((s: any) => ({
-                                ...s.trainingAssignment,
-                                candidateProjectMap: s.candidateProjectMap || {
-                                  candidate: s.candidate,
-                                  project: s.project,
-                                  roleNeeded: s.roleNeeded
-                                }
-                              })).filter(Boolean) 
-                            } 
-                          });
-                        }}
-                      >
-                        <Users className="mr-2 h-4 w-4" />
-                        Conduct Bulk Training ({selectedIds.length})
-                      </Button>
-                    </motion.div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <ProjectRoleFilter
+                    value={filter}
+                    onChange={(newFilter) => setFilter(newFilter)}
+                    className="sm:w-80"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
+                    onClick={() => {
+                      setActiveTile("assigned");
+                      setFilter({ projectId: "all", roleCatalogId: "all" });
+                      setSearch("");
+                    }}
+                    title="Reset Filters"
+                  >
+                    <FilterX className="h-4 w-4 text-slate-500" />
+                  </Button>
                 </div>
               </div>
+            </div>
+          </div>
 
+          <div className="px-6 py-4 border-b border-gray-200 bg-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <ClipboardCheck className="h-5 w-5 text-white" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">
+                    {allStats.find((t) => t.key === activeTile)?.label ?? "Screenings"}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {totalCount} candidate{totalCount !== 1 ? "s" : ""} found
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {activeTile === "assigned" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                    onClick={() => setIsBulkScheduleOpen(true)}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Bulk Schedule ({selectedIds.length})
+                  </Button>
+                )}
+                {activeTile === "training_assigned" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                    onClick={() => {
+                      const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                      setSelectedAssignmentsForTraining(
+                        selected
+                          .map((s: any) => s.trainingAssignment)
+                          .filter(Boolean)
+                      );
+                      setIsScheduleTrainingOpen(true);
+                    }}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Schedule Bulk Training ({selectedIds.length})
+                  </Button>
+                )}
+                {activeTile === "training_scheduled" && selectedIds.length > 0 && (
+                  <Button
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+                    onClick={() => {
+                      const selected = tableItems.filter((it: any) => selectedIds.includes(it.id));
+                      navigate("/screening-coordination/training/conduct", { 
+                        state: { 
+                          assignments: selected.map((s: any) => ({
+                            ...s.trainingAssignment,
+                            candidateProjectMap: s.candidateProjectMap || {
+                              candidate: s.candidate,
+                              project: s.project,
+                              roleNeeded: s.roleNeeded
+                            }
+                          })).filter(Boolean) 
+                        } 
+                      });
+                    }}
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Conduct Bulk Training ({selectedIds.length})
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-0">
+            <div ref={tableRef} className="overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50/50 border-b border-gray-200">
+                  <TableRow className="bg-slate-50/80 border-b border-gray-200">
                     {((activeTile === "assigned") || (activeTile === "training_assigned") || (activeTile === "training_scheduled")) && (
-                      <TableHead className="w-[40px] px-4">
+                      <TableHead className="w-[40px] h-10 px-4">
                         <Checkbox
                           checked={tableItems.length > 0 && selectedIds.length === tableItems.length}
                           onCheckedChange={(checked) => {
@@ -687,15 +654,15 @@ export default function ScreeningsDashboardPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Candidate</TableHead>
-                    <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Project & Role</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project & Role</TableHead>
                     {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Attempt</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempt</TableHead>
                     )}
                     {activeTile === "scheduled" ? (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Mode</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Mode</TableHead>
                     ) : activeTile !== "assigned" && (
-                      <TableHead className="h-10 px-4 text-left text-[11px] font-medium uppercase tracking-wider text-gray-600">Decision</TableHead>
+                      <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Decision</TableHead>
                     )}
                     {((activeTile === "passed") || (activeTile === "rejected") || (activeTile === "on_hold")) && (
                       <>
@@ -976,6 +943,13 @@ export default function ScreeningsDashboardPage() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openDecisionModal(item)}
+                            >
+                              Decision
+                            </Button>
                             {activeTile === "assigned" ? (
                               <Button
                                 size="sm"
@@ -1083,8 +1057,8 @@ export default function ScreeningsDashboardPage() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         <ScheduleScreeningModal
           open={isScheduleOpen || isBulkScheduleOpen}

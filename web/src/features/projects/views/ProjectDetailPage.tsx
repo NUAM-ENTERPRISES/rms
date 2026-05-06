@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -162,6 +162,7 @@ export default function ProjectDetailPage() {
   // Board filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRoleCatalogId, setSelectedRoleCatalogId] = useState<string>("all");
+  const [nominatedPage, setNominatedPage] = useState(1);
 
   const [showDetails, setShowDetails] = useState(false);
 
@@ -214,7 +215,7 @@ export default function ProjectDetailPage() {
         search: searchTerm || undefined,
         roleCatalogId:
           selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
-        page: 1,
+        page: nominatedPage,
         limit: 10, // default to 10 for nominated candidates
       },
       { 
@@ -828,6 +829,10 @@ export default function ProjectDetailPage() {
     setSelectedRoleCatalogId(value);
   };
 
+  useEffect(() => {
+    setNominatedPage(1);
+  }, [searchTerm, selectedRoleCatalogId]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -1111,6 +1116,10 @@ export default function ProjectDetailPage() {
                 onBulkSendForScreening={(candidateIds) =>
                   setBulkScreeningState({ isOpen: true, candidateIds })
                 }
+                nominatedPage={nominatedPage}
+                nominatedTotal={projectCandidatesData?.data?.pagination?.total}
+                nominatedTotalPages={projectCandidatesData?.data?.pagination?.totalPages}
+                onNominatedPageChange={setNominatedPage}
                 requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
               />

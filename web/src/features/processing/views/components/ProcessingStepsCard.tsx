@@ -872,6 +872,15 @@ function StepItem({
     return step.description;
   };
 
+  const isSubmissionDateRequired = ![
+    "eligibility",
+    "prometric",
+    "council_registration",
+    "document_attestation",
+    "visa",
+    "ticket",
+  ].includes(step.key);
+
   // Check if this is the Medical step with sub-steps
   if (step.hasSubSteps && step.subStepStatuses) {
     return (
@@ -1021,63 +1030,65 @@ function StepItem({
         </div>
 
         {/* Footer */}
-        <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs">
-            {isOfferLetterStep ? (
-              <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
-                <span className="text-[10px] text-slate-400">Offer letter received</span>
-                <div className="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
-                    {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
-                  </span>
-                </div>
-              </span>
-            ) : (
-              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-                <span className="text-[10px] text-slate-400">Submitted at</span>
-                <div className="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                    {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
-                  </span>
-                </div>
-              </span>
-            )}
-          </div>
+        {(isSubmissionDateRequired || stepCompleted) && (
+          <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs">
+              {isOfferLetterStep ? (
+                <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+                  <span className="text-[10px] text-slate-400">Offer letter received</span>
+                  <div className="inline-flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
+                      {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
+                    </span>
+                  </div>
+                </span>
+              ) : isSubmissionDateRequired ? (
+                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                  <span className="text-[10px] text-slate-400">Submitted at</span>
+                  <div className="inline-flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                      {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                    </span>
+                  </div>
+                </span>
+              ) : null}
+            </div>
 
-          {isOfferLetterStep ? (
-            <div className="text-xs text-right space-y-1">
-              <div className="text-[10px] text-slate-400">Completed at</div>
-              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
-            </div>
-          ) : stepCompleted ? (
-            <div className="text-xs text-right">
-              <div className="text-[10px] text-slate-400">Completed at</div>
-              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
-            </div>
-          ) : (
-            <div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                      className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
-                      aria-label="Edit submitted date"
-                    >
-                      <Edit3 className="h-4 w-4" />
-                      <span>Set date</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Set or edit submitted date</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
-        </div>     
+            {isOfferLetterStep ? (
+              <div className="text-xs text-right space-y-1">
+                <div className="text-[10px] text-slate-400">Completed at</div>
+                <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+              </div>
+            ) : stepCompleted ? (
+              <div className="text-xs text-right">
+                <div className="text-[10px] text-slate-400">Completed at</div>
+                <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
+              </div>
+            ) : isSubmissionDateRequired ? (
+              <div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                        className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
+                        aria-label="Edit submitted date"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                        <span>Set date</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Set or edit submitted date</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
     );
   }
@@ -1258,64 +1269,66 @@ function StepItem({
       </div>
 
       {/* Footer */}
-      <div className="mt-2 px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs">
-          {isOfferLetterStep ? (
-            <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
-              <span className="text-[10px] text-slate-400">Offer letter received</span>
-              <div className="inline-flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
-                  {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
-                </span>
-              </div>
-            </span>
-          ) : (
-            <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-              <span className="text-[10px] text-slate-400">Submitted at</span>
-              <div className="inline-flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                  {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
-                </span>
-              </div>
-            </span>
-          )}
-        </div>
+      {(isSubmissionDateRequired || stepCompleted) && (
+        <div className="mt-2 px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs">
+            {isOfferLetterStep ? (
+              <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
+                <span className="text-[10px] text-slate-400">Offer letter received</span>
+                <div className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs font-semibold" title={offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleString() : undefined}>
+                    {offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "No date"}
+                  </span>
+                </div>
+              </span>
+            ) : isSubmissionDateRequired ? (
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <span className="text-[10px] text-slate-400">Submitted at</span>
+                <div className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
+                    {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                  </span>
+                </div>
+              </span>
+            ) : null}
+          </div>
 
-        {isOfferLetterStep ? (
-          offerLetterStatus?.status === 'verified' ? (
-            <div className="text-xs text-right space-y-1">
+          {isOfferLetterStep ? (
+            offerLetterStatus?.status === 'verified' ? (
+              <div className="text-xs text-right space-y-1">
+                <div className="text-[10px] text-slate-400">Completed at</div>
+                <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+              </div>
+            ) : null
+          ) : stepCompleted ? (
+            <div className="text-xs text-right">
               <div className="text-[10px] text-slate-400">Completed at</div>
-              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
+              <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
             </div>
-          ) : null
-        ) : stepCompleted ? (
-          <div className="text-xs text-right">
-            <div className="text-[10px] text-slate-400">Completed at</div>
-            <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : (submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "—")}</div>
-          </div>
-        ) : (
-          <div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                    className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
-                    aria-label="Edit submitted date"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit submitted date</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
-      </div>   
+          ) : isSubmissionDateRequired ? (
+            <div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
+                      className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
+                      aria-label="Edit submitted date"
+                    >
+                      <Edit3 className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit submitted date</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

@@ -89,10 +89,15 @@ export class AuthController {
 
   async login(
     @Body() loginDto: LoginDto,
+    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
+    const meta = {
+      ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip,
+      userAgent: req.headers['user-agent'],
+    };
     const { accessToken, user, refresh } =
-      await this.authService.login(loginDto);
+      await this.authService.login(loginDto, meta);
     this.setRefreshCookies(res, refresh); // writes rfi & rft
     return {
       success: true,
@@ -208,9 +213,14 @@ export class AuthController {
   async verifyOtp(
     @Body()
     verifyOtpDto: VerifyOtpDto,
+    @Req() req: ExpressRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { accessToken, user, refresh } = await this.authService.verifyOtp(verifyOtpDto);
+    const meta = {
+      ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip,
+      userAgent: req.headers['user-agent'],
+    };
+    const { accessToken, user, refresh } = await this.authService.verifyOtp(verifyOtpDto, meta);
     this.setRefreshCookies(res, refresh);
     // writes rfi & rft
     return {
@@ -303,7 +313,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const { rfi } = req.cookies ?? {};
-    await this.authService.revokeFamilyByTokenId(rfi);
+    const userId = (req as any).user?.id as string | undefined;
+    const sessionId = (req as any).user?.sid as string | undefined;
+
+    await this.authService.logoutCurrentSession({
+      userId,
+      sessionId,
+      refreshTokenId: rfi,
+    });
     res.clearCookie('rfi', { path: '/api/v1/auth' });
     res.clearCookie('rft', { path: '/api/v1/auth' });
     return { success: true, message: 'Logged out' };
@@ -364,9 +381,13 @@ export class AuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async mobileLogin(@Body() loginDto: LoginDto) {
+  async mobileLogin(@Body() loginDto: LoginDto, @Req() req: ExpressRequest) {
+    const meta = {
+      ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip,
+      userAgent: req.headers['user-agent'],
+    };
     const { accessToken, user, refresh } =
-      await this.authService.login(loginDto);
+      await this.authService.login(loginDto, meta);
     
     return {
       success: true,

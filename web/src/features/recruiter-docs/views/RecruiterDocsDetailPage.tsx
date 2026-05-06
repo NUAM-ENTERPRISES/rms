@@ -46,6 +46,7 @@ import {
   Phone,
   Award,
   Plus,
+  Replace,
 } from "lucide-react";
 import {
   Tabs,
@@ -89,11 +90,14 @@ import { useGetProjectQuery, useSendForVerificationMutation, useCheckBulkCandida
 import { 
   useGetCandidateProjectRequirementsQuery,
   useCreateDocumentMutation,
+  useUpdateDocumentMutation,
   useReuseDocumentMutation,
   useGetDocumentsQuery,
   useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
+import type { Document as DocsApiDocument } from "@/features/documents/api";
+import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
@@ -172,6 +176,10 @@ interface DocumentRequirement {
   docType: string;
   description?: string;
   mandatory: boolean;
+  /** Friendly label from backend (DOCUMENT_TYPE_META.displayName or fallback) */
+  documentName?: string;
+  /** Same as docType; stable binding for the Document Type column */
+  documentType?: string;
 }
 
 interface DocumentVerification {
@@ -182,6 +190,9 @@ interface DocumentVerification {
   document: {
     id: string;
     docType: string;
+    documentDisplayName?: string;
+    documentType?: string;
+    docName?: string;
     fileName: string;
     fileUrl: string;
   };
@@ -242,6 +253,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const [uploadDocument, { isLoading: isUploading }] = useUploadDocumentMutation();
   const [createDocument, { isLoading: isCreating }] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
   const [reuseDocument, { isLoading: isReusing }] = useReuseDocumentMutation();
   const [sendForVerification, { isLoading: isSendingVerification }] = useSendForVerificationMutation();
   const [reuploadDocument] = useReuploadDocumentMutation();
@@ -253,6 +265,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [selectedRequirement, setSelectedRequirement] = React.useState<DocumentRequirement | null>(null);
   const [isReuploadMode, setIsReuploadMode] = React.useState(false);
   const [reuploadDocId, setReuploadDocId] = React.useState<string | null>(null);
+  const [reuploadMeta, setReuploadMeta] = React.useState<{ previousFileName: string } | null>(null);
 
   // Verification Confirmation State
   const [isVerifyConfirmOpen, setIsVerifyConfirmOpen] = React.useState(false);
@@ -290,6 +303,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const candidateDocs = candidateDocsData?.data?.documents || [];
   const candidateDocsPagination = candidateDocsData?.data?.pagination;
+
+  const uploadDocTypeLabel = React.useMemo(() => {
+    if (!uploadDocType) return undefined;
+    return DOCUMENT_TYPE_CONFIG[uploadDocType as keyof typeof DOCUMENT_TYPE_CONFIG]?.displayName;
+  }, [uploadDocType]);
 
   const [isPDFViewerOpen, setIsPDFViewerOpen] = React.useState(false);
   const [selectedDocument, setSelectedDocument] = React.useState<{
@@ -334,7 +352,36 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const shouldDisableItemVerification = isVerificationSent || isInScreeningOrTraining;
 
-  const handleUploadDocument = async (file: File) => {
+  const canReuploadCandidateRowDoc = React.useCallback(
+    (doc: DocsApiDocument) => {
+      if (!candidateProject?.id) return false;
+      if (!isVerificationSent) return true;
+      if (doc.status === "resubmission_required") return true;
+      return (
+        doc.verifications?.some(
+          (v) =>
+            v.candidateProjectMapId === candidateProject.id &&
+            v.status === "resubmission_required"
+        ) ?? false
+      );
+    },
+    [candidateProject?.id, isVerificationSent]
+  );
+
+  const openCandidateRowReupload = React.useCallback(
+    (doc: DocsApiDocument) => {
+      if (!candidateProject?.id) return;
+      setSelectedRequirement(null);
+      setUploadDocType(doc.docType);
+      setIsReuploadMode(true);
+      setReuploadDocId(doc.id);
+      setReuploadMeta({ previousFileName: doc.fileName });
+      setShowUploadDialog(true);
+    },
+    [candidateProject?.id]
+  );
+
+  const handleUploadDocument = async (file: File, meta?: { docName?: string }) => {
     if (!uploadDocType || !candidateId || !projectId) return;
 
     try {
@@ -358,9 +405,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
       if (isReuploadMode && reuploadDocId) {
         // Handle Reupload
+        const desiredDocName = (meta?.docName && meta.docName.trim()) || undefined;
         await reuploadDocument({
           documentId: reuploadDocId,
           candidateProjectMapId: candidateProject?.id || "",
+          docName: desiredDocName,
           fileName: uploadData.fileName,
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
@@ -372,6 +421,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
         const documentData = await createDocument({
           candidateId,
           docType: uploadDocType,
+          docName: meta?.docName?.trim() || undefined,
           fileName: uploadData.fileName,
           fileUrl: uploadData.fileUrl,
           fileSize: uploadData.fileSize,
@@ -394,7 +444,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
       setSelectedRequirement(null);
       setIsReuploadMode(false);
       setReuploadDocId(null);
+      setReuploadMeta(null);
       refetchRequirements();
+      void refetchCandidateDocs();
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Failed to upload document");
@@ -427,6 +479,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
     meta: {
       docType: string;
       roleCatalogId?: string;
+      workExperienceId?: string;
+      docName?: string;
       documentNumber?: string;
       expiryDate?: string;
       notes?: string;
@@ -447,20 +501,40 @@ const RecruiterDocsDetailPage: React.FC = () => {
         formData,
       }).unwrap();
 
-      const uploadData = response.data;
+      const uploadData: any = response.data as any;
 
-      await createDocument({
-        candidateId,
-        docType: meta.docType,
-        fileName: uploadData.fileName,
-        fileUrl: uploadData.fileUrl,
-        fileSize: uploadData.fileSize,
-        mimeType: uploadData.mimeType,
-        documentNumber: meta.documentNumber,
-        expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
-        notes: meta.notes,
-        roleCatalogId: meta.roleCatalogId || "",
-      }).unwrap();
+      const uploadedDocument =
+        uploadData?.document && uploadData.document.id
+          ? uploadData.document
+          : uploadData?.id
+            ? uploadData
+            : null;
+
+      const desiredDocName = (meta.docName && meta.docName.trim()) || "";
+
+      if (uploadedDocument) {
+        if (desiredDocName) {
+          await updateDocument({
+            id: uploadedDocument.id,
+            docName: desiredDocName,
+          }).unwrap();
+        }
+      } else {
+        await createDocument({
+          candidateId,
+          docType: meta.docType,
+          docName: desiredDocName || undefined,
+          fileName: uploadData.fileName,
+          fileUrl: uploadData.fileUrl,
+          fileSize: uploadData.fileSize,
+          mimeType: uploadData.mimeType,
+          documentNumber: meta.documentNumber,
+          expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+          notes: meta.notes,
+          roleCatalogId: meta.roleCatalogId || "",
+          workExperienceId: meta.workExperienceId,
+        }).unwrap();
+      }
 
       toast.success("Document uploaded successfully");
       setShowCandidateUploadDialog(false);
@@ -489,7 +563,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       setVerificationNotes("");
       setSelectedRoleNeededId(undefined);
       setIsRoleEditable(true);
-      refetchRequirements();
+      // Data will refresh automatically via Socket.io/Tag Invalidation
     } catch (error: unknown) {
       const err = error as { data?: { message?: string } };
       toast.error(err?.data?.message || "Failed to send candidate for verification");
@@ -564,7 +638,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
           <div className="flex items-center gap-2">
             {isVerificationSent ? (
               <>
-                {summary && summary.totalVerified === summary.totalRequired && summary.totalRequired > 0 ? (
+                {candidateProject?.subStatus?.name === "client_revision_requested" ? (
+                  <Badge className="bg-orange-500 text-white border-orange-600 px-3 py-1.5 text-sm font-semibold">
+                    <RefreshCw className="mr-1.5 h-4 w-4 animate-spin-slow" />
+                    Client Revision Requested
+                  </Badge>
+                ) : summary && summary.totalVerified === summary.totalRequired && summary.totalRequired > 0 ? (
                   <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 px-3 py-1.5 text-sm font-semibold">
                     <CheckCircle2 className="mr-1.5 h-4 w-4" />
                     Documents Verified
@@ -643,7 +722,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Document Name</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Document Type</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>File Name</TableHead>
                     <TableHead>Uploaded At</TableHead>
@@ -658,16 +737,41 @@ const RecruiterDocsDetailPage: React.FC = () => {
                       <TableRow key={requirement.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <div className="flex flex-col">
-                              <span>{requirement.docType}</span>
-                              {requirement.mandatory && (
-                                <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">Required</span>
-                              )}
+                            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate">
+                                {verification?.document?.documentDisplayName ??
+                                  verification?.document?.docName ??
+                                  requirement.documentName ??
+                                  requirement.docType}
+                              </span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{requirement.description || "N/A"}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-900">
+                                {DOCUMENT_TYPE_CONFIG[requirement.docType as keyof typeof DOCUMENT_TYPE_CONFIG]?.displayName ??
+                                  requirement.documentName ??
+                                  requirement.docType}
+                              </span>
+                              {requirement.mandatory ? (
+                                <Badge
+                                  variant="destructive"
+                                  className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
+                                >
+                                  Required
+                                </Badge>
+                              ) : null}
+                            </div>
+                            {requirement.description ? (
+                              <span className="text-xs text-muted-foreground font-normal line-clamp-3">
+                                {requirement.description}
+                              </span>
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {verification ? (
                             <div className="space-y-1">
@@ -754,9 +858,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                     onClick={() => {
                                       setSelectedRequirement(requirement);
                                       setUploadDocType(requirement.docType);
-                                      // Always set reupload mode when clicking the re-upload button
                                       setIsReuploadMode(true);
                                       setReuploadDocId(verification.document.id);
+                                      setReuploadMeta({
+                                        previousFileName: verification.document.fileName,
+                                      });
                                       setShowUploadDialog(true);
                                     }}
                                   >
@@ -775,6 +881,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                     setUploadDocType(requirement.docType);
                                     setIsReuploadMode(false);
                                     setReuploadDocId(null);
+                                    setReuploadMeta(null);
                                     setShowReuseDialog(true);
                                   }}
                                 >
@@ -790,6 +897,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                     setUploadDocType(requirement.docType);
                                     setIsReuploadMode(false);
                                     setReuploadDocId(null);
+                                    setReuploadMeta(null);
                                     setShowUploadDialog(true);
                                   }}
                                 >
@@ -854,10 +962,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Document Name</TableHead>
                     <TableHead>Document Type</TableHead>
-                    <TableHead>Project</TableHead>
-                    <TableHead>File Name</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>File Name</TableHead>
                     <TableHead>Uploaded At</TableHead>
                     <TableHead className="text-right w-[100px]">Actions</TableHead>
                   </TableRow>
@@ -865,7 +974,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <TableBody>
                   {isCandidateDocsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-10">
+                      <TableCell colSpan={7} className="text-center py-10">
                         <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                         <p className="text-sm text-muted-foreground mt-2">Loading documents...</p>
                       </TableCell>
@@ -873,31 +982,23 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   ) : candidateDocs.length > 0 ? (
                     candidateDocs.map((doc) => (
                       <TableRow key={doc.id}>
+                        <TableCell>
+                          <span className="text-xs font-medium text-slate-700">
+                            {doc.documentDisplayName ?? doc.docName ?? "—"}
+                          </span>
+                        </TableCell>
                         <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            {doc.docType}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="text-xs font-mono text-muted-foreground truncate">
+                              {doc.documentType ?? doc.docType}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1 text-xs font-medium text-slate-600">
-                            <Building2 className="h-3 w-3" />
-                            {doc.verifications?.[0]?.candidateProjectMap?.project?.title || "General / Unlinked"}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="text-xs text-muted-foreground truncate max-w-[200px] block cursor-help">
-                                  {doc.fileName}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs break-all">
-                                {doc.fileName}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <span className="text-xs text-muted-foreground">
+                            {doc.roleCatalog?.label || doc.roleCatalog?.name || "—"}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
@@ -926,14 +1027,30 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground truncate max-w-[200px] block cursor-help">
+                                  {doc.fileName}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs break-all">
+                                {doc.fileName}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                        <TableCell>
                           {new Date(doc.createdAt).toLocaleDateString("en-GB", {
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
+                          <div className="flex justify-end gap-1">
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -950,6 +1067,34 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             >
                               <Download className="h-4 w-4" />
                             </Button>
+                            {canReuploadCandidateRowDoc(doc) ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Replace document for this project"
+                                      className={cn(
+                                        "text-amber-700 hover:text-amber-800 hover:bg-amber-50",
+                                        doc.status === "resubmission_required" &&
+                                          "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      )}
+                                      onClick={() => openCandidateRowReupload(doc)}
+                                    >
+                                      <Replace className="h-4 w-4" aria-hidden />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="max-w-xs">
+                                    <p className="font-medium">Re-upload</p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      New Updated document will be replaced with existing documents.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1353,13 +1498,20 @@ const RecruiterDocsDetailPage: React.FC = () => {
           setShowUploadDialog(false);
           setUploadDocType("");
           setSelectedRequirement(null);
+          setIsReuploadMode(false);
+          setReuploadDocId(null);
+          setReuploadMeta(null);
         }}
         onUpload={handleUploadDocument}
         projectTitle={project.title}
         roleDesignation={candidateProject?.roleNeeded?.designation || project.rolesNeeded?.[0]?.designation || "N/A"}
         docType={uploadDocType}
+        docTypeLabel={uploadDocTypeLabel}
+        docTypeDescription={selectedRequirement?.description}
         isMandatory={selectedRequirement?.mandatory}
         isUploading={isUploading || isCreating || isReusing}
+        variant={isReuploadMode ? "reupload" : "upload"}
+        previousFileName={reuploadMeta?.previousFileName}
       />
 
       <React.Suspense fallback={null}>
@@ -1368,6 +1520,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           onClose={() => setShowCandidateUploadDialog(false)}
           onUpload={handleUploadCandidateDocument}
           isUploading={isUploading || isCreating}
+          workExperiences={candidate?.workExperiences}
         />
       </React.Suspense>
 

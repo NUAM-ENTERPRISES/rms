@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Loader2, User, Users, X, FileText, ChevronLeft, ChevronRight, Mail, Phone, Briefcase, Globe, Upload, Eye, CheckCircle2 } from "lucide-react";
+import { Loader2, User, Users, X, FileText, ChevronLeft, ChevronRight, Mail, Briefcase, Globe, Upload, Eye } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,7 @@ import { useGetUsersQuery } from "@/features/admin";
 import { toast } from "sonner";
 import { useAppDispatch } from "@/app/hooks";
 import { CandidateDetailTooltip } from "@/features/projects/components/CandidateDetailTooltip";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
@@ -47,6 +47,8 @@ interface MultiTransferToProcessingModalProps {
     candidateId: string;
     candidate: any;
     candidateName: string;
+    agentName?: string;
+    agentType?: string;
     recruiterName?: string;
     isOfferLetterUploaded?: boolean;
     offerLetterData?: any;
@@ -408,6 +410,29 @@ export function MultiTransferToProcessingModal({
                             <span className="truncate">{candidate.candidate.source}</span>
                           </div>
                         )}
+                        {(() => {
+                          const agentName =
+                            candidate.agentName || candidate.candidate?.agent?.name || "";
+                          const agentType =
+                            candidate.agentType || candidate.candidate?.agent?.agentType || "";
+
+                          if (!agentName && !agentType) return null;
+
+                          return (
+                            <div
+                              className="flex items-center gap-1 truncate col-span-2"
+                              title={`Agent: ${agentName || "—"}${agentType ? ` (${agentType})` : ""}`}
+                            >
+                              <Users className="h-2.5 w-2.5 text-slate-400 shrink-0" />
+                              <span className="truncate">
+                                {agentName || "—"}
+                                {agentType ? (
+                                  <span className="text-slate-400"> ({agentType})</span>
+                                ) : null}
+                              </span>
+                            </div>
+                          );
+                        })()}
                         {(candidate.candidate?.totalExperience !== undefined || candidate.candidate?.experience !== undefined) && (
                           <div className="flex items-center gap-1 truncate">
                             <Briefcase className="h-2.5 w-2.5 text-slate-400 shrink-0" />

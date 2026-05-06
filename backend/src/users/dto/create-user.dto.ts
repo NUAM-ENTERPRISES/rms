@@ -82,6 +82,30 @@ export class CreateUserDto {
   profileImage?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Physical / mailing country (`countries.code`). Distinct from phone `countryCode` (dial code).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  addressCountryCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Physical / mailing state (`states.id`)',
+  })
+  @IsOptional()
+  @IsString()
+  addressStateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Street or full mailing address line',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
+  @ApiPropertyOptional({
     description: 'User location (City, Country)',
     example: 'New York, USA',
   })

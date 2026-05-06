@@ -12,6 +12,7 @@ import { CandidateMatchingService } from '../candidate-matching/candidate-matchi
 import { RecruiterPoolService } from '../recruiter-pool/recruiter-pool.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PipelineService } from './pipeline.service';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
@@ -25,8 +26,10 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
@@ -42,7 +45,22 @@ import {
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
+  normalizeCandidateSource,
 } from '../common/constants';
+import { ROLE_NAMES } from '../common/constants/role-ids';
+import { canSeeAgentSourcedCandidates } from './candidate-visibility';
+import {
+  assertPhysicalAddressConsistent,
+  mergePhysicalAddress,
+} from '../common/address/assert-physical-address';
+import {
+  assertAgentCandidateLinkedToAgentProject,
+  agentSourceConsolidatedCandidateWhere,
+} from '../common/agent-project-candidate-scope';
+import {
+  computeCandidateProfileCompletion,
+  withProfileCompletion,
+} from './utils/profile-completion.util';
 
 @Injectable()
 export class CandidatesService {
@@ -110,6 +128,104 @@ export class CandidatesService {
     // Convert to years (rounded to 1 decimal place)
     return Math.round((totalMonths / 12) * 10) / 10;
   }
+
+  /**
+   * Shared nomination logic for nominate API (and similar flows).
+   */
+  private async createProjectNominationForWorkflow(
+    db: Prisma.TransactionClient,
+    candidateId: string,
+    link: { projectId: string; roleNeededId?: string; notes?: string },
+  ) {
+    if (link.roleNeededId) {
+      const role = await db.roleNeeded.findFirst({
+        where: { id: link.roleNeededId, projectId: link.projectId },
+        select: { id: true },
+      });
+      if (!role) {
+        throw new NotFoundException(
+          `Role-needed ${link.roleNeededId} not found on project ${link.projectId}`,
+        );
+      }
+    }
+
+    const project = await db.project.findUnique({
+      where: { id: link.projectId },
+      include: { documentRequirements: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${link.projectId} not found`);
+    }
+
+    const existingNomination = await db.candidateProjects.findFirst({
+      where: {
+        candidateId,
+        projectId: link.projectId,
+        roleNeededId: link.roleNeededId ?? null,
+      },
+    });
+    if (existingNomination) {
+      throw new ConflictException(
+        `Candidate ${candidateId} is already nominated for this project${link.roleNeededId ? ' and role slot' : ''}`,
+      );
+    }
+
+    const nomination = await db.candidateProjects.create({
+      data: {
+        candidateId,
+        projectId: link.projectId,
+        roleNeededId: link.roleNeededId,
+        currentProjectStatusId: 1,
+        notes: link.notes,
+      },
+    });
+
+    if (project.documentRequirements.length > 0) {
+      const pendingDocsStatus = await db.candidateProjectStatus.findFirst({
+        where: { statusName: 'pending_documents' },
+      });
+      if (pendingDocsStatus) {
+        await db.candidateProjects.update({
+          where: { id: nomination.id },
+          data: { currentProjectStatusId: pendingDocsStatus.id },
+        });
+      }
+    }
+
+    return nomination;
+  }
+
+  /** Replace AgentCandidateDeclaredProject rows; validates each project is an active AgentProject for this agent */
+  private async replaceAgentCandidateDeclaredProjects(
+    tx: Prisma.TransactionClient,
+    candidateId: string,
+    agentId: string,
+    rawProjectIds: string[],
+  ): Promise<void> {
+    await tx.agentCandidateDeclaredProject.deleteMany({ where: { candidateId } });
+    const uniq = [...new Set((rawProjectIds || []).filter(Boolean))];
+    if (!uniq.length) return;
+
+    const links = await tx.agentProject.findMany({
+      where: {
+        agentId,
+        isActive: true,
+        projectId: { in: uniq },
+      },
+      select: { projectId: true },
+    });
+    const ok = new Set(links.map((l) => l.projectId));
+    const missing = uniq.filter((id) => !ok.has(id));
+    if (missing.length) {
+      throw new BadRequestException(
+        `Each declaredProjectId must match an active agent-project link on this agent: ${missing.join(', ')}`,
+      );
+    }
+    await tx.agentCandidateDeclaredProject.createMany({
+      data: uniq.map((projectId) => ({ candidateId, projectId })),
+    });
+  }
+
 
   async create(
     createCandidateDto: CreateCandidateDto,
@@ -192,6 +308,62 @@ export class CandidatesService {
 
     this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
 
+    const creatingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        userRoles: {
+          include: {
+            role: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const isClientCoordinator = creatingUser?.userRoles.some(
+      (ur) =>
+        ur.role?.name?.toLowerCase() ===
+        ROLE_NAMES.CLIENT_COORDINATOR.toLowerCase(),
+    );
+
+    let resolvedSource =
+      normalizeCandidateSource(createCandidateDto.source) ?? 'manual';
+    if (isClientCoordinator) {
+      resolvedSource = 'agent';
+    }
+
+    let resolvedAgentId = createCandidateDto.agentId ?? undefined;
+    if (resolvedSource === 'agent') {
+      if (!resolvedAgentId) {
+        throw new BadRequestException(
+          'agentId is required when source is agent',
+        );
+      }
+      const agentRecord = await this.prisma.agent.findUnique({
+        where: { id: resolvedAgentId },
+        select: { id: true },
+      });
+      if (!agentRecord) {
+        throw new NotFoundException(
+          `Agent with ID ${resolvedAgentId} not found`,
+        );
+      }
+    }
+
+    if (createCandidateDto.declaredProjectIds?.length) {
+      if (resolvedSource !== 'agent' || !resolvedAgentId) {
+        throw new BadRequestException(
+          'declaredProjectIds is only allowed when source is agent and agentId is set.',
+        );
+      }
+    }
+
+    await assertPhysicalAddressConsistent(this.prisma, {
+      addressCountryCode: createCandidateDto.addressCountryCode ?? null,
+      addressStateId: createCandidateDto.addressStateId ?? null,
+    });
+
     // Get the default status info for history tracking
     const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
@@ -199,152 +371,183 @@ export class CandidatesService {
       select: { statusName: true },
     });
 
-    // Get user info for status history
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, email: true },
-    });
+    const user = creatingUser;
 
-    // Create candidate with qualifications
-    const candidate = await this.prisma.candidate.create({
-      data: {
-        firstName: createCandidateDto.firstName,
-        lastName: createCandidateDto.lastName,
-        countryCode: createCandidateDto.countryCode,
-        mobileNumber: createCandidateDto.mobileNumber,
-        email: createCandidateDto.email,
-        profileImage: createCandidateDto.profileImage,
-        source: createCandidateDto.source || 'manual',
-        referralCompanyName: createCandidateDto.referralCompanyName,
-        referralCountryCode: createCandidateDto.referralCountryCode,
-        referralEmail: createCandidateDto.referralEmail,
-        referralPhone: createCandidateDto.referralPhone,
-        referralDescription: createCandidateDto.referralDescription,
-        // set dateOfBirth value to either parsed date or null (optional field)
-        dateOfBirth: createCandidateDto.dateOfBirth ? new Date(createCandidateDto.dateOfBirth) : null,
-        gender: createCandidateDto.gender,
-        currentStatusId: defaultStatusId,
-        totalExperience: totalExperience,
-        currentSalary: createCandidateDto.currentSalary,
-        currentEmployer: createCandidateDto.currentEmployer,
-        currentRole: createCandidateDto.currentRole,
-        expectedMinSalary: createCandidateDto.expectedMinSalary,
-        expectedMaxSalary: createCandidateDto.expectedMaxSalary,
-        sectorType: createCandidateDto.sectorType,
-        visaType: createCandidateDto.visaType,
-        height: createCandidateDto.height,
-        weight: createCandidateDto.weight,
-        skinTone: createCandidateDto.skinTone,
-        languageProficiency: createCandidateDto.languageProficiency,
-        smartness: createCandidateDto.smartness,
-        licensingExam: createCandidateDto.licensingExam,
-        dataFlow: createCandidateDto.dataFlow ?? null,
-        eligibility: createCandidateDto.eligibility ?? null,
-        highestEducation: createCandidateDto.highestEducation,
-        university: createCandidateDto.university,
-        graduationYear: createCandidateDto.graduationYear,
-        gpa: createCandidateDto.gpa,
-        onHoldDuration: createCandidateDto.onHoldDuration,
-        onHoldUntil: createCandidateDto.onHoldUntil ? new Date(createCandidateDto.onHoldUntil) : null,
-        // Legacy fields for backward compatibility
-        experience: totalExperience,
-        skills: createCandidateDto.skills
-          ? JSON.parse(createCandidateDto.skills)
-          : [],
-        // Note: assignedTo field has been removed - all assignments tracked via CandidateProjects
-        teamId: createCandidateDto.teamId,
-        // Handle multiple preferred countries
-        preferredCountries: createCandidateDto.preferredCountries
-          ? {
-            create: createCandidateDto.preferredCountries.map((code) => ({
-              country: { connect: { code } },
-            })),
-          }
-          : undefined,
-        // Handle multiple facility preferences
-        facilityPreferences: createCandidateDto.facilityPreferences
-          ? {
-            create: createCandidateDto.facilityPreferences.map((facilityType) => ({
-              facilityType,
-            })),
-          }
-          : undefined,
-        // Handle multiple qualifications
-        qualifications: createCandidateDto.qualifications
-          ? {
-            create: createCandidateDto.qualifications.map((qual) => ({
-              qualificationId: qual.qualificationId,
-              university: qual.university,
-              graduationYear: qual.graduationYear,
-              gpa: qual.gpa,
-              isCompleted: qual.isCompleted ?? true,
-              notes: qual.notes,
-            })),
-          }
-          : undefined,
-        // Handle work experiences
-        workExperiences: createCandidateDto.workExperiences
-          ? {
-            create: createCandidateDto.workExperiences.map((exp) => {
-              // Handle skills - it might be a JSON string or already parsed
-              let parsedSkills = [];
-              if (exp.skills) {
-                try {
-                  parsedSkills = typeof exp.skills === 'string'
-                    ? JSON.parse(exp.skills)
-                    : exp.skills;
-                } catch (error: any) {
-                  this.logger.warn(`Failed to parse skills for work experience: ${error.message}`);
-                  parsedSkills = [];
-                }
-              }
-
-              return {
-                roleCatalogId: exp.roleCatalogId,
-                companyName: exp.companyName,
-                jobTitle: exp.jobTitle,
-                startDate: new Date(exp.startDate),
-                endDate: exp.endDate ? new Date(exp.endDate) : null,
-                isCurrent: exp.isCurrent ?? false,
-                description: exp.description,
-                salary: exp.salary,
-                location: exp.location,
-                skills: parsedSkills,
-                achievements: exp.achievements,
-              };
-            }),
-          }
-          : undefined,
+    const candidateInclude = {
+      team: true,
+      workExperiences: {
+        include: {
+          roleCatalog: true,
+        },
       },
-      include: {
-        // recruiter relation removed - now accessed via projects
-        team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
+      qualifications: {
+        include: {
+          qualification: true,
         },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
+      },
+      projects: {
+        include: {
+          project: {
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
                 },
               },
             },
           },
         },
       },
+      agentCandidateDeclaredProjects: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+    } as const;
+
+    const candidate = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidate.create({
+        data: {
+          firstName: createCandidateDto.firstName,
+          lastName: createCandidateDto.lastName,
+          countryCode: createCandidateDto.countryCode,
+          mobileNumber: createCandidateDto.mobileNumber,
+          email: createCandidateDto.email,
+          profileImage: createCandidateDto.profileImage,
+          addressCountryCode: createCandidateDto.addressCountryCode,
+          addressStateId: createCandidateDto.addressStateId,
+          address: createCandidateDto.address,
+          source: resolvedSource,
+          agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
+          referralCompanyName: createCandidateDto.referralCompanyName,
+          referralCountryCode: createCandidateDto.referralCountryCode,
+          referralEmail: createCandidateDto.referralEmail,
+          referralPhone: createCandidateDto.referralPhone,
+          referralDescription: createCandidateDto.referralDescription,
+          dateOfBirth: createCandidateDto.dateOfBirth
+            ? new Date(createCandidateDto.dateOfBirth)
+            : null,
+          gender: createCandidateDto.gender,
+          currentStatusId: defaultStatusId,
+          totalExperience: totalExperience,
+          currentSalary: createCandidateDto.currentSalary,
+          currentEmployer: createCandidateDto.currentEmployer,
+          currentRole: createCandidateDto.currentRole,
+          expectedMinSalary: createCandidateDto.expectedMinSalary,
+          expectedMaxSalary: createCandidateDto.expectedMaxSalary,
+          sectorType: createCandidateDto.sectorType,
+          visaType: createCandidateDto.visaType,
+          height: createCandidateDto.height,
+          weight: createCandidateDto.weight,
+          skinTone: createCandidateDto.skinTone,
+          languageProficiency: createCandidateDto.languageProficiency,
+          smartness: createCandidateDto.smartness,
+          licensingExam: createCandidateDto.licensingExam,
+          dataFlow: createCandidateDto.dataFlow ?? null,
+          eligibility: createCandidateDto.eligibility ?? null,
+          highestEducation: createCandidateDto.highestEducation,
+          university: createCandidateDto.university,
+          graduationYear: createCandidateDto.graduationYear,
+          gpa: createCandidateDto.gpa,
+          onHoldDuration: createCandidateDto.onHoldDuration,
+          onHoldUntil: createCandidateDto.onHoldUntil
+            ? new Date(createCandidateDto.onHoldUntil)
+            : null,
+          experience: totalExperience,
+          skills: createCandidateDto.skills
+            ? JSON.parse(createCandidateDto.skills)
+            : [],
+          teamId: createCandidateDto.teamId,
+          preferredCountries: createCandidateDto.preferredCountries
+            ? {
+                create: createCandidateDto.preferredCountries.map((code) => ({
+                  country: { connect: { code } },
+                })),
+              }
+            : undefined,
+          facilityPreferences: createCandidateDto.facilityPreferences
+            ? {
+                create: createCandidateDto.facilityPreferences.map(
+                  (facilityType) => ({
+                    facilityType,
+                  }),
+                ),
+              }
+            : undefined,
+          qualifications: createCandidateDto.qualifications
+            ? {
+                create: createCandidateDto.qualifications.map((qual) => ({
+                  qualificationId: qual.qualificationId,
+                  university: qual.university,
+                  graduationYear: qual.graduationYear,
+                  gpa: qual.gpa,
+                  isCompleted: qual.isCompleted ?? true,
+                  notes: qual.notes,
+                })),
+              }
+            : undefined,
+          workExperiences: createCandidateDto.workExperiences
+            ? {
+                create: createCandidateDto.workExperiences.map((exp) => {
+                  let parsedSkills = [];
+                  if (exp.skills) {
+                    try {
+                      parsedSkills =
+                        typeof exp.skills === 'string'
+                          ? JSON.parse(exp.skills)
+                          : exp.skills;
+                    } catch (error: any) {
+                      this.logger.warn(
+                        `Failed to parse skills for work experience: ${error.message}`,
+                      );
+                      parsedSkills = [];
+                    }
+                  }
+
+                  return {
+                    roleCatalogId: exp.roleCatalogId,
+                    companyName: exp.companyName,
+                    jobTitle: exp.jobTitle,
+                    startDate: new Date(exp.startDate),
+                    endDate: exp.endDate ? new Date(exp.endDate) : null,
+                    isCurrent: exp.isCurrent ?? false,
+                    description: exp.description,
+                    salary: exp.salary,
+                    location: exp.location,
+                    skills: parsedSkills,
+                    achievements: exp.achievements,
+                  };
+                }),
+              }
+            : undefined,
+        },
+        select: { id: true },
+      });
+
+      if (
+        resolvedSource === 'agent' &&
+        resolvedAgentId &&
+        createCandidateDto.declaredProjectIds?.length
+      ) {
+        await this.replaceAgentCandidateDeclaredProjects(
+          tx,
+          created.id,
+          resolvedAgentId,
+          createCandidateDto.declaredProjectIds,
+        );
+      }
+
+      return tx.candidate.findUniqueOrThrow({
+        where: { id: created.id },
+        include: candidateInclude,
+      });
     });
 
     // Create initial status history entry
@@ -431,10 +634,12 @@ export class CandidatesService {
       dateFrom,
       dateTo,
       roleCatalogId,
+      agentId,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
       sortOrder = 'desc',
+      roles = [],
     } = query;
 
     // Handle status alias - status is an alias for currentStatus
@@ -442,6 +647,13 @@ export class CandidatesService {
 
     // Build where clause
     const where: any = {};
+
+    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    if (!canSeeAgentSourcedCandidates(roles)) {
+      where.NOT = {
+        source: 'agent',
+      };
+    }
 
     if (search && typeof search === 'string' && search.trim().length > 0) {
       const s = search.trim();
@@ -484,6 +696,10 @@ export class CandidatesService {
 
     if (source) {
       where.source = source;
+    }
+
+    if (agentId) {
+      where.agentId = agentId;
     }
 
     if (gender) {
@@ -756,7 +972,11 @@ export class CandidatesService {
               },
             },
           }
-        }
+        },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
     });
 
@@ -777,8 +997,13 @@ export class CandidatesService {
         (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
       );
 
+      const { documents, ...rest } = candidate;
+      const merged = withProfileCompletion({
+        ...rest,
+        documents: documents ?? [],
+      });
       return {
-        ...candidate,
+        ...merged,
         isHandledByCRE,
         isCREReassigned,
         creHandler: creAssignment ? {
@@ -804,7 +1029,7 @@ export class CandidatesService {
 
   /**
    * Get consolidated candidates for project detail view
-   * Admin/Manager sees all, Recruiter sees their assigned only
+   * Admin/Manager-style roles see all; Recruiter and Client Coordinator see active recruiter assignments only.
    * Includes nomination status for a specific project
    */
   async getConsolidatedCandidates(
@@ -816,6 +1041,7 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
 
     const isRecruiter = roles.includes('Recruiter');
+    const isClientCoordinator = roles.includes('Client Coordinator');
     const isAdminOrManager = roles.some((role) =>
       [
         'CEO',
@@ -831,8 +1057,15 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Role-based filtering
-    if (isRecruiter && !isAdminOrManager) {
+    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    if (!canSeeAgentSourcedCandidates(roles)) {
+      where.NOT = {
+        source: 'agent',
+      };
+    }
+
+    // 2. Role-based filtering (recruiters and client coordinators see assigned candidates only)
+    if ((isRecruiter || isClientCoordinator) && !isAdminOrManager) {
       where.recruiterAssignments = {
         some: {
           recruiterId: userId,
@@ -891,6 +1124,14 @@ export class CandidatesService {
       };
     }
 
+    if (!where.AND) {
+      where.AND = [agentSourceConsolidatedCandidateWhere(projectId)];
+    } else if (Array.isArray(where.AND)) {
+      where.AND.push(agentSourceConsolidatedCandidateWhere(projectId));
+    } else {
+      where.AND = [where.AND, agentSourceConsolidatedCandidateWhere(projectId)];
+    }
+
     const [candidates, total] = await Promise.all([
       this.prisma.candidate.findMany({
         where,
@@ -901,6 +1142,12 @@ export class CandidatesService {
             select: {
               id: true,
               statusName: true,
+            },
+          },
+          agent: {
+            select: {
+              id: true,
+              name: true,
             },
           },
           qualifications: {
@@ -1073,12 +1320,31 @@ export class CandidatesService {
       'on_hold': 'on hold',
       'on hold': 'on hold',
       untouched: 'untouched',
+      junk: 'junk',
     };
 
     if (normalizedStatusInput) {
       if (normalizedStatusInput === 'interested') {
         // Converted Response mode: now identified by assignmentType instead of status
         where.recruiterAssignments.some.assignmentType = CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED;
+      } else if (normalizedStatusInput === 'junk') {
+        // Junk Candidates logic: Assigned > 5 days ago, active, not converted/reassigned
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - 5);
+
+        where.recruiterAssignments = {
+          some: {
+            recruiterId: creUserId,
+            isActive: true,
+            assignedAt: { lt: threshold },
+            assignmentType: {
+              notIn: [
+                CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+                CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              ],
+            },
+          },
+        };
       } else {
         const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
         const statusId = Number(normalizedStatusInput);
@@ -1090,12 +1356,21 @@ export class CandidatesService {
         }
       }
     } else {
-      // Default CRE assigned listing: exclude converted and reassigned candidates
-      where.recruiterAssignments.some.assignmentType = {
-        notIn: [
-          CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
-          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-        ],
+      // Default CRE assigned listing: exclude converted, reassigned, and junk (assigned > 5 days ago) candidates
+      const junkThreshold = new Date();
+      junkThreshold.setDate(junkThreshold.getDate() - 5);
+      where.recruiterAssignments = {
+        some: {
+          recruiterId: creUserId,
+          isActive: true,
+          assignedAt: { gte: junkThreshold },
+          assignmentType: {
+            notIn: [
+              CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+              CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+            ],
+          },
+        },
       };
     }
 
@@ -1195,6 +1470,7 @@ export class CandidatesService {
         recruiterAssignments: {
           select: {
             assignmentType: true,
+            assignedAt: true,
           },
           where: {
             recruiterId: creUserId,
@@ -1204,6 +1480,9 @@ export class CandidatesService {
       },
     });
 
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - 5);
+
     const roleCounters = {
       assigned: 0,
       converted: 0,
@@ -1211,11 +1490,14 @@ export class CandidatesService {
       rnr: 0,
       onHold: 0,
       untouched: 0,
+      junk: 0,
       other: 0,
     };
 
     allAssigned.forEach((candidate) => {
-      const assignmentType = candidate.recruiterAssignments[0]?.assignmentType;
+      const assignment = candidate.recruiterAssignments[0];
+      const assignmentType = assignment?.assignmentType;
+      const assignedAt = assignment?.assignedAt;
       
       if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED || 
           assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED) {
@@ -1223,6 +1505,12 @@ export class CandidatesService {
           roleCounters.converted += 1;
         }
         return; // Don't count converted or reassigned in "Total Assigned" status-based buckets
+      }
+
+      // Check for junk (assigned > 5 days ago)
+      if (assignedAt && assignedAt < threshold) {
+        roleCounters.junk += 1;
+        return; // Don't count junk candidates in status-based buckets or total
       }
 
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
@@ -1276,9 +1564,23 @@ export class CandidatesService {
       },
     });
 
+    // Count candidates created by this CRE user
+    const createdCount = await this.prisma.candidate.count({
+      where: {
+        recruiterAssignments: {
+          some: {
+            createdBy: creUserId,
+          },
+        },
+      },
+    });
+
     return {
       total: roleCounters.assigned,
-      roleCounters,
+      roleCounters: {
+        ...roleCounters,
+        created: createdCount,
+      },
     };
   }
 
@@ -1548,6 +1850,68 @@ export class CandidatesService {
     };
   }
 
+  /**
+   * Get candidates created by a specific CRE user
+   * Uses candidateRecruiterAssignment.createdBy to identify creator
+   */
+  async getUserCandidates(
+    creUserId: string,
+    query: { page?: number; limit?: number; search?: string },
+  ) {
+    const { page = 1, limit = 10, search } = query;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      recruiterAssignments: {
+        some: {
+          createdBy: creUserId,
+        },
+      },
+    };
+
+    if (search) {
+      where.AND = [
+        {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { mobileNumber: { contains: search, mode: 'insensitive' } },
+          ],
+        },
+      ];
+    }
+
+    const total = await this.prisma.candidate.count({ where });
+
+    const candidates = await this.prisma.candidate.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        currentStatus: { select: { id: true, statusName: true } },
+        recruiterAssignments: {
+          where: { isActive: true },
+          include: {
+            recruiter: { select: { id: true, name: true, email: true } },
+            assignedByUser: { select: { id: true, name: true, email: true } },
+          },
+        },
+      },
+    });
+
+    return {
+      candidates,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async findOne(id: string): Promise<CandidateWithRelations> {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id },
@@ -1575,6 +1939,22 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        addressCountry: {
+          select: { code: true, name: true },
+        },
+        addressState: {
+          select: { id: true, name: true, code: true },
+        },
+        agentCandidateDeclaredProjects: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
         recruiterAssignments: {
           where: { isActive: true },
           include: {
@@ -1602,6 +1982,10 @@ export class CandidatesService {
           },
           orderBy: { assignedAt: 'asc' },
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
     });
 
@@ -1616,9 +2000,11 @@ export class CandidatesService {
       firstAssignment?.assignedByUser ||
       null;
 
+    const base = withProfileCompletion(candidate as any);
+
     // Pipeline data removed from response to reduce payload
     return {
-      ...candidate,
+      ...base,
       createdBy,
     } as any;
   }
@@ -1726,8 +2112,18 @@ export class CandidatesService {
       updateData.email = updateCandidateDto.email;
     if (updateCandidateDto.profileImage !== undefined)
       updateData.profileImage = updateCandidateDto.profileImage;
+    if (updateCandidateDto.addressCountryCode !== undefined)
+      updateData.addressCountryCode = updateCandidateDto.addressCountryCode;
+    if (updateCandidateDto.addressStateId !== undefined)
+      updateData.addressStateId = updateCandidateDto.addressStateId;
+    if (updateCandidateDto.address !== undefined)
+      updateData.address = updateCandidateDto.address;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
+    if (updateCandidateDto.agentId !== undefined) {
+      const v = updateCandidateDto.agentId;
+      updateData.agentId = v === '' || v === null ? null : v;
+    }
     if (updateCandidateDto.referralCompanyName !== undefined)
       updateData.referralCompanyName = updateCandidateDto.referralCompanyName;
     if (updateCandidateDto.referralCountryCode !== undefined)
@@ -1812,40 +2208,94 @@ export class CandidatesService {
       };
     }
 
-    // Update candidate
-    const candidate = await this.prisma.candidate.update({
-      where: { id },
-      data: updateData,
-      include: {
-        // recruiter relation removed - now accessed via projects
-        team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
+    const declaredIdsPayload = updateCandidateDto.declaredProjectIds;
+
+    const mergedAgentValue =
+      updateCandidateDto.agentId !== undefined ? updateCandidateDto.agentId : existingCandidate.agentId;
+    const finalAgentIdMerged =
+      mergedAgentValue === '' || mergedAgentValue === undefined || mergedAgentValue === null
+        ? null
+        : mergedAgentValue;
+
+    if (declaredIdsPayload !== undefined) {
+      const hasDeclared =
+        Array.isArray(declaredIdsPayload) && declaredIdsPayload.length > 0;
+      /** Declarations are keyed off agent linkage; referrals may omit source=agent in legacy rows. */
+      if (hasDeclared && !finalAgentIdMerged) {
+        throw new BadRequestException(
+          'declaredProjectIds can only be set when the candidate is linked to an agent (agentId).',
+        );
+      }
+    }
+
+    await assertPhysicalAddressConsistent(
+      this.prisma,
+      mergePhysicalAddress(existingCandidate, {
+        addressCountryCode: updateCandidateDto.addressCountryCode,
+        addressStateId: updateCandidateDto.addressStateId,
+      }),
+    );
+
+    const candidateUpdateInclude = {
+      team: true,
+      workExperiences: {
+        include: {
+          roleCatalog: true,
         },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
+      },
+      qualifications: {
+        include: {
+          qualification: true,
         },
-        projects: {
-          include: {
-            project: {
-              include: {
-                client: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                  },
+      },
+      projects: {
+        include: {
+          project: {
+            include: {
+              client: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
                 },
               },
             },
           },
         },
       },
+      agentCandidateDeclaredProjects: {
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      },
+    } as const;
+
+    let candidate = await this.prisma.candidate.update({
+      where: { id },
+      data: updateData,
+      include: candidateUpdateInclude,
     });
+
+    if (declaredIdsPayload !== undefined && finalAgentIdMerged) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.replaceAgentCandidateDeclaredProjects(
+          tx,
+          id,
+          finalAgentIdMerged,
+          declaredIdsPayload ?? [],
+        );
+      });
+
+      candidate = await this.prisma.candidate.findUniqueOrThrow({
+        where: { id },
+        include: candidateUpdateInclude,
+      });
+    }
 
     // Notify about candidate update for real-time UI
     await this.outboxService.publishEvent('DataSync', {
@@ -1854,7 +2304,15 @@ export class CandidatesService {
       message: `Candidate ${candidate.firstName} ${candidate.lastName} updated`,
     });
 
-    return candidate;
+    const docs = await this.prisma.document.findMany({
+      where: { candidateId: id, isDeleted: false },
+      select: { docType: true },
+    });
+
+    return {
+      ...candidate,
+      profileCompletion: computeCandidateProfileCompletion(candidate, docs),
+    } as any;
   }
 
   async remove(
@@ -2503,40 +2961,24 @@ export class CandidatesService {
       }
     }
 
-    // Validate project exists
-    const project = await this.prisma.project.findUnique({
-      where: { id: nominateDto.projectId },
-      include: {
-        documentRequirements: true,
-      },
-    });
-    if (!project) {
-      throw new NotFoundException(
-        `Project with ID ${nominateDto.projectId} not found`,
-      );
-    }
+    await assertAgentCandidateLinkedToAgentProject(
+      this.prisma,
+      candidate,
+      nominateDto.projectId,
+    );
 
-    // Check if already nominated
-    const existingNomination = await this.prisma.candidateProjects.findFirst({
-      where: {
-        candidateId,
+    const prismaTx = this.prisma as unknown as Prisma.TransactionClient;
+    const nominationRow = await this.createProjectNominationForWorkflow(
+      prismaTx,
+      candidateId,
+      {
         projectId: nominateDto.projectId,
-      },
-    });
-    if (existingNomination) {
-      throw new ConflictException(
-        `Candidate ${candidateId} is already nominated for project ${nominateDto.projectId}`,
-      );
-    }
-
-    // Create nomination
-    const nomination = await this.prisma.candidateProjects.create({
-      data: {
-        candidateId,
-        projectId: nominateDto.projectId,
-        currentProjectStatusId: 1, // NOMINATED status
         notes: nominateDto.notes,
       },
+    );
+
+    const nomination = await this.prisma.candidateProjects.findUniqueOrThrow({
+      where: { id: nominationRow.id },
       include: {
         candidate: {
           select: {
@@ -2562,21 +3004,6 @@ export class CandidatesService {
         },
       },
     });
-
-    // Auto-transition to pending_documents if project has document requirements
-    if (project.documentRequirements.length > 0) {
-      const pendingDocsStatus = await this.prisma.candidateProjectStatus.findFirst({
-        where: { statusName: 'pending_documents' },
-      });
-      if (pendingDocsStatus) {
-        await this.prisma.candidateProjects.update({
-          where: { id: nomination.id },
-          data: {
-            currentProjectStatusId: pendingDocsStatus.id,
-          },
-        });
-      }
-    }
 
     return nomination;
   }
@@ -3209,7 +3636,7 @@ export class CandidatesService {
       );
     }
 
-    // Use the existing assignRecruiter method to handle the transfer
+    // Use the existing assignRecruiter method to handle the transfer (skip generic notification)
     const result = await this.assignRecruiter(
       candidateId,
       {
@@ -3219,11 +3646,98 @@ export class CandidatesService {
           `Transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'}`,
       },
       userId,
+      true, // skipNotification — we publish CandidateTransferred below
     );
+
+    // Publish transfer-specific notification event
+    await this.outboxService.publishEvent('CandidateTransferred', {
+      candidateId,
+      targetRecruiterId: transferCandidateDto.targetRecruiterId,
+      transferredBy: userId,
+      reason: transferCandidateDto.reason || '',
+      previousRecruiterId: currentAssignment?.recruiterId ?? null,
+    });
 
     return {
       message: `Candidate transferred from ${currentAssignment ? currentAssignment.recruiter.name : 'unassigned'} to ${targetRecruiter.name}`,
       assignment: result.assignment,
+    };
+  }
+
+  /**
+   * Bulk transfer multiple candidates to a new recruiter
+   */
+  async bulkTransferRecruiter(
+    dto: BulkTransferCandidateDto,
+    userId: string,
+  ): Promise<{ message: string; transferred: number; skipped: string[] }> {
+    // Verify target recruiter exists once
+    const targetRecruiter = await this.prisma.user.findUnique({
+      where: { id: dto.targetRecruiterId },
+    });
+
+    if (!targetRecruiter) {
+      throw new NotFoundException(
+        `Target recruiter with ID ${dto.targetRecruiterId} not found`,
+      );
+    }
+
+    let transferred = 0;
+    const skipped: string[] = [];
+
+    for (const candidateId of dto.candidateIds) {
+      try {
+        // Check current assignment
+        const candidate = await this.prisma.candidate.findUnique({
+          where: { id: candidateId },
+          include: {
+            recruiterAssignments: {
+              where: { isActive: true },
+              select: { recruiterId: true },
+            },
+          },
+        });
+
+        if (!candidate) {
+          skipped.push(candidateId);
+          continue;
+        }
+
+        const currentAssignment = candidate.recruiterAssignments[0];
+        if (currentAssignment?.recruiterId === dto.targetRecruiterId) {
+          skipped.push(candidateId);
+          continue;
+        }
+
+        await this.assignRecruiter(
+          candidateId,
+          {
+            recruiterId: dto.targetRecruiterId,
+            reason: dto.reason || `Bulk transferred to ${targetRecruiter.name}`,
+          },
+          userId,
+          true, // skipNotification — we publish CandidateTransferred below
+        );
+
+        // Publish transfer-specific notification event per candidate
+        await this.outboxService.publishEvent('CandidateTransferred', {
+          candidateId,
+          targetRecruiterId: dto.targetRecruiterId,
+          transferredBy: userId,
+          reason: dto.reason || '',
+          previousRecruiterId: currentAssignment?.recruiterId ?? null,
+        });
+
+        transferred++;
+      } catch {
+        skipped.push(candidateId);
+      }
+    }
+
+    return {
+      message: `Bulk transfer complete: ${transferred} transferred, ${skipped.length} skipped`,
+      transferred,
+      skipped,
     };
   }
 
@@ -3613,6 +4127,10 @@ export class CandidatesService {
       where.expectedMinSalary = {};
       if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
       if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
+    }
+
+    if (query.agentId) {
+      where.agentId = query.agentId;
     }
 
     if (query.heightMin !== undefined || query.heightMax !== undefined) {
@@ -4169,6 +4687,10 @@ export class CandidatesService {
           orderBy: { statusUpdatedAt: 'asc' },
           take: 1,
         },
+        documents: {
+          where: { isDeleted: false },
+          select: { docType: true },
+        },
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4182,10 +4704,17 @@ export class CandidatesService {
       const latestProject = c.projects?.[0] as any;
       
       // Destructure to remove projects array from the final response object
-      const { projects, ...candidateRest } = c;
+      const { projects, documents, ...candidateRest } = c as typeof c & {
+        documents?: Array<{ docType: string }>;
+      };
+
+      const withCompletion = withProfileCompletion({
+        ...candidateRest,
+        documents: documents ?? [],
+      });
 
       return {
-        ...candidateRest,
+        ...withCompletion,
         recruiter: activeAssignment?.recruiter || null,
         createdBy: 
           firstStatusChange?.changedBy || 
@@ -4786,6 +5315,7 @@ export class CandidatesService {
                 status: true,
                 template: {
                   select: {
+                    key: true,
                     label: true,
                     order: true,
                   },
@@ -4800,9 +5330,27 @@ export class CandidatesService {
       take: limit,
     });
 
+    const projectsWithSectorSteps = projects.map((row: any) => {
+      if (!row.processing?.processingSteps?.length) {
+        return row;
+      }
+      const sector = row.project?.sector ?? null;
+      const allowed = allowedTemplateKeysForSector(sector);
+      return {
+        ...row,
+        processing: {
+          ...row.processing,
+          processingSteps: row.processing.processingSteps.filter(
+            (s: any) =>
+              s.template?.key && allowed.has(s.template.key) && s.status !== 'cancelled',
+          ),
+        },
+      };
+    });
+
     return {
       candidate: candidateInfo,
-      projects,
+      projects: projectsWithSectorSteps,
       pagination: {
         total: totalProjects,
         page,

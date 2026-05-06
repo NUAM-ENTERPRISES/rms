@@ -32,6 +32,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
@@ -165,7 +166,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get consolidated candidates for project detail view',
     description:
-      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters, with nomination info for the specified project.',
+      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters and Client Coordinators, with nomination info for the specified project.',
   })
   async getConsolidatedCandidates(
     @Query() query: ConsolidatedCandidateQueryDto,
@@ -338,7 +339,12 @@ export class CandidatesController {
     name: 'source',
     required: false,
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agents', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
+  })
+  @ApiQuery({
+    name: 'agentId',
+    required: false,
+    description: 'Filter by specific agent ID',
   })
   @ApiQuery({
     name: 'teamId',
@@ -442,13 +448,20 @@ export class CandidatesController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryCandidatesDto): Promise<{
+  async findAll(
+    @Query() query: QueryCandidatesDto,
+    @Request() req: any,
+  ): Promise<{
     success: boolean;
     data: PaginatedCandidates;
     message: string;
   }> {
     // log incoming query for troubleshooting date filtering
     this.logger.log(`GET /candidates query => ${JSON.stringify(query)}`);
+
+    // Add roles to query for leadership filtering in service
+    const roles = req.user?.roles || [];
+    query.roles = roles;
 
     const result = await this.candidatesService.findAll(query);
     return {
@@ -656,6 +669,33 @@ export class CandidatesController {
       success: true,
       data: result,
       message: 'CRE reassigned candidate list retrieved successfully',
+    };
+  }
+
+  @Get('user-candidates')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get candidates created by the current user',
+    description: 'Retrieve candidates where the current user created the recruiter assignment (i.e., candidates they personally added). Reusable across roles.',
+  })
+  @ApiResponse({ status: 200, description: 'User candidates retrieved successfully' })
+  async getUserCandidates(
+    @Request() req,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search?: string,
+  ) {
+    const userId = req.user.id;
+    const result = await this.candidatesService.getUserCandidates(userId, {
+      page: Number(page),
+      limit: Number(limit),
+      search,
+    });
+
+    return {
+      success: true,
+      data: result,
+      message: 'User candidates retrieved successfully',
     };
   }
 
@@ -1320,6 +1360,40 @@ export class CandidatesController {
       success: true,
       data: result,
       message: 'Candidate transferred successfully',
+    };
+  }
+
+  @Post('bulk-transfer')
+  @Permissions('transfer:candidates')
+  @ApiOperation({
+    summary: 'Bulk transfer candidates to another recruiter',
+    description:
+      'Transfer multiple candidates from their current recruiter to a new recruiter in one operation.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk transfer completed',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid payload',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Target recruiter not found',
+  })
+  async bulkTransferRecruiter(
+    @Body() bulkTransferDto: BulkTransferCandidateDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidatesService.bulkTransferRecruiter(
+      bulkTransferDto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: result.message,
     };
   }
 

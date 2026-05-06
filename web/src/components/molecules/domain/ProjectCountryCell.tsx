@@ -37,7 +37,9 @@ export function ProjectCountryCell({
   className,
   fallbackText = "Not specified",
 }: ProjectCountryCellProps) {
-  const { getCountryName } = useCountryValidation();
+  const { getCountryName } = useCountryValidation({
+    skip: Boolean(propCountryName),
+  });
 
   if (!countryCode) {
     return (

@@ -8,6 +8,8 @@ export type {
   UpdateProjectRequest,
   QueryProjectsRequest,
   PaginatedProjectsResponse,
+  ProjectSummaryListItem,
+  PaginatedProjectSummaryResponse,
   ProjectStats,
 } from "./api";
 

@@ -192,6 +192,10 @@ export default function MultiStepEditProjectPage() {
           "medium",
         projectType:
           (project.projectType as "private" | "ministry") || "private",
+        sector:
+          ((project as any).sector === "healthcare" || (project as any).sector === "non-healthcare")
+            ? ((project as any).sector as "healthcare" | "non-healthcare")
+            : "healthcare",
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,

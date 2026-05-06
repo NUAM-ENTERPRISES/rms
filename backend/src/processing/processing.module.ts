@@ -4,11 +4,10 @@ import { ProcessingService } from './processing.service';
 import { PrismaModule } from '../database/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { HrdRemindersModule } from '../hrd-reminders/hrd-reminders.module';
-import { DataFlowRemindersModule } from '../data-flow-reminders/data-flow-reminders.module';
+import { ProcessingRemindersModule } from '../processing-reminders/processing-reminders.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, NotificationsModule, HrdRemindersModule, DataFlowRemindersModule],
+  imports: [PrismaModule, AuthModule, NotificationsModule, ProcessingRemindersModule],
   controllers: [ProcessingController],
   providers: [ProcessingService],
   exports: [ProcessingService],
