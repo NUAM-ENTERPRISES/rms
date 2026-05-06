@@ -9,9 +9,9 @@ set -euo pipefail
 # ── Config ──────────────────────────────────────────────────────────────────
 APP_NAME="rms-app"
 DEPLOY_DIR="/var/www/rms/backend"
-BUILD_MEM="3072"        # MB allocated to the NestJS build step
+BUILD_MEM="3584"        # MB allocated to the NestJS build step
 MIN_FREE_MEM=300        # MB — warn if available RAM drops below this
-HEALTH_TIMEOUT=30       # seconds to wait for the app to become healthy
+HEALTH_TIMEOUT=60      # seconds to wait for the app to become healthy
 HEALTH_URL="http://localhost:3000/health"
 
 # ── Flags ───────────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ run() {
   if $DRY_RUN; then
     log "[DRY-RUN] $*"
   else
-    eval "$@"
+    "$@"
   fi
 }
 
@@ -74,8 +74,18 @@ log "Deployed commit: $COMMIT"
 log "Flushing PM2 logs..."
 run pm2 flush "$APP_NAME" || true
 
-log "Cleaning Prisma and build caches..."
-run rm -rf node_modules/.prisma node_modules/.cache dist
+log "Cleaning Prisma and npm caches..."
+# Do NOT remove dist/ here — matching the known-good deploy flow: deleting dist/ without also
+# reliably wiping *.tsbuildinfo leaves TypeScript incremental in a state where it exits 0 and
+# emits nothing. The old script kept dist/ across deploys and used dist/src/main.js for PM2.
+run rm -rf node_modules/.prisma node_modules/.cache
+
+# Wipe incremental fingerprints so the next compile always re-checks outputs (safe with dist/ kept).
+if $DRY_RUN; then
+  log "[DRY-RUN] rm -f tsconfig*.tsbuildinfo ./*.tsbuildinfo"
+else
+  rm -f tsconfig.build.tsbuildinfo tsconfig.tsbuildinfo ./*.tsbuildinfo 2>/dev/null || true
+fi
 
 # ── Install dependencies ──────────────────────────────────────────────────────
 log "Installing npm dependencies..."
@@ -104,10 +114,36 @@ fi
 # ── Build ─────────────────────────────────────────────────────────────────────
 log "Building NestJS application..."
 export NODE_OPTIONS="--max-old-space-size=${BUILD_MEM}"
-run npx nest build
+run npm run build
 unset NODE_OPTIONS
 
-[[ -f "dist/main.js" ]] || $DRY_RUN || die "Build artefact dist/main.js not found — build may have failed"
+BACKEND_ENTRY=""
+for candidate in dist/src/main.js dist/main.js; do
+  if [[ -f "$candidate" ]]; then
+    BACKEND_ENTRY="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$BACKEND_ENTRY" ]] && ! $DRY_RUN; then
+  if [[ -d dist ]]; then
+    warn "dist/ contents (first 40 lines):"
+    ls -la dist | head -40
+    warn "main.js under dist (up to 20 paths):"
+    find dist -name main.js -print 2>/dev/null | head -20 || true
+  else
+    warn "dist/ directory missing after build (check nest/tsc errors above)"
+  fi
+  die "Nest build entry not found (tried dist/src/main.js and dist/main.js)"
+fi
+
+if $DRY_RUN && [[ -z "$BACKEND_ENTRY" ]]; then
+  BACKEND_ENTRY="dist/src/main.js"
+fi
+
+if [[ -n "$BACKEND_ENTRY" ]]; then
+  log "Backend entry: $BACKEND_ENTRY"
+fi
 
 # ── Restart PM2 ───────────────────────────────────────────────────────────────
 log "Restarting PM2 process..."
@@ -115,8 +151,9 @@ if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
   run pm2 restart "$APP_NAME" --update-env
 else
   warn "PM2 process '$APP_NAME' not found — starting fresh"
-  run pm2 start dist/main.js \
+  run pm2 start "$BACKEND_ENTRY" \
     --name "$APP_NAME" \
+    -i 2 \
     --update-env \
     --max-memory-restart 800M \
     --log-date-format "YYYY-MM-DD HH:mm:ss"
