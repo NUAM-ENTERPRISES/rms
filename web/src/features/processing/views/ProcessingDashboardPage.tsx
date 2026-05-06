@@ -61,7 +61,9 @@ export default function ProcessingDashboardPage() {
   // Filter States
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
-  const [statusFilter, setStatusFilter] = useState<string | null>("assigned");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "assigned" | "in_progress" | "completed" | "cancelled"
+  >("assigned");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
@@ -88,6 +90,11 @@ export default function ProcessingDashboardPage() {
   const candidates = apiResponse?.data?.candidates || [];
   const pagination = apiResponse?.data?.pagination;
   const counts = apiResponse?.data?.counts;
+  const totalProcessing =
+    (counts?.assigned || 0) +
+    (counts?.in_progress || 0) +
+    (counts?.completed || 0) +
+    (counts?.cancelled || 0);
 
   // Extract roles for selected project
   const rolesForSelectedProject = useMemo(() => {
@@ -126,19 +133,27 @@ export default function ProcessingDashboardPage() {
   const processingTiles: any[] = [
     {
       type: "status",
+      label: "Total Processing",
+      status: "all",
+      icon: ClipboardList,
+      accent: "blue",
+      value: totalProcessing,
+    },
+    {
+      type: "status",
       label: "Ready for Processing",
       status: "assigned",
-      accent: "blue",
       icon: UserCheck,
+      accent: "blue",
       value: counts?.assigned || 0,
     },
-    { type: "step", key: "offer_letter_verified", label: "Offer Letter", accent: "blue" },
-    { type: "step", key: "document_received", label: "Docs Received", accent: "amber" },
-    { type: "step", key: "hrd", label: "HRD", accent: "purple" },
-    { type: "step", key: "data_flow", label: "Data Flow", accent: "rose" },
-    { type: "step", key: "eligibility", label: "Eligibility", accent: "emerald" },
+    { type: "step", key: "offer_letter_verified", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
+    { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+    { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
+    { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
+    { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
     { type: "step", key: "prometric", label: "Licensing Exam", accent: "amber" },
-    { type: "step", key: "council_registration", label: "Council Registration", accent: "emerald" },
+    { type: "step", key: "council_registration", label: "Council", accent: "emerald" },
     { type: "step", key: "document_attestation", label: "Attestation", accent: "blue" },
     { type: "step", key: "medical", label: "Medical", accent: "emerald" },
     { type: "step", key: "biometrics", label: "Biometrics", accent: "blue" },
@@ -168,7 +183,8 @@ export default function ProcessingDashboardPage() {
       setStepFilter(tile.key === stepFilter ? null : tile.key);
       setStatusFilter("all");
     } else {
-      setStatusFilter(tile.status === statusFilter ? "all" : tile.status);
+      setStepFilter(null);
+      setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
       setStepFilter(null);
     }
     setPage(1);
@@ -187,6 +203,7 @@ export default function ProcessingDashboardPage() {
 
   const displayStatus = (status: string) => {
     const labels: Record<string, string> = {
+      "all": "All",
       "assigned": "Ready for Processing",
       "in_progress": "In Progress",
       "completed": "Completed",
@@ -227,20 +244,20 @@ export default function ProcessingDashboardPage() {
           subtitle="Monitor and manage candidate processing workflows"
         />
           
-          {(statusFilter || stepFilter) && (
+          {(stepFilter || (statusFilter && statusFilter !== "all")) && (
             <Badge variant="outline" className="h-8 gap-2 bg-violet-50 text-violet-700 border-violet-200 self-start md:self-center">
-              Filtered by: {stepFilter ? formatStep(stepFilter) : displayStatus(statusFilter || '')}
+              Filtered by: {stepFilter ? formatStep(stepFilter) : displayStatus(statusFilter)}
               <X
                 className="h-3 w-3 cursor-pointer hover:text-rose-500"
                 onClick={() => {
                   setStepFilter(null);
-                  setStatusFilter(null);
+                  setStatusFilter("all");
                 }}
               />
             </Badge>
           )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
@@ -437,15 +454,15 @@ export default function ProcessingDashboardPage() {
               </div>
 
               {/* Active Filters Display */}
-              {(statusFilter || projectFilter !== "all" || roleFilter !== "all") && (
+              {((statusFilter && statusFilter !== "all") || projectFilter !== "all" || roleFilter !== "all") && (
                 <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
                   <span className="text-xs font-semibold text-slate-500">Active:</span>
-                  {statusFilter && (
+                  {(statusFilter && statusFilter !== "all") && (
                     <Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">
                       Status: {displayStatus(statusFilter)}
                       <button 
                         className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => setStatusFilter(null)}
+                        onClick={() => setStatusFilter("all")}
                       >
                         <X className="h-3 w-3" />
                       </button>
