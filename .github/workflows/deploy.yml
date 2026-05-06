@@ -1,3 +1,4 @@
+
 name: Deploy RMS App
 
 on:
@@ -21,7 +22,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.VM_SSH_KEY }}
 
-      - name: Deploy Backend and Frontend
+      - name: Deploy Backend and Web
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
             
@@ -35,7 +36,7 @@ jobs:
               git config core.sparseCheckout true
 
               echo backend/ >> .git/info/sparse-checkout
-              echo frontend/ >> .git/info/sparse-checkout
+              echo web/ >> .git/info/sparse-checkout
 
               git pull origin main
             else
@@ -49,14 +50,16 @@ jobs:
 
             npm install
 
-            pm2 restart backend || pm2 start npm --name backend -- start
+            NODE_OPTIONS='--max-old-space-size=2048' npm run build
+
+            pm2 restart backend || pm2 start dist/main.js --name backend
 
             # =========================
             # Frontend Deployment
             # =========================
-            cd /var/www/rms/frontend
+            cd /var/www/rms/web
 
             npm install
 
-            npm run build
+            NODE_OPTIONS='--max-old-space-size=2048' npm run build
           "
