@@ -25,7 +25,7 @@ import { CompleteScreeningDto } from './dto/complete-screening.dto';
 import { QueryScreeningsDto } from './dto/query-screenings.dto';
 import { QueryAssignedScreeningsDto } from './dto/query-assigned-screenings.dto';
 import { QueryUpcomingScreeningsDto } from './dto/query-upcoming-screenings.dto';
-import { UpdateScreeningTemplateDto } from './dto/update-screening-template.dto';
+import { AssignScreeningTemplateDto } from './dto/assign-screening-template.dto';
 import { QueryScreeningDetailsDto } from './dto/query-screening-details.dto';
 import { QueryScreeningHistoryDto } from './dto/query-screening-history.dto';
 import { UpdateScreeningDecisionDto } from './dto/update-screening-decision.dto';
@@ -388,7 +388,7 @@ export class ScreeningsController {
   @ApiResponse({ status: 200, description: 'Template updated successfully' })
   @ApiResponse({ status: 400, description: 'Cannot change template for completed screening or template role mismatch' })
   @ApiResponse({ status: 404, description: 'Screening or template not found' })
-  updateTemplate(@Param('id') id: string, @Body() body: UpdateScreeningTemplateDto) {
+  updateTemplate(@Param('id') id: string, @Body() body: AssignScreeningTemplateDto) {
     return this.screeningsService.updateTemplate(id, body.templateId);
   }
 

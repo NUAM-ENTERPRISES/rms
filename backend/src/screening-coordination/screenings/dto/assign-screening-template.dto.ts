@@ -1,6 +1,6 @@
 import { IsString } from 'class-validator';
 
-export class UpdateScreeningTemplateDto {
+export class AssignScreeningTemplateDto {
   @IsString()
   templateId!: string;
 }
