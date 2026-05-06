@@ -114,6 +114,7 @@ export type ProjectFormData = z.infer<typeof projectFormSchema>;
 export const defaultProjectValues = {
   priority: "medium" as const,
   projectType: "private" as const,
+  sector: "healthcare" as const,
   resumeEditable: true,
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects
