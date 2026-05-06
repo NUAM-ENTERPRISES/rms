@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
+import { WhatsAppService } from '../notifications/whatsapp.service';
 
 export interface NotificationJobData {
   type: string;
@@ -22,6 +23,7 @@ export class NotificationsProcessor extends WorkerHost {
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly notificationsGateway: NotificationsGateway,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
+    private readonly whatsappService: WhatsAppService,
   ) {
     super();
   }
@@ -85,7 +87,7 @@ export class NotificationsProcessor extends WorkerHost {
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
       }
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process notification ${type}: ${error.message}`,
         error.stack,
@@ -155,7 +157,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Transfer request notifications created for ${recipients.length} recipients`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process transfer request: ${error.message}`,
         error.stack,
@@ -252,7 +254,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate documents verified notification created for recruiter ${recruiter.id}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate documents verified: ${error.message}`,
         error.stack,
@@ -349,7 +351,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate documents rejected notification created for recruiter ${recruiter.id}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate documents rejected: ${error.message}`,
         error.stack,
@@ -467,7 +469,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Document verified notification created for user ${recipientId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process document verified: ${error.message}`,
         error.stack,
@@ -574,7 +576,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Document rejected notification created for user ${recipientId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process document rejected: ${error.message}`,
         error.stack,
@@ -680,7 +682,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Document resubmission requested notification created for user ${recipientId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process document resubmission requested: ${error.message}`,
         error.stack,
@@ -786,7 +788,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Document resubmitted notification created for user ${recipientId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process document resubmitted: ${error.message}`,
         error.stack,
@@ -900,7 +902,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate sent for verification notification created for executive ${assignedToExecutive}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate sent for verification: ${error.message}`,
         error.stack,
@@ -1007,7 +1009,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate assigned notification created for recruiter ${recruiterId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate assigned to recruiter: ${error.message}`,
         error.stack,
@@ -1041,6 +1043,8 @@ export class NotificationsProcessor extends WorkerHost {
             id: true,
             firstName: true,
             lastName: true,
+            mobileNumber: true,
+            countryCode: true,
           },
         }),
         this.prisma.user.findUnique({
@@ -1132,6 +1136,50 @@ export class NotificationsProcessor extends WorkerHost {
         });
       }
 
+      // 1.7 Send WhatsApp notification to the candidate if it's a new assignment
+      if (isNewAssignment && !isCreAssignment) {
+        try {
+          const phoneNumber = this.whatsappService.validatePhoneNumber(
+            candidate.countryCode || '',
+            candidate.mobileNumber || '',
+          );
+
+          if (phoneNumber) {
+            const candidateName = `${candidate.firstName} ${candidate.lastName}`;
+            const recruiterName = newRecruiter?.name || 'our recruiter';
+
+            this.logger.log(
+              `Sending WhatsApp welcome notification to candidate ${candidateId} (${phoneNumber})`,
+            );
+
+            // Send WhatsApp notification (non-blocking)
+            this.whatsappNotificationService
+              .sendCandidateAssigned(candidateName, phoneNumber, recruiterName)
+              .then((result) => {
+                if (result.success) {
+                  this.logger.log(
+                    `WhatsApp welcome message sent successfully to ${phoneNumber}. Message ID: ${result.messageId || 'N/A'}`,
+                  );
+                } else {
+                  this.logger.warn(
+                    `WhatsApp welcome message failed for ${phoneNumber}: ${result.message}`,
+                  );
+                }
+              })
+              .catch((error: any) => {
+                this.logger.error(
+                  `Error sending WhatsApp welcome message to ${phoneNumber}:`,
+                  error.stack,
+                );
+              });
+          }
+        } catch (error: any) {
+          this.logger.error(
+            `Failed to process WhatsApp welcome message for candidate ${candidateId}: ${error.message}`,
+          );
+        }
+      }
+
       // 2. Notify the PREVIOUS recruiter or Handler
       // If moving TO CRE, notify primary with "In CRE Handling"
       // If moving FROM CRE back, notify the CRE of successful handoff
@@ -1185,7 +1233,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate assignment notifications created for candidate ${candidateId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate recruiter assignment: ${error.message}`,
         error.stack,
@@ -1284,7 +1332,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       this.logger.log(`Transfer notifications created for candidate ${candidateId}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate transfer notification: ${error.message}`,
         error.stack,
@@ -1352,7 +1400,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Candidate transferred back notification created for recruiter ${recruiterId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate transfer back: ${error.message}`,
         error.stack,
@@ -1430,7 +1478,7 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.log(`Screening assignment notifications processed`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to handle screening assignment: ${error.message}`,
         error.stack,
@@ -1577,7 +1625,7 @@ export class NotificationsProcessor extends WorkerHost {
         });
 
         this.logger.log(`Notifications created for candidate sent to screening event: ${eventId}`);
-      } catch (error) {
+      } catch (error: any) {
         this.logger.error(`Failed to process candidate sent to screening: ${error.message}`, error.stack);
         throw error;
       }
@@ -1828,7 +1876,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // NOTE: We intentionally avoid notifying the raw coordinatorId (trainer) here.
       // All Interview Coordinator role members are already being notified above.
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate approved for client interview: ${error.message}`,
         error.stack,
@@ -1904,7 +1952,7 @@ export class NotificationsProcessor extends WorkerHost {
         type: "ProcessingSummary",
         message: `Candidate ${candidate.firstName} ${candidate.lastName} assigned to processing`,
       });
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process candidate transfer to processing: ${error.message}`,
         error.stack,
@@ -1968,7 +2016,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       this.logger.log(`Candidate hired notification created for recruiter ${recruiterId}`);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`Failed to process CandidateHired event ${eventId}: ${err?.message || err}`, err?.stack);
       throw err;
     }
@@ -2028,7 +2076,7 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.log(`Ready for processing notifications created for ${targetUsers.length} users`);
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`Failed to process CandidateReadyForProcessing event ${eventId}: ${err?.message || err}`, err?.stack);
       throw err;
     }
@@ -2094,7 +2142,7 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       return { success: true, count: recipients.length };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process documents forwarded notification: ${error.message}`,
         error.stack,
@@ -2229,7 +2277,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // NOTE: We intentionally avoid notifying the raw coordinatorId (trainer) here.
       // All Interview Coordinator role members are already being notified above.
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to process candidate failed screening: ${error.message}`, error.stack);
       throw error;
     }
@@ -2257,7 +2305,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Recruiter notification created for user ${recruiterId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process recruiter notification: ${error.message}`,
         error.stack,
@@ -2288,7 +2336,7 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Documentation notification created for user ${recipientId}`,
       );
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process documentation notification: ${error.message}`,
         error.stack,
@@ -2380,7 +2428,7 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.debug(`DataSync event processed for type: ${type}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `Failed to process DataSync event: ${error.message}`,
         error.stack,

@@ -2,7 +2,8 @@ export const WHATSAPP_TEMPLATE_TYPES = {
     NUAM_ACCOUNT_CREATION_V1: 'num_account_creation_v1',
     HELLO_WORLD: 'hello_world',
     TEST_STATUS: 'test_status',
-    SCREENING_SCHEDULED: 'screening_scheduled_v1'
+    SCREENING_SCHEDULED: 'screening_scheduled_v1',
+    CANDIDATE_ASSIGNED_V1: 'candidate_assigned_v1'
 };
 
 export type WhatsAppTemplateType =

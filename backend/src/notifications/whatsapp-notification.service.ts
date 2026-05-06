@@ -60,4 +60,28 @@ export class WhatsAppNotificationService {
       ],
     });
   }
+
+  /**
+   * Send notification when candidate is first assigned to a recruiter
+   */
+  async sendCandidateAssigned(
+    candidateName: string,
+    phoneNumber: string,
+    recruiterName: string,
+  ): Promise<any> {
+    this.logger.log(`Sending assignment notification to ${phoneNumber}: ${candidateName} assigned to ${recruiterName}`);
+
+    // Template: candidate_assigned_v1
+    // Body: Hi {{1}}, your application has been received and assigned to our recruiter {{2}}. We will contact you soon.
+    
+    return this.whatsappService.sendTemplateMessage({
+      to: phoneNumber,
+      templateName: WHATSAPP_TEMPLATE_TYPES.CANDIDATE_ASSIGNED_V1,
+      languageCode: 'en_US',
+      bodyParameters: [
+        candidateName.split(' ')[0] || candidateName, // {{1}}
+        recruiterName,                                // {{2}}
+      ],
+    });
+  }
 }
