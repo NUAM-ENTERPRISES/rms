@@ -689,10 +689,8 @@ model Interview {
   id                    String             @id @default(cuid())
   scheduledTime         DateTime
   duration              Int                @default(60)
-  type                  String             @default("technical")
   outcome               String?
   notes                 String?
-  interviewer           String?
   location              String?
   airTicket             String?
   accommodation         Boolean            @default(false)

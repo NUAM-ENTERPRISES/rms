@@ -922,14 +922,10 @@ export default function PassedCandidatesPage() {
                       Interview Summary
                     </h3>
                     <div className="space-y-4 overflow-hidden">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm overflow-hidden">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm overflow-hidden">
                         <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg overflow-hidden">
                           <p className="text-muted-foreground text-xs uppercase font-semibold">Final Outcome</p>
                           <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 mt-1">PASSED</Badge>
-                        </div>
-                        <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg">
-                          <p className="text-muted-foreground text-xs uppercase font-semibold">Interview Type</p>
-                          <p className="font-medium capitalize mt-1">{selected.type || "—"}</p>
                         </div>
                         <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-lg">
                           <p className="text-muted-foreground text-xs uppercase font-semibold">Mode</p>

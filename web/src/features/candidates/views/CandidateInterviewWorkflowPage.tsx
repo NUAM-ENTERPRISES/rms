@@ -393,10 +393,10 @@ export default function CandidateInterviewWorkflowPage() {
                                         </div>
                                         <div className="min-w-0">
                                           <p className="text-[12px] font-semibold text-slate-800">
-                                            {i.type || "Client Interview"}
+                                            Client Interview
                                           </p>
                                           <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {i.interviewer || "Client Representative"}
+                                            Client Representative
                                           </p>
                                         </div>
                                       </div>
