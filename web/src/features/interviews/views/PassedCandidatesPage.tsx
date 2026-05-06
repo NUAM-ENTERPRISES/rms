@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useDebounce } from "@/hooks/useDebounce";
 import { getAge } from "@/utils/getAge";
 import {
@@ -21,12 +21,11 @@ import {
   GraduationCap,
   CalendarDays,
   Layers,
-  MapPin,
+  Users,
   Clock,
   ShieldCheck,
   Eye,
   Upload,
-  FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -42,7 +41,6 @@ import { useUpdateInterviewStatusMutation, useUpdateBulkInterviewStatusMutation 
 import { useGetCandidatesToTransferQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { SingleTransferToProcessingModal } from "../components/SingleTransferToProcessingModal";
 import { MultiTransferToProcessingModal } from "../components/MultiTransferToProcessingModal";
 import { ProcessingHistory } from "@/features/processing/components/ProcessingHistory";
@@ -146,8 +144,8 @@ export default function PassedCandidatesPage() {
     [projects, filters.projectId]
   );
 
-  const [updateStatus, { isLoading: isUpdating }] = useUpdateInterviewStatusMutation();
-  const [updateBulkStatus, { isLoading: isBulkUpdating }] = useUpdateBulkInterviewStatusMutation();
+  const [, { isLoading: isUpdating }] = useUpdateInterviewStatusMutation();
+  const [, { isLoading: isBulkUpdating }] = useUpdateBulkInterviewStatusMutation();
 
   const interviews = (data?.data?.interviews ?? []) as any[];
   
@@ -231,6 +229,8 @@ export default function PassedCandidatesPage() {
         candidateId: candidate?.id,
         candidate, // Pass full candidate object for tooltip
         candidateName: `${candidate?.firstName} ${candidate?.lastName}`,
+        agentName: interview.agentName || candidate?.agent?.name,
+        agentType: interview.agentType || candidate?.agent?.agentType,
         recruiterName: interview.candidateProjectMap?.recruiter?.name,
         isOfferLetterUploaded: interview.isOfferLetterUploaded,
         offerLetterData: interview.offerLetterData,
@@ -240,6 +240,8 @@ export default function PassedCandidatesPage() {
       candidateId: string;
       candidate: any;
       candidateName: string;
+      agentName?: string;
+      agentType?: string;
       recruiterName?: string;
       isOfferLetterUploaded?: boolean;
       offerLetterData?: any;
@@ -784,6 +786,60 @@ export default function PassedCandidatesPage() {
                               </div>
                             </div>
                           </div>
+
+                          {(() => {
+                            const agentName =
+                              selected.agentName ||
+                              (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.name ||
+                              "";
+                            const agentType =
+                              selected.agentType ||
+                              (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.agentType ||
+                              "";
+
+                            if (!agentName && !agentType) return null;
+
+                            const typeKey = String(agentType || "").toLowerCase();
+                            const typeBadgeClass =
+                              typeKey === "agency"
+                                ? "bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-200 dark:border-sky-800"
+                                : typeKey === "sub-agent" || typeKey === "sub agent" || typeKey === "subagent"
+                                  ? "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800"
+                                  : typeKey === "freelancer"
+                                    ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800"
+                                    : typeKey === "international partner"
+                                      ? "bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-800"
+                                      : "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/40 dark:text-slate-200 dark:border-slate-800";
+
+                            return (
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="p-2 rounded-full bg-violet-100/70 dark:bg-violet-900/30 shrink-0 ring-1 ring-violet-200 dark:ring-violet-800">
+                                  <Users className="h-4 w-4 text-violet-700 dark:text-violet-300" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-muted-foreground">Agent</p>
+                                  <div className="flex items-center gap-2 min-w-0 mt-1 flex-wrap">
+                                    {agentName ? (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-violet-50 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800 font-bold"
+                                      >
+                                        {agentName}
+                                      </Badge>
+                                    ) : null}
+                                    {agentType ? (
+                                      <Badge
+                                        variant="outline"
+                                        className={cn("font-black uppercase tracking-wide text-[10px]", typeBadgeClass)}
+                                      >
+                                        {agentType}
+                                      </Badge>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                           
                           {((selected.candidateProjectMap?.candidate || selected.candidate)?.qualifications?.length ?? 0) > 0 && (
                             <div className="flex items-start gap-3">
@@ -982,6 +1038,8 @@ export default function PassedCandidatesPage() {
           onClose={() => setTransferModalOpen(false)}
           candidateId={(selected.candidateProjectMap?.candidate || selected.candidate)?.id}
           candidateName={`${(selected.candidateProjectMap?.candidate || selected.candidate)?.firstName} ${(selected.candidateProjectMap?.candidate || selected.candidate)?.lastName}`}
+          agentName={selected.agentName || (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.name}
+          agentType={selected.agentType || (selected.candidateProjectMap?.candidate || selected.candidate)?.agent?.agentType}
           recruiterName={selected.candidateProjectMap?.recruiter?.name}
           projectId={selected.candidateProjectMap?.project?.id || selected.project?.id}
           projectTitle={selectedProjectTitle}

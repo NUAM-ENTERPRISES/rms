@@ -356,6 +356,7 @@ export default function ProcessingAdminDashboardPage() {
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Candidate</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Project & Role</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Recruiter</TableHead>
+                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Agent</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Processing</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Status</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[120px]">Progress</TableHead>
@@ -415,6 +416,19 @@ export default function ProcessingAdminDashboardPage() {
                                                             <span className="text-sm font-medium text-slate-700">
                                                                 {procCandidate.candidateProjectMap?.recruiter?.name || "N/A"}
                                                             </span>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    <TableCell className="py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-medium text-slate-700">
+                                                                {procCandidate.candidate?.agent?.name || "—"}
+                                                            </span>
+                                                            {procCandidate.candidate?.agent?.agentType && (
+                                                                <span className="text-[10px] uppercase tracking-wide text-slate-400 font-bold">
+                                                                    {procCandidate.candidate.agent.agentType}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
 

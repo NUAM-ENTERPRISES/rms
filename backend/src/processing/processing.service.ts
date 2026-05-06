@@ -4022,6 +4022,13 @@ export class ProcessingService {
                   profileImage: true,
                   dateOfBirth: true,
                   gender: true,
+                  agent: {
+                    select: {
+                      id: true,
+                      name: true,
+                      agentType: true,
+                    },
+                  },
                   qualifications: {
                     include: {
                       qualification: true,
@@ -4107,6 +4114,8 @@ export class ProcessingService {
       isTransferredToProcessing: !!itv.candidateProjectMap?.processing,
       offerLetterData: itv.candidateProjectMap?.documentVerifications?.[0] || null,
       isOfferLetterUploaded: (itv.candidateProjectMap?.documentVerifications?.length || 0) > 0,
+      agentName: itv.candidateProjectMap?.candidate?.agent?.name || null,
+      agentType: itv.candidateProjectMap?.candidate?.agent?.agentType || null,
     }));
 
     return {
@@ -4206,6 +4215,13 @@ export class ProcessingService {
               countryCode: true,
               experience: true,
               highestEducation: true,
+              agent: {
+                select: {
+                  id: true,
+                  name: true,
+                  agentType: true,
+                },
+              },
             },
           },
           project: {
@@ -4473,6 +4489,13 @@ export class ProcessingService {
               countryCode: true,
               experience: true,
               highestEducation: true,
+              agent: {
+                select: {
+                  id: true,
+                  name: true,
+                  agentType: true,
+                },
+              },
             },
           },
           project: {
@@ -4828,6 +4851,13 @@ export class ProcessingService {
       include: {
         candidate: {
           include: {
+            agent: {
+              select: {
+                id: true,
+                name: true,
+                agentType: true,
+              },
+            },
             qualifications: {
               include: {
                 qualification: true,

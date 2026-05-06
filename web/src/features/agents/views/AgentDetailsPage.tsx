@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useGetAgentQuery, useGetAgentCandidatesQuery } from "../api";
 import { useDebounce } from "@/hooks";
 import { useCan } from "@/hooks/useCan";
+import { useHasRole } from "@/hooks/useCan";
 import {
   AgentDetailsNotFound,
   AgentDetailsHero,
@@ -20,6 +21,8 @@ export default function AgentDetailsPage() {
   const canEditAgent = useCan("edit:agents");
   const canCreateCandidate = useCan("write:candidates");
   const canEditDeclaredProjects = useCan("write:candidates");
+  const isPrivilegedAdmin = useHasRole(["CEO", "Director", "Manager", "System Admin", "Admin"]);
+  const canCreateCandidateUi = canCreateCandidate && !isPrivilegedAdmin;
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -93,7 +96,7 @@ export default function AgentDetailsPage() {
               onViewCandidate={(candidateId) =>
                 navigate(`/candidates/${candidateId}`)
               }
-              canAddCandidate={canCreateCandidate}
+              canAddCandidate={canCreateCandidateUi}
               onAddCandidate={() =>
                 navigate(`/candidates/create?agentId=${id}`)
               }

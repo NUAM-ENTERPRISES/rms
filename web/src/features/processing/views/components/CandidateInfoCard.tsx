@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   User,
+  Users,
   GraduationCap,
   Briefcase,
   MapPin,
@@ -26,6 +27,11 @@ interface CandidateInfoCardProps {
     currentRole?: string | null;
     highestEducation?: string | null;
     university?: string | null;
+    agent?: {
+      id?: string;
+      name: string;
+      agentType?: string | null;
+    } | null;
     referralCompanyName?: string | null;
     referralCountryCode?: string | null;
     referralEmail?: string | null;
@@ -109,6 +115,22 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
           <InfoItem icon={<MapPin className="h-3 w-3" />} label="Source" value={candidate.source || "N/A"} capitalize />
           <InfoItem icon={<User className="h-3 w-3" />} label="Gender" value={candidate.gender || "N/A"} />
         </div>
+
+        {/* Agent - Compact (show only when agent exists) */}
+        {(candidate.agent?.name || candidate.agent?.agentType) ? (
+          <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+            <div className="flex items-center gap-1 text-slate-400 mb-0.5">
+              <Users className="h-3 w-3" />
+              <span className="text-[10px] font-bold uppercase">Agent</span>
+            </div>
+            <p className="text-xs font-bold text-slate-800 truncate">
+              {candidate.agent?.name || "—"}
+              {candidate.agent?.agentType ? (
+                <span className="text-slate-400"> ({candidate.agent.agentType})</span>
+              ) : null}
+            </p>
+          </div>
+        ) : null}
 
         {/* Contact Info - Compact */}
         <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 space-y-2">

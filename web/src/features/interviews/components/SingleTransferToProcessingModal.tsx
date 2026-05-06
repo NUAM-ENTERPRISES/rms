@@ -32,6 +32,8 @@ interface SingleTransferToProcessingModalProps {
   onClose: () => void;
   candidateId: string;
   candidateName: string;
+  agentName?: string;
+  agentType?: string;
   recruiterName?: string;
   projectId: string;
   projectTitle: string;
@@ -48,6 +50,8 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   onClose,
   candidateId,
   candidateName,
+  agentName,
+  agentType,
   recruiterName,
   projectId,
   projectTitle,
@@ -188,6 +192,15 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
             <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
               <span className="text-muted-foreground">Assigned Recruiter:</span>
               <span className="font-medium">{recruiterName}</span>
+            </div>
+          )}
+          {(agentName || agentType) && (
+            <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-slate-800 text-xs flex justify-between items-center">
+              <span className="text-muted-foreground">Agent:</span>
+              <span className="font-medium">
+                {agentName || "—"}
+                {agentType ? <span className="text-muted-foreground"> ({agentType})</span> : null}
+              </span>
             </div>
           )}
           <div className="grid gap-2">

@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -97,6 +98,7 @@ const STEPS = [
 
 export default function CreateCandidatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canCreateCandidate =
     useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
@@ -190,6 +192,20 @@ export default function CreateCandidatePage() {
       facilityPreferences: [],
     },
   });
+
+  // Preselect agent when coming from Agent screens
+  useEffect(() => {
+    const agentIdFromUrl = searchParams.get("agentId")?.trim() || "";
+    if (!agentIdFromUrl) return;
+
+    // Set only if the form doesn't already have an agentId (avoid clobbering user choice)
+    const currentAgentId = (form.getValues("agentId") || "").trim();
+    if (!currentAgentId) {
+      form.setValue("agentId", agentIdFromUrl, { shouldValidate: true, shouldDirty: true });
+      // Ensure source is agent for this flow (agent-driven creation)
+      form.setValue("source", "agent" as any, { shouldValidate: true, shouldDirty: true });
+    }
+  }, [searchParams, form]);
 
   // Permission check
   if (!canCreateCandidate) {
@@ -543,7 +559,7 @@ export default function CreateCandidatePage() {
         }
 
         toast.success("Candidate created successfully!");
-        navigate("/candidates");
+        navigate(isClientCoordinator ? "/agents" : "/candidates");
       }
     } catch (error: any) {
       console.error("Error creating candidate:", error);

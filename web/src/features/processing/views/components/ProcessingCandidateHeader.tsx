@@ -16,6 +16,10 @@ interface ProcessingCandidateHeaderProps {
     gender?: string;
     totalExperience?: number;
     profileImage?: string | null;
+    agent?: {
+      name: string;
+      agentType?: string | null;
+    } | null;
   };
   project: {
     title: string;
@@ -141,6 +145,17 @@ export function ProcessingCandidateHeader({
         {recruiter && (
           <p className="text-xs text-slate-400 hidden md:block">
             Recruited by <span className="font-bold text-slate-600">{recruiter.name}</span>
+          </p>
+        )}
+        {(candidate.agent?.name || candidate.agent?.agentType) && (
+          <p className="text-xs text-slate-400 hidden md:block">
+            Agent{" "}
+            <span className="font-bold text-slate-600">
+              {candidate.agent?.name || "—"}
+              {candidate.agent?.agentType ? (
+                <span className="text-slate-400"> ({candidate.agent.agentType})</span>
+              ) : null}
+            </span>
           </p>
         )}
         <p className="text-[10px] font-medium text-slate-400">

@@ -279,6 +279,11 @@ export const processingApi = baseApi.injectEndpoints({
           currentRole?: string | null;
           highestEducation?: string | null;
           university?: string | null;
+          agent?: {
+            id: string;
+            name: string;
+            agentType?: string | null;
+          } | null;
           qualifications: Array<{
             id: string;
             candidateId: string;
