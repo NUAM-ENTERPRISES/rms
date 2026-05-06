@@ -6,60 +6,25 @@ on:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.VM_SSH_KEY }}
 
-      - name: Deploy Backend and Web
+      - name: Deploy Application
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "
             
-            mkdir -p /var/www/rms
-            cd /var/www/rms
-
-            if [ ! -d .git ]; then
-              git init
-              git remote add origin https://github.com/NUAM-ENTERPRISES/rms.git
-
-              git config core.sparseCheckout true
-
-              echo backend/ >> .git/info/sparse-checkout
-              echo web/ >> .git/info/sparse-checkout
-
-              git pull origin main
-            else
-              git pull origin main
-            fi
-
-            # =========================
-            # Backend Deployment
-            # =========================
             cd /var/www/rms/backend
 
-            npm install
-
-            NODE_OPTIONS='--max-old-space-size=2048' npm run build
-
-            pm2 restart backend || pm2 start dist/main.js --name backend
-
-            # =========================
-            # Frontend Deployment
-            # =========================
-            cd /var/www/rms/web
-
-            npm install
-
-            NODE_OPTIONS='--max-old-space-size=2048' npm run build
+            ./deploy.sh
           "
