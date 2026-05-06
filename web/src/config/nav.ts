@@ -15,8 +15,6 @@ import {
   BarChart3,
 } from "lucide-react";
 
-
-
 export interface NavItem {
   id: string;
   label: string;
