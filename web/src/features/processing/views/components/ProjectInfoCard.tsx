@@ -32,6 +32,7 @@ interface ProjectInfoCardProps {
     status?: string;
     priority?: string;
     projectType?: string;
+    sector?: string | null;
     resumeEditable?: boolean;
     groomingRequired?: string | null;
     hideContactInfo?: boolean;
@@ -130,6 +131,13 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
     return grooming.charAt(0).toUpperCase() + grooming.slice(1);
   };
 
+  const formatSectorLabel = (sector?: string | null) => {
+    if (!sector) return null;
+    if (sector === "non-healthcare") return "Non-healthcare";
+    if (sector === "healthcare") return "Healthcare";
+    return sector.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   return (
     <Card className="border-0 shadow-xl overflow-hidden bg-white">
       <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-slate-100 py-3">
@@ -181,6 +189,12 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
               
               {/* Project Type & Deadline */}
               <div className="flex flex-wrap gap-2 text-[10px]">
+                {project.sector && formatSectorLabel(project.sector) && (
+                  <span className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-md border border-slate-200">
+                    <HeartPulse className="h-3 w-3 text-rose-500" />
+                    <span className="font-medium">{formatSectorLabel(project.sector)}</span>
+                  </span>
+                )}
                 {project.projectType && (
                   <span className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded-md border border-slate-200">
                     <Target className="h-3 w-3 text-violet-500" />

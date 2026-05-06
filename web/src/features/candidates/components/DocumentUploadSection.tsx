@@ -46,7 +46,7 @@ import { DateUtils } from "@/shared/utils/date";
 const DOCUMENT_TYPES = [
   { value: "passport", label: "Passport", category: "identity" },
   { value: "passport_copy", label: "Passport Copy", category: "identity" },
-  { value: "passport_photo", label: "Passport Size Photo", category: "other" },
+  { value: "passport_photo", label: "Passport Photo", category: "other" },
   { value: "aadhaar", label: "Aadhaar Card", category: "identity" },
   { value: "pan_card", label: "PAN Card", category: "identity" },
   { value: "driving_license", label: "Driving License", category: "identity" },

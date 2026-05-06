@@ -16,6 +16,11 @@ export const PROJECT_PRIORITY = {
   URGENT: "urgent",
 } as const;
 
+export const PROJECT_SECTOR = {
+  HEALTHCARE: "healthcare",
+  NON_HEALTHCARE: "non-healthcare",
+} as const;
+
 export const ROLE_PRIORITY = {
   LOW: "low",
   MEDIUM: "medium",

@@ -288,6 +288,7 @@ model Project {
   countryCode          String?
   projectType          String                @default("private") // "private" or "ministry"
   resumeEditable       Boolean               @default(true) // Whether resume can be edited according to requirements
+  sector               String                @default("healthcare") // "healthcare" or "non-healthcare"
   groomingRequired     String                @default("formal") // "formal", "casual", "not_specified"
   hideContactInfo      Boolean               @default(true) // Hide email and mobile in resume for private projects
   
@@ -688,10 +689,8 @@ model Interview {
   id                    String             @id @default(cuid())
   scheduledTime         DateTime
   duration              Int                @default(60)
-  type                  String             @default("technical")
   outcome               String?
   notes                 String?
-  interviewer           String?
   location              String?
   airTicket             String?
   accommodation         Boolean            @default(false)

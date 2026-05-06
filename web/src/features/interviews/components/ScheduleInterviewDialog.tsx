@@ -27,9 +27,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/molecules";
-import { MapPin, Video, PhoneCall, Plus, Users, FileText, User } from "lucide-react";
+import { MapPin, Video, PhoneCall, Plus, Users } from "lucide-react";
 import { useGetProjectsQuery } from "@/features/projects/api";
 import { useCreateInterviewMutation, useCreateBulkInterviewsMutation } from "../api";
 import { toast } from "sonner";
@@ -42,8 +41,6 @@ const scheduleInterviewSchema = z
       message: "Please select a date and time",
     }),
     mode: z.enum(["video", "phone", "in-person"]),
-    type: z.string().optional(),
-    interviewer: z.string().optional(),
     location: z.string().optional(),
     airTicket: z.enum(["up-and-down", "up-only", "down-only"]).optional(),
     accommodation: z.boolean().optional(),
@@ -104,8 +101,6 @@ export default function ScheduleInterviewDialog({
       candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
       scheduledTime: undefined,
       mode: "video",
-      type: "technical",
-      interviewer: "",
       location: "",
       airTicket: undefined,
       accommodation: false,
@@ -131,8 +126,6 @@ export default function ScheduleInterviewDialog({
         candidateProjectMapIds: initialCandidateProjectMapIds ?? undefined,
         scheduledTime: undefined,
         mode: "video",
-        type: "technical",
-        interviewer: "",
         location: "",
         airTicket: undefined,
         accommodation: false,
@@ -157,8 +150,6 @@ export default function ScheduleInterviewDialog({
           candidateProjectMapId: id,
           scheduledTime: data.scheduledTime.toISOString(),
           mode: data.mode,
-          type: data.type,
-          interviewer: data.interviewer,
           location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
@@ -174,8 +165,6 @@ export default function ScheduleInterviewDialog({
           candidateProjectMapId: data.candidateProjectMapId,
           scheduledTime: data.scheduledTime.toISOString(),
           mode: data.mode,
-          type: data.type,
-          interviewer: data.interviewer,
           location: data.location,
           meetingLink: data.meetingLink,
           notes: data.notes,
@@ -332,54 +321,6 @@ export default function ScheduleInterviewDialog({
                       </SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Interview Type */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-slate-700 font-medium">
-                    <FileText className="h-4 w-4 text-slate-500" />
-                    Interview Type
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="first_round">First Round</SelectItem>
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="final">Final Round</SelectItem>
-                      <SelectItem value="hr">HR Round</SelectItem>
-                      <SelectItem value="client">Client Interview</SelectItem>
-                      <SelectItem value="medical">Medical Check</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Interviewer */}
-            <FormField
-              control={form.control}
-              name="interviewer"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2 text-slate-700 font-medium">
-                    <User className="h-4 w-4 text-slate-500" />
-                    Interviewer Name
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter interviewer name" {...field} className="bg-white" />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

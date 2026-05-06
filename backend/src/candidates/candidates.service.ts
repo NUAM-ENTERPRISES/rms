@@ -29,6 +29,7 @@ import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
@@ -5314,6 +5315,7 @@ export class CandidatesService {
                 status: true,
                 template: {
                   select: {
+                    key: true,
                     label: true,
                     order: true,
                   },
@@ -5328,9 +5330,27 @@ export class CandidatesService {
       take: limit,
     });
 
+    const projectsWithSectorSteps = projects.map((row: any) => {
+      if (!row.processing?.processingSteps?.length) {
+        return row;
+      }
+      const sector = row.project?.sector ?? null;
+      const allowed = allowedTemplateKeysForSector(sector);
+      return {
+        ...row,
+        processing: {
+          ...row.processing,
+          processingSteps: row.processing.processingSteps.filter(
+            (s: any) =>
+              s.template?.key && allowed.has(s.template.key) && s.status !== 'cancelled',
+          ),
+        },
+      };
+    });
+
     return {
       candidate: candidateInfo,
-      projects,
+      projects: projectsWithSectorSteps,
       pagination: {
         total: totalProjects,
         page,

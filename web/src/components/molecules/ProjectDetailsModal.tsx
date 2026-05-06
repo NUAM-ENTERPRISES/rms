@@ -113,6 +113,9 @@ export default function ProjectDetailsModal({
                 <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium">
                   Type: {project.projectType || "Private"}
                 </div>
+                <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium uppercase">
+                  Sector: {project.sector || "Healthcare"}
+                </div>
                 {project.licensingExam && (
                   <div className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-medium border border-orange-200 text-orange-700">
                     License: {project.licensingExam.toUpperCase()}

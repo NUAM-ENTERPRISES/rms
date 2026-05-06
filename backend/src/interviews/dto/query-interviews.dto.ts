@@ -12,15 +12,6 @@ export class QueryInterviewsDto {
   search?: string;
 
   @ApiProperty({
-    description: 'Filter by interview type',
-    enum: ['technical', 'hr', 'managerial', 'final'],
-    required: false,
-  })
-  @IsEnum(['technical', 'hr', 'managerial', 'final'])
-  @IsOptional()
-  type?: string;
-
-  @ApiProperty({
     description: 'Filter by interview mode',
     enum: ['video', 'phone', 'in-person'],
     required: false,
