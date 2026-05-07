@@ -19,12 +19,10 @@ import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCan, useHasRole } from "@/hooks/useCan";
@@ -48,6 +46,19 @@ export default function AgentsPage() {
   /** Create API uses write:candidates; CreateCandidatePage also checks manage:candidates */
   const canCreateCandidate =
     useCan("write:candidates") || useCan("manage:candidates");
+  // Temporarily hide Add Candidate for admin/manager roles (UI only).
+  const isAddCandidateRestrictedRole = (user?.roles ?? []).some((role) => {
+    const normalized = String(role).trim().toLowerCase();
+    return (
+      normalized === "admin" ||
+      normalized === "manager" ||
+      normalized === "system admin" ||
+      // In RMS, "admin" users often come through as CEO/Director roles.
+      normalized === "ceo" ||
+      normalized === "director"
+    );
+  });
+  const canCreateCandidateUi = canCreateCandidate && !isAddCandidateRestrictedRole;
   const canWriteCandidates = useCan("write:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
@@ -292,7 +303,7 @@ export default function AgentsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {activeFilter === "with-candidates" && canCreateCandidate && (
+                  {activeFilter === "with-candidates" && canCreateCandidateUi && (
                     <Button
                       type="button"
                       onClick={() => navigate("/candidates/create")}
@@ -302,7 +313,7 @@ export default function AgentsPage() {
                       <UserPlus className="h-3.5 w-3.5" /> Add Candidate
                     </Button>
                   )}
-                  {canWrite && !(activeFilter === "with-candidates" && canCreateCandidate) && (
+                  {canWrite && !(activeFilter === "with-candidates" && canCreateCandidateUi) && (
                     <Button
                       type="button"
                       onClick={() => setIsModalOpen(true)}
