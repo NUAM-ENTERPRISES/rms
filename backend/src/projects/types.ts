@@ -120,5 +120,6 @@ export interface ProjectStats {
       name: string;
     };
   };
+  urgentProjectsCount: number;
   upcomingDeadlines: ProjectWithRelations[];
 }

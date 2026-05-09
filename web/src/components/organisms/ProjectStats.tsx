@@ -50,7 +50,7 @@ export default function ProjectStats({
     },
     {
       label: "Urgent Deadlines",
-      value: stats.upcomingDeadlines.length,
+      value: stats.urgentProjectsCount ?? stats.upcomingDeadlines.length,
       subtitle: "This week",
       icon: AlertTriangle,
       accent: "orange",

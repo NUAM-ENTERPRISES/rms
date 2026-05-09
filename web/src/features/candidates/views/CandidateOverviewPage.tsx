@@ -657,10 +657,6 @@ export default function CandidateOverviewPage() {
                         const statusName = candidate.currentStatus?.statusName ?? "";
                         const statusInfo = getStatusInfo(statusName);
                         const StatusIcon = statusInfo.icon;
-                        
-                        // NEW: Determine display status based on project sub status if available
-                        const projectSubStatus = candidate.projectDetails?.subStatus;
-                        const displayStatus = projectSubStatus || statusName;
 
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
@@ -810,7 +806,7 @@ export default function CandidateOverviewPage() {
                                   variant="outline"
                                   className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
                                 >
-                                  {displayStatus || "Unknown"}
+                                  {statusName || "Unknown"}
                                 </Badge>
                               </div>
                             )}
