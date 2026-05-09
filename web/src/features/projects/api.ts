@@ -329,6 +329,7 @@ export interface ProjectStats {
   projectsByClient: {
     [clientId: string]: number;
   };
+  urgentProjectsCount?: number;
   upcomingDeadlines: Project[];
 }
 

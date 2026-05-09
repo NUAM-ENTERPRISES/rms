@@ -2108,6 +2108,20 @@ export class ProjectsService {
       {} as { [clientId: string]: { count: number; name: string } },
     );
 
+    // Get urgent projects count (next 7 days)
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    
+    const urgentProjectsCount = await this.prisma.project.count({
+      where: {
+        deadline: {
+          gte: new Date(),
+          lte: sevenDaysFromNow,
+        },
+        status: 'active',
+      },
+    });
+
     // Get upcoming deadlines (next 30 days)
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
@@ -2156,6 +2170,7 @@ export class ProjectsService {
       cancelledProjects,
       projectsByStatus,
       projectsByClient,
+      urgentProjectsCount,
       upcomingDeadlines,
     };
   }
