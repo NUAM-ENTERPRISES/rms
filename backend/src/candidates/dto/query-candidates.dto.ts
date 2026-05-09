@@ -217,7 +217,7 @@ export class QueryCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by language proficiency',
-    example: 'English',
+    example: 'Professional',
   })
   @IsOptional()
   @IsString()

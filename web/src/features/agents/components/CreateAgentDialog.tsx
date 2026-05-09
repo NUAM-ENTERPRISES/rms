@@ -116,7 +116,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="create-agent-company">Agency/Company Name</Label>
+                <Label htmlFor="create-agent-company">Agency/Organization Name</Label>
                 <Input
                   id="create-agent-company"
                   value={formData.companyName}

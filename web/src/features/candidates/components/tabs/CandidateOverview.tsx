@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import {
   User,
   Mail,
@@ -769,57 +768,64 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                   {/* Work Experience Column */}
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800">
-                        <Briefcase className="h-5 w-5 text-emerald-600" />
-                        Work Experience
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        {canWriteCandidates && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openAddModal("workExperience")}
-                            className="h-8 flex items-center gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add
-                          </Button>
-                        )}
+                    {/* Section Header */}
+                    <div className="flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-emerald-100 rounded-xl">
+                          <Briefcase className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold text-slate-800 leading-tight">Work Experience</h3>
+                          {workExperiences.length > 0 && (
+                            <p className="text-[11px] text-slate-400 font-medium">
+                              {workExperiences.length} position{workExperiences.length !== 1 ? "s" : ""}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      {canWriteCandidates && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAddModal("workExperience")}
+                          className="h-8 gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:border-emerald-300 font-semibold text-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add Experience
+                        </Button>
+                      )}
                     </div>
 
                     {workExperiences.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Total Experience Summary */}
-                        <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-emerald-100 p-2 rounded-lg">
-                              <Briefcase className="h-5 w-5 text-emerald-600" />
-                            </div>
+                      <div className="space-y-3">
+                        {/* Total Experience Banner */}
+                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200/50">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
+                          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
+                          <div className="relative flex items-center justify-between">
                             <div>
-                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Experience</p>
-                              <p className="text-xl font-bold text-slate-900">
+                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Experience</p>
+                              <p className="text-2xl font-extrabold tracking-tight">
                                 {(() => {
                                   const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
                                   return DateUtils.formatDuration(years, months);
                                 })()}
                               </p>
                             </div>
-                          </div>
-                          <div className="text-right">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Positions</p>
-                             <p className="text-xl font-bold text-slate-700">{workExperiences.length}</p>
+                            <div className="text-right">
+                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Positions</p>
+                              <p className="text-2xl font-extrabold">{workExperiences.length}</p>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="relative space-y-4 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[1.5px] before:bg-slate-100">
-                        {pagedWorkExperiences.map((exp) => {
+                        {/* Experience Cards */}
+                        <div className="space-y-3">
+                        {pagedWorkExperiences.map((exp, idx) => {
                           const duration = DateUtils.calculateDuration(exp.startDate, exp.endDate, exp.isCurrent);
                           const expDocs = (workExperienceDocs ?? []).filter(
                             (d) => d.workExperienceId === exp.id
                           );
-                          const primaryDoc = expDocs[0];
                           const fallbackEmploymentDocs = (workExperienceDocs ?? []).filter(
                             (d) =>
                               !d.workExperienceId &&
@@ -830,221 +836,230 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 d.docType === DOCUMENT_TYPE.APPOINTMENT_LETTER)
                           );
                           const fallbackPrimaryDoc = fallbackEmploymentDocs[0];
+
+                          // Generate company initials for avatar
+                          const companyInitials = (exp.companyName || "?")
+                            .split(" ")
+                            .slice(0, 2)
+                            .map((w: string) => w[0]?.toUpperCase() ?? "")
+                            .join("");
+
+                          const avatarColors = [
+                            "from-blue-500 to-indigo-600",
+                            "from-purple-500 to-violet-600",
+                            "from-rose-500 to-pink-600",
+                            "from-amber-500 to-orange-600",
+                            "from-teal-500 to-cyan-600",
+                          ];
+                          const avatarColor = avatarColors[idx % avatarColors.length];
+
                           return (
                           <div
                             key={exp.id}
-                            className="group relative ml-8 bg-white border border-slate-200 rounded-xl p-4 transition-all hover:border-emerald-300 hover:shadow-md hover:shadow-emerald-100/20"
+                            className="group relative bg-white border border-slate-200/80 rounded-2xl overflow-hidden transition-all duration-200 hover:border-emerald-300/70 hover:shadow-lg hover:shadow-emerald-100/30"
                           >
-                            {/* Timeline dot */}
-                            <div className="absolute -left-[27px] top-6 w-3 h-3 rounded-full border-2 border-emerald-500 bg-white z-10 group-hover:bg-emerald-500 transition-colors" />
-                            
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-bold text-slate-900">
-                                    {exp.jobTitle}
-                                  </h4>
-                                  {exp.isCurrent && (
-                                    <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] h-4 px-1.5 shadow-none">
-                                      Current
-                                    </Badge>
-                                  )}
-                                  <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-medium border-slate-200 text-slate-500">
-                                    {DateUtils.formatDuration(duration.years, duration.months)}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-emerald-700 font-semibold mt-0.5">
-                                  {exp.companyName || "N/A"}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    const docToPreview = primaryDoc ?? fallbackPrimaryDoc;
-                                    if (!docToPreview) {
-                                      toast.error("No experience document available to preview.");
-                                      return;
-                                    }
-                                    const isPdf =
-                                      docToPreview.mimeType === "application/pdf" ||
-                                      docToPreview.fileUrl?.toLowerCase().includes(".pdf") ||
-                                      docToPreview.fileName?.toLowerCase().endsWith(".pdf");
-                                    setPreviewDoc({
-                                      fileUrl: docToPreview.fileUrl,
-                                      fileName: docToPreview.fileName,
-                                      isPdf: !!isPdf,
-                                    });
-                                  }}
-                                  disabled={!primaryDoc && !fallbackPrimaryDoc}
-                                  className={
-                                    primaryDoc || fallbackPrimaryDoc
-                                      ? "h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                      : "h-7 w-7 text-slate-300 hover:text-slate-400 hover:bg-slate-50"
-                                  }
-                                  aria-label="View experience documents"
-                                  title={
-                                    primaryDoc
-                                      ? `View experience documents (${expDocs.length})`
-                                      : fallbackPrimaryDoc
-                                      ? "View available experience document (not linked)"
-                                      : "No linked experience documents"
-                                  }
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </Button>
-                                {expDocs.length > 0 && (
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px] h-5 px-1.5 border-blue-200 text-blue-700 bg-blue-50"
-                                    title={`${expDocs.length} linked document(s)`}
-                                  >
-                                    {expDocs.length}
-                                  </Badge>
-                                )}
-                              {canWriteCandidates && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openEditModal("workExperience", exp)}
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  {onDeleteWorkExperience && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => onDeleteWorkExperience(exp.id)}
-                                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-red-500 hover:text-red-600 hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
-                                </>
-                              )}
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3 text-[11px] text-slate-500 font-medium">
-                              <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
-                                <Calendar className="h-3 w-3 text-slate-400" />
-                                {formatDate(exp.startDate)} –{" "}
-                                {exp.isCurrent
-                                  ? "Present"
-                                  : exp.endDate
-                                  ? formatDate(exp.endDate)
-                                  : "Ongoing"}
-                              </span>
-                              {exp.location && (
-                                <span className="flex items-center gap-1.5">
-                                  <MapPin className="h-3 w-3 text-slate-400" /> {exp.location}
-                                </span>
-                              )}
-                              {exp.salary && (
-                                <span className="flex items-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">
-                                  <IndianRupee className="h-2.5 w-2.5" />
-                                  {formatCurrency(exp.salary)}
-                                </span>
-                              )}
-                            </div>
-                            {exp.description && (
-                              <div className="mt-3 pt-3 border-t border-slate-50">
-                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed italic">
-                                  "{exp.description}"
-                                </p>
-                              </div>
+                            {/* Top accent bar */}
+                            {exp.isCurrent && (
+                              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-indigo-500" />
                             )}
 
-                            {/* Work experience documents */}
-                            {expDocs.length > 0 ? (
-                              <div className="mt-3 pt-3 border-t border-slate-100">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                  <FileText className="h-3 w-3" />
-                                  Experience Documents
-                                </p>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {expDocs.map((doc) => {
-                                    const cfg =
-                                      DOCUMENT_TYPE_CONFIG[
-                                        doc.docType as keyof typeof DOCUMENT_TYPE_CONFIG
-                                      ];
-                                    const isPdf =
-                                      doc.mimeType === "application/pdf" ||
-                                      doc.fileUrl?.toLowerCase().includes(".pdf") ||
-                                      doc.fileName?.toLowerCase().endsWith(".pdf");
-                                    return (
-                                      <button
-                                        key={doc.id}
-                                        type="button"
-                                        onClick={() =>
-                                          setPreviewDoc({
-                                            fileUrl: doc.fileUrl,
-                                            fileName: doc.fileName,
-                                            isPdf: !!isPdf,
-                                          })
-                                        }
-                                        className="group w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs hover:border-blue-300 hover:bg-blue-50/40 transition-all cursor-pointer shadow-sm hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                                        aria-label={`View ${doc.docName ? `${doc.docName} - ` : ""}${cfg?.displayName ?? doc.docType}`}
-                                        title={`${doc.docName ? `${doc.docName} : ` : ""}${cfg?.displayName ?? doc.docType}`}
-                                      >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
-                                            <FileText className="h-3.5 w-3.5 text-blue-600" />
-                                          </div>
-                                          <div className="min-w-0">
-                                            <div className="truncate font-semibold text-slate-900">
-                                              {doc.docName || cfg?.displayName || doc.docType}
-                                            </div>
-                                            <div className="mt-1 flex items-center gap-1.5">
-                                              {doc.docName ? (
-                                                <Badge
-                                                  variant="outline"
-                                                  className="h-4 px-1.5 text-[10px] border-slate-200 text-slate-500 bg-white"
-                                                >
-                                                  {cfg?.displayName ?? doc.docType}
-                                                </Badge>
-                                              ) : null}
-                                              <span className="text-[10px] text-slate-400 truncate">
-                                                {doc.fileName}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <div className="hidden sm:flex items-center gap-1 text-blue-600/80 group-hover:text-blue-700 transition-colors shrink-0">
-                                          <Eye className="h-3.5 w-3.5" />
-                                          <span className="text-[10px] font-semibold uppercase tracking-wide">
-                                            View
-                                          </span>
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
+                            <div className="p-4">
+                              {/* Header row */}
+                              <div className="flex items-start gap-3">
+                                {/* Company avatar */}
+                                <div className={`shrink-0 h-11 w-11 rounded-xl bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white font-bold text-sm shadow-md`}>
+                                  {companyInitials}
+                                </div>
+
+                                {/* Title & Company */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <h4 className="font-bold text-slate-900 text-sm leading-tight truncate">
+                                        {exp.jobTitle}
+                                      </h4>
+                                      <p className="text-sm text-slate-500 font-medium mt-0.5 truncate">
+                                        {exp.companyName || <span className="italic text-slate-400">Organization not specified</span>}
+                                      </p>
+                                    </div>
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-0.5 shrink-0">
+                                      {canWriteCandidates && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => openEditModal("workExperience", exp)}
+                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                                            title="Edit"
+                                          >
+                                            <Edit className="h-3.5 w-3.5" />
+                                          </Button>
+                                          {onDeleteWorkExperience && (
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => onDeleteWorkExperience(exp.id)}
+                                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-all text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                              title="Delete"
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5" />
+                                            </Button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Badges row */}
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                                    {exp.isCurrent && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                        Current
+                                      </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
+                                      <Clock className="h-2.5 w-2.5" />
+                                      {DateUtils.formatDuration(duration.years, duration.months)}
+                                    </span>
+
+                                  </div>
                                 </div>
                               </div>
-                            ) : null}
+
+                              {/* Meta info row */}
+                              <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3 ml-14">
+                                <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                  <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
+                                  {formatDate(exp.startDate)} — {exp.isCurrent ? "Present" : exp.endDate ? formatDate(exp.endDate) : "Ongoing"}
+                                </span>
+                                {exp.location && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                    <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
+                                    {exp.location}
+                                  </span>
+                                )}
+                                {exp.salary && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-bold">
+                                    <IndianRupee className="h-3 w-3 shrink-0" />
+                                    {formatCurrency(exp.salary)}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Description */}
+                              {exp.description && (
+                                <div className="mt-3 ml-14">
+                                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                                    {exp.description}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Achievements */}
+                              {exp.achievements && (
+                                <div className="mt-3 ml-14 px-3 py-2 bg-amber-50/80 border border-amber-100 rounded-xl">
+                                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Key Achievement</p>
+                                  <p className="text-xs text-amber-900 leading-relaxed line-clamp-2">{exp.achievements}</p>
+                                </div>
+                              )}
+
+                              {/* Skills */}
+                              {Array.isArray(exp.skills) && exp.skills.length > 0 && (
+                                <div className="mt-3 ml-14 flex flex-wrap gap-1">
+                                  {exp.skills.slice(0, 6).map((skill: string) => (
+                                    <span
+                                      key={skill}
+                                      className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-full border border-slate-200"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {exp.skills.length > 6 && (
+                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-semibold rounded-full border border-slate-200">
+                                      +{exp.skills.length - 6} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Experience Documents */}
+                              {expDocs.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-100">
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5 ml-14">
+                                    <FileText className="h-3 w-3" />
+                                    Experience Documents ({expDocs.length})
+                                  </p>
+                                  <div className="ml-14 flex flex-wrap gap-2">
+                                    {expDocs.map((doc) => {
+                                      const cfg = DOCUMENT_TYPE_CONFIG[doc.docType as keyof typeof DOCUMENT_TYPE_CONFIG];
+                                      const isPdf =
+                                        doc.mimeType === "application/pdf" ||
+                                        doc.fileUrl?.toLowerCase().includes(".pdf") ||
+                                        doc.fileName?.toLowerCase().endsWith(".pdf");
+                                      return (
+                                        <button
+                                          key={doc.id}
+                                          type="button"
+                                          onClick={() =>
+                                            setPreviewDoc({
+                                              fileUrl: doc.fileUrl,
+                                              fileName: doc.fileName,
+                                              isPdf: !!isPdf,
+                                            })
+                                          }
+                                          className="group/doc flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold hover:bg-blue-100 hover:border-blue-300 transition-all cursor-pointer focus:outline-none"
+                                          title={`${doc.docName ? `${doc.docName} : ` : ""}${cfg?.displayName ?? doc.docType}`}
+                                        >
+                                          <FileText className="h-3 w-3 shrink-0" />
+                                          <span className="truncate max-w-[120px]">
+                                            {doc.docName || cfg?.displayName || doc.docType}
+                                          </span>
+                                          <Eye className="h-3 w-3 shrink-0 opacity-60 group-hover/doc:opacity-100" />
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* No linked docs — show preview from fallback */}
+                              {expDocs.length === 0 && fallbackPrimaryDoc && (
+                                <div className="mt-3 pt-3 border-t border-slate-100 ml-14">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const isPdf =
+                                        fallbackPrimaryDoc.mimeType === "application/pdf" ||
+                                        fallbackPrimaryDoc.fileUrl?.toLowerCase().includes(".pdf") ||
+                                        fallbackPrimaryDoc.fileName?.toLowerCase().endsWith(".pdf");
+                                      setPreviewDoc({
+                                        fileUrl: fallbackPrimaryDoc.fileUrl,
+                                        fileName: fallbackPrimaryDoc.fileName,
+                                        isPdf: !!isPdf,
+                                      });
+                                    }}
+                                    className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                    View available experience document
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           );
                         })}
                         </div>
-                        {workExperiences.length > workExperienceLimit ? (
-                          <div className="flex flex-col gap-2 pt-1">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>
-                                Showing{" "}
-                                {(workExperiencePage - 1) * workExperienceLimit + 1}–
-                                {Math.min(
-                                  workExperiencePage * workExperienceLimit,
-                                  workExperiences.length
-                                )}{" "}
-                                of {workExperiences.length}
-                              </span>
-                              <span>
-                                Page {workExperiencePage} of {workExperiencesTotalPages}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-end gap-2">
+
+                        {/* Pagination */}
+                        {workExperiences.length > workExperienceLimit && (
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {(workExperiencePage - 1) * workExperienceLimit + 1}–{Math.min(workExperiencePage * workExperienceLimit, workExperiences.length)} of {workExperiences.length}
+                            </span>
+                            <div className="flex items-center gap-2">
                               <Select
                                 value={String(workExperienceLimit)}
                                 onValueChange={(v) => {
@@ -1052,7 +1067,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   setWorkExperiencePage(1);
                                 }}
                               >
-                                <SelectTrigger className="h-8 w-[110px]">
+                                <SelectTrigger className="h-7 w-[90px] text-xs">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1068,10 +1083,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-2"
-                                  onClick={() =>
-                                    setWorkExperiencePage((p) => Math.max(1, p - 1))
-                                  }
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => setWorkExperiencePage((p) => Math.max(1, p - 1))}
                                   disabled={workExperiencePage <= 1}
                                 >
                                   Prev
@@ -1080,12 +1093,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="h-8 px-2"
-                                  onClick={() =>
-                                    setWorkExperiencePage((p) =>
-                                      Math.min(workExperiencesTotalPages, p + 1)
-                                    )
-                                  }
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => setWorkExperiencePage((p) => Math.min(workExperiencesTotalPages, p + 1))}
                                   disabled={workExperiencePage >= workExperiencesTotalPages}
                                 >
                                   Next
@@ -1093,13 +1102,26 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                               </div>
                             </div>
                           </div>
-                        ) : null}
+                        )}
                       </div>
                     ) : (
-                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                        <p className="text-sm text-slate-500 italic">
-                          No work experience added.
-                        </p>
+                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+                        <div className="p-3 bg-slate-100 rounded-2xl mb-3">
+                          <Briefcase className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-500 mb-1">No work experience added</p>
+                        <p className="text-[11px] text-slate-400">Add positions to build the work history</p>
+                        {canWriteCandidates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAddModal("workExperience")}
+                            className="mt-4 h-8 gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 text-xs font-semibold"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add First Experience
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>

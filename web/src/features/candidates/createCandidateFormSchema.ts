@@ -3,6 +3,7 @@ import {
   CANDIDATE_SOURCES,
   SKIN_TONES,
   SMARTNESS_LEVELS,
+  LANGUAGE_PROFICIENCY_LEVELS,
 } from "@/constants/candidate-constants";
 
 const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
@@ -39,16 +40,24 @@ export const createCandidateSchema = z
     sectorType: z.string().optional(),
     visaType: z.string().optional(),
     height: z.preprocess(
-      (val) => (val === "" ? undefined : Number(val)),
+      (val) => {
+        if (val === "" || val === undefined || val === null) return undefined;
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      },
       z.number().optional()
     ),
     weight: z.preprocess(
-      (val) => (val === "" ? undefined : Number(val)),
+      (val) => {
+        if (val === "" || val === undefined || val === null) return undefined;
+        const num = Number(val);
+        return isNaN(num) ? undefined : num;
+      },
       z.number().optional()
     ),
-    skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional(),
-    languageProficiency: z.string().optional(),
-    smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional(),
+    skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional().or(z.literal("")),
+    languageProficiency: z.enum([...LANGUAGE_PROFICIENCY_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
+    smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
     licensingExam: z.string().optional(),
     dataFlow: z.boolean().optional().default(false),
     eligibility: z.boolean().optional().default(false),
@@ -95,16 +104,6 @@ export const createCandidateSchema = z
         code: z.ZodIssueCode.custom,
         message: "Select an agent",
         path: ["agentId"],
-      });
-    }
-    if (
-      data.source === "referral" &&
-      (!data.referralCompanyName || data.referralCompanyName.trim() === "")
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Referral company name is required when source is referral",
-        path: ["referralCompanyName"],
       });
     }
   })

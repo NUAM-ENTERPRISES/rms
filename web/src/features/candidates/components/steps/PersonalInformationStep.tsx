@@ -30,7 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetAgentProjectsQuery } from "@/features/agents/api";
 import { useDebounce } from "@/hooks";
-import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES } from "@/constants/candidate-constants";
+import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
 import {
   User,
@@ -829,12 +829,22 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                 name="languageProficiency"
                 control={control}
                 render={({ field }) => (
-                  <Input
-                    {...field}
-                    id="languageProficiency"
-                    placeholder="English (Fluent), Arabic (Basic)"
-                    className="h-11 bg-white border-slate-200"
-                  />
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select language proficiency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGE_PROFICIENCY_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
             </div>

@@ -2875,6 +2875,10 @@ export class CandidatesService {
       agents: 0,
       hospital_visit: 0,
       expo_event: 0,
+      job_board: 0,
+      social_media: 0,
+      direct_application: 0,
+      internal: 0,
     };
 
     candidatesBySourceData.forEach((item) => {

@@ -24,7 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Ruler, Weight, Sparkles, Languages, Brain, Save, X } from "lucide-react";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { toast } from "sonner";
-import { SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
+import { SKIN_TONES, SMARTNESS_LEVELS, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
 
 const physicalInfoSchema = z.object({
   height: z.number().min(0).optional(),
@@ -210,13 +210,22 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                 name="languageProficiency"
                 control={control}
                 render={({ field }) => (
-                  <Input
-                    {...field}
-                    id="languageProficiency"
-                    placeholder="English (Fluent), Arabic (Basic)"
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
                     disabled={isLoading}
-                    className="h-11 bg-white border-slate-200"
-                  />
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select language proficiency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGE_PROFICIENCY_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>
+                          {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
               />
             </div>

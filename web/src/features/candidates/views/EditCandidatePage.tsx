@@ -794,7 +794,7 @@ export default function EditCandidatePage() {
                           htmlFor="referralCompanyName"
                           className="text-slate-700 font-medium"
                         >
-                          Referral Company Name *
+                          Referral Organization Name *
                         </FormLabel>
                         <Input
                           id="referralCompanyName"

@@ -15,13 +15,6 @@ import { Label as FormLabel } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Building2,
   Briefcase,
   Calendar,
@@ -34,15 +27,15 @@ import {
 
 // Validation schema for work experience
 const workExperienceSchema = z.object({
-  companyName: z.string().min(2, "Company name is required").max(200),
+  companyName: z.string().max(200).optional().or(z.literal("")),
   jobTitle: z.string().min(2, "Job title is required").max(100),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),
-  isCurrent: z.boolean().default(false),
+  isCurrent: z.boolean(),
   description: z.string().max(1000).optional(),
   salary: z.number().min(0).optional(),
   location: z.string().max(200).optional(),
-  skills: z.array(z.string()).default([]),
+  skills: z.array(z.string()),
   achievements: z.string().max(500).optional(),
 });
 
@@ -120,13 +113,13 @@ export function WorkExperienceForm({
       <CardContent>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Company Name */}
+            {/* Organization Name */}
             <div className="space-y-2">
               <FormLabel
                 htmlFor="companyName"
                 className="text-slate-700 font-medium"
               >
-                Company Name *
+                Organization Name
               </FormLabel>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

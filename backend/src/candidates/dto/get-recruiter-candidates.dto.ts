@@ -53,7 +53,7 @@ export class GetRecruiterCandidatesDto {
 
   @ApiPropertyOptional({
     description: 'Filter by source',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
     example: 'manual',
   })
   @IsOptional()
