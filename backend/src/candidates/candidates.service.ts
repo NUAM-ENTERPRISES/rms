@@ -4678,19 +4678,6 @@ export class CandidatesService {
           },
           orderBy: { createdAt: 'asc' },
         },
-        statusHistories: {
-          include: {
-            changedBy: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: { statusUpdatedAt: 'asc' },
-          take: 1,
-        },
         documents: {
           where: { isDeleted: false },
           select: { docType: true },
@@ -4704,7 +4691,6 @@ export class CandidatesService {
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
-      const firstStatusChange = (c as any).statusHistories?.[0]; // Use status history as a reliable creator source
       const latestProject = c.projects?.[0] as any;
       
       // Destructure to remove projects array from the final response object
@@ -4720,10 +4706,9 @@ export class CandidatesService {
       return {
         ...withCompletion,
         recruiter: activeAssignment?.recruiter || null,
-        createdBy: 
-          firstStatusChange?.changedBy || 
-          firstAssignment?.createdByUser || 
-          firstAssignment?.assignedByUser || 
+        createdBy:
+          firstAssignment?.createdByUser ||
+          firstAssignment?.assignedByUser ||
           null,
         projectDetails: latestProject
           ? {
