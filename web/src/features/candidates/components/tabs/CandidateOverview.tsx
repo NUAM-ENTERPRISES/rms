@@ -758,10 +758,23 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         ) : null}
                       </div>
                     ) : (
-                      <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
-                        <p className="text-sm text-slate-500 italic">
-                          No educational qualifications added.
-                        </p>
+                      <div className="flex flex-col items-center justify-center py-10 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50">
+                        <div className="p-3 bg-slate-100 rounded-2xl mb-3">
+                          <GraduationCap className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-500 mb-1">No educational qualifications added</p>
+                        <p className="text-[11px] text-slate-400">Add degrees to build the education history</p>
+                        {canWriteCandidates && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAddModal("qualification")}
+                            className="mt-4 h-8 gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 text-xs font-semibold"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add First Qualification
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
