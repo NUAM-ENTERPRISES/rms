@@ -239,11 +239,11 @@ export default function CreateCandidatePage() {
       "source",
       "agentId",
       "gender",
-      "referralCompanyName",
-      "referralEmail",
-      "referralCountryCode",
-      "referralPhone",
-      "referralDescription"
+      "height",
+      "weight",
+      "skinTone",
+      "smartness",
+      "languageProficiency",
     ];
     const isValid = await form.trigger(step1Fields as any);
     

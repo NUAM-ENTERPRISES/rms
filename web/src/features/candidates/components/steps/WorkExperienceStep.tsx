@@ -192,7 +192,6 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
   const addWorkExperience = () => {
     if (
-      newWorkExperience.companyName &&
       newWorkExperience.jobTitle &&
       newWorkExperience.startDate
     ) {
@@ -220,7 +219,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       setNewSkill("");
     } else {
       toast.error(
-        "Please fill in the required fields (Company, Job Title, and Start Date) to add this work experience entry."
+        "Please fill in the required fields (Job Title and Start Date) to add this work experience entry."
       );
     }
   };
@@ -492,7 +491,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
 
               <div className="space-y-2">
                 <Label className="text-slate-700 font-medium">
-                  Company Name *
+                  Organization Name
                 </Label>
                 <Input
                   value={newWorkExperience.companyName}

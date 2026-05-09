@@ -374,7 +374,7 @@ export function AdvancedFiltersSheet({
 
               <div className="grid grid-cols-1 gap-2 mt-2">
                 <div>
-                  <label className="text-[9px] font-bold uppercase text-gray-500">Hospital/Company Name</label>
+                  <label className="text-[9px] font-bold uppercase text-gray-500">Hospital/Organization Name</label>
                   <Input
                     value={localFilters.workExperienceCompany ?? ''}
                     onChange={(e) => setLocalFilters(f => ({ ...f, workExperienceCompany: e.target.value, page: 1 }))}

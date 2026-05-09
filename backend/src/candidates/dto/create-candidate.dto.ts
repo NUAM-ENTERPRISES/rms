@@ -107,7 +107,7 @@ export class CreateCandidateDto {
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',
-    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event'],
+    enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
     default: 'manual',
   })
   @IsOptional()
@@ -120,6 +120,10 @@ export class CreateCandidateDto {
     'agent',
     'hospital_visit',
     'expo_event',
+    'job_board',
+    'social_media',
+    'direct_application',
+    'internal',
   ])
   source?: string = 'manual';
 
@@ -324,10 +328,12 @@ export class CreateCandidateDto {
 
   @ApiPropertyOptional({
     description: 'Candidate language proficiency',
-    example: 'English - Fluent, Arabic - Basic',
+    example: 'Professional',
+    enum: ['Basic', 'Conversational', 'Professional', 'Native'],
   })
   @IsOptional()
   @IsString()
+  @IsEnum(['Basic', 'Conversational', 'Professional', 'Native'])
   languageProficiency?: string;
 
   @ApiPropertyOptional({
@@ -561,13 +567,13 @@ export class CandidateQualificationDto {
 
 // DTO for work experiences during candidate creation (no candidateId needed)
 export class CandidateWorkExperienceDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Company name',
     example: 'City General Hospital',
-    minLength: 2,
   })
+  @IsOptional()
   @IsString()
-  companyName!: string;
+  companyName?: string;
 
   @ApiProperty({
     description: 'Job title/position',

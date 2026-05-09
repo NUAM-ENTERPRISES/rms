@@ -532,7 +532,7 @@ export default function QualificationWorkExperienceModal({
         if (!open) handleClose();
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl max-h-[75vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {type === "qualification" ? (
@@ -824,9 +824,9 @@ export default function QualificationWorkExperienceModal({
                 )}
               </div>
 
-              {/* Company Name */}
+              {/* Organization Name */}
               <div className="space-y-2">
-                <Label htmlFor="companyName">Hospital Name</Label>
+                <Label htmlFor="companyName">Organization Name</Label>
                 <Input
                   {...workExperienceForm.register("companyName")}
                   placeholder="ABC Hospital"

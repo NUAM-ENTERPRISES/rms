@@ -68,6 +68,13 @@ export const SMARTNESS_LEVELS = [
   "Below Average",
 ] as const;
 
+export const LANGUAGE_PROFICIENCY_LEVELS = [
+  "Basic",
+  "Conversational",
+  "Professional",
+  "Native",
+] as const;
+
 export const CANDIDATE_SOURCES = [
   { id: 'manual', value: 'manual', label: 'Manual' },
   { id: 'meta', value: 'meta', label: 'Meta' },
