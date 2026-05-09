@@ -1065,15 +1065,7 @@ export default function ProjectDetailPage() {
                       <Edit className="h-3.5 w-3.5 mr-1.5" />
                       Edit
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="font-semibold h-9 text-xs shadow-sm hover:shadow-md transition-all"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                      Delete
-                    </Button>
+                   
                   </>
                 )}
               </div>
