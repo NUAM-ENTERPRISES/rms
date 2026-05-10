@@ -231,6 +231,33 @@ export async function seedSystemConfig() {
     },
   });
 
+  // Session Monitoring Settings
+  const sessionSettings = {
+    activityThrottleMinutes: 5,
+    idleThresholdMinutes: 15,
+    adminSessionPollingSeconds: 60,
+    maxSessionDurationHours: 24,
+    breakAutoResetMinutes: 30,
+    heartbeatEnabled: true,
+    realtimeSessionUpdatesEnabled: true,
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'SESSION_SETTINGS' },
+    update: {
+      value: sessionSettings,
+      description: 'Session monitoring and activity tracking configuration',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'SESSION_SETTINGS',
+      value: sessionSettings,
+      description: 'Session monitoring and activity tracking configuration',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);

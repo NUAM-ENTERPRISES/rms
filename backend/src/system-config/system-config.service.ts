@@ -90,6 +90,38 @@ export class SystemConfigService {
   }
 
   /**
+   * Get Session Monitoring Settings
+   */
+  async getSessionConfig(): Promise<SessionConfig> {
+    const config = await this.getConfig('SESSION_SETTINGS');
+    if (!config) {
+      return this.getDefaultSessionConfig();
+    }
+    return { ...this.getDefaultSessionConfig(), ...config } as SessionConfig;
+  }
+
+  async updateSessionConfig(settings: Partial<SessionConfig>): Promise<void> {
+    const current = await this.getSessionConfig();
+    await this.setConfig(
+      'SESSION_SETTINGS',
+      { ...current, ...settings },
+      'Session monitoring configuration',
+    );
+  }
+
+  private getDefaultSessionConfig(): SessionConfig {
+    return {
+      activityThrottleMinutes: 5,
+      idleThresholdMinutes: 15,
+      adminSessionPollingSeconds: 60,
+      maxSessionDurationHours: 24,
+      breakAutoResetMinutes: 30,
+      heartbeatEnabled: true,
+      realtimeSessionUpdatesEnabled: true,
+    };
+  }
+
+  /**
    * Get RNR (Ring Not Response) Settings
    */
   async getRNRSettings(): Promise<RNRSettings> {
@@ -409,4 +441,21 @@ export type MedicalSettings = ProcessingStepSettings;
 export type BiometricSettings = ProcessingStepSettings;
 export type EmigrationSettings = ProcessingStepSettings;
 export type DocumentReceivedSettings = ProcessingStepSettings;
+
+export interface SessionConfig {
+  /** How often (in minutes) the client should send an activity ping. Default: 5 */
+  activityThrottleMinutes: number;
+  /** Minutes of inactivity before a session is considered idle. Default: 15 */
+  idleThresholdMinutes: number;
+  /** How often (in seconds) the admin monitoring page polls for updates. Default: 60 */
+  adminSessionPollingSeconds: number;
+  /** Maximum session duration in hours before stale-session cleanup ends it. Default: 24 */
+  maxSessionDurationHours: number;
+  /** Minutes on break before auto-resetting availability to ACTIVE. Default: 30 */
+  breakAutoResetMinutes: number;
+  /** Master switch — disable all heartbeat pings when false. Default: true */
+  heartbeatEnabled: boolean;
+  /** Master switch — disable session:updated socket emissions when false. Default: true */
+  realtimeSessionUpdatesEnabled: boolean;
+}
  

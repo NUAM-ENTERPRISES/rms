@@ -252,6 +252,8 @@ export default function SessionsMonitoringPage() {
   } = useGetAdminSessionsQuery(queryArgs, {
     refetchOnFocus: true,
     refetchOnReconnect: true,
+    pollingInterval: 60_000,
+    skipPollingIfUnfocused: true,
   });
 
   // Keep tile counts stable: respect role/search but ignore status + pagination.
@@ -275,6 +277,8 @@ export default function SessionsMonitoringPage() {
   } = useGetAdminSessionsQuery(countsQueryArgs, {
     refetchOnFocus: true,
     refetchOnReconnect: true,
+    pollingInterval: 60_000,
+    skipPollingIfUnfocused: true,
   });
 
   const sessions = data?.data ?? [];
@@ -905,14 +909,21 @@ export default function SessionsMonitoringPage() {
                           })}
                         </TableCell>
 
-                        {/* Last activity */}
-                        <TableCell className="py-3 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                          {session.lastActivityAt
-                            ? formatDistanceToNow(
+                        {/* Last activity — "last seen X ago" for better admin UX */}
+                        <TableCell className="py-3 whitespace-nowrap">
+                          {session.lastActivityAt ? (
+                            <span
+                              className="text-xs text-slate-500 dark:text-slate-400"
+                              title={new Date(session.lastActivityAt).toLocaleString()}
+                            >
+                              {formatDistanceToNow(
                                 new Date(session.lastActivityAt),
                                 { addSuffix: true }
-                              )
-                            : "—"}
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
+                          )}
                         </TableCell>
 
                         {/* Status (reflects break / on-call from session availability) */}

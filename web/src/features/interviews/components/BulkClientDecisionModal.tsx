@@ -135,7 +135,7 @@ export function BulkClientDecisionModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 py-4 space-y-4 overflow-hidden flex flex-col">
+        <div className="flex-1 py-4 gap-4 overflow-hidden flex flex-col">
           {/* Quick Actions */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground font-medium">Quick actions:</span>

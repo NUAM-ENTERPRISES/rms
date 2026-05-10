@@ -422,10 +422,8 @@ export const usersApi = baseApi.injectEndpoints({
         }
         return { url: `/users/sessions/admin?${searchParams.toString()}`, method: 'GET' };
       },
-      providesTags: ['User'],
+      providesTags: ['AdminSessions'],
     }),
-
-    // Admin: idle sessions summary for header notification
     getAdminIdleSessionsSummary: builder.query<
       AdminIdleSessionsSummaryResponse,
       { role?: string; search?: string; limit?: number } | void
@@ -435,7 +433,7 @@ export const usersApi = baseApi.injectEndpoints({
         method: 'GET',
         params: params || undefined,
       }),
-      providesTags: ['User'],
+      providesTags: ['AdminSessions'],
     }),
 
   }),

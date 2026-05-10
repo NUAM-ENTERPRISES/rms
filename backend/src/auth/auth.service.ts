@@ -17,6 +17,7 @@ import { OtpService } from 'src/otp/otp.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
@@ -79,6 +80,7 @@ export class AuthService {
     private configService: ConfigService,
     private auditService: AuditService,
     private otpService: OtpService,
+    private notificationsGateway: NotificationsGateway,
   ) { }
 
   async validateUser(
@@ -275,6 +277,11 @@ export class AuthService {
         where: { id: sessionId, userId },
         data: { isActive: false },
       });
+
+      // Notify admin monitoring page of session end
+      this.notificationsGateway
+        .broadcastToAdmins('session:updated', { type: 'session_ended', userId, sessionId })
+        .catch(() => {/* non-critical */});
     }
 
     if (userId) {
@@ -771,6 +778,12 @@ export class AuthService {
         isActive: true,
       },
     });
+
+    // Notify admin monitoring page of new session
+    this.notificationsGateway
+      .broadcastToAdmins('session:updated', { type: 'session_created', userId, sessionId: session.id })
+      .catch(() => {/* non-critical */});
+
     return session.id;
   }
 

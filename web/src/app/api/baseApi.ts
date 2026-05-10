@@ -56,6 +56,8 @@ export const baseApi = createApi({
     "RecruiterDocuments",
     "RecruiterAnalytics",
     "Agent",
+    // Session monitoring — dedicated tag to prevent unrelated page refetches
+    "AdminSessions",
   ],
   endpoints: () => ({}),
 });
