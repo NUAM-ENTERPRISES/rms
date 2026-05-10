@@ -32,7 +32,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
           <RNRReminderBadge />
           {/* Processing team unified badge */}
           <ProcessingRemindersBadge />
-          <SessionAvailabilityToggles />
+          {/* <SessionAvailabilityToggles /> */}
           <IdleUsersNotification />
           <NotificationBell />
           <UserMenu />
