@@ -994,10 +994,20 @@ export class UsersService {
   }
 
   async updateSessionActivity(sessionId: string) {
-    await (this.prisma as any).userSession.update({
+    const session = await (this.prisma as any).userSession.update({
       where: { id: sessionId },
       data: { lastActivityAt: new Date() },
+      select: { userId: true },
     });
+
+    // Notify admins so the monitoring page updates in real-time
+    this.notificationsGateway
+      .broadcastToAdmins('session:updated', {
+        type: 'availability_changed',
+        userId: session.userId,
+        sessionId,
+      })
+      .catch(() => {/* non-critical */});
   }
 
   async getLatestActiveSessionId(userId: string) {
