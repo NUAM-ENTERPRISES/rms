@@ -23,17 +23,33 @@ import {
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 
-const IDLE_THRESHOLD_MS = 15 * 60 * 1000;
+/** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
+const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class UsersService {
+  private idleThresholdMs = DEFAULT_IDLE_THRESHOLD_MS;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
     private readonly uploadService: UploadService,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
+
+  async onModuleInit() {
+    try {
+      const config = await this.systemConfigService.getSessionConfig();
+      this.idleThresholdMs = config.idleThresholdMinutes * 60 * 1000;
+    } catch {
+      // keep default
+    }
+  }
 
   async setSessionAvailability(
     sessionId: string,
@@ -61,6 +77,16 @@ export class UsersService {
         availabilityUpdatedAt: new Date(),
       },
     });
+
+    // Notify admins of the availability change in real-time
+    this.notificationsGateway
+      .broadcastToAdmins('session:updated', {
+        type: 'availability_changed',
+        userId,
+        sessionId,
+        availability,
+      })
+      .catch(() => {/* non-critical */});
 
     return { availability };
   }
@@ -761,7 +787,7 @@ export class UsersService {
       const availability = s.availability ?? SessionAvailability.ACTIVE;
       const timeIdle =
         lastActivityAt instanceof Date &&
-        Date.now() - lastActivityAt.getTime() > IDLE_THRESHOLD_MS;
+        Date.now() - lastActivityAt.getTime() > this.idleThresholdMs;
       const isIdle =
         s.isActive &&
         timeIdle &&
@@ -929,7 +955,7 @@ export class UsersService {
         const availability = s.availability ?? SessionAvailability.ACTIVE;
         const timeIdle =
           lastActivityAt instanceof Date &&
-          Date.now() - lastActivityAt.getTime() > IDLE_THRESHOLD_MS;
+          Date.now() - lastActivityAt.getTime() > this.idleThresholdMs;
         const isIdle =
           s.isActive &&
           timeIdle &&

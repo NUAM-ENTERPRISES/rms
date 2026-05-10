@@ -131,7 +131,6 @@ export default function ShortlistedCandidatesPage() {
         schedules.map((s) => ({
           candidateProjectMapId: s.candidateProjectMapId,
           scheduledTime: s.scheduledTime.toISOString(),
-          duration: s.duration,
           mode: s.mode,
           meetingLink: s.meetingLink,
           notes: s.notes,

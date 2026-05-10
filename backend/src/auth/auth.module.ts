@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -17,12 +17,14 @@ import { TeamScopeGuard } from './rbac/team-scope.guard';
 import { ServerTimingInterceptor } from '../common/interceptors/server-timing.interceptor';
 import { OtpService } from 'src/otp/otp.service';
 import { OtpModule } from 'src/otp/otp.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     OtpModule,
     PassportModule,
     PrismaModule,
+    forwardRef(() => NotificationsModule),
     AuditModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

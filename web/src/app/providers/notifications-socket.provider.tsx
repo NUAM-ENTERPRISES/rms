@@ -12,6 +12,7 @@ import { handleScreeningNotifications, handleScreeningSync } from "./notificatio
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
 import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
 import { handleProcessingNotifications, handleProcessingSync } from "./notification-handlers/processing-handler";
+import { handleSessionUpdated, type SessionEventPayload } from "./notification-handlers/session-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -20,6 +21,8 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   const dispatch = useAppDispatch();
   const { accessToken, user } = useAppSelector((state) => state.auth);
   const muted = useAppSelector((state) => state.notificationSettings?.muted);
+  // Debounce timer for session:updated events — collapses rapid bursts into one refetch
+  const sessionInvalidateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // keep slice in sync with server setting on login
   const { data: settings } = notificationsApi.useGetSettingsQuery(undefined, {
@@ -300,8 +303,23 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       dispatch(baseApi.util.invalidateTags([{ type: "Interview", id: "LIST" }]));
     });
 
+    // Session monitoring — debounced to prevent refetch storms on rapid events
+    socket.on("session:updated", (payload: SessionEventPayload) => {
+      if (sessionInvalidateTimerRef.current) {
+        clearTimeout(sessionInvalidateTimerRef.current);
+      }
+      sessionInvalidateTimerRef.current = setTimeout(() => {
+        handleSessionUpdated(payload, dispatch);
+        sessionInvalidateTimerRef.current = null;
+      }, 400);
+    });
+
     return () => {
       console.log("[Socket] Cleaning up...");
+      if (sessionInvalidateTimerRef.current) {
+        clearTimeout(sessionInvalidateTimerRef.current);
+        sessionInvalidateTimerRef.current = null;
+      }
       socket.disconnect();
       socketRef.current = null;
     };

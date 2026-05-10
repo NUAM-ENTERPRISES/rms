@@ -1,4 +1,4 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
 import { SystemConfigService } from './system-config.service';
 import { SystemConfigController } from './system-config.controller';
 import { PrismaService } from '../database/prisma.service';
@@ -6,7 +6,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Global() // Make it available everywhere
 @Module({
-  imports: [AuthModule],
+  imports: [forwardRef(() => AuthModule)],
   controllers: [SystemConfigController],
   providers: [SystemConfigService, PrismaService],
   exports: [SystemConfigService],

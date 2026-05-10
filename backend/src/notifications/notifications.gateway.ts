@@ -7,10 +7,11 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../database/prisma.service';
 
 @WebSocketGateway({
   cors: {
@@ -24,14 +25,20 @@ export class NotificationsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   private readonly logger = new Logger(NotificationsGateway.name);
   private readonly connectedUsers = new Map<string, string>(); // userId -> socketId
 
+  /** Roles that should join the 'admins' socket room for session monitoring events */
+  private static readonly ADMIN_ROLES = new Set([
+    'CEO', 'Manager',  'System Admin',
+  ]);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async handleConnection(client: Socket) {
@@ -65,6 +72,24 @@ export class NotificationsGateway
       // Join user to their personal room
       await client.join(`user:${userId}`);
 
+      // Join admin room if user has an admin role (for session monitoring events)
+      try {
+        const userRoles = await this.prisma.userRole.findMany({
+          where: { userId },
+          select: { role: { select: { name: true } } },
+        });
+        const roleNames = userRoles.map((ur: any) => ur.role?.name).filter(Boolean);
+        const isAdmin = roleNames.some((name: string) =>
+          NotificationsGateway.ADMIN_ROLES.has(name),
+        );
+        if (isAdmin) {
+          await client.join('admins');
+          this.logger.debug(`User ${userId} joined admin room (roles: ${roleNames.join(', ')})`);
+        }
+      } catch (roleError: any) {
+        this.logger.warn(`Could not determine admin roles for user ${userId}: ${(roleError as any)?.message ?? roleError}`);
+      }
+
       // Track connected user
       this.connectedUsers.set(client.id, userId);
 
@@ -72,10 +97,10 @@ export class NotificationsGateway
 
       // Send connection confirmation
       client.emit('connected', { userId, timestamp: new Date().toISOString() });
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Connection error for socket ${client.id}: ${error.message}`,
-        error.stack,
+        `Connection error for socket ${client.id}: ${(error as any)?.message ?? error}`,
+        (error as any)?.stack,
       );
       client.disconnect();
     }
@@ -102,10 +127,10 @@ export class NotificationsGateway
     try {
       this.server.to(`user:${userId}`).emit(event, data);
       this.logger.debug(`Emitted ${event} to user ${userId}`);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to emit to user ${userId}: ${error.message}`,
-        error.stack,
+        `Failed to emit to user ${userId}: ${(error as any)?.message ?? error}`,
+        (error as any)?.stack,
       );
     }
   }
@@ -122,10 +147,10 @@ export class NotificationsGateway
       for (const userId of userIds) {
         await this.emitToUser(userId, event, data);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to emit to users: ${error.message}`,
-        error.stack,
+        `Failed to emit to users: ${(error as any)?.message ?? error}`,
+        (error as any)?.stack,
       );
     }
   }
@@ -137,10 +162,26 @@ export class NotificationsGateway
     try {
       this.server.emit(event, data);
       this.logger.debug(`Broadcasting ${event} to all users`);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Failed to broadcast event ${event}: ${error.message}`,
-        error.stack,
+        `Failed to broadcast event ${event}: ${(error as any)?.message ?? error}`,
+        (error as any)?.stack,
+      );
+    }
+  }
+
+  /**
+   * Emit an event only to connected users in the 'admins' room.
+   * Use this for session monitoring events to avoid unnecessary traffic for normal users.
+   */
+  async broadcastToAdmins(event: string, data: any): Promise<void> {
+    try {
+      this.server.to('admins').emit(event, data);
+      this.logger.debug(`Emitted ${event} to admins room`);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to emit ${event} to admins: ${(error as any)?.message ?? error}`,
+        (error as any)?.stack,
       );
     }
   }
