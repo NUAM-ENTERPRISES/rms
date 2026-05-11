@@ -325,6 +325,7 @@ export interface ApprovedScreeningItem {
 // Item returned by the assigned-mock-interviews endpoint
 export interface AssignedScreeningItem {
   id: string; // candidateProject id
+  screeningId?: string | null; // latest screening id for this candidateProject (if exists)
   candidate: {
     id: string;
     firstName: string;
