@@ -13,7 +13,7 @@ import { AuditService } from '../common/audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { randomBytes, Verify } from 'crypto';
 import { SendLoginOtpDto } from './dto/send-login-otp.dto';
-import { OtpService } from 'src/otp/otp.service';
+import { OtpService } from '../otp/otp.service';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -225,20 +225,27 @@ export class AuthService {
     // Rotate within a transaction
     const next = await this.rotateInTx(row);
 
-    // Find the active session for this token and update its refreshTokenId to the new one
+    // Find the active session for this token and update its refreshTokenId to the new one.
+    // If none exists (legacy / data drift), create one so the access token always carries `sid`
+    // and session activity pings can resolve the row.
     const session = await (this.prisma as any).userSession.findFirst({
       where: { refreshTokenId: row.id, isActive: true },
     });
+
+    let accessSessionId: string;
     if (session) {
       await (this.prisma as any).userSession.update({
         where: { id: session.id },
         data: { refreshTokenId: next.id },
       });
+      accessSessionId = session.id;
+    } else {
+      accessSessionId = await this.createSession(row.userId, next.id, undefined);
     }
 
     const accessToken = this.issueAccess(
       { id: row.userId, email: row.user.email },
-      session?.id,
+      accessSessionId,
     );
     return {
       accessToken,
@@ -708,20 +715,28 @@ export class AuthService {
     // Rotate the token
     const next = await this.rotateInTx(matchedToken);
 
-    // Find the active session for this token and update its refreshTokenId to the new one
     const session = await (this.prisma as any).userSession.findFirst({
       where: { refreshTokenId: matchedToken.id, isActive: true },
     });
+
+    let accessSessionId: string;
     if (session) {
       await (this.prisma as any).userSession.update({
         where: { id: session.id },
         data: { refreshTokenId: next.id },
       });
+      accessSessionId = session.id;
+    } else {
+      accessSessionId = await this.createSession(
+        matchedToken.userId,
+        next.id,
+        undefined,
+      );
     }
 
     const accessToken = this.issueAccess(
       { id: matchedToken.userId, email: matchedToken.user.email },
-      session?.id,
+      accessSessionId,
     );
 
     return {

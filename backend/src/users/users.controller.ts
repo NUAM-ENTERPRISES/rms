@@ -38,6 +38,7 @@ import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilit
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { SkipAudit } from '../common/audit/skip-audit.decorator';
 import { UserWithRoles, PaginatedUsers } from './types';
 
 @ApiTags('Users')
@@ -308,6 +309,7 @@ export class UsersController {
   }
 
   @Put('profile/session/activity')
+  @SkipAudit()
   @ApiOperation({
     summary: 'Update current session activity',
     description:
@@ -317,15 +319,20 @@ export class UsersController {
     status: 200,
     description: 'Session activity updated successfully',
   })
-  @ApiResponse({ status: 400, description: 'Current session not available' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async updateCurrentSessionActivity(@Request() req) {
     const currentSessionId =
-      req.user.sid ||
-      (await this.usersService.getLatestActiveSessionId(req.user.id));
+      await this.usersService.resolveActiveSessionIdForActivity(
+        req.user.id,
+        req.user.sid ?? null,
+      );
 
     if (!currentSessionId) {
-      throw new BadRequestException('Current session not available');
+      return {
+        success: true,
+        data: null,
+        message: 'No active login session to update',
+      };
     }
 
     await this.usersService.updateSessionActivity(currentSessionId);
@@ -353,8 +360,10 @@ export class UsersController {
     @Body() dto: SetSessionAvailabilityDto,
   ) {
     const currentSessionId =
-      req.user.sid ||
-      (await this.usersService.getLatestActiveSessionId(req.user.id));
+      await this.usersService.resolveActiveSessionIdForActivity(
+        req.user.id,
+        req.user.sid ?? null,
+      );
 
     if (!currentSessionId) {
       throw new BadRequestException('Current session not available');
