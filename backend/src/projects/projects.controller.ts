@@ -43,7 +43,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
-  @Permissions('manage:projects')
+  @Permissions('manage:projects', 'write:projects')
   @ApiOperation({
     summary: 'Create a new project',
     description:
@@ -560,7 +560,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  @Permissions('manage:projects')
+  @Permissions('manage:projects', 'write:projects')
   @ApiOperation({
     summary: 'Update project',
     description:

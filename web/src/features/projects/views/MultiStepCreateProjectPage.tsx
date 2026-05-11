@@ -53,7 +53,7 @@ const STEPS = [
 
 export default function MultiStepCreateProjectPage() {
   const navigate = useNavigate();
-  const canCreateProjects = useCan("manage:projects");
+  const canCreateProjects = useCan(["manage:projects", "write:projects"]);
   const [currentStep, setCurrentStep] = useState(0);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
 

@@ -43,7 +43,7 @@ import {
 
 export default function CreateProjectPage() {
   const navigate = useNavigate();
-  const canCreateProjects = useCan("manage:projects");
+  const canCreateProjects = useCan(["manage:projects", "write:projects"]);
 
   // State for create client modal
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);

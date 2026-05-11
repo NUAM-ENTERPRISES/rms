@@ -11,12 +11,13 @@ import ProjectGrid from "@/components/organisms/ProjectGrid";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { Project } from "@/features/projects";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const canReadProjects = useCan("read:projects");
+  const canCreateProject = useCan(["manage:projects", "write:projects"]);
   const { user } = useAppSelector((state) => state.auth);
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
@@ -195,11 +196,27 @@ export default function ProjectsPage() {
                   {getActiveFilterLabel()}
                 </h2>
               </div>
-              {projectsData?.data && (
-                <span className="text-sm text-slate-500">
-                  {projectsData.data.pagination.total} {projectsData.data.pagination.total === 1 ? 'project' : 'projects'}
-                </span>
-              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                {projectsData?.data && (
+                  <span className="text-sm text-slate-500">
+                    {projectsData.data.pagination.total}{" "}
+                    {projectsData.data.pagination.total === 1
+                      ? "project"
+                      : "projects"}
+                  </span>
+                )}
+                {canCreateProject && (
+                  <Button
+                    type="button"
+                    onClick={() => navigate("/projects/create")}
+                    className="gap-2"
+                    aria-label="Create new project"
+                  >
+                    <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                    Add Project
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="p-6">
               <ProjectGrid
