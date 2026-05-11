@@ -1023,6 +1023,26 @@ export class UsersService {
     return session?.id ?? null;
   }
 
+  /**
+   * Prefer JWT `sid` when it still matches an active row for this user; otherwise fall back
+   * to the most recently active session. Avoids 400s when `sid` is stale or missing.
+   */
+  async resolveActiveSessionIdForActivity(
+    userId: string,
+    jwtSessionId: string | null | undefined,
+  ): Promise<string | null> {
+    if (jwtSessionId) {
+      const match = await (this.prisma as any).userSession.findFirst({
+        where: { id: jwtSessionId, userId, isActive: true },
+        select: { id: true },
+      });
+      if (match) {
+        return match.id;
+      }
+    }
+    return this.getLatestActiveSessionId(userId);
+  }
+
   private async getUserStats(userId: string) {
     // Get candidates assigned to this user (if they're a recruiter)
     const candidatesManaged = await this.prisma.candidateProjects.count({
