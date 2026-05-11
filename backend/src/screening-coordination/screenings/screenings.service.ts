@@ -1872,9 +1872,10 @@ export class ScreeningsService {
         }
       }
 
-      // Clean up internal relation and return enriched item
+      // Clean up internal relation and return enriched item (expose screeningId for FE navigation)
       const { screenings, ...rest } = it;
-      return { ...rest, candidate, trainer };
+      const screeningId = screenings?.[0]?.id ?? null;
+      return { ...rest, candidate, trainer, screeningId };
     }));
 
     return {

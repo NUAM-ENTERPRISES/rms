@@ -353,6 +353,7 @@ export default function ScreeningsDashboardPage() {
       .filter((it: any) => it.assignedAt)
       .map((it: any) => ({
         id: it.id,
+        screeningId: it.screeningId ?? null,
         candidate: it.candidate,
         project: it.project,
         roleNeeded: it.roleNeeded,
@@ -710,11 +711,19 @@ export default function ScreeningsDashboardPage() {
                         activeTile === "training_scheduled" ||
                         activeTile === "training_completed";
 
-                      const targetScreeningsUrl = activeTile === "scheduled"
-                        ? `/screenings/${item.id}/conduct`
-                        : isTrainingTile
-                        ? `/screenings/${item.id}?scrollTo=training`
-                        : `/screenings/${item.id}`;
+                      // For the "assigned" tile, item.id is the candidateProjectMap id — use
+                      // screeningId (the latest screening for this map) when navigating.
+                      const resolvedScreeningId = activeTile === "assigned"
+                        ? (item.screeningId ?? null)
+                        : item.id;
+
+                      const targetScreeningsUrl = resolvedScreeningId
+                        ? activeTile === "scheduled"
+                          ? `/screenings/${resolvedScreeningId}/conduct`
+                          : isTrainingTile
+                          ? `/screenings/${resolvedScreeningId}?scrollTo=training`
+                          : `/screenings/${resolvedScreeningId}`
+                        : null;
 
                       return (
                         <TableRow key={item.id} className="border-b border-gray-100 hover:bg-gray-50/70 transition-colors last:border-b-0">
@@ -742,9 +751,12 @@ export default function ScreeningsDashboardPage() {
                               <div className="flex-1">
                                 <button
                                   onClick={() => {
-                                    navigate(targetScreeningsUrl);
+                                    if (targetScreeningsUrl) navigate(targetScreeningsUrl);
                                   }}
-                                  className="font-semibold text-gray-900 hover:text-indigo-600 hover:underline transition-all duration-200 text-left text-sm"
+                                  className={cn(
+                                    "font-semibold text-gray-900 transition-all duration-200 text-left text-sm",
+                                    targetScreeningsUrl ? "hover:text-indigo-600 hover:underline cursor-pointer" : "cursor-default"
+                                  )}
                                 >
                                   {candidateName}
                                 </button>
