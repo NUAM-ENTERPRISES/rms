@@ -1,11 +1,8 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { format, differenceInYears } from "date-fns";
-import { toast } from "sonner";
-import { useAppSelector } from "@/app/hooks";
 import { useCan } from "@/hooks/useCan";
 import {
-  ClipboardCheck,
   Loader2,
   AlertCircle,
   User,
@@ -15,23 +12,18 @@ import {
   CalendarCheck,
   CheckCircle2,
   FileText,
-  Pencil,
   MessageCircle,
   ChevronDown,
-  X,
   Star,
   Clock,
   ExternalLink,
   Phone,
   Mail,
-  MapPin,
   GraduationCap,
   Building2,
   TrendingUp,
-  Award,
   Globe,
   Flag,
-  Users,
   Layers,
   CheckCheck,
   Video,
@@ -40,7 +32,6 @@ import {
   ChevronRight,
   Sparkles,
   Activity,
-  Shield,
   Languages,
   CalendarPlus,
   PlayCircle,
@@ -64,7 +55,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import {
   useGetScreeningQuery,
-  useUpdateScreeningDecisionMutation,
   useGetCandidateProjectHistoryQuery
 } from "../data";
 import { useCreateTrainingAssignmentMutation } from "../../training/data";
@@ -115,11 +105,9 @@ function RatingBar({ value, max, color }: { value: number; max: number; color: s
 export default function ScreeningDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const currentUser = useAppSelector((state) => state.auth.user);
 
   const canWriteScreenings = useCan("write:screenings");
   const canConductScreenings = useCan("conduct:screenings");
-  const canAssignTraining = useCan("assign:training");
   const canWriteTraining = useCan("write:training");
 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -147,10 +135,7 @@ export default function ScreeningDetailsPage() {
 
   const [notifyRecruiterConfirm, setNotifyRecruiterConfirm] = useState<any>({ isOpen: false });
 
-  const [updateScreeningDecision, { isLoading: isUpdatingDecision }] = useUpdateScreeningDecisionMutation();
-  const [createTrainingAssignment, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
-
-  const selectedProjectDetails = useMemo(() => selectedInterview?.candidateProjectMap?.project, [selectedInterview]);
+  const [, { isLoading: isCreatingTraining }] = useCreateTrainingAssignmentMutation();
 
   // ── Auto-scroll to Training Assignments when ?scrollTo=training ──────────
   const location = useLocation();
@@ -734,7 +719,7 @@ export default function ScreeningDetailsPage() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    {trainingAssignments.map((ta: any, idx: number) => (
+                    {trainingAssignments.map((ta: any) => (
                       <div
                         key={ta.id}
                         className={cn(
