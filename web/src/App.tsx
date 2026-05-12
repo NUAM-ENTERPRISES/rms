@@ -11,6 +11,7 @@ import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
 import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
+import { ROLE_NAMES } from "@/config/role-names";
 
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
@@ -406,7 +407,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
                           permissions={["nominate:candidates"]}
                         >
                           <AppLayout>
@@ -423,7 +424,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
                           permissions={["nominate:candidates"]}
                         >
                           <AppLayout>
@@ -441,7 +442,7 @@ function App() {
                       <RouteErrorBoundary>
                         <ProtectedRoute
                           matchRolesOrPermissions
-                          roles={["Recruiter", "System Admin", "Client Coordinator"]}
+                          roles={["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR]}
                           permissions={["nominate:candidates"]}
                         >
                           <AppLayout>

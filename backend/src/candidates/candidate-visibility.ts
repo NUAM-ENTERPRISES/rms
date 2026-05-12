@@ -11,7 +11,7 @@ export const ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES = [
   'Admin',
   'SuperAdmin',
   'System Admin',
-  'Client Coordinator',
+  'Agent Coordinator',
 ] as const;
 
 export function canSeeAgentSourcedCandidates(roles: string[]): boolean {

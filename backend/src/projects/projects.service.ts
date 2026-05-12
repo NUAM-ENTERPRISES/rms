@@ -35,6 +35,7 @@ import {
   agentSourceEligibleCandidateWhere,
   assertAgentCandidateLinkedToAgentProject,
 } from '../common/agent-project-candidate-scope';
+import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -1519,13 +1520,13 @@ export class ProjectsService {
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    const isClientCoordinator =
-      userRoles.includes('Client Coordinator') &&
+    const isAgentCoordinator =
+      userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
       !userRoles.includes('Manager') &&
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter || isClientCoordinator) {
+    if (isRecruiter || isAgentCoordinator) {
       whereClause.AND = whereClause.AND || [];
       whereClause.AND.push({
         OR: [
@@ -2230,20 +2231,20 @@ export class ProjectsService {
       },
     };
 
-    // Recruiter / Client Coordinator: only eligible pool = own assignments
+    // Recruiter / Agent Coordinator: only eligible pool = own assignments
     const isRecruiter =
       userRoles.includes('Recruiter') &&
       !userRoles.includes('Manager') &&
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    const isClientCoordinator =
-      userRoles.includes('Client Coordinator') &&
+    const isAgentCoordinator =
+      userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR) &&
       !userRoles.includes('Manager') &&
       !userRoles.includes('CEO') &&
       !userRoles.includes('Director');
 
-    if (isRecruiter || isClientCoordinator) {
+    if (isRecruiter || isAgentCoordinator) {
       whereClause.recruiterAssignments = {
         some: {
           recruiterId: userId,

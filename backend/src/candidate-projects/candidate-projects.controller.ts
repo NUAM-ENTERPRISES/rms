@@ -208,7 +208,7 @@ export class CandidateProjectsController {
   @ApiOperation({
     summary: 'Get candidates overview for a project',
     description:
-      'Retrieve a summary of candidate counts by main status and a paginated list of candidates for a project. Supports filtering by role, date period, and search. Users with the Recruiter or Client Coordinator role (without management/specialist override) see only candidate-project rows where they are the assigned recruiter.',
+      'Retrieve a summary of candidate counts by main status and a paginated list of candidates for a project. Supports filtering by role, date period, and search. Users with the Recruiter or Agent Coordinator role (without management/specialist override) see only candidate-project rows where they are the assigned recruiter.',
   })
   @ApiParam({ name: 'projectId', description: 'Project ID' })
   @ApiResponse({

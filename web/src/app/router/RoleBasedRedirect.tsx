@@ -2,6 +2,7 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
+import { ROLE_NAMES } from "@/config/role-names";
 
 const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
 const AdminDashboardPage = lazy(
@@ -75,7 +76,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes("Client Coordinator")) {
+  if (user?.roles.includes(ROLE_NAMES.AGENT_COORDINATOR)) {
     return <Navigate to="/agents" replace />;
   }
 

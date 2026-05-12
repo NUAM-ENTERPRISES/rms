@@ -15,6 +15,7 @@ import {
   BarChart3,
   UserSquare2,
 } from "lucide-react";
+import { ROLE_NAMES } from "@/config/role-names";
 
 export interface NavItem {
   id: string;
@@ -76,11 +77,11 @@ export const navigationConfig: NavItem[] = [
     // Recruiter Dashboard - points to Candidate Overview
   },
   {
-    id: "client-coordinator-dashboard",
+    id: "agent-coordinator-dashboard",
     label: "Dashboard",
     path: "/agents",
     icon: Home,
-    roles: ["Client Coordinator"],
+    roles: [ROLE_NAMES.AGENT_COORDINATOR],
     permissions: ["read:agents"],
   },
   {
@@ -113,7 +114,7 @@ export const navigationConfig: NavItem[] = [
       "Processing Executive",
       "System Admin",
       "Interview Coordinator",
-      "Client Coordinator",
+      ROLE_NAMES.AGENT_COORDINATOR,
       // "Screening Trainer",
     ],
     children: [
@@ -131,7 +132,7 @@ export const navigationConfig: NavItem[] = [
         id: "recruiter-docs",
         label: "Documents Collection",
         path: "/recruiter-docs",
-        roles: ["Recruiter", "System Admin", "Client Coordinator"],
+        roles: ["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR],
       },
     ],
   },
@@ -152,7 +153,7 @@ export const navigationConfig: NavItem[] = [
       "CRE",
       // "Screening Trainer",
     ],
-    hiddenForRoles: ["Client Coordinator"],
+    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR],
     children: [
       {
         id: "candidate-overview",
@@ -196,8 +197,8 @@ export const navigationConfig: NavItem[] = [
     path: "/agents",
     icon: UserSquare2,
     permissions: ["read:agents"],
-    // Client Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
-    hiddenForRoles: ["Client Coordinator"],
+    // Agent Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
+    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR],
   },
   {
     id: "teams",
@@ -283,7 +284,7 @@ export const navigationConfig: NavItem[] = [
       "Recruiter",
       "CRE",
       "Processing Executive",
-      "Client Coordinator",
+      ROLE_NAMES.AGENT_COORDINATOR,
     ],
     children: [
       {
@@ -324,7 +325,7 @@ export const navigationConfig: NavItem[] = [
       "CRE",
       "Documentation Executive",
       "Processing Executive",
-      "Client Coordinator",
+      ROLE_NAMES.AGENT_COORDINATOR,
     ],
     children: [
       {

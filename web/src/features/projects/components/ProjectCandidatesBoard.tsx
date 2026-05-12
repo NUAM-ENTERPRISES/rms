@@ -31,6 +31,7 @@ import {
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
+import { ROLE_NAMES } from "@/config/role-names";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
@@ -328,9 +329,10 @@ const ProjectCandidatesBoard = ({
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
-  const isClientCoordinator = user?.roles?.includes("Client Coordinator") ?? false;
+  const isAgentCoordinator =
+    user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR) ?? false;
   /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
-  const canUseRecruiterPipelineActions = isRecruiter || isClientCoordinator;
+  const canUseRecruiterPipelineActions = isRecruiter || isAgentCoordinator;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
@@ -693,7 +695,7 @@ const ProjectCandidatesBoard = ({
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
-              showAgentName={isClientCoordinator}
+              showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
               onAction={(id, action) => {
@@ -815,7 +817,7 @@ const ProjectCandidatesBoard = ({
                 projectId={projectId}
                 isRecruiter={canUseRecruiterPipelineActions}
                 hideContactInfo={hideContactInfo}
-                showAgentName={isClientCoordinator}
+                showAgentName={isAgentCoordinator}
                 searchTerm={searchTerm}
                 onView={() => onViewCandidate(assignmentInfo.candidateId)}
                 onAction={(id, action) => {
@@ -929,7 +931,7 @@ const ProjectCandidatesBoard = ({
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
-              showAgentName={isClientCoordinator}
+              showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {

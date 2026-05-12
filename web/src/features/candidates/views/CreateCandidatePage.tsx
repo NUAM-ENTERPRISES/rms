@@ -39,6 +39,7 @@ import {
   ChecklistStep,
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
+import { ROLE_NAMES } from "@/config/role-names";
 
 // ==================== WORK EXPERIENCE TYPES ====================
 
@@ -104,7 +105,7 @@ export default function CreateCandidatePage() {
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruiter");
   const isCRE = hasRole("CRE");
-  const isClientCoordinator = hasRole("Client Coordinator");
+  const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
 
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
@@ -157,7 +158,7 @@ export default function CreateCandidatePage() {
         ? "direct_enquiry"
         : isRecruiter
           ? "referral"
-          : isClientCoordinator
+          : isAgentCoordinator
             ? "agent"
             : "manual") as any,
       agentId: "",
@@ -559,7 +560,7 @@ export default function CreateCandidatePage() {
         }
 
         toast.success("Candidate created successfully!");
-        navigate(isClientCoordinator ? "/agents" : "/candidates");
+        navigate(isAgentCoordinator ? "/agents" : "/candidates");
       }
     } catch (error: any) {
       console.error("Error creating candidate:", error);
@@ -589,7 +590,7 @@ export default function CreateCandidatePage() {
             setSelectedImage={setSelectedImage}
             uploadingImage={uploadingImage}
             isLoading={isLoading}
-            lockSourceToAgent={isClientCoordinator}
+            lockSourceToAgent={isAgentCoordinator}
             setValue={form.setValue}
           />
         );

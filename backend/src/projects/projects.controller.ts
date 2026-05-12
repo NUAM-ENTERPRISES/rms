@@ -713,7 +713,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get nominated candidates for a project',
     description:
-      'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters and Client Coordinators see only nominated rows tied to them (assigned recruiter / active recruiter assignment); leadership roles see all.',
+      'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters and Agent Coordinators see only nominated rows tied to them (assigned recruiter / active recruiter assignment); leadership roles see all.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiQuery({
@@ -1009,7 +1009,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get eligible candidates for a project',
     description:
-      'Retrieve candidates who match project requirements and are not yet nominated. Recruiters and Client Coordinators see only their assigned candidates; managers and comparable leadership roles see all.',
+      'Retrieve candidates who match project requirements and are not yet nominated. Recruiters and Agent Coordinators see only their assigned candidates; managers and comparable leadership roles see all.',
   })
   @ApiParam({
     name: 'id',

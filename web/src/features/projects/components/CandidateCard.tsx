@@ -277,7 +277,7 @@ interface CandidateCardProps {
   showContactButtons?: boolean;
   /** control hiding of email/phone pills */
   hideContactInfo?: boolean;
-  /** When true, show supplying agent name (Client Coordinator project board). */
+  /** When true, show supplying agent name (Agent Coordinator project board). */
   showAgentName?: boolean;
   /** Drag and Drop support */
   onDragStart?: (e: React.DragEvent, candidateId: string) => void;

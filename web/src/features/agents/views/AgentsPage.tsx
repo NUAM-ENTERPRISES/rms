@@ -34,7 +34,8 @@ import {
 } from "@/features/candidates/api";
 import { TransferCandidateDialog } from "@/features/candidates/components/TransferCandidateDialog";
 import { useAppSelector } from "@/app/hooks";
-import { ClientCoordinatorCandidateTableRows } from "../components/ClientCoordinatorCandidateTableRows";
+import { ROLE_NAMES } from "@/config/role-names";
+import { AgentCoordinatorCandidateTableRows } from "../components/AgentCoordinatorCandidateTableRows";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 
 export default function AgentsPage() {
@@ -63,7 +64,7 @@ export default function AgentsPage() {
   const canTransferCandidates = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
   );
-  const isClientCoordinator = useHasRole("Client Coordinator");
+  const isAgentCoordinator = useHasRole(ROLE_NAMES.AGENT_COORDINATOR);
 
   const [transferDialog, setTransferDialog] = useState<{
     isOpen: boolean;
@@ -85,13 +86,13 @@ export default function AgentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates">("all");
 
-  /** CC: my-candidates (agent source) tile uses counts.totalAssigned from API */
-  const { data: coordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(
+  /** Agent Coordinator: my-candidates (agent source) tile uses counts.totalAssigned from API */
+  const { data: agentCoordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(
     { page: 1, limit: 1, source: "agent" },
-    { skip: !isClientCoordinator },
+    { skip: !isAgentCoordinator },
   );
 
-  const { data: coordinatorCandidatesPayload, isLoading: coordinatorCandidatesLoading } =
+  const { data: agentCoordinatorCandidatesPayload, isLoading: agentCoordinatorCandidatesLoading } =
     useGetRecruiterMyCandidatesQuery(
       {
         page: candidateListPage,
@@ -99,20 +100,20 @@ export default function AgentsPage() {
         source: "agent",
         search: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
       },
-      { skip: !isClientCoordinator || activeFilter !== "with-candidates" },
+      { skip: !isAgentCoordinator || activeFilter !== "with-candidates" },
     );
-  /** When the main agent table is skipped (CC on Total Candidates view), still need page-1 totals for tiles — limit 10 only (matches list page size). */
+  /** When the main agent table is skipped (Agent Coordinator on Total Candidates view), still need page-1 totals for tiles — limit 10 only (matches list page size). */
   const agentsListSkipped =
-    isClientCoordinator && activeFilter === "with-candidates";
+    isAgentCoordinator && activeFilter === "with-candidates";
   const { data: agentsForTilesWhenSkipped } = useGetAgentsQuery(
     { page: 1, limit: agentPageSize },
     { skip: !agentsListSkipped },
   );
 
-  /** Non-CC: sum candidate counts across many agents */
+  /** Roles other than Agent Coordinator: sum candidate counts across many agents */
   const { data: agentsForStatSum } = useGetAgentsQuery(
     { page: 1, limit: 500 },
-    { skip: isClientCoordinator },
+    { skip: isAgentCoordinator },
   );
 
   const { data: agentsPaged, isLoading: agentsLoading } = useGetAgentsQuery(
@@ -143,8 +144,8 @@ export default function AgentsPage() {
     [agentsForStatSum],
   );
 
-  const totalCandidates = isClientCoordinator
-    ? (coordinatorCountsPayload?.counts?.totalAssigned ?? 0)
+  const totalCandidates = isAgentCoordinator
+    ? (agentCoordinatorCountsPayload?.counts?.totalAssigned ?? 0)
     : totalCandidatesFromAgentRows;
 
   const totalAgentsCount =
@@ -152,12 +153,12 @@ export default function AgentsPage() {
     agentsForTilesWhenSkipped?.meta?.total ??
     0;
 
-  /** No separate GET /agents?isActive=true on load — use table meta when Active filter is on; else derive from stat batch (non-CC) or current page rows (CC). */
+  /** No separate GET /agents?isActive=true on load — use table meta when Active filter is on; else derive from stat batch (non–Agent Coordinator) or current page rows (Agent Coordinator). */
   const activeAgentsCount = useMemo(() => {
     if (activeFilter === "active") {
       return agentsPaged?.meta?.total ?? 0;
     }
-    if (!isClientCoordinator) {
+    if (!isAgentCoordinator) {
       return (agentsForStatSum?.data ?? []).filter(
         (a) => a.isActive !== false,
       ).length;
@@ -173,7 +174,7 @@ export default function AgentsPage() {
     agentsPaged?.data,
     agentsForTilesWhenSkipped?.data,
     agentsForStatSum?.data,
-    isClientCoordinator,
+    isAgentCoordinator,
   ]);
 
   useEffect(() => {
@@ -212,15 +213,15 @@ export default function AgentsPage() {
 
   const statTiles = [
     { label: "Total Agents",     value: totalAgentsCount, icon: Handshake,  statusFilter: "all",             accent: "blue",   subtitle: "Registered partners" },
-    { label: "Total Candidates", value: totalCandidates,  icon: Users,      statusFilter: "with-candidates", accent: "indigo", subtitle: isClientCoordinator ? "Agent-sourced assignments" : "Referral volume" },
+    { label: "Total Candidates", value: totalCandidates,  icon: Users,      statusFilter: "with-candidates", accent: "indigo", subtitle: isAgentCoordinator ? "Agent-sourced assignments" : "Referral volume" },
     { label: "Active Agents",    value: activeAgentsCount, icon: LayoutGrid, statusFilter: "active",          accent: "purple", subtitle: "Currently sourcing" },
   ];
 
-  const coordinatorCandidates =
-    coordinatorCandidatesPayload?.data ?? [];
-  const coordinatorPagination = coordinatorCandidatesPayload?.pagination;
-  const showCcCandidateTable =
-    isClientCoordinator && isCandidatePipelineFilter;
+  const agentCoordinatorCandidates =
+    agentCoordinatorCandidatesPayload?.data ?? [];
+  const agentCoordinatorPagination = agentCoordinatorCandidatesPayload?.pagination;
+  const showAgentCoordinatorCandidateTable =
+    isAgentCoordinator && isCandidatePipelineFilter;
 
   return (
     <div className="min-h-screen">
@@ -279,7 +280,7 @@ export default function AgentsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
-                    {isCandidatePipelineFilter && isClientCoordinator ? (
+                    {isCandidatePipelineFilter && isAgentCoordinator ? (
                       <Users className="h-5 w-5 text-white" aria-hidden />
                     ) : (
                       <Handshake className="h-5 w-5 text-white" aria-hidden />
@@ -291,13 +292,13 @@ export default function AgentsPage() {
                         ? "All Agents"
                         : activeFilter === "active"
                           ? "Active Agents"
-                          : isClientCoordinator
-                            ? "Your Candidates"
+                          : isAgentCoordinator
+                            ? "Agent Coordinator candidates"
                             : "Agents with Candidates"}
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {showCcCandidateTable
-                        ? `${coordinatorPagination?.totalCount ?? 0} candidate${(coordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
+                      {showAgentCoordinatorCandidateTable
+                        ? `${agentCoordinatorPagination?.totalCount ?? 0} candidate${(agentCoordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
                         : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? "s" : ""} on this page`}
                     </p>
                   </div>
@@ -330,7 +331,7 @@ export default function AgentsPage() {
               <div className="relative max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder={showCcCandidateTable ? "Search candidates…" : "Search agents…"}
+                  placeholder={showAgentCoordinatorCandidateTable ? "Search candidates…" : "Search agents…"}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
@@ -339,8 +340,8 @@ export default function AgentsPage() {
             </div>
           </div>
 
-          {/* ── CC Candidate Table ──────────────────────────────────── */}
-          {showCcCandidateTable ? (
+          {/* ── Agent Coordinator candidate table ─────────────────────── */}
+          {showAgentCoordinatorCandidateTable ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
@@ -355,9 +356,9 @@ export default function AgentsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    <ClientCoordinatorCandidateTableRows
-                      candidates={coordinatorCandidates}
-                      isLoading={coordinatorCandidatesLoading}
+                    <AgentCoordinatorCandidateTableRows
+                      candidates={agentCoordinatorCandidates}
+                      isLoading={agentCoordinatorCandidatesLoading}
                       canWriteCandidates={canWriteCandidates}
                       canTransferCandidates={!!canTransferCandidates}
                       onTransfer={(candidate, recruiter) =>
@@ -372,17 +373,17 @@ export default function AgentsPage() {
                   </TableBody>
                 </Table>
               </div>
-              {coordinatorPagination && coordinatorPagination.totalCount > 0 && (
+              {agentCoordinatorPagination && agentCoordinatorPagination.totalCount > 0 && (
                 <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 px-6 py-4 gap-3 bg-slate-50/50">
                   <p className="text-xs text-slate-500">
-                    Showing <span className="font-semibold text-slate-700">{(candidateListPage - 1) * candidatePageSize + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(candidateListPage * candidatePageSize, coordinatorPagination.totalCount)}</span> of <span className="font-semibold text-slate-700">{coordinatorPagination.totalCount}</span> candidates
+                    Showing <span className="font-semibold text-slate-700">{(candidateListPage - 1) * candidatePageSize + 1}</span>–<span className="font-semibold text-slate-700">{Math.min(candidateListPage * candidatePageSize, agentCoordinatorPagination.totalCount)}</span> of <span className="font-semibold text-slate-700">{agentCoordinatorPagination.totalCount}</span> candidates
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={coordinatorCandidatesLoading || candidateListPage <= 1} onClick={() => setCandidateListPage((p) => Math.max(1, p - 1))}>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={agentCoordinatorCandidatesLoading || candidateListPage <= 1} onClick={() => setCandidateListPage((p) => Math.max(1, p - 1))}>
                       Prev
                     </Button>
-                    <span className="text-xs tabular-nums text-slate-600 px-1">Page {candidateListPage} of {coordinatorPagination.totalPages}</span>
-                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={coordinatorCandidatesLoading || candidateListPage >= coordinatorPagination.totalPages} onClick={() => setCandidateListPage((p) => Math.min(coordinatorPagination.totalPages, p + 1))}>
+                    <span className="text-xs tabular-nums text-slate-600 px-1">Page {candidateListPage} of {agentCoordinatorPagination.totalPages}</span>
+                    <Button type="button" variant="outline" size="sm" className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-100 rounded-xl gap-1" disabled={agentCoordinatorCandidatesLoading || candidateListPage >= agentCoordinatorPagination.totalPages} onClick={() => setCandidateListPage((p) => Math.min(agentCoordinatorPagination.totalPages, p + 1))}>
                       Next
                     </Button>
                   </div>

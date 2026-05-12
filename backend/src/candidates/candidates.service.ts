@@ -321,15 +321,15 @@ export class CandidatesService {
       },
     });
 
-    const isClientCoordinator = creatingUser?.userRoles.some(
+    const isAgentCoordinator = creatingUser?.userRoles.some(
       (ur) =>
         ur.role?.name?.toLowerCase() ===
-        ROLE_NAMES.CLIENT_COORDINATOR.toLowerCase(),
+        ROLE_NAMES.AGENT_COORDINATOR.toLowerCase(),
     );
 
     let resolvedSource =
       normalizeCandidateSource(createCandidateDto.source) ?? 'manual';
-    if (isClientCoordinator) {
+    if (isAgentCoordinator) {
       resolvedSource = 'agent';
     }
 
@@ -648,7 +648,7 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    // 1. Leadership / Agent Coordinator: may see candidates with source === 'agent'
     if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
@@ -1029,7 +1029,7 @@ export class CandidatesService {
 
   /**
    * Get consolidated candidates for project detail view
-   * Admin/Manager-style roles see all; Recruiter and Client Coordinator see active recruiter assignments only.
+   * Admin/Manager-style roles see all; Recruiter and Agent Coordinator see active recruiter assignments only.
    * Includes nomination status for a specific project
    */
   async getConsolidatedCandidates(
@@ -1041,7 +1041,7 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
 
     const isRecruiter = roles.includes('Recruiter');
-    const isClientCoordinator = roles.includes('Client Coordinator');
+    const isAgentCoordinator = roles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isAdminOrManager = roles.some((role) =>
       [
         'CEO',
@@ -1057,15 +1057,15 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    // 1. Leadership / Agent Coordinator: may see candidates with source === 'agent'
     if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
       };
     }
 
-    // 2. Role-based filtering (recruiters and client coordinators see assigned candidates only)
-    if ((isRecruiter || isClientCoordinator) && !isAdminOrManager) {
+    // 2. Role-based filtering (recruiters and agent coordinators see assigned candidates only)
+    if ((isRecruiter || isAgentCoordinator) && !isAdminOrManager) {
       where.recruiterAssignments = {
         some: {
           recruiterId: userId,

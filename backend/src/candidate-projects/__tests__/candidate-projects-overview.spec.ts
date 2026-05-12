@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { OutboxService } from '../../notifications/outbox.service';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('CandidateProjectsService - getProjectOverview role scoping', () => {
   let service: CandidateProjectsService;
@@ -42,10 +43,15 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
     mockPrisma.project.findUnique.mockResolvedValue({ title: 'Test Project' });
   });
 
-  it('adds recruiterId scope for Client Coordinator without management roles', async () => {
+  it('adds recruiterId scope for Agent Coordinator without management roles', async () => {
     const ccUserId = 'user-cc';
 
-    await service.getProjectOverview('proj-1', {} as any, ccUserId, ['Client Coordinator']);
+    await service.getProjectOverview(
+      'proj-1',
+      {} as any,
+      ccUserId,
+      [ROLE_NAMES.AGENT_COORDINATOR],
+    );
 
     const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];
     expect(findArgs.where).toMatchObject({
@@ -54,12 +60,12 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
     });
   });
 
-  it('does not add recruiterId scope when Client Coordinator is also Manager', async () => {
+  it('does not add recruiterId scope when Agent Coordinator is also Manager', async () => {
     await service.getProjectOverview(
       'proj-1',
       {} as any,
       'user-cc',
-      ['Client Coordinator', 'Manager'],
+      [ROLE_NAMES.AGENT_COORDINATOR, 'Manager'],
     );
 
     const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];

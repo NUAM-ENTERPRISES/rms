@@ -105,11 +105,11 @@ if (!leadershipRoles.includes(userRole)) {
 }
 ```
 
-**Implementation note:** The runtime allowlist lives in `canSeeAgentSourcedCandidates` (`backend/src/candidates/candidate-visibility.ts`) and includes leadership-style roles plus **`Client Coordinator`**.
+**Implementation note:** The runtime allowlist lives in `canSeeAgentSourcedCandidates` (`backend/src/candidates/candidate-visibility.ts`) and includes leadership-style roles plus **`Agent Coordinator`**.
 
-## 5. Client Coordinator Pipeline
+## 5. Agent Coordinator Pipeline
 
-**Client Coordinators** manage external agents and candidates that enter through the agent channel.
+**Agent Coordinators** manage external agents and candidates that enter through the agent channel.
 
 ### Creating candidates
 1. **Source** is always **`agent`** for this role (the API enforces this in `CandidatesService.create`, and the create form defaults to Agent with the source control locked).
@@ -129,7 +129,7 @@ Users who are not Recruiters and create candidates with **non-agent** sources (e
 
 ### Agents page
 - Users with **Agent** permissions use the Agents area to manage partner records.
-- **Total Candidates (Client Coordinator):** On the dashboard at `/agents`, the **Total Candidates** tile for a **Client Coordinator** shows the count of candidates **assigned to the logged-in user** with **`source: 'agent'`**, using the recruiter “my candidates” summary (assignment-based), not the sum of per-agent `_count.candidates` on each `Agent` row.
+- **Total Candidates (Agent Coordinator):** On the dashboard at `/agents`, the **Total Candidates** tile for an **Agent Coordinator** shows the count of candidates **assigned to the logged-in user** with **`source: 'agent'`**, using the recruiter “my candidates” summary (assignment-based), not the sum of per-agent `_count.candidates` on each `Agent` row.
 - For other roles on the same page, **Total Candidates** may still reflect aggregate candidate volume linked to Agent rows (`Candidate.agentId`), as before.
 
 ### Candidate creation (general)

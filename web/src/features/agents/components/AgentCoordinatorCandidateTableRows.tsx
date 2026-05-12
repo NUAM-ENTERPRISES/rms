@@ -47,7 +47,7 @@ function formatPhoneForLink(c: {
 
 const TABLE_COL_SPAN = 6;
 
-export interface ClientCoordinatorCandidateTableRowsProps {
+export interface AgentCoordinatorCandidateTableRowsProps {
   candidates: any[];
   isLoading?: boolean;
   canWriteCandidates: boolean;
@@ -58,13 +58,13 @@ export interface ClientCoordinatorCandidateTableRowsProps {
   ) => void;
 }
 
-export function ClientCoordinatorCandidateTableRows({
+export function AgentCoordinatorCandidateTableRows({
   candidates,
   isLoading,
   canWriteCandidates,
   canTransferCandidates,
   onTransfer,
-}: ClientCoordinatorCandidateTableRowsProps) {
+}: AgentCoordinatorCandidateTableRowsProps) {
   const navigate = useNavigate();
 
   if (isLoading) {

@@ -70,7 +70,7 @@ describe('RecruiterAssignmentService', () => {
     email: 'cc@test.com',
     mobileNumber: '9876543210',
     countryCode: '+91',
-    userRoles: [{ roleId: 'role-cc', role: { name: 'Client Coordinator' } }],
+    userRoles: [{ roleId: 'role-cc', role: { name: ROLE_NAMES.AGENT_COORDINATOR } }],
   };
 
   const recruiterUser = {

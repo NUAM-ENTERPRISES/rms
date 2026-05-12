@@ -28,6 +28,7 @@ import {
   DOCUMENT_TYPE,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
+import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 @Injectable()
@@ -1148,10 +1149,10 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
-    // Role-based filtering: recruiters and Client Coordinators only see candidates
-    // assigned to them on the project row (aligned with recruiter pipeline / agent CC flow).
+    // Role-based filtering: recruiters and Agent Coordinators only see candidates
+    // assigned to them on the project row (aligned with recruiter pipeline / agent flow).
     const isRecruiter = userRoles.includes('Recruiter');
-    const isClientCoordinator = userRoles.includes('Client Coordinator');
+    const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isSpecialistOrManagement = userRoles.some(r =>
       [
         'CEO',
@@ -1168,7 +1169,7 @@ export class CandidateProjectsService {
     );
 
     const scopeToOwnAssignments =
-      (isRecruiter || isClientCoordinator) && !isSpecialistOrManagement;
+      (isRecruiter || isAgentCoordinator) && !isSpecialistOrManagement;
 
     if (scopeToOwnAssignments) {
       where.recruiterId = userId;

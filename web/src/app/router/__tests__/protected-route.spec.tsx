@@ -5,6 +5,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { vi } from "vitest";
 import ProtectedRoute from "@/app/router/protected-route";
 import authReducer from "@/features/auth/authSlice";
+import { ROLE_NAMES } from "@/config/role-names";
 
 // Mock the router hooks
 const mockNavigate = vi.fn();
@@ -232,7 +233,7 @@ describe("ProtectedRoute", () => {
     renderWithProviders(
       <ProtectedRoute
         matchRolesOrPermissions
-        roles={["Recruiter", "Client Coordinator"]}
+        roles={["Recruiter", ROLE_NAMES.AGENT_COORDINATOR]}
         permissions={["nominate:candidates"]}
       >
         <div>Protected Content</div>

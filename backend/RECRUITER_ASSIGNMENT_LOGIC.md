@@ -15,7 +15,7 @@ When a candidate is created, the system automatically assigns a recruiter using 
    - This ensures recruiters own the candidates they create
 
 2. **If the candidate’s `source` is `agent` (after normalizing legacy `agents` to `agent`) and the creator is not already handled by rule 1:**
-   - ✅ The candidate is assigned **directly to the creating user** (e.g. **Client Coordinator** agent pipeline)
+   - ✅ The candidate is assigned **directly to the creating user** (e.g. **Agent Coordinator** agent pipeline)
    - ❌ **No round-robin assignment** for agent-sourced creates
 
 3. **If the creator is NOT a Recruiter and the source is not agent-channel (e.g., Manager, Team Head, Admin creating a manual or meta candidate):**

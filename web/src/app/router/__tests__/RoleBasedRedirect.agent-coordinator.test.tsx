@@ -6,9 +6,10 @@ import { configureStore } from "@reduxjs/toolkit";
 import { describe, it, expect } from "vitest";
 import authReducer from "@/features/auth/authSlice";
 import { RoleBasedRedirect } from "@/app/router/RoleBasedRedirect";
+import { ROLE_NAMES } from "@/config/role-names";
 
 describe("RoleBasedRedirect", () => {
-  it("navigates Client Coordinator from / to /agents", async () => {
+  it("navigates Agent Coordinator from / to /agents", async () => {
     const store = configureStore({
       reducer: { auth: authReducer },
       preloadedState: {
@@ -17,7 +18,7 @@ describe("RoleBasedRedirect", () => {
             id: "u1",
             name: "Agent Coord",
             email: "agentcoord@test.com",
-            roles: ["Client Coordinator"],
+            roles: [ROLE_NAMES.AGENT_COORDINATOR],
             permissions: ["read:agents"],
           },
           accessToken: "a",

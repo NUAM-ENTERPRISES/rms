@@ -2,17 +2,20 @@ import {
   canSeeAgentSourcedCandidates,
   ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES,
 } from '../candidate-visibility';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('candidate-visibility', () => {
   describe('canSeeAgentSourcedCandidates', () => {
-    it('returns true when Client Coordinator is among roles', () => {
+    it('returns true when Agent Coordinator is among roles', () => {
       expect(
         canSeeAgentSourcedCandidates([
           'Interview Coordinator',
-          'Client Coordinator',
+          ROLE_NAMES.AGENT_COORDINATOR,
         ]),
       ).toBe(true);
-      expect(canSeeAgentSourcedCandidates(['Client Coordinator'])).toBe(true);
+      expect(
+        canSeeAgentSourcedCandidates([ROLE_NAMES.AGENT_COORDINATOR]),
+      ).toBe(true);
     });
 
     it('returns false when viewer lacks privileged roles', () => {
@@ -31,9 +34,11 @@ describe('candidate-visibility', () => {
       expect(canSeeAgentSourcedCandidates(['System Admin'])).toBe(true);
     });
 
-    it('documents Client Coordinator in exported allowlist', () => {
+    it('documents Agent Coordinator in exported allowlist', () => {
       expect(
-        ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES.includes('Client Coordinator'),
+        ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES.includes(
+          ROLE_NAMES.AGENT_COORDINATOR,
+        ),
       ).toBe(true);
     });
   });

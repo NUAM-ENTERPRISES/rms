@@ -12,6 +12,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -452,7 +453,7 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('getEligibleCandidates applies recruiterAssignments filter for Client Coordinator', async () => {
+    it('getEligibleCandidates applies recruiterAssignments filter for Agent Coordinator', async () => {
       const project = {
         id: 'proj-1',
         rolesNeeded: [
@@ -471,7 +472,7 @@ describe('ProjectsService', () => {
       prismaService.project.findUnique.mockResolvedValue(project);
       prismaService.candidate.findMany = jest.fn().mockResolvedValue([]);
 
-      await service.getEligibleCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+      await service.getEligibleCandidates('proj-1', 'cc-user', [ROLE_NAMES.AGENT_COORDINATOR], { page: 1, limit: 10 });
 
       expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -484,13 +485,13 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('getNominatedCandidates scopes to user for Client Coordinator', async () => {
+    it('getNominatedCandidates scopes to user for Agent Coordinator', async () => {
       const project = { id: 'proj-1', rolesNeeded: [] } as any;
       prismaService.project.findUnique.mockResolvedValue(project);
       prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
       prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
 
-      await service.getNominatedCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+      await service.getNominatedCandidates('proj-1', 'cc-user', [ROLE_NAMES.AGENT_COORDINATOR], { page: 1, limit: 10 });
 
       const findWhere = (prismaService.candidateProjects.findMany as jest.Mock).mock.calls[0][0]?.where;
       expect(findWhere.projectId).toBe('proj-1');

@@ -307,7 +307,7 @@ interface PersonalInformationStepProps {
   setSelectedImage: (image: File | null) => void;
   uploadingImage: boolean;
   isLoading: boolean;
-  /** Client Coordinator pipeline: source is always agent */
+  /** Agent Coordinator pipeline: source is always agent */
   lockSourceToAgent?: boolean;
   /** Used to clear declaredProjectIds when agent selection changes */
   setValue?: UseFormSetValue<CreateCandidateFormData>;

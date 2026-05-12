@@ -48,7 +48,7 @@ export class RecruiterAssignmentService {
   /**
    * Get the best recruiter to assign to a candidate based on user role and workload
    * If the creator is a recruiter, assign the candidate to them directly
-   * If the candidate source is agent, assign to the creator (Client Coordinator pipeline; no round-robin)
+   * If the candidate source is agent, assign to the creator (Agent Coordinator pipeline; no round-robin)
    * Otherwise, use language-aware assignment: state-driven target languages from
    * SystemConfig STATE_RECRUITMENT_LANGUAGES, match recruiter UserLanguage tiers
    * (PRIMARY > SECONDARY > TERTIARY), then least workload; if no config or no match,
