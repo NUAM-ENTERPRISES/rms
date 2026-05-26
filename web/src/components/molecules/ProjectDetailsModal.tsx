@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Users, Briefcase, Settings, ShieldCheck, ClipboardCheck } from "lucide-react";
+import { FileText, Users, Briefcase, Settings } from "lucide-react";
 
 type Project = any;
 
@@ -203,21 +203,6 @@ export default function ProjectDetailsModal({
                             <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">Transportation</Badge>
                           )}
                         </div>
-
-                        {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
-                          <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] text-slate-500">
-                            {role.backgroundCheckRequired && (
-                              <span className="flex items-center gap-1">
-                                <ShieldCheck className="h-3 w-3" /> Background Check
-                              </span>
-                            )}
-                            {role.drugScreeningRequired && (
-                              <span className="flex items-center gap-1">
-                                <ClipboardCheck className="h-3 w-3" /> Drug Screening
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
 
                       {role.requiredSkills && role.requiredSkills.length > 0 && (

@@ -1,10 +1,23 @@
-/** Mirrors backend project-client-visibility.util — UI layout only; API enforces redaction. */
+/** Mirrors backend project-client-visibility.util — project detail UI only. */
 
-const ELEVATED_ROLES = ["Manager", "CEO", "Director", "System Admin"] as const;
+export const ROLES_WITHOUT_PROJECT_CLIENT = [
+  'Recruiter',
+  'CRE',
+  'Screening Trainer',
+] as const;
 
-export function shouldHideProjectClient(userRoles: string[] = []): boolean {
-  if (userRoles.some((role) => ELEVATED_ROLES.includes(role as (typeof ELEVATED_ROLES)[number]))) {
-    return false;
+export function canViewProjectClientOnDetail(userRoles: string[] = []): boolean {
+  if (!userRoles.length) {
+    return true;
   }
-  return userRoles.includes("Recruiter") || userRoles.includes("CRE");
+
+  const hasRestrictedRole = userRoles.some((role) =>
+    (ROLES_WITHOUT_PROJECT_CLIENT as readonly string[]).includes(role),
+  );
+  const hasOtherRole = userRoles.some(
+    (role) =>
+      !(ROLES_WITHOUT_PROJECT_CLIENT as readonly string[]).includes(role),
+  );
+
+  return !hasRestrictedRole || hasOtherRole;
 }

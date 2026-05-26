@@ -2,7 +2,6 @@ import React, { useState, Suspense, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
-import { shouldHideProjectClient } from "@/constants/project-client-visibility";
 import {
   Card,
   CardContent,
@@ -65,6 +64,7 @@ import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan } from "@/hooks/useCan";
+import { canViewProjectClientOnDetail } from "@/constants/project-client-visibility";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
@@ -148,7 +148,7 @@ export default function ProjectDetailPage() {
   const canReadProjects = useCan("read:projects");
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
-  const hideProjectClient = shouldHideProjectClient(user?.roles ?? []);
+  const canViewProjectClient = canViewProjectClientOnDetail(user?.roles ?? []);
 
   // RTK Query hooks
   const {
@@ -1013,7 +1013,7 @@ export default function ProjectDetailPage() {
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
-                    {!hideProjectClient && project.client && (
+                    {canViewProjectClient && project.client && (
                       <span className="flex items-center gap-1.5 font-medium">
                         <Building2 className="h-3.5 w-3.5 text-slate-400" />
                         {project.client.name}
@@ -1420,30 +1420,12 @@ export default function ProjectDetailPage() {
                         )}
                       </div>
                     </div>
-
-                    {/* Screening Badges */}
-                    {(role.backgroundCheckRequired || role.drugScreeningRequired) && (
-                      <div className="flex items-center gap-2 pt-1">
-                        {role.backgroundCheckRequired && (
-                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
-                            <ShieldCheck className="h-2.5 w-2.5 text-slate-400" />
-                            Security Clearance
-                          </span>
-                        )}
-                        {role.drugScreeningRequired && (
-                          <span className="text-[9px] text-slate-500 flex items-center gap-1">
-                            <ClipboardCheck className="h-2.5 w-2.5 text-slate-400" />
-                            Medical Screening
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             </Card>
 
-            {!hideProjectClient && (
+            {canViewProjectClient && (
               <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
                   <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
@@ -1480,7 +1462,7 @@ export default function ProjectDetailPage() {
           isOpen={showDetails}
           onClose={() => setShowDetails(false)}
           project={projectData?.data}
-          hideClient={hideProjectClient}
+          hideClient={!canViewProjectClient}
         />
       </Suspense>
 

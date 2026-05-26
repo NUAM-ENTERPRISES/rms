@@ -1,25 +1,34 @@
 import { ROLE_NAMES } from '../constants/role-ids';
 
-const ELEVATED_ROLES = [
-  ROLE_NAMES.MANAGER,
-  ROLE_NAMES.CEO,
-  ROLE_NAMES.DIRECTOR,
-  ROLE_NAMES.SYSTEM_ADMIN,
+/** Roles that must not see client identity on project detail (when no other role applies). */
+export const ROLES_WITHOUT_PROJECT_CLIENT = [
+  ROLE_NAMES.RECRUITER,
+  ROLE_NAMES.CRE,
+  'Screening Trainer',
 ] as const;
 
 /**
- * Recruiter and CRE users must not see client identity on project detail.
- * Users with management/admin roles retain access.
+ * Hide client on project detail only for Recruiter, CRE, and Screening Trainer.
+ * Users with any additional role (e.g. Manager + Recruiter) still see the client.
  */
 export function shouldRedactProjectClient(userRoles: string[] = []): boolean {
-  if (userRoles.some((role) => ELEVATED_ROLES.includes(role as (typeof ELEVATED_ROLES)[number]))) {
+  if (!userRoles.length) {
     return false;
   }
 
-  return (
-    userRoles.includes(ROLE_NAMES.RECRUITER) ||
-    userRoles.includes(ROLE_NAMES.CRE)
+  const hasRestrictedRole = userRoles.some((role) =>
+    (ROLES_WITHOUT_PROJECT_CLIENT as readonly string[]).includes(role),
   );
+  const hasOtherRole = userRoles.some(
+    (role) =>
+      !(ROLES_WITHOUT_PROJECT_CLIENT as readonly string[]).includes(role),
+  );
+
+  return hasRestrictedRole && !hasOtherRole;
+}
+
+export function canViewProjectClient(userRoles: string[] = []): boolean {
+  return !shouldRedactProjectClient(userRoles);
 }
 
 export function applyProjectClientVisibility<

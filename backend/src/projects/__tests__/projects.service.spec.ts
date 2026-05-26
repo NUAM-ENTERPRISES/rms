@@ -536,7 +536,7 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('should redact client for Recruiter role', async () => {
+    it('should redact client for Recruiter-only role', async () => {
       prismaService.project.findUnique.mockResolvedValue(mockProject as any);
 
       const result = await service.findOne('project123', ['Recruiter']);
@@ -544,12 +544,14 @@ describe('ProjectsService', () => {
       expect(result.client).toBeNull();
     });
 
-    it('should redact client for CRE role', async () => {
+    it('should not redact client for Processing Executive', async () => {
       prismaService.project.findUnique.mockResolvedValue(mockProject as any);
 
-      const result = await service.findOne('project123', ['CRE']);
+      const result = await service.findOne('project123', [
+        'Processing Executive',
+      ]);
 
-      expect(result.client).toBeNull();
+      expect(result.client).toEqual(mockProject.client);
     });
   });
 
