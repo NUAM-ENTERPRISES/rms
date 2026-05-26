@@ -222,6 +222,199 @@ export class NotificationsService {
     return { muted: updated.notificationSoundMuted };
   }
 
+  /**
+   * Resolve the recruiter who should be notified for a candidate on a project.
+   */
+  async resolveRecruiterUserIdForCandidateProject(
+    candidateId: string,
+    projectId: string,
+    roleCatalogId?: string | null,
+  ): Promise<string | null> {
+    if (roleCatalogId) {
+      const roleNeeded = await this.prisma.roleNeeded.findFirst({
+        where: { projectId, roleCatalogId },
+        select: { id: true },
+      });
+      if (roleNeeded) {
+        const roleMapped = await this.prisma.candidateProjects.findUnique({
+          where: {
+            candidateId_projectId_roleNeededId: {
+              candidateId,
+              projectId,
+              roleNeededId: roleNeeded.id,
+            },
+          },
+          select: { recruiterId: true },
+        });
+        if (roleMapped?.recruiterId) {
+          return roleMapped.recruiterId;
+        }
+      }
+    }
+
+    const projectMapped = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId,
+        projectId,
+        recruiterId: { not: null },
+      },
+      select: { recruiterId: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (projectMapped?.recruiterId) {
+      return projectMapped.recruiterId;
+    }
+
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: { candidateId, isActive: true },
+      select: { recruiterId: true },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    return assignment?.recruiterId ?? null;
+  }
+
+  /**
+   * Notify recruiter and interview stakeholders when documents are sent to the client.
+   */
+  async notifyDocumentsForwardedToClient(params: {
+    eventId: string;
+    candidateId: string;
+    projectId: string;
+    senderId: string;
+    recipientEmail: string;
+    roleCatalogId?: string | null;
+  }): Promise<{ count: number }> {
+    const {
+      eventId,
+      candidateId,
+      projectId,
+      senderId,
+      recipientEmail,
+      roleCatalogId,
+    } = params;
+
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { firstName: true, lastName: true },
+    });
+    const candidateName = candidate
+      ? `${candidate.firstName} ${candidate.lastName}`
+      : 'Unknown';
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { title: true },
+    });
+    const projectTitle = project?.title || 'Unknown Project';
+
+    const recruiterId = await this.resolveRecruiterUserIdForCandidateProject(
+      candidateId,
+      projectId,
+      roleCatalogId,
+    );
+
+    const [interviewStakeholders, documentationExecutives] = await Promise.all([
+      this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  in: [
+                    'Interview Coordinator',
+                    'Director',
+                    'CEO',
+                    'Manager',
+                    'System Admin',
+                  ],
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      }),
+      this.prisma.user.findMany({
+        where: {
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  equals: 'Documentation Executive',
+                  mode: 'insensitive',
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    const documentationUserIds = new Set(
+      documentationExecutives.map((user) => user.id),
+    );
+
+    const recipientIds = new Set<string>();
+    if (recruiterId && recruiterId !== senderId) {
+      recipientIds.add(recruiterId);
+    }
+    for (const user of interviewStakeholders) {
+      if (user.id !== senderId) {
+        recipientIds.add(user.id);
+      }
+    }
+    for (const user of documentationExecutives) {
+      recipientIds.add(user.id);
+    }
+
+    const documentVerificationLink = `/candidates/${candidateId}/documents/${projectId}`;
+
+    this.logger.log(
+      `Documents forwarded: notifying ${recipientIds.size} user(s) (recruiter=${recruiterId ?? 'none'}, documentation=${documentationUserIds.size})`,
+    );
+
+    for (const userId of recipientIds) {
+      const isRecruiter = userId === recruiterId;
+      const isDocumentation = documentationUserIds.has(userId);
+      const isSender = userId === senderId;
+      const idemKey = `${eventId}:${userId}:docs_forwarded`;
+
+      let title: string;
+      let message: string;
+      let link: string;
+
+      if (isRecruiter) {
+        title = 'Documents Sent to Client';
+        message = `Verified documents for ${candidateName} (${projectTitle}) were sent to the client at ${recipientEmail}.`;
+        link = `/recruiter-docs/${projectId}/${candidateId}`;
+      } else if (isDocumentation) {
+        title = 'Sent to Client';
+        message = isSender
+          ? `You sent ${candidateName}'s verified documents for ${projectTitle} to ${recipientEmail}.`
+          : `${candidateName}'s documents for ${projectTitle} were sent to the client at ${recipientEmail}.`;
+        link = documentVerificationLink;
+      } else {
+        title = 'Documents Forwarded to Client';
+        message = `${candidateName}'s documents for project "${projectTitle}" have been forwarded to ${recipientEmail}.`;
+        link = `/interviews/shortlist-pending?search=${encodeURIComponent(candidateName)}`;
+      }
+
+      await this.createNotification({
+        userId,
+        type: 'documents_forwarded',
+        title,
+        message,
+        link,
+        meta: { candidateId, projectId, recipientEmail, audience: isDocumentation ? 'documentation' : isRecruiter ? 'recruiter' : 'interview' },
+        idemKey,
+      });
+    }
+
+    return { count: recipientIds.size };
+  }
+
   private mapToResponseDto(notification: any): NotificationResponseDto {
     return {
       id: notification.id,

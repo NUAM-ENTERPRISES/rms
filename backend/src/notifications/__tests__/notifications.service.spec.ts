@@ -126,3 +126,95 @@ describe('NotificationsService (createNotification)', () => {
     expect(result).toEqual(expect.objectContaining({ id: 'notif-1', userId: 'user-1', type: 'screening_passed' }));
   });
 });
+
+describe('NotificationsService (notifyDocumentsForwardedToClient)', () => {
+  let service: NotificationsService;
+  let prisma: any;
+  let gateway: any;
+
+  beforeEach(async () => {
+    prisma = {
+      notification: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'notif-1',
+          userId: 'recruiter-1',
+          type: 'documents_forwarded',
+          title: 'Documents Sent to Client',
+          message: 'msg',
+          link: '/recruiter-docs/p1/c1',
+          meta: {},
+          idemKey: 'e1:recruiter-1:docs_forwarded',
+          status: 'unread',
+          seen: false,
+          readAt: null,
+          createdAt: new Date(),
+        }),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'recruiter-1' }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      candidate: {
+        findUnique: jest.fn().mockResolvedValue({ firstName: 'Jane', lastName: 'Doe' }),
+      },
+      project: {
+        findUnique: jest.fn().mockResolvedValue({ title: 'UAE Nurses' }),
+      },
+      roleNeeded: { findFirst: jest.fn().mockResolvedValue(null) },
+      candidateProjects: {
+        findUnique: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue({ recruiterId: 'recruiter-1' }),
+      },
+      candidateRecruiterAssignment: { findFirst: jest.fn() },
+    };
+
+    gateway = { emitToUser: jest.fn() };
+
+    const module = await Test.createTestingModule({
+      providers: [
+        NotificationsService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsGateway, useValue: gateway },
+      ],
+    }).compile();
+
+    service = module.get<NotificationsService>(NotificationsService);
+  });
+
+  it('notifies assigned recruiter and documentation team when documents are sent to client', async () => {
+    prisma.user.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'doc-exec-1' }, { id: 'doc-exec-2' }]);
+
+    const result = await service.notifyDocumentsForwardedToClient({
+      eventId: 'evt-1',
+      candidateId: 'c1',
+      projectId: 'p1',
+      senderId: 'doc-exec-1',
+      recipientEmail: 'client@example.com',
+    });
+
+    expect(result.count).toBe(3);
+    expect(prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'recruiter-1',
+          type: 'documents_forwarded',
+          title: 'Documents Sent to Client',
+          link: '/recruiter-docs/p1/c1',
+        }),
+      }),
+    );
+    expect(prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'doc-exec-1',
+          type: 'documents_forwarded',
+          title: 'Sent to Client',
+          link: '/candidates/c1/documents/p1',
+        }),
+      }),
+    );
+  });
+});
