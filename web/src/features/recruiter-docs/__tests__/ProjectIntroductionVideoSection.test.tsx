@@ -6,6 +6,11 @@ vi.mock("@/features/introduction-videos/api", () => ({
   useUploadIntroductionVideoMutation: () => [vi.fn(), { isLoading: false }],
   useReuseIntroductionVideoMutation: () => [vi.fn(), { isLoading: false }],
   useReuploadIntroductionVideoMutation: () => [vi.fn(), { isLoading: false }],
+  useGetReusableIntroductionVideosQuery: () => ({
+    data: { data: [], pagination: { page: 1, limit: 10, total: 0, totalPages: 0 } },
+    isLoading: false,
+    isFetching: false,
+  }),
 }));
 
 describe("ProjectIntroductionVideoSection", () => {
@@ -15,7 +20,6 @@ describe("ProjectIntroductionVideoSection", () => {
         candidateId="c1"
         projectId="p1"
         introductionVideo={null}
-        existingDocuments={[]}
       />
     );
 

@@ -41,6 +41,13 @@ import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQ
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
+import { truncateFileName } from "@/lib/formatFileName";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Document type options based on backend constants
 const DOCUMENT_TYPES = [
@@ -154,6 +161,27 @@ interface DocumentUploadSectionProps {
   completionSourceDocuments?: any[];
   isLoading?: boolean;
   onRefresh?: () => void;
+}
+
+function FileNameCell({ fileName }: { fileName: string }) {
+  const { display, full, isTruncated } = truncateFileName(fileName, 60);
+
+  if (!isTruncated) {
+    return <p className="font-semibold text-slate-900">{display}</p>;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <p className="font-semibold text-slate-900 cursor-help">{display}</p>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-md break-all">
+          <p className="text-xs">{full}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function DocumentUploadSection({
@@ -417,7 +445,7 @@ export function DocumentUploadSection({
                       <FileText className="h-5 w-5 text-red-600" />
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">{doc.fileName}</p>
+                      <FileNameCell fileName={doc.fileName} />
                       {doc.documentNumber && (
                         <p className="text-sm text-slate-600">#{doc.documentNumber}</p>
                       )}

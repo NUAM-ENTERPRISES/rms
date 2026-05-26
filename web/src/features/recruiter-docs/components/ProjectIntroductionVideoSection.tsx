@@ -10,14 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -25,8 +17,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
@@ -41,8 +31,10 @@ import {
   Download,
   RefreshCw,
 } from "lucide-react";
-import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
+import { truncateFileName } from "@/lib/formatFileName";
 import {
   useUploadIntroductionVideoMutation,
   useReuseIntroductionVideoMutation,
@@ -50,20 +42,11 @@ import {
   type IntroductionVideoVerification,
 } from "@/features/introduction-videos/api";
 
-interface ExistingDocument {
-  id: string;
-  docType: string;
-  fileName: string;
-  fileUrl: string;
-  createdAt?: string;
-}
-
 interface ProjectIntroductionVideoSectionProps {
   candidateId: string;
   projectId: string;
   projectTitle?: string;
   introductionVideo?: IntroductionVideoVerification | null;
-  existingDocuments?: ExistingDocument[];
   isVerificationSent?: boolean;
   onSuccess?: () => void;
 }
@@ -109,7 +92,6 @@ export function ProjectIntroductionVideoSection({
   projectId,
   projectTitle,
   introductionVideo,
-  existingDocuments = [],
   isVerificationSent = false,
   onSuccess,
 }: ProjectIntroductionVideoSectionProps) {
@@ -123,13 +105,8 @@ export function ProjectIntroductionVideoSection({
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [showReuseDialog, setShowReuseDialog] = React.useState(false);
   const [showVideoModal, setShowVideoModal] = React.useState(false);
-  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
-  const [selectedExistingDocId, setSelectedExistingDocId] = React.useState("");
   const [isReuploadMode, setIsReuploadMode] = React.useState(false);
-
-  const reusableVideos = existingDocuments.filter(
-    (doc) => doc.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO
-  );
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   const canEdit =
     !introductionVideo ||
@@ -144,49 +121,53 @@ export function ProjectIntroductionVideoSection({
     isVerificationSent &&
     introductionVideo?.status === "rejected";
 
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a video file");
-      return;
-    }
-
+  const handleUpload = async ({
+    file,
+    remarks,
+  }: {
+    file: File;
+    remarks?: string;
+  }) => {
     try {
+      setUploadProgress(0);
       if (isReuploadMode && introductionVideo) {
         await reuploadIntroductionVideo({
           candidateId,
           projectId,
-          file: selectedFile,
+          file,
+          remarks,
+          onProgress: setUploadProgress,
         }).unwrap();
         toast.success("Introduction video re-uploaded successfully");
       } else {
         await uploadIntroductionVideo({
           candidateId,
           projectId,
-          file: selectedFile,
+          file,
+          remarks,
+          onProgress: setUploadProgress,
         }).unwrap();
         toast.success("Introduction video uploaded successfully");
       }
       setShowUploadDialog(false);
-      setSelectedFile(null);
       setIsReuploadMode(false);
+      setUploadProgress(0);
       onSuccess?.();
     } catch (error: any) {
+      setUploadProgress(0);
       toast.error(error?.data?.message || "Failed to upload introduction video");
     }
   };
 
-  const handleReuse = async () => {
-    if (!selectedExistingDocId) return;
-
+  const handleReuse = async (documentId: string) => {
     try {
       await reuseIntroductionVideo({
         candidateId,
         projectId,
-        documentId: selectedExistingDocId,
+        documentId,
       }).unwrap();
       toast.success("Introduction video linked successfully");
       setShowReuseDialog(false);
-      setSelectedExistingDocId("");
       onSuccess?.();
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to link introduction video");
@@ -214,6 +195,7 @@ export function ProjectIntroductionVideoSection({
                 <TableHead>Document</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>File Name</TableHead>
+                <TableHead>Remarks</TableHead>
                 <TableHead>Uploaded At</TableHead>
                 <TableHead className="text-right w-[140px]">Actions</TableHead>
               </TableRow>
@@ -258,11 +240,68 @@ export function ProjectIntroductionVideoSection({
                 </TableCell>
                 <TableCell>
                   {videoDoc ? (
-                    <span className="text-xs text-muted-foreground truncate max-w-[180px] block">
-                      {videoDoc.fileName}
-                    </span>
+                    (() => {
+                      const { display, full, isTruncated } = truncateFileName(
+                        videoDoc.fileName,
+                        80
+                      );
+                      if (!isTruncated) {
+                        return (
+                          <span className="text-xs text-muted-foreground truncate max-w-[180px] block">
+                            {display}
+                          </span>
+                        );
+                      }
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground truncate max-w-[180px] block cursor-help">
+                                {display}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-md break-all">
+                              <p className="text-xs">{full}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()
                   ) : (
                     <span className="text-xs text-muted-foreground italic">No file</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {videoDoc?.remarks ? (
+                    (() => {
+                      const { display, full, isTruncated } = truncateFileName(
+                        videoDoc.remarks,
+                        80
+                      );
+                      if (!isTruncated) {
+                        return (
+                          <span className="text-xs text-muted-foreground">
+                            {display}
+                          </span>
+                        );
+                      }
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-xs text-muted-foreground truncate max-w-[180px] block cursor-help">
+                                {display}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-md break-all">
+                              <p className="text-xs">{full}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">—</span>
                   )}
                 </TableCell>
                 <TableCell>
@@ -312,7 +351,6 @@ export function ProjectIntroductionVideoSection({
                             }
                             onClick={() => {
                               setIsReuploadMode(true);
-                              setSelectedFile(null);
                               setShowUploadDialog(true);
                             }}
                           >
@@ -331,7 +369,6 @@ export function ProjectIntroductionVideoSection({
                           size="sm"
                           className="text-violet-600 hover:bg-violet-50"
                           onClick={() => setShowReuseDialog(true)}
-                          disabled={reusableVideos.length === 0}
                         >
                           <Link2 className="h-4 w-4 mr-2" />
                           Add Existing
@@ -342,7 +379,6 @@ export function ProjectIntroductionVideoSection({
                           className="text-primary hover:bg-primary/10"
                           onClick={() => {
                             setIsReuploadMode(false);
-                            setSelectedFile(null);
                             setShowUploadDialog(true);
                           }}
                         >
@@ -359,87 +395,28 @@ export function ProjectIntroductionVideoSection({
         </CardContent>
       </Card>
 
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isReuploadMode ? "Re-upload Introduction Video" : "Upload Introduction Video"}
-            </DialogTitle>
-            <DialogDescription>
-              Accepted formats: MP4, WebM, MOV. Maximum size: 100MB.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label htmlFor="intro-video-file">Video file</Label>
-            <Input
-              id="intro-video-file"
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={!selectedFile || isUploading || isReuploading}
-            >
-              {isUploading || isReuploading ? "Uploading..." : "Upload"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <IntroductionVideoUploadModal
+        isOpen={showUploadDialog}
+        onClose={() => {
+          setShowUploadDialog(false);
+          setIsReuploadMode(false);
+          setUploadProgress(0);
+        }}
+        onSubmit={handleUpload}
+        isSubmitting={isUploading || isReuploading}
+        uploadProgress={uploadProgress}
+        variant={isReuploadMode ? "reupload" : "upload"}
+        idPrefix="project-intro-video"
+      />
 
-      <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reuse Introduction Video</DialogTitle>
-            <DialogDescription>
-              Select an existing introduction video uploaded for this candidate.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {reusableVideos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No existing introduction videos found for this candidate.
-              </p>
-            ) : (
-              reusableVideos.map((doc) => (
-                <button
-                  key={doc.id}
-                  type="button"
-                  className={`w-full text-left rounded-lg border p-3 transition ${
-                    selectedExistingDocId === doc.id
-                      ? "border-violet-500 bg-violet-50"
-                      : "border-slate-200 hover:bg-slate-50"
-                  }`}
-                  onClick={() => setSelectedExistingDocId(doc.id)}
-                >
-                  <p className="font-medium text-sm truncate">{doc.fileName}</p>
-                  {doc.createdAt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Uploaded {new Date(doc.createdAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReuseDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReuse}
-              disabled={!selectedExistingDocId || isReusing}
-            >
-              {isReusing ? "Linking..." : "Link Video"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <IntroductionVideoReuseModal
+        isOpen={showReuseDialog}
+        onClose={() => setShowReuseDialog(false)}
+        candidateId={candidateId}
+        excludeProjectId={projectId}
+        onReuse={handleReuse}
+        isReusing={isReusing}
+      />
 
       {videoDoc && (
         <VideoPlayerModal

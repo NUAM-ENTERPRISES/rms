@@ -39,7 +39,7 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
-import { CandidatesIntroductionVideos } from "../components/CandidatesIntroductionVideos";
+import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
@@ -546,6 +546,20 @@ export default function CandidateDetailPage() {
             onEditLicensing={() => setIsLicensingModalOpen(true)}
             workExperienceDocs={documentsData?.data?.documents ?? []}
           />
+
+          {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-200">
+                <CardTitle className="text-slate-900">Candidate Pipeline</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Status progression for this candidate
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <DeleteConfirmationDialog
@@ -580,9 +594,6 @@ export default function CandidateDetailPage() {
           <CandidateMetrics candidate={candidate} />
         </TabsContent>
       </Tabs>
-
-      {/* Introduction Videos */}
-      <CandidatesIntroductionVideos candidateId={id!} />
 
       {/* Modal for adding/editing qualifications and work experience */}
       <QualificationWorkExperienceModal

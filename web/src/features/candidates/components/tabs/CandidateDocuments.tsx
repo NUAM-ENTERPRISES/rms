@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { DocumentUploadSection } from "../DocumentUploadSection";
+import { CandidatesIntroductionVideos } from "../CandidatesIntroductionVideos";
 import { useGetDocumentsQuery } from "../../api";
 import { getCandidateProfileCompletion } from "../../profileCompletion";
 import { Button } from "@/components/ui/button";
@@ -229,6 +230,8 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
         isLoading={isLoading}
         onRefresh={refetchAll}
       />
+
+      <CandidatesIntroductionVideos candidateId={candidateId} />
 
       {meta && meta.total > 0 && (
         <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white/50 p-6 shadow-sm backdrop-blur-sm">

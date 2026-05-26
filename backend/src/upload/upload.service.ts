@@ -8,6 +8,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
@@ -190,19 +191,86 @@ export class UploadService {
     }
   }
 
+  getIntroductionVideoFolder(candidateId: string): string {
+    // Unconfirmed presigned uploads under this prefix can be cleaned up via
+    // a DigitalOcean Spaces lifecycle rule (e.g. delete after 24 hours).
+    return `candidates/introduction-videos/${candidateId}`;
+  }
+
+  getIntroductionVideoStorageKey(
+    candidateId: string,
+    storageFileName: string,
+  ): string {
+    return `${this.getIntroductionVideoFolder(candidateId)}/${storageFileName}`;
+  }
+
+  getPublicUrlForKey(key: string): string {
+    return this.cdnUrl
+      ? `${this.cdnUrl}/${key}`
+      : `${this.endpoint}/${this.bucketName}/${key}`;
+  }
+
+  extractKeyFromUrl(fileUrl: string): string {
+    if (this.cdnUrl && fileUrl.startsWith(this.cdnUrl)) {
+      return fileUrl.replace(`${this.cdnUrl}/`, '');
+    }
+
+    return fileUrl.replace(`${this.endpoint}/${this.bucketName}/`, '');
+  }
+
+  async createPresignedPutUrl(
+    key: string,
+    mimeType: string,
+    expiresIn = 3600,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ACL: 'public-read',
+        ContentType: mimeType,
+        CacheControl: 'max-age=31536000',
+      });
+
+      return await getSignedUrl(this.s3Client, command, { expiresIn });
+    } catch (error) {
+      console.error('Presigned PUT URL error:', error);
+      throw new InternalServerErrorException(
+        'Failed to generate presigned upload URL',
+      );
+    }
+  }
+
+  async headObject(
+    key: string,
+  ): Promise<{ contentLength: number; contentType?: string }> {
+    try {
+      const response = await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+      );
+
+      return {
+        contentLength: response.ContentLength ?? 0,
+        contentType: response.ContentType,
+      };
+    } catch (error) {
+      console.error('HeadObject error:', error);
+      throw new BadRequestException(
+        'Uploaded file was not found in storage. Please upload again.',
+      );
+    }
+  }
+
   /**
    * Delete file from DigitalOcean Spaces
    * @param fileUrl - Full URL of the file to delete
    */
   async deleteFile(fileUrl: string): Promise<void> {
     try {
-      // Extract key from URL
-      let key: string;
-      if (this.cdnUrl && fileUrl.startsWith(this.cdnUrl)) {
-        key = fileUrl.replace(`${this.cdnUrl}/`, '');
-      } else {
-        key = fileUrl.replace(`${this.endpoint}/${this.bucketName}/`, '');
-      }
+      const key = this.extractKeyFromUrl(fileUrl);
 
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -428,6 +496,7 @@ export class UploadService {
   async uploadIntroductionVideo(
     file: Express.Multer.File,
     candidateId: string,
+    customFileName?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = [
       'video/mp4',
@@ -436,7 +505,7 @@ export class UploadService {
       'video/x-msvideo',
     ];
     const folder = `candidates/introduction-videos/${candidateId}`;
-    return this.uploadFile(file, folder, allowedMimeTypes, 100);
+    return this.uploadFile(file, folder, allowedMimeTypes, 100, customFileName);
   }
 
   /**

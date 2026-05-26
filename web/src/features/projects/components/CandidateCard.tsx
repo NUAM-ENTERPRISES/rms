@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Upload,
   GraduationCap,
+  Video,
 } from "lucide-react";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { CandidateDetailTooltip } from "./CandidateDetailTooltip";
@@ -135,6 +137,7 @@ export interface CandidateRecord {
   project?: {
     id?: string;
     title?: string;
+    introductionVideoRequired?: boolean;
     documentRequirements?: Array<{
       id: string;
       docType: string;
@@ -357,7 +360,18 @@ const CandidateCard = memo(function CandidateCard({
     };
   });
 
-  const isAllUploaded = docStatusList.every(d => d.isUploaded);
+  const introductionVideoRequired =
+    candidate.project?.introductionVideoRequired === true;
+
+  const introVideoVerification = uploadedDocs.find(
+    (u) => u.document?.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+  );
+
+  const isIntroVideoUploaded = Boolean(introVideoVerification);
+
+  const isAllUploaded =
+    docStatusList.every((d) => d.isUploaded) &&
+    (!introductionVideoRequired || isIntroVideoUploaded);
 
   const handleUploadNavigation = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -974,7 +988,10 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Document Status Icon */}
-          {showDocumentStatus && (requiredDocs.length > 0 || uploadedDocs.length > 0) && (
+          {showDocumentStatus &&
+            (requiredDocs.length > 0 ||
+              uploadedDocs.length > 0 ||
+              introductionVideoRequired) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div 
@@ -1022,6 +1039,27 @@ const CandidateCard = memo(function CandidateCard({
                         </span>
                       </div>
                     ))}
+                    {introductionVideoRequired && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          {isIntroVideoUploaded ? (
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                          )}
+                          <Video className="h-3 w-3 text-violet-500" aria-hidden />
+                          <span>Introduction Video</span>
+                        </div>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            isIntroVideoUploaded ? "text-green-600" : "text-amber-600",
+                          )}
+                        >
+                          {isIntroVideoUploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {isRecruiter && (

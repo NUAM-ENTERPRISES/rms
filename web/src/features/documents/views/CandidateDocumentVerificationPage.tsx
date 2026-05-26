@@ -78,7 +78,14 @@ import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
 import { VerificationDocumentActions } from "@/components/molecules/VerificationDocumentActions";
+import {
+  useUploadIntroductionVideoMutation,
+  useReuseIntroductionVideoMutation,
+  useReuploadIntroductionVideoMutation,
+} from "@/features/introduction-videos/api";
 import { VerificationDocumentStatusBadge } from "@/components/molecules/VerificationDocumentStatusBadge";
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
@@ -127,6 +134,10 @@ export default function CandidateDocumentVerificationPage() {
   const [selectedResubmitVerification, setSelectedResubmitVerification] = useState<any>(null);
   const [isReuploadMode, setIsReuploadMode] = useState(false);
   const [reuploadDocId, setReuploadDocId] = useState<string | null>(null);
+  const [showIntroVideoUploadDialog, setShowIntroVideoUploadDialog] = useState(false);
+  const [showIntroVideoReuseDialog, setShowIntroVideoReuseDialog] = useState(false);
+  const [isIntroVideoReuploadMode, setIsIntroVideoReuploadMode] = useState(false);
+  const [introVideoUploadProgress, setIntroVideoUploadProgress] = useState(0);
 
   // PDF Viewer state
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
@@ -225,6 +236,12 @@ export default function CandidateDocumentVerificationPage() {
     useRequestResubmissionMutation();
   const [reuploadDocument, { isLoading: isReuploading }] =
     useReuploadDocumentMutation();
+  const [uploadIntroductionVideo, { isLoading: isUploadingIntroVideo }] =
+    useUploadIntroductionVideoMutation();
+  const [reuseIntroductionVideo, { isLoading: isReusingIntroVideo }] =
+    useReuseIntroductionVideoMutation();
+  const [reuploadIntroductionVideo, { isLoading: isReuploadingIntroVideo }] =
+    useReuploadIntroductionVideoMutation();
   console.log('isReuploading state:', isReuploading);
 
     // Project-related refetch helpers so we can trigger live updates elsewhere
@@ -426,6 +443,69 @@ export default function CandidateDocumentVerificationPage() {
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
+    }
+  };
+
+  const handleIntroVideoUpload = async ({
+    file,
+    remarks,
+  }: {
+    file: File;
+    remarks?: string;
+  }) => {
+    if (!candidateId || !selectedProjectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      setIntroVideoUploadProgress(0);
+      if (isIntroVideoReuploadMode && introductionVideo) {
+        await reuploadIntroductionVideo({
+          candidateId,
+          projectId: selectedProjectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video re-uploaded successfully");
+      } else {
+        await uploadIntroductionVideo({
+          candidateId,
+          projectId: selectedProjectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video uploaded successfully");
+      }
+      setShowIntroVideoUploadDialog(false);
+      setIsIntroVideoReuploadMode(false);
+      setIntroVideoUploadProgress(0);
+      refetchRequirements();
+    } catch (error: any) {
+      setIntroVideoUploadProgress(0);
+      toast.error(error?.data?.message || "Failed to upload introduction video");
+    }
+  };
+
+  const handleIntroVideoReuse = async (documentId: string) => {
+    if (!candidateId || !selectedProjectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      await reuseIntroductionVideo({
+        candidateId,
+        projectId: selectedProjectId,
+        documentId,
+      }).unwrap();
+      toast.success("Introduction video linked successfully");
+      setShowIntroVideoReuseDialog(false);
+      refetchRequirements();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to link introduction video");
     }
   };
 
@@ -1280,19 +1360,45 @@ export default function CandidateDocumentVerificationPage() {
                             <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
                               {verification.document.fileName}
                             </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                setVideoPreview({
-                                  fileUrl: verification.document.fileUrl,
-                                  fileName: verification.document.fileName,
-                                })
-                              }
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  setVideoPreview({
+                                    fileUrl: verification.document.fileUrl,
+                                    fileName: verification.document.fileName,
+                                  })
+                                }
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {(displayedStatus !== "verified" ||
+                                selectedProject?.subStatus?.name ===
+                                  "client_revision_requested") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  title={
+                                    displayedStatus === "resubmission_required"
+                                      ? "Re-upload (Requested)"
+                                      : "Re-upload video"
+                                  }
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(true);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  {displayedStatus === "resubmission_required" ? (
+                                    <Upload className="h-4 w-4" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-slate-500 italic text-xs">No video</span>
@@ -1325,6 +1431,28 @@ export default function CandidateDocumentVerificationPage() {
                               setSelectedResubmitVerification(v);
                               setIsResubmitDialogOpen(true);
                             }}
+                            emptyActions={
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3"
+                                  onClick={() => setShowIntroVideoReuseDialog(true)}
+                                >
+                                  Link
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(false);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
+                                </Button>
+                              </>
+                            }
                           />
                         </div>
                       </TableCell>
@@ -1597,6 +1725,31 @@ export default function CandidateDocumentVerificationPage() {
             title="Introduction Video"
           />
         )}
+
+        <IntroductionVideoUploadModal
+          isOpen={showIntroVideoUploadDialog}
+          onClose={() => {
+            setShowIntroVideoUploadDialog(false);
+            setIsIntroVideoReuploadMode(false);
+            setIntroVideoUploadProgress(0);
+          }}
+          onSubmit={handleIntroVideoUpload}
+          isSubmitting={isUploadingIntroVideo || isReuploadingIntroVideo}
+          uploadProgress={introVideoUploadProgress}
+          variant={isIntroVideoReuploadMode ? "reupload" : "upload"}
+          idPrefix="documentation-intro-video"
+        />
+
+        {candidateId && selectedProjectId ? (
+          <IntroductionVideoReuseModal
+            isOpen={showIntroVideoReuseDialog}
+            onClose={() => setShowIntroVideoReuseDialog(false)}
+            candidateId={candidateId}
+            excludeProjectId={selectedProjectId}
+            onReuse={handleIntroVideoReuse}
+            isReusing={isReusingIntroVideo}
+          />
+        ) : null}
 
         {/* Confirmation Dialog */}
         <ConfirmationDialog

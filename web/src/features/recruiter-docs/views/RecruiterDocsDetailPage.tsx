@@ -111,7 +111,14 @@ import { FlagIcon } from "@/shared/components/FlagIcon";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import { ImageViewer } from "@/components/molecules";
-import ProjectIntroductionVideoSection from "../components/ProjectIntroductionVideoSection";
+import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
+import {
+  useUploadIntroductionVideoMutation,
+  useReuseIntroductionVideoMutation,
+  useReuploadIntroductionVideoMutation,
+} from "@/features/introduction-videos/api";
 
 // Minimal colorful badge classes for match scores
 const getMinimalScoreBadgeClass = (score?: number) => {
@@ -270,6 +277,18 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [isReuploadMode, setIsReuploadMode] = React.useState(false);
   const [reuploadDocId, setReuploadDocId] = React.useState<string | null>(null);
   const [reuploadMeta, setReuploadMeta] = React.useState<{ previousFileName: string } | null>(null);
+  const [showIntroVideoUploadDialog, setShowIntroVideoUploadDialog] = React.useState(false);
+  const [showIntroVideoReuseDialog, setShowIntroVideoReuseDialog] = React.useState(false);
+  const [isIntroVideoReuploadMode, setIsIntroVideoReuploadMode] = React.useState(false);
+  const [introVideoUploadProgress, setIntroVideoUploadProgress] = React.useState(0);
+  const [showIntroVideoModal, setShowIntroVideoModal] = React.useState(false);
+
+  const [uploadIntroductionVideo, { isLoading: isUploadingIntroVideo }] =
+    useUploadIntroductionVideoMutation();
+  const [reuseIntroductionVideo, { isLoading: isReusingIntroVideo }] =
+    useReuseIntroductionVideoMutation();
+  const [reuploadIntroductionVideo, { isLoading: isReuploadingIntroVideo }] =
+    useReuploadIntroductionVideoMutation();
 
   // Verification Confirmation State
   const [isVerifyConfirmOpen, setIsVerifyConfirmOpen] = React.useState(false);
@@ -479,6 +498,71 @@ const RecruiterDocsDetailPage: React.FC = () => {
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
+    }
+  };
+
+  const handleIntroVideoUpload = async ({
+    file,
+    remarks,
+  }: {
+    file: File;
+    remarks?: string;
+  }) => {
+    if (!candidateId || !projectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      setIntroVideoUploadProgress(0);
+      if (isIntroVideoReuploadMode && introductionVideo) {
+        await reuploadIntroductionVideo({
+          candidateId,
+          projectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video re-uploaded successfully");
+      } else {
+        await uploadIntroductionVideo({
+          candidateId,
+          projectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video uploaded successfully");
+      }
+      setShowIntroVideoUploadDialog(false);
+      setIsIntroVideoReuploadMode(false);
+      setIntroVideoUploadProgress(0);
+      refetchRequirements();
+      refetchCandidateDocs();
+    } catch (error: any) {
+      setIntroVideoUploadProgress(0);
+      toast.error(error?.data?.message || "Failed to upload introduction video");
+    }
+  };
+
+  const handleIntroVideoReuse = async (documentId: string) => {
+    if (!candidateId || !projectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      await reuseIntroductionVideo({
+        candidateId,
+        projectId,
+        documentId,
+      }).unwrap();
+      toast.success("Introduction video linked successfully");
+      setShowIntroVideoReuseDialog(false);
+      refetchRequirements();
+      refetchCandidateDocs();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to link introduction video");
     }
   };
 
@@ -920,7 +1004,187 @@ const RecruiterDocsDetailPage: React.FC = () => {
                       </TableRow>
                     );
                   })}
-                  {requirements.length === 0 && (
+                  {introductionVideoRequired && candidateId && projectId ? (
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4 text-violet-600 shrink-0" />
+                          <span>Introduction Video</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900">
+                              Introduction Video
+                            </span>
+                            <Badge
+                              variant="destructive"
+                              className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
+                            >
+                              Required
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground font-normal">
+                            Candidate introduction video for this project
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo ? (
+                          <div className="space-y-1">
+                            <Badge
+                              className={
+                                introductionVideo.status === "verified"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : introductionVideo.status === "rejected"
+                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : introductionVideo.status === "resubmission_required"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                              }
+                            >
+                              {introductionVideo.status === "resubmission_required"
+                                ? "Resubmission Needed"
+                                : introductionVideo.status.charAt(0).toUpperCase() +
+                                  introductionVideo.status.slice(1)}
+                            </Badge>
+                            {introductionVideo.status === "resubmission_required" &&
+                              introductionVideo.rejectionReason && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                        Reason: {introductionVideo.rejectionReason}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-xs">
+                                        Reason: {introductionVideo.rejectionReason}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-400 border-slate-200">
+                            Not Submitted
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo?.document ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px] block cursor-help">
+                                  {introductionVideo.document.fileName}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs break-all">
+                                {introductionVideo.document.fileName}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No file</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo?.document?.createdAt
+                          ? new Date(introductionVideo.document.createdAt).toLocaleDateString(
+                              "en-GB",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {introductionVideo?.document ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="View video"
+                                onClick={() => setShowIntroVideoModal(true)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Download video"
+                                onClick={() =>
+                                  window.open(introductionVideo.document!.fileUrl, "_blank")
+                                }
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {(!isVerificationSent ||
+                                introductionVideo.status === "resubmission_required") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={
+                                    introductionVideo.status === "resubmission_required"
+                                      ? "Re-upload (Requested)"
+                                      : "Re-upload video"
+                                  }
+                                  className={
+                                    introductionVideo.status === "resubmission_required"
+                                      ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  }
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(true);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  {introductionVideo.status === "resubmission_required" ? (
+                                    <Upload className="h-4 w-4" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </>
+                          ) : !isVerificationSent ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-violet-600 hover:bg-violet-50"
+                                onClick={() => setShowIntroVideoReuseDialog(true)}
+                              >
+                                <Link2 className="h-4 w-4 mr-2" />
+                                Add Existing
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:bg-primary/10"
+                                onClick={() => {
+                                  setIsIntroVideoReuploadMode(false);
+                                  setShowIntroVideoUploadDialog(true);
+                                }}
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  {requirements.length === 0 && !introductionVideoRequired && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                         No document requirements found for this project.
@@ -931,21 +1195,6 @@ const RecruiterDocsDetailPage: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
-
-          {introductionVideoRequired && candidateId && projectId && (
-            <ProjectIntroductionVideoSection
-              candidateId={candidateId}
-              projectId={projectId}
-              projectTitle={project.title}
-              introductionVideo={introductionVideo}
-              existingDocuments={allCandidateDocuments}
-              isVerificationSent={isVerificationSent}
-              onSuccess={() => {
-                void refetchRequirements();
-                void refetchCandidateDocs();
-              }}
-            />
-          )}
         </TabsContent>
 
         <TabsContent value="candidate-docs" className="space-y-4">
@@ -1640,6 +1889,42 @@ const RecruiterDocsDetailPage: React.FC = () => {
         showRotationControls={true}
         showFullscreenToggle={true}
       />
+
+      <IntroductionVideoUploadModal
+        isOpen={showIntroVideoUploadDialog}
+        onClose={() => {
+          setShowIntroVideoUploadDialog(false);
+          setIsIntroVideoReuploadMode(false);
+          setIntroVideoUploadProgress(0);
+        }}
+        onSubmit={handleIntroVideoUpload}
+        isSubmitting={isUploadingIntroVideo || isReuploadingIntroVideo}
+        uploadProgress={introVideoUploadProgress}
+        variant={isIntroVideoReuploadMode ? "reupload" : "upload"}
+        idPrefix="recruiter-intro-video"
+      />
+
+      {candidateId && projectId ? (
+        <IntroductionVideoReuseModal
+          isOpen={showIntroVideoReuseDialog}
+          onClose={() => setShowIntroVideoReuseDialog(false)}
+          candidateId={candidateId}
+          excludeProjectId={projectId}
+          onReuse={handleIntroVideoReuse}
+          isReusing={isReusingIntroVideo}
+        />
+      ) : null}
+
+      {introductionVideo?.document ? (
+        <VideoPlayerModal
+          isOpen={showIntroVideoModal}
+          onClose={() => setShowIntroVideoModal(false)}
+          fileUrl={introductionVideo.document.fileUrl}
+          fileName={introductionVideo.document.fileName}
+          title="Introduction Video"
+          subtitle={project?.title}
+        />
+      ) : null}
 
       <ConfirmationDialog
         isOpen={isVerifyConfirmOpen}

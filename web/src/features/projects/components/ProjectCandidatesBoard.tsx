@@ -648,7 +648,17 @@ const ProjectCandidatesBoard = ({
 
           const candidateWithProject = {
             ...candidate,
-            project: candidate.project || project,
+            project: {
+              ...(candidate.project || project),
+              introductionVideoRequired:
+                project?.introductionVideoRequired ??
+                candidate.project?.introductionVideoRequired ??
+                false,
+              documentRequirements:
+                candidate.project?.documentRequirements ??
+                project?.documentRequirements ??
+                [],
+            },
           };
 
           const subStatusName =
