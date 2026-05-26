@@ -535,6 +535,7 @@ export default function CandidateDetailPage() {
         <TabsContent value="overview" className="space-y-6">
           <CandidateOverview
             candidate={candidate}
+            isCandidateLoading={isLoading}
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
             openEditModal={openEditModal}

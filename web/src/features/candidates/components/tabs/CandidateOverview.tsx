@@ -32,11 +32,18 @@ import {
   ClipboardCheck,
   FileText,
   Eye,
+  PauseCircle,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { DateUtils } from "@/shared/utils/date";
 import { getAge } from "@/utils/getAge";
-import { Candidate, CandidateQualification, WorkExperience, Document } from "../../api";
+import {
+  Candidate,
+  CandidateQualification,
+  WorkExperience,
+  Document,
+  CareerGapType,
+} from "../../api";
 import { CandidateResumeList } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
@@ -44,6 +51,7 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 
 interface CandidateOverviewProps {
   candidate: Candidate;
+  isCandidateLoading?: boolean;
   canWriteCandidates: boolean;
   openAddModal: (type: "qualification" | "workExperience") => void;
   openEditModal: (
@@ -59,8 +67,28 @@ interface CandidateOverviewProps {
   workExperienceDocs?: Document[];
 }
 
+const formatMonthsAsDuration = (totalMonths: number): string => {
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  return DateUtils.formatDuration(years, months);
+};
+
+const getGapTypeLabel = (type: CareerGapType): string => {
+  switch (type) {
+    case "education_to_work":
+      return "After education";
+    case "current_unemployment":
+      return "Currently unemployed";
+    case "between_jobs":
+      return "Between jobs";
+    default:
+      return "Gap";
+  }
+};
+
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   candidate,
+  isCandidateLoading = false,
   canWriteCandidates,
   openAddModal,
   openEditModal,
@@ -74,6 +102,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 }) => {
   const age = getAge(candidate.dateOfBirth);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string; isPdf: boolean } | null>(null);
+  const careerGaps = candidate.careerGapAnalysis;
 
   const QUAL_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
   const WORK_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
@@ -87,6 +116,28 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
   const qualifications = candidate.qualifications ?? [];
   const workExperiences = candidate.workExperiences ?? [];
+
+  const experienceLabel = useMemo(() => {
+    if (careerGaps) {
+      return formatMonthsAsDuration(careerGaps.totalExperienceMonths);
+    }
+    if (workExperiences.length > 0) {
+      const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
+      return DateUtils.formatDuration(years, months);
+    }
+    return (
+      candidate.totalExperience?.toString() ||
+      candidate.experience?.toString() ||
+      "N/A"
+    );
+  }, [careerGaps, workExperiences, candidate.totalExperience, candidate.experience]);
+
+  const careerGapLabel = useMemo(() => {
+    if (isCandidateLoading) return "Loading…";
+    if (!workExperiences.length) return "N/A";
+    if (!careerGaps || careerGaps.totalGapMonths === 0) return "No gaps";
+    return formatMonthsAsDuration(careerGaps.totalGapMonths);
+  }, [careerGaps, isCandidateLoading, workExperiences.length]);
 
   const qualificationsTotalPages = Math.max(
     1,
@@ -193,20 +244,24 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1">
                     <Clock className="h-3 w-3 text-slate-400" />
-                    {(() => {
-                      if (
-                        candidate.workExperiences &&
-                        candidate.workExperiences.length > 0
-                      ) {
-                        const { years, months } = DateUtils.calculateTotalExperience(candidate.workExperiences);
-                        return DateUtils.formatDuration(years, months);
-                      }
-                      return (
-                        candidate.totalExperience ||
-                        candidate.experience ||
-                        "N/A"
-                      );
-                    })()}
+                    {experienceLabel}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Career Gap
+                  </label>
+                  <p className="text-sm flex items-center gap-2 mt-1">
+                    <PauseCircle className="h-3 w-3 text-slate-400" aria-hidden />
+                    <span>{careerGapLabel}</span>
+                    {careerGaps && careerGaps.longestGapMonths >= 12 && (
+                      <Badge
+                        variant="outline"
+                        className="text-amber-700 border-amber-200 bg-amber-50 text-[10px] h-5 px-1.5"
+                      >
+                        Longest {formatMonthsAsDuration(careerGaps.longestGapMonths)}
+                      </Badge>
+                    )}
                   </p>
                 </div>
                 <div>
@@ -819,10 +874,22 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             <div>
                               <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Experience</p>
                               <p className="text-2xl font-extrabold tracking-tight">
-                                {(() => {
-                                  const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
-                                  return DateUtils.formatDuration(years, months);
-                                })()}
+                                {careerGaps
+                                  ? formatMonthsAsDuration(careerGaps.totalExperienceMonths)
+                                  : (() => {
+                                      const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
+                                      return DateUtils.formatDuration(years, months);
+                                    })()}
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Gap</p>
+                              <p className="text-2xl font-extrabold tracking-tight">
+                                {isCandidateLoading
+                                  ? "…"
+                                  : careerGaps && careerGaps.totalGapMonths > 0
+                                    ? formatMonthsAsDuration(careerGaps.totalGapMonths)
+                                    : "None"}
                               </p>
                             </div>
                             <div className="text-right">
@@ -831,6 +898,43 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             </div>
                           </div>
                         </div>
+
+                        {careerGaps && careerGaps.gaps.length > 0 && (
+                          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+                            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5">
+                              <PauseCircle className="h-3.5 w-3.5" aria-hidden />
+                              Career gap breakdown
+                            </p>
+                            <ul className="space-y-2" aria-label="Career gap breakdown">
+                              {careerGaps.gaps.map((gap) => (
+                                <li
+                                  key={`${gap.type}-${gap.startDate}-${gap.endDate}`}
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-white border border-amber-100 px-3 py-2.5"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-amber-800 border-amber-200 bg-amber-50 text-[10px] h-5"
+                                      >
+                                        {getGapTypeLabel(gap.type)}
+                                      </Badge>
+                                      <span className="text-xs font-semibold text-slate-800 truncate">
+                                        {gap.label}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                      {formatDate(gap.startDate)} — {formatDate(gap.endDate)}
+                                    </p>
+                                  </div>
+                                  <span className="text-sm font-bold text-amber-800 shrink-0">
+                                    {formatMonthsAsDuration(gap.months)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {/* Experience Cards */}
                         <div className="space-y-3">

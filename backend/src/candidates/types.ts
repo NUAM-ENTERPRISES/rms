@@ -9,6 +9,7 @@ import {
   CandidateQualification,
   Qualification,
 } from '@prisma/client';
+import { CareerGapAnalysis } from './utils/employment-timeline.util';
 
 export interface CandidateWithRelations extends Candidate {
   team: Team | null;
@@ -61,6 +62,7 @@ export interface CandidateWithRelations extends Candidate {
   preferredCountries?: { countryCode: string }[];
   facilityPreferences?: { facilityType: string }[];
   documents?: any[];
+  careerGapAnalysis?: CareerGapAnalysis;
 }
 
 export interface PaginatedCandidates {

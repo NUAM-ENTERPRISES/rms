@@ -61,6 +61,7 @@ import {
   computeCandidateProfileCompletion,
   withProfileCompletion,
 } from './utils/profile-completion.util';
+import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
 
 @Injectable()
 export class CandidatesService {
@@ -76,58 +77,6 @@ export class CandidatesService {
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
-
-  /**
-   * Calculate total experience in years from work experiences
-   * Considers overlapping periods and current jobs
-   */
-  private calculateTotalExperience(workExperiences?: any[]): number {
-    if (!workExperiences || workExperiences.length === 0) {
-      return 0;
-    }
-
-    // Create date ranges for each experience
-    const dateRanges = workExperiences.map((exp) => {
-      const startDate = new Date(exp.startDate);
-      const endDate = exp.endDate ? new Date(exp.endDate) : new Date();
-      return { startDate, endDate };
-    });
-
-    // Sort by start date
-    dateRanges.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-
-    // Merge overlapping date ranges
-    const mergedRanges: Array<{ startDate: Date; endDate: Date }> = [];
-    let currentRange = dateRanges[0];
-
-    for (let i = 1; i < dateRanges.length; i++) {
-      const nextRange = dateRanges[i];
-
-      // Check if ranges overlap or are adjacent
-      if (nextRange.startDate <= currentRange.endDate) {
-        // Merge: extend current range to max end date
-        currentRange.endDate = new Date(
-          Math.max(currentRange.endDate.getTime(), nextRange.endDate.getTime())
-        );
-      } else {
-        // No overlap: save current range and start new one
-        mergedRanges.push(currentRange);
-        currentRange = nextRange;
-      }
-    }
-    mergedRanges.push(currentRange);
-
-    // Calculate total years from merged ranges
-    const totalMonths = mergedRanges.reduce((total, range) => {
-      const months =
-        (range.endDate.getFullYear() - range.startDate.getFullYear()) * 12 +
-        (range.endDate.getMonth() - range.startDate.getMonth());
-      return total + months;
-    }, 0);
-
-    // Convert to years (rounded to 1 decimal place)
-    return Math.round((totalMonths / 12) * 10) / 10;
-  }
 
   /**
    * Shared nomination logic for nominate API (and similar flows).
@@ -300,7 +249,7 @@ export class CandidatesService {
 
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
-      ? this.calculateTotalExperience(createCandidateDto.workExperiences)
+      ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
       : 0;
 
     // Use provided totalExperience or calculated value
@@ -2006,6 +1955,10 @@ export class CandidatesService {
     return {
       ...base,
       createdBy,
+      careerGapAnalysis: calculateCareerGaps(
+        candidate.workExperiences ?? [],
+        candidate.qualifications ?? [],
+      ),
     } as any;
   }
 

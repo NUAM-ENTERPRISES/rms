@@ -164,6 +164,9 @@ export interface Candidate {
     };
   })[];
 
+  /** Computed on GET /candidates/:id from work experience + qualifications. */
+  careerGapAnalysis?: CareerGapAnalysis;
+
   // On hold tracking fields
   onHoldDuration?: number | null;
   onHoldUntil?: string | null;
@@ -264,6 +267,27 @@ export interface WorkExperience {
     label: string;
     roleDepartmentId: string;
   };
+}
+
+export type CareerGapType =
+  | "between_jobs"
+  | "education_to_work"
+  | "current_unemployment";
+
+export interface CareerGap {
+  type: CareerGapType;
+  startDate: string;
+  endDate: string;
+  months: number;
+  label: string;
+}
+
+export interface CareerGapAnalysis {
+  totalExperienceMonths: number;
+  totalGapMonths: number;
+  longestGapMonths: number;
+  hasCurrentEmployment: boolean;
+  gaps: CareerGap[];
 }
 
 export interface CreateWorkExperienceRequest {
@@ -1081,7 +1105,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: workExperienceData,
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: (_result, _error, arg) => [
+        "WorkExperience",
+        "Candidate",
+        { type: "Candidate", id: arg.candidateId },
+      ],
     }),
     updateWorkExperience: builder.mutation<
       WorkExperience,

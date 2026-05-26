@@ -351,10 +351,51 @@ describe('CandidatesService', () => {
       const result = await service.findOne('candidate123');
 
       expect(result).toMatchObject(mockCandidate);
+      expect(result).toHaveProperty('careerGapAnalysis');
       expect(prismaService.candidate.findUnique).toHaveBeenCalledWith({
         where: { id: 'candidate123' },
         include: expect.any(Object),
       });
+    });
+
+    it('should include careerGapAnalysis computed from work history', async () => {
+      const candidateWithJobs = {
+        ...mockCandidate,
+        workExperiences: [
+          {
+            startDate: new Date('2024-01-01'),
+            endDate: new Date('2025-01-01'),
+            isCurrent: false,
+            companyName: 'Aster Hospital',
+            jobTitle: 'Nurse',
+          },
+          {
+            startDate: new Date('2026-01-01'),
+            endDate: new Date('2026-12-31'),
+            isCurrent: false,
+            companyName: 'City Clinic',
+            jobTitle: 'Nurse',
+          },
+        ],
+        qualifications: [
+          {
+            graduationYear: 2023,
+            isCompleted: true,
+            qualification: { name: 'MSc Nursing' },
+          },
+        ],
+        documents: [],
+      };
+
+      prismaService.candidate.findUnique.mockResolvedValue(
+        candidateWithJobs as any,
+      );
+
+      const result = await service.findOne('candidate123');
+
+      expect(result.careerGapAnalysis).toBeDefined();
+      expect(result.careerGapAnalysis?.gaps.some((g) => g.type === 'between_jobs')).toBe(true);
+      expect(result.careerGapAnalysis?.gaps.some((g) => g.type === 'education_to_work')).toBe(false);
     });
 
     it('should throw NotFoundException when candidate does not exist', async () => {
