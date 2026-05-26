@@ -46,6 +46,14 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleDocumentResubmissionRequested(job);
         case 'DocumentResubmitted':
           return await this.handleDocumentResubmitted(job);
+        case 'IntroductionVideoRejected':
+          return await this.handleIntroductionVideoRejected(job);
+        case 'IntroductionVideoResubmissionRequested':
+          return await this.handleIntroductionVideoResubmissionRequested(job);
+        case 'IntroductionVideoResubmitted':
+          return await this.handleIntroductionVideoResubmitted(job);
+        case 'IntroductionVideoVerified':
+          return await this.handleIntroductionVideoVerified(job);
         case 'CandidateSentForVerification':
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
@@ -789,6 +797,322 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error(
         `Failed to process document resubmitted: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  private async loadIntroductionVideoNotificationContext(
+    documentId: string,
+    candidateProjectMapId: string,
+  ) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!document) {
+      return null;
+    }
+
+    const candidateProjectMap =
+      await this.prisma.candidateProjects.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+    if (!candidateProjectMap) {
+      return null;
+    }
+
+    return { document, candidateProjectMap };
+  }
+
+  async handleIntroductionVideoRejected(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing introduction video rejected event: ${eventId}`);
+
+    try {
+      const { documentId, rejectedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          rejectedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video rejected event (${documentId})`,
+        );
+        return;
+      }
+
+      const messageBase = `Introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.`;
+      const message = reason ? `${messageBase} Reason: ${reason}` : messageBase;
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_rejected',
+        title: 'Introduction Video Rejected',
+        message,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          rejectedBy,
+          reason,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_rejected`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video rejected: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoResubmissionRequested(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing introduction video resubmission requested event: ${eventId}`,
+    );
+
+    try {
+      const { documentId, requestedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          requestedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video resubmission request (${documentId})`,
+        );
+        return;
+      }
+
+      const messageBase = `Resubmission requested for introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.`;
+      const message = reason ? `${messageBase} Reason: ${reason}` : messageBase;
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_resubmission_requested',
+        title: 'Introduction Video Resubmission Required',
+        message,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          requestedBy,
+          reason,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_resubmission_requested`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video resubmission requested: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoResubmitted(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing introduction video resubmitted event: ${eventId}`,
+    );
+
+    try {
+      const { documentId, resubmittedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        resubmittedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+
+      const verification =
+        await this.prisma.candidateProjectDocumentVerification.findFirst({
+          where: {
+            candidateProjectMapId,
+            documentId,
+          },
+          include: {
+            verificationHistory: {
+              where: { action: 'resubmission_required' },
+              orderBy: { performedAt: 'desc' },
+              take: 1,
+            },
+          },
+        });
+
+      const requesterId =
+        verification?.verificationHistory[0]?.performedBy ?? null;
+      if (!requesterId) {
+        this.logger.warn(
+          `No documentation requester found for introduction video resubmitted event ${documentId}`,
+        );
+        return;
+      }
+
+      await this.notificationsService.createNotification({
+        userId: requesterId,
+        type: 'introduction_video_resubmitted',
+        title: 'Introduction Video Resubmitted',
+        message: `Recruiter has re-uploaded the introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} in project ${candidateProjectMap.project.title}.`,
+        link: `/candidates/${document.candidate.id}/documents/${candidateProjectMap.project.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          resubmittedBy,
+        },
+        idemKey: `${eventId}:${requesterId}:introduction_video_resubmitted`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video resubmitted: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoVerified(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing introduction video verified event: ${eventId}`);
+
+    try {
+      const { documentId, verifiedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        verifiedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video verified event (${documentId})`,
+        );
+        return;
+      }
+
+      const verifierUser = await this.prisma.user.findUnique({
+        where: { id: verifiedBy },
+        select: { name: true },
+      });
+      const verifierName = verifierUser?.name || 'Documentation team';
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_verified',
+        title: 'Introduction Video Verified',
+        message: `Introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified by ${verifierName} for project ${candidateProjectMap.project.title}.`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          verifiedBy,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_verified`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video verified: ${error.message}`,
         error.stack,
       );
       throw error;

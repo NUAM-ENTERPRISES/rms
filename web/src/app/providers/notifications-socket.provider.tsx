@@ -8,6 +8,7 @@ import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
 import { toast } from "sonner";
 import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
+import { handleIntroductionVideoNotifications, registerIntroductionVideoSocketEvents } from "./notification-handlers/introduction-video-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
 import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
@@ -274,6 +275,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       // Handle domain-specific notifications
       handleScreeningNotifications(context);
       handleDocumentNotifications(context);
+      handleIntroductionVideoNotifications(context);
       handleInterviewNotifications(context);
       handleCRENotifications(context);
       handleProcessingNotifications(context);
@@ -297,6 +299,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
     // Handle domain-specific direct socket events
     registerDocumentSocketEvents(socket, { dispatch, invalidateTags });
+    registerIntroductionVideoSocketEvents(socket, { dispatch, invalidateTags });
 
     socket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
       console.log("[Socket] Interview stats update received:", payload);

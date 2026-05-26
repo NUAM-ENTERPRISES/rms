@@ -138,6 +138,90 @@ export class OutboxService {
   }
 
   /**
+   * Publish introduction video rejected event
+   */
+  async publishIntroductionVideoRejected(
+    documentId: string,
+    rejectedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoRejected',
+      {
+        documentId,
+        rejectedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video resubmission requested event
+   */
+  async publishIntroductionVideoResubmissionRequested(
+    documentId: string,
+    requestedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoResubmissionRequested',
+      {
+        documentId,
+        requestedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video resubmitted event
+   */
+  async publishIntroductionVideoResubmitted(
+    documentId: string,
+    resubmittedBy: string,
+    candidateProjectMapId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoResubmitted',
+      {
+        documentId,
+        resubmittedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video verified event
+   */
+  async publishIntroductionVideoVerified(
+    documentId: string,
+    verifiedBy: string,
+    candidateProjectMapId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoVerified',
+      {
+        documentId,
+        verifiedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate documents verified event
    */
   async publishCandidateDocumentsVerified(

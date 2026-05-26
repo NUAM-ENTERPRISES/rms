@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CountrySelect, DatePicker, ClientSelect } from "@/components/molecules";
-import { Building2, Target, CheckCircle, Shield, FileText, ClipboardCheck, Award } from "lucide-react";
+import { Building2, Target, CheckCircle, Shield, FileText, ClipboardCheck, Award, Video } from "lucide-react";
 import { ProjectFormData } from "../../schemas/project-schemas";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 import { PROJECT_SECTOR } from "@/entities/project/constants";
@@ -460,6 +460,39 @@ export const ProjectDetailsStep: React.FC<ProjectDetailsStepProps> = ({
               </p>
               {errors.requiredScreening && (
                 <span className="text-sm text-red-600 mt-1 block">{errors.requiredScreening.message}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Introduction Video Checkbox */}
+        <div className="pt-4">
+          <div className="flex items-start space-x-3 p-4 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
+            <Controller
+              name="introductionVideoRequired"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="introductionVideoRequired"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="mt-1"
+                />
+              )}
+            />
+            <div className="flex-1">
+              <Label
+                htmlFor="introductionVideoRequired"
+                className="text-sm font-medium text-slate-800 cursor-pointer flex items-center gap-2"
+              >
+                <Video className="h-4 w-4 text-violet-600" />
+                Introduction Video Required
+              </Label>
+              <p className="text-xs text-slate-600 mt-1">
+                Enable this if recruiters must upload a candidate introduction video for this project. The same video can be reused across other projects.
+              </p>
+              {errors.introductionVideoRequired && (
+                <span className="text-sm text-red-600 mt-1 block">{errors.introductionVideoRequired.message}</span>
               )}
             </div>
           </div>

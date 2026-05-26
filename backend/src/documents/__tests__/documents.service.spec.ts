@@ -320,3 +320,172 @@ describe('DocumentsService - getVerificationCandidates', () => {
     expect(result.pagination.total).toBe(1);
   });
 });
+
+describe('DocumentsService - introduction video notifications', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+
+    jest.spyOn(outbox, 'publishIntroductionVideoRejected').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishIntroductionVideoResubmissionRequested').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishIntroductionVideoResubmitted').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishDocumentRejected').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishDocumentResubmissionRequested').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishDocumentResubmitted').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishDataSync').mockResolvedValue(undefined as never);
+    jest.spyOn(service as any, 'updateCandidateProjectStatus').mockResolvedValue(undefined);
+  });
+
+  it('verifyDocument publishes IntroductionVideoRejected for introduction_video docType', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-intro',
+      candidateId: 'cand-1',
+      docType: 'introduction_video',
+    });
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      candidateId: 'cand-1',
+      candidate: { id: 'cand-1' },
+      project: { documentRequirements: [] },
+    });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Verifier' });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findUnique' as any).mockResolvedValue({
+      id: 'ver-1',
+    });
+
+    const txMock: any = {
+      candidateProjectDocumentVerification: {
+        update: jest.fn().mockResolvedValue({ id: 'ver-1' }),
+      },
+      document: { update: jest.fn().mockResolvedValue({ id: 'doc-intro' }) },
+      documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
+    };
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
+
+    await service.verifyDocument(
+      'doc-intro',
+      {
+        candidateProjectMapId: 'cpm-1',
+        status: 'rejected',
+        rejectionReason: 'Poor audio quality',
+      } as any,
+      'user-1',
+    );
+
+    expect(outbox.publishIntroductionVideoRejected).toHaveBeenCalledWith(
+      'doc-intro',
+      'user-1',
+      'cpm-1',
+      'Poor audio quality',
+    );
+    expect(outbox.publishDocumentRejected).not.toHaveBeenCalled();
+  });
+
+  it('requestResubmission publishes IntroductionVideoResubmissionRequested for introduction_video', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-intro',
+      candidateId: 'cand-1',
+      docType: 'introduction_video',
+    });
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      candidateId: 'cand-1',
+    });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Requester' });
+    jest.spyOn(prisma.candidateProjectStatus, 'findFirst' as any).mockResolvedValue({ id: 'status-pending' });
+    jest.spyOn(prisma.candidateProjects, 'update' as any).mockResolvedValue(undefined);
+
+    const txMock: any = {
+      candidateProjectDocumentVerification: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'ver-1' }),
+        update: jest.fn().mockResolvedValue({ id: 'ver-1' }),
+      },
+      documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
+    };
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
+
+    await service.requestResubmission(
+      'doc-intro',
+      {
+        candidateProjectMapId: 'cpm-1',
+        reason: 'Please re-record in better lighting',
+      } as any,
+      'user-1',
+    );
+
+    expect(outbox.publishIntroductionVideoResubmissionRequested).toHaveBeenCalledWith(
+      'doc-intro',
+      'user-1',
+      'cpm-1',
+      'Please re-record in better lighting',
+    );
+    expect(outbox.publishDocumentResubmissionRequested).not.toHaveBeenCalled();
+  });
+
+  it('reupload publishes IntroductionVideoResubmitted for introduction_video docType', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-old',
+      candidateId: 'cand-1',
+      docType: 'introduction_video',
+      roleCatalogId: null,
+    });
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      candidateId: 'cand-1',
+    });
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Recruiter' });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findUnique' as any).mockResolvedValue({
+      id: 'ver-old',
+      roleCatalogId: null,
+    });
+
+    const txMock: any = {
+      candidateProjectDocumentVerification: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'ver-old' }),
+        update: jest.fn().mockResolvedValue({ id: 'ver-old' }),
+        create: jest.fn().mockResolvedValue({ id: 'ver-new' }),
+      },
+      documentVerificationHistory: { create: jest.fn().mockResolvedValue(undefined) },
+      document: {
+        create: jest.fn().mockResolvedValue({ id: 'doc-new' }),
+      },
+    };
+    jest.spyOn(prisma, '$transaction' as any).mockImplementation(async (cb: any) => cb(txMock));
+
+    await service.reupload(
+      'doc-old',
+      {
+        candidateProjectMapId: 'cpm-1',
+        fileName: 'intro-v2.mp4',
+        fileUrl: 'http://example.com/intro-v2.mp4',
+      } as any,
+      'user-1',
+      false,
+    );
+
+    expect(outbox.publishIntroductionVideoResubmitted).toHaveBeenCalledWith(
+      'doc-new',
+      'user-1',
+      'cpm-1',
+    );
+    expect(outbox.publishDocumentResubmitted).not.toHaveBeenCalled();
+  });
+});

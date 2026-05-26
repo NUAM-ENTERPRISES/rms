@@ -49,6 +49,7 @@ import { GoogleDriveModule } from './google-drive/google-drive.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
 import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analytics.module';
 import { AgentsModule } from './agents/agents.module';
+import { IntroductionVideosModule } from './introduction-videos/introduction-videos.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { AgentsModule } from './agents/agents.module';
     AdminDashboardModule,
     RecruiterAnalyticsModule,
     AgentsModule,
+    IntroductionVideosModule,
   ],
   controllers: [AppController],
   providers: [

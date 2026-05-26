@@ -98,6 +98,9 @@ export const DOCUMENT_TYPE = {
   COVID_VACCINATION: 'covid_vaccination',
   MEDICAL_INSURANCE: 'medical_insurance',
 
+  // Media
+  INTRODUCTION_VIDEO: 'introduction_video',
+
   // Other Documents
   PHOTO: 'photo',
   BANK_DETAILS: 'bank_details',
@@ -784,6 +787,16 @@ export const DOCUMENT_TYPE_META: Record<
     expiryRequired: true,
     maxSizeMB: 5,
     allowedFormats: ['pdf'],
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.INTRODUCTION_VIDEO]: {
+    displayName: 'Introduction Video',
+    description: 'Candidate introduction video for project submission',
+    category: 'other',
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 100,
+    allowedFormats: ['mp4', 'webm', 'mov', 'avi'],
     commonlyRequired: false,
   },
   [DOCUMENT_TYPE.PHOTO]: {

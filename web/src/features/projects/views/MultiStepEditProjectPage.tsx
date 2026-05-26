@@ -199,7 +199,9 @@ export default function MultiStepEditProjectPage() {
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
-        requiredScreening: (project as any).requiredScreening ?? false,        licensingExam: (project as any).licensingExam || "",
+        requiredScreening: (project as any).requiredScreening ?? false,
+        introductionVideoRequired: (project as any).introductionVideoRequired ?? false,
+        licensingExam: (project as any).licensingExam || "",
         dataFlow: (project as any).dataFlow ?? false,
         eligibility: (project as any).eligibility ?? false,
         rolesNeeded:

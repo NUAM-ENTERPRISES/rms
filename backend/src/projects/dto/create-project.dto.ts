@@ -32,7 +32,7 @@ export class CreateRoleNeededDto {
     example: 'Registered Nurse',
   })
   @IsString()
-  designation: string;
+  designation!: string;
 
   @ApiProperty({
     description: 'Number of positions needed',
@@ -41,7 +41,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 
   @ApiPropertyOptional({
     description: 'Priority level for this role',
@@ -262,7 +262,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(0)
-  minAge: number;
+  minAge!: number;
 
   @ApiProperty({
     description: 'Maximum age requirement for this role',
@@ -271,7 +271,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(0)
-  maxAge: number;
+  maxAge!: number;
 
   @ApiPropertyOptional({
     description: 'Accommodation details or requirements',
@@ -331,7 +331,7 @@ export class CreateRoleNeededDto {
     example: 'cmje8as41007gq4eo8btha21t',
   })
   @IsString()
-  roleCatalogId: string;
+  roleCatalogId!: string;
 
   @ApiPropertyOptional({
     description: 'Candidate states as JSON array',
@@ -405,7 +405,7 @@ export class CreateProjectDto {
     minLength: 2,
   })
   @IsString()
-  title: string;
+  title!: string;
 
   @ApiPropertyOptional({
     description: 'Project description',
@@ -546,6 +546,15 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   requiredScreening?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Whether recruiters must upload a candidate introduction video for this project',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  introductionVideoRequired?: boolean = false;
 
   @ApiPropertyOptional({
     description: 'Document requirements for this project',

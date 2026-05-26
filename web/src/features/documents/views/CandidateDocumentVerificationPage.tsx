@@ -57,6 +57,7 @@ import {
   Cake,
   Code,
   Send,
+  Video,
 } from "lucide-react";
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
 import {
@@ -76,6 +77,9 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { VerificationDocumentActions } from "@/components/molecules/VerificationDocumentActions";
+import { VerificationDocumentStatusBadge } from "@/components/molecules/VerificationDocumentStatusBadge";
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
 import { RequestClientRevisionModal } from "../components/RequestClientRevisionModal";
@@ -126,6 +130,7 @@ export default function CandidateDocumentVerificationPage() {
 
   // PDF Viewer state
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [videoPreview, setVideoPreview] = useState<{ fileUrl: string; fileName: string } | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<{
     fileUrl: string;
     fileName: string;
@@ -240,6 +245,8 @@ export default function CandidateDocumentVerificationPage() {
 
   const requirements = requirementsData?.data?.requirements || [];
   const verifications = requirementsData?.data?.verifications || [];
+  const introductionVideoRequired = requirementsData?.data?.introductionVideoRequired ?? false;
+  const introductionVideo = requirementsData?.data?.introductionVideo || null;
   const allCandidateDocuments =
     requirementsData?.data?.allCandidateDocuments || [];
   const summary = requirementsData?.data?.summary || {};
@@ -694,27 +701,7 @@ export default function CandidateDocumentVerificationPage() {
     setSelectedVerification(null);
   };
 
-  // Get document status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "verified":
-        return <Badge className="bg-green-500 text-white font-semibold whitespace-nowrap">Verified</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-500 text-white font-semibold whitespace-nowrap">Rejected</Badge>;
-      case "resubmission_required":
-        return <Badge className="bg-amber-500 text-white font-semibold text-center leading-tight py-1">Waiting for re-submission</Badge>;
-      case "resubmitted":
-        return <Badge className="bg-blue-500 text-white font-semibold whitespace-nowrap">Resubmitted</Badge>;
-      case "pending":
-        return <Badge variant="outline" className="whitespace-nowrap">Pending</Badge>;
-      default:
-        // Handle backend-style names like "client_revision_requested" if passed here
-        if (status === "client_revision_requested") {
-          return <Badge className="bg-orange-500 text-white font-semibold whitespace-nowrap">Revision Req.</Badge>;
-        }
-        return <Badge variant="outline" className="whitespace-nowrap">Unknown</Badge>;
-    }
-  };
+  // Get document status badge — use VerificationDocumentStatusBadge component in JSX
 
   if (projectsLoading || candidateLoading) {
     return (
@@ -1142,7 +1129,16 @@ export default function CandidateDocumentVerificationPage() {
                         </div>
                       </TableCell>
 
-                      <TableCell>{verification ? getStatusBadge(displayedStatus as string) : <Badge variant="outline">Not Submitted</Badge>}</TableCell>
+                      <TableCell>
+                        {verification ? (
+                          <VerificationDocumentStatusBadge
+                            status={displayedStatus as string}
+                            rejectionReason={verification.rejectionReason}
+                          />
+                        ) : (
+                          <Badge variant="outline">Not Submitted</Badge>
+                        )}
+                      </TableCell>
 
                       <TableCell>
                         {verification ? (
@@ -1179,124 +1175,162 @@ export default function CandidateDocumentVerificationPage() {
 
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {summary.isDocumentationReviewed && selectedProject?.subStatus?.name !== "client_revision_requested" ? (
-                            <Badge className={cn(
-                              "font-semibold text-xs",
-                              summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
-                                ? "bg-green-500 text-white"
-                                : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
-                                ? "bg-red-500 text-white"
-                                : "bg-slate-100 text-slate-700"
-                            )}>{summary.documentationStatus || "Reviewed"}</Badge>
-                          ) : verification ? (
-                            <>
-                              {canVerifyDocuments && displayedStatus === "pending" && (
-                                <div className="flex gap-2">
-                                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
-                                    <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
-                                    <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                  </Button>
-                                </div>
-                              )}
-                              {canVerifyDocuments && displayedStatus === "verified" && (
-                                <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
-                                  <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
+                          <VerificationDocumentActions
+                            verification={verification}
+                            displayedStatus={displayedStatus as string}
+                            canVerifyDocuments={canVerifyDocuments}
+                            canRequestResubmission={canRequestResubmission}
+                            isDocumentationReviewed={summary.isDocumentationReviewed}
+                            documentationStatus={summary.documentationStatus}
+                            isClientRevisionRequested={
+                              selectedProject?.subStatus?.name === "client_revision_requested"
+                            }
+                            onVerify={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("verify");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onReject={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("reject");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onRequestResubmission={(v) => {
+                              setSelectedResubmitVerification(v);
+                              setIsResubmitDialogOpen(true);
+                            }}
+                            emptyActions={
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3"
+                                  onClick={() => {
+                                    setUploadDocType(requirement.docType);
+                                    setIsReuploadMode(false);
+                                    setReuploadDocId(null);
+                                    setShowReuseDialog(true);
+                                  }}
+                                >
+                                  Link
                                 </Button>
-                              )}
-                              {canVerifyDocuments && (displayedStatus === "rejected" || displayedStatus === "resubmission_required" || displayedStatus === "resubmitted") && (
-                                <div className="flex gap-2">
-                                  {displayedStatus === "resubmission_required" ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className="flex gap-2">
-                                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" disabled>
-                                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                            </Button>
-                                            <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" disabled>
-                                              <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                            </Button>
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Please wait for resubmission of the document</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <>
-                                      <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
-                                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                      </Button>
-                                      {displayedStatus === "resubmitted" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedVerification(verification); 
-                                            setConfirmationAction("reject"); 
-                                            setIsConfirmationOpen(true); 
-                                          }}
-                                        >
-                                          <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                        </Button>
-                                      )}
-                                      {canRequestResubmission && displayedStatus === "rejected" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-blue-600 text-blue-600 hover:bg-blue-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedResubmitVerification(verification); 
-                                            setIsResubmitDialogOpen(true); 
-                                          }}
-                                        >
-                                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Resubmit
-                                        </Button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setShowReuseDialog(true);
-                              }}
-                            >
-                              Link
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setUploadFile(null);
-                                setShowUploadDialog(true);
-                              }}
-                            >
-                              <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
-                            </Button>
-                          </div>
-                          )}
+                                <Button
+                                  size="sm"
+                                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                                  onClick={() => {
+                                    setUploadDocType(requirement.docType);
+                                    setIsReuploadMode(false);
+                                    setReuploadDocId(null);
+                                    setUploadFile(null);
+                                    setShowUploadDialog(true);
+                                  }}
+                                >
+                                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
+                                </Button>
+                              </>
+                            }
+                          />
                         </div>
                       </TableCell> 
                     </TableRow>
                   );
                 })}
+
+                {introductionVideoRequired && (() => {
+                  const verification = introductionVideo;
+                  const displayedStatus = verification
+                    ? localStatuses[verification.id] ?? verification.status
+                    : undefined;
+
+                  return (
+                    <TableRow key="introduction-video" className="hover:bg-white/70 transition">
+                      <TableCell className="py-5">
+                        <div className="flex items-center gap-3">
+                          <Video className="h-6 w-6 text-violet-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800 truncate">
+                                Introduction Video
+                              </span>
+                              <Badge className="bg-red-500/20 text-red-700 text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0">
+                                REQ
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Candidate introduction video for this project
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        {verification ? (
+                          <VerificationDocumentStatusBadge
+                            status={displayedStatus as string}
+                            rejectionReason={verification.rejectionReason}
+                          />
+                        ) : (
+                          <Badge variant="outline">Not Submitted</Badge>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        {verification?.document ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
+                              {verification.document.fileName}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                setVideoPreview({
+                                  fileUrl: verification.document.fileUrl,
+                                  fileName: verification.document.fileName,
+                                })
+                              }
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic text-xs">No video</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <VerificationDocumentActions
+                            verification={verification}
+                            displayedStatus={displayedStatus as string}
+                            canVerifyDocuments={canVerifyDocuments}
+                            canRequestResubmission={canRequestResubmission}
+                            isDocumentationReviewed={summary.isDocumentationReviewed}
+                            documentationStatus={summary.documentationStatus}
+                            isClientRevisionRequested={
+                              selectedProject?.subStatus?.name === "client_revision_requested"
+                            }
+                            onVerify={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("verify");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onReject={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("reject");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onRequestResubmission={(v) => {
+                              setSelectedResubmitVerification(v);
+                              setIsResubmitDialogOpen(true);
+                            }}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })()}
               </TableBody>
             </Table>
           </div>
@@ -1553,6 +1587,16 @@ export default function CandidateDocumentVerificationPage() {
           showRotationControls={true}
           showFullscreenToggle={true}
         />
+
+        {videoPreview && (
+          <VideoPlayerModal
+            isOpen={!!videoPreview}
+            onClose={() => setVideoPreview(null)}
+            fileUrl={videoPreview.fileUrl}
+            fileName={videoPreview.fileName}
+            title="Introduction Video"
+          />
+        )}
 
         {/* Confirmation Dialog */}
         <ConfirmationDialog

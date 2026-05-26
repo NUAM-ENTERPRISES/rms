@@ -227,6 +227,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
               </div>
             )}
 
+            {formData.introductionVideoRequired && (
+              <div className="mt-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-md text-sm font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  Introduction Video Required
+                </div>
+              </div>
+            )}
+
             {/* Licensing and Verification Summary */}
             {(formData.licensingExam || formData.dataFlow || formData.eligibility) && (
               <div className="mt-4 pt-4 border-t border-slate-200">

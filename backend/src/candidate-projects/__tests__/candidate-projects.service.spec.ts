@@ -22,6 +22,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     interviewStatusHistory: { create: jest.fn() },
     screeningTraining: { create: jest.fn() },
     candidateRecruiterAssignment: { findFirst: jest.fn() },
+    candidateProjectDocumentVerification: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   } as any;
 
@@ -206,6 +207,35 @@ describe('CandidateProjectsService - sendForInterview', () => {
         message: 'Project screening required: John Doe has been assigned to this project Project P. Please assign for screening.',
         link: '/projects/p1',
       }),
+    );
+  });
+
+  it('sendForVerification blocks when introduction video is required but missing', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      rolesNeeded: [],
+      introductionVideoRequired: true,
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });
+
+    const existing = {
+      id: 'map1',
+      candidateId: 'c1',
+      projectId: 'p1',
+      roleNeededId: null,
+      subStatus: { name: 'nominated' },
+    };
+    prisma.candidateProjects.findFirst.mockResolvedValue(existing);
+    prisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow(
+      'Introduction video is required before sending for verification',
     );
   });
 

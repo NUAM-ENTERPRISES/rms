@@ -471,6 +471,42 @@ export class CandidateProjectsService {
       );
     }
 
+    if (project.introductionVideoRequired) {
+      const assignmentForIntroCheck =
+        existingAssignment ??
+        (await this.prisma.candidateProjects.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleNeededId: roleNeededId || null,
+          },
+        }));
+
+      if (!assignmentForIntroCheck) {
+        throw new BadRequestException(
+          'Introduction video is required before sending for verification',
+        );
+      }
+
+      const introVideoVerification =
+        await this.prisma.candidateProjectDocumentVerification.findFirst({
+          where: {
+            candidateProjectMapId: assignmentForIntroCheck.id,
+            isDeleted: false,
+            document: {
+              docType: 'introduction_video',
+              isDeleted: false,
+            },
+          },
+        });
+
+      if (!introVideoVerification) {
+        throw new BadRequestException(
+          'Introduction video is required before sending for verification',
+        );
+      }
+    }
+
     if (existingAssignment) {
       const existingBlockedHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
         where: {

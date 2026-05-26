@@ -196,6 +196,8 @@ export class ProjectsService {
           groomingRequired: createProjectDto.groomingRequired || 'formal',
           hideContactInfo: createProjectDto.hideContactInfo ?? true,
           requiredScreening: createProjectDto.requiredScreening ?? false,
+          introductionVideoRequired:
+            createProjectDto.introductionVideoRequired ?? false,
           dataFlow: createProjectDto.dataFlow ?? false,
           eligibility: createProjectDto.eligibility ?? false,
         },
@@ -840,6 +842,9 @@ export class ProjectsService {
       updateData.hideContactInfo = updateProjectDto.hideContactInfo;
     if (updateProjectDto.requiredScreening !== undefined)
       updateData.requiredScreening = updateProjectDto.requiredScreening;
+    if (updateProjectDto.introductionVideoRequired !== undefined)
+      updateData.introductionVideoRequired =
+        updateProjectDto.introductionVideoRequired;
     if (updateProjectDto.licensingExam !== undefined)
       updateData.licensingExam = updateProjectDto.licensingExam;
     if (updateProjectDto.dataFlow !== undefined)

@@ -624,7 +624,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: verifyData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments", "IntroductionVideo"],
     }),
 
     requestResubmission: builder.mutation<
@@ -636,7 +636,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: requestData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments", "DocumentVerification", "IntroductionVideo"],
     }),
 
     requestClientReupload: builder.mutation<

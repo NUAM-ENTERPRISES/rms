@@ -49,6 +49,11 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
   if (candidateId) {
     tags.push({ type: "DocumentVerification", id: candidateId });
     tags.push({ type: "Candidate", id: candidateId });
+    tags.push({ type: "IntroductionVideo", id: candidateId });
+  }
+
+  if (projectId && candidateId) {
+    tags.push({ type: "IntroductionVideo", id: `${candidateId}-${projectId}` });
   }
 
   dispatch(invalidateTags(tags));
@@ -58,7 +63,10 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
 export const handleDocumentSync = (payload: any, { dispatch, invalidateTags }: { dispatch: any, invalidateTags: any }) => {
   if (payload.type === "RecruiterDocuments") {
     console.log("[Socket] Recruiter documents data sync");
-    dispatch(invalidateTags([{ type: "RecruiterDocuments" }]));
+    dispatch(invalidateTags([
+      { type: "RecruiterDocuments" },
+      { type: "IntroductionVideo" },
+    ]));
     return true;
   }
   return false;
@@ -101,8 +109,17 @@ export const handleDocumentSocketEvents = (eventName: string, { data, dispatch, 
 
   if (data?.candidateId) {
     tags.push({ type: "DocumentVerification", id: data.candidateId });
+    tags.push({ type: "IntroductionVideo", id: data.candidateId });
   } else {
     tags.push({ type: "DocumentVerification" });
+    tags.push({ type: "IntroductionVideo" });
+  }
+
+  if (data?.candidateId && data?.projectId) {
+    tags.push({
+      type: "IntroductionVideo",
+      id: `${data.candidateId}-${data.projectId}`,
+    });
   }
 
   dispatch(invalidateTags(tags));

@@ -14,6 +14,7 @@ export const projectFormSchema = z.object({
   groomingRequired: z.enum(["formal", "casual", "not_specified"]),
   hideContactInfo: z.boolean(),
   requiredScreening: z.boolean(),
+  introductionVideoRequired: z.boolean(),
   licensingExam: z.string().optional(),
   dataFlow: z.boolean().optional(),
   eligibility: z.boolean().optional(),
@@ -119,6 +120,7 @@ export const defaultProjectValues = {
   groomingRequired: "formal" as const,
   hideContactInfo: true, // Default to hide contact info for private projects
   requiredScreening: false,
+  introductionVideoRequired: false,
   licensingExam: "",
   dataFlow: false,
   eligibility: false,

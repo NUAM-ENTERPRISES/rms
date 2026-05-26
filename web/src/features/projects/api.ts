@@ -38,6 +38,7 @@ export interface Project {
   groomingRequired?: "formal" | "casual" | "not_specified";
   hideContactInfo?: boolean;
   requiredScreening?: boolean;
+  introductionVideoRequired?: boolean;
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;

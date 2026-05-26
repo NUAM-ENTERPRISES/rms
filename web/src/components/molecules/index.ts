@@ -23,6 +23,11 @@ export { default as CandidateQualificationSelect } from "./CandidateQualificatio
 export { default as QualificationWorkExperienceModal } from "./QualificationWorkExperienceModal";
 export { CandidateResumeList } from "./CandidateResumeList";
 export { PDFViewer } from "./PDFViewer";
+export { VideoPlayerModal } from "./VideoPlayerModal";
+export type { VideoPlayerModalProps } from "./VideoPlayerModal";
+export { VerificationDocumentActions } from "./VerificationDocumentActions";
+export type { VerificationDocumentActionsProps, VerificationRecord } from "./VerificationDocumentActions";
+export { VerificationDocumentStatusBadge, getVerificationStatusBadge } from "./VerificationDocumentStatusBadge";
 export { ClientSelect } from "./ClientSelect";
 export { SelectAgent } from "./SelectAgent";
 export type { SelectAgentProps } from "./SelectAgent";

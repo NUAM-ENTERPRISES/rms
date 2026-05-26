@@ -423,6 +423,23 @@ export class UploadService {
   }
 
   /**
+   * Upload candidate introduction video (videos only, max 100MB)
+   */
+  async uploadIntroductionVideo(
+    file: Express.Multer.File,
+    candidateId: string,
+  ): Promise<UploadResult> {
+    const allowedMimeTypes = [
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+      'video/x-msvideo',
+    ];
+    const folder = `candidates/introduction-videos/${candidateId}`;
+    return this.uploadFile(file, folder, allowedMimeTypes, 100);
+  }
+
+  /**
    * Upload resume (PDFs only, max 10MB)
    * Saves to Document model with proper naming format
    */

@@ -47,6 +47,7 @@ import {
   Award,
   Plus,
   Replace,
+  Video,
 } from "lucide-react";
 import {
   Tabs,
@@ -110,6 +111,7 @@ import { FlagIcon } from "@/shared/components/FlagIcon";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import { ImageViewer } from "@/components/molecules";
+import ProjectIntroductionVideoSection from "../components/ProjectIntroductionVideoSection";
 
 // Minimal colorful badge classes for match scores
 const getMinimalScoreBadgeClass = (score?: number) => {
@@ -218,6 +220,8 @@ interface CandidateProjectRequirementsData {
   requirements: DocumentRequirement[];
   verifications: DocumentVerification[];
   candidateProject: CandidateProjectMap;
+  introductionVideoRequired?: boolean;
+  introductionVideo?: DocumentVerification | null;
   summary: {
     totalVerified: number;
     totalRequired: number;
@@ -323,6 +327,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const requirementsDataTyped = requirementsData?.data as CandidateProjectRequirementsData | undefined;
   const requirements = requirementsDataTyped?.requirements || [];
   const verifications = requirementsDataTyped?.verifications || [];
+  const introductionVideo = requirementsDataTyped?.introductionVideo;
+  const introductionVideoRequired =
+    project?.introductionVideoRequired ??
+    requirementsDataTyped?.introductionVideoRequired ??
+    false;
   const candidateProject = requirementsDataTyped?.candidateProject;
   const summary = requirementsDataTyped?.summary;
   const allCandidateDocuments = requirementsDataTyped?.allCandidateDocuments || [];
@@ -922,6 +931,21 @@ const RecruiterDocsDetailPage: React.FC = () => {
               </Table>
             </CardContent>
           </Card>
+
+          {introductionVideoRequired && candidateId && projectId && (
+            <ProjectIntroductionVideoSection
+              candidateId={candidateId}
+              projectId={projectId}
+              projectTitle={project.title}
+              introductionVideo={introductionVideo}
+              existingDocuments={allCandidateDocuments}
+              isVerificationSent={isVerificationSent}
+              onSuccess={() => {
+                void refetchRequirements();
+                void refetchCandidateDocs();
+              }}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="candidate-docs" className="space-y-4">
@@ -1201,6 +1225,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   <ShieldCheck className="h-3.5 w-3.5" /> Screening
                 </span>
                 <p className="text-sm font-medium">{project.requiredScreening ? "Required" : "Not Required"}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <Video className="h-3.5 w-3.5" /> Introduction Video
+                </span>
+                <p className="text-sm font-medium">
+                  {project.introductionVideoRequired ? "Required" : "Not Required"}
+                </p>
               </div>
 
               <div className="space-y-1.5">

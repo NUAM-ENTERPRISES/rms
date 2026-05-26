@@ -39,7 +39,7 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
-import { CandidatePipeline } from "../components/CandidatePipeline";
+import { CandidatesIntroductionVideos } from "../components/CandidatesIntroductionVideos";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
@@ -133,7 +133,7 @@ export default function CandidateDetailPage() {
   });
 
   // Fetch candidate status pipeline
-  const { data: pipelineData, isLoading: isPipelineLoading } =
+  const { data: pipelineData } =
     useGetCandidateStatusPipelineQuery(id!, {
       skip: !id,
     });
@@ -581,34 +581,8 @@ export default function CandidateDetailPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Pipeline */}
-      <Card className="mt-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
-            <Target className="h-5 w-5 text-blue-600" />
-            Candidate Status Pipeline
-          </CardTitle>
-          <CardDescription className="text-slate-600">
-            Track status changes and progression
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {isPipelineLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-sm text-muted-foreground">
-                Loading pipeline...
-              </p>
-            </div>
-          ) : pipelineData?.data ? (
-            <CandidatePipeline pipeline={pipelineData.data.pipeline} />
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No pipeline data available</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Introduction Videos */}
+      <CandidatesIntroductionVideos candidateId={id!} />
 
       {/* Modal for adding/editing qualifications and work experience */}
       <QualificationWorkExperienceModal

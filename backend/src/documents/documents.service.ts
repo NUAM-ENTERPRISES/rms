@@ -83,6 +83,52 @@ export class DocumentsService {
     };
   }
 
+  private computeVerificationSummary(
+    requirementsCount: number,
+    introductionVideoRequired: boolean,
+    verifications: Array<{ status: string; document: { docType: string } }>,
+  ) {
+    const introVerification = verifications.find(
+      (v) => v.document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+    );
+    const totalRequired =
+      requirementsCount + (introductionVideoRequired ? 1 : 0);
+    const totalSubmitted =
+      verifications.filter((v) => {
+        if (v.document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO) {
+          return introductionVideoRequired;
+        }
+        return true;
+      }).length;
+    const relevantVerifications = verifications.filter((v) => {
+      if (v.document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO) {
+        return introductionVideoRequired;
+      }
+      return true;
+    });
+    const totalVerified = relevantVerifications.filter(
+      (v) => v.status === DOCUMENT_STATUS.VERIFIED,
+    ).length;
+    const totalRejected = relevantVerifications.filter(
+      (v) => v.status === DOCUMENT_STATUS.REJECTED,
+    ).length;
+    const totalPending = relevantVerifications.filter(
+      (v) => v.status === DOCUMENT_STATUS.PENDING,
+    ).length;
+    const allDocumentsVerified =
+      totalRequired > 0 && totalVerified === totalRequired;
+
+    return {
+      totalRequired,
+      totalSubmitted,
+      totalVerified,
+      totalRejected,
+      totalPending,
+      allDocumentsVerified,
+      introductionVideo: introVerification ?? null,
+    };
+  }
+
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
@@ -615,19 +661,39 @@ export class DocumentsService {
     await this.updateCandidateProjectStatus(verifyDto.candidateProjectMapId);
 
     // Publish event for specific document verification/rejection
+    const isIntroductionVideo =
+      document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO;
+
     if (verifyDto.status === DOCUMENT_STATUS.VERIFIED) {
-      await this.outboxService.publishDocumentVerified(
-        documentId,
-        verifierId,
-        verifyDto.candidateProjectMapId,
-      );
+      if (isIntroductionVideo) {
+        await this.outboxService.publishIntroductionVideoVerified(
+          documentId,
+          verifierId,
+          verifyDto.candidateProjectMapId,
+        );
+      } else {
+        await this.outboxService.publishDocumentVerified(
+          documentId,
+          verifierId,
+          verifyDto.candidateProjectMapId,
+        );
+      }
     } else if (verifyDto.status === DOCUMENT_STATUS.REJECTED) {
-      await this.outboxService.publishDocumentRejected(
-        documentId,
-        verifierId,
-        verifyDto.candidateProjectMapId,
-        verifyDto.rejectionReason,
-      );
+      if (isIntroductionVideo) {
+        await this.outboxService.publishIntroductionVideoRejected(
+          documentId,
+          verifierId,
+          verifyDto.candidateProjectMapId,
+          verifyDto.rejectionReason,
+        );
+      } else {
+        await this.outboxService.publishDocumentRejected(
+          documentId,
+          verifierId,
+          verifyDto.candidateProjectMapId,
+          verifyDto.rejectionReason,
+        );
+      }
     }
 
     /* 
@@ -752,12 +818,21 @@ export class DocumentsService {
     }
 
     // Publish event for document resubmission request
-    await this.outboxService.publishDocumentResubmissionRequested(
-      documentId,
-      requesterId,
-      requestDto.candidateProjectMapId,
-      requestDto.reason,
-    );
+    if (document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO) {
+      await this.outboxService.publishIntroductionVideoResubmissionRequested(
+        documentId,
+        requesterId,
+        requestDto.candidateProjectMapId,
+        requestDto.reason,
+      );
+    } else {
+      await this.outboxService.publishDocumentResubmissionRequested(
+        documentId,
+        requesterId,
+        requestDto.candidateProjectMapId,
+        requestDto.reason,
+      );
+    }
 
     return verification;
   }
@@ -901,18 +976,26 @@ export class DocumentsService {
     });
 
     if (lastResubmissionHistory?.performedBy) {
-      await this.outboxService.publishDocumentationNotification(
-        lastResubmissionHistory.performedBy,
-        `Recruiter has re-uploaded document "${result.updatedDocument.fileName}" for candidate ${candidate?.firstName} ${candidate?.lastName} in project ${project?.title}.`,
-        'Document Re-uploaded by Recruiter',
-        `/candidates/${candidate?.id}/documents/${project?.id}`,
-        {
-          documentId: result.updatedDocument.id,
-          candidateId: candidate?.id,
-          projectId: project?.id,
-          reuploadedBy: userId,
-        },
-      );
+      if (result.updatedDocument.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO) {
+        await this.outboxService.publishIntroductionVideoResubmitted(
+          result.updatedDocument.id,
+          userId,
+          reuploadDto.candidateProjectMapId,
+        );
+      } else {
+        await this.outboxService.publishDocumentationNotification(
+          lastResubmissionHistory.performedBy,
+          `Recruiter has re-uploaded document "${result.updatedDocument.fileName}" for candidate ${candidate?.firstName} ${candidate?.lastName} in project ${project?.title}.`,
+          'Document Re-uploaded by Recruiter',
+          `/candidates/${candidate?.id}/documents/${project?.id}`,
+          {
+            documentId: result.updatedDocument.id,
+            candidateId: candidate?.id,
+            projectId: project?.id,
+            reuploadedBy: userId,
+          },
+        );
+      }
     }
 
     return result;
@@ -1080,11 +1163,19 @@ export class DocumentsService {
 
     // Publish event for notification if not skipped
     if (!skipEvent) {
-      await this.outboxService.publishDocumentResubmitted(
-        result.updatedDocument.id,
-        userId,
-        reuploadDto.candidateProjectMapId,
-      );
+      if (document.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO) {
+        await this.outboxService.publishIntroductionVideoResubmitted(
+          result.updatedDocument.id,
+          userId,
+          reuploadDto.candidateProjectMapId,
+        );
+      } else {
+        await this.outboxService.publishDocumentResubmitted(
+          result.updatedDocument.id,
+          userId,
+          reuploadDto.candidateProjectMapId,
+        );
+      }
     }
 
     // Notify for real-time update
@@ -1148,21 +1239,32 @@ export class DocumentsService {
       );
     }
 
-    const totalRequired =
-      candidateProjectMap.project.documentRequirements.length;
-    const totalSubmitted = candidateProjectMap.documentVerifications.length;
-    const totalVerified = candidateProjectMap.documentVerifications.filter(
-      (v) => v.status === DOCUMENT_STATUS.VERIFIED,
-    ).length;
-    const totalRejected = candidateProjectMap.documentVerifications.filter(
-      (v) => v.status === DOCUMENT_STATUS.REJECTED,
-    ).length;
-    const totalPending = candidateProjectMap.documentVerifications.filter(
-      (v) => v.status === DOCUMENT_STATUS.PENDING,
-    ).length;
+    const latestVerificationsMap = new Map<string, (typeof candidateProjectMap.documentVerifications)[number]>();
+    for (const v of candidateProjectMap.documentVerifications) {
+      const type = v.document.docType;
+      if (
+        !latestVerificationsMap.has(type) ||
+        new Date(v.document.createdAt) >
+          new Date(latestVerificationsMap.get(type)!.document.createdAt)
+      ) {
+        latestVerificationsMap.set(type, v);
+      }
+    }
+    const latestVerifications = Array.from(latestVerificationsMap.values());
 
-    const allDocumentsVerified =
-      totalRequired > 0 && totalVerified === totalRequired;
+    const summaryCounts = this.computeVerificationSummary(
+      candidateProjectMap.project.documentRequirements.length,
+      candidateProjectMap.project.introductionVideoRequired,
+      latestVerifications,
+    );
+    const {
+      totalRequired,
+      totalSubmitted,
+      totalVerified,
+      totalRejected,
+      totalPending,
+      allDocumentsVerified,
+    } = summaryCounts;
 
     return {
       candidateProjectMapId,
@@ -2108,6 +2210,7 @@ export class DocumentsService {
             title: true,
             deadline: true,
             createdAt: true,
+            introductionVideoRequired: true,
           },
         },
         recruiter: {
@@ -2168,6 +2271,7 @@ export class DocumentsService {
               docName: true,
               fileName: true,
               fileUrl: true,
+              mimeType: true,
               status: true,
               uploadedBy: true,
               createdAt: true,
@@ -2224,17 +2328,20 @@ export class DocumentsService {
     });
 
     // Calculate summary
-    const totalRequired = requirements.length;
-    const totalSubmitted = verifications.length;
-    const totalVerified = verifications.filter((v) => v.status === 'verified')
-      .length;
-    const totalRejected = verifications.filter((v) => v.status === 'rejected')
-      .length;
-    const totalPending = verifications.filter((v) => v.status === 'pending')
-      .length;
-
-    const allDocumentsVerified =
-      totalVerified === totalRequired && totalRequired > 0;
+    const summaryCounts = this.computeVerificationSummary(
+      requirements.length,
+      candidateProject.project.introductionVideoRequired,
+      verifications,
+    );
+    const {
+      totalRequired,
+      totalSubmitted,
+      totalVerified,
+      totalRejected,
+      totalPending,
+      allDocumentsVerified,
+      introductionVideo,
+    } = summaryCounts;
 
     // Check candidate project status history for documentation review
     // If a previous sub-status change to 'documents_verified' or 'rejected_documents' exists,
@@ -2288,6 +2395,9 @@ export class DocumentsService {
 
     return {
       candidateProject,
+      introductionVideoRequired:
+        candidateProject.project.introductionVideoRequired,
+      introductionVideo,
       isSendedForDocumentVerification,
       requirements: requirements.map((r) =>
         this.enrichProjectRequirementRow(
@@ -2538,15 +2648,30 @@ export class DocumentsService {
     });
 
     // 3. Get verification records
-    const verifications =
+    const allVerifications =
       await this.prisma.candidateProjectDocumentVerification.findMany({
         where: { candidateProjectMapId, isDeleted: false } as any,
+        include: { document: true },
       });
 
-    const totalRequired = requirements.length;
-    const totalVerified = verifications.filter(
-      (v) => v.status === 'verified',
-    ).length;
+    const latestVerificationsMap = new Map<string, (typeof allVerifications)[number]>();
+    for (const v of allVerifications) {
+      const type = v.document.docType;
+      if (
+        !latestVerificationsMap.has(type) ||
+        new Date(v.document.createdAt) >
+          new Date(latestVerificationsMap.get(type)!.document.createdAt)
+      ) {
+        latestVerificationsMap.set(type, v);
+      }
+    }
+    const verifications = Array.from(latestVerificationsMap.values());
+
+    const { totalRequired, totalVerified } = this.computeVerificationSummary(
+      requirements.length,
+      candidateProject.project.introductionVideoRequired,
+      verifications,
+    );
 
     if (totalVerified < totalRequired) {
       throw new BadRequestException('Not all required documents are verified');
@@ -2694,7 +2819,8 @@ export class DocumentsService {
         message: 'Document verification rejected',
       });
     } catch (err) {
-      this.logger.error(`Failed to publish data sync event for verification rejection: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Failed to publish data sync event for verification rejection: ${message}`);
     }
 
     return updated;
