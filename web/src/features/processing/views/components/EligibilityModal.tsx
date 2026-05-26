@@ -10,6 +10,7 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 
 import {
   useGetEligibilityRequirementsQuery,
@@ -356,7 +357,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
       await refetch();
     } catch (err: any) {
       console.error("Eligibility upload error", err);
-      toast.error(err?.data?.message || "Failed to upload and attach document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 

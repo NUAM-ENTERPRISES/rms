@@ -19,6 +19,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation, useReuploadProcessingDocumentMutation, useSetProcessingDocumentReceivedDateMutation } from "@/services/processingApi";
 
 interface DocumentReceivedModalProps {
@@ -262,7 +263,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
       }
     } catch (err: any) {
       console.error('Upload error', err);
-      toast.error(err?.data?.message || 'Failed to upload');
+      toast.error(getUploadErrorMessage(err));
     }
   };
 

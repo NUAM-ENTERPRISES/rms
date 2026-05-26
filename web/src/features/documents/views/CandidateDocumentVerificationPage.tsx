@@ -76,6 +76,17 @@ import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
+import {
+  buildAcceptAttribute,
+  effectiveMaxMB,
+  getUploadErrorMessage,
+  validateDocumentFile,
+  prepareDocumentFileForUpload,
+} from "@/lib/document-upload";
+import {
+  getAllowedFormatsString,
+  type DocumentType,
+} from "@/constants/document-types";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
@@ -121,6 +132,8 @@ export default function CandidateDocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDocType, setUploadDocType] = useState<string>("");
+  const [uploadFileError, setUploadFileError] = useState<string | null>(null);
+  const [isPreparingUpload, setIsPreparingUpload] = useState(false);
   // (no reupload optimistic state) we keep uploads simple — user can replace files
   const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"verify" | "reject" | null>(null);
@@ -543,12 +556,25 @@ export default function CandidateDocumentVerificationPage() {
 
   // Handle document upload
   const handleUploadDocument = async () => {
-    if (!uploadFile || !uploadDocType) return;
+    if (!uploadFile || !uploadDocType) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+
+    setIsPreparingUpload(true);
+    let fileToUpload = uploadFile;
+    try {
+      const prepared = await prepareDocumentFileForUpload(uploadFile, uploadDocType);
+      fileToUpload = prepared.file;
+    } catch {
+      setIsPreparingUpload(false);
+      return;
+    }
+    setIsPreparingUpload(false);
 
     try {
-      // Step 1: Upload the file to S3
       const formData = new FormData();
-      formData.append("file", uploadFile);
+      formData.append("file", fileToUpload);
       formData.append("docType", uploadDocType);
 
       const uploadResult = await uploadDocument({
@@ -606,13 +632,12 @@ export default function CandidateDocumentVerificationPage() {
       setShowUploadDialog(false);
       setUploadFile(null);
       setUploadDocType("");
+      setUploadFileError(null);
       setIsReuploadMode(false);
       setReuploadDocId(null);
-      // keep existing verification status intact when replacing the file
-      // Ensure UI updates immediately
       refetchRequirements();
     } catch (error) {
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
@@ -1668,13 +1693,45 @@ export default function CandidateDocumentVerificationPage() {
                 <Label className="text-sm font-medium">File</Label>
                 <Input
                   type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  accept={
+                    uploadDocType
+                      ? buildAcceptAttribute(uploadDocType)
+                      : ".pdf,.jpg,.jpeg,.png,.webp"
+                  }
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    e.target.value = "";
+                    if (!file) {
+                      setUploadFile(null);
+                      setUploadFileError(null);
+                      return;
+                    }
+                    if (!uploadDocType) {
+                      toast.error("Document type is not set");
+                      return;
+                    }
+                    const result = validateDocumentFile(file, uploadDocType);
+                    if (!result.ok) {
+                      setUploadFile(null);
+                      setUploadFileError(result.message ?? "Invalid file");
+                      if (result.message) toast.error(result.message);
+                      return;
+                    }
+                    setUploadFileError(null);
+                    setUploadFile(file);
+                  }}
                   className="cursor-pointer"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Supported formats: PDF, JPG, PNG, WEBP (max 10MB)
+                  {uploadDocType
+                    ? `Allowed: ${getAllowedFormatsString(uploadDocType as DocumentType)} · Max ${effectiveMaxMB(uploadDocType)} MB`
+                    : "Select a document type first"}
                 </p>
+                {uploadFileError ? (
+                  <p className="text-xs text-destructive mt-1" role="alert">
+                    {uploadFileError}
+                  </p>
+                ) : null}
               </div>
             </div>
             <DialogFooter>
@@ -1687,10 +1744,15 @@ export default function CandidateDocumentVerificationPage() {
               <Button
                 onClick={handleUploadDocument}
                 disabled={
-                  !uploadFile || !uploadDocType || isUploading || isCreating
+                  !uploadFile ||
+                  !uploadDocType ||
+                  isUploading ||
+                  isCreating ||
+                  isPreparingUpload ||
+                  !!uploadFileError
                 }
               >
-                {isUploading || isCreating ? (
+                {isUploading || isCreating || isPreparingUpload ? (
                   <RefreshCw className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />

@@ -43,6 +43,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  validateCsvAttachment,
+  EMAIL_COMBINED_ATTACHMENT_MAX_MB,
+  CSV_ATTACHMENT_MAX_MB,
+} from "@/lib/document-upload";
 import { BulkViewDocumentsModal, SelectedDoc } from "./BulkViewDocumentsModal";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
 import { useBulkForwardToClientMutation, BulkForwardToClientRequest } from "../api";
@@ -252,8 +257,13 @@ export function BulkSendToClientModal({
     }
 
     // Gmail/Outlook limit check for combined delivery
-    if (deliveryMethod === "email_combined" && totalSelectedSizeInfo.mb > 20) {
-      toast.error(`Total document size (${totalSelectedSizeInfo.mb.toFixed(2)}MB) exceeds the 20MB limit for combined emails. Please remove some candidates or use Google Drive method.`);
+    if (
+      deliveryMethod === "email_combined" &&
+      totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB
+    ) {
+      toast.error(
+        `Total attachment size (${totalSelectedSizeInfo.mb.toFixed(2)} MB) exceeds the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB limit for combined emails. Remove selections or use Google Drive.`
+      );
       return;
     }
 
@@ -388,7 +398,8 @@ export function BulkSendToClientModal({
                   variant="outline"
                   className={cn(
                     "font-bold px-3 py-1",
-                    totalSelectedSizeInfo.mb > 20 && deliveryMethod === "email_combined"
+                    totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB &&
+                    deliveryMethod === "email_combined"
                       ? "bg-rose-50 text-rose-700 border-rose-200 animate-pulse"
                       : "bg-slate-50 text-slate-700 border-slate-200"
                   )}
@@ -550,19 +561,37 @@ export function BulkSendToClientModal({
                       accept=".csv"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
-                            toast.error("Please upload only CSV files");
+                        e.target.value = "";
+                        if (!file) return;
+                        const result = validateCsvAttachment(file);
+                        if (!result.ok) {
+                          if (result.message) toast.error(result.message);
+                          return;
+                        }
+                        if (
+                          deliveryMethod === "email_combined"
+                        ) {
+                          const projectedMb =
+                            (totalSelectedSizeInfo.bytes + file.size) /
+                            (1024 * 1024);
+                          if (
+                            projectedMb > EMAIL_COMBINED_ATTACHMENT_MAX_MB
+                          ) {
+                            toast.error(
+                              `Adding this CSV would exceed the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB combined email limit (${projectedMb.toFixed(2)} MB).`
+                            );
                             return;
                           }
-                          setCsvFile(file);
                         }
+                        setCsvFile(file);
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
                     <div className="h-full border border-dashed border-slate-200 dark:border-slate-800 rounded flex flex-col items-center justify-center p-2 group-hover:border-blue-400 group-hover:bg-blue-50/30 transition-all">
                       <Paperclip className="h-3 w-3 text-slate-400 group-hover:text-blue-600 mb-0.5" />
-                      <p className="text-[9px] font-medium text-slate-500 group-hover:text-blue-700">Attach CSV</p>
+                      <p className="text-[9px] font-medium text-slate-500 group-hover:text-blue-700">
+                        Attach CSV (max {CSV_ATTACHMENT_MAX_MB} MB)
+                      </p>
                     </div>
                   </div>
                 )}
@@ -796,7 +825,8 @@ export function BulkSendToClientModal({
                     <AlertCircle className="h-3 w-3" />
                     {visibleCandidates.length - Object.keys(selectedDocsByCandidate).length} pending document selection
                   </p>
-                ) : totalSelectedSizeInfo.mb > 20 && deliveryMethod === "email_combined" ? (
+                ) : totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB &&
+                  deliveryMethod === "email_combined" ? (
                   <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     Total size {totalSelectedSizeInfo.mb.toFixed(2)}MB exceeds 20MB limit. Remove some candidates.

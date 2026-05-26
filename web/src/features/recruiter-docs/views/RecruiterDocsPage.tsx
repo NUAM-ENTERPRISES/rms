@@ -25,7 +25,9 @@ import {
   RotateCcw,
   ChevronDown,
   ArrowUpRight,
+  Phone,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -59,6 +61,21 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { getStatusConfig, CandidateProjectStatus } from "@/constants/statuses";
 import * as Icons from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+}) {
+  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
 
 const RecruiterDocsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -469,6 +486,9 @@ const RecruiterDocsPage: React.FC = () => {
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Role</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Progress</TableHead>
+                <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 w-[100px]">
+                  Contact
+                </TableHead>
                 <TableHead className="h-10 px-4 text-right w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -488,6 +508,7 @@ const RecruiterDocsPage: React.FC = () => {
                   ];
                   const isInScreening = screeningStatuses.includes(item.status.main) || 
                                        ((item.status as any).sub && screeningStatuses.includes((item.status as any).sub));
+                  const phoneDigits = formatPhoneForLink(item.candidate);
                   
                   return (
                     <TableRow 
@@ -559,6 +580,59 @@ const RecruiterDocsPage: React.FC = () => {
                               style={{ width: `${item.progress.docsPercentage}%` }}
                             />
                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-center">
+                        <div
+                          className="flex items-center justify-center gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                  onClick={() =>
+                                    phoneDigits &&
+                                    window.open(`https://wa.me/${phoneDigits}`, "_blank")
+                                  }
+                                  disabled={!phoneDigits}
+                                  aria-label={`WhatsApp ${item.candidate.firstName}`}
+                                >
+                                  <FaWhatsapp className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-xs">
+                                  {phoneDigits ? "WhatsApp" : "No phone number"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                  onClick={() =>
+                                    phoneDigits &&
+                                    (window.location.href = `tel:${phoneDigits}`)
+                                  }
+                                  disabled={!phoneDigits}
+                                  aria-label={`Call ${item.candidate.firstName}`}
+                                >
+                                  <Phone className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-xs">
+                                  {phoneDigits ? "Call" : "No phone number"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3 text-right">

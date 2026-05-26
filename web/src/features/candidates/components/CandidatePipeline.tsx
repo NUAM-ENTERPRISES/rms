@@ -194,12 +194,26 @@ const getStatusConfig = (statusName?: string) => {
   return statusConfig[lowerStatus] || statusConfig.default;
 };
 
-// Format date for display
-const formatDate = (dateString: string) => {
+const formatPipelineDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+/** Relative label for summary line (e.g. "Today") */
+const formatRelativeDate = (dateString: string) => {
   const date = new Date(dateString);
   const now = new Date();
   const diffInDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (diffInDays === 0) return "Today";
@@ -208,7 +222,7 @@ const formatDate = (dateString: string) => {
   if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
   if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
 
-  return date.toLocaleDateString("en-US", {
+  return date.toLocaleDateString("en-GB", {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -298,7 +312,8 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
               <div className="flex items-center gap-4 text-xs text-slate-500">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" />
-                  Since {formatDate(currentStatus.enteredAt)}
+                  Since {formatRelativeDate(currentStatus.enteredAt)} ·{" "}
+                  {formatPipelineDateTime(currentStatus.enteredAt)}
                 </span>
                 <span className="flex items-center gap-1">
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -356,12 +371,25 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                         <div key={`${stage.statusId}-${stage.step}`} className="flex items-start relative overflow-visible">
                           {/* Status Milestone */}
                           <div className="flex flex-col items-center min-w-[160px] max-w-[200px] relative">
-                            {/* Date & Duration Above */}
-                            <div className="mb-3 text-center h-12 flex flex-col justify-end">
-                              <div className="text-xs font-medium text-slate-700 mb-0.5">
-                                {formatDate(stage.enteredAt)}
+                            {/* Entered / exited date-time & duration */}
+                            <div className="mb-3 text-center min-h-[5.5rem] flex flex-col justify-end gap-0.5 px-1 w-full">
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                Entered
                               </div>
-                              <div className="text-xs text-slate-500">
+                              <div className="text-xs font-medium text-slate-700 leading-tight">
+                                {formatPipelineDateTime(stage.enteredAt)}
+                              </div>
+                              {stage.exitedAt ? (
+                                <>
+                                  <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mt-1">
+                                    Exited
+                                  </div>
+                                  <div className="text-xs font-medium text-slate-600 leading-tight">
+                                    {formatPipelineDateTime(stage.exitedAt)}
+                                  </div>
+                                </>
+                              ) : null}
+                              <div className="text-xs text-slate-500 mt-0.5">
                                 ⏱️ {duration}
                               </div>
                             </div>
@@ -442,7 +470,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
 
                           {/* Road Connection Arrow - Horizontal */}
                           {!isLastInRow && (
-                            <div className="flex flex-col items-center justify-center pt-[88px] px-2">
+                            <div className="flex flex-col items-center justify-center pt-[7.25rem] px-2">
                               <div className="relative">
                                 {/* Road/Path */}
                                 <div className={cn(
@@ -477,7 +505,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
 
                           {/* Downward Arrow at end of even row */}
                           {isLastInEvenRow && (
-                            <div className="absolute top-[88px] right-0 translate-x-1/2 z-20">
+                            <div className="absolute top-[7.25rem] right-0 translate-x-1/2 z-20">
                               <div className="flex flex-col items-center">
                                 {/* Vertical Road/Path */}
                                 <div className="w-1 h-16 rounded-full relative bg-slate-300">

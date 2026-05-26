@@ -14,6 +14,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 
 interface DocumentAttestationModalProps {
   isOpen: boolean;
@@ -323,7 +324,7 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
       await refetch();
     } catch (err: any) {
       console.error("Document attestation upload error", err);
-      toast.error(err?.data?.message || "Failed to upload and attach document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 

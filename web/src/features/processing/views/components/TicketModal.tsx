@@ -16,6 +16,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TicketModalProps {
@@ -334,7 +335,7 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
       await refetch();
     } catch (err: any) {
       console.error("Ticket upload error", err);
-      toast.error(err?.data?.message || "Failed to upload and attach document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 

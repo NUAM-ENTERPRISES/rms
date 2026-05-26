@@ -15,6 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
+  validateDocumentFile,
+  effectiveMaxMB,
+  buildAcceptAttribute,
+} from "@/lib/document-upload";
+import {
+  getAllowedFormatsString,
+  type DocumentType,
+} from "@/constants/document-types";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -36,6 +45,8 @@ export interface UploadedDocument {
 interface DocumentUploadProps {
   title?: string;
   description?: string;
+  /** When set, uses document-type rules from constants. */
+  docType?: string;
   accept?: string;
   maxSizeMB?: number;
   allowedTypes?: string[];
@@ -79,8 +90,9 @@ const getStatusColor = (status?: string) => {
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   title = "Document Upload",
   description = "Upload and manage documents",
-  accept = "application/pdf,image/jpeg,image/jpg,image/png,image/webp",
-  maxSizeMB = 10,
+  docType,
+  accept: acceptProp,
+  maxSizeMB: maxSizeMBProp,
   allowedTypes = [
     "application/pdf",
     "image/jpeg",
@@ -100,8 +112,23 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
 
+  const maxSizeMB = docType
+    ? effectiveMaxMB(docType)
+    : (maxSizeMBProp ?? 10);
+  const accept = docType
+    ? buildAcceptAttribute(docType)
+    : (acceptProp ?? "application/pdf,image/jpeg,image/jpg,image/png,image/webp");
+
   const validateFile = (file: File): boolean => {
-    // Check type
+    if (docType) {
+      const result = validateDocumentFile(file, docType);
+      if (!result.ok && result.message) {
+        toast.error(result.message);
+        return false;
+      }
+      return result.ok;
+    }
+
     if (!allowedTypes.includes(file.type)) {
       toast.error(
         `Invalid file type. Allowed: ${allowedTypes
@@ -111,14 +138,17 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       return false;
     }
 
-    // Check size
     if (file.size > maxSizeMB * 1024 * 1024) {
-      toast.error(`File size exceeds ${maxSizeMB}MB limit`);
+      toast.error(`File size exceeds ${maxSizeMB} MB limit`);
       return false;
     }
 
     return true;
   };
+
+  const formatHint = docType
+    ? `${getAllowedFormatsString(docType as DocumentType)} (max ${maxSizeMB} MB)`
+    : `(max ${maxSizeMB}MB)`;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;

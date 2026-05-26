@@ -16,6 +16,7 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 
 
 
@@ -260,7 +261,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to upload document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 

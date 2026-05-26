@@ -15,12 +15,21 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import { PrismaService } from '../database/prisma.service';
+import { UploadCompressionService } from './upload-compression.service';
+import {
+  getEffectiveMaxMB,
+  getEffectiveMaxBytes,
+} from './upload.constants';
+import { DOCUMENT_TYPE_META } from '../common/constants/document-types';
 
 export interface UploadResult {
   fileUrl: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
+  /** Set when the server compressed the file before storage. */
+  compressionApplied?: boolean;
+  originalFileSize?: number;
 }
 
 @Injectable()
@@ -34,6 +43,7 @@ export class UploadService {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
+    private uploadCompressionService: UploadCompressionService,
   ) {
     // DigitalOcean Spaces configuration
     this.bucketName = this.configService.get<string>('DO_SPACES_BUCKET') || '';
@@ -485,9 +495,31 @@ export class UploadService {
       'text/csv',
       'application/vnd.ms-excel',
       'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
+    const maxSizeMB = getEffectiveMaxMB(docType);
+    const targetMaxBytes = getEffectiveMaxBytes(docType);
+    const meta =
+      DOCUMENT_TYPE_META[docType as keyof typeof DOCUMENT_TYPE_META];
+    const originalFileSize = file.size;
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      targetMaxBytes,
+      meta?.displayName ?? docType,
+    );
     const folder = `candidates/documents/${candidateId}/${docType}`;
-    return this.uploadFile(file, folder, allowedMimeTypes, 20);
+    const result = await this.uploadFile(
+      prepared,
+      folder,
+      allowedMimeTypes,
+      maxSizeMB,
+    );
+    if (prepared.size < originalFileSize) {
+      result.compressionApplied = true;
+      result.originalFileSize = originalFileSize;
+    }
+    return result;
   }
 
   /**
@@ -518,6 +550,17 @@ export class UploadService {
     roleCatalogId?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
+    const docType = 'resume';
+    const maxSizeMB = getEffectiveMaxMB(docType);
+    const targetMaxBytes = getEffectiveMaxBytes(docType);
+    const meta =
+      DOCUMENT_TYPE_META[docType as keyof typeof DOCUMENT_TYPE_META];
+    const originalFileSize = file.size;
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      targetMaxBytes,
+      meta?.displayName ?? 'Resume',
+    );
     const folder = `candidates/resumes/${candidateId}`;
 
     // Get candidate details for naming
@@ -548,12 +591,16 @@ export class UploadService {
 
     // Upload file with custom name
     const uploadResult = await this.uploadFile(
-      file,
+      prepared,
       folder,
       allowedMimeTypes,
-      10,
+      maxSizeMB,
       newFileName,
     );
+    if (prepared.size < originalFileSize) {
+      uploadResult.compressionApplied = true;
+      uploadResult.originalFileSize = originalFileSize;
+    }
 
     // Save to Document model
     await this.prisma.document.create({
@@ -562,8 +609,8 @@ export class UploadService {
         docType: 'resume',
         fileName: newFileName,
         fileUrl: uploadResult.fileUrl,
-        fileSize: file.size,
-        mimeType: file.mimetype,
+        fileSize: uploadResult.fileSize,
+        mimeType: uploadResult.mimeType,
         roleCatalogId: roleCatalogId || null,
         uploadedBy: 'system', // TODO: Get from auth context
         status: 'pending',

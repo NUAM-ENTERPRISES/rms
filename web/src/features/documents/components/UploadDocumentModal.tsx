@@ -11,8 +11,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileText, Upload, RefreshCw, Replace } from "lucide-react";
+import { FileText, Upload, RefreshCw, Replace, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  getAllowedFormatsString,
+  getDocumentTypeConfig,
+  type DocumentType,
+} from "@/constants/document-types";
+import {
+  buildAcceptAttribute,
+  effectiveMaxMB,
+  validateDocumentFile,
+  prepareDocumentFileForUpload,
+} from "@/lib/document-upload";
 
 interface UploadDocumentModalProps {
   isOpen: boolean;
@@ -49,22 +61,62 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
 }) => {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const [docName, setDocName] = React.useState("");
+  const [fileError, setFileError] = React.useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = React.useState(false);
   const isReupload = variant === "reupload";
   const typeDisplay = docTypeLabel?.trim() || docType;
+  const docConfig = docType
+    ? getDocumentTypeConfig(docType as DocumentType)
+    : undefined;
+  const maxMb = docType ? effectiveMaxMB(docType) : 10;
+  const allowedFormatsStr = docType
+    ? getAllowedFormatsString(docType as DocumentType)
+    : "PDF, JPG, PNG";
+  const acceptAttr = docType ? buildAcceptAttribute(docType) : ".pdf,.jpg,.jpeg,.png";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUploadFile(e.target.files?.[0] || null);
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (!file || !docType) {
+      setUploadFile(null);
+      setFileError(null);
+      return;
+    }
+    const result = validateDocumentFile(file, docType);
+    if (!result.ok) {
+      setUploadFile(null);
+      setFileError(result.message ?? "Invalid file");
+      if (result.message) toast.error(result.message);
+      return;
+    }
+    setFileError(null);
+    setUploadFile(file);
   };
 
   const handleUpload = async () => {
-    if (!uploadFile) return;
-    await onUpload(uploadFile, { docName: docName.trim() || undefined });
+    if (!uploadFile || !docType) {
+      toast.error("Please select a file to upload");
+      return;
+    }
+    setIsPreparing(true);
+    try {
+      const { file: prepared } = await prepareDocumentFileForUpload(
+        uploadFile,
+        docType
+      );
+      await onUpload(prepared, { docName: docName.trim() || undefined });
+    } catch {
+      // prepareDocumentFileForUpload already toasts
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   React.useEffect(() => {
     if (!isOpen) {
       setUploadFile(null);
       setDocName("");
+      setFileError(null);
     }
   }, [isOpen]);
 
@@ -203,6 +255,7 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                 id="recruiter-doc-upload-file"
                 type="file"
                 className="hidden"
+                accept={acceptAttr}
                 onChange={handleFileChange}
               />
               <label
@@ -253,12 +306,19 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
                       {isReupload ? "Drop replacement file or browse" : "Click to browse or drag and drop"}
                     </span>
                     <span className="max-w-[18rem] text-xs leading-relaxed text-muted-foreground">
-                      PDF, JPG, PNG (max size per document type)
+                      {allowedFormatsStr} (max {maxMb} MB
+                      {docConfig ? ` for ${docConfig.displayName}` : ""})
                     </span>
                   </div>
                 )}
               </label>
             </div>
+            {fileError ? (
+              <p className="flex items-start gap-1.5 text-xs text-destructive" role="alert">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                {fileError}
+              </p>
+            ) : null}
           </div>
           </div>
         </div>
@@ -275,13 +335,13 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <Button
             type="button"
             onClick={handleUpload}
-            disabled={!uploadFile || isUploading}
+            disabled={!uploadFile || isUploading || isPreparing || !!fileError}
             className={cn(
               "w-full sm:w-auto sm:min-w-[140px]",
               isReupload && "bg-amber-600 text-white hover:bg-amber-700"
             )}
           >
-            {isUploading ? (
+            {isUploading || isPreparing ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                 {isReupload ? "Replacing…" : "Uploading…"}

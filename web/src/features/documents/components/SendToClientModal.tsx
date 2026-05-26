@@ -35,6 +35,11 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  validateCsvAttachment,
+  EMAIL_COMBINED_ATTACHMENT_MAX_MB,
+  CSV_ATTACHMENT_MAX_MB,
+} from "@/lib/document-upload";
 import { 
   useGetMergedDocumentQuery, 
   useForwardToClientMutation, 
@@ -229,8 +234,10 @@ export function SendToClientModal({
     }
 
     // Gmail/Outlook limit check
-    if (totalSelectedSizeInfo.mb > 20) {
-      toast.error(`Total document size (${totalSelectedSizeInfo.mb.toFixed(2)}MB) exceeds the 20MB limit. Please remove some documents.`);
+    if (totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB) {
+      toast.error(
+        `Total attachment size (${totalSelectedSizeInfo.mb.toFixed(2)} MB) exceeds the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB limit for combined emails. Please remove some documents or use Google Drive.`
+      );
       return;
     }
 
@@ -331,7 +338,9 @@ export function SendToClientModal({
                   <Badge 
                     variant="outline" 
                     className={`text-[10px] h-4.5 px-1.5 border-white/20 text-white font-bold ${
-                      totalSelectedSizeInfo.mb > 20 ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse" : "bg-white/10"
+                      totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB
+                        ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse"
+                        : "bg-white/10"
                     }`}
                   >
                     {totalSelectedSizeInfo.mb.toFixed(2)} MB
@@ -573,13 +582,23 @@ export function SendToClientModal({
                       accept=".csv"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
-                            toast.error("Please upload only CSV files");
-                            return;
-                          }
-                          setCsvFile(file);
+                        e.target.value = "";
+                        if (!file) return;
+                        const result = validateCsvAttachment(file);
+                        if (!result.ok) {
+                          if (result.message) toast.error(result.message);
+                          return;
                         }
+                        const projectedMb =
+                          (totalSelectedSizeInfo.bytes + file.size) /
+                          (1024 * 1024);
+                        if (projectedMb > EMAIL_COMBINED_ATTACHMENT_MAX_MB) {
+                          toast.error(
+                            `Adding this CSV would exceed the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB combined email limit (${projectedMb.toFixed(2)} MB). Remove other attachments first.`
+                          );
+                          return;
+                        }
+                        setCsvFile(file);
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                       id="csv-upload"
@@ -589,7 +608,9 @@ export function SendToClientModal({
                         <Paperclip className="h-4 w-4 text-slate-500" />
                       </div>
                       <p className="text-xs font-medium text-slate-700">Attach CSV</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Summary data</p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        CSV only · max {CSV_ATTACHMENT_MAX_MB} MB
+                      </p>
                     </div>
                   </div>
                 )}

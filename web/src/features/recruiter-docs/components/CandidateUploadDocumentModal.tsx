@@ -7,7 +7,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DepartmentSelect, JobTitleSelect } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, isValidFileExtension, isValidFileSize, getAllowedFormatsString, isPassportDocumentType } from "@/constants/document-types";
+import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, getAllowedFormatsString, isPassportDocumentType } from "@/constants/document-types";
+import {
+  buildAcceptAttribute,
+  effectiveMaxMB,
+  validateDocumentFile,
+  prepareDocumentFileForUpload,
+} from "@/lib/document-upload";
 import { Plus, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -70,6 +76,8 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
   const [roleCatalogId, setRoleCatalogId] = React.useState<string | undefined>(undefined);
   const [roleLabel, setRoleLabel] = React.useState<string>("");
   const [selectedWorkExperienceId, setSelectedWorkExperienceId] = React.useState<string | undefined>(undefined);
+  const [fileError, setFileError] = React.useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = React.useState(false);
 
   const showWorkExperienceSelector =
     EMPLOYMENT_DOC_TYPES.has(docType as any) && workExperiences && workExperiences.length > 0;
@@ -93,8 +101,10 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   const isUploadDisabled =
     isUploading ||
+    isPreparing ||
     !isPassportFormValid ||
-    (requiresRole && !roleCatalogId);
+    (requiresRole && !roleCatalogId) ||
+    !!fileError;
 
   const uploadDisabledReason = React.useMemo(() => {
     if (isUploading) return undefined;
@@ -141,6 +151,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       setRoleCatalogId(undefined);
       setRoleLabel("");
       setSelectedWorkExperienceId(undefined);
+      setFileError(null);
       return;
     }
 
@@ -164,6 +175,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
+    e.target.value = "";
     // cleanup previous preview URL
     if (previewSrc) {
       URL.revokeObjectURL(previewSrc);
@@ -172,15 +184,31 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       setPreviewType("");
     }
 
-    if (f) {
-      const url = URL.createObjectURL(f);
-      setSelectedFile(f);
-      setPreviewSrc(url);
-      setPreviewName(f.name);
-      setPreviewType(f.type || "");
-    } else {
+    if (!f) {
       setSelectedFile(null);
+      setFileError(null);
+      return;
     }
+
+    if (!docType) {
+      toast.error("Please select a document type first");
+      return;
+    }
+
+    const result = validateDocumentFile(f, docType);
+    if (!result.ok) {
+      setSelectedFile(null);
+      setFileError(result.message ?? "Invalid file");
+      if (result.message) toast.error(result.message);
+      return;
+    }
+
+    setFileError(null);
+    const url = URL.createObjectURL(f);
+    setSelectedFile(f);
+    setPreviewSrc(url);
+    setPreviewName(f.name);
+    setPreviewType(f.type || "");
   };
 
   const handleUploadClick = async () => {
@@ -190,24 +218,6 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     }
     if (!selectedFile) {
       toast.error("Please select a file to upload");
-      return;
-    }
-
-    const config = DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG];
-    if (!config) {
-      toast.error("Unknown document type");
-      return;
-    }
-
-    // Validate extension and size
-    if (!isValidFileExtension(docType as any, selectedFile.name)) {
-      toast.error(`Invalid file format. Allowed: ${getAllowedFormatsString(docType as any)}`);
-      return;
-    }
-
-    const sizeMB = Number((selectedFile.size / (1024 * 1024)).toFixed(2));
-    if (!isValidFileSize(docType as any, sizeMB)) {
-      toast.error(`File too large. Max size: ${config.maxSizeMB} MB`);
       return;
     }
 
@@ -239,8 +249,13 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       }
     }
 
+    setIsPreparing(true);
     try {
-      await onUpload(selectedFile, {
+      const { file: prepared } = await prepareDocumentFileForUpload(
+        selectedFile,
+        docType
+      );
+      await onUpload(prepared, {
         docType,
         roleCatalogId,
         workExperienceId: selectedWorkExperienceId ?? initialWorkExperienceId,
@@ -249,12 +264,11 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         expiryDate: expiryDate || undefined,
         notes: notes || undefined,
       });
-      // Close handled by parent on success in most flows, but keep safe
       setTimeout(() => onClose(), 200);
     } catch (err) {
-      // parent will usually toast, but provide fallback
       console.error(err);
-      toast.error("Upload failed");
+    } finally {
+      setIsPreparing(false);
     }
   };
 
@@ -272,9 +286,8 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     ? DOCUMENT_TYPE_CONFIG[docType as keyof typeof DOCUMENT_TYPE_CONFIG]
     : undefined;
 
-  const allowedFormats = docTypeConfig
-    ? docTypeConfig.allowedFormats.map((f) => `.${f}`).join(",")
-    : "";
+  const allowedFormats = docType ? buildAcceptAttribute(docType) : "";
+  const effectiveMax = docType ? effectiveMaxMB(docType) : 10;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -360,9 +373,14 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
               {docTypeConfig && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   Allowed: {getAllowedFormatsString(docType as any)} · Max{" "}
-                  {docTypeConfig.maxSizeMB} MB
+                  {effectiveMax} MB
                 </p>
               )}
+              {fileError ? (
+                <p className="text-[11px] text-destructive" role="alert">
+                  {fileError}
+                </p>
+              ) : null}
               {selectedFile && isPassportDoc && (
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   Check the passport number on the bio page matches what you enter below.
@@ -514,7 +532,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                         className="bg-green-600 hover:bg-green-700 text-white"
                         disabled={isUploadDisabled}
                       >
-                        {isUploading
+                        {isUploading || isPreparing
                           ? "Uploading..."
                           : isPassportDoc
                             ? "Upload & Save"
@@ -531,7 +549,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 className="bg-green-600 hover:bg-green-700 text-white"
                 disabled={isUploadDisabled}
               >
-                {isUploading
+                {isUploading || isPreparing
                   ? "Uploading..."
                   : isPassportDoc
                     ? "Upload & Save"

@@ -102,6 +102,7 @@ import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
+import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 
 
@@ -179,6 +180,8 @@ interface UploadData {
   fileUrl: string;
   fileSize?: number;
   mimeType?: string;
+  compressionApplied?: boolean;
+  originalFileSize?: number;
 }
 
 interface DocumentRequirement {
@@ -432,6 +435,13 @@ const RecruiterDocsDetailPage: React.FC = () => {
       // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
       const uploadData = (uploadResult && 'data' in uploadResult) ? (uploadResult.data as UploadData) : (uploadResult as unknown as UploadData);
 
+      const compressionToast =
+        uploadData?.compressionApplied &&
+        uploadData.originalFileSize &&
+        uploadData.fileSize
+          ? `File compressed from ${formatBytes(uploadData.originalFileSize)} to ${formatBytes(uploadData.fileSize)} and uploaded.`
+          : null;
+
       if (isReuploadMode && reuploadDocId) {
         // Handle Reupload
         const desiredDocName = (meta?.docName && meta.docName.trim()) || undefined;
@@ -444,7 +454,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
         }).unwrap();
-        toast.success("Document re-uploaded successfully!");
+        toast.success(compressionToast ?? "Document re-uploaded successfully!");
       } else {
         // Step 2: Create Document record in database
         const documentData = await createDocument({
@@ -465,7 +475,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
           roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
         }).unwrap();
 
-        toast.success("Document uploaded and linked successfully!");
+        toast.success(
+          compressionToast ?? "Document uploaded and linked successfully!"
+        );
       }
 
       setShowUploadDialog(false);
@@ -478,7 +490,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       void refetchCandidateDocs();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
@@ -639,7 +651,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       refetchRequirements();
     } catch (error) {
       console.error("Candidate upload error:", error);
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
