@@ -832,8 +832,8 @@ export class RecruiterAssignmentService {
         currentStatusId: true,
         recruiterAssignments: {
           where: { isActive: true },
-          select: { assignmentType: true }
-        }
+          select: { assignmentType: true, recruiterId: true },
+        },
       },
     });
 
@@ -895,22 +895,48 @@ export class RecruiterAssignmentService {
           (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO || a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL
         );
 
+        const isCreReassignedForRecruiter = c.recruiterAssignments.some(
+          (a) =>
+            a.recruiterId === recruiterId &&
+            a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+        );
+
+        // CRE handoff status is internal; recruiters always bucket these as untouched
+        const effectiveStatusId =
+          isCreReassignedForRecruiter && untouchedId
+            ? untouchedId
+            : c.currentStatusId;
+
         acc.totalAssigned += 1;
         if (isHandledByCRE) acc.handledByCRE += 1;
 
-        if (c.currentStatusId === untouchedId) acc.untouched += 1;
-        if (c.currentStatusId === rnrId) {
+        if (effectiveStatusId === untouchedId) acc.untouched += 1;
+        if (!isCreReassignedForRecruiter && c.currentStatusId === rnrId) {
           acc.rnr += 1;
           if (isHandledByCRE) acc.rnrHandledByCRE += 1;
         }
 
-        if (c.currentStatusId === onHoldId) acc.onHold += 1;
-        if (c.currentStatusId === interestedId) acc.interested += 1;
-        if (c.currentStatusId === notInterestedId) acc.notInterested += 1;
-        if (c.currentStatusId === otherEnquiryId) acc.otherEnquiry += 1;
-        if (c.currentStatusId === qualifiedId) acc.qualified += 1;
-        if (c.currentStatusId === futureId) acc.future += 1;
-        if (c.currentStatusId === deployedId) acc.working += 1;
+        if (!isCreReassignedForRecruiter && c.currentStatusId === onHoldId) {
+          acc.onHold += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === interestedId) {
+          acc.interested += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === notInterestedId) {
+          acc.notInterested += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === otherEnquiryId) {
+          acc.otherEnquiry += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === qualifiedId) {
+          acc.qualified += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === futureId) {
+          acc.future += 1;
+        }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === deployedId) {
+          acc.working += 1;
+        }
         return acc;
       },
       {
@@ -1025,10 +1051,22 @@ export class RecruiterAssignmentService {
 
       const merged = withProfileCompletion(candidate as any);
 
+      const recruiterFacingStatus =
+        isCREReassigned && untouchedStatus
+          ? {
+              id: untouchedStatus.id,
+              statusName: untouchedStatus.statusName,
+            }
+          : merged.currentStatus;
+
       return {
         ...merged,
+        currentStatus: recruiterFacingStatus,
         isHandledByCRE,
         isCREReassigned,
+        creStatusNote: isCREReassigned
+          ? recruiterAssignment?.creStatusNote ?? null
+          : null,
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,

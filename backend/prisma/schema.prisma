@@ -1542,14 +1542,19 @@ model CandidateRecruiterAssignment {
   assignedAt     DateTime  @default(now())
   unassignedAt   DateTime?
   unassignedBy   String?
-  reason         String? // Reason for assignment change
-  isActive       Boolean   @default(true)
-  assignmentType String    @default("manual") // manual, cre_auto, cre_manual
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  reason              String? // Reason for assignment change
+  isActive            Boolean   @default(true)
+  assignmentType      String    @default("manual") // manual, cre_auto, cre_manual
+  /// Status CRE selected at reassign; recruiter always sees candidate as untouched
+  creStatusId   Int?
+  /// CRE status note for the recruiter
+  creStatusNote String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  recruiter          User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  candidate          Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter          User             @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  creStatus   CandidateStatus? @relation("CreStatus", fields: [creStatusId], references: [id])
   assignedByUser     User      @relation("AssignedByUser", fields: [assignedBy], references: [id])
   unassignedByUser   User?     @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
   createdByUser      User?     @relation("CreatedByUser", fields: [createdBy], references: [id])
@@ -1570,7 +1575,8 @@ model CandidateStatus {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  candidates Candidate[]
+  candidates              Candidate[]
+  creStatusAssignments   CandidateRecruiterAssignment[] @relation("CreStatus")
 
   statusHistories CandidateStatusHistory[] @relation("StatusToHistory")
 

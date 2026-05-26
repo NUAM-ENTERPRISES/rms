@@ -61,6 +61,7 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
+import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
 import { toast } from "sonner";
 
 
@@ -1020,6 +1021,10 @@ export default function CandidatesPage() {
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
                       const isHandledByCRE = candidate.isHandledByCRE;
                       const isCREReassigned = candidate.isCREReassigned;
+                      const creStatusNote = candidate.creStatusNote as
+                        | string
+                        | null
+                        | undefined;
 
                       return (
                         <TableRow
@@ -1060,9 +1065,15 @@ export default function CandidatesPage() {
                                   )}
 
                                   {isCREReassigned && (
-                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
-                                      CRE Reassigned
-                                    </Badge>
+                                    <>
+                                      <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
+                                        CRE Reassigned
+                                      </Badge>
+                                      <CreReassignedStatusNote
+                                        note={creStatusNote}
+                                        candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                                      />
+                                    </>
                                   )}
                                 </div>
 
