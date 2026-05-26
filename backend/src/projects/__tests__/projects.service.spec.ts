@@ -519,7 +519,7 @@ describe('ProjectsService', () => {
     it('should return a project by id', async () => {
       prismaService.project.findUnique.mockResolvedValue(mockProject as any);
 
-      const result = await service.findOne('project123');
+      const result = await service.findOne('project123', ['Manager']);
 
       expect(result).toEqual(mockProject);
       expect(prismaService.project.findUnique).toHaveBeenCalledWith({
@@ -531,9 +531,25 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when project does not exist', async () => {
       prismaService.project.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne('project123')).rejects.toThrow(
+      await expect(service.findOne('project123', [])).rejects.toThrow(
         new NotFoundException('Project with ID project123 not found'),
       );
+    });
+
+    it('should redact client for Recruiter role', async () => {
+      prismaService.project.findUnique.mockResolvedValue(mockProject as any);
+
+      const result = await service.findOne('project123', ['Recruiter']);
+
+      expect(result.client).toBeNull();
+    });
+
+    it('should redact client for CRE role', async () => {
+      prismaService.project.findUnique.mockResolvedValue(mockProject as any);
+
+      const result = await service.findOne('project123', ['CRE']);
+
+      expect(result.client).toBeNull();
     });
   });
 

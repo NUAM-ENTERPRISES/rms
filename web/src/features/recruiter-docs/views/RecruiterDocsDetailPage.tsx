@@ -102,6 +102,7 @@ import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
+import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 
 
@@ -1614,8 +1615,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
                             <Globe className="h-3 w-3" /> Visa Type
                           </span>
-                          <p className="text-sm font-semibold text-slate-700 capitalize">
-                            {role.visaType || "N/A"}
+                          <p className="text-sm font-semibold text-slate-700">
+                            {role.visaType
+                              ? getProjectVisaTypeLabel(role.visaType)
+                              : "N/A"}
                           </p>
                         </div>
                       </div>

@@ -1,6 +1,8 @@
 import React, { useState, Suspense, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
+import { shouldHideProjectClient } from "@/constants/project-client-visibility";
 import {
   Card,
   CardContent,
@@ -146,6 +148,7 @@ export default function ProjectDetailPage() {
   const canReadProjects = useCan("read:projects");
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
+  const hideProjectClient = shouldHideProjectClient(user?.roles ?? []);
 
   // RTK Query hooks
   const {
@@ -1010,7 +1013,7 @@ export default function ProjectDetailPage() {
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
-                    {project.client && (
+                    {!hideProjectClient && project.client && (
                       <span className="flex items-center gap-1.5 font-medium">
                         <Building2 className="h-3.5 w-3.5 text-slate-400" />
                         {project.client.name}
@@ -1412,7 +1415,7 @@ export default function ProjectDetailPage() {
                         )}
                         {role.visaType && (
                           <Badge variant="outline" className="text-[10px] h-4.5 font-medium border-amber-300 text-amber-700 bg-amber-50 px-1.5">
-                            {role.visaType.replace(/_/g, ' ').toUpperCase()} VISA
+                            {getProjectVisaTypeLabel(role.visaType)}
                           </Badge>
                         )}
                       </div>
@@ -1440,32 +1443,33 @@ export default function ProjectDetailPage() {
               </div>
             </Card>
 
-            {/* Client Card */}
-            <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
-              <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
-                <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
-                  <Building2 className="h-3.5 w-3.5 text-teal-600" />
-                </div>
-                <span className="text-xs font-bold text-slate-800">Client</span>
-              </div>
-              <div className="px-3 pb-3">
-                <div className="flex items-center gap-3 p-2.5 bg-gradient-to-br from-teal-50/80 to-cyan-50/40 rounded-lg border border-teal-100">
-                  <div className="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="h-4 w-4 text-teal-600" />
+            {!hideProjectClient && (
+              <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2">
+                  <div className="h-6 w-6 rounded-md bg-teal-100 flex items-center justify-center">
+                    <Building2 className="h-3.5 w-3.5 text-teal-600" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-slate-800 text-xs truncate">
-                      {project.client?.name || "Not assigned"}
+                  <span className="text-xs font-bold text-slate-800">Client</span>
+                </div>
+                <div className="px-3 pb-3">
+                  <div className="flex items-center gap-3 p-2.5 bg-gradient-to-br from-teal-50/80 to-cyan-50/40 rounded-lg border border-teal-100">
+                    <div className="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-4 w-4 text-teal-600" />
                     </div>
-                    {project.client && (
-                      <span className="text-[10px] text-teal-600 font-medium">
-                        {project.client.type}
-                      </span>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-slate-800 text-xs truncate">
+                        {project.client?.name || "Not assigned"}
+                      </div>
+                      {project.client && (
+                        <span className="text-[10px] text-teal-600 font-medium">
+                          {project.client.type}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -1476,6 +1480,7 @@ export default function ProjectDetailPage() {
           isOpen={showDetails}
           onClose={() => setShowDetails(false)}
           project={projectData?.data}
+          hideClient={hideProjectClient}
         />
       </Suspense>
 

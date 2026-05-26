@@ -32,6 +32,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 import { useGetCandidateProjectPipelineQuery } from "@/features/candidates/api";
 import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil, getNextProgressStatus, mapToProgressKey } from "@/features/candidates/utils/progress";
+import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
 
 // Extended type for API response with additional fields
 interface ExtendedPipelineResponse {
@@ -1002,8 +1003,8 @@ export default function CandidateProjectDetailsPage() {
                                         {role.visaType && (
                                             <div className="flex items-center justify-between text-xs">
                                                 <span className="text-gray-500">Visa Type</span>
-                                                <Badge variant="outline" className="capitalize text-[10px]">
-                                                    {role.visaType}
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    {getProjectVisaTypeLabel(role.visaType)}
                                                 </Badge>
                                             </div>
                                         )}

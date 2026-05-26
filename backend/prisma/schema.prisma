@@ -357,7 +357,7 @@ model RoleNeeded {
   transport                 Boolean?
   target                    Int?
   technicalSkills           Json?
-  visaType                  String                           @default("contract") // "contract", "permanent", "work_permit", "student"
+  visaType                  String                           @default("direct_visa") // "direct_visa", "company_visa" (legacy: contract, permanent)
   requiredSkills            Json                             @default("[]") // Array of required skills
   candidateStates           Json                             @default("[]") // Array of allowed states for candidates
   candidateReligions        Json                             @default("[]") // Array of allowed religions for candidates

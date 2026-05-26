@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { formatSalaryRangeWithINRBracket, getCurrencySymbol } from "@/lib/utils";
+import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -29,10 +30,13 @@ export default function ProjectDetailsModal({
   isOpen,
   onClose,
   project,
+  hideClient = false,
 }: {
   isOpen: boolean;
   onClose: () => void;
   project?: Project | null;
+  /** When true, client identity is omitted (Recruiter / CRE). */
+  hideClient?: boolean;
 }) {
   if (!project) return null;
 
@@ -82,7 +86,9 @@ export default function ProjectDetailsModal({
                 Overview
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-sm">
-                <div><span className="text-xs text-slate-500">Client:</span> {project.client?.name || "—"}</div>
+                {!hideClient && (
+                  <div><span className="text-xs text-slate-500">Client:</span> {project.client?.name || "—"}</div>
+                )}
                 <div><span className="text-xs text-slate-500">Created by:</span> {project.creator?.name || "—"}</div>
                 <div><span className="text-xs text-slate-500">Deadline:</span> {formatDate(project.deadline)}</div>
                 <div><span className="text-xs text-slate-500">Created:</span> {formatDate(project.createdAt)}</div>
@@ -162,7 +168,7 @@ export default function ProjectDetailsModal({
                         <div><strong>Age:</strong> {role.minAge != null && role.maxAge != null ? `${role.minAge}–${role.maxAge}` : role.minAge != null ? `>= ${role.minAge}` : role.maxAge != null ? `<= ${role.maxAge}` : "—"}</div>
                         <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
                         <div><strong>Employment:</strong> {role.employmentType || "Any"}</div>
-                        <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
+                        <div><strong>Visa:</strong> {role.visaType ? getProjectVisaTypeLabel(role.visaType) : "Any"}</div>
                         <div>
                           <strong>Salary:</strong>
                           <span className="ml-1">
