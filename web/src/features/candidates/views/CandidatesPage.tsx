@@ -32,8 +32,6 @@ import {
   Plus,
   MoreHorizontal,
   Eye,
-  Edit,
-  Trash2,
   UserCheck,
   Calendar,
   Phone,
@@ -1240,22 +1238,6 @@ export default function CandidatesPage() {
                                 >
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
-                                {canWriteCandidates && (
-                                  <>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        navigate(
-                                          `/candidates/${candidate.id}/edit`
-                                        )
-                                      }
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-600">
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
                                 {canTransferCandidates && (
                                   <>
                                     <DropdownMenuSeparator />

@@ -37,8 +37,6 @@ import {
   Calendar,
   Filter,
   FilterX,
-  Edit,
-  Trash2,
   SlidersHorizontal,
   Building2,
   AlertCircle,
@@ -50,7 +48,6 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import { useGetCandidateOverviewQuery, useTransferCandidateMutation, useBulkTransferCandidatesMutation } from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";
-import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ImageViewer } from "@/components/molecules";
@@ -72,9 +69,7 @@ export default function CandidateOverviewPage() {
   );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
-  const isCRE = currentUser?.roles?.includes("CRE");
 
-  const canWriteCandidates = useCan("write:candidates") && !isCRE;
   const canTransferCandidates = currentUser?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
   );
@@ -869,16 +864,6 @@ export default function CandidateOverviewPage() {
                                 <DropdownMenuItem onClick={() => navigate(`/candidates/${candidate.id}`)}>
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
-                                {canWriteCandidates && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => navigate(`/candidates/${candidate.id}/edit`)}>
-                                      <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-500">
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
                                 {canTransferCandidates && (
                                   <>
                                     <DropdownMenuSeparator />
