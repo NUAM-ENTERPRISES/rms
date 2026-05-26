@@ -736,3 +736,15 @@ export function getAllowedFormatsString(docType: DocumentType): string {
   if (!config) return "";
   return config.allowedFormats.map((f) => f.toUpperCase()).join(", ");
 }
+
+/** Doc types that represent a passport copy or original (excludes passport_photo). */
+export const PASSPORT_DOCUMENT_TYPES = [
+  DOCUMENT_TYPE.PASSPORT,
+  "passport_original",
+  "passport_cover_bio",
+  "passport",
+] as const;
+
+export function isPassportDocumentType(docType: string): boolean {
+  return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
+}

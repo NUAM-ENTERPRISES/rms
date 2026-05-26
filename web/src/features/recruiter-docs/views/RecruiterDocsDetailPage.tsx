@@ -99,6 +99,7 @@ import {
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
 import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
+import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
@@ -605,13 +606,16 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
       const desiredDocName = (meta.docName && meta.docName.trim()) || "";
 
-      if (uploadedDocument) {
-        if (desiredDocName) {
-          await updateDocument({
-            id: uploadedDocument.id,
-            docName: desiredDocName,
-          }).unwrap();
-        }
+      if (uploadedDocument?.id) {
+        await updateDocument({
+          id: uploadedDocument.id,
+          docName: desiredDocName || undefined,
+          documentNumber: meta.documentNumber,
+          expiryDate: meta.expiryDate
+            ? new Date(meta.expiryDate).toISOString()
+            : undefined,
+          notes: meta.notes,
+        }).unwrap();
       } else {
         await createDocument({
           candidateId,
@@ -1803,6 +1807,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           onUpload={handleUploadCandidateDocument}
           isUploading={isUploading || isCreating}
           workExperiences={candidate?.workExperiences}
+          existingPassportDocument={getPassportDocument(allCandidateDocuments)}
         />
       </React.Suspense>
 

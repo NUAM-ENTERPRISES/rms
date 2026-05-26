@@ -902,3 +902,15 @@ export function isValidFileSize(
   const meta = DOCUMENT_TYPE_META[docType];
   return sizeMB <= (meta?.maxSizeMB ?? 10);
 }
+
+/** Doc types that represent a passport copy or original (excludes passport_photo). */
+export const PASSPORT_DOCUMENT_TYPES = [
+  DOCUMENT_TYPE.PASSPORT_COPY,
+  DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  DOCUMENT_TYPE.PASSPORT_COVER_BIO,
+  'passport',
+] as const;
+
+export function isPassportDocumentType(docType: string): boolean {
+  return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
+}

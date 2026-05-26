@@ -42,6 +42,7 @@ import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
 import { UploadService } from '../upload/upload.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
+import { validatePassportDocumentFields } from './utils/passport-document.util';
 
 @Injectable()
 export class DocumentsService {
@@ -181,6 +182,11 @@ export class DocumentsService {
       // Previously we raised a BadRequestException: `Expiry date is required for ${createDocumentDto.docType}`
       this.logger.warn(`Expiry date missing for ${createDocumentDto.docType}; continuing without expiryDate.`);
     }
+
+    validatePassportDocumentFields(createDocumentDto.docType, {
+      documentNumber: createDocumentDto.documentNumber,
+      expiryDate: createDocumentDto.expiryDate,
+    });
 
     const explicitRoleCatalogId =
       createDocumentDto.roleCatalog ||
@@ -457,9 +463,22 @@ export class DocumentsService {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
 
-    // Update document
     const docType = updateDocumentDto.docType || existingDocument.docType;
+    const mergedDocumentNumber =
+      updateDocumentDto.documentNumber !== undefined
+        ? updateDocumentDto.documentNumber
+        : existingDocument.documentNumber;
+    const mergedExpiryDate =
+      updateDocumentDto.expiryDate !== undefined
+        ? updateDocumentDto.expiryDate
+        : existingDocument.expiryDate;
 
+    validatePassportDocumentFields(docType, {
+      documentNumber: mergedDocumentNumber,
+      expiryDate: mergedExpiryDate,
+    });
+
+    // Update document
     const document = await this.prisma.document.update({
       where: { id },
       data: {
@@ -1076,6 +1095,15 @@ export class DocumentsService {
       );
     }
 
+    const resolvedDocumentNumber =
+      reuploadDto.documentNumber?.trim() || document.documentNumber;
+    const resolvedExpiryDate = reuploadDto.expiryDate ?? document.expiryDate;
+
+    validatePassportDocumentFields(document.docType, {
+      documentNumber: resolvedDocumentNumber,
+      expiryDate: resolvedExpiryDate,
+    });
+
     // Get user details for history
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1110,8 +1138,8 @@ export class DocumentsService {
           mimeType: reuploadDto.mimeType,
           expiryDate: reuploadDto.expiryDate
             ? new Date(reuploadDto.expiryDate)
-            : undefined,
-          documentNumber: reuploadDto.documentNumber,
+            : document.expiryDate ?? undefined,
+          documentNumber: resolvedDocumentNumber,
           notes: reuploadDto.notes,
           status: DOCUMENT_STATUS.RESUBMITTED,
           roleCatalogId: document.roleCatalogId || oldVerification?.roleCatalogId || null,

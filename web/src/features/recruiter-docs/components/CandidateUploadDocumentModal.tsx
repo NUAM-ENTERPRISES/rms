@@ -7,9 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DepartmentSelect, JobTitleSelect } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, isValidFileExtension, isValidFileSize, getAllowedFormatsString } from "@/constants/document-types";
+import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, isValidFileExtension, isValidFileSize, getAllowedFormatsString, isPassportDocumentType } from "@/constants/document-types";
 import { Plus, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { WorkExperience } from "@/features/candidates/api";
 
 const EMPLOYMENT_DOC_TYPES = new Set([
@@ -24,10 +30,16 @@ const HIDDEN_DOCUMENT_TYPES = new Set<string>([
   DOCUMENT_TYPE.EXPERIENCE_LETTER,
 ]);
 
+interface ExistingPassportDocument {
+  documentNumber?: string | null;
+  expiryDate?: string | null;
+}
+
 interface Props {
   isOpen: boolean;
   initialDocType?: string;
   initialWorkExperienceId?: string;
+  existingPassportDocument?: ExistingPassportDocument | null;
   onClose: () => void;
   onUpload: (file: File, meta: {
     docType: string;
@@ -42,7 +54,7 @@ interface Props {
   workExperiences?: WorkExperience[];
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, onClose, onUpload, isUploading, workExperiences }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, onClose, onUpload, isUploading, workExperiences }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -61,6 +73,47 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   const showWorkExperienceSelector =
     EMPLOYMENT_DOC_TYPES.has(docType as any) && workExperiences && workExperiences.length > 0;
+
+  const isPassportDoc = isPassportDocumentType(docType);
+
+  const formatExpiryForInput = (value?: string | null) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().slice(0, 10);
+  };
+
+  const isPassportFormValid =
+    !isPassportDoc ||
+    (documentNumber.trim().length > 0 && expiryDate.trim().length > 0);
+
+  const requiresRole =
+    docType === DOCUMENT_TYPE.RESUME ||
+    docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS;
+
+  const isUploadDisabled =
+    isUploading ||
+    !isPassportFormValid ||
+    (requiresRole && !roleCatalogId);
+
+  const uploadDisabledReason = React.useMemo(() => {
+    if (isUploading) return undefined;
+    if (isPassportDoc) {
+      if (!documentNumber.trim()) return "Please add passport number";
+      if (!expiryDate.trim()) return "Please add passport expiry date";
+    }
+    if (requiresRole && !roleCatalogId) {
+      return "Please select a role for this document";
+    }
+    return undefined;
+  }, [
+    isUploading,
+    isPassportDoc,
+    documentNumber,
+    expiryDate,
+    requiresRole,
+    roleCatalogId,
+  ]);
 
   const filteredDocTypes = React.useMemo(() => {
     const q = docTypeFilter.trim().toLowerCase();
@@ -88,10 +141,20 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       setRoleCatalogId(undefined);
       setRoleLabel("");
       setSelectedWorkExperienceId(undefined);
-    } else if (initialDocType) {
-      setDocType(initialDocType);
+      return;
     }
-  }, [isOpen, initialDocType]);
+
+    if (initialDocType) {
+      setDocType(initialDocType);
+      if (
+        isPassportDocumentType(initialDocType) &&
+        existingPassportDocument
+      ) {
+        setDocumentNumber(existingPassportDocument.documentNumber?.trim() || "");
+        setExpiryDate(formatExpiryForInput(existingPassportDocument.expiryDate));
+      }
+    }
+  }, [isOpen, initialDocType, existingPassportDocument]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -158,6 +221,24 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       return;
     }
 
+    if (isPassportDoc) {
+      if (!documentNumber.trim()) {
+        toast.error("Passport number is required");
+        return;
+      }
+      if (!expiryDate) {
+        toast.error("Passport expiry date is required");
+        return;
+      }
+      const expiry = new Date(expiryDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(expiry.getTime()) || expiry < today) {
+        toast.error("Passport expiry date must be in the future");
+        return;
+      }
+    }
+
     try {
       await onUpload(selectedFile, {
         docType,
@@ -204,14 +285,30 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
             Upload Candidate Document
           </DialogTitle>
           <DialogDescription className="text-xs leading-snug">
-            Select type, add optional details, then choose a file.
+            Select type, add details, then choose a file.
+            {isPassportDoc
+              ? " Verify the passport number matches the uploaded file before saving."
+              : null}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Document Type *</Label>
-              <Select value={docType} onValueChange={(v) => { setDocType(v); setDocTypeFilter(""); setDepartmentId(undefined); setRoleCatalogId(undefined); setRoleLabel(""); }}>
+              <Select value={docType} onValueChange={(v) => {
+                setDocType(v);
+                setDocTypeFilter("");
+                setDepartmentId(undefined);
+                setRoleCatalogId(undefined);
+                setRoleLabel("");
+                if (isPassportDocumentType(v) && existingPassportDocument) {
+                  setDocumentNumber(existingPassportDocument.documentNumber?.trim() || "");
+                  setExpiryDate(formatExpiryForInput(existingPassportDocument.expiryDate));
+                } else if (!isPassportDocumentType(v)) {
+                  setDocumentNumber("");
+                  setExpiryDate("");
+                }
+              }}>
                 <SelectTrigger className="h-9 w-full">
                   <SelectValue placeholder="Select document type" />
                 </SelectTrigger>
@@ -266,6 +363,11 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                   {docTypeConfig.maxSizeMB} MB
                 </p>
               )}
+              {selectedFile && isPassportDoc && (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Check the passport number on the bio page matches what you enter below.
+                </p>
+              )}
               {selectedFile && (
                 <div className="flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-2">
                   <span className="text-xs font-medium truncate max-w-[240px] text-slate-800">{selectedFile.name}</span>
@@ -286,18 +388,31 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
           <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Document Number</Label>
+              <Label className="text-xs font-medium">
+                {isPassportDoc ? "Passport Number" : "Document Number"}
+                {isPassportDoc ? " *" : ""}
+              </Label>
               <Input
                 value={documentNumber}
                 onChange={(e) => setDocumentNumber(e.target.value)}
-                placeholder="Optional"
+                placeholder={isPassportDoc ? "e.g., A1234567" : "Optional"}
                 className="h-9"
+                required={isPassportDoc}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Expiry Date</Label>
-              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="h-9" />
+              <Label className="text-xs font-medium">
+                {isPassportDoc ? "Passport Expiry Date" : "Expiry Date"}
+                {isPassportDoc ? " *" : ""}
+              </Label>
+              <Input
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                className="h-9"
+                required={isPassportDoc}
+              />
             </div>
           </div>
 
@@ -389,18 +504,40 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
           <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
           {/* Only show upload button when user has selected a type and a file. For resumes, require role selection (button disabled until role chosen). */}
           {docType && selectedFile ? (
-            <Button
-              onClick={handleUploadClick}
-              className="bg-green-600 hover:bg-green-700 text-white"
-              disabled={
-                isUploading ||
-                ((docType === DOCUMENT_TYPE.RESUME ||
-                  docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS) &&
-                  !roleCatalogId)
-              }
-            >
-              {isUploading ? "Uploading..." : "Upload"}
-            </Button>
+            uploadDisabledReason ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex" tabIndex={0}>
+                      <Button
+                        onClick={handleUploadClick}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        disabled={isUploadDisabled}
+                      >
+                        {isUploading
+                          ? "Uploading..."
+                          : isPassportDoc
+                            ? "Upload & Save"
+                            : "Upload"}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{uploadDisabledReason}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button
+                onClick={handleUploadClick}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={isUploadDisabled}
+              >
+                {isUploading
+                  ? "Uploading..."
+                  : isPassportDoc
+                    ? "Upload & Save"
+                    : "Upload"}
+              </Button>
+            )
           ) : null}
         </DialogFooter>
 

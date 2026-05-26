@@ -18,12 +18,16 @@ import { cn } from "@/lib/utils";
 
 interface CandidateDocumentsProps {
   candidateId: string;
+  initialUploadDocType?: string | null;
+  onInitialUploadDocTypeHandled?: () => void;
 }
 
 const RING = 2 * Math.PI * 40;
 
 export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   candidateId,
+  initialUploadDocType,
+  onInitialUploadDocTypeHandled,
 }) => {
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -36,7 +40,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   } = useGetDocumentsQuery({
     candidateId,
     page: 1,
-    limit: 10,
+    limit: 100,
   });
 
   const {
@@ -229,6 +233,8 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
         completionSourceDocuments={allForCompletion}
         isLoading={isLoading}
         onRefresh={refetchAll}
+        initialUploadDocType={initialUploadDocType}
+        onInitialUploadDocTypeHandled={onInitialUploadDocTypeHandled}
       />
 
       <CandidatesIntroductionVideos candidateId={candidateId} />

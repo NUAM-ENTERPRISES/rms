@@ -59,6 +59,7 @@ import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
+import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
@@ -71,6 +72,9 @@ export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
+    null
+  );
   const {} = useAppSelector((state) => state.auth);
 
   // Modal state
@@ -145,9 +149,18 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 10 },
+    { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
+
+  const passportDocument = getPassportDocument(
+    documentsData?.data?.documents ?? []
+  );
+
+  const handleOpenPassportDocuments = () => {
+    setActiveTab("documents");
+    setPendingUploadDocType(DOCUMENT_REPOSITORY_UPLOAD_TYPE.passport);
+  };
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -546,6 +559,8 @@ export default function CandidateDetailPage() {
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
             workExperienceDocs={documentsData?.data?.documents ?? []}
+            passportDocument={passportDocument}
+            onOpenPassportDocuments={handleOpenPassportDocuments}
           />
 
           {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (
@@ -582,7 +597,11 @@ export default function CandidateDetailPage() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
-          <CandidateDocuments candidateId={id!} />
+          <CandidateDocuments
+            candidateId={id!}
+            initialUploadDocType={pendingUploadDocType}
+            onInitialUploadDocTypeHandled={() => setPendingUploadDocType(null)}
+          />
         </TabsContent>
 
         {/* History Tab */}
@@ -638,13 +657,16 @@ export default function CandidateDetailPage() {
               const desiredDocName =
                 (meta.docName && meta.docName.trim()) || "";
 
-              if (uploadedDocument) {
-                if (desiredDocName) {
-                  await updateDocument({
-                    id: uploadedDocument.id,
-                    docName: desiredDocName,
-                  }).unwrap();
-                }
+              if (uploadedDocument?.id) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  docName: desiredDocName || undefined,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: meta.expiryDate
+                    ? new Date(meta.expiryDate).toISOString()
+                    : undefined,
+                  notes: meta.notes,
+                }).unwrap();
               } else {
                 await createDocument({
                   candidateId,
