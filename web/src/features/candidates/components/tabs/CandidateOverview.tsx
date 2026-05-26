@@ -36,6 +36,7 @@ import {
   Plane,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
 import { getAge } from "@/utils/getAge";
 import {
@@ -773,6 +774,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   GPA: {qual.gpa}
                                 </span>
                               )}
+                              {(qual.country?.name || qual.countryCode) && (
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                  {qual.countryCode && (
+                                    <FlagIcon countryCode={qual.countryCode} size="xs" />
+                                  )}
+                                  {qual.country?.name || qual.countryCode}
+                                </span>
+                              )}
                             </div>
 
                             {qual.notes && (
@@ -1095,6 +1104,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                                     {exp.location}
+                                  </span>
+                                )}
+                                {(exp.country?.name || exp.countryCode) && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                    {exp.countryCode && (
+                                      <FlagIcon countryCode={exp.countryCode} size="xs" />
+                                    )}
+                                    {exp.country?.name || exp.countryCode}
                                   </span>
                                 )}
                                 {exp.salary && (

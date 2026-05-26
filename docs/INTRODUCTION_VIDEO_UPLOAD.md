@@ -42,6 +42,24 @@ https://blr1.digitaloceanspaces.com/affiniks-rms-prod-ind1/candidates/introducti
 - When `DO_SPACES_CDN_URL` is set, public URLs use the CDN origin instead of the raw Spaces endpoint.
 - The S3 client uses **path-style** addressing (`endpoint/bucket/key`).
 
+### Browser CORS (required for direct presigned uploads)
+
+Direct browser uploads use `PUT` from the frontend origin (for example `http://localhost:5173`) to the Spaces endpoint. The bucket **must** allow that origin in its CORS rules, otherwise the browser blocks the request before the file is sent.
+
+**Symptom:**
+
+```
+Access to XMLHttpRequest at 'https://...digitaloceanspaces.com/...' from origin 'http://localhost:5173'
+has been blocked by CORS policy
+```
+
+**Fix options:**
+
+1. **Recommended for production** — configure CORS on the Spaces bucket (DigitalOcean control panel → Space → Settings → CORS, or apply `docs/digitalocean-spaces-cors.xml` with `s3cmd` / AWS CLI against the Spaces endpoint). Include every frontend origin that uploads videos.
+2. **Local/dev helper** — set `DO_SPACES_SYNC_CORS=true` in backend `.env` to push `CORS_ORIGIN` to the bucket on API startup (requires Spaces credentials with bucket CORS permission).
+3. **Local dev default** — set `VITE_INTRO_VIDEO_DIRECT_UPLOAD=false` in `web/.env` (default for localhost) to upload through the Nest API and avoid browser CORS console noise. Production builds should use direct upload once bucket CORS includes the deployed frontend origin (`true` or unset on non-localhost hosts).
+4. **Automatic app fallback** — if direct Spaces upload is enabled but fails (typically CORS), the frontend retries through the Nest multipart upload endpoints.
+
 ### Friendly vs storage filenames
 
 | Layer | Example | Notes |

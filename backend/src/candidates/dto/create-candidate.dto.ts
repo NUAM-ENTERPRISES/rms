@@ -563,6 +563,16 @@ export class CandidateQualificationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the qualification was obtained (`countries.code`).',
+    example: 'IN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string;
 }
 
 // DTO for work experiences during candidate creation (no candidateId needed)
@@ -632,6 +642,16 @@ export class CandidateWorkExperienceDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the role was held (`countries.code`). Distinct from phone dial `countryCode`.',
+    example: 'IN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string;
 
   @ApiPropertyOptional({
     description: 'Skills gained/used in this role as JSON array',

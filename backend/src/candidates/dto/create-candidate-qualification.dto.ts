@@ -5,7 +5,9 @@ import {
   IsBoolean,
   Min,
   Max,
+  MaxLength,
   IsNumber,
+  ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -37,24 +39,28 @@ export class CreateCandidateQualificationDto {
     example: 2018,
     minimum: 1950,
     maximum: 2030,
+    nullable: true,
   })
   @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsInt()
   @Min(1950)
   @Max(2030)
-  graduationYear?: number;
+  graduationYear?: number | null;
 
   @ApiPropertyOptional({
     description: 'GPA/Percentage',
     example: 3.8,
     minimum: 0,
     maximum: 4,
+    nullable: true,
   })
   @IsOptional()
+  @ValidateIf((_, value) => value !== null)
   @IsNumber()
   @Min(0)
   @Max(4)
-  gpa?: number;
+  gpa?: number | null;
 
   @ApiPropertyOptional({
     description: 'Whether the qualification is completed',
@@ -72,4 +78,16 @@ export class CreateCandidateQualificationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the qualification was obtained (`countries.code`).',
+    example: 'IN',
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string | null;
 }

@@ -20,6 +20,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, X, Search, GraduationCap } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
+import CountrySelect from "./CountrySelect";
 
 export interface CandidateQualification {
   id: string;
@@ -30,6 +31,7 @@ export interface CandidateQualification {
   gpa?: number;
   isCompleted: boolean;
   notes?: string;
+  countryCode?: string;
 }
 
 export interface CandidateQualificationSelectProps {
@@ -90,6 +92,7 @@ export default function CandidateQualificationSelect({
       gpa: undefined,
       isCompleted: true,
       notes: "",
+      countryCode: "",
     };
     onChange([...value, newQualification]);
     setIsDropdownOpen(false);
@@ -206,6 +209,21 @@ export default function CandidateQualificationSelect({
                         min="0"
                         max="4"
                         className="h-9 text-sm"
+                      />
+                    </div>
+
+                    {/* Country */}
+                    <div className="space-y-1 md:col-span-2">
+                      <CountrySelect
+                        label="Country (optional)"
+                        value={qualification.countryCode || ""}
+                        onValueChange={(code) =>
+                          updateQualification(qualification.id, {
+                            countryCode: code,
+                          })
+                        }
+                        allowEmpty
+                        className="text-sm"
                       />
                     </div>
 

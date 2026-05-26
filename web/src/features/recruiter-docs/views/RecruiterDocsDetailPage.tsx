@@ -143,6 +143,9 @@ const formatWorkExperienceEntry = (exp: {
   startDate?: string;
   endDate?: string;
   isCurrent?: boolean;
+  location?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
 }) => {
   const title = exp.jobTitle || exp.designation || exp.position || exp.role || "";
   const company = exp.companyName || exp.company || "";
@@ -167,11 +170,20 @@ const formatWorkExperienceEntry = (exp: {
     }
   }
 
+  const countryLabel = exp.country?.name || exp.countryCode || "";
+  const locationLabel = exp.location?.trim() || "";
+
   // Prefer showing title and company first, then years
   const parts = [] as string[];
   if (title) parts.push(title);
   if (company) parts.push(`at ${company}`);
-  return `${parts.join(" ")}${yearsLabel}`.trim();
+  let result = `${parts.join(" ")}${yearsLabel}`.trim();
+  if (countryLabel) {
+    result = result ? `${result} · ${countryLabel}` : countryLabel;
+  } else if (locationLabel) {
+    result = result ? `${result} · ${locationLabel}` : locationLabel;
+  }
+  return result;
 };
 
 interface UploadData {
@@ -1708,6 +1720,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {qual.university || qual.institution} • {qual.graduationYear || qual.yearOfCompletion}
+                              {(qual.country?.name || qual.countryCode)
+                                ? ` • ${qual.country?.name || qual.countryCode}`
+                                : ""}
                             </span>
                           </div>
                         </div>
@@ -1732,6 +1747,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {exp.companyName} • {new Date(exp.startDate).getFullYear()} - {exp.isCurrent ? 'Present' : (exp.endDate ? new Date(exp.endDate).getFullYear() : 'N/A')}
+                              {(exp.country?.name || exp.countryCode)
+                                ? ` • ${exp.country?.name || exp.countryCode}`
+                                : exp.location
+                                  ? ` • ${exp.location}`
+                                  : ""}
                             </span>
                           </div>
                         </div>
@@ -1968,6 +1988,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
                             {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
                             {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
+                            {qual.country?.name || qual.countryCode ? ` · ${qual.country?.name || qual.countryCode}` : ''}
                           </p>
                         ))
                       ) : (

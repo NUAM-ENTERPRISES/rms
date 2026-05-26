@@ -243,6 +243,8 @@ export interface CandidateQualification {
   gpa?: number;
   isCompleted: boolean;
   notes?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
 }
 
 export interface WorkExperience {
@@ -257,6 +259,8 @@ export interface WorkExperience {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
   skills: string[];
   achievements?: string;
   createdAt: string;
@@ -301,6 +305,7 @@ export interface CreateWorkExperienceRequest {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string;
   skills?: string;
   achievements?: string;
 }
@@ -313,16 +318,18 @@ export interface CreateCandidateQualificationRequest {
   gpa?: number;
   isCompleted?: boolean;
   notes?: string;
+  countryCode?: string;
 }
 
 export interface UpdateCandidateQualificationRequest {
   id: string;
   qualificationId?: string;
   university?: string;
-  graduationYear?: number;
-  gpa?: number;
+  graduationYear?: number | null;
+  gpa?: number | null;
   isCompleted?: boolean;
   notes?: string;
+  countryCode?: string | null;
 }
 
 export interface UpdateWorkExperienceRequest {
@@ -336,6 +343,7 @@ export interface UpdateWorkExperienceRequest {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string | null;
   skills?: string;
   achievements?: string;
 }

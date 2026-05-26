@@ -6,13 +6,17 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateWorkExperienceDto } from './dto/create-work-experience.dto';
 import { UpdateWorkExperienceDto } from './dto/update-work-experience.dto';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+import { workExperienceReadInclude } from './includes/work-experience.include';
 
 @Injectable()
 export class WorkExperienceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createWorkExperienceDto: CreateWorkExperienceDto) {
-    // Validate candidate exists
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: createWorkExperienceDto.candidateId },
     });
@@ -23,7 +27,6 @@ export class WorkExperienceService {
       );
     }
 
-    // Validate date logic
     if (createWorkExperienceDto.endDate && createWorkExperienceDto.isCurrent) {
       throw new BadRequestException(
         'Cannot have both end date and current position',
@@ -38,7 +41,6 @@ export class WorkExperienceService {
       throw new BadRequestException('End date must be after start date');
     }
 
-    // If this is marked as current, unmark all other current positions for this candidate
     if (createWorkExperienceDto.isCurrent) {
       await this.prisma.workExperience.updateMany({
         where: {
@@ -51,16 +53,27 @@ export class WorkExperienceService {
       });
     }
 
-    // Validate role catalog exists
-    const roleCatalog = await this.prisma.roleCatalog.findUnique({
-      where: { id: createWorkExperienceDto.roleCatalogId },
-    });
+    if (createWorkExperienceDto.roleCatalogId) {
+      const roleCatalog = await this.prisma.roleCatalog.findUnique({
+        where: { id: createWorkExperienceDto.roleCatalogId },
+      });
 
-    if (!roleCatalog) {
-      throw new NotFoundException(
-        `RoleCatalog with ID ${createWorkExperienceDto.roleCatalogId} not found`,
-      );
+      if (!roleCatalog) {
+        throw new NotFoundException(
+          `RoleCatalog with ID ${createWorkExperienceDto.roleCatalogId} not found`,
+        );
+      }
     }
+
+    await assertOptionalCountryCode(
+      this.prisma,
+      createWorkExperienceDto.countryCode,
+    );
+
+    const countryCode = normalizeOptionalCountryCode(
+      createWorkExperienceDto.countryCode,
+    );
+
     return this.prisma.workExperience.create({
       data: {
         candidateId: createWorkExperienceDto.candidateId,
@@ -75,28 +88,13 @@ export class WorkExperienceService {
         description: createWorkExperienceDto.description,
         salary: createWorkExperienceDto.salary,
         location: createWorkExperienceDto.location,
+        countryCode: countryCode ?? null,
         skills: createWorkExperienceDto.skills
           ? JSON.parse(createWorkExperienceDto.skills)
           : [],
         achievements: createWorkExperienceDto.achievements,
       },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        roleCatalog: {
-          select: {
-            id: true,
-            name: true,
-            label: true,
-            shortName: true,
-          },
-        },
-      },
+      include: workExperienceReadInclude,
     });
   }
 
@@ -105,23 +103,7 @@ export class WorkExperienceService {
 
     return this.prisma.workExperience.findMany({
       where,
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        roleCatalog: {
-          select: {
-            id: true,
-            name: true,
-            label: true,
-            shortName: true,
-          },
-        },
-      },
+      include: workExperienceReadInclude,
       orderBy: {
         startDate: 'desc',
       },
@@ -131,23 +113,7 @@ export class WorkExperienceService {
   async findOne(id: string) {
     const workExperience = await this.prisma.workExperience.findUnique({
       where: { id },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        roleCatalog: {
-          select: {
-            id: true,
-            name: true,
-            label: true,
-            shortName: true,
-          },
-        },
-      },
+      include: workExperienceReadInclude,
     });
 
     if (!workExperience) {
@@ -158,7 +124,6 @@ export class WorkExperienceService {
   }
 
   async update(id: string, updateWorkExperienceDto: UpdateWorkExperienceDto) {
-    // Check if work experience exists
     const existingWorkExperience = await this.prisma.workExperience.findUnique({
       where: { id },
     });
@@ -167,7 +132,6 @@ export class WorkExperienceService {
       throw new NotFoundException(`Work experience with ID ${id} not found`);
     }
 
-    // Validate date logic
     if (updateWorkExperienceDto.endDate && updateWorkExperienceDto.isCurrent) {
       throw new BadRequestException(
         'Cannot have both end date and current position',
@@ -183,13 +147,12 @@ export class WorkExperienceService {
       throw new BadRequestException('End date must be after start date');
     }
 
-    // If this is marked as current, unmark all other current positions for this candidate
     if (updateWorkExperienceDto.isCurrent) {
       await this.prisma.workExperience.updateMany({
         where: {
           candidateId: existingWorkExperience.candidateId,
           isCurrent: true,
-          id: { not: id }, // Exclude current record
+          id: { not: id },
         },
         data: {
           isCurrent: false,
@@ -197,7 +160,6 @@ export class WorkExperienceService {
       });
     }
 
-    // If roleCatalogId is provided, validate it exists
     if (updateWorkExperienceDto.roleCatalogId) {
       const roleCatalog = await this.prisma.roleCatalog.findUnique({
         where: { id: updateWorkExperienceDto.roleCatalogId },
@@ -209,6 +171,18 @@ export class WorkExperienceService {
         );
       }
     }
+
+    if ('countryCode' in updateWorkExperienceDto) {
+      await assertOptionalCountryCode(
+        this.prisma,
+        updateWorkExperienceDto.countryCode,
+      );
+    }
+
+    const countryCode =
+      'countryCode' in updateWorkExperienceDto
+        ? normalizeOptionalCountryCode(updateWorkExperienceDto.countryCode)
+        : undefined;
 
     return this.prisma.workExperience.update({
       where: { id },
@@ -226,28 +200,13 @@ export class WorkExperienceService {
         description: updateWorkExperienceDto.description,
         salary: updateWorkExperienceDto.salary,
         location: updateWorkExperienceDto.location,
+        ...(countryCode !== undefined ? { countryCode } : {}),
         skills: updateWorkExperienceDto.skills
           ? JSON.parse(updateWorkExperienceDto.skills)
           : undefined,
         achievements: updateWorkExperienceDto.achievements,
       },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        roleCatalog: {
-          select: {
-            id: true,
-            name: true,
-            label: true,
-            shortName: true,
-          },
-        },
-      },
+      include: workExperienceReadInclude,
     });
   }
 
@@ -278,6 +237,12 @@ export class WorkExperienceService {
             name: true,
             label: true,
             shortName: true,
+          },
+        },
+        country: {
+          select: {
+            code: true,
+            name: true,
           },
         },
       },

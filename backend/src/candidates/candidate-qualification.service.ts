@@ -6,6 +6,11 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { CreateCandidateQualificationDto } from './dto/create-candidate-qualification.dto';
 import { UpdateCandidateQualificationDto } from './dto/update-candidate-qualification.dto';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+import { candidateQualificationReadInclude } from './includes/candidate-qualification.include';
 
 @Injectable()
 export class CandidateQualificationService {
@@ -14,7 +19,6 @@ export class CandidateQualificationService {
   async create(
     createCandidateQualificationDto: CreateCandidateQualificationDto,
   ) {
-    // Validate candidate exists
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: createCandidateQualificationDto.candidateId },
     });
@@ -24,7 +28,6 @@ export class CandidateQualificationService {
       );
     }
 
-    // Validate qualification exists
     const qualification = await this.prisma.qualification.findUnique({
       where: { id: createCandidateQualificationDto.qualificationId },
     });
@@ -34,7 +37,6 @@ export class CandidateQualificationService {
       );
     }
 
-    // Check if candidate already has this qualification
     const existingQualification =
       await this.prisma.candidateQualification.findFirst({
         where: {
@@ -46,6 +48,15 @@ export class CandidateQualificationService {
       throw new BadRequestException('Candidate already has this qualification');
     }
 
+    await assertOptionalCountryCode(
+      this.prisma,
+      createCandidateQualificationDto.countryCode,
+    );
+
+    const countryCode = normalizeOptionalCountryCode(
+      createCandidateQualificationDto.countryCode,
+    );
+
     return this.prisma.candidateQualification.create({
       data: {
         candidateId: createCandidateQualificationDto.candidateId,
@@ -55,25 +66,9 @@ export class CandidateQualificationService {
         gpa: createCandidateQualificationDto.gpa,
         isCompleted: createCandidateQualificationDto.isCompleted ?? true,
         notes: createCandidateQualificationDto.notes,
+        countryCode: countryCode ?? null,
       },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        qualification: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            level: true,
-            field: true,
-          },
-        },
-      },
+      include: candidateQualificationReadInclude,
     });
   }
 
@@ -81,24 +76,7 @@ export class CandidateQualificationService {
     const where = candidateId ? { candidateId } : {};
     return this.prisma.candidateQualification.findMany({
       where,
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        qualification: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            level: true,
-            field: true,
-          },
-        },
-      },
+      include: candidateQualificationReadInclude,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -106,24 +84,7 @@ export class CandidateQualificationService {
   async findOne(id: string) {
     const qualification = await this.prisma.candidateQualification.findUnique({
       where: { id },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        qualification: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            level: true,
-            field: true,
-          },
-        },
-      },
+      include: candidateQualificationReadInclude,
     });
 
     if (!qualification) {
@@ -139,7 +100,6 @@ export class CandidateQualificationService {
     id: string,
     updateCandidateQualificationDto: UpdateCandidateQualificationDto,
   ) {
-    // Check if qualification exists
     const existingQualification =
       await this.prisma.candidateQualification.findUnique({
         where: { id },
@@ -150,7 +110,6 @@ export class CandidateQualificationService {
       );
     }
 
-    // If qualificationId is being updated, validate it exists
     if (updateCandidateQualificationDto.qualificationId) {
       const qualification = await this.prisma.qualification.findUnique({
         where: { id: updateCandidateQualificationDto.qualificationId },
@@ -161,7 +120,6 @@ export class CandidateQualificationService {
         );
       }
 
-      // Check if candidate already has this qualification (excluding current one)
       const duplicateQualification =
         await this.prisma.candidateQualification.findFirst({
           where: {
@@ -177,39 +135,57 @@ export class CandidateQualificationService {
       }
     }
 
+    if ('countryCode' in updateCandidateQualificationDto) {
+      await assertOptionalCountryCode(
+        this.prisma,
+        updateCandidateQualificationDto.countryCode,
+      );
+    }
+
+    const updateData: {
+      qualificationId?: string;
+      university?: string | null;
+      graduationYear?: number | null;
+      gpa?: number | null;
+      isCompleted?: boolean;
+      notes?: string | null;
+      countryCode?: string | null;
+    } = {};
+
+    if (updateCandidateQualificationDto.qualificationId !== undefined) {
+      updateData.qualificationId =
+        updateCandidateQualificationDto.qualificationId;
+    }
+    if (updateCandidateQualificationDto.university !== undefined) {
+      updateData.university = updateCandidateQualificationDto.university;
+    }
+    if ('graduationYear' in updateCandidateQualificationDto) {
+      updateData.graduationYear =
+        updateCandidateQualificationDto.graduationYear ?? null;
+    }
+    if ('gpa' in updateCandidateQualificationDto) {
+      updateData.gpa = updateCandidateQualificationDto.gpa ?? null;
+    }
+    if (updateCandidateQualificationDto.isCompleted !== undefined) {
+      updateData.isCompleted = updateCandidateQualificationDto.isCompleted;
+    }
+    if (updateCandidateQualificationDto.notes !== undefined) {
+      updateData.notes = updateCandidateQualificationDto.notes;
+    }
+    if ('countryCode' in updateCandidateQualificationDto) {
+      updateData.countryCode = normalizeOptionalCountryCode(
+        updateCandidateQualificationDto.countryCode,
+      ) as string | null;
+    }
+
     return this.prisma.candidateQualification.update({
       where: { id },
-      data: {
-        qualificationId: updateCandidateQualificationDto.qualificationId,
-        university: updateCandidateQualificationDto.university,
-        graduationYear: updateCandidateQualificationDto.graduationYear,
-        gpa: updateCandidateQualificationDto.gpa,
-        isCompleted: updateCandidateQualificationDto.isCompleted,
-        notes: updateCandidateQualificationDto.notes,
-      },
-      include: {
-        candidate: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        qualification: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            level: true,
-            field: true,
-          },
-        },
-      },
+      data: updateData,
+      include: candidateQualificationReadInclude,
     });
   }
 
   async remove(id: string) {
-    // Check if qualification exists
     const qualification = await this.prisma.candidateQualification.findUnique({
       where: { id },
     });
@@ -237,6 +213,12 @@ export class CandidateQualificationService {
             shortName: true,
             level: true,
             field: true,
+          },
+        },
+        country: {
+          select: {
+            code: true,
+            name: true,
           },
         },
       },

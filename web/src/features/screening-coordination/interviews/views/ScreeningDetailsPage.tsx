@@ -385,6 +385,11 @@ export default function ScreeningDetailsPage() {
                                 {q.isCompleted && (
                                   <span className="text-[10px] text-emerald-600 font-medium">✓ Completed</span>
                                 )}
+                                {(q.country?.name || q.countryCode) && (
+                                  <span className="text-[10px] text-slate-500">
+                                    {q.country?.name || q.countryCode}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <Badge variant="outline" className="text-[10px] border-purple-200 text-purple-700 bg-white capitalize shrink-0">
@@ -428,6 +433,9 @@ export default function ScreeningDetailsPage() {
                               <p className="text-[10px] text-slate-400 mt-1">
                                 {w.startDate ? format(new Date(w.startDate), "MMM yyyy") : "—"} —{" "}
                                 {w.isCurrent ? "Present" : w.endDate ? format(new Date(w.endDate), "MMM yyyy") : "—"}
+                                {(w.country?.name || w.countryCode)
+                                  ? ` · ${w.country?.name || w.countryCode}`
+                                  : ""}
                               </p>
                             </div>
                           </div>

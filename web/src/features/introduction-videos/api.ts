@@ -1,5 +1,11 @@
 import { baseApi } from "@/app/api/baseApi";
-import { putFileToPresignedUrl } from "./uploadToSpaces";
+import type { RootState } from "@/app/store";
+import {
+  prefersDirectSpacesUpload,
+  putFileToPresignedUrl,
+  uploadIntroductionVideoViaApi,
+} from "./uploadToSpaces";
+import type { BaseQueryApi } from "@reduxjs/toolkit/query";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 
 export interface IntroductionVideoDocument {
@@ -114,12 +120,53 @@ interface InitiateIntroductionVideoUploadResponse {
   };
 }
 
+async function performLegacyIntroductionVideoUpload(
+  api: BaseQueryApi,
+  args: PresignedIntroductionVideoUploadArgs,
+) {
+  const state = api.getState() as RootState;
+
+  try {
+    const data = await uploadIntroductionVideoViaApi({
+      apiBaseUrl: import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1",
+      accessToken: state.auth.accessToken,
+      candidateId: args.candidateId,
+      file: args.file,
+      remarks: args.remarks,
+      projectId: args.projectId,
+      mode: args.mode,
+      onProgress: args.onProgress,
+    });
+
+    return { data };
+  } catch (error) {
+    if (error && typeof error === "object" && "status" in error) {
+      return {
+        error: {
+          status: (error as { status: number | string }).status,
+          data: (error as { data?: unknown }).data,
+        } as FetchBaseQueryError,
+      };
+    }
+
+    return {
+      error: {
+        status: "CUSTOM_ERROR",
+        error: error instanceof Error ? error.message : "Upload failed",
+      } as FetchBaseQueryError,
+    };
+  }
+}
+
 async function performPresignedIntroductionVideoUpload(
-  fetchWithBQ: (arg: {
-    url: string;
-    method: string;
-    body: Record<string, unknown>;
-  }) => Promise<{ data?: unknown; error?: FetchBaseQueryError }>,
+  fetchWithBQ: (
+    arg: {
+      url: string;
+      method: string;
+      body: Record<string, unknown>;
+    },
+  ) => Promise<{ data?: unknown; error?: FetchBaseQueryError }>,
+  api: BaseQueryApi,
   {
     candidateId,
     file,
@@ -129,6 +176,17 @@ async function performPresignedIntroductionVideoUpload(
     onProgress,
   }: PresignedIntroductionVideoUploadArgs,
 ) {
+  if (!prefersDirectSpacesUpload()) {
+    return performLegacyIntroductionVideoUpload(api, {
+      candidateId,
+      file,
+      remarks,
+      projectId,
+      mode,
+      onProgress,
+    });
+  }
+
   const mimeType = file.type || "video/mp4";
 
   const initiateResult = await fetchWithBQ({
@@ -156,13 +214,15 @@ async function performPresignedIntroductionVideoUpload(
       mimeType,
       onProgress,
     );
-  } catch (error) {
-    return {
-      error: {
-        status: "CUSTOM_ERROR",
-        error: error instanceof Error ? error.message : "Upload failed",
-      } as FetchBaseQueryError,
-    };
+  } catch {
+    return performLegacyIntroductionVideoUpload(api, {
+      candidateId,
+      file,
+      remarks,
+      projectId,
+      mode,
+      onProgress,
+    });
   }
 
   const confirmResult = await fetchWithBQ({
@@ -279,8 +339,18 @@ export const introductionVideosApi = baseApi.injectEndpoints({
       },
       PresignedIntroductionVideoUploadArgs
     >({
-      queryFn: (args, _api, _extraOptions, fetchWithBQ) =>
-        performPresignedIntroductionVideoUpload(fetchWithBQ, args),
+      queryFn: (args, api, _extraOptions, fetchWithBQ) =>
+        performPresignedIntroductionVideoUpload(
+          fetchWithBQ as (
+            arg: {
+              url: string;
+              method: string;
+              body: Record<string, unknown>;
+            },
+          ) => Promise<{ data?: unknown; error?: FetchBaseQueryError }>,
+          api,
+          args,
+        ) as any,
       invalidatesTags: (_result, _error, { candidateId }) => [
         { type: "IntroductionVideo", id: candidateId },
         { type: "IntroductionVideo", id: `${candidateId}-reusable` },
@@ -293,11 +363,21 @@ export const introductionVideosApi = baseApi.injectEndpoints({
       { success: boolean; data: { introductionVideo: IntroductionVideoVerification } },
       PresignedIntroductionVideoUploadArgs & { projectId: string }
     >({
-      queryFn: (args, _api, _extraOptions, fetchWithBQ) =>
-        performPresignedIntroductionVideoUpload(fetchWithBQ, {
-          ...args,
-          mode: "upload",
-        }),
+      queryFn: (args, api, _extraOptions, fetchWithBQ) =>
+        performPresignedIntroductionVideoUpload(
+          fetchWithBQ as (
+            arg: {
+              url: string;
+              method: string;
+              body: Record<string, unknown>;
+            },
+          ) => Promise<{ data?: unknown; error?: FetchBaseQueryError }>,
+          api,
+          {
+            ...args,
+            mode: "upload",
+          },
+        ) as any,
       invalidatesTags: (_result, _error, { candidateId, projectId }) => [
         { type: "IntroductionVideo", id: candidateId },
         { type: "IntroductionVideo", id: `${candidateId}-reusable` },
@@ -329,11 +409,21 @@ export const introductionVideosApi = baseApi.injectEndpoints({
       { success: boolean; data: { introductionVideo: IntroductionVideoVerification } },
       PresignedIntroductionVideoUploadArgs & { projectId: string }
     >({
-      queryFn: (args, _api, _extraOptions, fetchWithBQ) =>
-        performPresignedIntroductionVideoUpload(fetchWithBQ, {
-          ...args,
-          mode: "reupload",
-        }),
+      queryFn: async (args, api, _extraOptions, fetchWithBQ) =>
+        performPresignedIntroductionVideoUpload(
+          fetchWithBQ as (
+            arg: {
+              url: string;
+              method: string;
+              body: Record<string, unknown>;
+            },
+          ) => Promise<{ data?: unknown; error?: FetchBaseQueryError }>,
+          api,
+          {
+            ...args,
+            mode: "reupload",
+          },
+        ) as any,
       invalidatesTags: (_result, _error, { candidateId, projectId }) => [
         { type: "IntroductionVideo", id: candidateId },
         { type: "IntroductionVideo", id: `${candidateId}-reusable` },

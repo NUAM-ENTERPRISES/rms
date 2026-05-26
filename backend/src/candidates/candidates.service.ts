@@ -62,6 +62,24 @@ import {
   withProfileCompletion,
 } from './utils/profile-completion.util';
 import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+
+const candidateWorkExperiencesInclude = {
+  include: {
+    roleCatalog: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
+
+const candidateQualificationsInclude = {
+  include: {
+    qualification: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
 
 @Injectable()
 export class CandidatesService {
@@ -247,6 +265,18 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.qualifications?.length) {
+      for (const qual of createCandidateDto.qualifications) {
+        await assertOptionalCountryCode(this.prisma, qual.countryCode);
+      }
+    }
+
+    if (createCandidateDto.workExperiences?.length) {
+      for (const exp of createCandidateDto.workExperiences) {
+        await assertOptionalCountryCode(this.prisma, exp.countryCode);
+      }
+    }
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
       ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
@@ -324,16 +354,8 @@ export class CandidatesService {
 
     const candidateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -439,6 +461,8 @@ export class CandidatesService {
                   gpa: qual.gpa,
                   isCompleted: qual.isCompleted ?? true,
                   notes: qual.notes,
+                  countryCode:
+                    normalizeOptionalCountryCode(qual.countryCode) ?? null,
                 })),
               }
             : undefined,
@@ -470,6 +494,8 @@ export class CandidatesService {
                     description: exp.description,
                     salary: exp.salary,
                     location: exp.location,
+                    countryCode:
+                      normalizeOptionalCountryCode(exp.countryCode) ?? null,
                     skills: parsedSkills,
                     achievements: exp.achievements,
                   };
@@ -1099,16 +1125,8 @@ export class CandidatesService {
               name: true,
             },
           },
-          qualifications: {
-            include: {
-              qualification: true,
-            },
-          },
-          workExperiences: {
-            include: {
-              roleCatalog: true,
-            },
-          },
+          qualifications: candidateQualificationsInclude,
+          workExperiences: candidateWorkExperiencesInclude,
           projects: {
             where: {
               projectId: projectId,
@@ -1344,16 +1362,8 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         recruiterAssignments: {
           where: { isActive: true },
           orderBy: { assignedAt: 'desc' },
@@ -1872,16 +1882,8 @@ export class CandidatesService {
           },
         },
         team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         preferredCountries: {
           include: {
             country: true,
@@ -2191,16 +2193,8 @@ export class CandidatesService {
 
     const candidateUpdateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -2429,12 +2423,8 @@ export class CandidatesService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        workExperiences: true,
+        qualifications: candidateQualificationsInclude,
+        workExperiences: candidateWorkExperiencesInclude,
       },
     });
 
