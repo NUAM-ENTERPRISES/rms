@@ -1868,6 +1868,78 @@ export class DocumentsService {
   }
 
   /**
+   * Dashboard tile counts for the documentation verification page.
+   * Uses subStatusId lookups so counts stay aligned with list filters.
+   */
+  private async getDocumentVerificationTileCounts(countBase: Record<string, any>) {
+    const tileStatusNames = [
+      'verification_in_progress_document',
+      'screening_passed',
+      'documents_verified',
+      'submitted_to_client',
+      'rejected_documents',
+      'client_revision_requested',
+    ];
+
+    const statusRecords = await this.prisma.candidateProjectSubStatus.findMany({
+      where: { name: { in: tileStatusNames } },
+      select: { id: true, name: true },
+    });
+
+    const idByName = Object.fromEntries(statusRecords.map((record) => [record.name, record.id]));
+
+    const countForStatusNames = (names: string[]) => {
+      const ids = names.map((name) => idByName[name]).filter(Boolean);
+      if (ids.length === 0) {
+        return Promise.resolve(0);
+      }
+      return this.prisma.candidateProjects.count({
+        where: {
+          ...countBase,
+          subStatusId: { in: ids },
+        },
+      });
+    };
+
+    const [pending, verified, rejected, clientRevisionRequested] = await Promise.all([
+      countForStatusNames(['verification_in_progress_document', 'screening_passed']),
+      countForStatusNames(['documents_verified', 'submitted_to_client']),
+      countForStatusNames(['rejected_documents']),
+      countForStatusNames(['client_revision_requested']),
+    ]);
+
+    return {
+      pending,
+      verified,
+      rejected,
+      client_revision_requested: clientRevisionRequested,
+      verification_in_progress_document: pending,
+    };
+  }
+
+  /**
+   * Candidate-project IDs that entered client revision at least once (status history).
+   */
+  private async getClientRevisionHistorySet(
+    candidateProjectMapIds: string[],
+  ): Promise<Set<string>> {
+    if (!candidateProjectMapIds.length) {
+      return new Set();
+    }
+
+    const rows = await this.prisma.candidateProjectStatusHistory.findMany({
+      where: {
+        candidateProjectMapId: { in: candidateProjectMapIds },
+        subStatus: { name: 'client_revision_requested' },
+      },
+      select: { candidateProjectMapId: true },
+      distinct: ['candidateProjectMapId'],
+    });
+
+    return new Set(rows.map((row) => row.candidateProjectMapId));
+  }
+
+  /**
    * Get candidates for document verification
    * Returns candidates who are in document verification stages
    */
@@ -1890,21 +1962,26 @@ export class DocumentsService {
     const allowedStatuses = [
       'verification_in_progress_document',
       'screening_passed',
+      'client_revision_requested',
     ];
 
     // Base inclusion: document verification progress plus screening passed
     const defaultStatuses = ['verification_in_progress_document', 'screening_passed'];
-    const requestedStatusNames = status
-      ? String(status)
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => allowedStatuses.includes(s))
-      : [];
+    const statusParam = status ? String(status).trim() : '';
 
-    // Always include default statuses and optionally preserve explicit selections
-    const selectedStatusNames = Array.from(
-      new Set([...defaultStatuses, ...requestedStatusNames]),
-    );
+    // When viewing the client-revision tile, query only that sub-status
+    const selectedStatusNames =
+      statusParam === 'client_revision_requested'
+        ? ['client_revision_requested']
+        : Array.from(
+            new Set([
+              ...defaultStatuses,
+              ...statusParam
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => allowedStatuses.includes(s)),
+            ]),
+          );
 
     const subStatuses = await this.prisma.candidateProjectSubStatus.findMany({
       where: { name: { in: selectedStatusNames } },
@@ -1988,7 +2065,7 @@ export class DocumentsService {
           },
           recruiter: { select: { id: true, name: true, email: true } },
           mainStatus: { select: { label: true } },
-          subStatus: { select: { label: true } },
+          subStatus: { select: { name: true, label: true } },
           screenings: {
             select: {
               id: true,
@@ -2042,28 +2119,7 @@ export class DocumentsService {
       countBase.screenings = { some: { decision: 'approved' } };
     }
 
-    const pendingCountWhere = {
-      ...countBase,
-      subStatus: { name: { in: selectedStatusNames } },
-    };
-
-    const [pendingCount, verifiedCount, rejectedCount] = await Promise.all([
-      this.prisma.candidateProjects.count({ where: pendingCountWhere }),
-
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          subStatus: { name: 'documents_verified' },
-        },
-      }),
-
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          subStatus: { name: 'rejected_documents' },
-        },
-      }),
-    ]);
+    const tileCounts = await this.getDocumentVerificationTileCounts(countBase);
 
     // ------------------------------------------------------
     // 🔥 5. Return SAME old structure + counts added (screenings -> latest screening object)
@@ -2108,11 +2164,7 @@ export class DocumentsService {
         total,
         totalPages: Math.ceil(total / limit),
       },
-      counts: {
-        pending: pendingCount,
-        verified: verifiedCount,
-        rejected: rejectedCount,
-      },
+      counts: tileCounts,
     };
   }
 
@@ -2136,8 +2188,10 @@ export class DocumentsService {
             in: [
               "verification_in_progress_document",
               "documents_verified",
+              "submitted_to_client",
               "rejected_documents",
-              "pending_documents"
+              "pending_documents",
+              "client_revision_requested",
             ],
           },
         },
@@ -2371,41 +2425,58 @@ export class DocumentsService {
       introductionVideo,
     } = summaryCounts;
 
-    // Check candidate project status history for documentation review
-    // If a previous sub-status change to 'documents_verified' or 'rejected_documents' exists,
-    // we consider documentation as reviewed. Also expose a human-friendly label
-    // and a code for the documentation status.
-    const reviewSubStatuses = await this.prisma.candidateProjectSubStatus.findMany({
-      where: { name: { in: ['documents_verified', 'rejected_documents'] } },
-      select: { id: true, name: true },
-    });
+    // Derive documentation review state from the CURRENT sub-status first so a
+    // client-revision rework cycle does not inherit a prior "verified" history.
+    const currentSubStatusName = candidateProject.subStatus?.name;
 
     let isDocumentationReviewed = false;
     let documentationStatusCode = 'pending';
     let documentationStatus = 'Document verification pending';
 
-    if (reviewSubStatuses.length > 0) {
-      const reviewSubStatusIds = reviewSubStatuses.map((s) => s.id);
-      const reviewHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
-        where: {
-          candidateProjectMapId: candidateProject.id,
-          subStatusId: { in: reviewSubStatusIds },
-        },
-        include: {
-          subStatus: { select: { name: true } },
-        },
-        orderBy: { statusChangedAt: 'desc' },
+    if (currentSubStatusName === 'client_revision_requested') {
+      isDocumentationReviewed = false;
+      documentationStatusCode = 'client_revision_requested';
+      documentationStatus = 'Client revision in progress';
+    } else if (
+      currentSubStatusName === 'documents_verified' ||
+      currentSubStatusName === 'submitted_to_client'
+    ) {
+      isDocumentationReviewed = true;
+      documentationStatusCode = 'documents_verified';
+      documentationStatus = 'Document verified';
+    } else if (currentSubStatusName === 'rejected_documents') {
+      isDocumentationReviewed = true;
+      documentationStatusCode = 'rejected_documents';
+      documentationStatus = 'Document rejected';
+    } else {
+      const reviewSubStatuses = await this.prisma.candidateProjectSubStatus.findMany({
+        where: { name: { in: ['documents_verified', 'rejected_documents'] } },
+        select: { id: true, name: true },
       });
 
-      if (reviewHistory) {
-        isDocumentationReviewed = true;
-        const subName = reviewHistory.subStatus?.name;
-        if (subName === 'documents_verified') {
-          documentationStatusCode = 'documents_verified';
-          documentationStatus = 'Document verified';
-        } else if (subName === 'rejected_documents') {
-          documentationStatusCode = 'rejected_documents';
-          documentationStatus = 'Document rejected';
+      if (reviewSubStatuses.length > 0) {
+        const reviewSubStatusIds = reviewSubStatuses.map((s) => s.id);
+        const reviewHistory = await this.prisma.candidateProjectStatusHistory.findFirst({
+          where: {
+            candidateProjectMapId: candidateProject.id,
+            subStatusId: { in: reviewSubStatusIds },
+          },
+          include: {
+            subStatus: { select: { name: true } },
+          },
+          orderBy: { statusChangedAt: 'desc' },
+        });
+
+        if (reviewHistory) {
+          isDocumentationReviewed = true;
+          const subName = reviewHistory.subStatus?.name;
+          if (subName === 'documents_verified') {
+            documentationStatusCode = 'documents_verified';
+            documentationStatus = 'Document verified';
+          } else if (subName === 'rejected_documents') {
+            documentationStatusCode = 'rejected_documents';
+            documentationStatus = 'Document rejected';
+          }
         }
       }
     }
@@ -2920,6 +2991,13 @@ export class DocumentsService {
           ? ['rejected']
           : ['verified', 'rejected'];
 
+    const listSubStatusNames =
+      status === 'verified'
+        ? ['documents_verified', 'submitted_to_client']
+        : status === 'rejected'
+          ? ['rejected_documents']
+          : ['documents_verified', 'submitted_to_client', 'rejected_documents'];
+
     const countBase: any = {};
     if (recruiterId) countBase.recruiterId = recruiterId;
     if (projectId) countBase.projectId = projectId;
@@ -2931,12 +3009,10 @@ export class DocumentsService {
       countBase.screenings = { some: { decision: 'approved' } };
     }
 
-    // Build candidateProjects where (one item per nomination)
-    // We filter by candidates who have AT LEAST ONE verification matching requested statuses
-    // This allows showing history even if candidate moved to other stages (e.g. submitted_to_client)
+    // Tile-scoped list: match candidate sub-status to the dashboard tile (never include client_revision_requested here)
     const cpWhere: any = {
       ...countBase,
-      // ensure there exists at least one verification matching requested statuses
+      subStatus: { name: { in: listSubStatusNames } },
       documentVerifications: { some: { status: { in: statuses }, isDeleted: false } },
     };
 
@@ -2954,8 +3030,9 @@ export class DocumentsService {
       ];
     }
 
-    // Fetch candidate-projects (grouped) + total, and counts
-    const [candidateProjects, total, pendingCount, verifiedCount, rejectedCount] = await Promise.all([
+    const tileCounts = await this.getDocumentVerificationTileCounts(countBase);
+
+    const [candidateProjects, total] = await Promise.all([
       this.prisma.candidateProjects.findMany({
         where: cpWhere,
         include: {
@@ -2972,7 +3049,7 @@ export class DocumentsService {
           },
           recruiter: { select: { id: true, name: true } },
           mainStatus: { select: { label: true } },
-          subStatus: { select: { label: true } },
+          subStatus: { select: { name: true, label: true } },
           roleNeeded: {
             select: {
               id: true,
@@ -3015,25 +3092,6 @@ export class DocumentsService {
       }),
 
       this.prisma.candidateProjects.count({ where: cpWhere }),
-
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          subStatus: { name: 'verification_in_progress_document' },
-        },
-      }),
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          documentVerifications: { some: { status: 'verified', isDeleted: false } },
-        },
-      }),
-      this.prisma.candidateProjects.count({
-        where: {
-          ...countBase,
-          documentVerifications: { some: { status: 'rejected', isDeleted: false } },
-        },
-      }),
     ] as any);
 
     // Map to response items (one per candidate-project) — return latest screening as `screening`
@@ -3084,6 +3142,7 @@ export class DocumentsService {
       : [];
 
     const inInterviewSet = new Set(interviewHistories.map((h) => h.candidateProjectMapId));
+    const clientRevisionSet = await this.getClientRevisionHistorySet(cpIds);
 
     // Attach latest `sendToClient` (DocumentForwardHistory) per candidate-project-role and the `isInInterview` flag
     const itemsWithSendToClient = await Promise.all(
@@ -3101,10 +3160,15 @@ export class DocumentsService {
           orderBy: { sentAt: 'desc' },
         });
 
+        const awaitingResubmitToClient =
+          clientRevisionSet.has(it.candidateProjectMapId) &&
+          it.subStatus?.name === 'documents_verified';
+
         return {
           ...it,
           sendToClient: latestForward ?? null,
           isInInterview: Boolean(inInterviewSet.has(it.candidateProjectMapId)),
+          awaitingResubmitToClient,
         };
       }),
     );
@@ -3117,11 +3181,7 @@ export class DocumentsService {
         total,
         totalPages: Math.ceil(total / limit),
       },
-      counts: {
-        pending: pendingCount,
-        verified: verifiedCount,
-        rejected: rejectedCount,
-      },
+      counts: tileCounts,
     };
   }
 

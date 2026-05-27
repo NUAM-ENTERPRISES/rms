@@ -100,6 +100,14 @@ import { Link2 } from "lucide-react";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
 
+function canShowDocReupload(
+  displayedStatus: string | undefined,
+  isClientRevision: boolean,
+): boolean {
+  if (!displayedStatus) return false;
+  if (isClientRevision) return displayedStatus === "rejected";
+  return displayedStatus !== "verified";
+}
 
 export default function CandidateDocumentVerificationPage() {
   const { candidateId, projectId: routeProjectId } = useParams<{
@@ -1230,7 +1238,10 @@ export default function CandidateDocumentVerificationPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {(displayedStatus !== "verified" || selectedProject?.subStatus?.name === "client_revision_requested") && (
+                              {canShowDocReupload(
+                                displayedStatus,
+                                selectedProject?.subStatus?.name === "client_revision_requested",
+                              ) && (
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
@@ -1374,28 +1385,21 @@ export default function CandidateDocumentVerificationPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {(displayedStatus !== "verified" ||
-                                selectedProject?.subStatus?.name ===
-                                  "client_revision_requested") && (
+                              {canShowDocReupload(
+                                displayedStatus,
+                                selectedProject?.subStatus?.name === "client_revision_requested",
+                              ) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                                  title={
-                                    displayedStatus === "resubmission_required"
-                                      ? "Re-upload (Requested)"
-                                      : "Re-upload video"
-                                  }
+                                  title="Re-upload video"
                                   onClick={() => {
                                     setIsIntroVideoReuploadMode(true);
                                     setShowIntroVideoUploadDialog(true);
                                   }}
                                 >
-                                  {displayedStatus === "resubmission_required" ? (
-                                    <Upload className="h-4 w-4" />
-                                  ) : (
-                                    <RefreshCw className="h-4 w-4" />
-                                  )}
+                                  <RefreshCw className="h-4 w-4" />
                                 </Button>
                               )}
                             </div>

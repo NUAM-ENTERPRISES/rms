@@ -37,6 +37,7 @@ import {
   Eye,
   ArrowUpRight,
   FilterX,
+  RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -52,10 +53,41 @@ import TypedHeader from "@/components/molecules/TypedHeader";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
 
+type VerificationCountsPayload = {
+  pending?: number;
+  verified?: number;
+  rejected?: number;
+  client_revision_requested?: number;
+  verification_in_progress_document?: number;
+};
+
+function extractVerificationCounts(queryResult: unknown): VerificationCountsPayload {
+  if (!queryResult || typeof queryResult !== "object") {
+    return {};
+  }
+
+  const root = queryResult as {
+    data?: { counts?: VerificationCountsPayload } | VerificationCountsPayload;
+    counts?: VerificationCountsPayload;
+  };
+
+  const nestedData = root.data;
+  if (nestedData && typeof nestedData === "object" && "counts" in nestedData) {
+    return nestedData.counts ?? {};
+  }
+
+  if (nestedData && typeof nestedData === "object" && "pending" in nestedData) {
+    return nestedData as VerificationCountsPayload;
+  }
+
+  return root.counts ?? {};
+}
+
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
   blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
   emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
   red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
+  orange: { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600", iconBg: "bg-orange-100", value: "text-orange-700", ring: "ring-orange-400/50", dot: "bg-orange-500" },
 };
 
 export default function DocumentVerificationPage() {
@@ -128,20 +160,36 @@ export default function DocumentVerificationPage() {
     setBulkSendModalOpen(true);
   };
 
+  const sharedListFilters = {
+    projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
+    roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
+    search: searchTerm || undefined,
+    recruiterId: isStrictRecruiter ? user?.id : undefined,
+    screening: screeningFilter || undefined,
+  };
+
+  // Always fetch tile counts (regardless of active tile) so badges stay in sync.
+  // `forTileCounts` is ignored by the backend but keeps a dedicated RTK cache entry.
+  const tileCountsQuery = useGetVerificationCandidatesQuery(
+    {
+      ...sharedListFilters,
+      page: 1,
+      limit: 1,
+      forTileCounts: true,
+    },
+    { refetchOnMountOrArgChange: true },
+  );
+
   // Pending (verification candidates) query — only call when viewing pending / in-progress
   const verificationCandidatesQuery = useGetVerificationCandidatesQuery(
     {
+      ...sharedListFilters,
       status: statusFilter === "all" ? undefined : statusFilter,
-      projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
-      roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
-      search: searchTerm || undefined,
       page: currentPage,
       limit: 10,
-      recruiterId: isStrictRecruiter ? user?.id : undefined,
-      screening: screeningFilter || undefined,
     },
     { 
-      skip: statusFilter !== "verification_in_progress_document",
+      skip: statusFilter !== "verification_in_progress_document" && statusFilter !== "client_revision_requested",
     }
   );
 
@@ -153,16 +201,14 @@ export default function DocumentVerificationPage() {
         ? "verified"
         : statusFilter === "rejected_documents"
         ? "rejected"
-        : undefined,
-    projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
-    roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
-    search: searchTerm || undefined,
+        : "verified",
+    ...sharedListFilters,
     page: currentPage,
     limit: 10,
-    recruiterId: isStrictRecruiter ? user?.id : undefined,
-    screening: screeningFilter || undefined,
   }, {
-    skip: statusFilter === "screening_approved"
+    skip:
+      statusFilter !== "documents_verified" &&
+      statusFilter !== "rejected_documents",
   });
 
   // Screening approved candidates query
@@ -184,17 +230,22 @@ export default function DocumentVerificationPage() {
   const approvedScreeningData = approvedScreeningQuery.data;
 
   const isLoading = 
+    tileCountsQuery.isLoading ||
     verificationCandidatesQuery.isLoading || 
     verifiedRejectedQuery.isLoading || 
     approvedScreeningQuery.isLoading;
     
   const error = 
+    tileCountsQuery.error ||
     verificationCandidatesQuery.error || 
     verifiedRejectedQuery.error || 
     approvedScreeningQuery.error;
 
   // Refresh both endpoints to keep counts and lists in sync
   const refetch = () => {
+    if (tileCountsQuery.status !== 'uninitialized') {
+      tileCountsQuery.refetch?.();
+    }
     if (verificationCandidatesQuery.status !== 'uninitialized') {
       verificationCandidatesQuery.refetch?.();
     }
@@ -210,7 +261,7 @@ export default function DocumentVerificationPage() {
   let totalCandidates = 0;
   let totalPages = 1;
 
-  if (statusFilter === "verification_in_progress_document") {
+  if (statusFilter === "verification_in_progress_document" || statusFilter === "client_revision_requested") {
     candidateProjects = verificationData?.data?.items || verificationData?.data?.candidateProjects || [];
     totalCandidates = verificationData?.data?.pagination?.total || candidateProjects.length;
     totalPages = verificationData?.data?.pagination?.totalPages || 1;
@@ -252,6 +303,8 @@ export default function DocumentVerificationPage() {
           roleNeeded: it.roleNeeded || cpm.roleNeeded,
           // preserve interview state when present so UI can disable selection
           isInInterview: (cpm as any).isInInterview || it.isInInterview || false,
+          awaitingResubmitToClient:
+            it.awaitingResubmitToClient || (cpm as any).awaitingResubmitToClient || false,
           // surface API-provided statuses so UI can show subStatus/mainStatus
           subStatus: (it as any).subStatus || (cpm as any).subStatus || null,
           mainStatus: (it as any).mainStatus || (cpm as any).mainStatus || null,
@@ -276,6 +329,7 @@ export default function DocumentVerificationPage() {
         roleNeeded: it.roleNeeded || null,
         // ensure interview flag is preserved when backend provides it
         isInInterview: (it as any).isInInterview || false,
+        awaitingResubmitToClient: (it as any).awaitingResubmitToClient || false,
         // surface API-provided statuses so UI can show subStatus/mainStatus
         subStatus: (it as any).subStatus || null,
         mainStatus: (it as any).mainStatus || null,
@@ -351,19 +405,31 @@ export default function DocumentVerificationPage() {
   };
 
   // Calculate status counts from API data (prefer server-supplied counts when available)
-  const getStatusCounts = () => {
-    // Prefer server-supplied counts when available. We merge counts from both
-    // the verification (pending) endpoint and the verified/rejected endpoint.
-    const verificationCounts = (verificationData?.data)?.counts || {};
-    const verifiedCounts = (verifiedRejectedData?.data)?.counts || {};
+  const statusCounts = useMemo(() => {
+    const tileCounts = extractVerificationCounts(tileCountsQuery.data);
+    const listCounts = extractVerificationCounts(verificationCandidatesQuery.data);
+    const verifiedCounts = extractVerificationCounts(verifiedRejectedQuery.data);
     const screeningApprovedTotal = (approvedScreeningData?.data as any)?.pagination?.total || 0;
 
+    const counts = { ...listCounts, ...tileCounts };
+
     const pending = Number(
-      verificationCounts.pending ?? verificationCounts.verification_in_progress ?? verificationCounts.verification_in_progress_document ?? 0
+      counts.pending ?? counts.verification_in_progress_document ?? 0
     );
 
-    const verified = Number(verifiedCounts.verified ?? verificationCounts.verified ?? 0);
-    const rejected = Number(verifiedCounts.rejected ?? verificationCounts.rejected ?? 0);
+    const verified = Number(verifiedCounts.verified ?? counts.verified ?? 0);
+    const rejected = Number(verifiedCounts.rejected ?? counts.rejected ?? 0);
+    const clientRevisionFromList =
+      statusFilter === "client_revision_requested"
+        ? Number(verificationData?.data?.pagination?.total ?? 0)
+        : 0;
+    const clientRevisionRequested = Number(
+      tileCounts.client_revision_requested ??
+      counts.client_revision_requested ??
+      verifiedCounts.client_revision_requested ??
+      clientRevisionFromList ??
+      0
+    );
 
     return {
       verification_in_progress_document: pending,
@@ -372,10 +438,16 @@ export default function DocumentVerificationPage() {
       documents_verified: verified,
       rejected_documents: rejected,
       screening_approved: screeningApprovedTotal,
+      client_revision_requested: clientRevisionRequested,
     };
-  };
-
-  const statusCounts = getStatusCounts();
+  }, [
+    tileCountsQuery.data,
+    verificationCandidatesQuery.data,
+    verifiedRejectedQuery.data,
+    approvedScreeningData?.data,
+    statusFilter,
+    verificationData?.data?.pagination?.total,
+  ]);
 
   // Get candidate data for bulk send modal
   // Only include candidates with verified documents (exclude pending)
@@ -397,7 +469,7 @@ export default function DocumentVerificationPage() {
         />
 
         {/* Tiles Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Pending Candidates Tile */}
           {(() => {
             const s = accentStyles.blue;
@@ -511,6 +583,48 @@ export default function DocumentVerificationPage() {
               </button>
             );
           })()}
+
+          {/* Client Revision Requested Tile */}
+          {(() => {
+            const s = accentStyles.orange;
+            const isActive = statusFilter === "client_revision_requested";
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatusFilter("client_revision_requested");
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Client Revision Requested</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
+                      {tileCountsQuery.isLoading && !tileCountsQuery.data
+                        ? "—"
+                        : statusCounts.client_revision_requested}
+                    </p>
+                    <p className="text-xs text-slate-500">Awaiting corrections</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <RotateCcw className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })()}
         </div>
 
         {/* Unified Table Container */}
@@ -592,6 +706,8 @@ export default function DocumentVerificationPage() {
                           return "In-progress Candidates";
                         case "rejected_documents":
                           return "Rejected Candidates";
+                        case "client_revision_requested":
+                          return "Client Revision Requested";
                         case "screening_approved":
                           return "Screening Approved Candidates";
                         default:
@@ -673,6 +789,10 @@ export default function DocumentVerificationPage() {
           ) : statusFilter === "rejected_documents" ? (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
               Rejected
+            </TableHead>
+          ) : statusFilter === "client_revision_requested" ? (
+            <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
+              Document Status
             </TableHead>
           ) : statusFilter === "screening_approved" ? (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
@@ -756,16 +876,27 @@ export default function DocumentVerificationPage() {
                     </div>
                   )}
                   <div>
-                    <button
-                      onClick={() =>
-                        navigate(
-                          `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
-                        )
-                      }
-                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
-                    >
-                      {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() =>
+                          navigate(
+                            `/candidates/${candidateProject.candidate.id}/documents/${candidateProject.project.id}`
+                          )
+                        }
+                        className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                      >
+                        {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
+                      </button>
+                      {statusFilter === "documents_verified" && candidateProject.awaitingResubmitToClient && (
+                        <Badge
+                          variant="outline"
+                          className="bg-orange-50 text-orange-700 border-orange-200 text-[10px] font-semibold whitespace-nowrap"
+                          title="Re-verified after client revision — send updated documents to client again"
+                        >
+                          Resubmit to Client
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
                   </div>
                 </div>
@@ -830,6 +961,14 @@ export default function DocumentVerificationPage() {
                         {lastVerified ? (
                           <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
                         ) : null}
+                        {candidateProject.awaitingResubmitToClient && (
+                          <Badge
+                            variant="outline"
+                            className="mt-2 bg-orange-50 text-orange-700 border-orange-200 text-[10px] font-semibold"
+                          >
+                            2nd submission pending
+                          </Badge>
+                        )}
                         {renderSubStatus()}
                       </div>
                     );
@@ -858,6 +997,20 @@ export default function DocumentVerificationPage() {
                         {lastRejected?.reason ? (
                           <div className="text-xs text-gray-500 truncate max-w-[20rem]">Reason: {lastRejected.reason}</div>
                         ) : null}
+                        {renderSubStatus()}
+                      </div>
+                    );
+                  }
+
+                  if (statusFilter === "client_revision_requested") {
+                    const resubmissionCount = docs.filter((d: any) => d.status === "resubmission_required").length;
+
+                    return (
+                      <div className="text-sm text-gray-700">
+                        <div className="font-medium">
+                          Verified: {verifiedCount} · Rejected: {rejectedCount} · Resubmit: {resubmissionCount}
+                        </div>
+                        <div className="text-xs text-gray-500">Total documents: {totalDocs}</div>
                         {renderSubStatus()}
                       </div>
                     );
