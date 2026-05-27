@@ -37,6 +37,7 @@ import {
   CANDIDATE_PROJECT_STATUS,
   canTransitionStatus,
   ROLE_NAMES,
+  isPdfMergeableDocument,
 } from '../common/constants';
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
@@ -3978,12 +3979,22 @@ export class DocumentsService {
       throw new NotFoundException('No verified documents found for this candidate nomination.');
     }
 
+    const mergeableVerifications = verifications.filter((v) =>
+      isPdfMergeableDocument(v.document),
+    );
+
+    if (mergeableVerifications.length === 0) {
+      throw new NotFoundException(
+        'No PDF-mergeable verified documents found (videos and unsupported file types are excluded).',
+      );
+    }
+
     let docsToMerge: any[];
 
     // 3. Reorder documents if documentIds are provided, otherwise use latest per type
     if (orderedDocumentIds && orderedDocumentIds.length > 0) {
       // Create a map for quick lookup
-      const vMap = new Map(verifications.map(v => [v.documentId, v]));
+      const vMap = new Map(mergeableVerifications.map(v => [v.documentId, v]));
       
       // Order them based on the provided list
       docsToMerge = orderedDocumentIds
@@ -3992,7 +4003,7 @@ export class DocumentsService {
     } else {
       // Filter to keep only the latest document per docType (to avoid duplicates if any)
       const latestDocsMap = new Map<string, any>();
-      for (const v of verifications) {
+      for (const v of mergeableVerifications) {
         const type = v.document.docType;
         if (
           !latestDocsMap.has(type) ||
@@ -4002,6 +4013,12 @@ export class DocumentsService {
         }
       }
       docsToMerge = Array.from(latestDocsMap.values());
+    }
+
+    if (docsToMerge.length === 0) {
+      throw new NotFoundException(
+        'No PDF-mergeable verified documents selected for merge (videos and unsupported file types are excluded).',
+      );
     }
 
     const mergedPdf = await PDFDocument.create();

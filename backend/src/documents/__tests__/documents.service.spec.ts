@@ -626,3 +626,27 @@ describe('DocumentsService - introduction video notifications', () => {
     expect(outbox.publishDocumentResubmitted).not.toHaveBeenCalled();
   });
 });
+
+describe('isPdfMergeableDocument', () => {
+  const { isPdfMergeableDocument, DOCUMENT_TYPE } = jest.requireActual(
+    '../../common/constants/document-types',
+  );
+
+  it('excludes introduction video from PDF merge', () => {
+    expect(
+      isPdfMergeableDocument({
+        docType: DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+        fileName: 'intro.mp4',
+      }),
+    ).toBe(false);
+  });
+
+  it('includes passport copy PDF documents', () => {
+    expect(
+      isPdfMergeableDocument({
+        docType: DOCUMENT_TYPE.PASSPORT_COPY,
+        fileName: 'passport.pdf',
+      }),
+    ).toBe(true);
+  });
+});
