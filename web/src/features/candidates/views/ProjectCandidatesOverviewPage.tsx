@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,6 @@ import {
   Mic,
   Settings,
   CheckCircle,
-  Send,
   UserCheck,
   Phone,
   Mail,
@@ -30,7 +29,7 @@ import {
 } from "lucide-react";
 import { ProjectRoleFilter, ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
@@ -62,7 +61,7 @@ const TILE_ACCENT_STYLES: Record<string, { card: string; icon: string; iconBg: s
 
 const TILES: TileDef[] = [
   { key: "all",        label: "Total Candidates",  subtitle: "In this project",        icon: Users,        accent: "blue"    },
-  { key: "nominated",  label: "Registered",         subtitle: "Submitted candidates",    icon: Send,         accent: "indigo"  },
+  { key: "nominated",  label: "Registered",         subtitle: "Submitted candidates",    icon: Users,        accent: "indigo"  },
   { key: "documents",  label: "Documents",          subtitle: "In document stage",       icon: FileText,     accent: "amber"   },
   { key: "interview",  label: "Interview",          subtitle: "Scheduled / completed",   icon: Mic,          accent: "purple"  },
   { key: "processing", label: "Processing",         subtitle: "Under processing",        icon: Settings,     accent: "orange"  },
@@ -104,6 +103,28 @@ const STATUS_BADGE: Record<
 // -------------------------------------------------------------------
 // Component
 // -------------------------------------------------------------------
+type CandidateOverviewItem = {
+  id: string;
+  createdAt: string;
+  candidate?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email?: string | null;
+    countryCode?: string | null;
+    mobileNumber?: string | null;
+    profileImage?: string | null;
+  } | null;
+  project?: { title?: string | null } | null;
+  roleNeeded?: {
+    designation?: string | null;
+    roleCatalog?: { label?: string | null } | null;
+  } | null;
+  mainStatus?: { name?: string | null; label?: string | null } | null;
+  subStatus?: { label?: string | null } | null;
+  recruiter?: { name?: string | null } | null;
+};
+
 export default function ProjectCandidatesOverviewPage() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -154,6 +175,38 @@ export default function ProjectCandidatesOverviewPage() {
     user?.roles?.includes("Recruiter") || false,
     [user]
   );
+
+  const appliedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (debouncedSearch?.trim()) count += 1;
+    if (activeFilter !== "all") count += 1;
+    if (projectRole.roleCatalogId !== "all") count += 1;
+    if (dateRange !== "all") count += 1;
+    if (advancedFilters.gender !== "all") count += 1;
+    if (advancedFilters.countryPreferences.length > 0) count += 1;
+    if (advancedFilters.visaTypes.length > 0) count += 1;
+    if (advancedFilters.sectorTypes.length > 0) count += 1;
+    if (advancedFilters.qualification) count += 1;
+    if (advancedFilters.minExperience !== undefined) count += 1;
+    if (advancedFilters.maxExperience !== undefined) count += 1;
+    if (advancedFilters.minAge !== undefined) count += 1;
+    if (advancedFilters.maxAge !== undefined) count += 1;
+    return count;
+  }, [
+    activeFilter,
+    advancedFilters.countryPreferences.length,
+    advancedFilters.gender,
+    advancedFilters.maxAge,
+    advancedFilters.maxExperience,
+    advancedFilters.minAge,
+    advancedFilters.minExperience,
+    advancedFilters.qualification,
+    advancedFilters.sectorTypes.length,
+    advancedFilters.visaTypes.length,
+    dateRange,
+    debouncedSearch,
+    projectRole.roleCatalogId,
+  ]);
 
   const handleResetFilters = () => {
     setAdvancedFilters({
@@ -207,7 +260,7 @@ export default function ProjectCandidatesOverviewPage() {
   );
 
   const summary = overviewData?.summary;
-  const candidates = (overviewData?.data as any[]) || [];
+  const candidates = (overviewData?.data ?? []) as CandidateOverviewItem[];
   const meta = overviewData?.meta;
   const projectTitle = overviewData?.projectTitle;
 
@@ -281,56 +334,191 @@ export default function ProjectCandidatesOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full max-w-[98%] mx-auto space-y-4 mt-2 px-4">
         {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              <span>{projectTitle || "Candidate Overview"}</span>
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Comprehensive dashboard for candidate tracking and status overview
-            </p>
-          </div>
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white via-slate-50/50 to-slate-50 p-6 shadow-sm ring-1 ring-slate-100/50">
+  {/* Decorative subtle background glow */}
+  <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-blue-400/10 blur-3xl" />
+  
+  <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+      {/* Premium Gradient Icon Wrapper */}
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-[1px] shadow-lg shadow-indigo-200/50 dark:shadow-none">
+        <div className="flex h-full w-full items-center justify-center rounded-[15px] bg-white/10 backdrop-blur-sm">
+          <span className="text-xl font-bold tracking-tight text-white drop-shadow-sm">
+            {(projectTitle || "C").trim().charAt(0).toUpperCase()}
+          </span>
         </div>
+      </div>
+
+      {/* Text Context */}
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            {projectTitle || "Candidate Overview"}
+          </h1>
+        </div>
+        <p className="max-w-2xl text-sm font-medium leading-relaxed text-slate-500">
+          Comprehensive dashboard for candidate tracking and status overview
+        </p>
+      </div>
+    </div>
+
+    {/* Badges Section -> Nicely aligned on the right on desktop */}
+    {projectTitle && (
+      <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+        <Badge className="border-0 bg-blue-600 px-3 py-1 text-xs font-semibold tracking-wide text-white hover:bg-blue-700 shadow-sm shadow-blue-200">
+          Active Project
+        </Badge>
+        <Badge
+          variant="outline"
+          className="rounded-full border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm"
+        >
+          {projectTitle}
+        </Badge>
+      </div>
+    )}
+  </div>
+</div>
 
         {/* ── Search & Filter ── */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by name, role, or email..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
-              />
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="px-4 py-3">
+            <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+              <div className="flex-1 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Search
+                </p>
+                <div className="relative w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    aria-label="Search candidates"
+                    placeholder="Search by name, email, phone, or role…"
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+                  />
+                  {search && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => {
+                        setSearch("");
+                        setPage(1);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Project & Role
+                </p>
+                <ProjectRoleFilter
+                  value={projectRole}
+                  onChange={(v) => {
+                    setProjectRole(v);
+                    setPage(1);
+                  }}
+                  projectLabel="Project"
+                  roleLabel="Role"
+                  defaultProject={true}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 lg:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAdvancedFiltersOpen(true)}
+                  className={cn(
+                    "flex items-center gap-2 h-9 px-3 rounded-xl border transition-all duration-200",
+                    isAdvancedFiltersOpen
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                  )}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span className="text-xs font-semibold">Filters</span>
+                  {appliedFiltersCount > 0 && (
+                    <span className="ml-1 rounded-full bg-slate-900/10 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {appliedFiltersCount}
+                    </span>
+                  )}
+                </Button>
+                {appliedFiltersCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetFilters}
+                    className="h-9 px-3 rounded-xl text-slate-600 hover:bg-slate-100"
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-              <ProjectRoleFilter
-                value={projectRole}
-                onChange={(v) => {
-                  setProjectRole(v);
-                  setPage(1);
-                }}
-                defaultProject={true}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAdvancedFiltersOpen(true)}
-                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl border transition-all duration-200 shrink-0 ${
-                  isAdvancedFiltersOpen
-                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                }`}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">Filters</span>
-              </Button>
-            </div>
+
+            {/* Active filter chips */}
+            {appliedFiltersCount > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {activeFilter !== "all" && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Stage: {getActiveTileLabel()}
+                  </Badge>
+                )}
+                {projectRole.roleCatalogId !== "all" && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Role filtered
+                  </Badge>
+                )}
+                {dateRange !== "all" && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Date: {dateRange === "custom" ? "Custom" : dateRange.replace(/_/g, " ")}
+                  </Badge>
+                )}
+                {advancedFilters.gender !== "all" && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Gender: {advancedFilters.gender}
+                  </Badge>
+                )}
+                {advancedFilters.countryPreferences.length > 0 && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Countries: {advancedFilters.countryPreferences.length}
+                  </Badge>
+                )}
+                {advancedFilters.sectorTypes.length > 0 && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Sectors: {advancedFilters.sectorTypes.length}
+                  </Badge>
+                )}
+                {advancedFilters.visaTypes.length > 0 && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Visa: {advancedFilters.visaTypes.length}
+                  </Badge>
+                )}
+                {(advancedFilters.minExperience !== undefined || advancedFilters.maxExperience !== undefined) && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Exp: {advancedFilters.minExperience ?? "–"}-{advancedFilters.maxExperience ?? "–"} yrs
+                  </Badge>
+                )}
+                {(advancedFilters.minAge !== undefined || advancedFilters.maxAge !== undefined) && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Age: {advancedFilters.minAge ?? "–"}-{advancedFilters.maxAge ?? "–"}
+                  </Badge>
+                )}
+                {advancedFilters.qualification && (
+                  <Badge variant="outline" className="rounded-full border-slate-200 bg-slate-50 text-slate-700">
+                    Qualification: {advancedFilters.qualification}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -470,12 +658,12 @@ export default function ProjectCandidatesOverviewPage() {
                                   <div className="text-sm text-slate-500 mt-1.5 space-y-0.5">
                                     <div className="flex items-center gap-2">
                                       <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                      <span className="text-gray-700">{candidate.email || "—"}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Phone className="h-3.5 w-3.5 text-gray-400" />
                                       <span className="text-gray-700">
-                                        {candidate.countryCode} {candidate.mobileNumber}
+                                        {candidate.countryCode || ""} {candidate.mobileNumber || "—"}
                                       </span>
                                     </div>
                                   </div>
