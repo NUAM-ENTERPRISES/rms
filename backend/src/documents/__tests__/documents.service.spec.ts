@@ -627,6 +627,80 @@ describe('DocumentsService - introduction video notifications', () => {
   });
 });
 
+describe('DocumentsService - mergeVerifiedDocuments', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('rejects documentIds that are not verified for the nomination', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
+      id: 'cpm-1',
+      candidateId: 'cand-1',
+    });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any).mockResolvedValue([
+      {
+        documentId: 'doc-verified',
+        status: 'verified',
+        isDeleted: false,
+        isReuploaded: false,
+        isUploadedByProcessingTeam: false,
+        document: {
+          id: 'doc-verified',
+          docType: 'passport_copy',
+          fileName: 'passport.pdf',
+          fileUrl: 'https://example.com/passport.pdf',
+          candidateId: 'cand-1',
+          isDeleted: false,
+          createdAt: new Date('2026-01-02'),
+        },
+      },
+      {
+        documentId: 'doc-pending',
+        status: 'pending',
+        isDeleted: false,
+        isReuploaded: false,
+        isUploadedByProcessingTeam: false,
+        document: {
+          id: 'doc-pending',
+          docType: 'degree_certificate',
+          fileName: 'degree.pdf',
+          fileUrl: 'https://example.com/degree.pdf',
+          candidateId: 'cand-1',
+          isDeleted: false,
+          createdAt: new Date('2026-01-03'),
+        },
+      },
+    ]);
+
+    await expect(
+      service.mergeVerifiedDocuments(
+        'cand-1',
+        'proj-1',
+        'role-1',
+        'cpm-1',
+        ['doc-pending'],
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+});
+
 describe('isPdfMergeableDocument', () => {
   const { isPdfMergeableDocument, DOCUMENT_TYPE } = jest.requireActual(
     '../../common/constants/document-types',

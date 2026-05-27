@@ -131,6 +131,70 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Keep only the newest uploaded document per docType (matches verification detail page logic).
+   */
+  private selectLatestVerificationsPerDocType<
+    T extends { document: { docType: string; createdAt: Date | string } },
+  >(verifications: T[]): T[] {
+    const latest = new Map<string, T>();
+
+    for (const verification of verifications) {
+      const docType = verification.document.docType;
+      const existing = latest.get(docType);
+
+      if (
+        !existing ||
+        new Date(verification.document.createdAt) >
+          new Date(existing.document.createdAt)
+      ) {
+        latest.set(docType, verification);
+      }
+    }
+
+    return Array.from(latest.values());
+  }
+
+  /**
+   * Verified, PDF-mergeable documents for a single candidate-project nomination.
+   * Excludes superseded/reuploaded rows, processing-team uploads, and non-verified latest rows.
+   */
+  private async getVerifiedDocumentsForMerge(
+    cpMap: { id: string; candidateId: string },
+    roleCatalogId?: string,
+  ) {
+    const verifications =
+      await this.prisma.candidateProjectDocumentVerification.findMany({
+        where: {
+          candidateProjectMapId: cpMap.id,
+          isDeleted: false,
+          isReuploaded: false,
+          isUploadedByProcessingTeam: false,
+          ...(roleCatalogId
+            ? { OR: [{ roleCatalogId }, { roleCatalogId: null }] }
+            : {}),
+        },
+        include: {
+          document: true,
+        },
+        orderBy: {
+          document: {
+            createdAt: 'asc',
+          },
+        },
+      });
+
+    const latestPerDocType = this.selectLatestVerificationsPerDocType(verifications);
+
+    return latestPerDocType.filter(
+      (verification) =>
+        verification.status === DOCUMENT_STATUS.VERIFIED &&
+        !verification.document.isDeleted &&
+        verification.document.candidateId === cpMap.candidateId &&
+        isPdfMergeableDocument(verification.document),
+    );
+  }
+
   private readonly logger = new Logger(DocumentsService.name);
 
   constructor(
@@ -2577,15 +2641,13 @@ export class DocumentsService {
       );
     }
 
-    // Build where clause for verifications
+    // Build where clause for verifications (fetch all, dedupe latest per docType, then paginate)
     const where: any = {
       candidateProjectMapId: candidateProject.id,
       isDeleted: false,
+      isReuploaded: false,
+      isUploadedByProcessingTeam: false,
     };
-
-    if (status && status !== 'all') {
-      where.status = status;
-    }
 
     if (search) {
       where.AND = [
@@ -2600,9 +2662,8 @@ export class DocumentsService {
       ];
     }
 
-    const [total, verifications] = await Promise.all([
-      this.prisma.candidateProjectDocumentVerification.count({ where } as any),
-      this.prisma.candidateProjectDocumentVerification.findMany({
+    const allVerifications =
+      await this.prisma.candidateProjectDocumentVerification.findMany({
         where: where as any,
         include: {
           document: {
@@ -2613,19 +2674,27 @@ export class DocumentsService {
           roleCatalog: true,
         },
         orderBy: { createdAt: 'desc' },
-        skip,
-        take: Number(limit),
-      }),
-    ]);
+      });
 
-    const totalSubmitted = total;
+    let verifications = this.selectLatestVerificationsPerDocType(allVerifications).filter(
+      (verification) => verification.document.candidateId === candidateProject.candidateId,
+    );
+
+    if (status && status !== 'all') {
+      verifications = verifications.filter((verification) => verification.status === status);
+    }
+
+    const total = verifications.length;
+    const paginatedVerifications = verifications.slice(skip, skip + Number(limit));
+
+    const totalSubmitted = verifications.length;
     const totalVerified = verifications.filter((v) => v.status === DOCUMENT_STATUS.VERIFIED).length;
     const totalRejected = verifications.filter((v) => v.status === DOCUMENT_STATUS.REJECTED).length;
     const totalPending = verifications.filter((v) => v.status === DOCUMENT_STATUS.PENDING).length;
 
     return {
       candidateProject,
-      verifications,
+      verifications: paginatedVerifications,
       pagination: {
         page,
         limit: Number(limit),
@@ -3956,68 +4025,49 @@ export class DocumentsService {
       );
     }
 
-    // 2. Fetch all verified verifications for this mapping
-    // We include documents that are either generic (null role) or match the specific role requested
-    const verifications = await this.prisma.candidateProjectDocumentVerification.findMany({
-      where: {
-        candidateProjectMapId: cpMap.id,
-        status: DOCUMENT_STATUS.VERIFIED,
-        isDeleted: false,
-        OR: roleCatalogId ? [{ roleCatalogId: roleCatalogId }, { roleCatalogId: null }] : undefined,
-      },
-      include: {
-        document: true,
-      },
-      orderBy: {
-        document: {
-          createdAt: 'asc',
-        },
-      },
-    });
-
-    if (verifications.length === 0) {
-      throw new NotFoundException('No verified documents found for this candidate nomination.');
-    }
-
-    const mergeableVerifications = verifications.filter((v) =>
-      isPdfMergeableDocument(v.document),
+    const mergeableVerifications = await this.getVerifiedDocumentsForMerge(
+      cpMap,
+      roleCatalogId,
     );
 
     if (mergeableVerifications.length === 0) {
       throw new NotFoundException(
-        'No PDF-mergeable verified documents found (videos and unsupported file types are excluded).',
+        'No verified PDF-mergeable documents found for this candidate nomination.',
       );
     }
 
-    let docsToMerge: any[];
+    let docsToMerge: typeof mergeableVerifications;
 
-    // 3. Reorder documents if documentIds are provided, otherwise use latest per type
     if (orderedDocumentIds && orderedDocumentIds.length > 0) {
-      // Create a map for quick lookup
-      const vMap = new Map(mergeableVerifications.map(v => [v.documentId, v]));
-      
-      // Order them based on the provided list
-      docsToMerge = orderedDocumentIds
-        .map(id => vMap.get(id))
-        .filter(v => !!v);
-    } else {
-      // Filter to keep only the latest document per docType (to avoid duplicates if any)
-      const latestDocsMap = new Map<string, any>();
-      for (const v of mergeableVerifications) {
-        const type = v.document.docType;
-        if (
-          !latestDocsMap.has(type) ||
-          new Date(v.document.createdAt) > new Date(latestDocsMap.get(type).document.createdAt)
-        ) {
-          latestDocsMap.set(type, v);
-        }
+      const allowedByDocumentId = new Map(
+        mergeableVerifications.map((verification) => [
+          verification.documentId,
+          verification,
+        ]),
+      );
+
+      const invalidIds = orderedDocumentIds.filter(
+        (documentId) => !allowedByDocumentId.has(documentId),
+      );
+
+      if (invalidIds.length > 0) {
+        throw new BadRequestException(
+          'One or more selected documents are not verified for this project/role and cannot be merged.',
+        );
       }
-      docsToMerge = Array.from(latestDocsMap.values());
+
+      docsToMerge = orderedDocumentIds
+        .map((documentId) => allowedByDocumentId.get(documentId))
+        .filter((verification): verification is NonNullable<typeof verification> =>
+          Boolean(verification),
+        );
+    } else {
+      docsToMerge = mergeableVerifications;
     }
 
     if (docsToMerge.length === 0) {
       throw new NotFoundException(
-        'No PDF-mergeable verified documents selected for merge (videos and unsupported file types are excluded).',
+        'No verified documents selected for merge.',
       );
     }
 

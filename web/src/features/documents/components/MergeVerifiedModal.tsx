@@ -48,7 +48,7 @@ export function MergeVerifiedModal({
 
   // Fetch candidate project verifications with documents
   const { data: verificationsResponse, isLoading: isLoadingVerifications, error: verificationsError } = useGetCandidateProjectVerificationsQuery(
-    { candidateId, projectId, roleCatalogId, status: 'verified' },
+    { candidateId, projectId, roleCatalogId, status: 'verified', limit: 100 },
     { skip: !isOpen || !candidateId || !projectId || !roleCatalogId }
   );
 
@@ -64,8 +64,8 @@ export function MergeVerifiedModal({
     }
 
     const docs = verificationsResponse.data.verifications
-      .filter(v => v.status === 'verified')
-      .map(v => v.document)
+      .filter((v) => v.status === 'verified' && v.document?.id)
+      .map((v) => v.document)
       .filter((doc) => isPdfMergeableDocument(doc));
 
     const candidate = verificationsResponse.data.candidateProject?.candidate;
