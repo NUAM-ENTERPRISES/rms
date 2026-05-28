@@ -735,15 +735,6 @@ export default function CandidateOverviewPage() {
                                     </>
                                   )}
                                 </div>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-xs"
-                                >
-                                  {candidate.firstName} {candidate.lastName}
-                                </button>
                                 {candidate.candidateCode ? (
                                   <div className="text-[11px] text-muted-foreground font-mono truncate">
                                     {candidate.candidateCode}

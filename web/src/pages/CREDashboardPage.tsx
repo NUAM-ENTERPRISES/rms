@@ -85,7 +85,8 @@ export default function CREDashboardPage() {
   const totalCount = assignedCandidatesData?.total || 0;
   const totalPages = assignedCandidatesData?.totalPages || 0;
 
-  const { data: summaryData } = useGetCREAssignedSummaryQuery();
+  const { data: summaryData, refetch: refetchSummary } =
+    useGetCREAssignedSummaryQuery();
   const [markCandidateConverted, { isLoading: isConverting }] = useMarkCandidateConvertedMutation();
   const [transferCandidateToRecruiter, { isLoading: isTransferring }] = useTransferCandidateToRecruiterMutation();
 
@@ -149,6 +150,19 @@ export default function CREDashboardPage() {
     return digits || null;
   };
 
+  /** CRE status recorded on reassign — not recruiter currentStatus (always untouched). */
+  const getCreReassignedStatusName = (candidate: any): string => {
+    const reassignedAssignment = candidate.recruiterAssignments?.find(
+      (a: { assignmentType?: string }) =>
+        a.assignmentType === "cre_reassigned",
+    );
+    return (
+      candidate.creStatus?.statusName ||
+      reassignedAssignment?.creStatus?.statusName ||
+      "Unknown"
+    );
+  };
+
   const handleConfirmConvert = async () => {
     if (!candidateToConvert) return;
     try {
@@ -174,7 +188,12 @@ export default function CREDashboardPage() {
       setCandidateToTransfer(null);
       setCurrentRecruiterForTransfer('');
       setPage(1);
-      refetch();
+      await Promise.all([
+        assignedCandidatesQuery.refetch(),
+        reassignedCandidatesQuery.refetch(),
+        createdCandidatesQuery.refetch(),
+        refetchSummary(),
+      ]);
     } catch (error: unknown) {
       console.error('Transfer modal confirm failed', error);
       const message =
@@ -382,13 +401,9 @@ export default function CREDashboardPage() {
                         nonCreAssignment?.assignedByUser?.name ||
                         'System / Admin';
                       const statusName =
-                        candidate.creStatus?.statusName ||
-                        candidate.recruiterAssignments?.find(
-                          (a: { assignmentType?: string }) =>
-                            a.assignmentType === 'cre_reassigned',
-                        )?.creStatus?.statusName ||
-                        candidate.currentStatus?.statusName ||
-                        'Unknown';
+                        statusFilter === "reassigned"
+                          ? getCreReassignedStatusName(candidate)
+                          : candidate.currentStatus?.statusName || "Unknown";
                       const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
                       const assignmentReason = activeAssignment?.reason || '';
                       const phoneDigits = formatPhoneForLink(candidate);

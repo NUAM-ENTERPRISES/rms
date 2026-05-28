@@ -44,6 +44,7 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
+  CRE_REASSIGN_RECRUITER_RETURN_REASON,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
@@ -1755,8 +1756,8 @@ export class CandidatesService {
           assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
           assignedBy: creUserId,
           reason: reassignmentReason,
-          creStatusId: creStatus.id,
           creStatusNote: statusNote,
+          creStatusId: creStatus.id,
         },
       });
     }
@@ -1823,7 +1824,7 @@ export class CandidatesService {
         statusNameSnapshot: untouchedStatus.statusName,
         statusUpdatedAt: new Date(),
         notificationCount: 0,
-        reason: 'Returned to recruiter pipeline as untouched after CRE reassign',
+        reason: CRE_REASSIGN_RECRUITER_RETURN_REASON,
       },
     });
 
@@ -1901,6 +1902,46 @@ export class CandidatesService {
     };
   }
 
+  /**
+   * CRE status selected at reassign (stored on assignment or status history).
+   */
+  private resolveCreHandoffStatus(
+    reassignedAssignment:
+      | {
+          creStatus?: { id: number; statusName: string } | null;
+          creStatusId?: number | null;
+        }
+      | undefined,
+    statusHistories: Array<{
+      statusId: number;
+      statusNameSnapshot: string;
+      reason: string | null;
+      statusUpdatedAt: Date;
+      status?: { id: number; statusName: string };
+    }>,
+  ): { id: number; statusName: string } | null {
+    if (reassignedAssignment?.creStatus) {
+      return reassignedAssignment.creStatus;
+    }
+
+    const handoffHistory = statusHistories.find(
+      (entry) =>
+        entry.reason?.trim() &&
+        !entry.reason.startsWith(CRE_REASSIGN_RECRUITER_RETURN_REASON),
+    );
+
+    if (handoffHistory) {
+      return (
+        handoffHistory.status ?? {
+          id: handoffHistory.statusId,
+          statusName: handoffHistory.statusNameSnapshot,
+        }
+      );
+    }
+
+    return null;
+  }
+
   async getCREReassignedCandidates(
     recruiterId: string,
     query: {
@@ -1938,14 +1979,23 @@ export class CandidatesService {
       },
     };
 
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-        { candidateCode: { contains: search, mode: 'insensitive' } },
+    if (search?.trim()) {
+      const term = search.trim();
+      where.AND = [
+        {
+          OR: where.OR,
+        },
+        {
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { mobileNumber: { contains: term, mode: 'insensitive' } },
+            { candidateCode: { contains: term, mode: 'insensitive' } },
+          ],
+        },
       ];
+      delete where.OR;
     }
 
     const total = await this.prisma.candidate.count({ where });
@@ -1957,6 +2007,13 @@ export class CandidatesService {
       orderBy: { updatedAt: 'desc' },
       include: {
         currentStatus: { select: { id: true, statusName: true } },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          include: {
+            status: { select: { id: true, statusName: true } },
+          },
+        },
         recruiterAssignments: {
           where: { isActive: true },
           include: {
@@ -1975,10 +2032,16 @@ export class CandidatesService {
           CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
       );
 
+      const creStatus = this.resolveCreHandoffStatus(
+        reassignedAssignment,
+        candidate.statusHistories,
+      );
+
+      const { statusHistories: _omit, ...candidateRest } = candidate;
+
       return {
-        ...candidate,
-        creStatus:
-          reassignedAssignment?.creStatus ?? candidate.currentStatus,
+        ...candidateRest,
+        creStatus,
       };
     });
 
