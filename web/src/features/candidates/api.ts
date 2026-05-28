@@ -40,6 +40,7 @@ export interface UploadDocumentRequest {
 // Types
 export interface Candidate {
   id: string;
+  candidateCode?: string | null;
   firstName: string;
   lastName: string;
   contact: string;

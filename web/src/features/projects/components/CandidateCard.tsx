@@ -67,6 +67,7 @@ type CandidateProjectLink = {
 export interface CandidateRecord {
   id?: string;
   candidateId?: string;
+  candidateCode?: string | null;
   firstName?: string;
   lastName?: string;
   profileImage?: string;
@@ -725,6 +726,11 @@ const CandidateCard = memo(function CandidateCard({
                 <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
                   {fullName || "Unnamed Candidate"}
                 </p>
+                {candidate.candidateCode ? (
+                  <p className="text-[11px] text-muted-foreground font-mono truncate leading-tight mt-0.5">
+                    {candidate.candidateCode}
+                  </p>
+                ) : null}
                 {/* Show current role / employer as subtitle */}
                 {(candidate.currentRole || candidate.currentEmployer) && (
                   <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">

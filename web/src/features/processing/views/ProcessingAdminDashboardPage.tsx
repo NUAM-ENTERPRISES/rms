@@ -354,6 +354,7 @@ export default function ProcessingAdminDashboardPage() {
                                     <TableHeader>
                                         <TableRow className="bg-slate-50/80 hover:bg-slate-50">
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Candidate</TableHead>
+                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Contact</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Project & Role</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Recruiter</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Agent</TableHead>
@@ -367,7 +368,7 @@ export default function ProcessingAdminDashboardPage() {
                                     <TableBody>
                                         {isLoading ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} className="h-64 text-center">
+                                                <TableCell colSpan={9} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <svg className="h-10 w-10 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
                                                         <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
@@ -376,7 +377,7 @@ export default function ProcessingAdminDashboardPage() {
                                             </TableRow>
                                         ) : candidates.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} className="h-64 text-center">
+                                                <TableCell colSpan={9} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
                                                         <Filter className="h-10 w-10 opacity-20" />
                                                         <p className="text-lg font-bold">No candidates found</p>
@@ -393,10 +394,26 @@ export default function ProcessingAdminDashboardPage() {
                                                             <ImageViewer title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} src={procCandidate.candidate.profileImage || null} className="h-9 w-9 rounded-full" ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} enableHoverPreview={true} />
                                                             <div className="min-w-0">
                                                                 <button className="font-bold text-sm text-slate-900 truncate text-left hover:text-violet-600 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/processingCandidateDetails/${procCandidate.id}`); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/processingCandidateDetails/${procCandidate.id}`); } }}>{procCandidate.candidate.firstName} {procCandidate.candidate.lastName}</button>
-                                                                <div className="text-xs text-slate-500 truncate flex flex-col gap-0.5 mt-1">
-                                                                    <div className="flex items-center gap-2"><Mail className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.email || "—"}</span></div>
-                                                                    <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.mobileNumber || "—"}</span></div>
-                                                                </div>
+                                                                {procCandidate.candidate.candidateCode && (
+                                                                    <div className="mt-1">
+                                                                        <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                                                            {procCandidate.candidate.candidateCode}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    <TableCell className="py-4">
+                                                        <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                                                <span className="min-w-0 whitespace-normal break-all">{procCandidate.candidate.email || "—"}</span>
+                                                            </div>
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                                                <span className="min-w-0 whitespace-normal break-words">{procCandidate.candidate.mobileNumber || "—"}</span>
                                                             </div>
                                                         </div>
                                                     </TableCell>

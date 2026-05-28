@@ -1108,8 +1108,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {introductionVideo?.document?.createdAt
-                          ? new Date(introductionVideo.document.createdAt).toLocaleDateString(
+                        {introductionVideo?.createdAt
+                          ? new Date(introductionVideo.createdAt).toLocaleDateString(
                               "en-GB",
                               {
                                 day: "2-digit",
@@ -1671,6 +1671,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
                   <div>
                     <h3 className="font-bold text-lg leading-none">{candidate.firstName} {candidate.lastName}</h3>
+                    {candidate.candidateCode ? (
+                      <div className="text-xs text-muted-foreground font-mono mt-1">
+                        {candidate.candidateCode}
+                      </div>
+                    ) : null}
                     <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-100">
                       {candidate.currentStatus?.statusName || "N/A"}
                     </Badge>

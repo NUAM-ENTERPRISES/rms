@@ -368,12 +368,17 @@ export default function CandidateDetailPage() {
     <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
       {candidate.firstName} {candidate.lastName}
     </h1>
+    {candidate.candidateCode ? (
+      <div className="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-700 font-mono border border-red-200">
+        {candidate.candidateCode}
+      </div>
+    ) : null}
   </div>
 
   {/* Status (RIGHT - Clickable) */}
   <div
     onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer group ml-4"
+    className="cursor-pointer group ml-4 mb-6"
     title="Click to update status"
   >
     {isOnHold ? (
@@ -449,9 +454,9 @@ export default function CandidateDetailPage() {
 </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm text-slate-500">
+            {/* <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
-            </span>
+            </span> */}
             <span className="text-sm text-slate-400">
               Added {formatDate(candidate.createdAt)}
             </span>

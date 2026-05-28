@@ -376,6 +376,7 @@ model RoleNeeded {
 
 model Candidate {
   id                   String                         @id @default(cuid())
+  candidateCode        String?                        @unique @map("candidate_code")
   email                String?
   source               String                         @default("manual")
   agentId              String?
@@ -468,7 +469,15 @@ model Candidate {
   @@index([source])
   @@index([agentId])
   @@index([gender])
+  @@index([candidateCode])
   @@map("candidates")
+}
+
+model CandidateCodeSequence {
+  year       Int @id
+  lastNumber Int @default(0) @map("last_number")
+
+  @@map("candidate_code_sequences")
 }
 
 model Agent {

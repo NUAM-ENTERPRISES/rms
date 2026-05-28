@@ -112,7 +112,16 @@ export default function RecruiterCandidatesTable({
                         ariaLabel={`View full image for ${c.fullName}`}
                         enableHoverPreview={true}
                       />
-                      <span className="font-medium text-gray-900">{c.fullName}</span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900 truncate">
+                          {c.fullName}
+                        </div>
+                        {c.candidateCode ? (
+                          <div className="text-xs text-muted-foreground font-mono truncate">
+                            {c.candidateCode}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-3 text-gray-600 whitespace-nowrap">{c.phone}</td>

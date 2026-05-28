@@ -1559,6 +1559,7 @@ export class ProjectsService {
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
           { mobileNumber: { contains: search } },
+          { candidateCode: { contains: search, mode: 'insensitive' } },
           // Match candidate qualifications (qualification name / shortName / field / university)
           {
             qualifications: {
@@ -1839,6 +1840,7 @@ export class ProjectsService {
         // Candidate Fields (Same as Eligible)
         id: assignment.id,
         candidateId: c.id,
+        candidateCode: c.candidateCode,
         firstName: c.firstName,
         lastName: c.lastName,
         email: c.email,

@@ -1944,6 +1944,7 @@ export class DocumentsService {
       where.OR = [
         { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: search, mode: 'insensitive' } } },
         { project: { title: { contains: search, mode: 'insensitive' } } },
       ];
     }
@@ -1960,6 +1961,7 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               countryCode: true,
@@ -2947,6 +2949,7 @@ export class DocumentsService {
           OR: [
             { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
             { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+            { candidate: { candidateCode: { contains: search, mode: 'insensitive' } } },
             { project: { title: { contains: search, mode: 'insensitive' } } },
             { documentVerifications: { some: { document: { fileName: { contains: search, mode: 'insensitive' } } } } },
           ],
@@ -2960,7 +2963,7 @@ export class DocumentsService {
         where: cpWhere,
         include: {
           candidate: {
-            select: { id: true, firstName: true, lastName: true, email: true, mobileNumber: true, profileImage: true },
+            select: { id: true, firstName: true, lastName: true, candidateCode: true, email: true, mobileNumber: true, profileImage: true },
           },
           project: {
             select: {
@@ -3221,6 +3224,7 @@ export class DocumentsService {
           OR: [
             { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
             { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+            { candidate: { candidateCode: { contains: search, mode: 'insensitive' } } },
             { project: { title: { contains: search, mode: 'insensitive' } } },
           ],
         },
@@ -3237,6 +3241,7 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               countryCode: true,
@@ -3592,6 +3597,7 @@ export class DocumentsService {
       const searchOR = [
         { candidate: { firstName: { contains: search, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: search, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: search, mode: 'insensitive' } } },
         { project: { title: { contains: search, mode: 'insensitive' } } },
       ];
 
@@ -3622,6 +3628,7 @@ export class DocumentsService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               countryCode: true,

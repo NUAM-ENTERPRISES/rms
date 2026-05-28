@@ -131,6 +131,7 @@ export interface RecruiterDocumentItem {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email: string;
     mobileNumber: string;
     countryCode: string;

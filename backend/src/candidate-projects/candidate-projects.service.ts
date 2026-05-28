@@ -1277,6 +1277,7 @@ export class CandidateProjectsService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { mobileNumber: { contains: search, mode: 'insensitive' } },
+            { candidateCode: { contains: search, mode: 'insensitive' } },
           ],
         },
       };

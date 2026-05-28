@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   ChevronLeft,
@@ -133,9 +132,62 @@ export default function InterviewDetailPage() {
   }
 
   const selected = interview!;
-  const candidate = interview?.candidate || interview?.candidateProjectMap?.candidate;
-  const project = interview?.project || interview?.candidateProjectMap?.project;
-  const role = interview?.roleNeeded || interview?.candidateProjectMap?.roleNeeded;
+  // Prefer candidate/project/role from candidateProjectMap because it has the richest shape
+  // (e.g. workExperiences) and is the most consistent across endpoints.
+  const candidate = interview?.candidateProjectMap?.candidate || interview?.candidate;
+  const project = interview?.candidateProjectMap?.project || interview?.project;
+  const role = interview?.candidateProjectMap?.roleNeeded || interview?.roleNeeded;
+
+  const computeExperienceMonthsFromWorkHistory = (workExperiences: any[] | undefined) => {
+    if (!Array.isArray(workExperiences) || workExperiences.length === 0) return undefined;
+    let totalMonths = 0;
+    for (const exp of workExperiences) {
+      const start = exp?.startDate ? new Date(exp.startDate) : null;
+      const end = exp?.endDate ? new Date(exp.endDate) : exp?.isCurrent ? new Date() : null;
+      if (!start || Number.isNaN(start.getTime()) || !end || Number.isNaN(end.getTime())) continue;
+      const diffMs = Math.max(0, end.getTime() - start.getTime());
+      const months = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44));
+      totalMonths += months;
+    }
+    return totalMonths;
+  };
+
+  const formatExperienceLabel = (months: number) => {
+    const clamped = Math.max(0, Math.floor(months));
+    const years = Math.floor(clamped / 12);
+    const remMonths = clamped % 12;
+    if (remMonths === 0) return `${years} yrs`;
+    return `${years} yrs ${remMonths}`;
+  };
+
+  const resolvedExperienceYears = (() => {
+    const te = (candidate as any)?.totalExperience;
+    const exp = (candidate as any)?.experience;
+    const computedMonths = computeExperienceMonthsFromWorkHistory((candidate as any)?.workExperiences);
+    // Prefer totalExperience when it is a meaningful value. If it's 0 but `experience` is > 0,
+    // show `experience` to avoid displaying incorrect 0y.
+    if (typeof te === "number") {
+      if (te === 0 && typeof exp === "number" && exp > 0) return exp;
+      if (te === 0 && (exp === undefined || exp === null || exp === 0) && typeof computedMonths === "number" && computedMonths > 0) {
+        return Math.floor(computedMonths / 12);
+      }
+      return te;
+    }
+    if (typeof exp === "number") return exp;
+    if (typeof computedMonths === "number") return Math.floor(computedMonths / 12);
+    return undefined;
+  })();
+
+  const resolvedExperienceLabel = (() => {
+    const computedMonths = computeExperienceMonthsFromWorkHistory((candidate as any)?.workExperiences);
+    if (typeof computedMonths === "number" && computedMonths > 0) {
+      return formatExperienceLabel(computedMonths);
+    }
+    if (resolvedExperienceYears !== undefined) {
+      return `${resolvedExperienceYears} yrs`;
+    }
+    return undefined;
+  })();
 
   const outcomeConfig = getOutcomeConfig(selected.outcome);
   const OutcomeIcon = outcomeConfig.icon;
@@ -198,6 +250,11 @@ export default function InterviewDetailPage() {
                   <h1 className="text-xl font-bold tracking-tight text-slate-900 truncate">
                     {candidate ? `${candidate.firstName} ${candidate.lastName}` : "Unknown Candidate"}
                   </h1>
+                  {candidate?.candidateCode ? (
+                    <span className="inline-flex rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700 border border-red-200">
+                      {candidate.candidateCode}
+                    </span>
+                  ) : null}
                   <Badge
                     className={cn("rounded-full px-2 py-0 h-5 text-[9px] uppercase font-bold tracking-wider", outcomeConfig.bgClass)}
                   >
@@ -207,27 +264,10 @@ export default function InterviewDetailPage() {
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                   <div className="flex items-center gap-3">
-                    {candidate?.email && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
-                        <Mail className="h-3 w-3 text-indigo-400" />
-                        {candidate.email}
-                      </div>
-                    )}
-                    {candidate?.mobileNumber && (
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
-                        <Phone className="h-3 w-3 text-indigo-400" />
-                        {candidate.mobileNumber}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="hidden sm:block h-3 w-px bg-slate-200" />
-
-                  <div className="flex items-center gap-3">
-                    {(candidate as any)?.totalExperience !== undefined && (
+                    {resolvedExperienceLabel !== undefined && (
                       <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium">
                         <Briefcase className="h-3 w-3 text-amber-400" />
-                        {(candidate as any).totalExperience}y Exp
+                        {resolvedExperienceLabel}
                       </div>
                     )}
                     {(candidate as any)?.gender && (
@@ -327,6 +367,16 @@ export default function InterviewDetailPage() {
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Candidate Info</h4>
                   </div>
                   <div className="space-y-3">
+                    {candidate?.candidateCode ? (
+                      <div className="flex items-center gap-2.5 text-sm text-slate-700">
+                        <div className="h-7 w-7 rounded-lg bg-red-50 flex items-center justify-center shrink-0 border border-red-100">
+                          <User className="h-3.5 w-3.5 text-red-600" />
+                        </div>
+                        <span className="text-[12px] font-mono font-bold text-red-700">
+                          {candidate.candidateCode}
+                        </span>
+                      </div>
+                    ) : null}
                     {candidate?.email && (
                       <div className="flex items-center gap-2.5 text-sm text-slate-700">
                         <div className="h-7 w-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
@@ -357,12 +407,12 @@ export default function InterviewDetailPage() {
                         </button>
                       </div>
                     )}
-                    {(candidate as any)?.totalExperience !== undefined && (
+                    {resolvedExperienceLabel !== undefined && (
                       <div className="flex items-center gap-2.5 text-sm text-slate-700">
                         <div className="h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
                           <Briefcase className="h-3.5 w-3.5 text-amber-500" />
                         </div>
-                        <span className="text-[12px]">{(candidate as any).totalExperience} yrs experience</span>
+                        <span className="text-[12px]">{resolvedExperienceLabel} experience</span>
                       </div>
                     )}
                     {(candidate as any)?.highestEducation && (

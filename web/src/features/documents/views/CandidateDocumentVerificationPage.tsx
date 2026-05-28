@@ -28,12 +28,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   FileText,
   CheckCircle,
   XCircle,
@@ -837,9 +831,15 @@ export default function CandidateDocumentVerificationPage() {
                   <h2 className="text-lg font-bold text-slate-900">
                     {candidate.firstName} {candidate.lastName}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Candidate ID: {candidate.id}
-                  </p>
+                  {candidate.candidateCode ? (
+                    <div className="mt-1 inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                      {candidate.candidateCode}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      Candidate ID: {candidate.id}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -29,6 +29,7 @@ import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { CandidateCodeService } from './services/candidate-code.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
@@ -91,6 +92,7 @@ export class CandidatesService {
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly candidateCodeService: CandidateCodeService,
     private readonly rnrRemindersService: RnrRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
@@ -384,8 +386,11 @@ export class CandidatesService {
     } as const;
 
     const candidate = await this.prisma.$transaction(async (tx) => {
+      const candidateCode = await this.candidateCodeService.reserveNextCode(tx);
+
       const created = await tx.candidate.create({
         data: {
+          candidateCode,
           firstName: createCandidateDto.firstName,
           lastName: createCandidateDto.lastName,
           countryCode: createCandidateDto.countryCode,
@@ -636,6 +641,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: s, mode: 'insensitive' } },
         { lastName: { contains: s, mode: 'insensitive' } },
+        { candidateCode: { contains: s, mode: 'insensitive' } },
         { mobileNumber: { contains: s, mode: 'insensitive' } },
         { email: { contains: s, mode: 'insensitive' } },
         // Match candidate qualifications (qualification name / shortName / field / university)
@@ -1275,6 +1281,7 @@ export class CandidatesService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { candidateCode: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -1776,6 +1783,7 @@ export class CandidatesService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { candidateCode: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -1836,6 +1844,7 @@ export class CandidatesService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { mobileNumber: { contains: search, mode: 'insensitive' } },
+            { candidateCode: { contains: search, mode: 'insensitive' } },
           ],
         },
       ];
@@ -4023,6 +4032,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },
         { lastName: { contains: query.search, mode: 'insensitive' } },
+        { candidateCode: { contains: query.search, mode: 'insensitive' } },
         { mobileNumber: { contains: query.search, mode: 'insensitive' } },
         { email: { contains: query.search, mode: 'insensitive' } },
       ];

@@ -396,6 +396,7 @@ export class CandidatesController {
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
+                  candidateCode: { type: 'string', nullable: true, example: 'AFFCD012026' },
                   name: { type: 'string' },
                   contact: { type: 'string' },
                   email: { type: 'string' },

@@ -615,6 +615,7 @@ export default function CandidateOverviewPage() {
                       </TableHead>
                     )}
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -624,7 +625,6 @@ export default function CandidateOverviewPage() {
                       Profile
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -708,25 +708,65 @@ export default function CandidateOverviewPage() {
                                 >
                                   {candidate.firstName} {candidate.lastName}
                                 </button>
+                                {candidate.candidateCode ? (
+                                  <div className="text-[11px] text-muted-foreground font-mono truncate">
+                                    {candidate.candidateCode}
+                                  </div>
+                                ) : null}
                                 <div className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
                                   {candidate.currentRole || ""}
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-1.5 space-y-0.5">
-                                  {candidate.email && (
-                                    <div className="flex items-center gap-1.5">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="text-gray-700 truncate">{candidate.email}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1.5">
-                                    <Phone className="h-3 w-3 text-gray-400" />
-                                    <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
-                                  </div>
                                 </div>
                               </div>
                             </div>
                           </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            <div className="flex flex-col items-stretch gap-2">
+                              <div className="flex items-center justify-center gap-1.5 w-full">
+                              {(() => {
+                                const phoneDigits = formatPhoneForLink(candidate);
+                                return (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
+                                      onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
+                                      disabled={!phoneDigits}
+                                      title="WhatsApp"
+                                    >
+                                      <FaWhatsapp className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
+                                      onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
+                                      disabled={!phoneDigits}
+                                      title="Call"
+                                    >
+                                      <Phone className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                );
+                              })()}
+                            </div>
 
+                            <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                              {candidate.email ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Mail className="h-3 w-3 text-gray-400" />
+                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                    {candidate.email}
+                                  </span>
+                                </div>
+                              ) : null}
+                              <div className="flex items-center justify-center gap-1.5">
+                                <Phone className="h-3 w-3 text-gray-400" />
+                                <span className="text-gray-700 truncate max-w-[220px]">
+                                  {candidate.countryCode} {candidate.mobileNumber}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          </TableCell>
                           {/* Recruiter */}
                           <TableCell className="px-4 py-3">
                             <div className="text-xs">
@@ -820,35 +860,7 @@ export default function CandidateOverviewPage() {
                           </TableCell>
 
                           {/* Contact */}
-                          <TableCell className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {(() => {
-                                const phoneDigits = formatPhoneForLink(candidate);
-                                return (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
-                                      disabled={!phoneDigits}
-                                      title="WhatsApp"
-                                    >
-                                      <FaWhatsapp className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
-                                      disabled={!phoneDigits}
-                                      title="Call"
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </TableCell>
+                       
 
                           {/* Actions */}
                           <TableCell className="px-4 py-3 text-right">

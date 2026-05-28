@@ -32,6 +32,7 @@ import {
   User,
   Building2,
   FileText,
+  Mail,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -658,6 +659,9 @@ export default function DocumentVerificationPage() {
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Candidate
           </TableHead>
+          <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+            Contact
+          </TableHead>
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Project
           </TableHead>
@@ -755,7 +759,7 @@ export default function DocumentVerificationPage() {
                       {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
                     </div>
                   )}
-                  <div>
+                  <div className="min-w-0">
                     <button
                       onClick={() =>
                         navigate(
@@ -766,8 +770,27 @@ export default function DocumentVerificationPage() {
                     >
                       {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
                     </button>
-                    <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
+                    {candidateProject.candidate.candidateCode ? (
+                      <p className="text-xs text-muted-foreground font-mono truncate">
+                        {candidateProject.candidate.candidateCode}
+                      </p>
+                    ) : null}
                   </div>
+                </div>
+              </TableCell>
+
+              <TableCell className="px-6 py-5 text-center">
+                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                  {candidateProject.candidate.email ? (
+                    <div className="flex items-center justify-center gap-1.5">
+                      <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                      <span className="text-gray-700 break-all">
+                        {candidateProject.candidate.email}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
                 </div>
               </TableCell>
 
