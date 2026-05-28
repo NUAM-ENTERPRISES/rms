@@ -268,6 +268,7 @@ export const processingApi = baseApi.injectEndpoints({
           id: string;
           firstName: string;
           lastName: string;
+          candidateCode?: string | null;
           email?: string;
           mobileNumber?: string;
           countryCode?: string;

@@ -35,10 +35,59 @@ export class InterviewsService {
     return candidate;
   }
 
+  private computeExperienceYearsFromWorkHistory(
+    workExperiences: Array<{ startDate?: string | Date | null; endDate?: string | Date | null; isCurrent?: boolean | null }> | undefined,
+  ): number | null {
+    if (!Array.isArray(workExperiences) || workExperiences.length === 0) return null;
+
+    let totalMonths = 0;
+    for (const exp of workExperiences) {
+      const start = exp?.startDate ? new Date(exp.startDate as any) : null;
+      const end = exp?.endDate
+        ? new Date(exp.endDate as any)
+        : exp?.isCurrent
+          ? new Date()
+          : null;
+      if (!start || Number.isNaN(start.getTime()) || !end || Number.isNaN(end.getTime())) continue;
+      const diffMs = Math.max(0, end.getTime() - start.getTime());
+      // Average month length = 30.44 days (aligned with other services)
+      const months = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44));
+      totalMonths += months;
+    }
+
+    return Math.floor(totalMonths / 12);
+  }
+
+  private normalizeCandidateExperience(candidate: any) {
+    if (!candidate) return candidate;
+    const te = candidate.totalExperience;
+    const exp = candidate.experience;
+
+    // If either field already has a meaningful value, prefer it.
+    const hasMeaningfulTotal = typeof te === 'number' && te > 0;
+    const hasMeaningfulExp = typeof exp === 'number' && exp > 0;
+    if (hasMeaningfulTotal || hasMeaningfulExp) {
+      candidate.totalExperience = hasMeaningfulTotal ? te : exp;
+      return candidate;
+    }
+
+    const computed = this.computeExperienceYearsFromWorkHistory(candidate.workExperiences);
+    if (typeof computed === 'number' && computed > 0) {
+      candidate.totalExperience = computed;
+    }
+    return candidate;
+  }
+
   private formatInterviewCandidateDob(interview: any) {
     if (!interview) return interview;
     if (interview.candidateProjectMap?.candidate) {
       this.formatCandidateDob(interview.candidateProjectMap.candidate);
+      this.normalizeCandidateExperience(interview.candidateProjectMap.candidate);
+    }
+    // Some list endpoints may include a top-level candidate as well.
+    if (interview.candidate) {
+      this.formatCandidateDob(interview.candidate);
+      this.normalizeCandidateExperience(interview.candidate);
     }
     return interview;
   }
@@ -165,6 +214,7 @@ export class InterviewsService {
                   mobileNumber: true,
                   profileImage: true,
                   totalExperience: true,
+                  experience: true,
                   dateOfBirth: true,
                   highestEducation: true,
                   gender: true,
@@ -189,7 +239,7 @@ export class InterviewsService {
           include: { 
             mainStatus: true, 
             subStatus: true,
-            candidate: { select: { firstName: true, lastName: true } },
+            candidate: { select: { firstName: true, lastName: true, candidateCode: true } },
             project: { select: { title: true } },
           },
         });
@@ -393,6 +443,16 @@ export class InterviewsService {
         {
           candidateProjectMap: {
             candidate: {
+              candidateCode: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+        {
+          candidateProjectMap: {
+            candidate: {
               email: {
                 contains: search,
                 mode: 'insensitive',
@@ -426,10 +486,13 @@ export class InterviewsService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  candidateCode: true,
                   email: true,
                   mobileNumber: true,
+                  countryCode: true,
                   profileImage: true,
                   totalExperience: true,
+                  experience: true,
                 },
               },
               project: {
@@ -558,7 +621,7 @@ export class InterviewsService {
     const items = await this.prisma.candidateProjects.findMany({
       where,
       include: {
-        candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+        candidate: { select: { id: true, firstName: true, lastName: true, candidateCode: true, email: true, mobileNumber: true, countryCode: true, profileImage: true } },
         project: { select: { id: true, title: true } },
         roleNeeded: {
           include: {
@@ -613,6 +676,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -627,8 +691,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -788,6 +854,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -802,8 +869,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -958,6 +1027,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -972,8 +1042,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -1334,6 +1406,7 @@ export class InterviewsService {
         { candidateProjectMap: { is: { candidate: { firstName: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { candidate: { lastName: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { candidate: { email: { contains: s, mode: 'insensitive' } } } } },
+        { candidateProjectMap: { is: { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { project: { title: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { roleNeeded: { designation: { contains: s, mode: 'insensitive' } } } } },
       ];
@@ -1351,10 +1424,12 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
@@ -1850,13 +1925,23 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
+                workExperiences: {
+                  select: {
+                    id: true,
+                    startDate: true,
+                    endDate: true,
+                    isCurrent: true,
+                  },
+                },
               },
             },
             project: {
@@ -1971,13 +2056,23 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
+                workExperiences: {
+                  select: {
+                    id: true,
+                    startDate: true,
+                    endDate: true,
+                    isCurrent: true,
+                  },
+                },
               },
             },
             project: {

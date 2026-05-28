@@ -1,5 +1,6 @@
 export interface UserWithRoles {
   id: string;
+  employeeCode?: string | null;
   email: string;
   name: string;
   phone?: string;

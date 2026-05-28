@@ -27,7 +27,7 @@ import {
   FileText,
 } from "lucide-react";
 import { toast } from "sonner";
-import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
+import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 
 export type PendingCertBatch = {
   id: string;
@@ -47,6 +47,7 @@ type WorkExperience = {
   description: string;
   salary?: number;
   location: string;
+  countryCode?: string;
   skills: string[];
   achievements: string;
   pendingCertBatches?: PendingCertBatch[];
@@ -185,6 +186,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     description: "",
     salary: undefined,
     location: "",
+    countryCode: "",
     skills: [],
     achievements: "",
     pendingCertBatches: [],
@@ -305,6 +307,11 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                       {experience.location && (
                         <p className="text-sm text-slate-500">
                           {experience.location}
+                        </p>
+                      )}
+                      {experience.countryCode && (
+                        <p className="text-sm text-slate-500">
+                          Country: {experience.countryCode}
                         </p>
                       )}
                       {experience.skills && experience.skills.length > 0 && (
@@ -591,6 +598,20 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   }
                   placeholder="New York, NY"
                   className="h-11 bg-white border-slate-200"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <CountrySelect
+                  label="Country (optional)"
+                  value={newWorkExperience.countryCode || ""}
+                  onValueChange={(code) =>
+                    setNewWorkExperience({
+                      ...newWorkExperience,
+                      countryCode: code,
+                    })
+                  }
+                  allowEmpty
                 />
               </div>
             </div>

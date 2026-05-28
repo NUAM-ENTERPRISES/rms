@@ -24,6 +24,7 @@ import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/Recru
 import {
   useCreateUserMutation,
   useListUserLanguagesQuery,
+  useSuggestEmployeeCodeMutation,
   useUpdateRecruiterCapabilitiesMutation,
 } from "@/features/admin/api";
 import { useUploadUserProfileImageMutation } from "@/services/uploadApi";
@@ -38,6 +39,8 @@ export default function CreateUserPage() {
   const { data: systemConfig } = useSystemConfig();
 
   const [createUser, { isLoading }] = useCreateUserMutation();
+  const [suggestEmployeeCode, { isLoading: suggestingEmployeeCode }] =
+    useSuggestEmployeeCodeMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
     useUpdateRecruiterCapabilitiesMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
@@ -52,6 +55,7 @@ export default function CreateUserPage() {
     reValidateMode: "onChange",
     defaultValues: {
       name: "",
+      employeeCode: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -93,6 +97,7 @@ export default function CreateUserPage() {
       // Prepare form data - convert empty strings to undefined
       const formData = {
         name: data.name,
+        employeeCode: data.employeeCode,
         email: data.email,
         password: data.password,
         countryCode: data.countryCode,
@@ -162,6 +167,19 @@ export default function CreateUserPage() {
       }
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to create user");
+    }
+  };
+
+  const handleSuggestEmployeeCode = async () => {
+    try {
+      const res = await suggestEmployeeCode().unwrap();
+      form.setValue("employeeCode", res.data.employeeCode, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+      toast.success("Employee code suggested");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to suggest employee code");
     }
   };
 
@@ -258,6 +276,54 @@ export default function CreateUserPage() {
                         {form.formState.errors.name.message}
                       </p>
                     )}
+                  </div>
+
+                  {/* Employee Code */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="employeeCode"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      Employee Code *
+                    </Label>
+                    <div className="flex gap-2">
+                      <div className="flex-1 min-w-0">
+                        <Controller
+                          name="employeeCode"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="employeeCode"
+                              placeholder="e.g., AFFEMP012026"
+                              className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                            />
+                          )}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11"
+                        onClick={handleSuggestEmployeeCode}
+                        disabled={
+                          isLoading ||
+                          suggestingEmployeeCode ||
+                          uploadingImage ||
+                          savingRecruiterCaps
+                        }
+                      >
+                        {suggestingEmployeeCode ? "Suggesting..." : "Suggest"}
+                      </Button>
+                    </div>
+                    {form.formState.errors.employeeCode && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.employeeCode.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026)
+                    </p>
                   </div>
 
                   {/* Email */}

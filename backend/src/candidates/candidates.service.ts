@@ -30,6 +30,7 @@ import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { CandidateCodeService } from './services/candidate-code.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
@@ -62,6 +63,25 @@ import {
   computeCandidateProfileCompletion,
   withProfileCompletion,
 } from './utils/profile-completion.util';
+import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+
+const candidateWorkExperiencesInclude = {
+  include: {
+    roleCatalog: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
+
+const candidateQualificationsInclude = {
+  include: {
+    qualification: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
 
 @Injectable()
 export class CandidatesService {
@@ -73,62 +93,11 @@ export class CandidatesService {
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly candidateCodeService: CandidateCodeService,
     private readonly rnrRemindersService: RnrRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
-
-  /**
-   * Calculate total experience in years from work experiences
-   * Considers overlapping periods and current jobs
-   */
-  private calculateTotalExperience(workExperiences?: any[]): number {
-    if (!workExperiences || workExperiences.length === 0) {
-      return 0;
-    }
-
-    // Create date ranges for each experience
-    const dateRanges = workExperiences.map((exp) => {
-      const startDate = new Date(exp.startDate);
-      const endDate = exp.endDate ? new Date(exp.endDate) : new Date();
-      return { startDate, endDate };
-    });
-
-    // Sort by start date
-    dateRanges.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-
-    // Merge overlapping date ranges
-    const mergedRanges: Array<{ startDate: Date; endDate: Date }> = [];
-    let currentRange = dateRanges[0];
-
-    for (let i = 1; i < dateRanges.length; i++) {
-      const nextRange = dateRanges[i];
-
-      // Check if ranges overlap or are adjacent
-      if (nextRange.startDate <= currentRange.endDate) {
-        // Merge: extend current range to max end date
-        currentRange.endDate = new Date(
-          Math.max(currentRange.endDate.getTime(), nextRange.endDate.getTime())
-        );
-      } else {
-        // No overlap: save current range and start new one
-        mergedRanges.push(currentRange);
-        currentRange = nextRange;
-      }
-    }
-    mergedRanges.push(currentRange);
-
-    // Calculate total years from merged ranges
-    const totalMonths = mergedRanges.reduce((total, range) => {
-      const months =
-        (range.endDate.getFullYear() - range.startDate.getFullYear()) * 12 +
-        (range.endDate.getMonth() - range.startDate.getMonth());
-      return total + months;
-    }, 0);
-
-    // Convert to years (rounded to 1 decimal place)
-    return Math.round((totalMonths / 12) * 10) / 10;
-  }
 
   /**
    * Shared nomination logic for nominate API (and similar flows).
@@ -299,9 +268,21 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.qualifications?.length) {
+      for (const qual of createCandidateDto.qualifications) {
+        await assertOptionalCountryCode(this.prisma, qual.countryCode);
+      }
+    }
+
+    if (createCandidateDto.workExperiences?.length) {
+      for (const exp of createCandidateDto.workExperiences) {
+        await assertOptionalCountryCode(this.prisma, exp.countryCode);
+      }
+    }
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
-      ? this.calculateTotalExperience(createCandidateDto.workExperiences)
+      ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
       : 0;
 
     // Use provided totalExperience or calculated value
@@ -376,16 +357,8 @@ export class CandidatesService {
 
     const candidateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -414,8 +387,11 @@ export class CandidatesService {
     } as const;
 
     const candidate = await this.prisma.$transaction(async (tx) => {
+      const candidateCode = await this.candidateCodeService.reserveNextCode(tx);
+
       const created = await tx.candidate.create({
         data: {
+          candidateCode,
           firstName: createCandidateDto.firstName,
           lastName: createCandidateDto.lastName,
           countryCode: createCandidateDto.countryCode,
@@ -491,6 +467,8 @@ export class CandidatesService {
                   gpa: qual.gpa,
                   isCompleted: qual.isCompleted ?? true,
                   notes: qual.notes,
+                  countryCode:
+                    normalizeOptionalCountryCode(qual.countryCode) ?? null,
                 })),
               }
             : undefined,
@@ -522,6 +500,8 @@ export class CandidatesService {
                     description: exp.description,
                     salary: exp.salary,
                     location: exp.location,
+                    countryCode:
+                      normalizeOptionalCountryCode(exp.countryCode) ?? null,
                     skills: parsedSkills,
                     achievements: exp.achievements,
                   };
@@ -662,6 +642,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: s, mode: 'insensitive' } },
         { lastName: { contains: s, mode: 'insensitive' } },
+        { candidateCode: { contains: s, mode: 'insensitive' } },
         { mobileNumber: { contains: s, mode: 'insensitive' } },
         { email: { contains: s, mode: 'insensitive' } },
         // Match candidate qualifications (qualification name / shortName / field / university)
@@ -1151,16 +1132,8 @@ export class CandidatesService {
               name: true,
             },
           },
-          qualifications: {
-            include: {
-              qualification: true,
-            },
-          },
-          workExperiences: {
-            include: {
-              roleCatalog: true,
-            },
-          },
+          qualifications: candidateQualificationsInclude,
+          workExperiences: candidateWorkExperiencesInclude,
           projects: {
             where: {
               projectId: projectId,
@@ -1309,6 +1282,7 @@ export class CandidatesService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { candidateCode: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -1396,16 +1370,8 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         recruiterAssignments: {
           where: { isActive: true },
           orderBy: { assignedAt: 'desc' },
@@ -1946,7 +1912,41 @@ export class CandidatesService {
     const { page = 1, limit = 10, search } = query;
     const skip = (page - 1) * limit;
 
-    const where = this.buildCreReassignedCandidatesWhere(recruiterId, search);
+    const where: any = {
+      OR: [
+        {
+          recruiterAssignments: {
+            some: {
+              recruiterId: recruiterId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+        {
+          recruiterAssignments: {
+            some: {
+              assignedBy: recruiterId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+      ],
+      currentStatus: {
+        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
+      },
+    };
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { candidateCode: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const total = await this.prisma.candidate.count({ where });
 
@@ -2020,6 +2020,7 @@ export class CandidatesService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { mobileNumber: { contains: search, mode: 'insensitive' } },
+            { candidateCode: { contains: search, mode: 'insensitive' } },
           ],
         },
       ];
@@ -2066,16 +2067,8 @@ export class CandidatesService {
           },
         },
         team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         preferredCountries: {
           include: {
             country: true,
@@ -2181,6 +2174,10 @@ export class CandidatesService {
       creStatusNote: isCREReassigned
         ? creReassignedAssignment?.creStatusNote ?? null
         : null,
+      careerGapAnalysis: calculateCareerGaps(
+        candidate.workExperiences ?? [],
+        candidate.qualifications ?? [],
+      ),
     } as any;
   }
 
@@ -2413,16 +2410,8 @@ export class CandidatesService {
 
     const candidateUpdateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -2651,12 +2640,8 @@ export class CandidatesService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        workExperiences: true,
+        qualifications: candidateQualificationsInclude,
+        workExperiences: candidateWorkExperiencesInclude,
       },
     });
 
@@ -4255,6 +4240,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },
         { lastName: { contains: query.search, mode: 'insensitive' } },
+        { candidateCode: { contains: query.search, mode: 'insensitive' } },
         { mobileNumber: { contains: query.search, mode: 'insensitive' } },
         { email: { contains: query.search, mode: 'insensitive' } },
       ];

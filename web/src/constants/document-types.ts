@@ -736,3 +736,63 @@ export function getAllowedFormatsString(docType: DocumentType): string {
   if (!config) return "";
   return config.allowedFormats.map((f) => f.toUpperCase()).join(", ");
 }
+
+/** Doc types that represent a passport copy or original (excludes passport_photo). */
+export const PASSPORT_DOCUMENT_TYPES = [
+  DOCUMENT_TYPE.PASSPORT,
+  "passport_original",
+  "passport_cover_bio",
+  "passport",
+] as const;
+
+export function isPassportDocumentType(docType: string): boolean {
+  return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
+}
+
+/** Formats supported when building a unified client PDF (pdf-lib). */
+const PDF_MERGE_ALLOWED_FORMATS = new Set(["pdf", "jpg", "jpeg", "png"]);
+
+/** Doc types that must never appear in unified PDF merge flows. */
+export const PDF_MERGE_EXCLUDED_DOC_TYPES = [
+  DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+] as const;
+
+/**
+ * Whether a document can be included in unified PDF merge (excludes videos and non-image/pdf files).
+ */
+export function isPdfMergeableDocument(doc: {
+  docType?: string | null;
+  fileName?: string | null;
+}): boolean {
+  const docType = doc.docType?.trim();
+  if (!docType) return false;
+
+  if ((PDF_MERGE_EXCLUDED_DOC_TYPES as readonly string[]).includes(docType)) {
+    return false;
+  }
+
+  const config = DOCUMENT_TYPE_CONFIG[docType as DocumentType];
+  if (config?.allowedFormats?.length) {
+    return config.allowedFormats.some((format) => PDF_MERGE_ALLOWED_FORMATS.has(format));
+  }
+
+  const fileName = (doc.fileName || "").toLowerCase();
+  return (
+    fileName.endsWith(".pdf") ||
+    fileName.endsWith(".jpg") ||
+    fileName.endsWith(".jpeg") ||
+    fileName.endsWith(".png")
+  );
+}
+
+/**
+ * Whether a verified document may be attached individually when sending to client.
+ * Excludes introduction video and other client-send excluded types.
+ */
+export function isClientSendableDocument(doc: {
+  docType?: string | null;
+}): boolean {
+  const docType = doc.docType?.trim();
+  if (!docType) return false;
+  return !(PDF_MERGE_EXCLUDED_DOC_TYPES as readonly string[]).includes(docType);
+}

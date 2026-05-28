@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, RefreshCw, ArrowUpRight, PlusCircle } from "lucide-react";
+import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
@@ -351,6 +351,7 @@ export default function CREDashboardPage() {
                   <TableHeader>
                     <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 w-64">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 w-56">Contact</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                       {statusFilter === 'reassigned' && (
                         <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned By</TableHead>
@@ -426,10 +427,32 @@ export default function CREDashboardPage() {
                                 >
                                   {candidate.firstName || ''} {candidate.lastName || ''}
                                 </button>
-                                <div className="text-xs text-slate-400 mt-0.5 truncate">
-                                  {candidate.countryCode || ''} {candidate.mobileNumber || ''}
-                                </div>
+                                {candidate.candidateCode && (
+                                  <div className="mt-1">
+                                    <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                      {candidate.candidateCode}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
+                            </div>
+                          </TableCell>
+
+                          {/* Contact */}
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                <span className="min-w-0 whitespace-normal break-words">
+                                  {(candidate.countryCode || '')} {(candidate.mobileNumber || '')}
+                                </span>
+                              </div>
+                              {candidate.email && (
+                                <div className="flex items-start gap-2 min-w-0">
+                                  <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                  <span className="min-w-0 whitespace-normal break-all">{candidate.email}</span>
+                                </div>
+                              )}
                             </div>
                           </TableCell>
 

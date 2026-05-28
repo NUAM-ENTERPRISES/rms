@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
-import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -35,17 +34,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
-  Filter,
   Eye,
   FileText,
-  CheckCircle,
   Clock,
   MoreHorizontal,
   BarChart3,
   Phone,
   Mail,
   AlertCircle,
-  Calendar,
   User,
 } from "lucide-react";
 import { useGetDocumentVerificationCandidatesQuery } from "@/features/projects";
@@ -165,15 +161,21 @@ export default function DocumentVerificationDashboard() {
     error,
   } = useGetDocumentVerificationCandidatesQuery("all"); // This would need to be implemented to get all projects
 
-  const candidates = candidatesData?.data?.candidateProjects || [];
+  const candidates =
+    (Array.isArray((candidatesData as any)?.data)
+      ? (candidatesData as any).data
+      : (candidatesData as any)?.data?.candidateProjects) || [];
 
   // Filter candidates
-  const filteredCandidates = candidates.filter((candidate) => {
+  const filteredCandidates = candidates.filter((candidate: any) => {
     const matchesSearch =
       candidate.candidate?.firstName
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       candidate.candidate?.lastName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      candidate.candidate?.candidateCode
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       candidate.candidate?.email
@@ -321,6 +323,7 @@ export default function DocumentVerificationDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Candidate</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Experience</TableHead>
                     <TableHead>Match Score</TableHead>
@@ -331,7 +334,7 @@ export default function DocumentVerificationDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCandidates.map((candidate) => (
+                  {filteredCandidates.map((candidate: any) => (
                     <TableRow key={candidate.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -340,24 +343,35 @@ export default function DocumentVerificationDashboard() {
                               ?.charAt(0)
                               .toUpperCase() || "?"}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="font-medium text-gray-900">
                               {candidate.candidate.firstName}{" "}
                               {candidate.candidate.lastName}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-2">
-                              {candidate.candidate.email && (
-                                <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {candidate.candidate.email}
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {candidate.candidate.countryCode}{" "}
-                                {candidate.candidate.mobileNumber}
+                            {candidate.candidate.candidateCode ? (
+                              <div className="text-xs text-muted-foreground font-mono truncate">
+                                {candidate.candidate.candidateCode}
                               </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-500 space-y-1 min-w-0">
+                          {candidate.candidate.email ? (
+                            <div className="flex items-center gap-1 min-w-0">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {candidate.candidate.email}
+                              </span>
                             </div>
+                          ) : null}
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span>
+                              {candidate.candidate.countryCode}{" "}
+                              {candidate.candidate.mobileNumber}
+                            </span>
                           </div>
                         </div>
                       </TableCell>

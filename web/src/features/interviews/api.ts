@@ -22,9 +22,11 @@ export interface Interview {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string;
     profileImage?: string;
     mobileNumber?: string;
+    countryCode?: string;
     qualifications?: Array<{
       id: string;
       university?: string | null;
@@ -52,9 +54,11 @@ export interface Interview {
       id: string;
       firstName: string;
       lastName: string;
+      candidateCode?: string | null;
       email?: string;
       profileImage?: string;
       mobileNumber?: string;
+      countryCode?: string;
       qualifications?: Array<{
         id: string;
         university?: string | null;
@@ -164,7 +168,7 @@ export interface QueryShortlistPendingRequest {
 
 export interface AssignedInterviewItem {
   id: string;
-  candidate?: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
+  candidate?: { id: string; firstName?: string; lastName?: string; candidateCode?: string | null; email?: string; profileImage?: string; mobileNumber?: string; countryCode?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
   project?: { id: string; title?: string };
   roleNeeded?: { id?: string; designation?: string };
   recruiter?: { id?: string; name?: string; email?: string };
@@ -176,7 +180,7 @@ export interface AssignedInterviewItem {
   // Optionally include the expanded candidateProjectMap for consistency with Interview
   candidateProjectMap?: {
     id: string;
-    candidate: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
+    candidate: { id: string; firstName?: string; lastName?: string; candidateCode?: string | null; email?: string; profileImage?: string; mobileNumber?: string; countryCode?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
     project: { id: string; title?: string };
     roleNeeded?: { id?: string; designation?: string };
     recruiter?: { id?: string; name?: string; email?: string };

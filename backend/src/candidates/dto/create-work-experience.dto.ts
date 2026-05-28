@@ -6,6 +6,7 @@ import {
   IsDateString,
   Min,
   Max,
+  MaxLength,
   IsJSON,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -92,6 +93,16 @@ export class CreateWorkExperienceDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the role was held (`countries.code`). Distinct from phone dial `countryCode`.',
+    example: 'IN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string;
 
   @ApiPropertyOptional({
     description: 'Skills gained/used in this role as JSON array',

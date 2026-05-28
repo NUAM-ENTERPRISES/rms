@@ -40,6 +40,7 @@ export interface UploadDocumentRequest {
 // Types
 export interface Candidate {
   id: string;
+  candidateCode?: string | null;
   firstName: string;
   lastName: string;
   contact: string;
@@ -164,6 +165,9 @@ export interface Candidate {
     };
   })[];
 
+  /** Computed on GET /candidates/:id from work experience + qualifications. */
+  careerGapAnalysis?: CareerGapAnalysis;
+
   // On hold tracking fields
   onHoldDuration?: number | null;
   onHoldUntil?: string | null;
@@ -240,6 +244,8 @@ export interface CandidateQualification {
   gpa?: number;
   isCompleted: boolean;
   notes?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
 }
 
 export interface WorkExperience {
@@ -254,6 +260,8 @@ export interface WorkExperience {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
   skills: string[];
   achievements?: string;
   createdAt: string;
@@ -264,6 +272,27 @@ export interface WorkExperience {
     label: string;
     roleDepartmentId: string;
   };
+}
+
+export type CareerGapType =
+  | "between_jobs"
+  | "education_to_work"
+  | "current_unemployment";
+
+export interface CareerGap {
+  type: CareerGapType;
+  startDate: string;
+  endDate: string;
+  months: number;
+  label: string;
+}
+
+export interface CareerGapAnalysis {
+  totalExperienceMonths: number;
+  totalGapMonths: number;
+  longestGapMonths: number;
+  hasCurrentEmployment: boolean;
+  gaps: CareerGap[];
 }
 
 export interface CreateWorkExperienceRequest {
@@ -277,6 +306,7 @@ export interface CreateWorkExperienceRequest {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string;
   skills?: string;
   achievements?: string;
 }
@@ -289,16 +319,18 @@ export interface CreateCandidateQualificationRequest {
   gpa?: number;
   isCompleted?: boolean;
   notes?: string;
+  countryCode?: string;
 }
 
 export interface UpdateCandidateQualificationRequest {
   id: string;
   qualificationId?: string;
   university?: string;
-  graduationYear?: number;
-  gpa?: number;
+  graduationYear?: number | null;
+  gpa?: number | null;
   isCompleted?: boolean;
   notes?: string;
+  countryCode?: string | null;
 }
 
 export interface UpdateWorkExperienceRequest {
@@ -312,6 +344,7 @@ export interface UpdateWorkExperienceRequest {
   description?: string;
   salary?: number;
   location?: string;
+  countryCode?: string | null;
   skills?: string;
   achievements?: string;
 }
@@ -1081,7 +1114,11 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: workExperienceData,
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: (_result, _error, arg) => [
+        "WorkExperience",
+        "Candidate",
+        { type: "Candidate", id: arg.candidateId },
+      ],
     }),
     updateWorkExperience: builder.mutation<
       WorkExperience,
@@ -1157,11 +1194,20 @@ export const candidatesApi = baseApi.injectEndpoints({
           };
         };
       },
-      { candidateId: string; page?: number; limit?: number; docType?: string }
+      {
+        candidateId?: string;
+        page?: number;
+        limit?: number;
+        docType?: string;
+        search?: string;
+        status?: string;
+        uploadedBy?: string;
+        roleCatalogId?: string;
+      } | void
     >({
-      query: ({ candidateId, page = 1, limit = 10, docType }) => ({
+      query: (params) => ({
         url: "/documents",
-        params: { candidateId, page, limit, docType },
+        params,
       }),
       providesTags: ["Document"],
     }),

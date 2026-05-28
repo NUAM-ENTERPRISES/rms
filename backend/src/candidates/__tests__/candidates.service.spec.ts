@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CandidatesService } from '../candidates.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -17,12 +18,14 @@ import { RecruiterAssignmentService } from '../services/recruiter-assignment.ser
 import { RnrRemindersService } from '../../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
+import { CandidateCodeService } from '../services/candidate-code.service';
 
 describe('CandidatesService', () => {
   let service: CandidatesService;
-  let prismaService: typeof mockPrismaService;
+  let prismaService: any;
 
-  const mockPrismaService = {
+  const mockPrismaService: any = {
+    $transaction: jest.fn(),
     candidate: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -33,10 +36,22 @@ describe('CandidatesService', () => {
       groupBy: jest.fn(),
       aggregate: jest.fn(),
     },
+    candidateStatus: {
+      findUnique: jest.fn(),
+    },
+    candidateStatusHistory: {
+      create: jest.fn(),
+    },
     team: {
       findUnique: jest.fn(),
     },
     project: {
+      findUnique: jest.fn(),
+    },
+    roleCatalog: {
+      findMany: jest.fn(),
+    },
+    agent: {
       findUnique: jest.fn(),
     },
     candidateProjects: {
@@ -52,18 +67,29 @@ describe('CandidatesService', () => {
     user: {
       findUnique: jest.fn(),
     },
+    country: {
+      findUnique: jest.fn(),
+    },
+    state: {
+      findUnique: jest.fn(),
+    },
   };
 
-  const mockOutboxService = {
+  const mockOutboxService: any = {
     enqueue: jest.fn(),
-    publishEvent: jest.fn().mockResolvedValue(undefined),
+    publishEvent: jest.fn(async () => undefined),
   };
   const mockPipelineService = {};
   const mockEligibilityService = {};
-  const mockRecruiterAssignmentService = {};
+  const mockRecruiterAssignmentService = {
+    assignRecruiterToCandidate: jest.fn(),
+  };
   const mockRnrRemindersService = {};
   const mockWhatsAppService = {};
   const mockWhatsAppNotificationService = {};
+  const mockCandidateCodeService: any = {
+    reserveNextCode: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -83,6 +109,7 @@ describe('CandidatesService', () => {
           provide: RecruiterAssignmentService,
           useValue: mockRecruiterAssignmentService,
         },
+        { provide: CandidateCodeService, useValue: mockCandidateCodeService },
         { provide: RnrRemindersService, useValue: mockRnrRemindersService },
         { provide: WhatsAppService, useValue: mockWhatsAppService },
         {
@@ -198,6 +225,61 @@ describe('CandidatesService', () => {
 
       await expect(service.create(futureDateDto, 'user123')).rejects.toThrow(
         new BadRequestException('Date of birth must be in the past'),
+      );
+    });
+  });
+
+  describe('create (candidateCode)', () => {
+    it('generates candidateCode and passes it to candidate.create', async () => {
+      const createCandidateDto = {
+        firstName: 'John',
+        lastName: 'Doe',
+        countryCode: '+91',
+        mobileNumber: '9999999999',
+        source: 'manual',
+        currentStatusId: 1,
+        dateOfBirth: '1990-01-01T00:00:00.000Z',
+      } as unknown as CreateCandidateDto;
+
+      prismaService.candidate.findUnique.mockResolvedValue(null);
+      prismaService.user.findUnique.mockResolvedValue({
+        name: 'Creator',
+        email: 'creator@test.com',
+        userRoles: [],
+      });
+      prismaService.candidateStatus.findUnique.mockResolvedValue({
+        statusName: 'Untouched',
+      });
+      prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
+      (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
+        id: 'rec-1',
+        name: 'Recruiter',
+        email: 'rec@test.com',
+      });
+
+      mockCandidateCodeService.reserveNextCode.mockResolvedValue('AFFCD012026');
+
+      const tx: any = {
+        candidate: {
+          create: jest.fn(async () => ({ id: 'cand-1' })),
+          findUniqueOrThrow: jest.fn(async () => ({
+            id: 'cand-1',
+            candidateCode: 'AFFCD012026',
+          })),
+        },
+      };
+
+      prismaService.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+      await service.create(createCandidateDto, 'user-1');
+
+      expect(mockCandidateCodeService.reserveNextCode).toHaveBeenCalledWith(tx);
+      expect(tx.candidate.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            candidateCode: 'AFFCD012026',
+          }),
+        }),
       );
     });
   });
@@ -351,10 +433,51 @@ describe('CandidatesService', () => {
       const result = await service.findOne('candidate123');
 
       expect(result).toMatchObject(mockCandidate);
+      expect(result).toHaveProperty('careerGapAnalysis');
       expect(prismaService.candidate.findUnique).toHaveBeenCalledWith({
         where: { id: 'candidate123' },
         include: expect.any(Object),
       });
+    });
+
+    it('should include careerGapAnalysis computed from work history', async () => {
+      const candidateWithJobs = {
+        ...mockCandidate,
+        workExperiences: [
+          {
+            startDate: new Date('2024-01-01'),
+            endDate: new Date('2025-01-01'),
+            isCurrent: false,
+            companyName: 'Aster Hospital',
+            jobTitle: 'Nurse',
+          },
+          {
+            startDate: new Date('2026-01-01'),
+            endDate: new Date('2026-12-31'),
+            isCurrent: false,
+            companyName: 'City Clinic',
+            jobTitle: 'Nurse',
+          },
+        ],
+        qualifications: [
+          {
+            graduationYear: 2023,
+            isCompleted: true,
+            qualification: { name: 'MSc Nursing' },
+          },
+        ],
+        documents: [],
+      };
+
+      prismaService.candidate.findUnique.mockResolvedValue(
+        candidateWithJobs as any,
+      );
+
+      const result = await service.findOne('candidate123');
+
+      expect(result.careerGapAnalysis).toBeDefined();
+      expect(result.careerGapAnalysis?.gaps.some((g) => g.type === 'between_jobs')).toBe(true);
+      expect(result.careerGapAnalysis?.gaps.some((g) => g.type === 'education_to_work')).toBe(false);
     });
 
     it('should throw NotFoundException when candidate does not exist', async () => {
@@ -485,7 +608,7 @@ describe('CandidatesService', () => {
       notes: 'Test assignment',
     };
 
-    let getNextSpy: jest.SpyInstance;
+    let getNextSpy: any;
 
     beforeEach(() => {
       getNextSpy = jest
@@ -696,8 +819,12 @@ describe('CandidatesService', () => {
           manual: 60,
           meta: 30,
           referral: 10,
+          direct_application: 0,
           direct_enquiry: 0,
+          internal: 0,
+          job_board: 0,
           paid_ads: 0,
+          social_media: 0,
           agents: 0,
           hospital_visit: 0,
           expo_event: 0,

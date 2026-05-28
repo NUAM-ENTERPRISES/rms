@@ -407,6 +407,7 @@ export default function CreateCandidatePage() {
           gpa: qual.gpa,
           isCompleted: qual.isCompleted,
           notes: qual.notes,
+          ...(qual.countryCode?.trim() && { countryCode: qual.countryCode.trim() }),
         }));
       }
 
@@ -447,6 +448,9 @@ export default function CreateCandidatePage() {
             description: expData.description || undefined,
             salary: expData.salary || undefined,
             location: expData.location || undefined,
+            ...(expData.countryCode?.trim() && {
+              countryCode: expData.countryCode.trim(),
+            }),
             skills:
               expData.skills && expData.skills.length > 0
                 ? expData.skills

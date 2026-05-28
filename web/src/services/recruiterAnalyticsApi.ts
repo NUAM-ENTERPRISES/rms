@@ -54,6 +54,7 @@ interface PerformanceStagesResponse {
 interface RecruiterCandidate {
   id: string;
   fullName: string;
+  candidateCode?: string | null;
   phone: string;
   email: string;
   status: string;

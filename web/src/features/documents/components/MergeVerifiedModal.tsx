@@ -15,6 +15,7 @@ import { useGetMergedDocumentQuery, useGetCandidateProjectVerificationsQuery } f
 import { PDFViewer } from "@/components/molecules";
 import { formatDistanceToNow } from "date-fns";
 import { Reorder } from "framer-motion";
+import { isPdfMergeableDocument } from "@/constants/document-types";
 
 interface MergeVerifiedModalProps {
   isOpen: boolean;
@@ -47,7 +48,7 @@ export function MergeVerifiedModal({
 
   // Fetch candidate project verifications with documents
   const { data: verificationsResponse, isLoading: isLoadingVerifications, error: verificationsError } = useGetCandidateProjectVerificationsQuery(
-    { candidateId, projectId, roleCatalogId, status: 'verified' },
+    { candidateId, projectId, roleCatalogId, status: 'verified', limit: 100 },
     { skip: !isOpen || !candidateId || !projectId || !roleCatalogId }
   );
 
@@ -63,8 +64,9 @@ export function MergeVerifiedModal({
     }
 
     const docs = verificationsResponse.data.verifications
-      .filter(v => v.status === 'verified')
-      .map(v => v.document);
+      .filter((v) => v.status === 'verified' && v.document?.id)
+      .map((v) => v.document)
+      .filter((doc) => isPdfMergeableDocument(doc));
 
     const candidate = verificationsResponse.data.candidateProject?.candidate;
     const candidateName = candidate 
@@ -297,7 +299,7 @@ export function MergeVerifiedModal({
           <p className="text-blue-100 text-xs mt-0.5">
             {existingMergedDoc 
               ? "A merged document already exists. Download it or regenerate with latest documents."
-              : `Review the ${verifiedDocuments.length} verified documents that will be combined into a single PDF.`
+              : `Review the ${verifiedDocuments.length} verified PDF/image documents that will be combined into a single PDF.`
             }
           </p>
         </DialogHeader>

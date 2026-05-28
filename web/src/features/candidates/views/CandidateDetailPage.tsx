@@ -60,6 +60,7 @@ import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
+import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
@@ -72,6 +73,9 @@ export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("overview");
+  const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
+    null
+  );
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -149,6 +153,15 @@ export default function CandidateDetailPage() {
     { candidateId: id!, page: 1, limit: 10 },
     { skip: !id }
   );
+
+  const passportDocument = getPassportDocument(
+    documentsData?.data?.documents ?? []
+  );
+
+  const handleOpenPassportDocuments = () => {
+    setActiveTab("documents");
+    setPendingUploadDocType(DOCUMENT_REPOSITORY_UPLOAD_TYPE.passport);
+  };
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -356,12 +369,17 @@ export default function CandidateDetailPage() {
     <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
       {candidate.firstName} {candidate.lastName}
     </h1>
+    {candidate.candidateCode ? (
+      <div className="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-700 font-mono border border-red-200">
+        {candidate.candidateCode}
+      </div>
+    ) : null}
   </div>
 
   {/* Status (RIGHT - Clickable) */}
   <div
     onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer group ml-4"
+    className="cursor-pointer group ml-4 mb-6"
     title="Click to update status"
   >
     {isOnHold ? (
@@ -437,9 +455,9 @@ export default function CandidateDetailPage() {
 </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm text-slate-500">
+            {/* <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
-            </span>
+            </span> */}
             <span className="text-sm text-slate-400">
               Added {formatDate(candidate.createdAt)}
             </span>
@@ -547,6 +565,7 @@ export default function CandidateDetailPage() {
         <TabsContent value="overview" className="space-y-6">
           <CandidateOverview
             candidate={candidate}
+            isCandidateLoading={isLoading}
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
             openEditModal={openEditModal}
@@ -557,6 +576,8 @@ export default function CandidateDetailPage() {
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
             workExperienceDocs={documentsData?.data?.documents ?? []}
+            passportDocument={passportDocument}
+            onOpenPassportDocuments={handleOpenPassportDocuments}
           />
 
           {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (
@@ -593,7 +614,11 @@ export default function CandidateDetailPage() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
-          <CandidateDocuments candidateId={id!} />
+          <CandidateDocuments
+            candidateId={id!}
+            initialUploadDocType={pendingUploadDocType}
+            onInitialUploadDocTypeHandled={() => setPendingUploadDocType(null)}
+          />
         </TabsContent>
 
         {/* History Tab */}
@@ -636,6 +661,24 @@ export default function CandidateDetailPage() {
               const formData = new FormData();
               formData.append("file", file);
               formData.append("docType", meta.docType);
+              if (meta.roleCatalogId) {
+                formData.append("roleCatalogId", meta.roleCatalogId);
+              }
+              if (meta.workExperienceId) {
+                formData.append("workExperienceId", meta.workExperienceId);
+              }
+              if (meta.docName) {
+                formData.append("docName", meta.docName);
+              }
+              if (meta.documentNumber) {
+                formData.append("documentNumber", meta.documentNumber);
+              }
+              if (meta.expiryDate) {
+                formData.append("expiryDate", meta.expiryDate);
+              }
+              if (meta.notes) {
+                formData.append("notes", meta.notes);
+              }
 
               const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
               const uploadData: any = uploadResp.data;
@@ -649,13 +692,16 @@ export default function CandidateDetailPage() {
               const desiredDocName =
                 (meta.docName && meta.docName.trim()) || "";
 
-              if (uploadedDocument) {
-                if (desiredDocName) {
-                  await updateDocument({
-                    id: uploadedDocument.id,
-                    docName: desiredDocName,
-                  }).unwrap();
-                }
+              if (uploadedDocument?.id) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  docName: desiredDocName || undefined,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: meta.expiryDate
+                    ? new Date(meta.expiryDate).toISOString()
+                    : undefined,
+                  notes: meta.notes,
+                }).unwrap();
               } else {
                 await createDocument({
                   candidateId,

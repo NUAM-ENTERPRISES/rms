@@ -433,7 +433,7 @@ export default function ConductScreeningPage() {
                       {candidate.qualifications.map((q: any) => (
                         <li key={q.id} className="text-sm">
                           <div className="font-medium text-slate-900">{q.qualification?.shortName || q.qualification?.name}</div>
-                          <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : ''}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}</div>
+                          <div className="text-xs text-slate-500">{q.university ? `${q.university}${q.graduationYear ? ` • ${q.graduationYear}` : ''}` : ''}{q.gpa !== undefined && q.gpa !== null ? ` • GPA ${q.gpa}` : ''}{(q.country?.name || q.countryCode) ? ` • ${q.country?.name || q.countryCode}` : ''}</div>
                         </li>
                       ))}
                     </ul>
@@ -448,7 +448,7 @@ export default function ConductScreeningPage() {
                       {candidate.workExperiences.slice().sort((a: any, b: any) => (new Date(b.startDate || 0).getTime() - new Date(a.startDate || 0).getTime())).slice(0, 3).map((w: any) => (
                         <li key={w.id} className="text-sm">
                           <div className="font-medium text-slate-900">{w.jobTitle || 'Role'}{w.companyName ? ` • ${w.companyName}` : ''}</div>
-                          <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}</div>
+                          <div className="text-xs text-slate-500">{w.startDate ? format(new Date(w.startDate), 'MMM yyyy') : ''}{w.endDate ? ` — ${format(new Date(w.endDate), 'MMM yyyy')}` : (w.isCurrent ? ' — Present' : '')}{(w.country?.name || w.countryCode) ? ` · ${w.country?.name || w.countryCode}` : ''}</div>
                         </li>
                       ))}
                       {candidate.workExperiences.length > 3 && (

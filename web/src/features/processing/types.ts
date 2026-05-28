@@ -41,6 +41,7 @@ export interface ProcessingCandidateSummary {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string | null;
     countryCode?: string | null;
     mobileNumber?: string | null;
@@ -86,6 +87,7 @@ export interface ProcessingCandidate {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string | null;
     mobileNumber?: string | null;
     profileImage?: string | null;

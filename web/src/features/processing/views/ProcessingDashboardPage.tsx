@@ -40,6 +40,8 @@ import {
     UserCheck,
     ArrowUpRight,
     FilterX,
+    Mail,
+    Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -503,6 +505,9 @@ export default function ProcessingDashboardPage() {
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
                     Candidate
                   </TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
+                    Contact
+                  </TableHead>
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
                     Project & Role
                   </TableHead>
@@ -526,7 +531,7 @@ export default function ProcessingDashboardPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                     <TableCell colSpan={6} className="h-64 text-center">
+                     <TableCell colSpan={7} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
                         <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
@@ -556,12 +561,33 @@ export default function ProcessingDashboardPage() {
                             >
                               {procCandidate.candidate.firstName} {procCandidate.candidate.lastName}
                             </button>
-                            <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                            {procCandidate.candidate.candidateCode && (
+                              <div className="mt-1">
+                                <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                  {procCandidate.candidate.candidateCode}
+                                </div>
+                              </div>
+                            )}
+                            <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1">
                               <Users className="h-3 w-3" /> {procCandidate.assignedTo?.name || "Unassigned"}
                             </p>
                           </div>
                         </div>
                       </TableCell>
+
+                      <TableCell className="py-4">
+                        <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                          <div className="flex items-start gap-2 min-w-0">
+                            <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                            <span className="min-w-0 whitespace-normal break-all">{procCandidate.candidate.email || "—"}</span>
+                          </div>
+                          <div className="flex items-start gap-2 min-w-0">
+                            <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                            <span className="min-w-0 whitespace-normal break-words">{procCandidate.candidate.mobileNumber || "—"}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+
                       <TableCell className="py-4">
                         <div className="space-y-1">
                           <p className="text-sm text-slate-700 font-bold leading-tight">{procCandidate.project.title}</p>
@@ -635,7 +661,7 @@ export default function ProcessingDashboardPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64 text-center">
+                    <TableCell colSpan={7} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
                         <Filter className="h-10 w-10 opacity-20" />
                         <p className="text-lg font-bold">No candidates found</p>

@@ -3,6 +3,8 @@ import { UsersService } from '../users.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { UploadService } from '../../upload/upload.service';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { SystemConfigService } from '../../system-config/system-config.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
@@ -51,6 +53,14 @@ describe('UsersService', () => {
     logRoleAction: jest.fn(),
   };
 
+  const mockNotificationsGateway = {
+    broadcastToAdmins: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockSystemConfigService = {
+    getSessionConfig: jest.fn().mockResolvedValue({ idleThresholdMinutes: 15 }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -62,6 +72,14 @@ describe('UsersService', () => {
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: mockNotificationsGateway,
+        },
+        {
+          provide: SystemConfigService,
+          useValue: mockSystemConfigService,
         },
         {
           provide: UploadService,
@@ -132,6 +150,19 @@ describe('UsersService', () => {
         ConflictException,
       );
     });
+
+    it('should throw ConflictException if employeeCode already exists', async () => {
+      const dtoWithEmployeeCode: CreateUserDto = {
+        ...createUserDto,
+        employeeCode: 'AFFEMP012026',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({ id: 'existing' });
+
+      await expect(service.create(dtoWithEmployeeCode, 'admin123')).rejects.toThrow(
+        ConflictException,
+      );
+    });
   });
 
   describe('findOne', () => {
@@ -159,6 +190,28 @@ describe('UsersService', () => {
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should throw ConflictException if employeeCode already exists', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+      };
+
+      const dto: UpdateUserDto = {
+        employeeCode: 'AFFEMP012026',
+      } as any;
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser) // existing user by id
+        .mockResolvedValueOnce({ id: 'other-user' }); // employee code uniqueness check
+
+      await expect(service.update('user123', dto, 'admin123')).rejects.toThrow(
+        ConflictException,
       );
     });
   });

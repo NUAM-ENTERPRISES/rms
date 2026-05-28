@@ -49,6 +49,16 @@ export class WorkExperienceController {
     return this.workExperienceService.findAll(candidateId);
   }
 
+  @Get('candidate/:candidateId')
+  @ApiOperation({ summary: 'Get work experience by candidate ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Work experience entries retrieved successfully',
+  })
+  findByCandidateId(@Param('candidateId') candidateId: string) {
+    return this.workExperienceService.findByCandidateId(candidateId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get work experience by ID' })
   @ApiResponse({
@@ -84,15 +94,5 @@ export class WorkExperienceController {
   @ApiResponse({ status: 404, description: 'Work experience not found' })
   remove(@Param('id') id: string) {
     return this.workExperienceService.remove(id);
-  }
-
-  @Get('candidate/:candidateId')
-  @ApiOperation({ summary: 'Get work experience by candidate ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Work experience entries retrieved successfully',
-  })
-  findByCandidateId(@Param('candidateId') candidateId: string) {
-    return this.workExperienceService.findByCandidateId(candidateId);
   }
 }

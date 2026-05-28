@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import {
   Edit,
-  Trash2,
   Calendar,
   Building2,
   Target,

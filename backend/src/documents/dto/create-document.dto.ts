@@ -91,7 +91,8 @@ export class CreateDocumentDto {
   notes?: string;
 
   @ApiPropertyOptional({
-    description: 'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility)',
+    description:
+      'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()
@@ -99,7 +100,8 @@ export class CreateDocumentDto {
   roleCatalog?: string;
 
   @ApiPropertyOptional({
-    description: 'Alias for `roleCatalog` - optional role catalog id as `roleCatalogId` key (backward compatibility)',
+    description:
+      'Alias for `roleCatalog` - optional role catalog id as `roleCatalogId` key (backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()
@@ -107,7 +109,8 @@ export class CreateDocumentDto {
   roleCatalogId?: string;
 
   @ApiPropertyOptional({
-    description: 'Common frontend typo alias: `roleCatelogId` (backward compatibility)',
+    description:
+      'Common frontend typo alias: `roleCatelogId` (backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()
