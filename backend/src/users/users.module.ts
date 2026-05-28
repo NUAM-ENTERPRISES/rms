@@ -8,11 +8,12 @@ import { AuditModule } from '../common/audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { UploadModule } from '../upload/upload.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmployeeCodeService } from './services/employee-code.service';
 
 @Module({
   imports: [AuditModule, AuthModule, UploadModule, forwardRef(() => NotificationsModule)],
   controllers: [UsersController, RecruitersController],
-  providers: [UsersService, SessionCleanupService, PrismaService],
+  providers: [UsersService, SessionCleanupService, PrismaService, EmployeeCodeService],
   exports: [UsersService],
 })
 export class UsersModule {}

@@ -362,6 +362,16 @@ export default function UserDetailPage() {
                     {user.name}
                   </h1>
                   <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                  {user.employeeCode?.trim() ? (
+                    <div className="mt-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        {user.employeeCode}
+                      </Badge>
+                    </div>
+                  ) : null}
                   {roles.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {roles
@@ -439,6 +449,15 @@ export default function UserDetailPage() {
                     </p>
                     <p className="text-sm font-medium text-slate-800">
                       {user.name}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                      Employee Code
+                    </p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {user.employeeCode?.trim() ? user.employeeCode : "N/A"}
                     </p>
                   </div>
 

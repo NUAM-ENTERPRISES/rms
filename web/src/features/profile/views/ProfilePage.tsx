@@ -527,6 +527,25 @@ export default function ProfilePage() {
 
                 <h2 style={{ color: "#111827", fontWeight: 700, fontSize: "1.05rem", margin: "0 0 3px" }}>{userData.name}</h2>
                 <p style={{ color: "#9ca3af", fontSize: "0.82rem", margin: "0 0 12px" }}>{userData.email}</p>
+                {userData.employeeCode?.trim() ? (
+                  <div style={{ marginBottom: 10 }}>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        border: "1px solid #bfdbfe",
+                        borderRadius: 999,
+                        padding: "2px 10px",
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.04em",
+                      }}
+                    >
+                      {userData.employeeCode}
+                    </span>
+                  </div>
+                ) : null}
                 <div style={{ display: "flex", justifyContent: "center", gap: 5, flexWrap: "wrap" }}>
                   {userData.roles.map((role: string) => (
                     <span key={role} className="p-badge-role">{role}</span>

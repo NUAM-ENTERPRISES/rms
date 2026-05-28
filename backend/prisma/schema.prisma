@@ -52,6 +52,7 @@ model UserSession {
 
 model User {
   id                               String                         @id @default(cuid())
+  employeeCode                     String?                        @unique @map("employee_code")
   email                            String                         @unique
   name                             String
   password                         String
@@ -110,7 +111,15 @@ model User {
   @@index([addressCountryCode])
   @@index([addressStateId])
   @@index([createdAt])
+  @@index([employeeCode])
   @@map("users")
+}
+
+model EmployeeCodeSequence {
+  year       Int @id
+  lastNumber Int @default(0) @map("last_number")
+
+  @@map("employee_code_sequences")
 }
 
 model Role {

@@ -17,6 +17,7 @@ export interface UserRole {
 
 export interface UserWithRoles {
   id: string;
+  employeeCode?: string | null;
   email: string;
   name: string;
   countryCode: string;
@@ -58,6 +59,7 @@ export interface PaginatedUsersData {
 
 export interface CreateUserRequest {
   name: string;
+  employeeCode?: string;
   email: string;
   password: string;
   countryCode: string;
@@ -71,6 +73,7 @@ export interface CreateUserRequest {
 
 export interface UpdateUserRequest {
   name?: string;
+  employeeCode?: string | null;
   email?: string;
   countryCode?: string;
   mobileNumber?: string;
@@ -162,9 +165,22 @@ export interface UserResponse {
   message: string;
 }
 
+export interface SuggestEmployeeCodeResponse {
+  success: boolean;
+  data: { employeeCode: string };
+  message: string;
+}
+
 // Users API using baseApi injection pattern (FE_GUIDELINES compliance)
 export const usersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    suggestEmployeeCode: builder.mutation<SuggestEmployeeCodeResponse, void>({
+      query: () => ({
+        url: '/users/employee-code/suggest',
+        method: 'POST',
+      }),
+    }),
+
     // Get all users with pagination and search
     getUsers: builder.query<UsersResponse, QueryUsersRequest | void>({
       query: (params) => {
@@ -441,6 +457,7 @@ export const usersApi = baseApi.injectEndpoints({
 
 // Export hooks
 export const {
+  useSuggestEmployeeCodeMutation,
   useGetUsersQuery,
   useGetUserQuery,
   useCreateUserMutation,

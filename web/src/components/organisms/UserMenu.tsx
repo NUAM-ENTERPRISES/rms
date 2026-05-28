@@ -20,6 +20,7 @@ import { LogoutSuccess } from "@/components/organisms/LogoutSuccess";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useGetProfileQuery } from "@/features/profile/api";
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -28,6 +29,11 @@ export default function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
+
+  const { data: profileData } = useGetProfileQuery(undefined, {
+    skip: !user,
+  });
+  const employeeCode = profileData?.data?.employeeCode ?? null;
 
   if (!user) return null;
 
@@ -126,6 +132,16 @@ export default function UserMenu() {
               {user.name}
             </p>
             <p className="text-xs text-gray-500 leading-none">{user.email}</p>
+            {employeeCode?.trim() ? (
+              <div className="pt-1">
+                <Badge
+                  variant="outline"
+                  className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200 w-fit"
+                >
+                  {employeeCode}
+                </Badge>
+              </div>
+            ) : null}
             {/* Role badges */}
             {user.roles.includes("CEO") && (
               <Badge variant="destructive" className="text-xs w-fit mt-1">
