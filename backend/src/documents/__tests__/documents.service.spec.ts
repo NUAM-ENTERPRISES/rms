@@ -85,6 +85,109 @@ describe('DocumentsService - verifyOfferLetter', () => {
   });
 });
 
+describe('DocumentsService - create resume role mapping', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+    jest.spyOn(outbox, 'publishDataSync').mockResolvedValue(undefined as never);
+  });
+
+  it('rejects resume upload without roleCatalogId', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+
+    await expect(
+      service.create(
+        {
+          candidateId: 'cand-1',
+          docType: 'resume',
+          fileName: 'resume.pdf',
+          fileUrl: 'https://example.com/resume.pdf',
+        } as any,
+        'user-1',
+      ),
+    ).rejects.toThrow(
+      new BadRequestException('roleCatalogId is required for resume/cv documents'),
+    );
+  });
+
+  it('rejects resume upload with invalid roleCatalogId', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+    jest.spyOn(prisma.roleCatalog, 'findFirst' as any).mockResolvedValue(null);
+
+    await expect(
+      service.create(
+        {
+          candidateId: 'cand-1',
+          docType: 'resume',
+          fileName: 'resume.pdf',
+          fileUrl: 'https://example.com/resume.pdf',
+          roleCatalogId: 'invalid-role',
+        } as any,
+        'user-1',
+      ),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'Valid active roleCatalogId is required for resume/cv documents',
+      ),
+    );
+  });
+
+  it('creates resume when valid active roleCatalogId is provided', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+    jest.spyOn(prisma.roleCatalog, 'findFirst' as any).mockResolvedValue({
+      id: 'role-1',
+    });
+    const createSpy = jest
+      .spyOn(prisma.document, 'create' as any)
+      .mockResolvedValue({ id: 'doc-1', roleCatalogId: 'role-1' });
+
+    await service.create(
+      {
+        candidateId: 'cand-1',
+        docType: 'resume',
+        fileName: 'resume.pdf',
+        fileUrl: 'https://example.com/resume.pdf',
+        roleCatalogId: 'role-1',
+      } as any,
+      'user-1',
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          docType: 'resume',
+          roleCatalogId: 'role-1',
+        }),
+      }),
+    );
+    expect(outbox.publishDataSync).toHaveBeenCalled();
+  });
+});
+
 
 // additional tests for reupload behaviour
 
@@ -153,6 +256,13 @@ describe('DocumentsService - reupload behaviour', () => {
       where: { id: existingVer.id },
       data: expect.objectContaining({
         isReuploaded: true,
+        isDeleted: true,
+      }),
+    });
+
+    expect(txMock.document.update).toHaveBeenCalledWith({
+      where: { id: documentId },
+      data: expect.objectContaining({
         isDeleted: true,
       }),
     });

@@ -1,16 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -44,8 +37,6 @@ import {
   Upload,
   ArrowLeft,
   FileIcon,
-  FileX,
-  CheckCircle2,
   Briefcase,
   Users,
   FileCheck,
@@ -71,6 +62,9 @@ import {
   useRequestResubmissionMutation,
   useReuploadDocumentationDocumentMutation as useReuploadDocumentMutation,
 } from "@/features/documents";
+import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
+import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
+import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
@@ -100,13 +94,8 @@ import { Link2 } from "lucide-react";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
 
-function canShowDocReupload(
-  displayedStatus: string | undefined,
-  isClientRevision: boolean,
-): boolean {
-  if (!displayedStatus) return false;
-  if (isClientRevision) return displayedStatus === "rejected";
-  return displayedStatus !== "verified";
+function isRejectedDocumentStatus(displayedStatus: string | undefined): boolean {
+  return displayedStatus === "rejected";
 }
 
 export default function CandidateDocumentVerificationPage() {
@@ -125,11 +114,10 @@ export default function CandidateDocumentVerificationPage() {
   );
   const [showReuseDialog, setShowReuseDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [verificationNotes, setVerificationNotes] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDocType, setUploadDocType] = useState<string>("");
-  // (no reupload optimistic state) we keep uploads simple — user can replace files
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [reuploadMeta, setReuploadMeta] = useState<{ previousFileName: string } | null>(null);
   const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"verify" | "reject" | null>(null);
   const [bulkNotes, setBulkNotes] = useState("");
@@ -272,9 +260,42 @@ export default function CandidateDocumentVerificationPage() {
   const verifications = requirementsData?.data?.verifications || [];
   const introductionVideoRequired = requirementsData?.data?.introductionVideoRequired ?? false;
   const introductionVideo = requirementsData?.data?.introductionVideo || null;
-  const allCandidateDocuments =
-    requirementsData?.data?.allCandidateDocuments || [];
   const summary = requirementsData?.data?.summary || {};
+
+  const uploadDocTypeLabel = useMemo(() => {
+    if (!uploadDocType) return undefined;
+    return DOCUMENT_TYPE_CONFIG[uploadDocType as keyof typeof DOCUMENT_TYPE_CONFIG]
+      ?.displayName;
+  }, [uploadDocType]);
+
+  const resetUploadDialogState = useCallback(() => {
+    setUploadDocType("");
+    setSelectedRequirement(null);
+    setIsReuploadMode(false);
+    setReuploadDocId(null);
+    setReuploadMeta(null);
+  }, []);
+
+  const openRejectedDocLinkExisting = useCallback(
+    (verification: any, requirement: any) => {
+      setSelectedRequirement(requirement);
+      setUploadDocType(verification.document.docType);
+      setIsReuploadMode(false);
+      setReuploadDocId(null);
+      setReuploadMeta(null);
+      setShowReuseDialog(true);
+    },
+    [],
+  );
+
+  const openRejectedDocReupload = useCallback((verification: any, requirement: any) => {
+    setSelectedRequirement(requirement);
+    setUploadDocType(verification.document.docType);
+    setIsReuploadMode(true);
+    setReuploadDocId(verification.document.id);
+    setReuploadMeta({ previousFileName: verification.document.fileName });
+    setShowUploadDialog(true);
+  }, []);
 
   // Documents that are verified and have a file URL
   const verifiedDocuments = (verifications || [])
@@ -435,19 +456,18 @@ export default function CandidateDocumentVerificationPage() {
   };
 
   // Handle document reuse
-  const handleReuseDocument = async () => {
-    if (!selectedDocumentType) return;
+  const handleReuseDocument = async (documentId: string) => {
+    if (!documentId || !selectedProjectId) return;
 
     try {
       await reuseDocument({
-        documentId: selectedDocumentType,
+        documentId,
         projectId: selectedProjectId,
         roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
       toast.success("Document linked successfully!");
       setShowReuseDialog(false);
-      setSelectedDocumentType("");
-      // Ensure UI updates immediately
+      resetUploadDialogState();
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
@@ -549,29 +569,41 @@ export default function CandidateDocumentVerificationPage() {
     }
   };
 
-  // Handle document upload
-  const handleUploadDocument = async () => {
-    if (!uploadFile || !uploadDocType) return;
+  // Handle document upload / reupload
+  const handleUploadDocument = async (
+    file: File,
+    meta?: { docName?: string },
+  ) => {
+    if (!uploadDocType || !candidateId || !selectedProjectId) return;
 
     try {
-      // Step 1: Upload the file to S3
       const formData = new FormData();
-      formData.append("file", uploadFile);
+      formData.append("file", file);
       formData.append("docType", uploadDocType);
 
+      const roleCatalogId = selectedProject?.roleNeeded?.roleCatalog?.id;
+      if (roleCatalogId) {
+        formData.append("roleCatalogId", roleCatalogId);
+      }
+
       const uploadResult = await uploadDocument({
-        candidateId: candidateId!,
+        candidateId,
         formData,
       }).unwrap();
 
-      // Step 2: Create Document record in database
-      // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
-      const uploadData: any = (uploadResult && (uploadResult as any).data) ? (uploadResult as any).data : uploadResult;
+      const uploadData: any =
+        uploadResult && (uploadResult as any).data
+          ? (uploadResult as any).data
+          : uploadResult;
 
-      const fileName = typeof uploadData?.fileName === "string" ? uploadData.fileName : undefined;
-      const fileUrl = typeof uploadData?.fileUrl === "string" ? uploadData.fileUrl : undefined;
-      const fileSize = typeof uploadData?.fileSize === "number" ? uploadData.fileSize : undefined;
-      const mimeType = typeof uploadData?.mimeType === "string" ? uploadData.mimeType : undefined;
+      const fileName =
+        typeof uploadData?.fileName === "string" ? uploadData.fileName : undefined;
+      const fileUrl =
+        typeof uploadData?.fileUrl === "string" ? uploadData.fileUrl : undefined;
+      const fileSize =
+        typeof uploadData?.fileSize === "number" ? uploadData.fileSize : undefined;
+      const mimeType =
+        typeof uploadData?.mimeType === "string" ? uploadData.mimeType : undefined;
 
       if (!fileName || !fileUrl) {
         toast.error("Upload failed: missing fileName or fileUrl from upload response");
@@ -579,29 +611,29 @@ export default function CandidateDocumentVerificationPage() {
       }
 
       if (isReuploadMode && reuploadDocId) {
-        // Handle Reupload versioning logic
         await reuploadDocument({
           documentId: reuploadDocId,
           candidateProjectMapId: candidateProjectMapId || "",
+          docName: meta?.docName?.trim() || undefined,
           fileName,
           fileUrl,
           fileSize,
           mimeType,
-        }).unwrap();
-        toast.success("Document re-uploaded successfully!");
-      } else {
-        // Step 2: Create Document record in database
-        const documentData = await createDocument({
-          candidateId: candidateId!,
-          docType: uploadDocType,
-          fileName,
-          fileUrl,
-          fileSize,
-          mimeType,
-          roleCatalogId: uploadDocType.toLowerCase() === "resume" ? (selectedProject?.roleNeeded?.roleCatalog?.id || "") : undefined,
         }).unwrap();
 
-        // Step 3: Link the document to the current project
+        toast.success("Document re-uploaded successfully!");
+      } else {
+        const documentData = await createDocument({
+          candidateId,
+          docType: uploadDocType,
+          docName: meta?.docName?.trim() || undefined,
+          fileName,
+          fileUrl,
+          fileSize,
+          mimeType,
+          roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
+        }).unwrap();
+
         await reuseDocument({
           documentId: documentData.data.id,
           projectId: selectedProjectId,
@@ -612,12 +644,7 @@ export default function CandidateDocumentVerificationPage() {
       }
 
       setShowUploadDialog(false);
-      setUploadFile(null);
-      setUploadDocType("");
-      setIsReuploadMode(false);
-      setReuploadDocId(null);
-      // keep existing verification status intact when replacing the file
-      // Ensure UI updates immediately
+      resetUploadDialogState();
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to upload document");
@@ -1238,25 +1265,6 @@ export default function CandidateDocumentVerificationPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {canShowDocReupload(
-                                displayedStatus,
-                                selectedProject?.subStatus?.name === "client_revision_requested",
-                              ) && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
-                                  onClick={() => { 
-                                    setUploadDocType(verification.document.docType); 
-                                    setIsReuploadMode(true);
-                                    setReuploadDocId(verification.document.id);
-                                    setShowUploadDialog(true); 
-                                    setUploadFile(null); 
-                                  }}
-                                >
-                                  <RefreshCw className="h-4 w-4" />
-                                </Button>
-                              )}
                             </div>
                           </div>
                         ) : (
@@ -1265,7 +1273,7 @@ export default function CandidateDocumentVerificationPage() {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-col items-end gap-2">
                           <VerificationDocumentActions
                             verification={verification}
                             displayedStatus={displayedStatus as string}
@@ -1290,37 +1298,33 @@ export default function CandidateDocumentVerificationPage() {
                               setSelectedResubmitVerification(v);
                               setIsResubmitDialogOpen(true);
                             }}
-                            emptyActions={
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 px-3"
-                                  onClick={() => {
-                                    setUploadDocType(requirement.docType);
-                                    setIsReuploadMode(false);
-                                    setReuploadDocId(null);
-                                    setShowReuseDialog(true);
-                                  }}
-                                >
-                                  Link
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
-                                  onClick={() => {
-                                    setUploadDocType(requirement.docType);
-                                    setIsReuploadMode(false);
-                                    setReuploadDocId(null);
-                                    setUploadFile(null);
-                                    setShowUploadDialog(true);
-                                  }}
-                                >
-                                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
-                                </Button>
-                              </>
-                            }
                           />
+                          {isRejectedDocumentStatus(displayedStatus) && verification && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-violet-600 hover:bg-violet-50"
+                                onClick={() =>
+                                  openRejectedDocLinkExisting(verification, requirement)
+                                }
+                              >
+                                <Link2 className="h-4 w-4 mr-2" />
+                                Add Existing
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:bg-primary/10"
+                                onClick={() =>
+                                  openRejectedDocReupload(verification, requirement)
+                                }
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reupload
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </TableCell> 
                     </TableRow>
@@ -1385,10 +1389,7 @@ export default function CandidateDocumentVerificationPage() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {canShowDocReupload(
-                                displayedStatus,
-                                selectedProject?.subStatus?.name === "client_revision_requested",
-                              ) && (
+                              {isRejectedDocumentStatus(displayedStatus) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1552,158 +1553,44 @@ export default function CandidateDocumentVerificationPage() {
           />
         )}
 
-        {/* Document Reuse Dialog */}
-       <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-  <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
-    {/* Elegant Header */}
-    <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white">
-      <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-        <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl">
-          <Link2 className="w-6 h-6" />
-        </div>
-        Link Existing Document
-      </DialogTitle>
-      <DialogDescription className="text-white/90 mt-2 text-base">
-        Select an existing document to link to this project.
-      </DialogDescription>
-    </DialogHeader>
+        <UploadDocumentModal
+          isOpen={showUploadDialog}
+          onClose={() => {
+            setShowUploadDialog(false);
+            resetUploadDialogState();
+          }}
+          onUpload={handleUploadDocument}
+          projectTitle={projectResponse?.data?.title || "Project"}
+          roleDesignation={
+            selectedProject?.roleNeeded?.designation ||
+            projectResponse?.data?.rolesNeeded?.[0]?.designation ||
+            "N/A"
+          }
+          docType={uploadDocType}
+          docTypeLabel={uploadDocTypeLabel}
+          docTypeDescription={selectedRequirement?.description}
+          isMandatory={selectedRequirement?.mandatory}
+          isUploading={isUploading || isCreating || isReuploading}
+          variant={isReuploadMode ? "reupload" : "upload"}
+          previousFileName={reuploadMeta?.previousFileName}
+        />
 
-    {/* Body - Clean & Modern */}
-    <div className="p-6 pt-2 bg-white/95 backdrop-blur-xl">
-      <div className="space-y-5">
-        <div>
-          <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-violet-600" />
-            Available Documents
-          </Label>
-
-          <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-            <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white/70 shadow-sm focus:ring-4 focus:ring-violet-500/30 transition-all">
-              <SelectValue placeholder="Choose a document" />
-            </SelectTrigger>
-
-            <SelectContent className="rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md shadow-xl">
-              {allCandidateDocuments.length === 0 ? (
-                <div className="py-8 text-center">
-                  <FileX className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm text-slate-500">No documents available</p>
-                </div>
-              ) : (
-                allCandidateDocuments.map((doc: any) => (
-                  <SelectItem key={doc.id} value={doc.id} className="py-3 cursor-pointer">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 p-2 bg-gradient-to-br from-violet-100 to-purple-100 rounded-lg">
-                        <FileText className="w-4 h-4 text-violet-700" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-800">{doc.docType}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Optional: Visual confirmation when selected */}
-        {selectedDocumentType && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50/80 px-4 py-2.5 rounded-lg border border-emerald-200/50"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Document selected and ready to link
-          </motion.div>
-        )}
-      </div>
-    </div>
-
-    {/* Footer - Clean & Balanced */}
-    <DialogFooter className="p-6 pt-4 bg-gradient-to-t from-slate-50 to-transparent border-t border-slate-200/60">
-      <Button
-        variant="outline"
-        onClick={() => setShowReuseDialog(false)}
-        className="h-11 px-6 rounded-xl font-medium border-slate-300 hover:bg-slate-50"
-      >
-        Cancel
-      </Button>
-      <Button
-        onClick={handleReuseDocument}
-        disabled={!selectedDocumentType || isReusing}
-        className="h-11 px-6 rounded-xl font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-purple-500/30 disabled:opacity-60 transition-all"
-      >
-        {isReusing ? (
-          <>
-            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-            Linking...
-          </>
-        ) : (
-          <>
-            <Link2 className="h-4 w-4 mr-2" />
-            Link Document
-          </>
-        )}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-        {/* Document Upload Dialog */}
-        <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Upload New Document</DialogTitle>
-              <DialogDescription>
-                Upload a new document for this candidate and link it to the
-                current project.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Document Type</Label>
-                <div className="mt-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm font-semibold text-slate-700 capitalize">
-                  {uploadDocType ? uploadDocType.replace(/_/g, ' ') : 'None'}
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">File</Label>
-                <Input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supported formats: PDF, JPG, PNG, WEBP (max 10MB)
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowUploadDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUploadDocument}
-                disabled={
-                  !uploadFile || !uploadDocType || isUploading || isCreating
-                }
-              >
-                {isUploading || isCreating ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                Upload Document
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <LinkExistingDocumentModal
+          isOpen={showReuseDialog}
+          onClose={() => {
+            setShowReuseDialog(false);
+            resetUploadDialogState();
+          }}
+          candidateId={candidateId || ""}
+          docType={uploadDocType}
+          roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          roleLabel={
+            selectedProject?.roleNeeded?.designation ||
+            selectedProject?.roleNeeded?.roleCatalog?.label
+          }
+          isLinking={isReusing}
+          onConfirm={handleReuseDocument}
+        />
 
         {/* PDF Viewer */}
         <PDFViewer

@@ -227,6 +227,7 @@ export interface QueryDocumentsParams {
   status?: string;
   uploadedBy?: string;
   verifiedBy?: string;
+  roleCatalogId?: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -247,18 +248,10 @@ export const documentsApi = baseApi.injectEndpoints({
       { success: boolean; data: PaginatedDocuments },
       QueryDocumentsParams | void
     >({
-      query: (params) => {
-        const searchParams = new URLSearchParams();
-        if (params) {
-          Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              searchParams.append(key, String(value));
-            }
-          });
-        }
-        const queryString = searchParams.toString();
-        return `/documents${queryString ? `?${queryString}` : ""}`;
-      },
+      query: (params) => ({
+        url: "/documents",
+        params,
+      }),
       providesTags: ["Document"],
     }),
 

@@ -47,6 +47,26 @@ import { validatePassportDocumentFields } from './utils/passport-document.util';
 
 @Injectable()
 export class DocumentsService {
+  private isResumeOrCvDocument(docType: string): boolean {
+    return docType === DOCUMENT_TYPE.RESUME || docType === DOCUMENT_TYPE.CV;
+  }
+
+  private async assertValidResumeRoleCatalog(roleCatalogId: string): Promise<void> {
+    const roleCatalog = await this.prisma.roleCatalog.findFirst({
+      where: {
+        id: roleCatalogId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    if (!roleCatalog) {
+      throw new BadRequestException(
+        'Valid active roleCatalogId is required for resume/cv documents',
+      );
+    }
+  }
+
   /** Human-readable label for a document type key (fallback when not in DOCUMENT_TYPE_META). */
   private formatDocTypeKey(docType: string): string {
     return docType
@@ -83,6 +103,70 @@ export class DocumentsService {
       documentDisplayName,
       documentType: docType,
     };
+  }
+
+  private async attachDocumentActorNames(
+    documents: DocumentWithRelations[],
+  ): Promise<Record<string, unknown>[]> {
+    const userIds = new Set<string>();
+    const verificationIds: string[] = [];
+
+    for (const doc of documents) {
+      if (doc.uploadedBy) userIds.add(doc.uploadedBy);
+      if (doc.verifiedBy) userIds.add(doc.verifiedBy);
+      if (doc.rejectedBy) userIds.add(doc.rejectedBy);
+      for (const ver of doc.verifications || []) {
+        if (ver?.id) verificationIds.push(ver.id);
+      }
+    }
+
+    const [users, historyRows] = await Promise.all([
+      userIds.size
+        ? this.prisma.user.findMany({
+            where: { id: { in: Array.from(userIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : Promise.resolve([]),
+      verificationIds.length
+        ? this.prisma.documentVerificationHistory.findMany({
+            where: { verificationId: { in: verificationIds } },
+            orderBy: { performedAt: 'desc' },
+            include: {
+              performer: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const usersById = new Map<string, any>(
+      (users as any[]).map((u): [string, any] => [u.id, u]),
+    );
+    const latestHistoryByVerificationId = new Map<string, (typeof historyRows)[number]>();
+    for (const row of historyRows) {
+      if (!row.verificationId || latestHistoryByVerificationId.has(row.verificationId)) {
+        continue;
+      }
+      latestHistoryByVerificationId.set(row.verificationId, row);
+    }
+
+    return documents.map((doc) => ({
+      ...doc,
+      uploadedByUser: doc.uploadedBy ? usersById.get(doc.uploadedBy) || null : null,
+      verifiedByUser: doc.verifiedBy ? usersById.get(doc.verifiedBy) || null : null,
+      rejectedByUser: doc.rejectedBy ? usersById.get(doc.rejectedBy) || null : null,
+      verifications: (doc.verifications || []).map((ver) => {
+        const latest = latestHistoryByVerificationId.get(ver.id);
+        return {
+          ...ver,
+          latestAction: latest?.action || null,
+          latestActionAt: latest?.performedAt || null,
+          latestActionBy: latest?.performer || null,
+          latestActionByName: latest?.performedByName || latest?.performer?.name || null,
+        };
+      }),
+    }));
   }
 
   private computeVerificationSummary(
@@ -305,6 +389,15 @@ export class DocumentsService {
       }
     }
 
+    if (this.isResumeOrCvDocument(createDocumentDto.docType)) {
+      if (!resolvedRoleCatalogId) {
+        throw new BadRequestException(
+          'roleCatalogId is required for resume/cv documents',
+        );
+      }
+      await this.assertValidResumeRoleCatalog(resolvedRoleCatalogId);
+    }
+
     // Create document
     const document = await this.prisma.document.create({
       data: {
@@ -390,6 +483,7 @@ export class DocumentsService {
   async findAll(query: QueryDocumentsDto): Promise<PaginatedDocuments> {
     const { page = 1, limit = 20, search, ...filters } = query;
     const skip = (page - 1) * limit;
+    const normalizedSearch = search?.trim();
 
     // Build where clause
     const where: any = { isDeleted: false };
@@ -410,11 +504,71 @@ export class DocumentsService {
       where.uploadedBy = filters.uploadedBy;
     }
 
-    if (search) {
-      where.OR = [
-        { fileName: { contains: search, mode: 'insensitive' } },
-        { docName: { contains: search, mode: 'insensitive' } },
-        { documentNumber: { contains: search, mode: 'insensitive' } },
+    if (filters.roleCatalogId) {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : []),
+        {
+          OR: [
+            { roleCatalogId: filters.roleCatalogId },
+            { roleCatalogId: null },
+          ],
+        },
+      ];
+    }
+
+    if (normalizedSearch) {
+      where.AND = [
+        {
+          OR: [
+            { fileName: { contains: normalizedSearch, mode: 'insensitive' } },
+            { docName: { contains: normalizedSearch, mode: 'insensitive' } },
+            {
+              documentNumber: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
+              },
+            },
+            {
+              roleCatalog: {
+                is: {
+                  name: { contains: normalizedSearch, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              roleCatalog: {
+                is: {
+                  label: { contains: normalizedSearch, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              roleCatalog: {
+                is: {
+                  roleDepartment: {
+                    is: {
+                      name: { contains: normalizedSearch, mode: 'insensitive' },
+                    },
+                  },
+                },
+              },
+            },
+            {
+              roleCatalog: {
+                is: {
+                  roleDepartment: {
+                    is: {
+                      label: {
+                        contains: normalizedSearch,
+                        mode: 'insensitive',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
       ];
     }
 
@@ -457,8 +611,12 @@ export class DocumentsService {
       }),
     ]);
 
+    const docsWithActors = await this.attachDocumentActorNames(
+      documents as DocumentWithRelations[],
+    );
+
     return {
-      documents: (documents as DocumentWithRelations[]).map((d) =>
+      documents: docsWithActors.map((d) =>
         this.enrichDocumentListItem(d as unknown as Record<string, unknown>),
       ) as DocumentListRow[],
       pagination: {
@@ -719,8 +877,18 @@ export class DocumentsService {
         where: { id: documentId },
         data: {
           status: verifyDto.status,
-          verifiedAt: verifyDto.status === DOCUMENT_STATUS.VERIFIED ? new Date() : null,
-          rejectedAt: verifyDto.status === DOCUMENT_STATUS.REJECTED ? new Date() : null,
+          verifiedAt:
+            verifyDto.status === DOCUMENT_STATUS.VERIFIED ? new Date() : null,
+          rejectedAt:
+            verifyDto.status === DOCUMENT_STATUS.REJECTED ? new Date() : null,
+          verifiedBy:
+            verifyDto.status === DOCUMENT_STATUS.VERIFIED ? verifierId : null,
+          rejectedBy:
+            verifyDto.status === DOCUMENT_STATUS.REJECTED ? verifierId : null,
+          rejectionReason:
+            verifyDto.status === DOCUMENT_STATUS.REJECTED
+              ? verifyDto.rejectionReason || null
+              : null,
         },
       });
 
@@ -1224,6 +1392,15 @@ export class DocumentsService {
           },
         });
       }
+
+      // Soft-delete the superseded document so callers do not need manage:documents DELETE.
+      await tx.document.update({
+        where: { id: documentId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        } as any,
+      });
 
       // Create the new verification record
       const verification = await tx.candidateProjectDocumentVerification.create({
