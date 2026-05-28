@@ -727,9 +727,14 @@ const CandidateCard = memo(function CandidateCard({
                   {fullName || "Unnamed Candidate"}
                 </p>
                 {candidate.candidateCode ? (
-                  <p className="text-[11px] text-muted-foreground font-mono truncate leading-tight mt-0.5">
-                    {candidate.candidateCode}
-                  </p>
+                  <div className="mt-1">
+                    <Badge
+                      variant="outline"
+                      className="text-[11px] font-bold bg-red-50 text-red-700 border-red-200 font-mono"
+                    >
+                      {candidate.candidateCode}
+                    </Badge>
+                  </div>
                 ) : null}
                 {/* Show current role / employer as subtitle */}
                 {(candidate.currentRole || candidate.currentEmployer) && (
