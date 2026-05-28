@@ -914,3 +914,39 @@ export const PASSPORT_DOCUMENT_TYPES = [
 export function isPassportDocumentType(docType: string): boolean {
   return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
 }
+
+/** Formats supported when building a unified client PDF (pdf-lib). */
+const PDF_MERGE_ALLOWED_FORMATS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+
+/** Doc types that must never appear in unified PDF merge flows. */
+export const PDF_MERGE_EXCLUDED_DOC_TYPES = [
+  DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+] as const;
+
+/**
+ * Whether a document can be included in unified PDF merge (excludes videos and non-image/pdf files).
+ */
+export function isPdfMergeableDocument(doc: {
+  docType?: string | null;
+  fileName?: string | null;
+}): boolean {
+  const docType = doc.docType?.trim();
+  if (!docType) return false;
+
+  if ((PDF_MERGE_EXCLUDED_DOC_TYPES as readonly string[]).includes(docType)) {
+    return false;
+  }
+
+  const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+  if (meta?.allowedFormats?.length) {
+    return meta.allowedFormats.some((format) => PDF_MERGE_ALLOWED_FORMATS.has(format));
+  }
+
+  const fileName = (doc.fileName || '').toLowerCase();
+  return (
+    fileName.endsWith('.pdf') ||
+    fileName.endsWith('.jpg') ||
+    fileName.endsWith('.jpeg') ||
+    fileName.endsWith('.png')
+  );
+}

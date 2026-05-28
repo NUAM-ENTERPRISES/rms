@@ -1194,11 +1194,20 @@ export const candidatesApi = baseApi.injectEndpoints({
           };
         };
       },
-      { candidateId: string; page?: number; limit?: number; docType?: string }
+      {
+        candidateId?: string;
+        page?: number;
+        limit?: number;
+        docType?: string;
+        search?: string;
+        status?: string;
+        uploadedBy?: string;
+        roleCatalogId?: string;
+      } | void
     >({
-      query: ({ candidateId, page = 1, limit = 10, docType }) => ({
+      query: (params) => ({
         url: "/documents",
-        params: { candidateId, page, limit, docType },
+        params,
       }),
       providesTags: ["Document"],
     }),

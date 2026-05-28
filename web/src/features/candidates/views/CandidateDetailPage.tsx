@@ -149,7 +149,7 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 100 },
+    { candidateId: id!, page: 1, limit: 10 },
     { skip: !id }
   );
 
@@ -649,6 +649,24 @@ export default function CandidateDetailPage() {
               const formData = new FormData();
               formData.append("file", file);
               formData.append("docType", meta.docType);
+              if (meta.roleCatalogId) {
+                formData.append("roleCatalogId", meta.roleCatalogId);
+              }
+              if (meta.workExperienceId) {
+                formData.append("workExperienceId", meta.workExperienceId);
+              }
+              if (meta.docName) {
+                formData.append("docName", meta.docName);
+              }
+              if (meta.documentNumber) {
+                formData.append("documentNumber", meta.documentNumber);
+              }
+              if (meta.expiryDate) {
+                formData.append("expiryDate", meta.expiryDate);
+              }
+              if (meta.notes) {
+                formData.append("notes", meta.notes);
+              }
 
               const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
               const uploadData: any = uploadResp.data;
