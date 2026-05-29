@@ -88,15 +88,38 @@ const formatWorkPeriod = (startDate?: string, endDate?: string) => {
   }
 };
 
-// Derive a human-readable qualification label from multiple possible shapes
-const getQualificationLabel = (candidate: CandidateRecord) => {
-  if (candidate.highestEducation) return candidate.highestEducation;
-  const quals = (candidate.candidateQualifications || candidate.qualifications || []) as any[];
-  if (!Array.isArray(quals) || quals.length === 0) return null;
-  const q = quals[0];
-  const nested = q.qualification || {};
-  const label = q.shortName || q.name || nested.shortName || nested.name || q.field || q.university;
-  return label ? String(label) : null;
+// Derive human-readable qualification labels from multiple possible shapes
+const getQualificationLabels = (candidate: CandidateRecord) => {
+  const quals = (candidate.candidateQualifications ||
+    candidate.qualifications ||
+    []) as any[];
+
+  if (!Array.isArray(quals) || quals.length === 0) {
+    return candidate.highestEducation ? [candidate.highestEducation] : [];
+  }
+
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  quals.forEach((q) => {
+    const nested = q.qualification || {};
+    const label =
+      q.shortName ||
+      q.name ||
+      nested.shortName ||
+      nested.name ||
+      q.field ||
+      q.university;
+    if (label) {
+      const labelStr = String(label).trim();
+      if (!seen.has(labelStr.toLowerCase())) {
+        seen.add(labelStr.toLowerCase());
+        labels.push(labelStr);
+      }
+    }
+  });
+
+  return labels;
 };
 
 // Try to extract department info from known candidate shapes (matchScore / roleMatches)
@@ -190,8 +213,13 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
     : workExpFromHistory ||
       (typeof totalExp === "number" && totalExp > 0 ? `${totalExp} yrs` : null);
 
-  // New fields requested: qualification label, numeric years and department
-  const qualificationLabel = getQualificationLabel(c) || getQualificationLabel(candidate);
+  // New fields requested: qualification labels, numeric years and department
+  const qualificationLabels = (() => {
+    const labels = getQualificationLabels(c);
+    if (labels.length > 0) return labels;
+    return getQualificationLabels(candidate);
+  })();
+
   const department = getDepartmentFromCandidate(c) || getDepartmentFromCandidate(candidate);
   const experienceYearsNumeric = hasWorkExperiencesField
     ? calculateExperienceYears(workExperiences) ?? 0
@@ -470,15 +498,18 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           )}
 
           {/* Qualification */}
-          {qualificationLabel && (
+          {qualificationLabels.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
-                Qualification
+                Qualifications
               </h4>
-              <div className="text-[11px] flex items-center gap-2">
-                <span className="text-slate-500">Qualification:</span>
-                <span className="text-slate-700 font-medium">{qualificationLabel}</span>
+              <div className="space-y-1">
+                {qualificationLabels.map((label, idx) => (
+                  <div key={idx} className="text-[11px] flex items-center gap-2">
+                    <span className="text-slate-700 font-medium">• {label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -503,12 +534,12 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 </div>
               )} */}
 
-              {/* Work history details (show up to 3 recent entries) with per-entry duration */}
+              {/* Work history details (show up to 5 recent entries) with per-entry duration */}
               {workExperiences.length > 0 && (
                 <div className="pt-2 space-y-2">
                   <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
-                    {workExperiences.slice(0, 3).map((we: any, idx: number) => {
+                    {workExperiences.slice(0, 5).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;
                       const end = we.endDate || we.end_date;
                       const period = formatWorkPeriod(start, end);
