@@ -9,6 +9,7 @@ interface ProcessingCandidateHeaderProps {
   candidate: {
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string;
     mobileNumber?: string;
     countryCode?: string;
@@ -89,6 +90,11 @@ export function ProcessingCandidateHeader({
             <h1 className="text-xl font-black text-slate-900 truncate">
               {candidate.firstName} {candidate.lastName}
             </h1>
+            {candidate.candidateCode && (
+              <div className="inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700 border border-red-200">
+                {candidate.candidateCode}
+              </div>
+            )}
             <Badge className={`px-2 py-0.5 text-[10px] font-bold border ${getStatusBadge(processingStatus)}`}>
               {displayStatus(processingStatus)}
             </Badge>

@@ -322,6 +322,11 @@ export default function ScreeningDetailsPage() {
                       <h2 className="text-lg font-bold text-slate-800 leading-tight">
                         {candidate?.firstName} {candidate?.lastName}
                       </h2>
+                      {candidate?.candidateCode ? (
+                        <div className="mt-1 inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                          {candidate.candidateCode}
+                        </div>
+                      ) : null}
                       <p className="text-sm text-indigo-600 font-medium mt-0.5">
                         {roleNeeded?.designation || candidate?.currentRole || "—"}
                       </p>
@@ -385,6 +390,11 @@ export default function ScreeningDetailsPage() {
                                 {q.isCompleted && (
                                   <span className="text-[10px] text-emerald-600 font-medium">✓ Completed</span>
                                 )}
+                                {(q.country?.name || q.countryCode) && (
+                                  <span className="text-[10px] text-slate-500">
+                                    {q.country?.name || q.countryCode}
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <Badge variant="outline" className="text-[10px] border-purple-200 text-purple-700 bg-white capitalize shrink-0">
@@ -428,6 +438,9 @@ export default function ScreeningDetailsPage() {
                               <p className="text-[10px] text-slate-400 mt-1">
                                 {w.startDate ? format(new Date(w.startDate), "MMM yyyy") : "—"} —{" "}
                                 {w.isCurrent ? "Present" : w.endDate ? format(new Date(w.endDate), "MMM yyyy") : "—"}
+                                {(w.country?.name || w.countryCode)
+                                  ? ` · ${w.country?.name || w.countryCode}`
+                                  : ""}
                               </p>
                             </div>
                           </div>

@@ -2,6 +2,8 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
   S3Client,
@@ -9,6 +11,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  PutBucketCorsCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
@@ -33,7 +36,8 @@ export interface UploadResult {
 }
 
 @Injectable()
-export class UploadService {
+export class UploadService implements OnModuleInit {
+  private readonly logger = new Logger(UploadService.name);
   private s3Client: S3Client;
   private bucketName: string;
   private region: string;
@@ -67,6 +71,60 @@ export class UploadService {
       },
       forcePathStyle: true,
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.syncSpacesCorsConfiguration();
+  }
+
+  private async syncSpacesCorsConfiguration(): Promise<void> {
+    if (this.configService.get<string>('DO_SPACES_SYNC_CORS') !== 'true') {
+      return;
+    }
+
+    const corsOrigin = this.configService.get<string>('CORS_ORIGIN');
+    if (!corsOrigin?.trim()) {
+      this.logger.warn(
+        'DO_SPACES_SYNC_CORS is enabled but CORS_ORIGIN is empty; skipping Spaces CORS sync',
+      );
+      return;
+    }
+
+    const allowedOrigins = corsOrigin
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+
+    if (allowedOrigins.length === 0) {
+      return;
+    }
+
+    try {
+      await this.s3Client.send(
+        new PutBucketCorsCommand({
+          Bucket: this.bucketName,
+          CORSConfiguration: {
+            CORSRules: [
+              {
+                AllowedHeaders: ['*'],
+                AllowedMethods: ['GET', 'PUT', 'HEAD', 'POST'],
+                AllowedOrigins: allowedOrigins,
+                ExposeHeaders: ['ETag'],
+                MaxAgeSeconds: 3600,
+              },
+            ],
+          },
+        }),
+      );
+
+      this.logger.log(
+        `Synced DigitalOcean Spaces CORS for origins: ${allowedOrigins.join(', ')}`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown Spaces CORS error';
+      this.logger.warn(`Failed to sync DigitalOcean Spaces CORS: ${message}`);
+    }
   }
 
   /**
@@ -509,17 +567,18 @@ export class UploadService {
       meta?.displayName ?? docType,
     );
     const folder = `candidates/documents/${candidateId}/${docType}`;
-    const result = await this.uploadFile(
-      prepared,
+    const safeDocType = docType.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).slice(2, 8);
+    const extension = file.originalname.split(".").pop() || "bin";
+    const customFileName = `${safeDocType}_${timestamp}_${randomSuffix}.${extension}`;
+    return this.uploadFile(
+      file,
       folder,
       allowedMimeTypes,
-      maxSizeMB,
+      20,
+      customFileName,
     );
-    if (prepared.size < originalFileSize) {
-      result.compressionApplied = true;
-      result.originalFileSize = originalFileSize;
-    }
-    return result;
   }
 
   /**
@@ -548,6 +607,7 @@ export class UploadService {
     file: Express.Multer.File,
     candidateId: string,
     roleCatalogId?: string,
+    docName?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
     const docType = 'resume';
@@ -573,21 +633,28 @@ export class UploadService {
       throw new Error(`Candidate with ID ${candidateId} not found`);
     }
 
-    // Generate filename with candidate name and current date
-    const candidateName =
-      `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
-    const currentDate = new Date();
-    const dateStr = currentDate
-      .toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-      .replace(/\s+/g, '_')
-      .toUpperCase();
-
-    const originalExtension = file.originalname.split('.').pop() || 'pdf';
-    const newFileName = `${candidateName}_${dateStr}.${originalExtension}`;
+    // NOTE: Temporarily using the original uploaded file name directly.
+    // Custom resume file naming is intentionally commented out as requested.
+    //
+    // const candidateName =
+    //   `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
+    // const currentDate = new Date();
+    // const dateStr = currentDate
+    //   .toLocaleDateString('en-GB', {
+    //     day: '2-digit',
+    //     month: 'short',
+    //     year: 'numeric',
+    //   })
+    //   .replace(/\s+/g, '_')
+    //   .toUpperCase();
+    // const timeStr = [
+    //   String(currentDate.getHours()).padStart(2, '0'),
+    //   String(currentDate.getMinutes()).padStart(2, '0'),
+    //   String(currentDate.getSeconds()).padStart(2, '0'),
+    // ].join('');
+    // const originalExtension = file.originalname.split('.').pop() || 'pdf';
+    // const newFileName = `${candidateName}_${dateStr}_${timeStr}.${originalExtension}`;
+    const newFileName = file.originalname;
 
     // Upload file with custom name
     const uploadResult = await this.uploadFile(
@@ -607,6 +674,7 @@ export class UploadService {
       data: {
         candidateId,
         docType: 'resume',
+        docName: docName || null,
         fileName: newFileName,
         fileUrl: uploadResult.fileUrl,
         fileSize: uploadResult.fileSize,

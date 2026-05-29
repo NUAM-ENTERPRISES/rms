@@ -102,6 +102,16 @@ export class UsersService {
     createUserDto: CreateUserDto,
     createdByUserId?: string,
   ): Promise<UserWithRoles> {
+    if (createUserDto.employeeCode) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: createUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     // Check for existing phone number + country code combination
     const existingPhone = await this.prisma.user.findUnique({
       where: {
@@ -137,6 +147,7 @@ export class UsersService {
       // Create the user
       const newUser = await tx.user.create({
         data: {
+          employeeCode: createUserDto.employeeCode,
           email: createUserDto.email,
           name: createUserDto.name,
           password: hashedPassword,
@@ -373,9 +384,26 @@ export class UsersService {
       }
     }
 
+    if (
+      updateUserDto.employeeCode &&
+      updateUserDto.employeeCode !== existingUser.employeeCode
+    ) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: updateUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     const updateData: any = { ...updateUserDto };
     if (updateUserDto.dateOfBirth) {
       updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
+    }
+
+    if (updateUserDto.employeeCode !== undefined) {
+      updateData.employeeCode = updateUserDto.employeeCode || null;
     }
 
     // Handle role assignment if provided
@@ -639,6 +667,7 @@ export class UsersService {
       id: user.id,
       name: user.name,
       email: user.email,
+      employeeCode: (user as any).employeeCode ?? null,
       mobileNumber: user.mobileNumber,
       countryCode: user.countryCode,
       dateOfBirth: user.dateOfBirth,

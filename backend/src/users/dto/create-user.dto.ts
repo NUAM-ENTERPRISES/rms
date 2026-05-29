@@ -11,6 +11,17 @@ import {
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
+  @ApiPropertyOptional({
+    description: 'Employee code (must be unique)',
+    example: 'AFFEMP012026',
+  })
+  @IsOptional()
+  @IsString({ message: 'Employee code must be a string' })
+  @Matches(/^AFFEMP\d{2}\d{4}$/, {
+    message: 'Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)',
+  })
+  employeeCode?: string;
+
   @ApiProperty({
     description: 'User email address (must be unique)',
     example: 'john.doe@affiniks.com',

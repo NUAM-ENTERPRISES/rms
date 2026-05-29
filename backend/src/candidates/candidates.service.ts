@@ -26,9 +26,11 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { CandidateCodeService } from './services/candidate-code.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
@@ -42,6 +44,7 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
+  CRE_REASSIGN_RECRUITER_RETURN_REASON,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
@@ -62,6 +65,24 @@ import {
   withProfileCompletion,
 } from './utils/profile-completion.util';
 import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+
+const candidateWorkExperiencesInclude = {
+  include: {
+    roleCatalog: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
+
+const candidateQualificationsInclude = {
+  include: {
+    qualification: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
 
 @Injectable()
 export class CandidatesService {
@@ -73,6 +94,7 @@ export class CandidatesService {
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly candidateCodeService: CandidateCodeService,
     private readonly rnrRemindersService: RnrRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
@@ -247,6 +269,18 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.qualifications?.length) {
+      for (const qual of createCandidateDto.qualifications) {
+        await assertOptionalCountryCode(this.prisma, qual.countryCode);
+      }
+    }
+
+    if (createCandidateDto.workExperiences?.length) {
+      for (const exp of createCandidateDto.workExperiences) {
+        await assertOptionalCountryCode(this.prisma, exp.countryCode);
+      }
+    }
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
       ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
@@ -324,16 +358,8 @@ export class CandidatesService {
 
     const candidateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -362,8 +388,11 @@ export class CandidatesService {
     } as const;
 
     const candidate = await this.prisma.$transaction(async (tx) => {
+      const candidateCode = await this.candidateCodeService.reserveNextCode(tx);
+
       const created = await tx.candidate.create({
         data: {
+          candidateCode,
           firstName: createCandidateDto.firstName,
           lastName: createCandidateDto.lastName,
           countryCode: createCandidateDto.countryCode,
@@ -439,6 +468,8 @@ export class CandidatesService {
                   gpa: qual.gpa,
                   isCompleted: qual.isCompleted ?? true,
                   notes: qual.notes,
+                  countryCode:
+                    normalizeOptionalCountryCode(qual.countryCode) ?? null,
                 })),
               }
             : undefined,
@@ -470,6 +501,8 @@ export class CandidatesService {
                     description: exp.description,
                     salary: exp.salary,
                     location: exp.location,
+                    countryCode:
+                      normalizeOptionalCountryCode(exp.countryCode) ?? null,
                     skills: parsedSkills,
                     achievements: exp.achievements,
                   };
@@ -610,6 +643,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: s, mode: 'insensitive' } },
         { lastName: { contains: s, mode: 'insensitive' } },
+        { candidateCode: { contains: s, mode: 'insensitive' } },
         { mobileNumber: { contains: s, mode: 'insensitive' } },
         { email: { contains: s, mode: 'insensitive' } },
         // Match candidate qualifications (qualification name / shortName / field / university)
@@ -1099,16 +1133,8 @@ export class CandidatesService {
               name: true,
             },
           },
-          qualifications: {
-            include: {
-              qualification: true,
-            },
-          },
-          workExperiences: {
-            include: {
-              roleCatalog: true,
-            },
-          },
+          qualifications: candidateQualificationsInclude,
+          workExperiences: candidateWorkExperiencesInclude,
           projects: {
             where: {
               projectId: projectId,
@@ -1257,6 +1283,7 @@ export class CandidatesService {
         { lastName: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { candidateCode: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -1344,16 +1371,8 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         recruiterAssignments: {
           where: { isActive: true },
           orderBy: { assignedAt: 'desc' },
@@ -1484,33 +1503,9 @@ export class CandidatesService {
       roleCounters.untouched +
       roleCounters.other;
 
-    // Count reassigned candidates (CRE transferred to recruiter, now untouched)
+    // Count reassigned candidates (CRE transferred to recruiter at any handoff status)
     roleCounters.reassigned = await this.prisma.candidate.count({
-      where: {
-        OR: [
-          {
-            recruiterAssignments: {
-              some: {
-                recruiterId: creUserId,
-                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-                isActive: true,
-              },
-            },
-          },
-          {
-            recruiterAssignments: {
-              some: {
-                assignedBy: creUserId,
-                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-                isActive: true,
-              },
-            },
-          },
-        ],
-        currentStatus: {
-          statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
-        },
-      },
+      where: this.buildCreReassignedCandidatesWhere(creUserId),
     });
 
     // Count candidates created by this CRE user
@@ -1597,7 +1592,88 @@ export class CandidatesService {
     return updatedCandidate as any;
   }
 
-  async transferCREConvertedToRecruiter(candidateId: string, creUserId: string, notes?: string) {
+  private validateCandidateStatusTransitionFields(
+    statusName: string,
+    fields: Pick<
+      UpdateCandidateStatusDto,
+      'onHoldDurationDays' | 'onHoldUntil' | 'futureDate'
+    >,
+  ): void {
+    const normalizedStatus = statusName.toLowerCase();
+
+    if (normalizedStatus === 'on hold' || normalizedStatus === 'onhold') {
+      if (
+        (fields.onHoldDurationDays === undefined ||
+          fields.onHoldDurationDays === null ||
+          fields.onHoldDurationDays <= 0) &&
+        !fields.onHoldUntil
+      ) {
+        throw new BadRequestException(
+          'onHoldDurationDays or onHoldUntil is required when status is On Hold',
+        );
+      }
+    }
+
+    if (normalizedStatus === 'future') {
+      if (!fields.futureDate) {
+        throw new BadRequestException(
+          'futureDate is required when status is Future',
+        );
+      }
+      const futureDate = new Date(fields.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (futureDate < today) {
+        throw new BadRequestException(
+          'futureDate must be today or a future date when status is Future',
+        );
+      }
+    }
+  }
+
+  private async resolveTransferToRecruiterStatus(
+    dto: TransferToRecruiterDto,
+  ): Promise<{ id: number; statusName: string }> {
+    const status = await this.prisma.candidateStatus.findUnique({
+      where: { id: dto.currentStatusId },
+    });
+
+    if (!status) {
+      throw new NotFoundException(
+        `Candidate status ${dto.currentStatusId} not found`,
+      );
+    }
+
+    const normalizedStatus = status.statusName.toLowerCase();
+    const disallowedForCreTransfer = new Set([
+      'qualified',
+      'new',
+      'nominated',
+      'verified',
+      'interviewing',
+      'selected',
+      'processing',
+      'hired',
+      'rejected',
+      'deployed',
+    ]);
+
+    if (disallowedForCreTransfer.has(normalizedStatus)) {
+      throw new BadRequestException(
+        `Status "${status.statusName}" cannot be set during CRE reassignment`,
+      );
+    }
+
+    this.validateCandidateStatusTransitionFields(status.statusName, dto);
+
+    return status;
+  }
+
+  async transferCREConvertedToRecruiter(
+    candidateId: string,
+    creUserId: string,
+    dto: TransferToRecruiterDto,
+  ) {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
@@ -1638,6 +1714,40 @@ export class CandidatesService {
       },
     });
 
+    const creStatus = await this.resolveTransferToRecruiterStatus(dto);
+
+    const statusNote = dto.reason?.trim();
+    if (!statusNote) {
+      throw new BadRequestException('CRE status note is required');
+    }
+
+    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
+      },
+    });
+
+    if (!untouchedStatus) {
+      throw new NotFoundException('Untouched status not found');
+    }
+
+    let creStatusOnHoldDays: number | null = null;
+    const creStatusNormalized = creStatus.statusName.toLowerCase();
+    if (creStatusNormalized === 'on hold' || creStatusNormalized === 'onhold') {
+      if (dto.onHoldUntil) {
+        const untilDate = new Date(dto.onHoldUntil);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        creStatusOnHoldDays = Math.ceil(
+          (untilDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+        );
+      } else {
+        creStatusOnHoldDays = dto.onHoldDurationDays ?? null;
+      }
+    }
+
+    const reassignmentReason = 'Handed back from CRE converted response';
+
     // Update the primary recruiter assignment to mark it as cre_reassigned
     if (primaryAssignment) {
       await this.prisma.candidateRecruiterAssignment.update({
@@ -1645,31 +1755,30 @@ export class CandidatesService {
         data: {
           assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
           assignedBy: creUserId,
-          reason: notes || 'Handed back from CRE converted response',
+          reason: reassignmentReason,
+          creStatusNote: statusNote,
+          creStatusId: creStatus.id,
         },
       });
     }
 
-    // Notify about handoff
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       primaryAssignment?.recruiterId || creUserId, // Notify the primary recruiter (or self if none)
       creUserId,
-      notes || 'Handed back from CRE converted response',
+      reassignmentReason,
       creUserId, // Previous was the CRE
     );
 
-    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
-    });
-
-    if (!untouchedStatus) {
-      throw new NotFoundException('Untouched status not found');
-    }
-
+    // Recruiter always receives the candidate as untouched to call fresh
     const updatedCandidate = await this.prisma.candidate.update({
       where: { id: candidateId },
-      data: { currentStatusId: untouchedStatus.id },
+      data: {
+        currentStatusId: untouchedStatus.id,
+        onHoldDuration: null,
+        onHoldUntil: null,
+        futureDate: null,
+      },
       include: {
         recruiterAssignments: {
           include: {
@@ -1679,9 +1788,30 @@ export class CandidatesService {
             assignedByUser: {
               select: { id: true, name: true, email: true },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
         },
         currentStatus: true,
+      },
+    });
+
+    const creUserName =
+      (await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name ||
+      'CRE';
+
+    await this.prisma.candidateStatusHistory.create({
+      data: {
+        candidateId,
+        changedById: creUserId,
+        changedByName: creUserName,
+        statusId: creStatus.id,
+        statusNameSnapshot: creStatus.statusName,
+        statusUpdatedAt: new Date(),
+        notificationCount: 0,
+        reason: statusNote,
+        onHoldDurationDays: creStatusOnHoldDays,
       },
     });
 
@@ -1689,13 +1819,12 @@ export class CandidatesService {
       data: {
         candidateId,
         changedById: creUserId,
-        changedByName:
-          (await this.prisma.user.findUnique({ where: { id: creUserId } }))
-            ?.name || 'CRE',
+        changedByName: creUserName,
         statusId: untouchedStatus.id,
         statusNameSnapshot: untouchedStatus.statusName,
         statusUpdatedAt: new Date(),
         notificationCount: 0,
+        reason: CRE_REASSIGN_RECRUITER_RETURN_REASON,
       },
     });
 
@@ -1721,6 +1850,96 @@ export class CandidatesService {
     }
 
     return updatedCandidate;
+  }
+
+  /**
+   * Candidates handed from CRE to recruiter (any status CRE set on reassign).
+   */
+  private buildCreReassignedCandidatesWhere(
+    creUserId: string,
+    search?: string,
+  ): Prisma.CandidateWhereInput {
+    const reassignedFilter: Prisma.CandidateWhereInput = {
+      OR: [
+        {
+          recruiterAssignments: {
+            some: {
+              recruiterId: creUserId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+        {
+          recruiterAssignments: {
+            some: {
+              assignedBy: creUserId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+      ],
+    };
+
+    if (!search?.trim()) {
+      return reassignedFilter;
+    }
+
+    const term = search.trim();
+    return {
+      AND: [
+        reassignedFilter,
+        {
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { mobileNumber: { contains: term, mode: 'insensitive' } },
+          ],
+        },
+      ],
+    };
+  }
+
+  /**
+   * CRE status selected at reassign (stored on assignment or status history).
+   */
+  private resolveCreHandoffStatus(
+    reassignedAssignment:
+      | {
+          creStatus?: { id: number; statusName: string } | null;
+          creStatusId?: number | null;
+        }
+      | undefined,
+    statusHistories: Array<{
+      statusId: number;
+      statusNameSnapshot: string;
+      reason: string | null;
+      statusUpdatedAt: Date;
+      status?: { id: number; statusName: string };
+    }>,
+  ): { id: number; statusName: string } | null {
+    if (reassignedAssignment?.creStatus) {
+      return reassignedAssignment.creStatus;
+    }
+
+    const handoffHistory = statusHistories.find(
+      (entry) =>
+        entry.reason?.trim() &&
+        !entry.reason.startsWith(CRE_REASSIGN_RECRUITER_RETURN_REASON),
+    );
+
+    if (handoffHistory) {
+      return (
+        handoffHistory.status ?? {
+          id: handoffHistory.statusId,
+          statusName: handoffHistory.statusNameSnapshot,
+        }
+      );
+    }
+
+    return null;
   }
 
   async getCREReassignedCandidates(
@@ -1760,13 +1979,23 @@ export class CandidatesService {
       },
     };
 
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
+    if (search?.trim()) {
+      const term = search.trim();
+      where.AND = [
+        {
+          OR: where.OR,
+        },
+        {
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { mobileNumber: { contains: term, mode: 'insensitive' } },
+            { candidateCode: { contains: term, mode: 'insensitive' } },
+          ],
+        },
       ];
+      delete where.OR;
     }
 
     const total = await this.prisma.candidate.count({ where });
@@ -1778,18 +2007,46 @@ export class CandidatesService {
       orderBy: { updatedAt: 'desc' },
       include: {
         currentStatus: { select: { id: true, statusName: true } },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          include: {
+            status: { select: { id: true, statusName: true } },
+          },
+        },
         recruiterAssignments: {
           where: { isActive: true },
           include: {
             recruiter: { select: { id: true, name: true, email: true } },
             assignedByUser: { select: { id: true, name: true, email: true } },
+            creStatus: { select: { id: true, statusName: true } },
           },
         },
       },
     });
 
+    const candidatesWithCreStatus = candidates.map((candidate) => {
+      const reassignedAssignment = candidate.recruiterAssignments.find(
+        (assignment) =>
+          assignment.assignmentType ===
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
+
+      const creStatus = this.resolveCreHandoffStatus(
+        reassignedAssignment,
+        candidate.statusHistories,
+      );
+
+      const { statusHistories: _omit, ...candidateRest } = candidate;
+
+      return {
+        ...candidateRest,
+        creStatus,
+      };
+    });
+
     return {
-      candidates,
+      candidates: candidatesWithCreStatus,
       pagination: {
         page,
         limit,
@@ -1826,6 +2083,7 @@ export class CandidatesService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { mobileNumber: { contains: search, mode: 'insensitive' } },
+            { candidateCode: { contains: search, mode: 'insensitive' } },
           ],
         },
       ];
@@ -1872,16 +2130,8 @@ export class CandidatesService {
           },
         },
         team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         preferredCountries: {
           include: {
             country: true,
@@ -1951,10 +2201,42 @@ export class CandidatesService {
 
     const base = withProfileCompletion(candidate as any);
 
+    const creReassignedAssignment = candidate.recruiterAssignments.find(
+      (assignment) =>
+        assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED &&
+        assignment.isActive,
+    );
+    const isCREReassigned = !!creReassignedAssignment;
+
+    let recruiterFacingStatus = base.currentStatus;
+    if (
+      isCREReassigned &&
+      base.currentStatus?.statusName?.toLowerCase() !==
+        CANDIDATE_STATUS.UNTOUCHED
+    ) {
+      const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+        where: {
+          statusName: {
+            equals: CANDIDATE_STATUS.UNTOUCHED,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true, statusName: true },
+      });
+      if (untouchedStatus) {
+        recruiterFacingStatus = untouchedStatus;
+      }
+    }
+
     // Pipeline data removed from response to reduce payload
     return {
       ...base,
+      currentStatus: recruiterFacingStatus,
       createdBy,
+      isCREReassigned,
+      creStatusNote: isCREReassigned
+        ? creReassignedAssignment?.creStatusNote ?? null
+        : null,
       careerGapAnalysis: calculateCareerGaps(
         candidate.workExperiences ?? [],
         candidate.qualifications ?? [],
@@ -2191,16 +2473,8 @@ export class CandidatesService {
 
     const candidateUpdateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
-        },
-      },
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
       projects: {
         include: {
           project: {
@@ -2429,12 +2703,8 @@ export class CandidatesService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        workExperiences: true,
+        qualifications: candidateQualificationsInclude,
+        workExperiences: candidateWorkExperiencesInclude,
       },
     });
 
@@ -4033,6 +4303,7 @@ export class CandidatesService {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },
         { lastName: { contains: query.search, mode: 'insensitive' } },
+        { candidateCode: { contains: query.search, mode: 'insensitive' } },
         { mobileNumber: { contains: query.search, mode: 'insensitive' } },
         { email: { contains: query.search, mode: 'insensitive' } },
       ];
@@ -4578,6 +4849,13 @@ export class CandidatesService {
       };
     }
 
+    const untouchedStatusForRecruiter = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
+      },
+      select: { id: true, statusName: true },
+    });
+
     const candidatesData = await this.prisma.candidate.findMany({
       where,
       include: {
@@ -4643,8 +4921,30 @@ export class CandidatesService {
 
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
+      const recruiterAssignment =
+        targetRecruiterId && targetRecruiterId !== 'all'
+          ? c.recruiterAssignments.find(
+              (a) => a.isActive && a.recruiterId === targetRecruiterId,
+            )
+          : activeAssignment;
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
       const latestProject = c.projects?.[0] as any;
+
+      const creAssignment = c.recruiterAssignments.find(
+        (a) =>
+          a.isActive &&
+          (a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO ||
+            a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL),
+      );
+      const isHandledByCRE = !!creAssignment;
+      const isCREReassigned =
+        recruiterAssignment?.assignmentType ===
+        CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
+
+      const recruiterFacingStatus =
+        isCREReassigned && untouchedStatusForRecruiter
+          ? untouchedStatusForRecruiter
+          : c.currentStatus;
       
       // Destructure to remove projects array from the final response object
       const { projects, documents, ...candidateRest } = c as typeof c & {
@@ -4653,11 +4953,17 @@ export class CandidatesService {
 
       const withCompletion = withProfileCompletion({
         ...candidateRest,
+        currentStatus: recruiterFacingStatus,
         documents: documents ?? [],
       });
 
       return {
         ...withCompletion,
+        isHandledByCRE,
+        isCREReassigned,
+        creStatusNote: isCREReassigned
+          ? recruiterAssignment?.creStatusNote ?? null
+          : null,
         recruiter: activeAssignment?.recruiter || null,
         createdBy:
           firstAssignment?.createdByUser ||

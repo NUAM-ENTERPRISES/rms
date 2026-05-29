@@ -76,7 +76,7 @@ export default function EditUserPage() {
   };
 
   const form = useForm<UpdateUserFormData>({
-    resolver: zodResolver(buildUpdateUserSchema(true)),
+    resolver: zodResolver(buildUpdateUserSchema(true)) as any,
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
@@ -132,6 +132,7 @@ export default function EditUserPage() {
 
       const formData = {
         name: user.name || "",
+        employeeCode: user.employeeCode || "",
         email: user.email || "",
         countryCode: user.countryCode || "",
         mobileNumber: user.mobileNumber || "",
@@ -231,6 +232,10 @@ export default function EditUserPage() {
       // Prepare form data - convert empty strings to undefined
       const formData = {
         name: data.name && data.name.trim() !== "" ? data.name : undefined,
+        employeeCode:
+          data.employeeCode && data.employeeCode.trim() !== ""
+            ? data.employeeCode
+            : null,
         email: data.email && data.email.trim() !== "" ? data.email : undefined,
         countryCode:
           data.countryCode && data.countryCode.trim() !== ""
@@ -475,6 +480,37 @@ export default function EditUserPage() {
                         {form.formState.errors.name.message}
                       </p>
                     )}
+                  </div>
+
+                  {/* Employee Code */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="employeeCode"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      Employee Code
+                    </Label>
+                    <Controller
+                      name="employeeCode"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="employeeCode"
+                          placeholder="e.g., AFFEMP012026"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.employeeCode && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.employeeCode.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026). Leave
+                      empty to remove.
+                    </p>
                   </div>
 
                   {/* Email */}

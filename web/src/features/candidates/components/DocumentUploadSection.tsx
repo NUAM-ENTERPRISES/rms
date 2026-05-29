@@ -18,6 +18,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -37,12 +45,17 @@ import {
   Check,
   Clock,
   X,
+  RefreshCw,
   Plus,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
+import { ResumeUploadRoleModal } from "@/components/molecules/ResumeUploadRoleModal";
+import type { ResumeRoleSelection } from "@/components/molecules/ResumeUploadRoleModal";
 import {
   getCandidateProfileCompletion,
   getDocumentRepositorySlots,
@@ -51,6 +64,7 @@ import {
 import { isPassportDocumentType } from "@/constants/document-types";
 import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { useUploadResumeMutation } from "@/services/uploadApi";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
 import { truncateFileName } from "@/lib/formatFileName";
@@ -169,6 +183,19 @@ interface DocumentUploadSectionProps {
   candidateId: string;
   /** Rows for the table (may be paginated). */
   data?: any[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  isFetching?: boolean;
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  selectedDocType?: string;
+  onDocTypeChange?: (value: string) => void;
   /** All documents used only for mandatory-type completion (omit to derive from `data` / local fetch). */
   completionSourceDocuments?: any[];
   isLoading?: boolean;
@@ -178,18 +205,34 @@ interface DocumentUploadSectionProps {
   onInitialUploadDocTypeHandled?: () => void;
 }
 
+const DOCUMENT_NAME_MAX_LENGTH = 40;
+
 function FileNameCell({ fileName }: { fileName: string }) {
-  const { display, full, isTruncated } = truncateFileName(fileName, 60);
+  const { display, full, isTruncated } = truncateFileName(
+    fileName,
+    DOCUMENT_NAME_MAX_LENGTH,
+  );
+
+  const label = (
+    <p
+      className="font-semibold text-slate-900 truncate max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem]"
+      title={full}
+    >
+      {display}
+    </p>
+  );
 
   if (!isTruncated) {
-    return <p className="font-semibold text-slate-900">{display}</p>;
+    return label;
   }
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <p className="font-semibold text-slate-900 cursor-help">{display}</p>
+          <span className="block min-w-0 max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem] cursor-help">
+            {label}
+          </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-md break-all">
           <p className="text-xs">{full}</p>
@@ -202,6 +245,14 @@ function FileNameCell({ fileName }: { fileName: string }) {
 export function DocumentUploadSection({
   candidateId,
   data: externalDocuments,
+  pagination: externalPagination,
+  currentPage,
+  onPageChange,
+  isFetching = false,
+  search = "",
+  onSearchChange,
+  selectedDocType = "all",
+  onDocTypeChange,
   completionSourceDocuments,
   isLoading: isExternalLoading,
   onRefresh,
@@ -216,6 +267,14 @@ export function DocumentUploadSection({
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
   const [editPassportDoc, setEditPassportDoc] = useState<any | null>(null);
   const [isSavingPassportDetails, setIsSavingPassportDetails] = useState(false);
+  const [showResumeUploadModal, setShowResumeUploadModal] = useState(false);
+  const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
+  const [resumeDocName, setResumeDocName] = useState("");
+  const [resumeDocNameMode, setResumeDocNameMode] = useState<"common" | "individual">("common");
+  const [resumeRoleSelections, setResumeRoleSelections] = useState<ResumeRoleSelection[]>([
+    { id: crypto.randomUUID() },
+  ]);
+  const [isResumeUploading, setIsResumeUploading] = useState(false);
 
   // If external data is provided, use it. Otherwise fetch (for backward compatibility if needed, though we're refactoring)
   const {
@@ -232,10 +291,20 @@ export function DocumentUploadSection({
   );
 
   const documents = externalDocuments || documentsData?.data?.documents || [];
+  const pagination = externalPagination || documentsData?.data?.pagination;
+  const page = currentPage ?? pagination?.page ?? 1;
   const isLoading = isExternalLoading || isLocalLoading;
 
   const completionDocs =
     completionSourceDocuments ?? documents;
+  const filterDocTypes = React.useMemo(
+    () =>
+      Array.from(
+        new Set((completionDocs || []).map((d: any) => d?.docType).filter(Boolean)),
+      ) as string[],
+    [completionDocs],
+  );
+
   const completion = getCandidateProfileCompletion(completionDocs);
   const repositorySlots = getDocumentRepositorySlots(completionDocs);
   const passportDocument = getPassportDocument(completionDocs);
@@ -243,6 +312,7 @@ export function DocumentUploadSection({
   const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
 
   const [uploadDocument] = useUploadDocumentMutation();
+  const [uploadResume] = useUploadResumeMutation();
   const [createDocument] = useCreateDocumentMutation();
   const [updateDocument] = useUpdateDocumentMutation();
 
@@ -257,6 +327,8 @@ export function DocumentUploadSection({
         return <X className="h-4 w-4 text-red-600" />;
       case "resubmission_required":
         return <AlertCircle className="h-4 w-4 text-amber-600" />;
+      case "resubmitted":
+        return <RefreshCw className="h-4 w-4 text-blue-600" />;
       default:
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
@@ -285,12 +357,68 @@ export function DocumentUploadSection({
             Waiting for re-submission
           </Badge>
         );
+      case "resubmitted":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            Resubmitted
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
+  const getActorLabel = (actor: any): string => {
+    if (!actor) return "—";
+    if (typeof actor === "string") return actor;
+    if (typeof actor === "object") {
+      return actor.name || actor.email || actor.id || "—";
+    }
+    return "—";
+  };
+
+  const getLatestDecisionActor = (doc: any): string => {
+    const normalized = (doc?.status || "").toLowerCase();
+    const latestVerification = doc?.verifications?.[0];
+    if (normalized === "verified") {
+      return getActorLabel(
+        doc?.verifiedByUser ||
+          doc?.verifiedBy ||
+          latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName,
+      );
+    }
+    if (normalized === "rejected") {
+      return getActorLabel(
+        doc?.rejectedByUser ||
+          doc?.rejectedBy ||
+          latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName,
+      );
+    }
+    if (normalized === "resubmitted") {
+      return getActorLabel(
+        latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName ||
+          doc?.uploadedByUser ||
+          doc?.uploadedBy,
+      );
+    }
+    if (normalized === "resubmission_required") {
+      return getActorLabel(
+        latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName ||
+          latestVerification?.resubmissionRequestedBy,
+      );
+    }
+    return "—";
+  };
+
   const openUploadModal = (presetDocType?: string) => {
+    if (presetDocType === DOCUMENT_TYPE.RESUME) {
+      setShowResumeUploadModal(true);
+      return;
+    }
     setUploadModalDocType(presetDocType);
     setShowUploadModal(true);
   };
@@ -305,6 +433,78 @@ export function DocumentUploadSection({
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setUploadModalDocType(undefined);
+  };
+
+  const closeResumeUploadModal = () => {
+    setShowResumeUploadModal(false);
+    setSelectedResumeFile(null);
+    setResumeDocName("");
+    setResumeDocNameMode("common");
+    setResumeRoleSelections([{ id: crypto.randomUUID() }]);
+  };
+
+  const addResumeRoleSelection = () => {
+    setResumeRoleSelections((prev) => [...prev, { id: crypto.randomUUID() }]);
+  };
+
+  const removeResumeRoleSelection = (id: string) => {
+    setResumeRoleSelections((prev) =>
+      prev.length === 1 ? prev : prev.filter((entry) => entry.id !== id),
+    );
+  };
+
+  const handleResumeUpload = async () => {
+    if (!selectedResumeFile) {
+      toast.error("Please select a resume file");
+      return;
+    }
+
+    const selectedRoles = Array.from(
+      new Set(
+        resumeRoleSelections
+          .map((entry) => entry.roleCatalogId?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (!selectedRoles.length) {
+      toast.error("Please select at least one department and role");
+      return;
+    }
+
+    setIsResumeUploading(true);
+    try {
+      await Promise.all(
+        selectedRoles.map((roleCatalogId) => {
+          const selection = resumeRoleSelections.find(
+            (entry) => entry.roleCatalogId === roleCatalogId,
+          );
+          const individualDocName = selection?.docName?.trim();
+          return uploadResume({
+            candidateId,
+            file: selectedResumeFile,
+            roleCatalogId,
+            docName:
+              resumeDocNameMode === "common"
+                ? resumeDocName.trim() || undefined
+                : individualDocName || undefined,
+          }).unwrap();
+        }),
+      );
+
+      toast.success("Resume uploaded successfully");
+      closeResumeUploadModal();
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        refetch();
+      }
+    } catch (error) {
+      console.error("Resume upload error:", error);
+      toast.error("Failed to upload resume");
+    } finally {
+      setIsResumeUploading(false);
+    }
   };
 
   const persistUploadedDocument = async (
@@ -520,11 +720,42 @@ export function DocumentUploadSection({
             <Plus className="mr-2 h-4 w-4" />
             Upload New Document
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2"
+            onClick={() => setShowResumeUploadModal(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Resume
+          </Button>
         </div>
       </div>
     </CardHeader>
 
     <CardContent className="p-0">
+      <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/40 px-4 py-3 sm:flex-row sm:items-center">
+        <Input
+          value={search}
+          onChange={(e) => onSearchChange?.(e.target.value)}
+          placeholder="Search by file name, doc name, number..."
+          className="sm:max-w-sm"
+        />
+        <Select value={selectedDocType} onValueChange={(value) => onDocTypeChange?.(value)}>
+          <SelectTrigger className="sm:w-[220px]">
+            <SelectValue placeholder="Filter by document type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All document types</SelectItem>
+            {filterDocTypes.map((docType) => (
+              <SelectItem key={docType} value={docType}>
+                {DOCUMENT_TYPES.find((t) => t.value === docType)?.label || docType}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600" />
@@ -548,26 +779,37 @@ export function DocumentUploadSection({
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/70">
-              <TableHead className="font-semibold text-slate-700">Document</TableHead>
+              <TableHead className="min-w-0 max-w-[14rem] font-semibold text-slate-700 sm:max-w-[16rem] md:max-w-[18rem]">
+                Document
+              </TableHead>
               <TableHead className="font-semibold text-slate-700">Type</TableHead>
               <TableHead className="font-semibold text-slate-700">Status</TableHead>
               <TableHead className="font-semibold text-slate-700">Expiry Date</TableHead>
               <TableHead className="font-semibold text-slate-700">Uploaded</TableHead>
+              <TableHead className="font-semibold text-slate-700">Activity</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {documents.map((doc: any) => (
               <TableRow key={doc.id} className="hover:bg-indigo-50/30 transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
+                <TableCell className="min-w-0 max-w-[14rem] sm:max-w-[16rem] md:max-w-[18rem]">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="shrink-0 rounded-lg bg-red-100 p-2">
                       <FileText className="h-5 w-5 text-red-600" />
                     </div>
-                    <div>
-                      <FileNameCell fileName={doc.fileName} />
+                    <div className="min-w-0 flex-1">
+                      <FileNameCell
+                        fileName={
+                          (doc.docName && String(doc.docName).trim()) ||
+                          doc.fileName ||
+                          "Untitled"
+                        }
+                      />
                       {doc.documentNumber && (
-                        <p className="text-sm text-slate-600">#{doc.documentNumber}</p>
+                        <p className="truncate text-sm text-slate-600">
+                          #{doc.documentNumber}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -612,6 +854,16 @@ export function DocumentUploadSection({
                     <Calendar className="h-4 w-4 text-slate-500" />
                     {DateUtils.formatDateTime(doc.createdAt)}
                   </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    By: {getActorLabel(doc.uploadedByUser || doc.uploadedBy)}
+                  </p>
+                </TableCell>
+
+                <TableCell className="text-slate-700">
+                  <div className="text-sm capitalize">{doc.status?.replaceAll("_", " ") || "—"}</div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    By: {getLatestDecisionActor(doc)}
+                  </p>
                 </TableCell>
 
                 <TableCell>
@@ -668,6 +920,34 @@ export function DocumentUploadSection({
     </CardContent>
   </Card>
 
+  {pagination && pagination.totalPages > 1 && (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white/60 p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-600">
+        Page {page} of {pagination.totalPages}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1 || isFetching}
+          onClick={() => onPageChange?.(Math.max(1, page - 1))}
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Prev
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= pagination.totalPages || isFetching}
+          onClick={() => onPageChange?.(Math.min(pagination.totalPages, page + 1))}
+        >
+          Next
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )}
+
   {/* Lazy-loaded Upload Modal */}
   <React.Suspense fallback={null}>
     <CandidateUploadDocumentModal
@@ -677,6 +957,16 @@ export function DocumentUploadSection({
       onClose={closeUploadModal}
       onUpload={async (file: File, meta: any) => {
         try {
+          if (meta?.docType === DOCUMENT_TYPE.RESUME) {
+            setShowUploadModal(false);
+            setSelectedResumeFile(file);
+            setResumeDocName(meta?.docName || "");
+            setResumeDocNameMode("common");
+            setResumeRoleSelections([{ id: crypto.randomUUID() }]);
+            setShowResumeUploadModal(true);
+            return;
+          }
+
           const formData = new FormData();
           formData.append("file", file);
           formData.append("docType", meta.docType);
@@ -707,6 +997,39 @@ export function DocumentUploadSection({
       workExperiences={workExperiences}
     />
   </React.Suspense>
+
+  <ResumeUploadRoleModal
+    mode="upload"
+    isOpen={showResumeUploadModal}
+    selectedFile={selectedResumeFile}
+    docName={resumeDocName}
+    docNameMode={resumeDocNameMode}
+    roleSelections={resumeRoleSelections}
+    isUploading={isResumeUploading}
+    onClose={closeResumeUploadModal}
+    onFileSelect={(event) => {
+      const file = event.target.files?.[0];
+      if (file && file.type !== "application/pdf") {
+        toast.error("Please select a PDF file");
+        return;
+      }
+      setSelectedResumeFile(file || null);
+    }}
+    onPreview={() => {
+      if (!selectedResumeFile) return;
+      setPreviewDoc({
+        fileUrl: URL.createObjectURL(selectedResumeFile),
+        fileName: selectedResumeFile.name,
+      });
+      setIsPDFViewerOpen(true);
+    }}
+    onAddRole={addResumeRoleSelection}
+    onRemoveRole={removeResumeRoleSelection}
+    onRoleSelectionsChange={setResumeRoleSelections}
+    onDocNameModeChange={setResumeDocNameMode}
+    onDocNameChange={setResumeDocName}
+    onUpload={handleResumeUpload}
+  />
 
   <React.Suspense fallback={null}>
     <PassportDocumentDetailsDialog

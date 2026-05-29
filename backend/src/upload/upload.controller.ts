@@ -388,6 +388,10 @@ export class UploadController {
           type: 'string',
           description: 'Role Catalog ID',
         },
+        docName: {
+          type: 'string',
+          description: 'Optional document display name',
+        },
       },
     },
   })
@@ -395,6 +399,7 @@ export class UploadController {
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('roleCatalogId') roleCatalogId?: string,
+    @Body('docName') docName?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -404,6 +409,7 @@ export class UploadController {
       file,
       candidateId,
       roleCatalogId,
+      docName?.trim() || undefined,
     );
 
     return {

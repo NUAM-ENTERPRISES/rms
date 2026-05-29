@@ -53,6 +53,7 @@ import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { SelectedDoc } from "./BulkViewDocumentsModal";
 import { Badge } from "@/components/ui";
 import { MultiEmailInput } from "./MultiEmailInput";
+import { isClientSendableDocument } from "@/constants/document-types";
 
 interface SendToClientModalProps {
   isOpen: boolean;
@@ -111,6 +112,11 @@ export function SendToClientModal({
   }, [isOpen, refetchMerged, roleCatalogId]);
 
   const mergedDoc = mergedDocResponse?.data;
+
+  const sendableDocuments = useMemo(
+    () => documents.filter((doc) => isClientSendableDocument(doc)),
+    [documents],
+  );
 
   // Total size of selected documents in MB
   const totalSelectedSizeInfo = useMemo(() => {
@@ -198,7 +204,7 @@ export function SendToClientModal({
       if (isCurrentlySelected) {
         return withoutMerged.filter(d => d.id !== docId);
       } else {
-        const doc = documents.find(d => d.id === docId);
+        const doc = sendableDocuments.find(d => d.id === docId);
         if (!doc) return withoutMerged;
         return [
           ...withoutMerged,
@@ -743,10 +749,10 @@ export function SendToClientModal({
                     
                     const individualSelectedCount = selectedDocs.filter(d => d.id !== "merged").length;
                     
-                    if (individualSelectedCount === documents.length) {
+                    if (individualSelectedCount === sendableDocuments.length) {
                       setSelectedDocs([]);
                     } else {
-                      setSelectedDocs(documents.map(doc => ({
+                      setSelectedDocs(sendableDocuments.map(doc => ({
                         id: doc.id,
                         name: doc.fileName,
                         size: doc.fileSize || 0
@@ -754,11 +760,11 @@ export function SendToClientModal({
                     }
                   }}
                 >
-                  {selectedDocs.filter(d => d.id !== "merged").length === documents.length ? "Deselect All" : "Select All"}
+                  {selectedDocs.filter(d => d.id !== "merged").length === sendableDocuments.length ? "Deselect All" : "Select All"}
                 </Button>
               </div>
               <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                {documents.map((doc) => (
+                {sendableDocuments.map((doc) => (
                   <div key={doc.id} className={`p-3 flex items-center gap-3 transition-colors ${hasMergedSelected ? "cursor-not-allowed" : "hover:bg-slate-50"}`}>
                     <Checkbox 
                       id={`doc-${doc.id}`} 

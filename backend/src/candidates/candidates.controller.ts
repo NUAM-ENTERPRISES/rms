@@ -32,6 +32,7 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
@@ -396,6 +397,7 @@ export class CandidatesController {
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
+                  candidateCode: { type: 'string', nullable: true, example: 'AFFCD012026' },
                   name: { type: 'string' },
                   contact: { type: 'string' },
                   email: { type: 'string' },
@@ -650,7 +652,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get CRE reassigned candidates',
     description:
-      'Retrieve candidates transferred by CRE to recruiter; currently untouched for recruiter',
+      'Retrieve candidates transferred by CRE to recruiter with their CRE status',
   })
   async getMyCREReassignedCandidates(
     @Request() req,
@@ -724,19 +726,18 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Transfer converted candidate to recruiter',
     description:
-      'Transfer an interested candidate to a recruiter and set status to untouched',
+      'Transfer a CRE-assigned candidate back to the recruiter with a selected pipeline status',
   })
   async transferToRecruiter(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: TransferToRecruiterDto,
     @Request() req,
   ) {
     const userId = req.user.id;
-    const notes = body?.notes;
     const candidate = await this.candidatesService.transferCREConvertedToRecruiter(
       id,
       userId,
-      notes,
+      body,
     );
 
     return {

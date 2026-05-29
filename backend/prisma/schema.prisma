@@ -52,6 +52,7 @@ model UserSession {
 
 model User {
   id                               String                         @id @default(cuid())
+  employeeCode                     String?                        @unique @map("employee_code")
   email                            String                         @unique
   name                             String
   password                         String
@@ -110,7 +111,15 @@ model User {
   @@index([addressCountryCode])
   @@index([addressStateId])
   @@index([createdAt])
+  @@index([employeeCode])
   @@map("users")
+}
+
+model EmployeeCodeSequence {
+  year       Int @id
+  lastNumber Int @default(0) @map("last_number")
+
+  @@map("employee_code_sequences")
 }
 
 model Role {
@@ -267,6 +276,8 @@ model Country {
   usersPhysicalAddress          User[]                        @relation("PhysicalAddressCountryUser")
   candidatesPhysicalAddress     Candidate[]                 @relation("PhysicalAddressCountryCandidate")
   userCountryCoverages          UserCountryCoverage[]
+  workExperiences               WorkExperience[]            @relation("WorkExperienceCountry")
+  candidateQualifications       CandidateQualification[]    @relation("CandidateQualificationCountry")
 
   @@map("countries")
 }
@@ -374,6 +385,7 @@ model RoleNeeded {
 
 model Candidate {
   id                   String                         @id @default(cuid())
+  candidateCode        String?                        @unique @map("candidate_code")
   email                String?
   source               String                         @default("manual")
   agentId              String?
@@ -466,7 +478,15 @@ model Candidate {
   @@index([source])
   @@index([agentId])
   @@index([gender])
+  @@index([candidateCode])
   @@map("candidates")
+}
+
+model CandidateCodeSequence {
+  year       Int @id
+  lastNumber Int @default(0) @map("last_number")
+
+  @@map("candidate_code_sequences")
 }
 
 model Agent {
@@ -558,12 +578,14 @@ model WorkExperience {
   description   String?
   salary        Int?
   location      String?
+  countryCode   String?
   skills        Json         @default("[]")
   achievements  String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   candidate     Candidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog   RoleCatalog? @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
+  country       Country?     @relation("WorkExperienceCountry", fields: [countryCode], references: [code], onDelete: SetNull)
 
   documents     Document[]
 
@@ -571,6 +593,7 @@ model WorkExperience {
   @@index([roleCatalogId])
   @@index([companyName])
   @@index([jobTitle])
+  @@index([countryCode])
   @@map("work_experiences")
 }
 
@@ -583,13 +606,16 @@ model CandidateQualification {
   gpa             Float?
   isCompleted     Boolean       @default(true)
   notes           String?
+  countryCode     String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   candidate       Candidate     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   qualification   Qualification @relation(fields: [qualificationId], references: [id], onDelete: Cascade)
+  country         Country?      @relation("CandidateQualificationCountry", fields: [countryCode], references: [code], onDelete: SetNull)
 
   @@index([candidateId])
   @@index([qualificationId])
+  @@index([countryCode])
   @@map("candidate_qualifications")
 }
 
@@ -1542,14 +1568,19 @@ model CandidateRecruiterAssignment {
   assignedAt     DateTime  @default(now())
   unassignedAt   DateTime?
   unassignedBy   String?
-  reason         String? // Reason for assignment change
-  isActive       Boolean   @default(true)
-  assignmentType String    @default("manual") // manual, cre_auto, cre_manual
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  reason              String? // Reason for assignment change
+  isActive            Boolean   @default(true)
+  assignmentType      String    @default("manual") // manual, cre_auto, cre_manual
+  /// Status CRE selected at reassign; recruiter always sees candidate as untouched
+  creStatusId   Int?
+  /// CRE status note for the recruiter
+  creStatusNote String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  candidate          Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
-  recruiter          User      @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  candidate          Candidate        @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter          User             @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+  creStatus   CandidateStatus? @relation("CreStatus", fields: [creStatusId], references: [id])
   assignedByUser     User      @relation("AssignedByUser", fields: [assignedBy], references: [id])
   unassignedByUser   User?     @relation("UnassignedByUser", fields: [unassignedBy], references: [id])
   createdByUser      User?     @relation("CreatedByUser", fields: [createdBy], references: [id])
@@ -1570,7 +1601,8 @@ model CandidateStatus {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  candidates Candidate[]
+  candidates              Candidate[]
+  creStatusAssignments   CandidateRecruiterAssignment[] @relation("CreStatus")
 
   statusHistories CandidateStatusHistory[] @relation("StatusToHistory")
 

@@ -266,11 +266,20 @@ export const candidatesApi = baseApi.injectEndpoints({
         "Candidate",
       ],
     }),
-    transferCandidateToRecruiter: builder.mutation<Candidate, { id: string; notes?: string }>({
-      query: ({ id, notes }) => ({
+    transferCandidateToRecruiter: builder.mutation<
+      Candidate,
+      {
+        id: string;
+        currentStatusId: number;
+        reason: string;
+        onHoldUntil?: string;
+        futureDate?: string;
+      }
+    >({
+      query: ({ id, ...body }) => ({
         url: `/candidates/${id}/transfer-to-recruiter`,
         method: "POST",
-        body: { notes },
+        body,
       }),
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },

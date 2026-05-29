@@ -38,6 +38,7 @@ import { useGetProjectsQuery } from "@/services/projectsApi";
 import { useDebounce } from "@/hooks/useDebounce";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { useAppSelector } from "@/app/hooks";
+import { FaWhatsapp } from "react-icons/fa";
 
 
 // -------------------------------------------------------------------
@@ -242,6 +243,19 @@ export default function ProjectCandidatesOverviewPage() {
     });
   };
 
+  const formatPhoneForLink = (c: {
+    countryCode?: string | null;
+    mobileNumber?: string | null;
+    mobile?: string | null;
+    contact?: string | null;
+  }) => {
+    const raw =
+      String(c?.countryCode ?? "") +
+      String(c?.mobileNumber ?? c?.mobile ?? c?.contact ?? "");
+    const digits = raw.replace(/\D/g, "");
+    return digits || null;
+  };
+
   const getActiveTileLabel = () =>
     TILES.find((t) => t.key === activeFilter)?.label ?? "All Candidates";
 
@@ -419,6 +433,9 @@ export default function ProjectCandidatesOverviewPage() {
                         <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                           Candidate
                         </TableHead>
+                        <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+                          Contact
+                        </TableHead>
                         <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
                           Project & Role
                         </TableHead>
@@ -460,24 +477,70 @@ export default function ProjectCandidatesOverviewPage() {
                                   title={`${candidate.firstName} ${candidate.lastName}`}
                                   className="h-11 w-11 shadow"
                                 />
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <button
                                     onClick={() => navigate(`/candidates/${candidate.id}`)}
                                     className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
                                   >
                                     {candidate.firstName} {candidate.lastName}
                                   </button>
-                                  <div className="text-sm text-slate-500 mt-1.5 space-y-0.5">
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">{candidate.email}</span>
+                                  {candidate.candidateCode ? (
+                                    <div className="text-xs text-muted-foreground font-mono truncate mt-0.5">
+                                      {candidate.candidateCode}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                      <span className="text-gray-700">
-                                        {candidate.countryCode} {candidate.mobileNumber}
+                                  ) : null}
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            <TableCell className="px-6 py-5 text-center">
+                              <div className="flex flex-col items-stretch gap-2">
+                                <div className="flex items-center justify-center gap-1.5 w-full">
+                                  {/* {(() => {
+                                    const phoneDigits = formatPhoneForLink(candidate);
+                                    return (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                          onClick={() =>
+                                            phoneDigits &&
+                                            window.open(`https://wa.me/${phoneDigits}`, "_blank")
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`WhatsApp ${candidate.firstName || ""}`}
+                                        >
+                                          <FaWhatsapp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                          onClick={() =>
+                                            phoneDigits && (window.location.href = `tel:${phoneDigits}`)
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`Call ${candidate.firstName || ""}`}
+                                        >
+                                          <Phone className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+                                  })()} */}
+                                </div>
+                                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                  {candidate.email ? (
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                                      <span className="text-gray-700 truncate max-w-[220px]">
+                                        {candidate.email}
                                       </span>
                                     </div>
+                                  ) : null}
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <span className="text-gray-700">
+                                      {candidate.countryCode} {candidate.mobileNumber}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -521,7 +584,7 @@ export default function ProjectCandidatesOverviewPage() {
                             <TableCell className="px-6 py-5 text-sm text-gray-600">
                               {formatDate(item.createdAt)}
                             </TableCell>
-
+                           
                             <TableCell className="px-6 py-5 text-right">
                               <Button
                                 variant="ghost"

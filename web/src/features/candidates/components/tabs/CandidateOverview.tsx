@@ -36,6 +36,7 @@ import {
   Plane,
 } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
 import { getAge } from "@/utils/getAge";
 import {
@@ -199,22 +200,26 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
           <CardContent>
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Email
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Mail className="h-3 w-3 text-slate-400" />
-                    {candidate.email || "N/A"}
+                  <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
+                    <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="min-w-0 flex-1 whitespace-normal break-all leading-snug">
+                      {candidate.email || "N/A"}
+                    </span>
                   </p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Phone
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Phone className="h-3 w-3 text-slate-400" />
-                    {candidate.mobileNumber || "N/A"}
+                  <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
+                    <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                      {candidate.mobileNumber || "N/A"}
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -773,6 +778,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   GPA: {qual.gpa}
                                 </span>
                               )}
+                              {(qual.country?.name || qual.countryCode) && (
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                  {qual.countryCode && (
+                                    <FlagIcon countryCode={qual.countryCode} size="sm" />
+                                  )}
+                                  {qual.country?.name || qual.countryCode}
+                                </span>
+                              )}
                             </div>
 
                             {qual.notes && (
@@ -1095,6 +1108,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                                     {exp.location}
+                                  </span>
+                                )}
+                                {(exp.country?.name || exp.countryCode) && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                    {exp.countryCode && (
+                                      <FlagIcon countryCode={exp.countryCode} size="sm" />
+                                    )}
+                                    {exp.country?.name || exp.countryCode}
                                   </span>
                                 )}
                                 {exp.salary && (

@@ -29,6 +29,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
 import { UsersService } from './users.service';
 import { UploadService } from '../upload/upload.service';
+import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -36,6 +37,7 @@ import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
+import { EmployeeCodeService } from './services/employee-code.service';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { SkipAudit } from '../common/audit/skip-audit.decorator';
@@ -48,7 +50,36 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly uploadService: UploadService,
+    private readonly prisma: PrismaService,
+    private readonly employeeCodeService: EmployeeCodeService,
   ) {}
+
+  @Post('employee-code/suggest')
+  @Permissions('manage:users')
+  @ApiOperation({
+    summary: 'Suggest next employee code',
+    description:
+      'Reserve and return the next available employee code. This is an explicit admin action (not automatic during user creation).',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Employee code reserved successfully',
+  })
+  async suggestEmployeeCode(@Request() req): Promise<{
+    success: boolean;
+    data: { employeeCode: string };
+    message: string;
+  }> {
+    const employeeCode = await this.prisma.$transaction((tx) =>
+      this.employeeCodeService.reserveNextCode(tx as any),
+    );
+
+    return {
+      success: true,
+      data: { employeeCode },
+      message: 'Employee code reserved successfully',
+    };
+  }
 
   @Post()
   @Permissions('manage:users')

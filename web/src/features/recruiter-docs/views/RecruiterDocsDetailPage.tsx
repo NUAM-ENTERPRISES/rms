@@ -104,6 +104,7 @@ import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
 import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
+import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
 
 
 const CandidateUploadDocumentModal = React.lazy(() => import("../components/CandidateUploadDocumentModal"));
@@ -144,6 +145,9 @@ const formatWorkExperienceEntry = (exp: {
   startDate?: string;
   endDate?: string;
   isCurrent?: boolean;
+  location?: string;
+  countryCode?: string | null;
+  country?: { code: string; name: string } | null;
 }) => {
   const title = exp.jobTitle || exp.designation || exp.position || exp.role || "";
   const company = exp.companyName || exp.company || "";
@@ -168,11 +172,20 @@ const formatWorkExperienceEntry = (exp: {
     }
   }
 
+  const countryLabel = exp.country?.name || exp.countryCode || "";
+  const locationLabel = exp.location?.trim() || "";
+
   // Prefer showing title and company first, then years
   const parts = [] as string[];
   if (title) parts.push(title);
   if (company) parts.push(`at ${company}`);
-  return `${parts.join(" ")}${yearsLabel}`.trim();
+  let result = `${parts.join(" ")}${yearsLabel}`.trim();
+  if (countryLabel) {
+    result = result ? `${result} · ${countryLabel}` : countryLabel;
+  } else if (locationLabel) {
+    result = result ? `${result} · ${locationLabel}` : locationLabel;
+  }
+  return result;
 };
 
 interface UploadData {
@@ -276,7 +289,6 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [showReuseDialog, setShowReuseDialog] = React.useState(false);
   const [uploadDocType, setUploadDocType] = React.useState("");
-  const [selectedExistingDocId, setSelectedExistingDocId] = React.useState("");
   const [selectedRequirement, setSelectedRequirement] = React.useState<DocumentRequirement | null>(null);
   const [isReuploadMode, setIsReuploadMode] = React.useState(false);
   const [reuploadDocId, setReuploadDocId] = React.useState<string | null>(null);
@@ -454,7 +466,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
         }).unwrap();
-        toast.success(compressionToast ?? "Document re-uploaded successfully!");
+
+        toast.success("Document re-uploaded successfully!");
       } else {
         // Step 2: Create Document record in database
         const documentData = await createDocument({
@@ -494,19 +507,18 @@ const RecruiterDocsDetailPage: React.FC = () => {
     }
   };
 
-  const handleReuseDocument = async () => {
-    if (!selectedExistingDocId || !projectId) return;
+  const handleReuseDocument = async (documentId: string) => {
+    if (!documentId || !projectId) return;
 
     try {
       await reuseDocument({
-        documentId: selectedExistingDocId,
+        documentId,
         projectId,
         roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
       
       toast.success("Document linked successfully!");
       setShowReuseDialog(false);
-      setSelectedExistingDocId("");
       setSelectedRequirement(null);
       refetchRequirements();
     } catch (error) {
@@ -1108,8 +1120,8 @@ const RecruiterDocsDetailPage: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {introductionVideo?.document?.createdAt
-                          ? new Date(introductionVideo.document.createdAt).toLocaleDateString(
+                        {introductionVideo?.createdAt
+                          ? new Date(introductionVideo.createdAt).toLocaleDateString(
                               "en-GB",
                               {
                                 day: "2-digit",
@@ -1671,6 +1683,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
                   <div>
                     <h3 className="font-bold text-lg leading-none">{candidate.firstName} {candidate.lastName}</h3>
+                    {candidate.candidateCode ? (
+                      <div className="text-xs text-muted-foreground font-mono mt-1">
+                        {candidate.candidateCode}
+                      </div>
+                    ) : null}
                     <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-100">
                       {candidate.currentStatus?.statusName || "N/A"}
                     </Badge>
@@ -1720,6 +1737,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {qual.university || qual.institution} • {qual.graduationYear || qual.yearOfCompletion}
+                              {(qual.country?.name || qual.countryCode)
+                                ? ` • ${qual.country?.name || qual.countryCode}`
+                                : ""}
                             </span>
                           </div>
                         </div>
@@ -1744,6 +1764,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {exp.companyName} • {new Date(exp.startDate).getFullYear()} - {exp.isCurrent ? 'Present' : (exp.endDate ? new Date(exp.endDate).getFullYear() : 'N/A')}
+                              {(exp.country?.name || exp.countryCode)
+                                ? ` • ${exp.country?.name || exp.countryCode}`
+                                : exp.location
+                                  ? ` • ${exp.location}`
+                                  : ""}
                             </span>
                           </div>
                         </div>
@@ -1823,75 +1848,19 @@ const RecruiterDocsDetailPage: React.FC = () => {
         />
       </React.Suspense>
 
-      <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 text-violet-600" />
-              Link Existing {uploadDocType}
-            </DialogTitle>
-            <DialogDescription>
-              Select an existing {uploadDocType} from the candidate's profile to link to this project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Available {uploadDocType} Documents</Label>
-              <Select value={selectedExistingDocId} onValueChange={setSelectedExistingDocId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={`Select a ${uploadDocType}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  <TooltipProvider>
-                    {allCandidateDocuments
-                      .filter((doc: CandidateDocument) => doc.docType.toLowerCase() === uploadDocType.toLowerCase())
-                      .map((doc: CandidateDocument) => (
-                        <SelectItem key={doc.id} value={doc.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex flex-col max-w-[280px]">
-                                <span className="font-medium truncate">{doc.fileName}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  Uploaded on {new Date(doc.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs break-all">
-                              {doc.fileName}
-                            </TooltipContent>
-                          </Tooltip>
-                        </SelectItem>
-                      ))}
-                  </TooltipProvider>
-                  {allCandidateDocuments.filter((doc: CandidateDocument) => doc.docType.toLowerCase() === uploadDocType.toLowerCase()).length === 0 && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      <FileX className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                      No existing {uploadDocType} found.
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReuseDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleReuseDocument} 
-              disabled={!selectedExistingDocId || isReusing}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
-            >
-              {isReusing ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-2" />
-              )}
-              Link Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinkExistingDocumentModal
+        isOpen={showReuseDialog}
+        onClose={() => setShowReuseDialog(false)}
+        candidateId={candidateId || ""}
+        docType={uploadDocType}
+        roleCatalogId={candidateProject?.roleNeeded?.roleCatalog?.id}
+        roleLabel={
+          candidateProject?.roleNeeded?.designation ||
+          candidateProject?.roleNeeded?.roleCatalog?.label
+        }
+        isLinking={isReusing}
+        onConfirm={handleReuseDocument}
+      />
 
       <PDFViewer
         fileUrl={selectedDocument?.fileUrl || ""}
@@ -1980,6 +1949,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
                             {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
                             {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
+                            {qual.country?.name || qual.countryCode ? ` · ${qual.country?.name || qual.countryCode}` : ''}
                           </p>
                         ))
                       ) : (
