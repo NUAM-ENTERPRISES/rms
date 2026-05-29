@@ -23,10 +23,6 @@ import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 import { formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { useGetClientQuery } from "@/features/clients";
-import {
-  getProjectVisaTypeLabel,
-  isDirectVisaType,
-} from "@/constants/project-visa-types";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
@@ -344,9 +340,11 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                     Positions: {role.quantity}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {isDirectVisaType(role.visaType) && role.contractDurationYears
-                      ? `${getProjectVisaTypeLabel(role.visaType)} (${role.contractDurationYears} years)`
-                      : getProjectVisaTypeLabel(role.visaType)}
+                    {role.visaType === "contract" && role.contractDurationYears
+                      ? `Contract (${role.contractDurationYears} years)`
+                      : role.visaType === "contract"
+                      ? "Contract"
+                      : "Permanent"}
                   </Badge>
                 </div>
               </div>

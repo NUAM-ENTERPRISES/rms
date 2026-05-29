@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { refinePhysicalAddress } from "@/shared/utils/physical-address";
 
 export const LANGUAGE_PROFICIENCIES = ["PRIMARY", "SECONDARY", "TERTIARY"] as const;
 export type LanguageProficiencyValue = (typeof LANGUAGE_PROFICIENCIES)[number];
@@ -150,7 +149,13 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
       path: ["confirmPassword"],
     })
     .superRefine((data, ctx) => {
-      refinePhysicalAddress(data, ctx);
+      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country before state",
+          path: ["addressCountryCode"],
+        });
+      }
 
       if (!isRecruiterRole) return;
 
@@ -219,7 +224,13 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
   return z
     .object(updateUserFieldsShape)
     .superRefine((data, ctx) => {
-      refinePhysicalAddress(data, ctx);
+      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country before state",
+          path: ["addressCountryCode"],
+        });
+      }
       refineRecruiterCapabilityRows(
         {
           recruiterLanguages: data.recruiterLanguages,

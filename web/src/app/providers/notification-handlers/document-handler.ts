@@ -12,8 +12,7 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "candidate_documents_verified",
     "candidate_documents_rejected",
     "candidate_sent_for_verification",
-    "client_revision_requested",
-    "documents_forwarded",
+    "client_revision_requested"
   ];
 
   if (!documentNotificationTypes.includes(notification.type)) return false;

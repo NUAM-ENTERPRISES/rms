@@ -199,48 +199,32 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
     c.experience ??
     (candidate as any).totalExperience ??
     (candidate as any).experience;
-
-  const hasWorkExperiencesField =
-    "workExperiences" in c ||
-    "work_experiences" in c ||
-    "workExperiences" in candidate ||
-    "work_experiences" in candidate ||
-    ((candidate as any).candidate &&
-      ("workExperiences" in (candidate as any).candidate ||
-        "work_experiences" in (candidate as any).candidate));
-
   const workExperiences =
     (c.workExperiences && Array.isArray(c.workExperiences)
       ? c.workExperiences
-      : c.work_experiences && Array.isArray(c.work_experiences)
+      : (c.work_experiences && Array.isArray(c.work_experiences)
         ? c.work_experiences
-        : undefined) ||
-    ((candidate as any).candidate?.workExperiences &&
-    Array.isArray((candidate as any).candidate?.workExperiences)
+        : undefined)) ||
+    ((candidate as any).candidate?.workExperiences && Array.isArray((candidate as any).candidate?.workExperiences)
       ? (candidate as any).candidate.workExperiences
-      : (candidate as any).candidate?.work_experiences &&
-          Array.isArray((candidate as any).candidate.work_experiences)
-        ? (candidate as any).candidate.work_experiences
-        : undefined) ||
+      : (candidate as any).candidate?.work_experiences && Array.isArray((candidate as any).candidate.work_experiences)
+      ? (candidate as any).candidate.work_experiences
+      : undefined) ||
     ((candidate as any).workExperiences && Array.isArray((candidate as any).workExperiences)
       ? (candidate as any).workExperiences
       : (candidate as any).work_experiences && Array.isArray((candidate as any).work_experiences)
-        ? (candidate as any).work_experiences
-        : undefined) ||
+      ? (candidate as any).work_experiences
+      : undefined) ||
     [];
 
-  const workExpFromHistory = calculateExperience(workExperiences);
-  const workExpDuration = hasWorkExperiencesField
-    ? workExpFromHistory ?? (workExperiences.length === 0 ? "0 years" : null)
-    : workExpFromHistory ||
-      (typeof totalExp === "number" && totalExp > 0 ? `${totalExp} years` : null);
+  const workExpDuration = calculateExperience(workExperiences) ||
+    (typeof totalExp === "number" && totalExp > 0 ? `${totalExp} years` : null);
 
   // New fields requested: qualification label, numeric years and department
   const qualificationLabel = getQualificationLabel(c) || getQualificationLabel(candidate);
   const department = getDepartmentFromCandidate(c) || getDepartmentFromCandidate(candidate);
-  const experienceYearsNumeric = hasWorkExperiencesField
-    ? calculateExperienceYears(workExperiences) ?? 0
-    : typeof totalExp === "number" && totalExp > 0
+  const experienceYearsNumeric =
+    typeof totalExp === "number" && totalExp > 0
       ? totalExp
       : calculateExperienceYears(workExperiences);
 

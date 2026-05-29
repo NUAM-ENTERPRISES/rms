@@ -2656,17 +2656,10 @@ export class CandidateProjectsService {
 
     const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
     const candidateGender = candidate.gender?.toLowerCase();
-    let candidateExp = 0;
-    if (
-      Array.isArray(candidate.workExperiences) &&
-      candidate.workExperiences.length > 0
-    ) {
-      candidateExp = this.calculateExperienceFromWorkHistory(
-        candidate.workExperiences,
-      );
-    } else {
-      candidateExp =
-        candidate.totalExperience ?? candidate.experience ?? 0;
+    let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+    // If explicit experience is missing/zero, derive from work history when available
+    if ((!candidateExp || candidateExp === 0) && Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0) {
+      candidateExp = this.calculateExperienceFromWorkHistory(candidate.workExperiences);
     }
 
     const roleEligibility = project.rolesNeeded.map((role) => {
@@ -2858,17 +2851,9 @@ export class CandidateProjectsService {
     const results = candidates.map((candidate) => {
       const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
       const candidateGender = candidate.gender?.toLowerCase();
-      let candidateExp = 0;
-      if (
-        Array.isArray(candidate.workExperiences) &&
-        candidate.workExperiences.length > 0
-      ) {
-        candidateExp = this.calculateExperienceFromWorkHistory(
-          candidate.workExperiences,
-        );
-      } else {
-        candidateExp =
-          candidate.totalExperience ?? candidate.experience ?? 0;
+      let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
+      if ((!candidateExp || candidateExp === 0) && Array.isArray(candidate.workExperiences) && candidate.workExperiences.length > 0) {
+        candidateExp = this.calculateExperienceFromWorkHistory(candidate.workExperiences);
       }
 
       const roleEligibility = project.rolesNeeded.map((role) => {

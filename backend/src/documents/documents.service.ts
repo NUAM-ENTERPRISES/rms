@@ -4752,24 +4752,17 @@ export class DocumentsService {
         }
       }
 
-    } catch (e) {
-      // best-effort: do not fail the forwarding if status update/history creation fails
-      this.logger.warn(`Failed to update candidate project status after forwarding: ${e?.message || e}`);
-    }
-
-    // Notify recruiter and interview team (separate try so status failures do not block alerts)
-    try {
+      // 7. Notify Interview Coordinators about forwarding
       await this.outboxService.publishDocumentsForwardedToClient(
         candidateId,
         projectId,
         senderId,
         recipientEmail,
-        roleCatalogId,
       );
+
     } catch (e) {
-      this.logger.warn(
-        `Failed to queue documents forwarded notifications: ${e?.message || e}`,
-      );
+      // best-effort: do not fail the forwarding if status update/history creation fails
+      this.logger.warn(`Failed to update candidate project status after forwarding: ${e?.message || e}`);
     }
 
     return {

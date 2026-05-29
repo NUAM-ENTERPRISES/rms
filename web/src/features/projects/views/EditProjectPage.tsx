@@ -279,7 +279,7 @@ export default function EditProjectPage() {
           drugScreeningRequired: true,
           onCallRequired: false,
           relocationAssistance: false,
-          visaType: "direct_visa",
+          visaType: "contract",
           genderRequirement: "all",
           requiredSkills: [],
           candidateStates: [],
