@@ -2488,10 +2488,15 @@ export class ProjectsService {
    * Calculate total experience (years) from an array of workExperiences.
    * Matches logic used in other services (average month length = 30.44 days).
    */
-  private calculateExperienceFromWorkHistory(workExperiences: any[]): number {
+  private calculateExperienceFromWorkHistory(
+    workExperiences: any[],
+    roleCatalogId?: string,
+  ): number {
     let totalMonths = 0;
 
     workExperiences.forEach((exp) => {
+      if (roleCatalogId && exp.roleCatalogId !== roleCatalogId) return;
+
       const start = new Date(exp.startDate);
       const end = exp.endDate ? new Date(exp.endDate) : new Date();
 
@@ -2642,34 +2647,58 @@ export class ProjectsService {
     const candidateExperience =
       candidate.totalExperience ?? candidate.experience;
 
-    // Experience scoring (40 points)
-    // First, prefer role-catalog specific work experience (if candidate has workExperiences matching role.roleCatalogId)
-    const hasRoleSpecificWorkExp =
-      Array.isArray(candidate.workExperiences) &&
-      role.roleCatalogId &&
-      candidate.workExperiences.some(
-        (we: any) => we.roleCatalogId === role.roleCatalogId,
-      );
+    // Experience scoring (40 points) — proportional based on actual years of role-specific experience
+    const minExp = role.minExperience ?? 0;
+    const maxExp = role.maxExperience ?? null;
 
-    if (hasRoleSpecificWorkExp) {
-      roleScore += 40;
+    if (role.roleCatalogId && Array.isArray(candidate.workExperiences)) {
+      const specificYears = this.calculateExperienceFromWorkHistory(
+        candidate.workExperiences,
+        role.roleCatalogId,
+      );
+      if (specificYears > 0) {
+        if (minExp === 0 || specificYears >= minExp) {
+          // Meets or exceeds specific experience requirement — full points
+          roleScore += 40;
+        } else {
+          // Has specific experience but below the minimum — partial points (20–39)
+          const ratio = specificYears / Math.max(minExp, 1);
+          roleScore += 20 + Math.round(ratio * 19);
+        }
+      }
+      // specificYears === 0 → no points (already hard-gated above)
     } else {
-      // Award partial points (20 instead of 40) if overall experience matches but not specific role
-      const experienceMatch =
-        candidateExperience &&
-        this.matchExperience(
-          candidateExperience,
-          role.minExperience,
-          role.maxExperience,
+      // No roleCatalog requirement — score by general experience fit (0–20 points)
+      if (candidateExperience && candidateExperience > 0) {
+        const effectiveMax = maxExp ?? minExp + 10;
+        const range = Math.max(effectiveMax - minExp, 1);
+        const ratio = Math.min(
+          (candidateExperience - minExp) / range + 0.5,
+          1,
         );
-      if (experienceMatch) {
-        roleScore += 20;
+        roleScore += Math.round(ratio * 20);
       }
     }
 
-    // Skills scoring (30 points)
-    if (this.matchSkills(candidate.skills, role.skills)) {
-      roleScore += 30;
+    // Skills scoring (30 points) — proportional across role.skills, role.requiredSkills, role.technicalSkills
+    const allRequiredSkills: string[] = [
+      ...this.parseJsonField(role.skills),
+      ...this.parseJsonField(role.requiredSkills),
+      ...this.parseJsonField(role.technicalSkills),
+    ];
+
+    if (allRequiredSkills.length === 0) {
+      roleScore += 30; // No skills required → full points
+    } else {
+      const candidateSkillsList: string[] = this.parseJsonField(candidate.skills);
+      const matchedCount = allRequiredSkills.filter((req: string) =>
+        candidateSkillsList.some(
+          (cs: string) =>
+            cs.toLowerCase().includes(req.toLowerCase()) ||
+            req.toLowerCase().includes(cs.toLowerCase()),
+        ),
+      ).length;
+      roleScore += Math.round((matchedCount / allRequiredSkills.length) * 30);
     }
 
     // Education scoring (30 points)
@@ -2754,7 +2783,7 @@ export class ProjectsService {
   /**
    * Calculate education score for a role (0-30)
    * - If role has no education requirements, award full points (30)
-   * - If candidate has any qualification that matches requirement by id/level/field -> 30
+   * - If candidate has any qualification that matches requirement by id/name/shortName/level/field -> 30
    * - If candidate has qualifications but none match -> partial (15)
    */
   private calculateEducationScore(candidateQualifications: any[] | undefined, roleEducationReqs: any[] | undefined): number {
@@ -2774,12 +2803,41 @@ export class ProjectsService {
       const reqQual = req?.qualification ?? req;
       if (!reqQual) continue;
 
-      // Match by ID
+      // Match by ID (exact)
       if (reqQual.id && candidateQuals.some((cq) => cq.id === reqQual.id)) {
         return MAX;
       }
 
-      // Match by level
+      // Match by qualification name (case-insensitive, both directions)
+      if (reqQual.name) {
+        const reqName = reqQual.name.toLowerCase();
+        if (
+          candidateQuals.some((cq) => {
+            const cqName = (cq.name ?? '').toLowerCase();
+            return cqName.includes(reqName) || reqName.includes(cqName);
+          })
+        ) {
+          return MAX;
+        }
+      }
+
+      // Match by shortName (case-insensitive, both directions)
+      if (reqQual.shortName) {
+        const reqShort = reqQual.shortName.toLowerCase();
+        if (
+          candidateQuals.some((cq) => {
+            const cqShort = (cq.shortName ?? '').toLowerCase();
+            return (
+              cqShort.length > 0 &&
+              (cqShort.includes(reqShort) || reqShort.includes(cqShort))
+            );
+          })
+        ) {
+          return MAX;
+        }
+      }
+
+      // Match by level (exact)
       if (reqQual.level && candidateQuals.some((cq) => cq.level === reqQual.level)) {
         return MAX;
       }
