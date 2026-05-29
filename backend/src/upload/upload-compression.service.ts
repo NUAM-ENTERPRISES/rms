@@ -8,7 +8,7 @@ export class UploadCompressionService {
 
   /**
    * Compress file buffer when it exceeds targetMaxBytes (images/PDF).
-   * PDFs use qpdf-compress (lossy image re-encoding inside the PDF, output stays PDF).
+   * Images use sharp; PDFs use qpdf-compress (output stays PDF).
    */
   async prepareFile(
     file: Express.Multer.File,

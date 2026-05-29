@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   validateDocumentFile,
   validateCsvAttachment,
-  canClientCompress,
+  canServerCompressImage,
   effectiveMaxMB,
 } from "../index";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
@@ -59,14 +59,14 @@ describe("validateCsvAttachment", () => {
   });
 });
 
-describe("canClientCompress", () => {
+describe("canServerCompressImage", () => {
   it("returns true for jpeg", () => {
     const file = new File(["x"], "photo.jpg", { type: "image/jpeg" });
-    expect(canClientCompress(file)).toBe(true);
+    expect(canServerCompressImage(file)).toBe(true);
   });
 
   it("returns false for pdf", () => {
     const file = new File(["x"], "doc.pdf", { type: "application/pdf" });
-    expect(canClientCompress(file)).toBe(false);
+    expect(canServerCompressImage(file)).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import sharp from 'sharp';
 import { UploadCompressionService } from '../upload-compression.service';
 
 jest.mock('../pdf-compressor', () => ({
@@ -42,6 +43,31 @@ describe('UploadCompressionService', () => {
     const file = makeFile(buf, 'application/pdf', 'small.pdf');
     const out = await service.prepareFile(file, 10 * 1024 * 1024, 'Test');
     expect(out.size).toBe(100);
+    expect(mockCompressPdfToTarget).not.toHaveBeenCalled();
+  });
+
+  it('compresses oversized JPEG via sharp', async () => {
+    const width = 5000;
+    const height = 5000;
+    const raw = Buffer.alloc(width * height * 3);
+    for (let i = 0; i < raw.length; i++) {
+      raw[i] = i % 256;
+    }
+
+    const original = await sharp(raw, {
+      raw: { width, height, channels: 3 },
+    })
+      .jpeg({ quality: 100 })
+      .toBuffer();
+
+    expect(original.length).toBeGreaterThan(5 * 1024 * 1024);
+
+    const file = makeFile(original, 'image/jpeg', 'photo.jpg');
+    const out = await service.prepareFile(file, 5 * 1024 * 1024, 'Photo');
+
+    expect(out.size).toBeLessThanOrEqual(5 * 1024 * 1024);
+    expect(out.mimetype).toBe('image/jpeg');
+    expect(out.originalname).toBe('photo.jpg');
     expect(mockCompressPdfToTarget).not.toHaveBeenCalled();
   });
 

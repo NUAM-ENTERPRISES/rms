@@ -95,10 +95,8 @@ export function validateDocumentFile(
   }
 
   if (sizeMb > maxMb) {
-    if (canClientCompress(file)) {
-      return { ok: true };
-    }
     if (
+      canServerCompressImage(file) ||
       isPdfMime(file.type) ||
       file.name.toLowerCase().endsWith(".pdf")
     ) {
@@ -118,8 +116,8 @@ function formatSizeMb(sizeMb: number): string {
   return `${sizeMb} MB`;
 }
 
-/** Files we can shrink in the browser before upload. */
-export function canClientCompress(file: File): boolean {
+/** JPEG/PNG/WebP images compressed on the server via sharp (requires 30MB ingress). */
+export function canServerCompressImage(file: File): boolean {
   const mime = file.type || "";
   return (
     mime.startsWith("image/") &&
@@ -135,7 +133,10 @@ export function canClientCompress(file: File): boolean {
 export function needsServerCompression(file: File, docType: string): boolean {
   const maxBytes = effectiveMaxMB(docType) * 1024 * 1024;
   if (file.size <= maxBytes) return false;
-  if (canClientCompress(file)) return false;
+  if (canServerCompressImage(file)) return false;
+  if (isPdfMime(file.type) || file.name.toLowerCase().endsWith(".pdf")) {
+    return false;
+  }
   return true;
 }
 
