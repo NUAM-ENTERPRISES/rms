@@ -1,4 +1,5 @@
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useMemo, type ComponentType } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -163,6 +164,29 @@ export default function RecruiterCandidatesTab({
 
   // Candidates are already filtered by the API based on user role
   const recruiterCandidates = allCandidates;
+
+  const recruiterCandidateIds = useMemo(
+    () =>
+      recruiterCandidates
+        .map((c: { id?: string }) => c.id)
+        .filter((id): id is string => Boolean(id))
+        .sort(),
+    [recruiterCandidates]
+  );
+  const debouncedRecruiterIds = useDebounce(recruiterCandidateIds, 500);
+  const { data: bulkEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId, candidateIds: debouncedRecruiterIds },
+    { skip: !projectId || debouncedRecruiterIds.length === 0 }
+  );
+  const eligibilityMap = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof assignEligibilityData>>();
+    if (bulkEligibilityResponse?.data && Array.isArray(bulkEligibilityResponse.data)) {
+      bulkEligibilityResponse.data.forEach((item) => {
+        map.set(item.candidateId, item);
+      });
+    }
+    return map;
+  }, [bulkEligibilityResponse]);
 
   // Filter candidates (show all recruiter's candidates)
   const filteredCandidates = recruiterCandidates.filter((candidate: any) => {
@@ -667,6 +691,7 @@ export default function RecruiterCandidatesTab({
                     isAlreadyInProject={isAssignedToProject}
                     className="hover:scale-100"
                     showDocumentStatus={isAssignedToProject}
+                    eligibilityData={eligibilityMap.get(candidate.id)}
                   />
                 );
               })}

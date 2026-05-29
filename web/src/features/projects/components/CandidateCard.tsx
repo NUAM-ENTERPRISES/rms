@@ -34,6 +34,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import type { CareerGapAnalysis } from "@/features/candidates/api";
+import {
+  formatMonthsAsDuration,
+  getGapTypeLabel,
+  hasCareerGaps,
+} from "@/features/candidates/utils/career-gap-display";
 
 type StatusReference = {
   name?: string;
@@ -212,6 +218,7 @@ export interface CandidateRecord {
     id?: string;
     name?: string;
   } | null;
+  careerGapAnalysis?: CareerGapAnalysis;
 }
 
 interface CandidateCardProps {
@@ -617,6 +624,13 @@ const CandidateCard = memo(function CandidateCard({
   };
 
   const primaryRoleMatch = getPrimaryRoleMatch();
+  const careerGapAnalysis = candidate.careerGapAnalysis;
+  const showCareerGapNotice = hasCareerGaps(careerGapAnalysis);
+  const showEligibilityIssues = Boolean(
+    eligibilityData &&
+      (eligibilityData.isEligible === false ||
+        eligibilityData.roleEligibility?.some((r) => r.reasons && r.reasons.length > 0))
+  );
   // Ensure the displayed match score is a plain number (not an object).
   const resolveNumericScore = (s: any): number | undefined => {
     if (s === undefined || s === null) return undefined;
@@ -1110,7 +1124,7 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Eligibility Warning Icon */}
-          {eligibilityData && (eligibilityData.isEligible === false || eligibilityData.roleEligibility?.some(r => r.reasons && r.reasons.length > 0)) && (
+          {(showCareerGapNotice || showEligibilityIssues) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
@@ -1125,6 +1139,27 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipTrigger>
               <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs max-h-72 overflow-y-auto p-3 rounded-xl">
                 <div className="space-y-2">
+                  {showCareerGapNotice && careerGapAnalysis && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                        <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+                        Career Gap
+                      </div>
+                      <p className="text-[10px] text-amber-800 font-medium">
+                        Total gap: {formatMonthsAsDuration(careerGapAnalysis.totalGapMonths)}
+                      </p>
+                      <ul className="space-y-1">
+                        {careerGapAnalysis.gaps.slice(0, 3).map((gap, gapIdx) => (
+                          <li key={gapIdx} className="text-[10px] text-amber-700 leading-snug">
+                            <span className="font-medium">{getGapTypeLabel(gap.type)}:</span>{" "}
+                            {gap.label} ({formatMonthsAsDuration(gap.months)})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {showEligibilityIssues && (
+                    <>
                   <div className={cn(
                     "flex items-center gap-2 font-bold text-xs",
                     isNotEligible ? "text-red-600" : "text-amber-600"
@@ -1137,8 +1172,10 @@ const CandidateCard = memo(function CandidateCard({
                       ? "This candidate does not meet the minimum requirements for any role in this project."
                       : "This candidate is eligible but has some soft mismatches or requires verification."}
                   </div>
+                    </>
+                  )}
                   
-                  {eligibilityData?.roleEligibility && (
+                  {showEligibilityIssues && eligibilityData?.roleEligibility && (
                     <div className="space-y-2 border-t pt-2">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role Breakdown</div>
                       {eligibilityData.roleEligibility.map((role, rIdx) => (

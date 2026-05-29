@@ -1223,6 +1223,10 @@ export class CandidatesService {
 
       return {
         ...candidateData,
+        careerGapAnalysis: calculateCareerGaps(
+          candidate.workExperiences ?? [],
+          candidate.qualifications ?? [],
+        ),
         isNominated,
         isHandledByCRE,
         isCREReassigned,
@@ -4909,6 +4913,8 @@ export class CandidatesService {
             status: { select: { id: true, statusName: true } },
           },
         },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4959,6 +4965,10 @@ export class CandidatesService {
 
       return {
         ...withCompletion,
+        careerGapAnalysis: calculateCareerGaps(
+          c.workExperiences ?? [],
+          c.qualifications ?? [],
+        ),
         isHandledByCRE,
         isCREReassigned,
         creStatusNote: isCREReassigned

@@ -46,8 +46,10 @@ import {
   Trash2,
   Check,
   Edit,
+  Clock,
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
+import { DateUtils } from "@/shared/utils/date";
 import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
@@ -997,6 +999,27 @@ export default function QualificationWorkExperienceModal({
                   disabled={workExperienceForm.watch("isCurrent")}
                 />
               </div>
+
+              {/* Duration Preview */}
+              {(() => {
+                const start = workExperienceForm.watch("startDate");
+                const end = workExperienceForm.watch("endDate");
+                const isCurrent = workExperienceForm.watch("isCurrent");
+                if (!start) return null;
+                const duration = DateUtils.formatDurationBetweenDates(
+                  start,
+                  end,
+                  isCurrent
+                );
+                return (
+                  <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">
+                      Calculated Duration: {duration}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Current Position */}
               <div className="flex items-center space-x-2">

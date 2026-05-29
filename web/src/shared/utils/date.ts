@@ -3,7 +3,15 @@
  * Following FE_GUIDELINES.md shared pattern
  */
 
-import { format, formatDistanceToNow, parseISO, isValid, differenceInMonths } from "date-fns";
+import {
+  format,
+  formatDistanceToNow,
+  parseISO,
+  isValid,
+  intervalToDuration,
+  differenceInCalendarDays,
+  addDays,
+} from "date-fns";
 
 export class DateUtils {
   /**
@@ -152,17 +160,16 @@ export class DateUtils {
   }
 
   /**
-   * Calculate duration between two dates
-   * Returns object with years and months
+   * Calculate duration between two dates (calendar-accurate years, months, days).
    */
   static calculateDuration(
     startDate: string | Date,
     endDate?: string | Date | null,
     isCurrent: boolean = false
-  ): { years: number; months: number } {
+  ): { years: number; months: number; days: number } {
     try {
       const start = typeof startDate === "string" ? parseISO(startDate) : startDate;
-      if (!isValid(start)) return { years: 0, months: 0 };
+      if (!isValid(start)) return { years: 0, months: 0, days: 0 };
 
       let end: Date;
       if (isCurrent || !endDate) {
@@ -171,55 +178,108 @@ export class DateUtils {
         end = typeof endDate === "string" ? parseISO(endDate) : endDate;
       }
 
-      if (!isValid(end) || end < start) return { years: 0, months: 0 };
+      if (!isValid(end) || end < start) return { years: 0, months: 0, days: 0 };
 
-      const totalMonths = differenceInMonths(end, start);
-      const years = Math.floor(totalMonths / 12);
-      const months = totalMonths % 12;
-
-      return { years, months };
+      const duration = intervalToDuration({ start, end });
+      return {
+        years: duration.years ?? 0,
+        months: duration.months ?? 0,
+        days: duration.days ?? 0,
+      };
     } catch {
-      return { years: 0, months: 0 };
+      return { years: 0, months: 0, days: 0 };
     }
   }
 
   /**
-   * Format duration to string (e.g., "2 yrs 3 mos")
+   * Format duration to string (e.g., "2 yrs 3 mos 5 days").
    */
-  static formatDuration(years: number, months: number): string {
+  static formatDuration(
+    years: number,
+    months: number,
+    days: number = 0
+  ): string {
     const parts: string[] = [];
 
     if (years > 0) {
       parts.push(`${years} yr${years > 1 ? "s" : ""}`);
     }
 
-    if (months > 0 || (years === 0 && months === 0)) {
+    if (months > 0 || years > 0) {
       parts.push(`${months} mo${months !== 1 ? "s" : ""}`);
     }
+
+    parts.push(`${days} day${days !== 1 ? "s" : ""}`);
 
     return parts.join(" ");
   }
 
+  /** Format a pre-aggregated month count (career-gap API); days are not available. */
+  static formatDurationFromTotalMonths(totalMonths: number): string {
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    return this.formatDuration(years, months, 0);
+  }
+
+  /** Human-readable duration between two dates. */
+  static formatDurationBetweenDates(
+    startDate: string | Date,
+    endDate?: string | Date | null,
+    isCurrent: boolean = false
+  ): string {
+    const { years, months, days } = this.calculateDuration(
+      startDate,
+      endDate,
+      isCurrent
+    );
+    return this.formatDuration(years, months, days);
+  }
+
   /**
-   * Sum total experience from an array of work experience objects
+   * Sum total experience from work history (sums calendar days, then decomposes).
    */
   static calculateTotalExperience(
     experiences: any[]
-  ): { years: number; months: number } {
-    let totalMonths = 0;
+  ): { years: number; months: number; days: number } {
+    let totalDays = 0;
 
     experiences.forEach((exp) => {
-      const { years, months } = this.calculateDuration(
-        exp.startDate,
-        exp.endDate,
-        exp.isCurrent
-      );
-      totalMonths += years * 12 + months;
+      try {
+        const start =
+          typeof exp.startDate === "string"
+            ? parseISO(exp.startDate)
+            : exp.startDate;
+        if (!isValid(start)) return;
+
+        let end: Date;
+        if (exp.isCurrent || !exp.endDate) {
+          end = new Date();
+        } else {
+          end =
+            typeof exp.endDate === "string" ? parseISO(exp.endDate) : exp.endDate;
+        }
+
+        if (!isValid(end) || end < start) return;
+
+        totalDays += Math.max(0, differenceInCalendarDays(end, start));
+      } catch {
+        // skip invalid entry
+      }
+    });
+
+    if (totalDays === 0) {
+      return { years: 0, months: 0, days: 0 };
+    }
+
+    const duration = intervalToDuration({
+      start: new Date(0),
+      end: addDays(new Date(0), totalDays),
     });
 
     return {
-      years: Math.floor(totalMonths / 12),
-      months: totalMonths % 12,
+      years: duration.years ?? 0,
+      months: duration.months ?? 0,
+      days: duration.days ?? 0,
     };
   }
 }

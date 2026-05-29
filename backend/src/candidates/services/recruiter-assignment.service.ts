@@ -13,6 +13,7 @@ import {
   resolveCreHandoffNote,
   resolveCreHandoffStatus,
 } from '../utils/cre-handoff.util';
+import { calculateCareerGaps } from '../utils/employment-timeline.util';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
 
@@ -1076,6 +1077,10 @@ export class RecruiterAssignmentService {
 
       return {
         ...merged,
+        careerGapAnalysis: calculateCareerGaps(
+          candidate.workExperiences ?? [],
+          candidate.qualifications ?? [],
+        ),
         currentStatus: merged.currentStatus,
         isHandledByCRE,
         isCREReassigned,
