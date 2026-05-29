@@ -38,6 +38,7 @@ import {
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
+import { getCandidateExperienceLabel } from "../../utils/experience-display";
 import { getAge } from "@/utils/getAge";
 import {
   Candidate,
@@ -72,11 +73,8 @@ interface CandidateOverviewProps {
   onOpenPassportDocuments?: () => void;
 }
 
-const formatMonthsAsDuration = (totalMonths: number): string => {
-  const years = Math.floor(totalMonths / 12);
-  const months = totalMonths % 12;
-  return DateUtils.formatDuration(years, months);
-};
+const formatMonthsAsDuration = (totalMonths: number): string =>
+  DateUtils.formatDurationFromTotalMonths(totalMonths);
 
 const getGapTypeLabel = (type: CareerGapType): string => {
   switch (type) {
@@ -124,20 +122,16 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   const qualifications = candidate.qualifications ?? [];
   const workExperiences = candidate.workExperiences ?? [];
 
-  const experienceLabel = useMemo(() => {
-    if (careerGaps) {
-      return formatMonthsAsDuration(careerGaps.totalExperienceMonths);
-    }
-    if (workExperiences.length > 0) {
-      const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
-      return DateUtils.formatDuration(years, months);
-    }
-    return (
-      candidate.totalExperience?.toString() ||
-      candidate.experience?.toString() ||
-      "N/A"
-    );
-  }, [careerGaps, workExperiences, candidate.totalExperience, candidate.experience]);
+  const experienceLabel = useMemo(
+    () =>
+      getCandidateExperienceLabel({
+        careerGapAnalysis: careerGaps,
+        workExperiences,
+        totalExperience: candidate.totalExperience,
+        experience: candidate.experience,
+      }),
+    [careerGaps, workExperiences, candidate.totalExperience, candidate.experience]
+  );
 
   const careerGapLabel = useMemo(() => {
     if (isCandidateLoading) return "Loading…";
@@ -927,12 +921,21 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             <div>
                               <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Experience</p>
                               <p className="text-2xl font-extrabold tracking-tight">
-                                {careerGaps
-                                  ? formatMonthsAsDuration(careerGaps.totalExperienceMonths)
-                                  : (() => {
-                                      const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
-                                      return DateUtils.formatDuration(years, months);
-                                    })()}
+                                {(() => {
+                                  if (workExperiences.length > 0) {
+                                    const { years, months, days } =
+                                      DateUtils.calculateTotalExperience(workExperiences);
+                                    return DateUtils.formatDuration(years, months, days);
+                                  }
+                                  if (careerGaps) {
+                                    return formatMonthsAsDuration(careerGaps.totalExperienceMonths);
+                                  }
+                                  return (
+                                    candidate.totalExperience?.toString() ||
+                                    candidate.experience?.toString() ||
+                                    "N/A"
+                                  );
+                                })()}
                               </p>
                             </div>
                             <div className="text-center">
@@ -1091,7 +1094,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                     )}
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
                                       <Clock className="h-2.5 w-2.5" />
-                                      {DateUtils.formatDuration(duration.years, duration.months)}
+                                      {DateUtils.formatDuration(
+                                        duration.years,
+                                        duration.months,
+                                        duration.days
+                                      )}
                                     </span>
 
                                   </div>

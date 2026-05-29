@@ -59,6 +59,7 @@ import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
+import { getCandidateExperienceLabel } from "../utils/experience-display";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -616,6 +617,7 @@ export default function CandidateOverviewPage() {
                       </TableHead>
                     )}
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Experience</TableHead>
                     <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
@@ -633,12 +635,12 @@ export default function CandidateOverviewPage() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={canTransferCandidates ? 9 : 8} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 10 : 9} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canTransferCandidates ? 9 : 8} className="h-64 text-center">
+                      <TableCell colSpan={canTransferCandidates ? 10 : 9} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                             <UserCheck className="h-8 w-8 text-slate-300" />
@@ -722,6 +724,12 @@ export default function CandidateOverviewPage() {
                                   codeClassName="text-[11px] text-muted-foreground font-mono"
                                 />
                               </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium tabular-nums">
+                              <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden />
+                              <span>{getCandidateExperienceLabel(candidate)}</span>
                             </div>
                           </TableCell>
                           <TableCell className="px-4 py-3 text-center">

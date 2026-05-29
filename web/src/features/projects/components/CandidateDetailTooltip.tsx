@@ -11,6 +11,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { CandidateRecord } from "./CandidateCard";
+import { DateUtils } from "@/shared/utils/date";
 
 interface CandidateDetailTooltipProps {
   candidate: CandidateRecord;
@@ -63,42 +64,15 @@ const formatDateOfBirth = (dob?: string) => {
 
 const calculateExperience = (workExp?: Array<any>) => {
   if (!workExp || workExp.length === 0) return null;
-  try {
-    let totalMonths = 0;
-    workExp.forEach(exp => {
-      const start = new Date(exp.startDate || exp.start_date);
-      const end = new Date(exp.endDate || exp.end_date || undefined);
-      const effectiveEnd = exp.endDate || exp.end_date ? end : new Date();
-      const months = (effectiveEnd.getFullYear() - start.getFullYear()) * 12 + (effectiveEnd.getMonth() - start.getMonth());
-      totalMonths += Math.max(0, months);
-    });
-    const years = Math.floor(totalMonths / 12);
-    const months = totalMonths % 12;
-    if (years > 0 && months > 0) return `${years}y ${months}m`;
-    if (years > 0) return `${years} years`;
-    if (months > 0) return `${months} months`;
-  } catch {
-    return null;
-  }
-  return null;
+  const { years, months, days } = DateUtils.calculateTotalExperience(workExp);
+  return DateUtils.formatDuration(years, months, days);
 };
 
 // Returns total full years of experience (number) when possible
 const calculateExperienceYears = (workExp?: Array<any>) => {
   if (!workExp || workExp.length === 0) return null;
-  try {
-    let totalMonths = 0;
-    workExp.forEach(exp => {
-      const start = new Date(exp.startDate || exp.start_date);
-      const end = new Date(exp.endDate || exp.end_date || undefined);
-      const effectiveEnd = exp.endDate || exp.end_date ? end : new Date();
-      const months = (effectiveEnd.getFullYear() - start.getFullYear()) * 12 + (effectiveEnd.getMonth() - start.getMonth());
-      totalMonths += Math.max(0, months);
-    });
-    return Math.floor(totalMonths / 12);
-  } catch {
-    return null;
-  }
+  const { years } = DateUtils.calculateTotalExperience(workExp);
+  return years > 0 ? years : null;
 };
 
 // Format a work experience period as `YYYY - YYYY` or `YYYY - Present` (safe for tests)
@@ -114,34 +88,38 @@ const formatWorkPeriod = (startDate?: string, endDate?: string) => {
   }
 };
 
-// Human-readable duration between two dates (used per-work-entry)
-const formatDuration = (startDate?: string, endDate?: string) => {
-  if (!startDate) return null;
-  try {
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : new Date();
-    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    months = Math.max(0, months);
-    const years = Math.floor(months / 12);
-    const remMonths = months % 12;
-    if (years > 0 && remMonths > 0) return `${years}y ${remMonths}m`;
-    if (years > 0) return `${years} ${years === 1 ? 'year' : 'years'}`;
-    if (remMonths > 0) return `${remMonths} months`;
-    return `0 months`;
-  } catch {
-    return null;
-  }
-};
+// Derive human-readable qualification labels from multiple possible shapes
+const getQualificationLabels = (candidate: CandidateRecord) => {
+  const quals = (candidate.candidateQualifications ||
+    candidate.qualifications ||
+    []) as any[];
 
-// Derive a human-readable qualification label from multiple possible shapes
-const getQualificationLabel = (candidate: CandidateRecord) => {
-  if (candidate.highestEducation) return candidate.highestEducation;
-  const quals = (candidate.candidateQualifications || candidate.qualifications || []) as any[];
-  if (!Array.isArray(quals) || quals.length === 0) return null;
-  const q = quals[0];
-  const nested = q.qualification || {};
-  const label = q.shortName || q.name || nested.shortName || nested.name || q.field || q.university;
-  return label ? String(label) : null;
+  if (!Array.isArray(quals) || quals.length === 0) {
+    return candidate.highestEducation ? [candidate.highestEducation] : [];
+  }
+
+  const seen = new Set<string>();
+  const labels: string[] = [];
+
+  quals.forEach((q) => {
+    const nested = q.qualification || {};
+    const label =
+      q.shortName ||
+      q.name ||
+      nested.shortName ||
+      nested.name ||
+      q.field ||
+      q.university;
+    if (label) {
+      const labelStr = String(label).trim();
+      if (!seen.has(labelStr.toLowerCase())) {
+        seen.add(labelStr.toLowerCase());
+        labels.push(labelStr);
+      }
+    }
+  });
+
+  return labels;
 };
 
 // Try to extract department info from known candidate shapes (matchScore / roleMatches)
@@ -199,32 +177,53 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
     c.experience ??
     (candidate as any).totalExperience ??
     (candidate as any).experience;
+
+  const hasWorkExperiencesField =
+    "workExperiences" in c ||
+    "work_experiences" in c ||
+    "workExperiences" in candidate ||
+    "work_experiences" in candidate ||
+    ((candidate as any).candidate &&
+      ("workExperiences" in (candidate as any).candidate ||
+        "work_experiences" in (candidate as any).candidate));
+
   const workExperiences =
     (c.workExperiences && Array.isArray(c.workExperiences)
       ? c.workExperiences
-      : (c.work_experiences && Array.isArray(c.work_experiences)
+      : c.work_experiences && Array.isArray(c.work_experiences)
         ? c.work_experiences
-        : undefined)) ||
-    ((candidate as any).candidate?.workExperiences && Array.isArray((candidate as any).candidate?.workExperiences)
+        : undefined) ||
+    ((candidate as any).candidate?.workExperiences &&
+    Array.isArray((candidate as any).candidate?.workExperiences)
       ? (candidate as any).candidate.workExperiences
-      : (candidate as any).candidate?.work_experiences && Array.isArray((candidate as any).candidate.work_experiences)
-      ? (candidate as any).candidate.work_experiences
-      : undefined) ||
+      : (candidate as any).candidate?.work_experiences &&
+          Array.isArray((candidate as any).candidate.work_experiences)
+        ? (candidate as any).candidate.work_experiences
+        : undefined) ||
     ((candidate as any).workExperiences && Array.isArray((candidate as any).workExperiences)
       ? (candidate as any).workExperiences
       : (candidate as any).work_experiences && Array.isArray((candidate as any).work_experiences)
-      ? (candidate as any).work_experiences
-      : undefined) ||
+        ? (candidate as any).work_experiences
+        : undefined) ||
     [];
 
-  const workExpDuration = calculateExperience(workExperiences) ||
-    (typeof totalExp === "number" && totalExp > 0 ? `${totalExp} years` : null);
+  const workExpFromHistory = calculateExperience(workExperiences);
+  const workExpDuration = hasWorkExperiencesField
+    ? workExpFromHistory ?? (workExperiences.length === 0 ? "0 days" : null)
+    : workExpFromHistory ||
+      (typeof totalExp === "number" && totalExp > 0 ? `${totalExp} yrs` : null);
 
-  // New fields requested: qualification label, numeric years and department
-  const qualificationLabel = getQualificationLabel(c) || getQualificationLabel(candidate);
+  // New fields requested: qualification labels, numeric years and department
+  const qualificationLabels = (() => {
+    const labels = getQualificationLabels(c);
+    if (labels.length > 0) return labels;
+    return getQualificationLabels(candidate);
+  })();
+
   const department = getDepartmentFromCandidate(c) || getDepartmentFromCandidate(candidate);
-  const experienceYearsNumeric =
-    typeof totalExp === "number" && totalExp > 0
+  const experienceYearsNumeric = hasWorkExperiencesField
+    ? calculateExperienceYears(workExperiences) ?? 0
+    : typeof totalExp === "number" && totalExp > 0
       ? totalExp
       : calculateExperienceYears(workExperiences);
 
@@ -499,15 +498,18 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
           )}
 
           {/* Qualification */}
-          {qualificationLabel && (
+          {qualificationLabels.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1">
                 <GraduationCap className="h-3 w-3" />
-                Qualification
+                Qualifications
               </h4>
-              <div className="text-[11px] flex items-center gap-2">
-                <span className="text-slate-500">Qualification:</span>
-                <span className="text-slate-700 font-medium">{qualificationLabel}</span>
+              <div className="space-y-1">
+                {qualificationLabels.map((label, idx) => (
+                  <div key={idx} className="text-[11px] flex items-center gap-2">
+                    <span className="text-slate-700 font-medium">• {label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -532,16 +534,22 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
                 </div>
               )} */}
 
-              {/* Work history details (show up to 3 recent entries) with per-entry duration */}
+              {/* Work history details (show up to 5 recent entries) with per-entry duration */}
               {workExperiences.length > 0 && (
                 <div className="pt-2 space-y-2">
                   <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Work Experience</h5>
                   <div className="space-y-2 text-[11px]">
-                    {workExperiences.slice(0, 3).map((we: any, idx: number) => {
+                    {workExperiences.slice(0, 5).map((we: any, idx: number) => {
                       const start = we.startDate || we.start_date;
                       const end = we.endDate || we.end_date;
                       const period = formatWorkPeriod(start, end);
-                      const duration = formatDuration(start, end);
+                      const duration = start
+                        ? DateUtils.formatDurationBetweenDates(
+                            start,
+                            end,
+                            we.isCurrent === true
+                          )
+                        : null;
 
                       // Robust display fallbacks for heterogeneous API shapes:
                       const roleCatalogFromExp = we.roleCatalog || we.role_catalog;

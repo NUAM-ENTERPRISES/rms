@@ -1,4 +1,5 @@
-import { useState, type ComponentType } from "react";
+import { useState, useMemo, type ComponentType } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -109,6 +110,29 @@ export default function EligibleCandidatesTab({
     : [];
   const projectCandidates = projectCandidatesData?.data || [];
   const assignedToProjectIds = projectCandidates.map((c) => c.candidateId);
+
+  const eligibleCandidateIds = useMemo(
+    () =>
+      eligibleCandidates
+        .map((c: { id?: string; candidateId?: string }) => c.id || c.candidateId)
+        .filter((id): id is string => Boolean(id))
+        .sort(),
+    [eligibleCandidates]
+  );
+  const debouncedEligibleIds = useDebounce(eligibleCandidateIds, 500);
+  const { data: bulkEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId, candidateIds: debouncedEligibleIds },
+    { skip: !projectId || debouncedEligibleIds.length === 0 }
+  );
+  const eligibilityMap = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof assignEligibilityData>>();
+    if (bulkEligibilityResponse?.data && Array.isArray(bulkEligibilityResponse.data)) {
+      bulkEligibilityResponse.data.forEach((item) => {
+        map.set(item.candidateId, item);
+      });
+    }
+    return map;
+  }, [bulkEligibilityResponse]);
 
   // Get candidate by ID for comparison
   const getCandidateById = (candidateId: string) => {
@@ -378,6 +402,7 @@ export default function EligibleCandidatesTab({
                   projectStatus={projectStatusToShow}
                   className="hover:scale-100"
                   showDocumentStatus={false}
+                  eligibilityData={eligibilityMap.get(candidate.id)}
                 />
               );
             })}

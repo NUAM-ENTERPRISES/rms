@@ -37,6 +37,7 @@ import {
 } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 
 @Injectable()
 export class ProjectsService {
@@ -1925,6 +1926,11 @@ export class ProjectsService {
           skills: this.parseJsonField(we.skills),
         })),
 
+        careerGapAnalysis: calculateCareerGaps(
+          c.workExperiences ?? [],
+          c.qualifications ?? [],
+        ),
+
         // Recruiter who nominated
         recruiter: assignment.recruiter,
 
@@ -2393,6 +2399,10 @@ export class ProjectsService {
 
       return {
         ...candidate,
+        careerGapAnalysis: calculateCareerGaps(
+          candidate.workExperiences ?? [],
+          candidate.qualifications ?? [],
+        ),
         matchScore: top
           ? {
               roleId: top.roleId,

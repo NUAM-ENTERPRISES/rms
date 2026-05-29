@@ -46,8 +46,10 @@ import {
   Trash2,
   Check,
   Edit,
+  Clock,
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
+import { DateUtils } from "@/shared/utils/date";
 import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
@@ -203,6 +205,7 @@ export default function QualificationWorkExperienceModal({
   const [newSkill, setNewSkill] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedQualName, setSelectedQualName] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
   type PendingCertBatch = { id: string; docName: string; files: File[] };
@@ -309,6 +312,7 @@ export default function QualificationWorkExperienceModal({
     if (editData && isOpen) {
       if (type === "qualification") {
         const qual = editData as CandidateQualification;
+        setSelectedQualName(qual.qualificationName || (qual as any).qualification?.name || "");
         qualificationForm.reset({
           qualificationId: qual.qualificationId,
           university: qual.university || "",
@@ -340,6 +344,7 @@ export default function QualificationWorkExperienceModal({
       }
     } else if (!editData && isOpen) {
       // Reset forms for new entries
+      setSelectedQualName("");
       qualificationForm.reset({
         qualificationId: "",
         university: "",
@@ -366,12 +371,15 @@ export default function QualificationWorkExperienceModal({
       });
       setSkills([]);
     }
-    // Reset search query when modal opens
+  }, [editData, isOpen, type, qualificationForm, workExperienceForm]);
+
+  // Reset search query and dropdown state ONLY when modal opens or type changes
+  useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
       setIsDropdownOpen(false);
     }
-  }, [editData, isOpen, type, qualificationForm, workExperienceForm]);
+  }, [isOpen, type]);
 
   const handleQualificationSubmit = async (data: QualificationFormData) => {
     try {
@@ -514,6 +522,7 @@ export default function QualificationWorkExperienceModal({
     setSkills([]);
     setNewSkill("");
     setSearchQuery("");
+    setSelectedQualName("");
     setIsDropdownOpen(false);
     setPendingCertBatches([]);
     setCertModalOpen(false);
@@ -716,8 +725,10 @@ export default function QualificationWorkExperienceModal({
                         className="w-full justify-start text-slate-600"
                       >
                         {field.value
-                          ? qualifications.find((q) => q.id === field.value)
-                              ?.name || "Select a qualification"
+                          ? selectedQualName ||
+                            qualifications.find((q) => q.id === field.value)
+                              ?.name ||
+                            "Select a qualification"
                           : "Select a qualification"}
                       </Button>
                     </DropdownMenuTrigger>
@@ -733,7 +744,9 @@ export default function QualificationWorkExperienceModal({
                             placeholder="Search qualifications..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.stopPropagation()}
                             className="pl-8 h-8"
+                            autoFocus
                           />
                         </div>
                       </div>
@@ -755,6 +768,7 @@ export default function QualificationWorkExperienceModal({
                               key={qualification.id}
                               onSelect={() => {
                                 field.onChange(qualification.id);
+                                setSelectedQualName(qualification.name);
                                 setIsDropdownOpen(false);
                                 setSearchQuery("");
                               }}
@@ -1029,6 +1043,27 @@ export default function QualificationWorkExperienceModal({
                   disabled={workExperienceForm.watch("isCurrent")}
                 />
               </div>
+
+              {/* Duration Preview */}
+              {(() => {
+                const start = workExperienceForm.watch("startDate");
+                const end = workExperienceForm.watch("endDate");
+                const isCurrent = workExperienceForm.watch("isCurrent");
+                if (!start) return null;
+                const duration = DateUtils.formatDurationBetweenDates(
+                  start,
+                  end,
+                  isCurrent
+                );
+                return (
+                  <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">
+                      Calculated Duration: {duration}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Current Position */}
               <div className="flex items-center space-x-2">
