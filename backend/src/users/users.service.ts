@@ -20,6 +20,7 @@ import { UploadService } from '../upload/upload.service';
 import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
+  normalizePhysicalAddressPatch,
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
@@ -135,9 +136,14 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const createAddress = normalizePhysicalAddressPatch({
+      addressCountryCode: createUserDto.addressCountryCode,
+      addressStateId: createUserDto.addressStateId,
+    });
+
     await assertPhysicalAddressConsistent(this.prisma, {
-      addressCountryCode: createUserDto.addressCountryCode ?? null,
-      addressStateId: createUserDto.addressStateId ?? null,
+      addressCountryCode: createAddress.addressCountryCode ?? null,
+      addressStateId: createAddress.addressStateId ?? null,
     });
 
     const hashedPassword = await argon2.hash(createUserDto.password);
@@ -157,8 +163,8 @@ export class UsersService {
             ? new Date(createUserDto.dateOfBirth)
             : null,
           profileImage: createUserDto.profileImage,
-          addressCountryCode: createUserDto.addressCountryCode,
-          addressStateId: createUserDto.addressStateId,
+          addressCountryCode: createAddress.addressCountryCode ?? null,
+          addressStateId: createAddress.addressStateId ?? null,
           address: createUserDto.address,
         },
       });
@@ -366,13 +372,18 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    await assertPhysicalAddressConsistent(
-      this.prisma,
-      mergePhysicalAddress(existingUser, {
-        addressCountryCode: updateUserDto.addressCountryCode,
-        addressStateId: updateUserDto.addressStateId,
-      }),
-    );
+    const updateAddress = normalizePhysicalAddressPatch({
+      addressCountryCode: updateUserDto.addressCountryCode,
+      addressStateId: updateUserDto.addressStateId,
+    });
+
+    const hasAddressPatch =
+      updateUserDto.addressCountryCode !== undefined ||
+      updateUserDto.addressStateId !== undefined;
+
+    const effectiveAddress = mergePhysicalAddress(existingUser, updateAddress);
+
+    await assertPhysicalAddressConsistent(this.prisma, effectiveAddress);
 
     if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
       const emailExists = await this.prisma.user.findUnique({
@@ -398,6 +409,10 @@ export class UsersService {
     }
 
     const updateData: any = { ...updateUserDto };
+    if (hasAddressPatch) {
+      updateData.addressCountryCode = effectiveAddress.addressCountryCode;
+      updateData.addressStateId = effectiveAddress.addressStateId;
+    }
     if (updateUserDto.dateOfBirth) {
       updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
     }

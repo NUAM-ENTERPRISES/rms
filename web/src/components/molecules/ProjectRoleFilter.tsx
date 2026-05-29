@@ -135,6 +135,8 @@ export function ProjectRoleFilter({
     return selectedProject?.title || "Select Project";
   }, [value.projectId, selectedProject]);
 
+  const hasSelectedProject = value.projectId !== "all" && selectedProjectName !== "Select Project";
+
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
       {/* Project Filter with Search and Pagination */}
@@ -145,11 +147,22 @@ export function ProjectRoleFilter({
               variant="outline"
               role="combobox"
               aria-expanded={isProjectOpen}
-              className="h-9 w-full justify-between text-sm font-normal"
+              className={cn(
+                "h-9 w-full justify-between text-sm font-normal border-slate-200 bg-white hover:bg-slate-50",
+                isProjectOpen && "border-blue-300 ring-2 ring-blue-100",
+                hasSelectedProject && "bg-blue-50/40 border-blue-200"
+              )}
             >
               <div className="flex items-center gap-2 truncate">
-                <Building2 className="h-4 w-4 text-gray-500 shrink-0" />
-                <span className="truncate">{selectedProjectName}</span>
+                <Building2
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    hasSelectedProject ? "text-blue-600" : "text-gray-500"
+                  )}
+                />
+                <span className={cn("truncate", hasSelectedProject && "font-semibold text-slate-900")}>
+                  {selectedProjectName}
+                </span>
               </div>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -157,6 +170,9 @@ export function ProjectRoleFilter({
           <PopoverContent className="w-[280px] p-0" align="start">
             {/* Search Input */}
             <div className="p-2 border-b">
+              <p className="px-1 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                {projectLabel}
+              </p>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input

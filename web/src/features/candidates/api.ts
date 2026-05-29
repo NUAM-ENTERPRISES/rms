@@ -1120,6 +1120,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, arg) => [
         "WorkExperience",
         "Candidate",
+        "ProjectCandidates",
         { type: "Candidate", id: arg.candidateId },
       ],
     }),
@@ -1132,14 +1133,14 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: workExperienceData,
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: ["WorkExperience", "Candidate", "ProjectCandidates"],
     }),
     deleteWorkExperience: builder.mutation<void, string>({
       query: (id) => ({
         url: `/work-experience/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: ["WorkExperience", "Candidate", "ProjectCandidates"],
     }),
 
     // Candidate Qualifications endpoints

@@ -346,10 +346,10 @@ export function BulkSendToClientModal({
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="!max-w-[1400px] w-[90vw] max-h-[90vh] flex flex-col p-0 overflow-hidden shadow-2xl border-none"
+        className="!max-w-[1400px] w-[90vw] h-[90vh] max-h-[90vh] flex flex-col min-h-0 p-0 overflow-hidden shadow-2xl border-none gap-0"
         showCloseButton={false}
       >
-        <DialogHeader className="px-6 pt-5 pb-3 border-b bg-white dark:bg-gray-900 sticky top-0 z-10">
+        <DialogHeader className="shrink-0 px-6 pt-5 pb-3 border-b bg-white dark:bg-gray-900 z-10">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -412,8 +412,9 @@ export function BulkSendToClientModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6 py-3 bg-slate-50/50 dark:bg-gray-950/50">
-          <div className="max-w-5xl mx-auto space-y-2 mb-3">
+        <div className="flex flex-1 min-h-0 flex-col overflow-hidden bg-slate-50/50 dark:bg-gray-950/50">
+          <div className="shrink-0 px-6 py-3 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="max-w-5xl mx-auto space-y-2">
             {/* Delivery Method Selection - Compact */}
             <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -598,9 +599,11 @@ export function BulkSendToClientModal({
               </div>
             </div>
           </div>
+          </div>
 
+          <ScrollArea className="flex-1 min-h-0 w-full [&>[data-radix-scroll-area-viewport]]:h-full [&>[data-radix-scroll-area-viewport]>div]:!block">
           <TooltipProvider delayDuration={200}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pb-4 px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-6 pb-4">
             {currentCandidates.map((candidate) => {
               const roleLabel =
                 candidate.roleNeeded?.roleCatalog?.label || "Role Not Specified";
@@ -811,9 +814,10 @@ export function BulkSendToClientModal({
             })}
             </div>
           </TooltipProvider>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
 
-        <div className="px-6 py-4 border-t bg-white dark:bg-gray-900 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <div className="shrink-0 px-6 py-4 border-t bg-white dark:bg-gray-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-6">
               <div className="flex flex-col">

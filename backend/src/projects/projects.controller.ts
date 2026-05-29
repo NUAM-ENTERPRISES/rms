@@ -456,12 +456,18 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findPicker(@Query() query: QueryProjectPickerDto): Promise<{
+  async findPicker(
+    @Query() query: QueryProjectPickerDto,
+    @Request() req,
+  ): Promise<{
     success: boolean;
     data: PaginatedProjectPicker;
     message: string;
   }> {
-    const data = await this.projectsService.findPickerList(query);
+    const data = await this.projectsService.findPickerList(
+      query,
+      req.user?.roles ?? [],
+    );
     return {
       success: true,
       data,
@@ -546,12 +552,18 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findOne(@Param('id') id: string): Promise<{
+  async findOne(
+    @Param('id') id: string,
+    @Request() req,
+  ): Promise<{
     success: boolean;
     data: ProjectWithRelations;
     message: string;
   }> {
-    const project = await this.projectsService.findOne(id);
+    const project = await this.projectsService.findOne(
+      id,
+      req.user?.roles ?? [],
+    );
     return {
       success: true,
       data: project,

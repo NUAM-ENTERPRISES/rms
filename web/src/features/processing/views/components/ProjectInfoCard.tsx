@@ -22,6 +22,7 @@ import {
   Target,
 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
+import { getProjectVisaTypeLabel } from "@/constants/project-visa-types";
 
 interface ProjectInfoCardProps {
   project: {
@@ -284,7 +285,7 @@ export function ProjectInfoCard({ project, role, mainStatus, subStatus }: Projec
             <RoleInfoItem icon={<Briefcase className="h-3 w-3 text-violet-500" />} label="Role" value={role.designation} />
             <RoleInfoItem icon={<Users className="h-3 w-3 text-blue-500" />} label="Openings" value={role.quantity ? `${role.quantity}` : "N/A"} />
             <RoleInfoItem icon={<Clock className="h-3 w-3 text-amber-500" />} label="Experience" value={role.minExperience !== undefined ? `${role.minExperience}-${role.maxExperience} years` : "N/A"} />
-            <RoleInfoItem icon={<Plane className="h-3 w-3 text-emerald-500" />} label="Visa Type" value={role.visaType || "N/A"} capitalize />
+            <RoleInfoItem icon={<Plane className="h-3 w-3 text-emerald-500" />} label="Visa Type" value={role.visaType ? getProjectVisaTypeLabel(role.visaType) : "N/A"} />
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 // (ProfilePage uses custom `p-card` layout; no shadcn Card here)
 import { Button } from "@/components/ui/button";
@@ -49,17 +50,15 @@ import { CountrySelect } from "@/components/molecules/CountrySelect";
 import { StateSelect } from "@/components/molecules/StateSelect";
 import { useGetStatesByCountryCodeQuery } from "@/shared/hooks/useCountriesLookup";
 import { FlagIcon } from "@/shared";
-
-const profileSchema = {
-  name: "",
-  email: "",
-  mobileNumber: "",
-  countryCode: "",
-  dateOfBirth: "",
-  addressCountryCode: "",
-  addressStateId: "",
-  address: "",
-};
+import {
+  buildPhysicalAddressPayload,
+  isPhysicalAddressIndiaCountry,
+} from "@/shared/utils/physical-address";
+import {
+  PROFILE_FORM_DEFAULT_VALUES,
+  profileFormSchema,
+  type ProfileFormData,
+} from "@/features/profile/schemas/profile-schema";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -102,8 +101,9 @@ export default function ProfilePage() {
     return `${sessionsPagination?.total ?? sessions.length}`;
   }, [sessions.length, sessionsData?.data?.pagination, sessionsPagination?.total]);
 
-  const form = useForm({
-    defaultValues: profileSchema,
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: PROFILE_FORM_DEFAULT_VALUES,
     mode: "onChange",
   });
 
@@ -118,22 +118,32 @@ export default function ProfilePage() {
 
   const handleEdit = () => {
     if (!userData) return;
+    const country = userData.addressCountryCode ?? "";
+    prevAddressCountryCodeRef.current = country;
     setIsEditing(true);
     form.reset({
       name: userData.name,
       email: userData.email,
       mobileNumber: userData.mobileNumber,
       countryCode: userData.countryCode,
-      dateOfBirth: userData.dateOfBirth,
-      addressCountryCode: userData.addressCountryCode ?? "",
+      dateOfBirth: userData.dateOfBirth ?? "",
+      addressCountryCode: country,
       addressStateId: userData.addressStateId ?? "",
       address: userData.address ?? "",
     });
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: ProfileFormData) => {
     try {
-      await updateProfile(data).unwrap();
+      const address = buildPhysicalAddressPayload(data);
+      await updateProfile({
+        name: data.name,
+        email: data.email,
+        mobileNumber: data.mobileNumber,
+        countryCode: data.countryCode,
+        dateOfBirth: data.dateOfBirth?.trim() ? data.dateOfBirth : undefined,
+        ...address,
+      }).unwrap();
       toast.success("Profile updated successfully");
       setIsEditing(false);
     } catch (error: any) {
@@ -715,7 +725,18 @@ export default function ProfilePage() {
                                       ? "Select state…"
                                       : "Select country first…"
                                   }
-                                  allowEmpty
+                                  required={isPhysicalAddressIndiaCountry(
+                                    addressCountryCode,
+                                  )}
+                                  allowEmpty={
+                                    !isPhysicalAddressIndiaCountry(
+                                      addressCountryCode,
+                                    )
+                                  }
+                                  error={
+                                    form.formState.errors.addressStateId
+                                      ?.message
+                                  }
                                 />
                               )}
                             />
