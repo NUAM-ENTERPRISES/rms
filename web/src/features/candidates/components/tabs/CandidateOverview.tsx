@@ -132,12 +132,8 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
       const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
       return DateUtils.formatDuration(years, months);
     }
-    return (
-      candidate.totalExperience?.toString() ||
-      candidate.experience?.toString() ||
-      "N/A"
-    );
-  }, [careerGaps, workExperiences, candidate.totalExperience, candidate.experience]);
+    return "0";
+  }, [careerGaps, workExperiences]);
 
   const careerGapLabel = useMemo(() => {
     if (isCandidateLoading) return "Loading…";

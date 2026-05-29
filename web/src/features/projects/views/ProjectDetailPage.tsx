@@ -1614,12 +1614,16 @@ export default function ProjectDetailPage() {
                     <div>
                       <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
                       <div className="space-y-1">
-                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
-                          candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {formatWorkExperienceEntry(exp)}
-                            </p>
-                          ))
+                        {Array.isArray(candidate.workExperiences) ? (
+                          candidate.workExperiences.length > 0 ? (
+                            candidate.workExperiences.map((exp: any, idx: number) => (
+                              <p key={idx} className="text-xs text-slate-700">
+                                {formatWorkExperienceEntry(exp)}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-xs text-slate-500">No experience details</p>
+                          )
                         ) : candidate.candidateExperience ? (
                           <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
                         ) : (
@@ -2009,12 +2013,16 @@ export default function ProjectDetailPage() {
                     <div>
                       <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
                       <div className="space-y-1">
-                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
-                          candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {formatWorkExperienceEntry(exp)}
-                            </p>
-                          ))
+                        {Array.isArray(candidate.workExperiences) ? (
+                          candidate.workExperiences.length > 0 ? (
+                            candidate.workExperiences.map((exp: any, idx: number) => (
+                              <p key={idx} className="text-xs text-slate-700">
+                                {formatWorkExperienceEntry(exp)}
+                              </p>
+                            ))
+                          ) : (
+                            <p className="text-xs text-slate-500">No experience details</p>
+                          )
                         ) : candidate.candidateExperience ? (
                           <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
                         ) : (
