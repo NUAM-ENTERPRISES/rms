@@ -39,7 +39,6 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
-import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
@@ -62,6 +61,11 @@ import { CandidateProfileCompletion } from "../components/CandidateProfileComple
 import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
+);
+const CandidatePipeline = React.lazy(() =>
+  import("../components/CandidatePipeline").then((m) => ({
+    default: m.CandidatePipeline,
+  }))
 );
 
 // Fallback avatar used when candidate has no profileImage
@@ -265,7 +269,6 @@ export default function CandidateDetailPage() {
   }
 
   if (!candidate) {
-    console.log("No candidate data received");
     return (
       <div className="p-8">
         <div className="text-center py-12">
@@ -577,7 +580,19 @@ export default function CandidateDetailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+                <React.Suspense
+                  fallback={
+                    <div
+                      className="flex justify-center py-8"
+                      role="status"
+                      aria-label="Loading status pipeline"
+                    >
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  }
+                >
+                  <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+                </React.Suspense>
               </CardContent>
             </Card>
           ) : null}
