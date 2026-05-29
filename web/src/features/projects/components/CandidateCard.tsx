@@ -296,6 +296,8 @@ interface CandidateCardProps {
   selected?: boolean;
   /** Called when the selection checkbox is toggled */
   onSelect?: (candidateId: string) => void;
+  /** Subtle glass shimmer — Registered column processing cards only */
+  showProcessingGlance?: boolean;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -328,6 +330,7 @@ const CandidateCard = memo(function CandidateCard({
   onDragStart,
   selected,
   onSelect,
+  showProcessingGlance = false,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -693,7 +696,9 @@ const CandidateCard = memo(function CandidateCard({
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
         "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
-        isAlreadyInProject && "border-l-[3px] border-l-emerald-400",
+        isAlreadyInProject &&
+          !showProcessingGlance &&
+          "border-l-[3px] border-l-emerald-400",
         isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
         className
       )}
@@ -708,10 +713,25 @@ const CandidateCard = memo(function CandidateCard({
       tabIndex={0}
       aria-label={`View candidate ${fullName}`}
     >
+      {showProcessingGlance && (
+        <div
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
+          aria-hidden
+        >
+          <div className="absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-90 mix-blend-overlay" />
+          <div className="absolute inset-y-0 left-0 w-[38%] animate-processing-glance bg-gradient-to-r from-transparent via-blue-300/45 to-transparent opacity-70 mix-blend-soft-light [animation-delay:1.4s]" />
+        </div>
+      )}
+
       {/* Detailed Info Tooltip - Hover on entire card */}
       <CandidateDetailTooltip candidate={candidate} />
 
-      <CardContent className="px-3.5 py-3 space-y-2.5">
+      <CardContent
+        className={cn(
+          "px-3.5 py-3 space-y-2.5",
+          showProcessingGlance && "relative z-[1]",
+        )}
+      >
         {/* Header row */}
         <div className="flex items-center gap-3">
           {/* Bulk-selection checkbox */}

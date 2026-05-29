@@ -94,6 +94,7 @@ export default {
         'slide-up': 'slideUp 0.3s ease-out',
         'wiggle': 'wiggle 1s ease-in-out infinite',
         'shimmer': 'shimmer 2s infinite',
+        'processing-glance': 'processingGlance 2.8s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -109,7 +110,12 @@ export default {
           '50%': { transform: 'rotate(3deg)' },
         },
         shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
+        },
+        processingGlance: {
+          '0%': { transform: 'translateX(-120%) skewX(-14deg)' },
+          '100%': { transform: 'translateX(320%) skewX(-14deg)' },
         },
       },
     },

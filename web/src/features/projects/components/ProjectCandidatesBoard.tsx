@@ -32,6 +32,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ROLE_NAMES } from "@/config/role-names";
+import { cn } from "@/lib/utils";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
@@ -51,6 +52,65 @@ type ProjectAssignment = {
   mainStatus?: {
     name?: string;
   };
+};
+
+const normalizeRegisteredStatus = (statusRaw: string) => {
+  const raw = (statusRaw || "").toString().trim().toLowerCase();
+  return {
+    raw,
+    underscored: raw.replace(/[\s-]+/g, "_"),
+    compact: raw.replace(/[\s_-]+/g, ""),
+  };
+};
+
+const isRegisteredProcessingStatus = (statusRaw: string) => {
+  const { raw, underscored } = normalizeRegisteredStatus(statusRaw);
+  return (
+    underscored === "processing" ||
+    underscored.startsWith("processing_") ||
+    raw.includes("processing")
+  );
+};
+
+const getRegisteredAccentClass = (statusRaw: string) => {
+  const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
+  if (!raw) return "";
+
+  // Documentation
+  if (
+    underscored === "pending_documents" ||
+    underscored === "verification_in_progress" ||
+    compact === "pendingdocuments" ||
+    compact === "verificationinprogress"
+  ) {
+    return "border-l-[4px] border-l-red-400";
+  }
+
+  // Interview
+  if (underscored.startsWith("interview_") || raw.includes("interview")) {
+    return "border-l-[4px] border-l-violet-400";
+  }
+
+  // Processing — dark blue glass accent (Registered column only)
+  if (isRegisteredProcessingStatus(statusRaw)) {
+    return cn(
+      "border-l-[4px] !border-l-blue-800",
+      "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/50",
+      "border-blue-200/70 shadow-md shadow-blue-200/30 backdrop-blur-sm",
+    );
+  }
+
+  // Trainer
+  if (
+    underscored.startsWith("training_") ||
+    underscored.startsWith("trainer_") ||
+    raw.includes("training") ||
+    raw.includes("trainer")
+  ) {
+    return "border-l-[4px] border-l-amber-400";
+  }
+
+  return "";
 };
 
 
@@ -694,11 +754,23 @@ const ProjectCandidatesBoard = ({
 
           const isSelectable = selectableNominatedCandidates.some(c => (c.candidateId || c.id) === candidateId);
           const isSelected = selectedNominatedIds.has(candidateId);
+          const registeredAccentStatus =
+            candidate.projectSubStatus?.label ||
+            subStatusName ||
+            candidate.currentProjectStatus?.statusName ||
+            candidate.projectStatus?.statusName ||
+            "";
+          const registeredAccentClass = getRegisteredAccentClass(registeredAccentStatus);
+          const isProcessingCard = isRegisteredProcessingStatus(registeredAccentStatus);
 
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
-              className={isSelected ? "ring-1 ring-purple-400/60 bg-purple-50/30" : ""}
+              showProcessingGlance={isProcessingCard}
+              className={cn(
+                isSelected ? "ring-1 ring-purple-400/60 bg-purple-50/30" : "",
+                registeredAccentClass,
+              )}
               selected={isSelectable ? isSelected : undefined}
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
               candidate={candidateWithProject}
