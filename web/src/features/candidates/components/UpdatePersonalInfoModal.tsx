@@ -39,7 +39,7 @@ const normalizeLegacySource = (source: string) =>
 
 const personalInfoSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters").max(50),
-  lastName: z.string().min(2, "Last name must be at least 2 characters").max(50),
+  lastName: z.string(),
   countryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
     .string()
@@ -255,7 +255,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             {/* Last Name */}
             <div className="space-y-2">
               <Label htmlFor="lastName" className="text-slate-700 font-medium">
-                Last Name *
+                Last Name
               </Label>
               <Controller
                 name="lastName"

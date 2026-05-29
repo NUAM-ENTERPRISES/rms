@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle } from "lucide-react";
+import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
@@ -28,40 +28,172 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search, 500);
-  const [page, setPage] = useState(1);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const limitCount = 10;
-  
+
+  const [filters, setFilters] = useState({
+    search: "",
+    status: "all",
+    dateFilter: "all",
+    dateFrom: undefined as Date | undefined,
+    dateTo: undefined as Date | undefined,
+    countryPreferences: [] as string[],
+    sectorTypes: [] as string[],
+    facilityPreferences: [] as string[],
+    gender: "all",
+    sources: [] as string[],
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minSalary: undefined as number | undefined,
+    maxSalary: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
+    visaType: undefined as string | undefined,
+    qualification: "",
+    departmentId: undefined as string | undefined,
+    roleCatalogId: undefined as string | undefined,
+    heightMin: undefined as number | undefined,
+    heightMax: undefined as number | undefined,
+    weightMin: undefined as number | undefined,
+    weightMax: undefined as number | undefined,
+    skinTone: "",
+    languageProficiency: "",
+    smartness: "",
+    licensingExam: "",
+    dataFlow: undefined as boolean | undefined,
+    eligibility: undefined as boolean | undefined,
+    workExperienceCompany: "",
+    workExperienceTitle: "",
+    page: 1,
+    limit: limitCount,
+  });
+
+  const debouncedSearch = useDebounce(filters.search, 500);
+
+  const listRequestPayload = useMemo(() => ({
+    page: filters.page,
+    limit: limitCount,
+    search: debouncedSearch || undefined,
+    dateFilter: filters.dateFilter !== "all" ? filters.dateFilter : undefined,
+    dateFrom: filters.dateFrom ? format(filters.dateFrom, "yyyy-MM-dd") : undefined,
+    dateTo: filters.dateTo ? format(filters.dateTo, "yyyy-MM-dd") : undefined,
+    gender: filters.gender === "all" ? undefined : filters.gender,
+    sources: filters.sources.length > 0 ? filters.sources : undefined,
+    countryPreferences:
+      filters.countryPreferences.length > 0 ? filters.countryPreferences : undefined,
+    sectorTypes: filters.sectorTypes.length > 0 ? filters.sectorTypes : undefined,
+    facilityPreferences:
+      filters.facilityPreferences.length > 0 ? filters.facilityPreferences : undefined,
+    minExperience: filters.minExperience,
+    maxExperience: filters.maxExperience,
+    minSalary: filters.minSalary,
+    maxSalary: filters.maxSalary,
+    minAge: filters.minAge,
+    maxAge: filters.maxAge,
+    visaType: filters.visaType,
+    qualification: filters.qualification || undefined,
+    roleCatalogId: filters.roleCatalogId || undefined,
+    heightMin: filters.heightMin,
+    heightMax: filters.heightMax,
+    weightMin: filters.weightMin,
+    weightMax: filters.weightMax,
+    skinTone: filters.skinTone || undefined,
+    languageProficiency: filters.languageProficiency || undefined,
+    smartness: filters.smartness || undefined,
+    licensingExam: filters.licensingExam || undefined,
+    dataFlow: filters.dataFlow,
+    eligibility: filters.eligibility,
+    workExperienceCompany: filters.workExperienceCompany || undefined,
+    workExperienceTitle: filters.workExperienceTitle || undefined,
+  }), [debouncedSearch, filters]);
+
+  const activeFilterCount = [
+    filters.countryPreferences.length > 0,
+    filters.sectorTypes.length > 0,
+    filters.facilityPreferences.length > 0,
+    filters.sources.length > 0,
+    filters.dateFilter !== "all",
+    filters.gender !== "all",
+    filters.minExperience !== undefined,
+    filters.maxExperience !== undefined,
+    filters.minSalary !== undefined,
+    filters.maxSalary !== undefined,
+    filters.minAge !== undefined,
+    filters.maxAge !== undefined,
+    !!filters.visaType,
+    !!filters.qualification,
+    !!filters.workExperienceCompany,
+    !!filters.workExperienceTitle,
+    !!filters.skinTone,
+    !!filters.languageProficiency,
+    !!filters.smartness,
+    !!filters.licensingExam,
+    filters.dataFlow !== undefined,
+    filters.eligibility !== undefined,
+    !!filters.roleCatalogId,
+  ].filter(Boolean).length;
+
+  const handleResetFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      dateFilter: "all",
+      dateFrom: undefined,
+      dateTo: undefined,
+      countryPreferences: [],
+      sectorTypes: [],
+      facilityPreferences: [],
+      gender: "all",
+      sources: [],
+      minExperience: undefined,
+      maxExperience: undefined,
+      minSalary: undefined,
+      maxSalary: undefined,
+      minAge: undefined,
+      maxAge: undefined,
+      visaType: undefined,
+      qualification: "",
+      departmentId: undefined,
+      roleCatalogId: undefined,
+      heightMin: undefined,
+      heightMax: undefined,
+      weightMin: undefined,
+      weightMax: undefined,
+      skinTone: "",
+      languageProficiency: "",
+      smartness: "",
+      licensingExam: "",
+      dataFlow: undefined,
+      eligibility: undefined,
+      workExperienceCompany: "",
+      workExperienceTitle: "",
+      page: 1,
+      limit: limitCount,
+    });
+    setFilters((f) => ({ ...f, page: 1 }));
+  };
+
   // Fetch only candidates assigned to this CRE with optional status filter
   const assignedCandidatesQuery = useGetMyAssignedCandidatesQuery({
+    ...listRequestPayload,
     currentStatus: (statusFilter === 'reassigned' || statusFilter === 'created') ? undefined : statusFilter,
-    page: page,
-    limit: limitCount,
-    search: debouncedSearch,
   });
 
-  const reassignedCandidatesQuery = useGetCREReassignedCandidatesQuery({
-    page: page,
-    limit: limitCount,
-    search: debouncedSearch,
-  });
+  const reassignedCandidatesQuery = useGetCREReassignedCandidatesQuery(listRequestPayload);
 
-  const createdCandidatesQuery = useGetUserCandidatesQuery({
-    page: page,
-    limit: limitCount,
-    search: debouncedSearch,
-  });
+  const createdCandidatesQuery = useGetUserCandidatesQuery(listRequestPayload);
 
   const isLoading =
     statusFilter === 'reassigned' ? reassignedCandidatesQuery.isLoading
@@ -76,9 +208,9 @@ export default function CREDashboardPage() {
     : statusFilter === 'created' ? createdCandidatesQuery.refetch
     : assignedCandidatesQuery.refetch;
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when debounced search changes
   useEffect(() => {
-    setPage(1);
+    setFilters((f) => ({ ...f, page: 1 }));
   }, [debouncedSearch]);
 
   const candidates = assignedCandidatesData?.data || [];
@@ -118,8 +250,8 @@ export default function CREDashboardPage() {
       : 'Selected';
 
   const noCandidatesTitle = `No ${statusLabel} candidates found`;
-  const noCandidatesSubtitle = search
-    ? 'Try adjusting your search query.'
+  const noCandidatesSubtitle = filters.search
+    ? 'Try adjusting your search or filters.'
     : `You'll see ${statusLabel.toLowerCase()} candidates here once they're escalated to you.`;
 
   const getTableTitle = () => {
@@ -169,7 +301,7 @@ export default function CREDashboardPage() {
       await markCandidateConverted(candidateToConvert.id).unwrap();
       setIsConvertModalOpen(false);
       setCandidateToConvert(null);
-      setPage(1);
+      setFilters((f) => ({ ...f, page: 1 }));
       refetch();
     } catch (error) {
       console.error('Convert modal confirm failed', error);
@@ -187,7 +319,7 @@ export default function CREDashboardPage() {
       setIsTransferModalOpen(false);
       setCandidateToTransfer(null);
       setCurrentRecruiterForTransfer('');
-      setPage(1);
+      setFilters((f) => ({ ...f, page: 1 }));
       await Promise.all([
         assignedCandidatesQuery.refetch(),
         reassignedCandidatesQuery.refetch(),
@@ -267,7 +399,7 @@ export default function CREDashboardPage() {
                 <button
                   key={stat.label}
                   type="button"
-                  onClick={() => { setStatusFilter(stat.statusId); setPage(1); }}
+                  onClick={() => { setStatusFilter(stat.statusId); setFilters((f) => ({ ...f, page: 1 })); }}
                   className={cn(
                     "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                     s.card,
@@ -313,16 +445,39 @@ export default function CREDashboardPage() {
                     <p className="text-xs text-gray-500 mt-0.5 truncate">{getTableSubtitle()}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <div className="relative w-full sm:w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <Input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      value={filters.search}
+                      onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                       placeholder="Search name, email or phone…"
                       className="pl-9 h-9 text-sm border-slate-200 bg-white focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsFilterSheetOpen(true)}
+                    className="flex items-center gap-2 h-9 px-3 rounded-lg border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="hidden sm:inline">Advanced Filters</span>
+                    {activeFilterCount > 0 && (
+                      <Badge className="ml-0.5 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                        {activeFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  {activeFilterCount > 0 && (
+                    <Button
+                      variant="ghost"
+                      onClick={handleResetFilters}
+                      className="h-9 px-3 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-sm font-medium gap-1.5"
+                    >
+                      <FilterX className="h-4 w-4" />
+                      <span className="hidden sm:inline">Reset</span>
+                    </Button>
+                  )}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-slate-200" onClick={() => refetch()}>
@@ -601,27 +756,27 @@ export default function CREDashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page === 1}
+                        onClick={() => setFilters((f) => ({ ...f, page: Math.max(1, f.page - 1) }))}
+                        disabled={filters.page === 1}
                         className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
                       >
                         <ChevronLeft className="h-3.5 w-3.5" /> Prev
                       </Button>
                       <div className="flex items-center gap-1">
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                          if (totalPages <= 7 || p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)) {
+                          if (totalPages <= 7 || p === 1 || p === totalPages || (p >= filters.page - 1 && p <= filters.page + 1)) {
                             return (
                               <Button
                                 key={p}
-                                variant={page === p ? 'default' : 'ghost'}
+                                variant={filters.page === p ? 'default' : 'ghost'}
                                 size="sm"
-                                onClick={() => setPage(p)}
-                                className={cn("h-8 w-8 p-0 text-xs", page === p ? 'bg-blue-600 hover:bg-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-100')}
+                                onClick={() => setFilters((f) => ({ ...f, page: p }))}
+                                className={cn("h-8 w-8 p-0 text-xs", filters.page === p ? 'bg-blue-600 hover:bg-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-100')}
                               >
                                 {p}
                               </Button>
                             );
-                          } else if (p === page - 2 || p === page + 2) {
+                          } else if (p === filters.page - 2 || p === filters.page + 2) {
                             return <span key={p} className="text-slate-300 text-xs px-0.5">…</span>;
                           }
                           return null;
@@ -630,8 +785,8 @@ export default function CREDashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
+                        onClick={() => setFilters((f) => ({ ...f, page: Math.min(totalPages, f.page + 1) }))}
+                        disabled={filters.page === totalPages}
                         className="h-8 gap-1 border-slate-200 hover:bg-slate-100 text-slate-600 text-xs"
                       >
                         Next <ChevronRight className="h-3.5 w-3.5" />
@@ -667,6 +822,16 @@ export default function CREDashboardPage() {
           currentStatus={candidateToTransfer?.currentStatus?.statusName || 'Unknown'}
           isSubmitting={isTransferring}
         />
+
+          <AdvancedFiltersSheet
+            isOpen={isFilterSheetOpen}
+            onOpenChange={setIsFilterSheetOpen}
+            filters={filters as any}
+            setFilters={setFilters as any}
+            isManagerOrAdmin={false}
+            isRecruiter={false}
+            handleResetFilters={handleResetFilters}
+          />
         </div>
       </div>
     </TooltipProvider>

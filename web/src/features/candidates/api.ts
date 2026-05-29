@@ -579,32 +579,136 @@ export interface RecruiterAssignment {
   };
 }
 
-export interface GetCandidatesParams {
-  assignedTo?: string;
+export interface CandidateListQueryParams {
   page?: number;
   limit?: number;
-  status?: string;
   search?: string;
+  status?: string;
+  currentStatus?: string;
+  dateFilter?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  gender?: string;
+  countryPreferences?: string[];
+  sectorTypes?: string[];
+  facilityPreferences?: string[];
+  sources?: string[];
+  source?: string;
+  minExperience?: number;
+  maxExperience?: number;
+  minSalary?: number;
+  maxSalary?: number;
+  minAge?: number;
+  maxAge?: number;
+  visaType?: string;
+  qualification?: string;
   roleCatalogId?: string;
   teamId?: string;
-  source?: string;
-  /** Filter by createdAt (ISO string) - start of range */
-  dateFrom?: string;
-  /** Filter by createdAt (ISO string) - end of range */
-  dateTo?: string;
+  assignedTo?: string;
+  heightMin?: number;
+  heightMax?: number;
+  weightMin?: number;
+  weightMax?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
+  workExperienceCompany?: string;
+  workExperienceTitle?: string;
 }
 
-export interface GetRecruiterMyCandidatesParams {
-  page?: number;
-  limit?: number;
-  status?: string;
-  search?: string;
-  roleCatalogId?: string;
-  source?: string;
-  /** Filter by createdAt (ISO string) - start of range */
-  dateFrom?: string;
-  /** Filter by createdAt (ISO string) - end of range */
-  dateTo?: string;
+export interface GetCandidatesParams extends CandidateListQueryParams {}
+
+export interface GetRecruiterMyCandidatesParams extends CandidateListQueryParams {}
+
+export function appendCandidateListQueryParams(
+  queryParams: URLSearchParams,
+  params: CandidateListQueryParams,
+): void {
+  if (params.assignedTo) queryParams.append("assignedTo", params.assignedTo);
+  if (params.page) queryParams.append("page", params.page.toString());
+  if (params.limit) queryParams.append("limit", params.limit.toString());
+  if (params.status) queryParams.append("status", params.status);
+  if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus);
+  if (params.search) queryParams.append("search", params.search);
+  if (params.dateFilter) queryParams.append("dateFilter", params.dateFilter);
+  if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+  if (params.dateTo) queryParams.append("dateTo", params.dateTo);
+  if (params.gender) queryParams.append("gender", params.gender);
+  if (params.roleCatalogId) queryParams.append("roleCatalogId", params.roleCatalogId);
+  if (params.teamId) queryParams.append("teamId", params.teamId);
+
+  if (params.countryPreferences) {
+    params.countryPreferences.forEach((cp) =>
+      queryParams.append("countryPreferences", cp),
+    );
+  }
+  if (params.sectorTypes) {
+    params.sectorTypes.forEach((st) => queryParams.append("sectorTypes", st));
+  }
+  if (params.facilityPreferences) {
+    params.facilityPreferences.forEach((fp) =>
+      queryParams.append("facilityPreferences", fp),
+    );
+  }
+  if (params.sources) {
+    params.sources.forEach((s) => queryParams.append("sources", s));
+  } else if (params.source) {
+    queryParams.append("source", params.source);
+  }
+
+  if (params.minExperience !== undefined) {
+    queryParams.append("minExperience", params.minExperience.toString());
+  }
+  if (params.maxExperience !== undefined) {
+    queryParams.append("maxExperience", params.maxExperience.toString());
+  }
+  if (params.minSalary !== undefined) {
+    queryParams.append("minSalary", params.minSalary.toString());
+  }
+  if (params.maxSalary !== undefined) {
+    queryParams.append("maxSalary", params.maxSalary.toString());
+  }
+  if (params.minAge !== undefined) {
+    queryParams.append("minAge", params.minAge.toString());
+  }
+  if (params.maxAge !== undefined) {
+    queryParams.append("maxAge", params.maxAge.toString());
+  }
+  if (params.visaType) queryParams.append("visaType", params.visaType);
+  if (params.qualification) queryParams.append("qualification", params.qualification);
+  if (params.heightMin !== undefined) {
+    queryParams.append("heightMin", params.heightMin.toString());
+  }
+  if (params.heightMax !== undefined) {
+    queryParams.append("heightMax", params.heightMax.toString());
+  }
+  if (params.weightMin !== undefined) {
+    queryParams.append("weightMin", params.weightMin.toString());
+  }
+  if (params.weightMax !== undefined) {
+    queryParams.append("weightMax", params.weightMax.toString());
+  }
+  if (params.skinTone) queryParams.append("skinTone", params.skinTone);
+  if (params.languageProficiency) {
+    queryParams.append("languageProficiency", params.languageProficiency);
+  }
+  if (params.smartness) queryParams.append("smartness", params.smartness);
+  if (params.licensingExam) queryParams.append("licensingExam", params.licensingExam);
+  if (params.dataFlow !== undefined) {
+    queryParams.append("dataFlow", String(params.dataFlow));
+  }
+  if (params.eligibility !== undefined) {
+    queryParams.append("eligibility", String(params.eligibility));
+  }
+  if (params.workExperienceCompany) {
+    queryParams.append("workExperienceCompany", params.workExperienceCompany);
+  }
+  if (params.workExperienceTitle) {
+    queryParams.append("workExperienceTitle", params.workExperienceTitle);
+  }
 }
 
 export interface RecruiterMyCandidatesResponse {
@@ -918,16 +1022,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         if (!params) return "/candidates";
 
         const queryParams = new URLSearchParams();
-        if (params.assignedTo) queryParams.append("assignedTo", params.assignedTo);
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        if (params.status) queryParams.append("status", params.status);
-        if (params.search) queryParams.append("search", params.search);
-        if (params.roleCatalogId) queryParams.append("roleCatalogId", params.roleCatalogId);
-        if (params.source) queryParams.append("source", params.source);
-        if (params.teamId) queryParams.append("teamId", params.teamId);
-        if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-        if (params.dateTo) queryParams.append("dateTo", params.dateTo);
+        appendCandidateListQueryParams(queryParams, params);
 
         const queryString = queryParams.toString();
         return queryString ? `/candidates?${queryString}` : "/candidates";
@@ -1320,15 +1415,9 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params?.page) queryParams.append("page", params.page.toString());
-        if (params?.limit) queryParams.append("limit", params.limit.toString());
-        if (params?.status) queryParams.append("status", params.status);
-        if (params?.search) queryParams.append("search", params.search);
-        if (params?.roleCatalogId)
-          queryParams.append("roleCatalogId", params.roleCatalogId);
-        if (params?.source) queryParams.append("source", params.source);
-        if (params?.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-        if (params?.dateTo) queryParams.append("dateTo", params.dateTo);
+        if (params) {
+          appendCandidateListQueryParams(queryParams, params);
+        }
 
         const queryString = queryParams.toString();
         return queryString

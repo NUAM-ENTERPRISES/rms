@@ -33,6 +33,7 @@ import {
   Building2,
   FileText,
   Mail,
+  Phone,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -40,7 +41,14 @@ import {
   FilterX,
   RotateCcw,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { motion } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
 import { useCan } from "@/hooks/useCan";
@@ -60,6 +68,27 @@ type VerificationCountsPayload = {
   client_revision_requested?: number;
   verification_in_progress_document?: number;
 };
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? candidate.contact ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
+
+function formatPhoneDisplay(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const code = candidate.countryCode?.trim();
+  const mobile = candidate.mobileNumber?.trim() || candidate.contact?.trim();
+  if (!mobile) return null;
+  return `${code ? `${code} ` : ""}${mobile}`;
+}
 
 function extractVerificationCounts(queryResult: unknown): VerificationCountsPayload {
   if (!queryResult || typeof queryResult !== "object") {
@@ -852,18 +881,92 @@ export default function DocumentVerificationPage() {
               </TableCell>
 
               <TableCell className="px-6 py-5 text-center">
-                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
-                  {candidateProject.candidate.email ? (
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                      <span className="text-gray-700 break-all">
-                        {candidateProject.candidate.email}
-                      </span>
+                {(() => {
+                  const candidate = candidateProject.candidate;
+                  const phoneDigits = formatPhoneForLink(candidate);
+                  const phoneDisplay = formatPhoneDisplay(candidate);
+                  const hasContact = phoneDisplay || candidate.email;
+
+                  if (!hasContact) {
+                    return <span className="text-slate-400 text-xs">—</span>;
+                  }
+
+                  return (
+                    <div className="w-full min-w-0 flex flex-col items-center gap-2 text-xs text-slate-500">
+                      {phoneDisplay ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                          <TooltipProvider>
+                            <div className="flex items-center justify-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-green-600 hover:bg-green-100 hover:text-green-700"
+                                    disabled={!phoneDigits}
+                                    aria-label={`WhatsApp ${candidate.firstName ?? "candidate"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (phoneDigits) {
+                                        window.open(
+                                          `https://wa.me/${phoneDigits}`,
+                                          "_blank",
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">WhatsApp</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                    disabled={!phoneDigits}
+                                    aria-label={`Call ${candidate.firstName ?? "candidate"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (phoneDigits) {
+                                        window.location.href = `tel:${phoneDigits}`;
+                                      }
+                                    }}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">Call</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+                            <span className="text-gray-700 whitespace-nowrap">
+                              {phoneDisplay}
+                            </span>
+                          </div>
+                        </div>
+                      ) : null}
+                      {candidate.email ? (
+                        <div className="flex items-center justify-center gap-1.5 max-w-[180px]">
+                          <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                          <span className="text-gray-700 break-all">
+                            {candidate.email}
+                          </span>
+                        </div>
+                      ) : null}
                     </div>
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                </div>
+                  );
+                })()}
               </TableCell>
 
               <TableCell className="px-6 py-5">

@@ -6,7 +6,6 @@
 import { useState } from "react";
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -47,22 +46,21 @@ export function MultiSelect({
     option.label.toLowerCase().includes(search.toLowerCase())
   );
 
+  const selectedValues = Array.isArray(value) ? value : [];
+
   const handleSelect = (optionValue: string) => {
-    const isSelected = value.includes(optionValue);
-    let newValue: string[];
-    
-    if (isSelected) {
-      newValue = value.filter((v) => v !== optionValue);
-    } else {
-      newValue = [...value, optionValue];
-    }
-    
+    const current = Array.isArray(value) ? value : [];
+    const isSelected = current.includes(optionValue);
+    const newValue = isSelected
+      ? current.filter((v) => v !== optionValue)
+      : [...current, optionValue];
+
     onValueChange?.(newValue);
   };
 
-  const removeOption = (optionValue: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onValueChange?.(value.filter((v) => v !== optionValue));
+  const removeOption = (optionValue: string) => {
+    const current = Array.isArray(value) ? value : [];
+    onValueChange?.(current.filter((v) => v !== optionValue));
   };
 
   return (
@@ -74,19 +72,23 @@ export function MultiSelect({
         </Label>
       )}
 
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
+        <PopoverTrigger asChild disabled={disabled}>
           <div
+            role="combobox"
+            aria-expanded={open}
+            aria-haspopup="listbox"
+            tabIndex={disabled ? -1 : 0}
             className={cn(
-              "flex flex-wrap gap-2 p-2 min-h-[44px] w-full bg-white border border-slate-200 rounded-md cursor-pointer hover:bg-slate-50 transition-colors",
+              "flex items-start gap-2 p-2 min-h-[44px] w-full bg-white border border-slate-200 rounded-md text-left",
+              !disabled && "cursor-pointer hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/20",
               disabled && "opacity-50 cursor-not-allowed",
-              error && "border-destructive focus-within:ring-destructive"
+              error && "border-destructive focus-visible:ring-destructive/20",
             )}
-            onClick={() => !disabled && setOpen(!open)}
           >
-            {value.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {value.map((v) => {
+            <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+              {selectedValues.length > 0 ? (
+                selectedValues.map((v) => {
                   const option = options.find((o) => o.value === v);
                   return (
                     <Badge
@@ -95,23 +97,34 @@ export function MultiSelect({
                       className="bg-indigo-50 text-indigo-700 border-indigo-100 flex items-center gap-1 pr-1"
                     >
                       <span>{option?.label || v}</span>
-                      <X
-                        className="h-3 w-3 cursor-pointer hover:text-indigo-900"
-                        onClick={(e) => removeOption(v, e)}
-                      />
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        className="relative z-10 rounded-sm p-0.5 hover:bg-indigo-100/80 focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-400 disabled:pointer-events-none"
+                        aria-label={`Remove ${option?.label || v}`}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          removeOption(v);
+                        }}
+                      >
+                        <X className="h-3 w-3 pointer-events-none" />
+                      </button>
                     </Badge>
                   );
-                })}
-              </div>
-            ) : (
-              <span className="text-slate-400 text-sm py-1 px-1">{placeholder}</span>
-            )}
-            <div className="ml-auto flex items-center pr-1">
-              <ChevronDown className="h-4 w-4 opacity-50" />
+                })
+              ) : (
+                <span className="text-slate-400 text-sm py-1 px-1">{placeholder}</span>
+              )}
             </div>
+            <ChevronDown className="h-4 w-4 shrink-0 opacity-50 mt-1" aria-hidden />
           </div>
         </PopoverTrigger>
-        <PopoverContent className="w-full min-w-[240px] p-0 shadow-xl border-slate-200 rounded-xl" align="start">
+          <PopoverContent className="w-full min-w-[240px] p-0 shadow-xl border-slate-200 rounded-xl" align="start">
           <div className="p-2 space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -135,7 +148,7 @@ export function MultiSelect({
                       key={option.value}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm",
-                        value.includes(option.value)
+                        selectedValues.includes(option.value)
                           ? "bg-indigo-50 text-indigo-700 font-medium"
                           : "hover:bg-slate-50 text-slate-600"
                       )}
@@ -143,9 +156,9 @@ export function MultiSelect({
                     >
                       <div className={cn(
                         "h-4 w-4 border border-slate-300 rounded flex items-center justify-center transition-colors",
-                        value.includes(option.value) ? "bg-indigo-600 border-indigo-600" : "bg-white"
+                        selectedValues.includes(option.value) ? "bg-indigo-600 border-indigo-600" : "bg-white"
                       )}>
-                        {value.includes(option.value) && <Check className="h-3 w-3 text-white" />}
+                        {selectedValues.includes(option.value) && <Check className="h-3 w-3 text-white" />}
                       </div>
                       <span className="truncate flex-1">{option.label}</span>
                     </div>
@@ -154,7 +167,7 @@ export function MultiSelect({
               )}
             </div>
           </div>
-        </PopoverContent>
+          </PopoverContent>
       </Popover>
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>

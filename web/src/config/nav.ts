@@ -26,6 +26,8 @@ export interface NavItem {
   hiddenForRoles?: string[];
   permissions?: string[];
   featureFlag?: string;
+  /** Regex patterns (tested against pathname) that also mark this item/group active */
+  activePathPatterns?: string[];
   badge?: {
     text: string;
     variant?: "default" | "secondary" | "destructive" | "outline";
@@ -277,6 +279,11 @@ export const navigationConfig: NavItem[] = [
     label: "Screenings",
     icon: ClipboardCheck,
     permissions: ["read:screenings"],
+    activePathPatterns: [
+      "^/screenings$",
+      "^/screenings/(?!list|assigned|upcoming|templates|training)[^/]+",
+      "^/screening-coordination/training",
+    ],
     hiddenForRoles: [
       "Screening Trainer",
       "Documentation Executive",
@@ -319,6 +326,10 @@ export const navigationConfig: NavItem[] = [
     label: "Documents",
     icon: FileText,
     permissions: ["read:documents"],
+    activePathPatterns: [
+      "^/documents/",
+      "^/candidates/[^/]+/documents/",
+    ],
     hiddenForRoles: [
       "Interview Coordinator",
       "Recruiter",
@@ -341,6 +352,11 @@ export const navigationConfig: NavItem[] = [
     label: "Processing",
     icon: ClipboardCheck,
     roles: ["CEO", "Director", "Manager", "System Admin"],
+    activePathPatterns: [
+      "^/processing-admin",
+      "^/processingCandidateDetails/",
+      "^/ready-for-processing",
+    ],
     children: [
 
       {

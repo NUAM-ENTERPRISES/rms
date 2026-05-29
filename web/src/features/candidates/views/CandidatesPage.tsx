@@ -43,10 +43,12 @@ import {
   AlertCircle,
   Users,
   ArrowUpRight,
+  SlidersHorizontal,
+  FilterX,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
-import { parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
@@ -58,6 +60,7 @@ import {
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
 
@@ -91,31 +94,164 @@ export default function CandidatesPage() {
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
 
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
   // State for filters and pagination
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
-    experience: "all",
     source: "all" as string,
-    // date range filter (date added)
-    dateRange: "all" as string,
+    dateFilter: "all",
     dateFrom: undefined as Date | undefined,
     dateTo: undefined as Date | undefined,
+    countryPreferences: [] as string[],
+    sectorTypes: [] as string[],
+    facilityPreferences: [] as string[],
+    gender: "all",
+    sources: [] as string[],
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minSalary: undefined as number | undefined,
+    maxSalary: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
+    visaType: undefined as string | undefined,
+    qualification: "",
+    departmentId: undefined as string | undefined,
+    roleCatalogId: undefined as string | undefined,
+    heightMin: undefined as number | undefined,
+    heightMax: undefined as number | undefined,
+    weightMin: undefined as number | undefined,
+    weightMax: undefined as number | undefined,
+    skinTone: "",
+    languageProficiency: "",
+    smartness: "",
+    licensingExam: "",
+    dataFlow: undefined as boolean | undefined,
+    eligibility: undefined as boolean | undefined,
+    workExperienceCompany: "",
+    workExperienceTitle: "",
     page: 1,
     limit: 10,
   });
 
-  // Fetch candidates - use different API for Recruiter users
-  const allCandidatesQuery = useGetCandidatesQuery(
-    {
+  const listRequestPayload = useMemo(() => {
+    const sourceParam =
+      filters.sources.length > 0
+        ? undefined
+        : filters.source !== "all"
+          ? filters.source
+          : undefined;
+
+    return {
       page: filters.page,
       limit: filters.limit,
+      search: filters.search || undefined,
       status: filters.status !== "all" ? filters.status : undefined,
-      source: filters.source !== "all" ? filters.source : undefined,
-      // send server-side date filters as date-only (YYYY-MM-DD) to avoid timezone shifts
-      dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
-      dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
-    },
+      dateFilter: filters.dateFilter !== "all" ? filters.dateFilter : undefined,
+      dateFrom: filters.dateFrom ? format(filters.dateFrom, "yyyy-MM-dd") : undefined,
+      dateTo: filters.dateTo ? format(filters.dateTo, "yyyy-MM-dd") : undefined,
+      gender: filters.gender === "all" ? undefined : filters.gender,
+      sources: filters.sources.length > 0 ? filters.sources : undefined,
+      source: sourceParam,
+      countryPreferences:
+        filters.countryPreferences.length > 0 ? filters.countryPreferences : undefined,
+      sectorTypes: filters.sectorTypes.length > 0 ? filters.sectorTypes : undefined,
+      facilityPreferences:
+        filters.facilityPreferences.length > 0 ? filters.facilityPreferences : undefined,
+      minExperience: filters.minExperience,
+      maxExperience: filters.maxExperience,
+      minSalary: filters.minSalary,
+      maxSalary: filters.maxSalary,
+      minAge: filters.minAge,
+      maxAge: filters.maxAge,
+      visaType: filters.visaType,
+      qualification: filters.qualification || undefined,
+      roleCatalogId: filters.roleCatalogId || undefined,
+      heightMin: filters.heightMin,
+      heightMax: filters.heightMax,
+      weightMin: filters.weightMin,
+      weightMax: filters.weightMax,
+      skinTone: filters.skinTone || undefined,
+      languageProficiency: filters.languageProficiency || undefined,
+      smartness: filters.smartness || undefined,
+      licensingExam: filters.licensingExam || undefined,
+      dataFlow: filters.dataFlow,
+      eligibility: filters.eligibility,
+      workExperienceCompany: filters.workExperienceCompany || undefined,
+      workExperienceTitle: filters.workExperienceTitle || undefined,
+    };
+  }, [filters]);
+
+  const activeFilterCount = [
+    filters.countryPreferences.length > 0,
+    filters.sectorTypes.length > 0,
+    filters.facilityPreferences.length > 0,
+    filters.sources.length > 0,
+    filters.dateFilter !== "all",
+    filters.gender !== "all",
+    filters.minExperience !== undefined,
+    filters.maxExperience !== undefined,
+    filters.minSalary !== undefined,
+    filters.maxSalary !== undefined,
+    filters.minAge !== undefined,
+    filters.maxAge !== undefined,
+    !!filters.visaType,
+    !!filters.qualification,
+    !!filters.workExperienceCompany,
+    !!filters.workExperienceTitle,
+    !!filters.skinTone,
+    !!filters.languageProficiency,
+    !!filters.smartness,
+    !!filters.licensingExam,
+    filters.dataFlow !== undefined,
+    filters.eligibility !== undefined,
+    !!filters.roleCatalogId,
+  ].filter(Boolean).length;
+
+  const handleResetFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      source: "all",
+      dateFilter: "all",
+      dateFrom: undefined,
+      dateTo: undefined,
+      countryPreferences: [],
+      sectorTypes: [],
+      facilityPreferences: [],
+      gender: "all",
+      sources: [],
+      minExperience: undefined,
+      maxExperience: undefined,
+      minSalary: undefined,
+      maxSalary: undefined,
+      minAge: undefined,
+      maxAge: undefined,
+      visaType: undefined,
+      qualification: "",
+      departmentId: undefined,
+      roleCatalogId: undefined,
+      heightMin: undefined,
+      heightMax: undefined,
+      weightMin: undefined,
+      weightMax: undefined,
+      skinTone: "",
+      languageProficiency: "",
+      smartness: "",
+      licensingExam: "",
+      dataFlow: undefined,
+      eligibility: undefined,
+      workExperienceCompany: "",
+      workExperienceTitle: "",
+      page: 1,
+      limit: 10,
+    });
+  };
+
+  // Fetch candidates - use different API for Recruiter users
+  const allCandidatesQuery = useGetCandidatesQuery(
+    listRequestPayload,
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
 
@@ -128,16 +264,7 @@ export default function CandidatesPage() {
   const allCandidatesRefetch = allCandidatesQuery.refetch;
 
   const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
-    {
-      page: filters.page,
-      limit: filters.limit,
-      search: filters.search || undefined,
-      status: filters.status !== "all" ? filters.status : undefined,
-      source: filters.source !== "all" ? filters.source : undefined,
-      // server-side date filtering: send date-only strings (YYYY-MM-DD)
-      dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
-      dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
-    },
+    listRequestPayload,
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
 
@@ -198,108 +325,15 @@ export default function CandidatesPage() {
 
 
 
-  // Filter and paginate candidates
-  const { filteredCandidates, paginatedCandidates } =
-    useMemo(() => {
-      // Ensure candidates is an array
-      if (!Array.isArray(candidates)) {
-        console.warn("Candidates data is not an array:", candidates);
-        return {
-          filteredCandidates: [],
-          paginatedCandidates: [],
-        };
-      }
-
-      let filtered = candidates;
-
-      if (filters.search) {
-        filtered = filtered.filter(
-          (candidate) =>
-            `${candidate.firstName} ${candidate.lastName}`
-              .toLowerCase()
-              .includes(filters.search.toLowerCase()) ||
-            (candidate.candidateCode &&
-              candidate.candidateCode
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())) ||
-            (candidate.email &&
-              candidate.email
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())) ||
-            candidate?.skills?.some((skill: string) =>
-              skill.toLowerCase().includes(filters.search.toLowerCase())
-            )
-        );
-      }
-
-      // if (filters.status !== "all") {
-      //   filtered = filtered.filter(
-      //     (candidate) => candidate.currentStatus === filters.status
-      //   );
-      // }
-
-      if (filters.experience !== "all") {
-        const experienceMap: { [key: string]: [number, number] } = {
-          "0-2": [0, 2],
-          "3-5": [3, 5],
-          "6-8": [6, 8],
-          "9+": [9, 999],
-        };
-        const [min, max] = experienceMap[filters.experience] || [0, 999];
-        filtered = filtered.filter((candidate) => {
-          const experience =
-            candidate.totalExperience || candidate.experience || 0;
-          return experience >= min && experience <= max;
-        });
-      }
-
-      // Date range filter (client-side fallback)
-      if (filters.dateFrom || filters.dateTo) {
-        const from = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
-        const to = filters.dateTo ? endOfDay(filters.dateTo) : null;
-        filtered = filtered.filter((candidate) => {
-          const dStr = candidate.createdAt || candidate.updatedAt;
-          if (!dStr) return false;
-          const d = parseISO(dStr);
-          if (from && to) return d >= from && d <= to;
-          if (from) return d >= from;
-          if (to) return d <= to;
-          return true;
-        });
-      }
-
-      // Note: availability filter removed as it's not in the API interface
-      // if (filters.availability !== "all") {
-      //   filtered = filtered.filter(
-      //     (candidate) => candidate.availability === filters.availability
-      //   );
-      // }
-
-      // Calculate pagination
-      const startIndex = (filters.page - 1) * filters.limit;
-      const endIndex = startIndex + filters.limit;
-      const paginated = filtered.slice(startIndex, endIndex);
-
-      return {
-        filteredCandidates: filtered,
-        paginatedCandidates: paginated,
-      };
-    }, [candidates, filters]);
-
   const pagination =
     isRecruiter && !isManager
       ? recruiterCandidatesData?.pagination
       : allCandidatesData?.pagination;
-  const hasServerPagination = Boolean(
-    pagination &&
-      (pagination.totalPages !== undefined ||
-        pagination.totalCount !== undefined ||
-        pagination.total !== undefined)
-  );
-  const pageItems = hasServerPagination ? candidates : paginatedCandidates;
+  const pageItems = candidates;
   const totalCount =
-    pagination?.totalCount ?? pagination?.total ?? filteredCandidates.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / filters.limit));
+    pagination?.totalCount ?? pagination?.total ?? candidates.length;
+  const totalPages =
+    pagination?.totalPages ?? Math.max(1, Math.ceil(totalCount / filters.limit));
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -507,16 +541,16 @@ export default function CandidatesPage() {
       serverCounts?.totalAssigned ??
       totalCount,
     handledByCRE: serverCounts?.handledByCRE ?? 0,
-    untouched: serverCounts?.untouched ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
-    rnr: serverCounts?.rnr ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    untouched: serverCounts?.untouched ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
+    rnr: serverCounts?.rnr ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
     rnrHandledByCRE: serverCounts?.rnrHandledByCRE ?? 0,
-    onHold: serverCounts?.onHold ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
-    interested: serverCounts?.interested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
-    qualified: serverCounts?.qualified ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
-    future: serverCounts?.future ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
-    deployed: serverCounts?.deployed ?? serverCounts?.working ?? filteredCandidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
-    notInterested: serverCounts?.notInterested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
-    otherEnquiry: serverCounts?.otherEnquiry ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
+    onHold: serverCounts?.onHold ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
+    interested: serverCounts?.interested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
+    qualified: serverCounts?.qualified ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
+    future: serverCounts?.future ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
+    deployed: serverCounts?.deployed ?? serverCounts?.working ?? candidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
+    notInterested: serverCounts?.notInterested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
+    otherEnquiry: serverCounts?.otherEnquiry ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
   };
 
   let stats: Stat[] = [
@@ -625,7 +659,7 @@ export default function CandidatesPage() {
         color: "from-emerald-500 to-teal-500",
       },
       {
-        label: "Call Back (RNR)",
+        label: "Ring Not Responded (RNR)",
         value: rnrCount,
         subtitle: "Ring not responded",
         icon: Phone,
@@ -861,10 +895,35 @@ export default function CandidatesPage() {
                 className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="flex items-center gap-2 h-9 px-3 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-0.5 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-9 px-3 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-sm font-medium gap-1.5"
+                >
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
               <Select
                 value={filters.source}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, source: value, page: 1 }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, source: value, sources: [], page: 1 }))
+                }
               >
                 <SelectTrigger className="h-9 text-sm border-slate-200 rounded-xl bg-white min-w-[130px]">
                   <SelectValue placeholder="All Sources" />
@@ -1344,6 +1403,16 @@ export default function CandidatesPage() {
             )}
           </div>
         </div>
+
+      <AdvancedFiltersSheet
+        isOpen={isFilterSheetOpen}
+        onOpenChange={setIsFilterSheetOpen}
+        filters={filters as any}
+        setFilters={setFilters as any}
+        isManagerOrAdmin={!!isManager}
+        isRecruiter={!!isRecruiter}
+        handleResetFilters={handleResetFilters}
+      />
 
       {/* Transfer Candidate Dialog */}
       {transferDialog.isOpen && transferDialog.candidateId && (

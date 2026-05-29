@@ -62,12 +62,12 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<JobPreferenceFormData>({
     resolver: zodResolver(jobPreferenceSchema),
     defaultValues: {
-      expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-      expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+      expectedSalary: initialData.expectedMinSalary ?? undefined,
       sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
       visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: initialData.preferredCountries || [],
@@ -76,17 +76,17 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
   });
 
   useEffect(() => {
-    if (isOpen) {
-      reset({
-        expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-        expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
-        sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
-        visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
-        preferredCountries: initialData.preferredCountries || [],
-        facilityPreferences: initialData.facilityPreferences || [],
-      });
-    }
-  }, [isOpen, initialData, reset]);
+    if (!isOpen) return;
+    reset({
+      expectedSalary: initialData.expectedMinSalary ?? undefined,
+      sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
+      visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
+      preferredCountries: initialData.preferredCountries || [],
+      facilityPreferences: initialData.facilityPreferences || [],
+    });
+    // Reset only when the modal opens — not on every parent re-render while editing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, reset]);
 
   const onSubmit = async (data: JobPreferenceFormData) => {
     try {
@@ -216,8 +216,10 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                   <MultiCountrySelect
                     label="Preferred Countries"
                     placeholder="Select countries..."
-                    value={field.value}
-                    onValueChange={field.onChange}
+                    value={field.value ?? []}
+                    onValueChange={(next) =>
+                      setValue("preferredCountries", next, { shouldDirty: true })
+                    }
                     disabled={isLoading}
                     pageSize={20}
                     error={errors.preferredCountries?.message}
@@ -245,8 +247,10 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                         label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
                       })),
                     ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
+                    value={field.value ?? []}
+                    onValueChange={(next) =>
+                      setValue("facilityPreferences", next, { shouldDirty: true })
+                    }
                     disabled={isLoading}
                     error={errors.facilityPreferences?.message}
                   />

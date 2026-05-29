@@ -31,6 +31,7 @@ import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { CandidateCodeService } from './services/candidate-code.service';
+import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
@@ -99,6 +100,7 @@ export class CandidatesService {
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
     private readonly candidateCodeService: CandidateCodeService,
+    private readonly candidateListFilterService: CandidateListFilterService,
     private readonly rnrRemindersService: RnrRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
@@ -606,21 +608,8 @@ export class CandidatesService {
       search,
       currentStatus,
       status,
-      source,
-      gender,
       teamId,
       assignedTo,
-      minExperience,
-      maxExperience,
-      minSalary,
-      maxSalary,
-      dateOfBirthFrom,
-      dateOfBirthTo,
-      // server-side createdAt range filter (ISO strings)
-      dateFrom,
-      dateTo,
-      roleCatalogId,
-      agentId,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
@@ -628,11 +617,8 @@ export class CandidatesService {
       roles = [],
     } = query;
 
-    // Handle status alias - status is an alias for currentStatus
-    const effectiveStatus = currentStatus || status;
-
     // Build where clause
-    const where: any = {};
+    const where: Prisma.CandidateWhereInput = {};
 
     // 1. Leadership / Agent Coordinator: may see candidates with source === 'agent'
     if (!canSeeAgentSourcedCandidates(roles)) {
@@ -641,138 +627,16 @@ export class CandidatesService {
       };
     }
 
-    if (search && typeof search === 'string' && search.trim().length > 0) {
-      const s = search.trim();
-      // Search across primary candidate fields and related qualifications
-      where.OR = [
-        { firstName: { contains: s, mode: 'insensitive' } },
-        { lastName: { contains: s, mode: 'insensitive' } },
-        { candidateCode: { contains: s, mode: 'insensitive' } },
-        { mobileNumber: { contains: s, mode: 'insensitive' } },
-        { email: { contains: s, mode: 'insensitive' } },
-        // Match candidate qualifications (qualification name / shortName / field / university)
-        {
-          qualifications: {
-            some: {
-              OR: [
-                { qualification: { name: { contains: s, mode: 'insensitive' } } },
-                { qualification: { shortName: { contains: s, mode: 'insensitive' } } },
-                { qualification: { field: { contains: s, mode: 'insensitive' } } },
-                { university: { contains: s, mode: 'insensitive' } },
-              ],
-            },
-          },
-        },
-      ];
-    }
-
-    if (effectiveStatus) {
-      // Look up status by name to get the ID
-      const statusRecord = await this.prisma.candidateStatus.findFirst({
-        where: {
-          statusName: {
-            equals: effectiveStatus,
-            mode: 'insensitive',
-          },
-        },
-      });
-      if (statusRecord) {
-        where.currentStatusId = statusRecord.id;
-      }
-    }
-
-    if (source) {
-      where.source = source;
-    }
-
-    if (agentId) {
-      where.agentId = agentId;
-    }
-
-    if (gender) {
-      where.gender = gender;
-    }
-
-    if (teamId) {
-      where.teamId = teamId;
-    }
-
-    // Note: assignedTo filtering is now handled via CandidateProjects
-    // This will be implemented in the query logic below
-
-    if (minExperience !== undefined || maxExperience !== undefined) {
-      where.experience = {};
-      if (minExperience !== undefined) {
-        where.experience.gte = minExperience;
-      }
-      if (maxExperience !== undefined) {
-        where.experience.lte = maxExperience;
-      }
-    }
-
-    if (minSalary !== undefined || maxSalary !== undefined) {
-      where.expectedMinSalary = {};
-      if (minSalary !== undefined) {
-        where.expectedMinSalary.gte = minSalary;
-      }
-      if (maxSalary !== undefined) {
-        where.expectedMinSalary.lte = maxSalary;
-      }
-    }
-
-    if (dateOfBirthFrom || dateOfBirthTo) {
-      where.dateOfBirth = {};
-      if (dateOfBirthFrom) {
-        where.dateOfBirth.gte = new Date(dateOfBirthFrom);
-      }
-      if (dateOfBirthTo) {
-        where.dateOfBirth.lte = new Date(dateOfBirthTo);
-      }
-    }
-
-    // createdAt range filter (date added) - server-side
-    // Treat incoming dateFrom/dateTo as calendar dates — normalize to UTC day boundaries
-    if (dateFrom || dateTo) {
-      const rawFrom = dateFrom;
-      const rawTo = dateTo;
-
-      let fromDt: Date | undefined;
-      let toDt: Date | undefined;
-
-      if (rawFrom) {
-        const parsed = new Date(rawFrom);
-        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-      }
-
-      if (rawTo) {
-        const parsed = new Date(rawTo);
-        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
-      }
-
-      if (fromDt && toDt && fromDt.getTime() > toDt.getTime()) {
-        const tmp = fromDt;
-        fromDt = toDt;
-        toDt = tmp;
-      }
-
-      where.createdAt = {} as any;
-      if (fromDt) {
-        where.createdAt.gte = fromDt;
-      }
-      if (toDt) {
-        where.createdAt.lte = toDt;
-      }
-
-      this.logger.log(`Applying createdAt filter in findAll(): rawFrom=${rawFrom || 'n/a'} rawTo=${rawTo || 'n/a'} normalizedFrom=${fromDt?.toISOString() || 'n/a'} normalizedTo=${toDt?.toISOString() || 'n/a'}`);
-    }
-
-    if (roleCatalogId && roleCatalogId !== 'all') {
-      where.workExperiences = {
-        some: {
-          roleCatalogId: roleCatalogId,
-        },
-      };
-    }
+    this.candidateListFilterService.applySearchFilter(where, search, {
+      includeQualifications: true,
+    });
+    await this.candidateListFilterService.applyCrmStatusNameFilter(
+      where,
+      status,
+      currentStatus,
+    );
+    this.candidateListFilterService.applyCreatedAtFilter(where, query);
+    this.candidateListFilterService.applyAdvancedListFilters(where, query);
 
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -798,26 +662,7 @@ export class CandidatesService {
       };
     }
 
-    // apply createdAt filter to dashboard counts when provided (use same normalization)
-    if (dateFrom || dateTo) {
-      const rawFrom = dateFrom;
-      const rawTo = dateTo;
-      let fromDt: Date | undefined;
-      let toDt: Date | undefined;
-
-      if (rawFrom) {
-        const parsed = new Date(rawFrom);
-        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-      }
-      if (rawTo) {
-        const parsed = new Date(rawTo);
-        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
-      }
-
-      baseWhere.createdAt = {} as any;
-      if (fromDt) baseWhere.createdAt.gte = fromDt;
-      if (toDt) baseWhere.createdAt.lte = toDt;
-    }
+    this.candidateListFilterService.applyCreatedAtFilter(baseWhere, query);
 
     // Get all candidate status records in one query
     const statuses = await this.prisma.candidateStatus.findMany({
@@ -1273,19 +1118,32 @@ export class CandidatesService {
     };
   }
 
+  /** Merge CRE list base scope with shared advanced candidate filters. */
+  private buildCreListWhere(
+    baseWhere: Prisma.CandidateWhereInput,
+    query: QueryCandidatesDto,
+  ): Prisma.CandidateWhereInput {
+    const advancedWhere: Prisma.CandidateWhereInput = {};
+    this.candidateListFilterService.applySearchFilter(advancedWhere, query.search, {
+      includeQualifications: true,
+    });
+    this.candidateListFilterService.applyCreatedAtFilter(advancedWhere, query);
+    this.candidateListFilterService.applyAdvancedListFilters(advancedWhere, query);
+
+    if (Object.keys(advancedWhere).length === 0) {
+      return baseWhere;
+    }
+
+    return { AND: [baseWhere, advancedWhere] };
+  }
+
   /**
    * Get candidates assigned to a specific CRE user
    * Used for CRE dashboard to show only their assigned candidates
    */
   async getCREAssignedCandidates(
     creUserId: string,
-    query: {
-      page?: number;
-      limit?: number;
-      search?: string;
-      currentStatus?: string;
-      gender?: string;
-    },
+    query: QueryCandidatesDto & { currentStatus?: string },
   ): Promise<{
     candidates: any[];
     pagination: {
@@ -1295,11 +1153,12 @@ export class CandidatesService {
       totalPages: number;
     };
   }> {
-    const { page = 1, limit = 10, search, currentStatus, gender } = query;
+    const { page = 1, limit = 10, currentStatus, status } = query;
+    const effectiveStatus = currentStatus || status;
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       recruiterAssignments: {
         some: {
           recruiterId: creUserId,
@@ -1308,19 +1167,10 @@ export class CandidatesService {
       },
     };
 
-    // Add search filter
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-        { candidateCode: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    let where: Prisma.CandidateWhereInput = baseWhere;
 
     // Add status filter (supports numeric id or statusName string)
-    const normalizedStatusInput = currentStatus?.toLowerCase().trim();
+    const normalizedStatusInput = effectiveStatus?.toLowerCase().trim();
 
     const statusNameMap: Record<string, string> = {
       interested: 'interested',
@@ -1334,7 +1184,13 @@ export class CandidatesService {
     if (normalizedStatusInput) {
       if (normalizedStatusInput === 'interested') {
         // Converted Response mode: now identified by assignmentType instead of status
-        where.recruiterAssignments.some.assignmentType = CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED;
+        where.recruiterAssignments = {
+          some: {
+            recruiterId: creUserId,
+            isActive: true,
+            assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+          },
+        };
       } else if (normalizedStatusInput === 'junk') {
         // Junk Candidates logic: Assigned > 5 days ago, active, not converted/reassigned
         const threshold = new Date();
@@ -1382,10 +1238,7 @@ export class CandidatesService {
       };
     }
 
-    // Add gender filter
-    if (gender) {
-      where.gender = gender;
-    }
+    where = this.buildCreListWhere(where, query);
 
     // Get total count
     const total = await this.prisma.candidate.count({ where });
@@ -1936,16 +1789,12 @@ export class CandidatesService {
 
   async getCREReassignedCandidates(
     recruiterId: string,
-    query: {
-      page?: number;
-      limit?: number;
-      search?: string;
-    },
+    query: QueryCandidatesDto,
   ) {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       OR: [
         {
           recruiterAssignments: {
@@ -1971,24 +1820,7 @@ export class CandidatesService {
       },
     };
 
-    if (search?.trim()) {
-      const term = search.trim();
-      where.AND = [
-        {
-          OR: where.OR,
-        },
-        {
-          OR: [
-            { firstName: { contains: term, mode: 'insensitive' } },
-            { lastName: { contains: term, mode: 'insensitive' } },
-            { email: { contains: term, mode: 'insensitive' } },
-            { mobileNumber: { contains: term, mode: 'insensitive' } },
-            { candidateCode: { contains: term, mode: 'insensitive' } },
-          ],
-        },
-      ];
-      delete where.OR;
-    }
+    const where = this.buildCreListWhere(baseWhere, query);
 
     const total = await this.prisma.candidate.count({ where });
 
@@ -2054,12 +1886,12 @@ export class CandidatesService {
    */
   async getUserCandidates(
     creUserId: string,
-    query: { page?: number; limit?: number; search?: string },
+    query: QueryCandidatesDto,
   ) {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       recruiterAssignments: {
         some: {
           createdBy: creUserId,
@@ -2067,19 +1899,7 @@ export class CandidatesService {
       },
     };
 
-    if (search) {
-      where.AND = [
-        {
-          OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } },
-            { mobileNumber: { contains: search, mode: 'insensitive' } },
-            { candidateCode: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-      ];
-    }
+    const where = this.buildCreListWhere(baseWhere, query);
 
     const total = await this.prisma.candidate.count({ where });
 
@@ -4238,200 +4058,9 @@ export class CandidatesService {
       };
     }
 
-    // Date Range logic
-    if (query.dateFilter && query.dateFilter !== 'custom' && query.dateFilter !== 'all') {
-      const now = new Date();
-      let start: Date | undefined;
-      let end: Date | undefined;
-
-      switch (query.dateFilter) {
-        case 'today':
-          start = new Date(new Date().setHours(0, 0, 0, 0));
-          end = new Date(new Date().setHours(23, 59, 59, 999));
-          break;
-        case 'yesterday':
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          start = new Date(yesterday.setHours(0, 0, 0, 0));
-          end = new Date(yesterday.setHours(23, 59, 59, 999));
-          break;
-        case 'this_week':
-          const first = now.getDate() - now.getDay();
-          const sunday = new Date(new Date().setDate(first));
-          start = new Date(sunday.setHours(0, 0, 0, 0));
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'last_week':
-          const lastFirst = now.getDate() - now.getDay() - 7;
-          const lastSunday = new Date(new Date().setDate(lastFirst));
-          start = new Date(lastSunday.setHours(0, 0, 0, 0));
-          end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'this_month':
-          start = new Date(now.getFullYear(), now.getMonth(), 1);
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'this_year':
-          start = new Date(now.getFullYear(), 0, 1);
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-      }
-      if (start && end) {
-        where.createdAt = { gte: start, lte: end };
-      }
-    } else if (query.dateFrom || query.dateTo) {
-      const dateRange: any = {};
-      if (query.dateFrom) dateRange.gte = new Date(query.dateFrom);
-      if (query.dateTo) dateRange.lte = new Date(query.dateTo);
-      where.createdAt = dateRange;
-    }
-
-    // Add list filters
-    if (query.search) {
-      where.OR = [
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
-        { candidateCode: { contains: query.search, mode: 'insensitive' } },
-        { mobileNumber: { contains: query.search, mode: 'insensitive' } },
-        { email: { contains: query.search, mode: 'insensitive' } },
-      ];
-    }
-
-    if (query.gender) {
-      where.gender = query.gender.toUpperCase();
-    }
-
-    if (query.sources && query.sources.length > 0) {
-      where.source = { in: query.sources };
-    } else if (query.source) {
-      where.source = query.source;
-    }
-
-    if (query.countryPreferences && query.countryPreferences.length > 0) {
-      where.preferredCountries = { some: { countryCode: { in: query.countryPreferences } } };
-    }
-
-    if (query.sectorTypes && query.sectorTypes.length > 0) {
-      where.sectorType = { in: query.sectorTypes };
-    }
-
-    if (query.facilityPreferences && query.facilityPreferences.length > 0) {
-      where.facilityPreferences = { some: { facilityType: { in: query.facilityPreferences } } };
-    }
-
-    if (query.visaType) {
-      where.visaType = query.visaType;
-    }
-
-    if (query.qualification) {
-      where.qualifications = {
-        some: {
-          qualification: {
-            name: { contains: query.qualification, mode: 'insensitive' },
-          },
-        },
-      };
-    }
-
-    if (query.minExperience !== undefined || query.maxExperience !== undefined) {
-      where.experience = {};
-      if (query.minExperience !== undefined) where.experience.gte = query.minExperience;
-      if (query.maxExperience !== undefined) where.experience.lte = query.maxExperience;
-    }
-
-    if (query.minSalary !== undefined || query.maxSalary !== undefined) {
-      where.expectedMinSalary = {};
-      if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
-      if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
-    }
-
-    if (query.agentId) {
-      where.agentId = query.agentId;
-    }
-
-    if (query.heightMin !== undefined || query.heightMax !== undefined) {
-      where.height = {};
-      if (query.heightMin !== undefined) where.height.gte = query.heightMin;
-      if (query.heightMax !== undefined) where.height.lte = query.heightMax;
-    }
-
-    if (query.weightMin !== undefined || query.weightMax !== undefined) {
-      where.weight = {};
-      if (query.weightMin !== undefined) where.weight.gte = query.weightMin;
-      if (query.weightMax !== undefined) where.weight.lte = query.weightMax;
-    }
-
-    if (query.skinTone) {
-      where.skinTone = query.skinTone;
-    }
-
-    if (query.languageProficiency) {
-      where.languageProficiency = { contains: query.languageProficiency, mode: 'insensitive' };
-    }
-
-    if (query.smartness) {
-      where.smartness = query.smartness;
-    }
-
-    if (query.licensingExam) {
-      where.licensingExam = query.licensingExam;
-    }
-
-    if (query.dataFlow !== undefined) {
-      where.dataFlow = query.dataFlow;
-    }
-
-    if (query.eligibility !== undefined) {
-      where.eligibility = query.eligibility;
-    }
-
-    // Age filter is converted to dateOfBirth filter range
-    const ageDobRange = this.computeDateOfBirthRangeFromAge(query.minAge, query.maxAge);
-    if (ageDobRange.dateOfBirthFrom || ageDobRange.dateOfBirthTo) {
-      where.dateOfBirth = {};
-      if (ageDobRange.dateOfBirthFrom) {
-        where.dateOfBirth.gte = ageDobRange.dateOfBirthFrom;
-      }
-      if (ageDobRange.dateOfBirthTo) {
-        where.dateOfBirth.lte = ageDobRange.dateOfBirthTo;
-      }
-    }
-
-    if (query.dateOfBirthFrom || query.dateOfBirthTo) {
-      if (!where.dateOfBirth) {
-        where.dateOfBirth = {};
-      }
-      if (query.dateOfBirthFrom) {
-        const parsedFrom = new Date(query.dateOfBirthFrom);
-        where.dateOfBirth.gte = where.dateOfBirth.gte
-          ? new Date(Math.max(new Date(where.dateOfBirth.gte).getTime(), parsedFrom.getTime()))
-          : parsedFrom;
-      }
-      if (query.dateOfBirthTo) {
-        const parsedTo = new Date(query.dateOfBirthTo);
-        const toDate = new Date(parsedTo);
-        toDate.setHours(23, 59, 59, 999);
-        where.dateOfBirth.lte = where.dateOfBirth.lte
-          ? new Date(Math.min(new Date(where.dateOfBirth.lte).getTime(), toDate.getTime()))
-          : toDate;
-      }
-    }
-
-    if (query.workExperienceCompany || query.workExperienceTitle) {
-      const workExperienceCondition: any = {};
-      if (query.workExperienceCompany) {
-        workExperienceCondition.companyName = { contains: query.workExperienceCompany, mode: 'insensitive' };
-      }
-      if (query.workExperienceTitle) {
-        workExperienceCondition.jobTitle = { contains: query.workExperienceTitle, mode: 'insensitive' };
-      }
-      where.workExperiences = { some: workExperienceCondition };
-    }
+    this.candidateListFilterService.applyCreatedAtFilter(where, query);
+    this.candidateListFilterService.applySearchFilter(where, query.search);
+    this.candidateListFilterService.applyAdvancedListFilters(where, query);
 
     // New: Main and Sub Status filtering
     if (query.mainStatus || query.subStatus) {

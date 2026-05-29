@@ -328,38 +328,6 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
 
-                {/* Referral Fields Integrated */}
-                {candidate.source === "referral" && (
-                  <>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Company
-                      </label>
-                      <p className="text-sm mt-1">
-                        {candidate.referralCompanyName || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Email
-                      </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3 text-slate-400" />
-                        {candidate.referralEmail || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Phone
-                      </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        {candidate.referralCountryCode}
-                        {candidate.referralPhone || "N/A"}
-                      </p>
-                    </div>
-                  </>
-                )}
               </div>
 
               {/* Referral Description Integrated */}

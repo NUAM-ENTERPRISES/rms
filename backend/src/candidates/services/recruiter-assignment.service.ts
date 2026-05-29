@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
 import { GetRecruiterCandidatesDto } from '../dto/get-recruiter-candidates.dto';
+import { CandidateListFilterService } from './candidate-list-filter.service';
 import { OutboxService } from '../../notifications/outbox.service';
 import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
@@ -48,6 +49,7 @@ export class RecruiterAssignmentService {
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
     private readonly rolesService: RolesService,
+    private readonly candidateListFilterService: CandidateListFilterService,
   ) { }
 
   /**
@@ -661,11 +663,11 @@ export class RecruiterAssignmentService {
     recruiterId: string,
     dto: GetRecruiterCandidatesDto,
   ) {
-    const { page = 1, limit = 10, status, search, roleCatalogId, source } = dto;
+    const { page = 1, limit = 10, status, search, source, sources } = dto;
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const whereClause: any = {
+    const whereClause: Prisma.CandidateWhereInput = {
       recruiterAssignments: {
         some: {
           recruiterId,
@@ -675,127 +677,41 @@ export class RecruiterAssignmentService {
     };
 
     // Base assignment-only where used for dashboard counts (ignores search/status filters)
-    const assignmentOnlyWhere = { ...whereClause };
+    const assignmentOnlyWhere: Prisma.CandidateWhereInput = { ...whereClause };
 
-    // Add status filter if provided
-    if (status) {
-      // Normalize incoming status (e.g., 'on_hold' -> 'On Hold') and try to resolve to a status record
-      const normalized = status.replace(/_/g, ' ').trim();
-      const titleCase = normalized
-        .split(' ')
-        .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
-        .join(' ');
+    await this.candidateListFilterService.applyCrmStatusNameFilter(
+      whereClause,
+      status,
+      dto.currentStatus,
+    );
 
-      const statusRecord = await this.prisma.candidateStatus.findFirst({
-        where: {
-          OR: [
-            { statusName: { equals: status, mode: 'insensitive' } },
-            { statusName: { equals: normalized, mode: 'insensitive' } },
-            { statusName: { equals: titleCase, mode: 'insensitive' } },
-          ],
-        },
-        select: { id: true, statusName: true },
-      });
+    this.candidateListFilterService.applySearchFilter(whereClause, search, {
+      includeQualifications: true,
+    });
+    this.candidateListFilterService.applyCreatedAtFilter(whereClause, dto);
+    this.candidateListFilterService.applyAdvancedListFilters(whereClause, dto, {
+      skipSource: true,
+    });
+    this.candidateListFilterService.applySourceFilter(
+      whereClause,
+      { source, sources },
+      prismaAgentChannelWhere(),
+    );
 
-      if (statusRecord) {
-        whereClause.currentStatusId = statusRecord.id;
-      } else {
-        // Fallback: try to match by status enum value directly (some DB rows may store lowercase)
-        whereClause.currentStatus = { statusName: { equals: status, mode: 'insensitive' } };
-      }
-    }
-
-    // Add search filter if provided
-    if (search) {
-      whereClause.OR = [
-        {
-          firstName: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-        {
-          lastName: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-        {
-          email: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-        {
-          mobileNumber: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        },
-      ];
-    }
-    if (source && source !== 'all') {
-      if (source === 'agent') {
-        whereClause.AND = [
-          ...(whereClause.AND ?? []),
-          prismaAgentChannelWhere(),
-        ];
-      } else {
-        whereClause.source = source;
-      }
-    }
-    if (roleCatalogId && roleCatalogId !== 'all') {
-      whereClause.workExperiences = {
-        some: {
-          roleCatalogId: roleCatalogId,
-        },
-      };
-    }
-
-    // Dashboard counts: when `source` is set, bucket stats on the same cohort as the listing
-    // (respects channel; for `agent`, includes agentId-linked rows, not only source === 'agent').
+    // Dashboard counts: when source filter is set, bucket stats on the same cohort as the listing
     let assignmentWhereForDashboard: Prisma.CandidateWhereInput =
       assignmentOnlyWhere;
-    if (source && source !== 'all') {
+    const dashboardSource =
+      sources && sources.length === 1
+        ? sources[0]
+        : sources && sources.length > 0
+          ? undefined
+          : source;
+    if (dashboardSource && dashboardSource !== 'all') {
       assignmentWhereForDashboard =
-        source === 'agent'
+        dashboardSource === 'agent'
           ? { AND: [assignmentOnlyWhere, prismaAgentChannelWhere()] }
-          : { AND: [assignmentOnlyWhere, { source }] };
-    }
-
-    // CreatedAt / Date range filtering (server-side)
-    // Normalize incoming dateFrom/dateTo to full UTC calendar days so clients can pass
-    // either date-only or datetime strings and still get "whole-day" semantics.
-    if ((dto as any).dateFrom || (dto as any).dateTo) {
-      const rawFrom = (dto as any).dateFrom;
-      const rawTo = (dto as any).dateTo;
-
-      let fromDt: Date | undefined;
-      let toDt: Date | undefined;
-
-      if (rawFrom) {
-        const parsed = new Date(rawFrom);
-        // use UTC components of the parsed value and normalize to start of that day (00:00:00.000 UTC)
-        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-      }
-
-      if (rawTo) {
-        const parsed = new Date(rawTo);
-        // normalize to end of that day (23:59:59.999 UTC)
-        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
-      }
-
-      if (fromDt && toDt && fromDt.getTime() > toDt.getTime()) {
-        const tmp = fromDt;
-        fromDt = toDt;
-        toDt = tmp;
-      }
-
-      whereClause.createdAt = {} as any;
-      if (fromDt) whereClause.createdAt.gte = fromDt;
-      if (toDt) whereClause.createdAt.lte = toDt;
-
-      this.logger.log(`Applying createdAt filter for recruiter ${recruiterId}: rawFrom=${rawFrom || 'n/a'} rawTo=${rawTo || 'n/a'} normalizedFrom=${fromDt?.toISOString() || 'n/a'} normalizedTo=${toDt?.toISOString() || 'n/a'}`);
+          : { AND: [assignmentOnlyWhere, { source: dashboardSource }] };
     }
 
     // Get total count (for the listing - respects search/status/search filters)

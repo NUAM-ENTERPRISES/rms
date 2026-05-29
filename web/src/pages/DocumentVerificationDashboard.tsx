@@ -44,8 +44,24 @@ import {
   AlertCircle,
   User,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useGetDocumentVerificationCandidatesQuery } from "@/features/projects";
 import { format } from "date-fns";
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+}) {
+  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
 
 const DocumentStatusBadge = ({ status }: { status: string }) => {
   const getStatusConfig = (status: string) => {
@@ -322,7 +338,7 @@ export default function DocumentVerificationDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Candidate</TableHead>
+                    {/* <TableHead>Candidate</TableHead> */}
                     <TableHead>Contact</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Experience</TableHead>
@@ -334,7 +350,11 @@ export default function DocumentVerificationDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCandidates.map((candidate: any) => (
+                  {filteredCandidates.map((candidate: any) => {
+                    const phoneDigits = formatPhoneForLink(candidate.candidate);
+                    const candidateName = `${candidate.candidate.firstName ?? ""} ${candidate.candidate.lastName ?? ""}`.trim();
+
+                    return (
                     <TableRow key={candidate.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -357,7 +377,7 @@ export default function DocumentVerificationDashboard() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm text-gray-500 space-y-1 min-w-0">
+                        <div className="text-sm text-gray-500 space-y-1.5 min-w-0">
                           {candidate.candidate.email ? (
                             <div className="flex items-center gap-1 min-w-0">
                               <Mail className="h-3 w-3 shrink-0" />
@@ -366,12 +386,71 @@ export default function DocumentVerificationDashboard() {
                               </span>
                             </div>
                           ) : null}
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 shrink-0" />
-                            <span>
-                              {candidate.candidate.countryCode}{" "}
-                              {candidate.candidate.mobileNumber}
-                            </span>
+                          {(candidate.candidate.countryCode ||
+                            candidate.candidate.mobileNumber) && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span>
+                                {candidate.candidate.countryCode}{" "}
+                                {candidate.candidate.mobileNumber}
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            className="flex items-center gap-1.5 pt-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 border border-green-100/50"
+                                    onClick={() =>
+                                      phoneDigits &&
+                                      window.open(
+                                        `https://wa.me/${phoneDigits}`,
+                                        "_blank",
+                                      )
+                                    }
+                                    disabled={!phoneDigits}
+                                    aria-label={`WhatsApp ${candidateName || "candidate"}`}
+                                  >
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">
+                                    {phoneDigits ? "WhatsApp" : "No phone number"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                    onClick={() =>
+                                      phoneDigits &&
+                                      (window.location.href = `tel:${phoneDigits}`)
+                                    }
+                                    disabled={!phoneDigits}
+                                    aria-label={`Call ${candidateName || "candidate"}`}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">
+                                    {phoneDigits ? "Call" : "No phone number"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </TableCell>
@@ -467,7 +546,8 @@ export default function DocumentVerificationDashboard() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

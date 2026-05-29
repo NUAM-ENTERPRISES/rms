@@ -7,11 +7,22 @@ import {
   Max,
   IsDateString,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
-import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender } from './create-candidate.dto';
+
+export enum DateFilterType {
+  ALL = 'all',
+  TODAY = 'today',
+  YESTERDAY = 'yesterday',
+  THIS_WEEK = 'this_week',
+  LAST_WEEK = 'last_week',
+  THIS_MONTH = 'this_month',
+  THIS_YEAR = 'this_year',
+  CUSTOM = 'custom',
+}
 
 export class QueryCandidatesDto {
   @ApiPropertyOptional({
@@ -300,6 +311,54 @@ export class QueryCandidatesDto {
   @IsOptional()
   @IsDateString()
   dateOfBirthTo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Preset date filter for candidate createdAt',
+    enum: DateFilterType,
+  })
+  @IsOptional()
+  @IsEnum(DateFilterType)
+  dateFilter?: DateFilterType;
+
+  @ApiPropertyOptional({
+    description: 'Filter by preferred countries (country codes)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  countryPreferences?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by sector types',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  sectorTypes?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by facility preferences',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  facilityPreferences?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by multiple sources',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  sources?: string[];
 
   @ApiPropertyOptional({
     description: 'Filter by candidate createdAt (from) - ISO datetime',

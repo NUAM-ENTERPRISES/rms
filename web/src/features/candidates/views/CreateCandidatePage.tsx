@@ -107,6 +107,12 @@ export default function CreateCandidatePage() {
   const isCRE = hasRole("CRE");
   const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
 
+  const candidatesHomePath = isAgentCoordinator
+    ? "/agents"
+    : isCRE
+      ? "/cre-dashboard"
+      : "/candidates";
+
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
@@ -220,9 +226,9 @@ export default function CreateCandidatePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/candidates")} variant="outline">
+            <Button onClick={() => navigate(candidatesHomePath)} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Candidates
+              {isCRE ? "Back to CRE Dashboard" : isAgentCoordinator ? "Back to Agents" : "Back to Candidates"}
             </Button>
           </CardContent>
         </Card>
@@ -564,7 +570,7 @@ export default function CreateCandidatePage() {
         }
 
         toast.success("Candidate created successfully!");
-        navigate(isAgentCoordinator ? "/agents" : "/candidates");
+        navigate(candidatesHomePath);
       }
     } catch (error: any) {
       console.error("Error creating candidate:", error);
@@ -677,7 +683,7 @@ export default function CreateCandidatePage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/candidates")}
+            onClick={() => navigate(candidatesHomePath)}
             disabled={isLoading || uploadingImage}
             className="min-w-[120px] border-slate-300"
           >

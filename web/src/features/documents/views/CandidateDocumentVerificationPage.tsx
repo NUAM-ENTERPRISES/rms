@@ -98,6 +98,23 @@ import { cn } from "@/lib/utils";
 import { Link2 } from "lucide-react";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
+import { FaWhatsapp } from "react-icons/fa";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+function formatPhoneForLink(c: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const raw = `${c.countryCode ?? ""}${c.mobileNumber ?? c.contact ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
 
 function isRejectedDocumentStatus(displayedStatus: string | undefined): boolean {
   return displayedStatus === "rejected";
@@ -176,6 +193,20 @@ export default function CandidateDocumentVerificationPage() {
   } = useGetCandidateByIdQuery(candidateId!, {
     skip: !candidateId,
   });
+
+  const hideContactInfo = projectResponse?.data?.hideContactInfo ?? false;
+  const candidatePhoneDigits = useMemo(
+    () => (candidate && !hideContactInfo ? formatPhoneForLink(candidate) : null),
+    [candidate, hideContactInfo],
+  );
+  const candidatePhoneDisplay = useMemo(() => {
+    if (!candidate || hideContactInfo) return null;
+    const code = candidate.countryCode
+      ? `+${String(candidate.countryCode).replace(/^\+/, "")} `
+      : "";
+    const number = candidate.mobileNumber || candidate.contact;
+    return number ? `${code}${number}`.trim() : null;
+  }, [candidate, hideContactInfo]);
 
   // this query provides a `DocumentVerification` tag scoped to the candidate
   // (see api slice). the socket provider invalidates that tag when a document
@@ -937,13 +968,69 @@ export default function CandidateDocumentVerificationPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Phone</p>
-                  <p className="font-semibold text-slate-700">
-                    {candidate.countryCode && `+${candidate.countryCode} `}
-                    {candidate.mobileNumber || candidate.contact || "N/A"}
-                  </p>
+                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-slate-400">Contact</p>
+                  {hideContactInfo ? (
+                    <p className="font-semibold text-slate-500">Hidden</p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+                        {candidatePhoneDisplay || "N/A"}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 hover:text-green-700"
+                                disabled={!candidatePhoneDigits}
+                                aria-label={`WhatsApp ${candidate.firstName ?? "candidate"}`}
+                                onClick={() => {
+                                  if (candidatePhoneDigits) {
+                                    window.open(
+                                      `https://wa.me/${candidatePhoneDigits}`,
+                                      "_blank",
+                                    );
+                                  }
+                                }}
+                              >
+                                <FaWhatsapp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">WhatsApp</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                disabled={!candidatePhoneDigits}
+                                aria-label={`Call ${candidate.firstName ?? "candidate"}`}
+                                onClick={() => {
+                                  if (candidatePhoneDigits) {
+                                    window.location.href = `tel:${candidatePhoneDigits}`;
+                                  }
+                                }}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">Call</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -4,6 +4,7 @@ import { ChevronLeft, Sparkles } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
 import { NavItem } from "@/config/nav";
 import { cn } from "@/lib/utils";
+import { isNavGroupActive, isNavItemActive } from "@/utils/nav-active";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -147,12 +148,10 @@ function NavItemComponent({
   const location = useLocation();
 
   const hasChildren = item.children && item.children.length > 0;
-  const isActive = location.pathname === item.path;
-  const isChildActive =
-    hasChildren &&
-    item.children?.some(
-      (child) => child.path && location.pathname.startsWith(child.path)
-    );
+  const isActive = item.path
+    ? isNavItemActive(location.pathname, item)
+    : false;
+  const isChildActive = hasChildren && isNavGroupActive(location.pathname, item);
   const isCurrentlyActive = isActive || isChildActive;
 
   // Initialize expansion based on whether any child is active so that

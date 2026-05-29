@@ -1,4 +1,8 @@
 import { baseApi } from "@/app/api/baseApi";
+import {
+  appendCandidateListQueryParams,
+  type CandidateListQueryParams,
+} from "@/features/candidates/api";
 
 interface Candidate {
   id: string;
@@ -105,11 +109,8 @@ interface UpdateCandidateRequest {
   referralDescription?: string | null;
 }
 
-interface GetMyAssignedCandidatesParams {
-  search?: string;
+interface GetMyAssignedCandidatesParams extends CandidateListQueryParams {
   currentStatus?: string;
-  page?: number;
-  limit?: number;
 }
 
 interface PaginatedCandidatesResponse {
@@ -146,11 +147,11 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus.toString());
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        
+        appendCandidateListQueryParams(queryParams, params);
+        if (params.currentStatus) {
+          queryParams.append("currentStatus", params.currentStatus);
+        }
+
         return `/candidates/my-assigned?${queryParams.toString()}`;
       },
       transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
@@ -189,9 +190,7 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
+        appendCandidateListQueryParams(queryParams, params);
 
         return `/candidates/my-assigned/reassigned?${queryParams.toString()}`;
       },
@@ -210,9 +209,7 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
+        appendCandidateListQueryParams(queryParams, params);
 
         return `/candidates/user-candidates?${queryParams.toString()}`;
       },

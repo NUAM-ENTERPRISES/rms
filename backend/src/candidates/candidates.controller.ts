@@ -585,10 +585,7 @@ export class CandidatesController {
   })
   async getMyCREAssignedCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
-    @Query('currentStatus') currentStatus?: string,
+    @Query() query: QueryCandidatesDto,
   ): Promise<{
     success: boolean;
     data: {
@@ -603,16 +600,11 @@ export class CandidatesController {
     message: string;
   }> {
     const userId = req.user.id; // Get logged-in CRE user ID
-    
-    const result = await this.candidatesService.getCREAssignedCandidates(
-      userId,
-      {
-        page: Number(page),
-        limit: Number(limit),
-        search,
-        currentStatus,
-      },
-    );
+
+    const result = await this.candidatesService.getCREAssignedCandidates(userId, {
+      ...query,
+      currentStatus: query.currentStatus || query.status,
+    });
 
     return {
       success: true,
@@ -656,16 +648,10 @@ export class CandidatesController {
   })
   async getMyCREReassignedCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
+    @Query() query: QueryCandidatesDto,
   ) {
     const userId = req.user.id;
-    const result = await this.candidatesService.getCREReassignedCandidates(userId, {
-      page: Number(page),
-      limit: Number(limit),
-      search,
-    });
+    const result = await this.candidatesService.getCREReassignedCandidates(userId, query);
 
     return {
       success: true,
@@ -683,16 +669,10 @@ export class CandidatesController {
   @ApiResponse({ status: 200, description: 'User candidates retrieved successfully' })
   async getUserCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
+    @Query() query: QueryCandidatesDto,
   ) {
     const userId = req.user.id;
-    const result = await this.candidatesService.getUserCandidates(userId, {
-      page: Number(page),
-      limit: Number(limit),
-      search,
-    });
+    const result = await this.candidatesService.getUserCandidates(userId, query);
 
     return {
       success: true,
