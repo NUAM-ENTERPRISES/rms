@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { StatusBadge } from "@/features/candidates/components/StatusBadge";
 
@@ -28,11 +27,12 @@ export function CreReassignedStatusNote({
   const trimmedNote = note?.trim();
   const trimmedCreStatus = creStatus?.trim();
 
-  if (!trimmedNote && !trimmedCreStatus) return null;
-
   const title = candidateName?.trim()
     ? `CRE note — ${candidateName.trim()}`
     : "CRE status note";
+
+  const hasStatus = Boolean(trimmedCreStatus);
+  const hasNote = Boolean(trimmedNote);
 
   return (
     <>
@@ -48,7 +48,7 @@ export function CreReassignedStatusNote({
           e.stopPropagation();
           setOpen(true);
         }}
-        aria-label="View CRE status note"
+        aria-label="View CRE handoff details"
       >
         <FileText className="h-3 w-3 shrink-0" aria-hidden />
         Note
@@ -61,32 +61,35 @@ export function CreReassignedStatusNote({
         >
           <DialogHeader>
             <DialogTitle className="text-base">{title}</DialogTitle>
-            <DialogDescription className="sr-only">
-              CRE status and note from when this candidate was reassigned to you.
-            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            {trimmedCreStatus ? (
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
-                  CRE Status
-                </p>
-                <StatusBadge status={trimmedCreStatus} />
-              </div>
-            ) : null}
+          {!hasStatus && !hasNote ? (
+            <p className="text-sm text-slate-500">
+              No CRE handoff details were recorded for this candidate.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {hasStatus ? (
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
+                    CRE Status
+                  </p>
+                  <StatusBadge status={trimmedCreStatus} />
+                </div>
+              ) : null}
 
-            {trimmedNote ? (
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
-                  CRE Note
-                </p>
-                <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
-                  {trimmedNote}
-                </p>
-              </div>
-            ) : null}
-          </div>
+              {hasNote ? (
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
+                    CRE Note
+                  </p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                    {trimmedNote}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

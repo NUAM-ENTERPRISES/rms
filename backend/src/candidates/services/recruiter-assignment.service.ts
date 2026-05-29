@@ -9,6 +9,10 @@ import { RolesService } from '../../roles/roles.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
 import { isAgentCandidateSource } from '../../common/constants/candidate-constants';
 import { withProfileCompletion } from '../utils/profile-completion.util';
+import {
+  resolveCreHandoffNote,
+  resolveCreHandoffStatus,
+} from '../utils/cre-handoff.util';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
 
@@ -1029,6 +1033,17 @@ export class RecruiterAssignmentService {
           where: { isDeleted: false },
           select: { docType: true },
         },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -1049,10 +1064,15 @@ export class RecruiterAssignmentService {
         (a) => a.recruiterId === recruiterId
       );
 
-      // Check if this recruiter assignment was handed back from a CRE
-      const isCREReassigned = recruiterAssignment?.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
+      const creReassignedAssignment = candidate.recruiterAssignments.find(
+        (a) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
+      const isCREReassigned = !!creReassignedAssignment;
+      const statusHistories = candidate.statusHistories ?? [];
 
-      const merged = withProfileCompletion(candidate as any);
+      const { statusHistories: _omitHistories, ...candidateWithoutHistories } =
+        candidate;
+      const merged = withProfileCompletion(candidateWithoutHistories as any);
 
       return {
         ...merged,
@@ -1060,12 +1080,11 @@ export class RecruiterAssignmentService {
         isHandledByCRE,
         isCREReassigned,
         creStatusNote: isCREReassigned
-          ? recruiterAssignment?.creStatusNote ?? null
+          ? resolveCreHandoffNote(creReassignedAssignment, statusHistories)
           : null,
-        creStatus:
-          isCREReassigned && recruiterAssignment?.creStatus
-            ? recruiterAssignment.creStatus
-            : null,
+        creStatus: isCREReassigned
+          ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
+          : null,
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,

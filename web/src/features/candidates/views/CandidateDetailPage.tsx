@@ -45,8 +45,7 @@ import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { Badge } from "@/components/ui/badge";
-import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
+import { CreReassignedHandoffBadge } from "@/components/molecules/CreReassignedHandoffBadge";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -472,16 +471,11 @@ export default function CandidateDetailPage() {
               </div>
             )}
             {candidate.isCREReassigned && (
-              <>
-                <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
-                  CRE Reassigned
-                </Badge>
-                <CreReassignedStatusNote
-                  note={candidate.creStatusNote}
-                  creStatus={candidate.creStatus?.statusName}
-                  candidateName={`${candidate.firstName} ${candidate.lastName}`}
-                />
-              </>
+              <CreReassignedHandoffBadge
+                note={candidate.creStatusNote}
+                creStatus={candidate.creStatus?.statusName}
+                candidateName={`${candidate.firstName} ${candidate.lastName}`}
+              />
             )}
           </div>
         </div>

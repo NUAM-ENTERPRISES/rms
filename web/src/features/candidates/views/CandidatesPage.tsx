@@ -59,7 +59,7 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
-import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
+import { CreReassignedHandoffBadge } from "@/components/molecules/CreReassignedHandoffBadge";
 import { toast } from "sonner";
 
 
@@ -1050,34 +1050,30 @@ export default function CandidatesPage() {
                               />
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-start gap-2 min-w-0">
                                   <button
+                                    type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigate(`/candidates/${candidate.id}`);
                                     }}
-                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
+                                    className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
                                   >
                                     {candidate.firstName} {candidate.lastName}
                                   </button>
 
-                                  {isHandledByCRE && (
-                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
+                                  {isHandledByCRE && !isCREReassigned && (
+                                    <Badge className="shrink-0 text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
                                       CRE Assigned
                                     </Badge>
                                   )}
 
                                   {isCREReassigned && (
-                                    <>
-                                      <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
-                                        CRE Reassigned
-                                      </Badge>
-                                      <CreReassignedStatusNote
-                                        note={creStatusNote}
-                                        creStatus={candidate.creStatus?.statusName}
-                                        candidateName={`${candidate.firstName} ${candidate.lastName}`}
-                                      />
-                                    </>
+                                    <CreReassignedHandoffBadge
+                                      note={creStatusNote}
+                                      creStatus={candidate.creStatus?.statusName}
+                                      candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                                    />
                                   )}
                                 </div>
 

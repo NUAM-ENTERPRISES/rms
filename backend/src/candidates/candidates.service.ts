@@ -66,6 +66,10 @@ import {
 } from './utils/profile-completion.util';
 import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
 import {
+  resolveCreHandoffNote,
+  resolveCreHandoffStatus,
+} from './utils/cre-handoff.util';
+import {
   assertOptionalCountryCode,
   normalizeOptionalCountryCode,
 } from '../common/country/assert-optional-country-code';
@@ -917,6 +921,10 @@ export class CandidatesService {
           select: {
             id: true,
             assignmentType: true,
+            creStatusNote: true,
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
             recruiter: {
               select: {
                 id: true,
@@ -924,7 +932,18 @@ export class CandidatesService {
                 email: true,
               },
             },
-          }
+          },
+        },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
         },
         projects: {
           take: 5,
@@ -966,6 +985,11 @@ export class CandidatesService {
     const candidatesWithCreator = candidates.map((candidate: any) => {
       // Find the specific active assignment
       const activeAssignment = candidate.recruiterAssignments?.[0];
+
+      const creReassignedAssignment = candidate.recruiterAssignments.find(
+        (a: any) =>
+          a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
       
       // Find the specific CRE assignment if it exists
       const creAssignment = candidate.recruiterAssignments.find(
@@ -975,12 +999,10 @@ export class CandidatesService {
       // Check if candidate is handled by a CRE
       const isHandledByCRE = !!creAssignment;
 
-      // Check if any active assignment is marked as CRE_REASSIGNED
-      const isCREReassigned = candidate.recruiterAssignments.some(
-        (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
-      );
+      const isCREReassigned = !!creReassignedAssignment;
+      const statusHistories = candidate.statusHistories ?? [];
 
-      const { documents, ...rest } = candidate;
+      const { documents, statusHistories: _omitHistories, ...rest } = candidate;
       const merged = withProfileCompletion({
         ...rest,
         documents: documents ?? [],
@@ -989,6 +1011,12 @@ export class CandidatesService {
         ...merged,
         isHandledByCRE,
         isCREReassigned,
+        creStatusNote: isCREReassigned
+          ? resolveCreHandoffNote(creReassignedAssignment, statusHistories)
+          : null,
+        creStatus: isCREReassigned
+          ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
+          : null,
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,
@@ -1902,46 +1930,6 @@ export class CandidatesService {
     };
   }
 
-  /**
-   * CRE status selected at reassign (stored on assignment or status history).
-   */
-  private resolveCreHandoffStatus(
-    reassignedAssignment:
-      | {
-          creStatus?: { id: number; statusName: string } | null;
-          creStatusId?: number | null;
-        }
-      | undefined,
-    statusHistories: Array<{
-      statusId: number;
-      statusNameSnapshot: string;
-      reason: string | null;
-      statusUpdatedAt: Date;
-      status?: { id: number; statusName: string };
-    }>,
-  ): { id: number; statusName: string } | null {
-    if (reassignedAssignment?.creStatus) {
-      return reassignedAssignment.creStatus;
-    }
-
-    const handoffHistory = statusHistories.find(
-      (entry) =>
-        entry.reason?.trim() &&
-        !entry.reason.startsWith(CRE_REASSIGN_RECRUITER_RETURN_REASON),
-    );
-
-    if (handoffHistory) {
-      return (
-        handoffHistory.status ?? {
-          id: handoffHistory.statusId,
-          statusName: handoffHistory.statusNameSnapshot,
-        }
-      );
-    }
-
-    return null;
-  }
-
   async getCREReassignedCandidates(
     recruiterId: string,
     query: {
@@ -2032,7 +2020,7 @@ export class CandidatesService {
           CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
       );
 
-      const creStatus = this.resolveCreHandoffStatus(
+      const creStatus = resolveCreHandoffStatus(
         reassignedAssignment,
         candidate.statusHistories,
       );
@@ -2188,6 +2176,17 @@ export class CandidatesService {
           where: { isDeleted: false },
           select: { docType: true },
         },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
+        },
       },
     });
 
@@ -2195,21 +2194,25 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
+    const { statusHistories, ...candidateWithoutHistories } = candidate;
+
     // Extract the creator from the first active assignment
-    const firstAssignment = candidate.recruiterAssignments?.[0];
+    const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
     const createdBy =
       firstAssignment?.createdByUser ||
       firstAssignment?.assignedByUser ||
       null;
 
-    const base = withProfileCompletion(candidate as any);
+    const base = withProfileCompletion(candidateWithoutHistories as any);
 
-    const creReassignedAssignment = candidate.recruiterAssignments.find(
+    const creReassignedAssignment =
+      candidateWithoutHistories.recruiterAssignments.find(
       (assignment) =>
         assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED &&
         assignment.isActive,
     );
     const isCREReassigned = !!creReassignedAssignment;
+    const histories = statusHistories ?? [];
 
     // Pipeline data removed from response to reduce payload
     return {
@@ -2218,15 +2221,14 @@ export class CandidatesService {
       createdBy,
       isCREReassigned,
       creStatusNote: isCREReassigned
-        ? creReassignedAssignment?.creStatusNote ?? null
+        ? resolveCreHandoffNote(creReassignedAssignment, histories)
         : null,
-      creStatus:
-        isCREReassigned && creReassignedAssignment?.creStatus
-          ? creReassignedAssignment.creStatus
-          : null,
+      creStatus: isCREReassigned
+        ? resolveCreHandoffStatus(creReassignedAssignment, histories)
+        : null,
       careerGapAnalysis: calculateCareerGaps(
-        candidate.workExperiences ?? [],
-        candidate.qualifications ?? [],
+        candidateWithoutHistories.workExperiences ?? [],
+        candidateWithoutHistories.qualifications ?? [],
       ),
     } as any;
   }
@@ -4896,6 +4898,17 @@ export class CandidatesService {
           where: { isDeleted: false },
           select: { docType: true },
         },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
+        },
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4910,8 +4923,14 @@ export class CandidatesService {
               (a) => a.isActive && a.recruiterId === targetRecruiterId,
             )
           : activeAssignment;
+      const creReassignedAssignment = c.recruiterAssignments.find(
+        (a) =>
+          a.isActive &&
+          a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
       const latestProject = c.projects?.[0] as any;
+      const statusHistories = c.statusHistories ?? [];
 
       const creAssignment = c.recruiterAssignments.find(
         (a) =>
@@ -4920,12 +4939,15 @@ export class CandidatesService {
             a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL),
       );
       const isHandledByCRE = !!creAssignment;
-      const isCREReassigned =
-        recruiterAssignment?.assignmentType ===
-        CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
+      const isCREReassigned = !!creReassignedAssignment;
 
       // Destructure to remove projects array from the final response object
-      const { projects, documents, ...candidateRest } = c as typeof c & {
+      const {
+        projects,
+        documents,
+        statusHistories: _omitHistories,
+        ...candidateRest
+      } = c as typeof c & {
         documents?: Array<{ docType: string }>;
       };
 
@@ -4940,12 +4962,11 @@ export class CandidatesService {
         isHandledByCRE,
         isCREReassigned,
         creStatusNote: isCREReassigned
-          ? recruiterAssignment?.creStatusNote ?? null
+          ? resolveCreHandoffNote(creReassignedAssignment, statusHistories)
           : null,
-        creStatus:
-          isCREReassigned && recruiterAssignment?.creStatus
-            ? recruiterAssignment.creStatus
-            : null,
+        creStatus: isCREReassigned
+          ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
+          : null,
         recruiter: activeAssignment?.recruiter || null,
         createdBy:
           firstAssignment?.createdByUser ||

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   Target,
   Clock,
-  Calendar,
   TrendingUp,
   ArrowRight,
   ChevronDown,
@@ -57,74 +56,19 @@ function PipelineStageDates({
   config: CandidatePipelineStatusVisual;
 }) {
   return (
-    <div className="mb-3 w-full max-w-[11.5rem] mx-auto">
-      <div
-        className={cn(
-          "overflow-hidden rounded-xl border-2 bg-white shadow-md ring-1 ring-slate-900/[0.03]",
-          config.borderColor
-        )}
-        role="group"
-        aria-label={`Updated ${DateUtils.formatDateTimeAmPm(updatedAt)}`}
-      >
-        <div
-          className={cn(
-            "flex items-center justify-center gap-1.5 border-b px-2.5 py-1.5",
-            config.bgColor,
-            config.borderColor
-          )}
-        >
-          <span
-            className={cn(
-              "flex h-4 w-4 items-center justify-center rounded-full bg-white/80 shadow-sm",
-              config.borderColor,
-              "border"
-            )}
-          >
-            <Clock className={cn("h-2.5 w-2.5", config.iconColor)} aria-hidden />
-          </span>
-          <span
-            className={cn(
-              "text-[10px] font-bold uppercase tracking-[0.12em]",
-              config.iconColor
-            )}
-          >
-            Updated
-          </span>
-        </div>
-        <div className="space-y-2 px-2.5 py-2.5">
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-lg border px-2 py-1.5",
-              config.bgColor,
-              config.borderColor
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-white shadow-sm",
-                config.borderColor
-              )}
-            >
-              <Calendar className={cn("h-3.5 w-3.5", config.iconColor)} aria-hidden />
-            </span>
-            <p className="min-w-0 text-left text-[11px] font-bold leading-tight text-slate-900 tabular-nums">
-              {DateUtils.formatDate(updatedAt)}
-            </p>
-          </div>
-          <div className="flex justify-center">
-            <span
-              className={cn(
-                "inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br px-2 py-1.5 text-[11px] font-semibold text-white tabular-nums shadow-sm",
-                config.color
-              )}
-            >
-              <Clock className="h-3 w-3 shrink-0 text-white/95" aria-hidden />
-              {DateUtils.formatTimeAmPm(updatedAt)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <p
+      className={cn(
+        "mt-2 mb-2 mx-auto max-w-[11rem] rounded-md border px-2 py-1 text-center text-[10px] leading-tight tabular-nums text-slate-700",
+        config.bgColor,
+        config.borderColor
+      )}
+      aria-label={`Updated ${DateUtils.formatDateTimeAmPm(updatedAt)}`}
+    >
+      <span className={cn("font-semibold", config.iconColor)}>Updated </span>
+      {DateUtils.formatDate(updatedAt)}
+      <span className="text-slate-400"> · </span>
+      {DateUtils.formatTimeAmPm(updatedAt)}
+    </p>
   );
 }
 
@@ -236,7 +180,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
           </CollapsibleTrigger>
 
           <CollapsibleContent>
-            <div className="p-8">
+            <div className="px-8 pb-8 pt-10">
               <div className="space-y-0">
                 {Array.from({ length: Math.ceil(pipeline.length / 5) }).map(
                   (_, rowIndex) => {
@@ -252,7 +196,10 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                     return (
                       <div
                         key={rowIndex}
-                        className="relative overflow-visible"
+                        className={cn(
+                          "relative overflow-visible",
+                          rowIndex > 0 && "mt-12"
+                        )}
                       >
                         <div
                           className={cn(
@@ -280,7 +227,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 key={`${stage.statusId}-${stage.step}`}
                                 className="flex items-start relative overflow-visible"
                               >
-                                <div className="flex flex-col items-center min-w-[160px] max-w-[200px] relative">
+                                <div className="flex flex-col items-center min-w-[160px] max-w-[200px] relative pt-1">
                                   <PipelineStageDates
                                     updatedAt={stage.exitedAt ?? stage.enteredAt}
                                     config={config}
@@ -362,7 +309,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 </div>
 
                                 {!isLastInRow && (
-                                  <div className="flex flex-col items-center justify-center pt-[88px] px-2">
+                                  <div className="flex flex-col items-center justify-center pt-[80px] px-2">
                                     <div className="relative">
                                       <div
                                         className={cn(
@@ -403,7 +350,7 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 )}
 
                                 {isLastInEvenRow && (
-                                  <div className="absolute top-[88px] right-0 translate-x-1/2 z-20">
+                                  <div className="absolute top-[80px] right-0 translate-x-1/2 z-20">
                                     <div className="flex flex-col items-center">
                                       <div className="w-1 h-16 rounded-full relative bg-slate-300">
                                         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-1">
