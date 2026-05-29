@@ -19,7 +19,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
-import { PROJECT_SECTOR } from './constants';
+import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -279,7 +279,7 @@ export class ProjectsService {
               employmentType: role.employmentType || 'permanent',
               contractDurationYears: role.contractDurationYears,
               genderRequirement: (role.genderRequirement || 'all') as any,
-              visaType: role.visaType || 'contract',
+              visaType: normalizeProjectRoleVisaType(role.visaType),
               requiredSkills: role.requiredSkills
                 ? JSON.parse(role.requiredSkills)
                 : [],
@@ -995,7 +995,7 @@ export class ProjectsService {
           employmentType: role.employmentType || 'permanent',
           contractDurationYears: role.contractDurationYears,
           genderRequirement: (role.genderRequirement || 'all') as any,
-          visaType: role.visaType || 'contract',
+          visaType: normalizeProjectRoleVisaType(role.visaType),
           requiredSkills: role.requiredSkills ? JSON.parse(role.requiredSkills) : [],
           candidateStates: role.candidateStates ? JSON.parse(role.candidateStates) : [],
           candidateReligions: role.candidateReligions ? JSON.parse(role.candidateReligions) : [],

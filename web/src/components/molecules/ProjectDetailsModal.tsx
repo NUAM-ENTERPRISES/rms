@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { useCountryValidation } from "@/shared/hooks/useCountriesLookup";
 import { formatSalaryRangeWithINRBracket, getCurrencySymbol } from "@/lib/utils";
+import { getProjectRoleVisaTypeLabel } from "@/features/projects/constants/project-role-visa-types";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -38,7 +39,8 @@ export default function ProjectDetailsModal({
 
   const { getCountryCurrency } = useCountryValidation();
   const projectCurrency = project.country?.currency || getCountryCurrency(project.countryCode);
-  const currencySymbol = getCurrencySymbol(projectCurrency);
+  // keep for future salary/currency rendering parity across modals
+  void getCurrencySymbol(projectCurrency);
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()}>
@@ -162,7 +164,7 @@ export default function ProjectDetailsModal({
                         <div><strong>Age:</strong> {role.minAge != null && role.maxAge != null ? `${role.minAge}–${role.maxAge}` : role.minAge != null ? `>= ${role.minAge}` : role.maxAge != null ? `<= ${role.maxAge}` : "—"}</div>
                         <div><strong>Gender:</strong> {role.genderRequirement || "All"}</div>
                         <div><strong>Employment:</strong> {role.employmentType || "Any"}</div>
-                        <div><strong>Visa:</strong> {role.visaType || "Any"}</div>
+                        <div><strong>Visa:</strong> {role.visaType ? getProjectRoleVisaTypeLabel(role.visaType) : "Any"}</div>
                         <div>
                           <strong>Salary:</strong>
                           <span className="ml-1">

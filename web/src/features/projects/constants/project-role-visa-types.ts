@@ -1,18 +1,6 @@
-/**
- * Project domain constants
- */
-
-export const PROJECT_SECTOR = {
-  HEALTHCARE: 'healthcare',
-  NON_HEALTHCARE: 'non-healthcare',
-} as const;
-
-export type ProjectSector = (typeof PROJECT_SECTOR)[keyof typeof PROJECT_SECTOR];
-
-/** Visa types for project role requirements (Requirement Criteria step). */
 export const PROJECT_ROLE_VISA_TYPE = {
-  COMPANY_VISA: 'company_visa',
-  DIRECT_VISA: 'direct_visa',
+  COMPANY_VISA: "company_visa",
+  DIRECT_VISA: "direct_visa",
 } as const;
 
 export const PROJECT_ROLE_VISA_TYPES = [
@@ -28,6 +16,11 @@ const LEGACY_PROJECT_ROLE_VISA_TYPE: Record<string, ProjectRoleVisaType> = {
   permanent: PROJECT_ROLE_VISA_TYPE.DIRECT_VISA,
 };
 
+export const PROJECT_ROLE_VISA_TYPE_LABELS: Record<ProjectRoleVisaType, string> = {
+  [PROJECT_ROLE_VISA_TYPE.COMPANY_VISA]: "Company Visa",
+  [PROJECT_ROLE_VISA_TYPE.DIRECT_VISA]: "Direct Visa",
+};
+
 export function normalizeProjectRoleVisaType(
   value?: string | null,
 ): ProjectRoleVisaType {
@@ -41,4 +34,8 @@ export function normalizeProjectRoleVisaType(
     return value;
   }
   return LEGACY_PROJECT_ROLE_VISA_TYPE[value] ?? PROJECT_ROLE_VISA_TYPE.COMPANY_VISA;
+}
+
+export function getProjectRoleVisaTypeLabel(value?: string | null): string {
+  return PROJECT_ROLE_VISA_TYPE_LABELS[normalizeProjectRoleVisaType(value)];
 }

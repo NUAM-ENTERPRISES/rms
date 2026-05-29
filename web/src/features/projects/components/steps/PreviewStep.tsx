@@ -25,6 +25,7 @@ import { formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
+import { getProjectRoleVisaTypeLabel } from "../../constants/project-role-visa-types";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 import { PROJECT_SECTOR } from "@/entities/project/constants";
 
@@ -340,11 +341,16 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                     Positions: {role.quantity}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {role.visaType === "contract" && role.contractDurationYears
-                      ? `Contract (${role.contractDurationYears} years)`
-                      : role.visaType === "contract"
-                      ? "Contract"
-                      : "Permanent"}
+                    {(() => {
+                      const label = getProjectRoleVisaTypeLabel(role.visaType);
+                      if (
+                        (role.visaType === "company_visa" || role.visaType === "contract") &&
+                        role.contractDurationYears
+                      ) {
+                        return `${label} (${role.contractDurationYears} years)`;
+                      }
+                      return label;
+                    })()}
                   </Badge>
                 </div>
               </div>

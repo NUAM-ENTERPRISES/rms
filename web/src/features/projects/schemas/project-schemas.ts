@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROJECT_ROLE_VISA_TYPES } from "../constants/project-role-visa-types";
 
 // Shared validation schema for project forms (create and edit)
 export const projectFormSchema = z.object({
@@ -61,8 +62,7 @@ export const projectFormSchema = z.object({
         drugScreeningRequired: z.boolean().optional(),
         additionalRequirements: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
-        // Changed from employmentType to visaType
-        visaType: z.enum(["contract", "permanent"]),
+        visaType: z.enum(PROJECT_ROLE_VISA_TYPES),
         contractDurationYears: z
           .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
@@ -138,7 +138,7 @@ export const defaultProjectValues = {
       drugScreeningRequired: true,
       onCallRequired: false,
       relocationAssistance: false,
-      visaType: "contract" as const,
+      visaType: "company_visa" as const,
       genderRequirement: "all" as const,
       minAge: 18,
       maxAge: 35,
