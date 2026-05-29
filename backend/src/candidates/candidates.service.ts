@@ -2178,6 +2178,9 @@ export class CandidatesService {
                 email: true,
               },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
           orderBy: { assignedAt: 'asc' },
         },
@@ -2208,35 +2211,19 @@ export class CandidatesService {
     );
     const isCREReassigned = !!creReassignedAssignment;
 
-    let recruiterFacingStatus = base.currentStatus;
-    if (
-      isCREReassigned &&
-      base.currentStatus?.statusName?.toLowerCase() !==
-        CANDIDATE_STATUS.UNTOUCHED
-    ) {
-      const untouchedStatus = await this.prisma.candidateStatus.findFirst({
-        where: {
-          statusName: {
-            equals: CANDIDATE_STATUS.UNTOUCHED,
-            mode: 'insensitive',
-          },
-        },
-        select: { id: true, statusName: true },
-      });
-      if (untouchedStatus) {
-        recruiterFacingStatus = untouchedStatus;
-      }
-    }
-
     // Pipeline data removed from response to reduce payload
     return {
       ...base,
-      currentStatus: recruiterFacingStatus,
+      currentStatus: base.currentStatus,
       createdBy,
       isCREReassigned,
       creStatusNote: isCREReassigned
         ? creReassignedAssignment?.creStatusNote ?? null
         : null,
+      creStatus:
+        isCREReassigned && creReassignedAssignment?.creStatus
+          ? creReassignedAssignment.creStatus
+          : null,
       careerGapAnalysis: calculateCareerGaps(
         candidate.workExperiences ?? [],
         candidate.qualifications ?? [],
@@ -4849,13 +4836,6 @@ export class CandidatesService {
       };
     }
 
-    const untouchedStatusForRecruiter = await this.prisma.candidateStatus.findFirst({
-      where: {
-        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
-      },
-      select: { id: true, statusName: true },
-    });
-
     const candidatesData = await this.prisma.candidate.findMany({
       where,
       include: {
@@ -4906,6 +4886,9 @@ export class CandidatesService {
                 email: true,
               },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -4941,11 +4924,6 @@ export class CandidatesService {
         recruiterAssignment?.assignmentType ===
         CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED;
 
-      const recruiterFacingStatus =
-        isCREReassigned && untouchedStatusForRecruiter
-          ? untouchedStatusForRecruiter
-          : c.currentStatus;
-      
       // Destructure to remove projects array from the final response object
       const { projects, documents, ...candidateRest } = c as typeof c & {
         documents?: Array<{ docType: string }>;
@@ -4953,7 +4931,7 @@ export class CandidatesService {
 
       const withCompletion = withProfileCompletion({
         ...candidateRest,
-        currentStatus: recruiterFacingStatus,
+        currentStatus: c.currentStatus,
         documents: documents ?? [],
       });
 
@@ -4964,6 +4942,10 @@ export class CandidatesService {
         creStatusNote: isCREReassigned
           ? recruiterAssignment?.creStatusNote ?? null
           : null,
+        creStatus:
+          isCREReassigned && recruiterAssignment?.creStatus
+            ? recruiterAssignment.creStatus
+            : null,
         recruiter: activeAssignment?.recruiter || null,
         createdBy:
           firstAssignment?.createdByUser ||

@@ -1020,6 +1020,9 @@ export class RecruiterAssignmentService {
                 countryCode: true,
               },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
         },
         documents: {
@@ -1051,22 +1054,18 @@ export class RecruiterAssignmentService {
 
       const merged = withProfileCompletion(candidate as any);
 
-      const recruiterFacingStatus =
-        isCREReassigned && untouchedStatus
-          ? {
-              id: untouchedStatus.id,
-              statusName: untouchedStatus.statusName,
-            }
-          : merged.currentStatus;
-
       return {
         ...merged,
-        currentStatus: recruiterFacingStatus,
+        currentStatus: merged.currentStatus,
         isHandledByCRE,
         isCREReassigned,
         creStatusNote: isCREReassigned
           ? recruiterAssignment?.creStatusNote ?? null
           : null,
+        creStatus:
+          isCREReassigned && recruiterAssignment?.creStatus
+            ? recruiterAssignment.creStatus
+            : null,
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,

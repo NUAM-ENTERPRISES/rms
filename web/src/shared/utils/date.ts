@@ -41,7 +41,7 @@ export class DateUtils {
   }
 
   /**
-   * Format time only
+   * Format time only (24-hour)
    */
   static formatTime(dateString?: string): string {
     if (!dateString) return "N/A";
@@ -54,6 +54,36 @@ export class DateUtils {
       return format(date, "HH:mm");
     } catch {
       return "Invalid Time";
+    }
+  }
+
+  /** Format time in 12-hour clock with AM/PM (e.g. 3:57 PM). */
+  static formatTimeAmPm(dateString?: string): string {
+    if (!dateString) return "N/A";
+
+    try {
+      const date =
+        typeof dateString === "string" ? parseISO(dateString) : dateString;
+      if (!isValid(date)) return "Invalid Time";
+
+      return format(date, "h:mm a");
+    } catch {
+      return "Invalid Time";
+    }
+  }
+
+  /** Format date and time in 12-hour clock (e.g. 28 May 2026, 3:57 PM). */
+  static formatDateTimeAmPm(dateString?: string): string {
+    if (!dateString) return "N/A";
+
+    try {
+      const date =
+        typeof dateString === "string" ? parseISO(dateString) : dateString;
+      if (!isValid(date)) return "Invalid Date";
+
+      return format(date, "dd MMM yyyy, h:mm a");
+    } catch {
+      return "Invalid Date";
     }
   }
 

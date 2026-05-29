@@ -9,21 +9,26 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { StatusBadge } from "@/features/candidates/components/StatusBadge";
 
 type CreReassignedStatusNoteProps = {
   note?: string | null;
+  creStatus?: string | null;
   candidateName?: string;
   className?: string;
 };
 
 export function CreReassignedStatusNote({
   note,
+  creStatus,
   candidateName,
   className,
 }: CreReassignedStatusNoteProps) {
   const [open, setOpen] = useState(false);
-  const trimmed = note?.trim();
-  if (!trimmed) return null;
+  const trimmedNote = note?.trim();
+  const trimmedCreStatus = creStatus?.trim();
+
+  if (!trimmedNote && !trimmedCreStatus) return null;
 
   const title = candidateName?.trim()
     ? `CRE note — ${candidateName.trim()}`
@@ -57,13 +62,30 @@ export function CreReassignedStatusNote({
           <DialogHeader>
             <DialogTitle className="text-base">{title}</DialogTitle>
             <DialogDescription className="sr-only">
-              Status note from CRE when this candidate was reassigned to you.
+              CRE status and note from when this candidate was reassigned to you.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
-            <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
-              {trimmed}
-            </p>
+
+          <div className="space-y-3">
+            {trimmedCreStatus ? (
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
+                  CRE Status
+                </p>
+                <StatusBadge status={trimmedCreStatus} />
+              </div>
+            ) : null}
+
+            {trimmedNote ? (
+              <div className="rounded-lg border border-emerald-100 bg-emerald-50/50 px-3 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-2">
+                  CRE Note
+                </p>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                  {trimmedNote}
+                </p>
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>

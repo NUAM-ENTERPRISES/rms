@@ -471,13 +471,14 @@ export default function CandidateDetailPage() {
                 <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
               </div>
             )}
-            {(candidate as { isCREReassigned?: boolean }).isCREReassigned && (
+            {candidate.isCREReassigned && (
               <>
                 <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
                   CRE Reassigned
                 </Badge>
                 <CreReassignedStatusNote
-                  note={(candidate as { creStatusNote?: string | null }).creStatusNote}
+                  note={candidate.creStatusNote}
+                  creStatus={candidate.creStatus?.statusName}
                   candidateName={`${candidate.firstName} ${candidate.lastName}`}
                 />
               </>

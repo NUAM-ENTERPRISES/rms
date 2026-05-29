@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import {
-  Calendar,
   Target,
   Clock,
+  Calendar,
   TrendingUp,
   ArrowRight,
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,51 +32,101 @@ interface CandidatePipelineProps {
   className?: string;
 }
 
-function StatusNodeIcon({ config }: { config: CandidatePipelineStatusVisual }) {
+function StatusNodeIcon({
+  config,
+  className,
+}: {
+  config: CandidatePipelineStatusVisual;
+  className?: string;
+}) {
   const IconComponent = config.icon;
-  return <IconComponent className="h-8 w-8 text-white" />;
+  return (
+    <IconComponent
+      className={cn("h-8 w-8 shrink-0", config.iconColor, className)}
+      strokeWidth={2.25}
+      aria-hidden
+    />
+  );
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+function PipelineStageDates({
+  updatedAt,
+  config,
+}: {
+  updatedAt: string;
+  config: CandidatePipelineStatusVisual;
+}) {
+  return (
+    <div className="mb-3 w-full max-w-[11.5rem] mx-auto">
+      <div
+        className={cn(
+          "overflow-hidden rounded-xl border-2 bg-white shadow-md ring-1 ring-slate-900/[0.03]",
+          config.borderColor
+        )}
+        role="group"
+        aria-label={`Updated ${DateUtils.formatDateTimeAmPm(updatedAt)}`}
+      >
+        <div
+          className={cn(
+            "flex items-center justify-center gap-1.5 border-b px-2.5 py-1.5",
+            config.bgColor,
+            config.borderColor
+          )}
+        >
+          <span
+            className={cn(
+              "flex h-4 w-4 items-center justify-center rounded-full bg-white/80 shadow-sm",
+              config.borderColor,
+              "border"
+            )}
+          >
+            <Clock className={cn("h-2.5 w-2.5", config.iconColor)} aria-hidden />
+          </span>
+          <span
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-[0.12em]",
+              config.iconColor
+            )}
+          >
+            Updated
+          </span>
+        </div>
+        <div className="space-y-2 px-2.5 py-2.5">
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-lg border px-2 py-1.5",
+              config.bgColor,
+              config.borderColor
+            )}
+          >
+            <span
+              className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-white shadow-sm",
+                config.borderColor
+              )}
+            >
+              <Calendar className={cn("h-3.5 w-3.5", config.iconColor)} aria-hidden />
+            </span>
+            <p className="min-w-0 text-left text-[11px] font-bold leading-tight text-slate-900 tabular-nums">
+              {DateUtils.formatDate(updatedAt)}
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <span
+              className={cn(
+                "inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-br px-2 py-1.5 text-[11px] font-semibold text-white tabular-nums shadow-sm",
+                config.color
+              )}
+            >
+              <Clock className="h-3 w-3 shrink-0 text-white/95" aria-hidden />
+              {DateUtils.formatTimeAmPm(updatedAt)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
-
-  if (diffInDays === 0) return "Today";
-  if (diffInDays === 1) return "Yesterday";
-  if (diffInDays < 7) return `${diffInDays} days ago`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
-
-  return date.toLocaleDateString("en-GB", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-
-const calculateDuration = (
-  enteredAt: string,
-  exitedAt: string | null
-): string => {
-  const start = new Date(enteredAt);
-  const end = exitedAt ? new Date(exitedAt) : new Date();
-  const diffInHours = Math.floor(
-    (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-  );
-
-  if (diffInHours < 1) return "< 1 hour";
-  if (diffInHours < 24) return `${diffInHours}h`;
-  const days = Math.floor(diffInHours / 24);
-  if (days === 1) return "1 day";
-  if (days < 7) return `${days} days`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks}w`;
-  const months = Math.floor(days / 30);
-  return `${months}mo`;
-};
+}
 
 export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
   pipeline,
@@ -105,11 +156,6 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
   const currentStatus = pipeline[pipeline.length - 1];
   const currentStatusName = currentStatus?.statusName ?? "";
   const currentConfig = getCandidatePipelineStatusConfig(currentStatusName);
-  const totalDuration = calculateDuration(
-    pipeline[0].enteredAt,
-    currentStatus?.exitedAt ?? null
-  );
-
   return (
     <div className={cn("space-y-6", className)}>
       {/* Summary Card */}
@@ -118,12 +164,12 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
           <div className="flex items-start gap-4 flex-1">
             <div
               className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center shadow-lg bg-gradient-to-br",
-                currentConfig.color,
-                "ring-4 ring-white"
+                "flex h-16 w-16 items-center justify-center rounded-full border-2 bg-white shadow-lg ring-4 ring-white",
+                currentConfig.borderColor,
+                currentConfig.bgColor
               )}
             >
-              <StatusNodeIcon config={currentConfig} />
+              <StatusNodeIcon config={currentConfig} className="h-9 w-9" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -132,9 +178,10 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                 </h3>
                 <span
                   className={cn(
-                    "px-2 py-0.5 rounded-full text-xs font-medium",
+                    "rounded-full px-2 py-0.5 text-xs font-medium border",
                     currentConfig.bgColor,
-                    currentConfig.color
+                    currentConfig.iconColor,
+                    currentConfig.borderColor
                   )}
                 >
                   Active
@@ -143,19 +190,21 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
               <p className="text-sm text-slate-600 mb-2">
                 {currentConfig.description}
               </p>
-              <div className="flex items-center gap-4 text-xs text-slate-500">
-                {/* <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Since {formatRelativeDate(currentStatus.enteredAt)} ·{" "}
-                  {formatPipelineDateTime(currentStatus.enteredAt)}
-                </span> */}
-                <span className="flex items-center gap-1">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  {pipeline.length} status changes
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium shadow-sm",
+                    currentConfig.bgColor,
+                    currentConfig.borderColor,
+                    currentConfig.iconColor
+                  )}
+                >
+                  <Clock className={cn("h-3.5 w-3.5 shrink-0", currentConfig.iconColor)} />
+                  Updated {DateUtils.formatDateTimeAmPm(currentStatus.enteredAt)}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Total: {totalDuration}
+                  <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                  {pipeline.length} status changes
                 </span>
               </div>
             </div>
@@ -223,10 +272,6 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                             const isLastOverall =
                               actualIndex === pipeline.length - 1;
                             const isCurrent = isLastOverall;
-                            const duration = calculateDuration(
-                              stage.enteredAt,
-                              stage.exitedAt
-                            );
                             const isLastInEvenRow =
                               isEvenRow && isLastInRow && hasNextRow;
 
@@ -236,27 +281,29 @@ export const CandidatePipeline: React.FC<CandidatePipelineProps> = ({
                                 className="flex items-start relative overflow-visible"
                               >
                                 <div className="flex flex-col items-center min-w-[160px] max-w-[200px] relative">
-                                  <div className="mb-3 text-center h-12 flex flex-col justify-end">
-                                    <div className="text-xs font-medium text-slate-700 mb-0.5">
-                                      {formatDate(stage.enteredAt)}
-                                    </div>
-                                    <div className="text-xs text-slate-500">
-                                      ⏱️ {duration}
-                                    </div>
-                                  </div>
+                                  <PipelineStageDates
+                                    updatedAt={stage.exitedAt ?? stage.enteredAt}
+                                    config={config}
+                                  />
 
                                   <div className="relative z-10 mb-3">
                                     <div
                                       className={cn(
-                                        "w-20 h-20 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 relative border-4",
-                                        config.bgColor,
+                                        "relative flex h-20 w-20 items-center justify-center rounded-full border-4 bg-white shadow-lg transition-all duration-300",
                                         config.borderColor,
                                         isCurrent
-                                          ? "scale-125 shadow-xl"
+                                          ? "scale-125 shadow-xl ring-2 ring-amber-400/60 ring-offset-2"
                                           : "hover:scale-105"
                                       )}
                                     >
-                                      <StatusNodeIcon config={config} />
+                                      <div
+                                        className={cn(
+                                          "flex h-14 w-14 items-center justify-center rounded-full",
+                                          config.bgColor
+                                        )}
+                                      >
+                                        <StatusNodeIcon config={config} />
+                                      </div>
 
                                       {isCurrent && (
                                         <>

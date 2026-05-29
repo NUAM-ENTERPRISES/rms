@@ -115,6 +115,9 @@ export interface Candidate {
     name: string;
     email: string;
   } | null;
+  isCREReassigned?: boolean;
+  creStatusNote?: string | null;
+  creStatus?: { id: number; statusName: string } | null;
   assignedTo?: string;
   matchScore?: number;
   createdAt: string;

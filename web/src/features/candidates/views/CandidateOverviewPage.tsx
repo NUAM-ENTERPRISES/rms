@@ -730,6 +730,7 @@ export default function CandidateOverviewPage() {
                                       </Badge>
                                       <CreReassignedStatusNote
                                         note={creStatusNote}
+                                        creStatus={candidate.creStatus?.statusName}
                                         candidateName={`${candidate.firstName} ${candidate.lastName}`}
                                       />
                                     </>

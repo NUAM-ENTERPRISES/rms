@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -216,9 +217,52 @@ export function StatusUpdateModal({
       futureDate: "",
     },
   });
+  const { reset, setValue, getValues } = form;
+  const wasOpenRef = useRef(false);
+
+  const statuses = useMemo(() => {
+    const rawStatuses = statusesData?.data || [];
+    return rawStatuses.filter(
+      (status) => (status.statusName || "").toLowerCase() !== "qualified",
+    );
+  }, [statusesData?.data]);
+
+  const normalizeStatusKey = (name?: string) =>
+    (name || "").toLowerCase().trim().replace(/_/g, " ");
 
   const currentConfig = getStatusConfig(currentStatus);
   const CurrentIcon = currentConfig.icon;
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (wasOpenRef.current) {
+        reset({
+          currentStatusId: "",
+          reason: "",
+          onHoldUntil: "",
+          futureDate: "",
+        });
+      }
+      wasOpenRef.current = false;
+      return;
+    }
+
+    wasOpenRef.current = true;
+
+    if (isLoadingStatuses || statuses.length === 0) return;
+
+    const match = statuses.find(
+      (status) =>
+        normalizeStatusKey(status.statusName) ===
+        normalizeStatusKey(currentStatus),
+    );
+    if (!match) return;
+
+    const nextId = String(match.id);
+    if (getValues("currentStatusId") === nextId) return;
+
+    setValue("currentStatusId", nextId, { shouldValidate: true });
+  }, [isOpen, isLoadingStatuses, statuses, currentStatus, reset, setValue, getValues]);
 
   const handleSubmit = async (data: StatusUpdateFormData) => {
     const selectedStatus = statuses.find(
@@ -291,16 +335,13 @@ export function StatusUpdateModal({
     onClose();
   };
 
-  const rawStatuses = statusesData?.data || [];
-  const statuses = rawStatuses.filter(
-    (status) => (status.statusName || '').toLowerCase() !== 'qualified',
+  const selectedStatusId = form.watch("currentStatusId");
+  const selectedStatus = statuses.find(
+    (status) => String(status.id) === selectedStatusId,
   );
-
-  const selectedStatusId = form.watch('currentStatusId');
-  const selectedStatusName = (
-    statuses.find((status) => String(status.id) === selectedStatusId)?.statusName ||
-    ''
-  ).toLowerCase();
+  const selectedStatusName = (selectedStatus?.statusName || "").toLowerCase();
+  const selectedConfig = getStatusConfig(selectedStatus?.statusName);
+  const SelectedIcon = selectedConfig.icon;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -351,10 +392,24 @@ export function StatusUpdateModal({
 
                 <div className="flex-1 flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">To</span>
-                    <div className="p-2.5 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-400 shadow-inner ring-4 ring-white">
-                        <Sparkles className="h-5 w-5" />
+                    <div className={cn(
+                      "p-2.5 rounded-xl shadow-md ring-4 ring-white transition-transform",
+                      selectedStatusId
+                        ? cn("bg-gradient-to-br", selectedConfig.color)
+                        : "bg-slate-100 border-2 border-dashed border-slate-300"
+                    )}>
+                        {selectedStatusId ? (
+                          <SelectedIcon className="h-5 w-5 text-white" />
+                        ) : (
+                          <Sparkles className="h-5 w-5 text-slate-400" />
+                        )}
                     </div>
-                    <span className="mt-2 font-bold text-slate-400 text-xs">Selection</span>
+                    <span className={cn(
+                      "mt-2 font-bold text-xs capitalize",
+                      selectedStatusId ? "text-slate-700" : "text-slate-400"
+                    )}>
+                      {selectedStatus?.statusName || "Selection"}
+                    </span>
                 </div>
             </div>
 
@@ -369,7 +424,7 @@ export function StatusUpdateModal({
                     </FormLabel>
                     <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         disabled={isLoadingStatuses}
                     >
                         <FormControl>
