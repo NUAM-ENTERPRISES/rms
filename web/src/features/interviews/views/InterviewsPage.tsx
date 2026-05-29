@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Mail,
+  Phone,
   X,
   Search,
   CalendarDays,
@@ -1025,6 +1026,7 @@ export default function InterviewsPage() {
                           </TableHead>
                         )}
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                        <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Stage</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Role</TableHead>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
@@ -1164,8 +1166,31 @@ export default function InterviewsPage() {
                                       {candidate?.firstName} {candidate?.lastName}
                                     </p>
                                   )}
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email || "—"}</p>
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.mobileNumber || "—"}</p>
+                                  {candidate?.candidateCode ? (
+                                    <p className="text-[11px] text-muted-foreground font-mono truncate">
+                                      {candidate.candidateCode}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-center">
+                              <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                {candidate?.email ? (
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <span className="text-gray-700 break-all">
+                                      {candidate.email}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+                                  <span className="text-gray-700">
+                                    {candidate?.countryCode ? `${candidate.countryCode} ` : ""}{candidate?.mobileNumber || "—"}
+                                  </span>
                                 </div>
                               </div>
                             </TableCell>

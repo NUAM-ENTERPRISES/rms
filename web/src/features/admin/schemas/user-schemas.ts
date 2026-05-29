@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { refinePhysicalAddress } from "@/shared/utils/physical-address";
 
 export const LANGUAGE_PROFICIENCIES = ["PRIMARY", "SECONDARY", "TERTIARY"] as const;
 export type LanguageProficiencyValue = (typeof LANGUAGE_PROFICIENCIES)[number];
@@ -84,6 +85,14 @@ const createUserFieldsShape = {
     .min(2, "Name must be at least 2 characters long")
     .max(100, "Name cannot exceed 100 characters"),
 
+  employeeCode: z
+    .string()
+    .min(1, "Employee code is required")
+    .regex(
+      /^AFFEMP\d{2}\d{4}$/,
+      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
+    ),
+
   email: z
     .string()
     .email("Please provide a valid email address")
@@ -141,13 +150,7 @@ export function buildCreateUserSchema(isRecruiterRole: boolean) {
       path: ["confirmPassword"],
     })
     .superRefine((data, ctx) => {
-      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Select a country before state",
-          path: ["addressCountryCode"],
-        });
-      }
+      refinePhysicalAddress(data, ctx);
 
       if (!isRecruiterRole) return;
 
@@ -171,6 +174,15 @@ const updateUserFieldsShape = {
     .min(2, "Name must be at least 2 characters long")
     .max(100, "Name cannot exceed 100 characters")
     .optional(),
+
+  employeeCode: z
+    .string()
+    .regex(
+      /^AFFEMP\d{2}\d{4}$/,
+      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
+    )
+    .optional()
+    .or(z.literal("")),
 
   email: z
     .string()
@@ -207,13 +219,7 @@ export function buildUpdateUserSchema(validateRecruiterCapabilities: boolean) {
   return z
     .object(updateUserFieldsShape)
     .superRefine((data, ctx) => {
-      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Select a country before state",
-          path: ["addressCountryCode"],
-        });
-      }
+      refinePhysicalAddress(data, ctx);
       refineRecruiterCapabilityRows(
         {
           recruiterLanguages: data.recruiterLanguages,
@@ -235,6 +241,7 @@ export type UpdateUserFormData = z.infer<ReturnType<typeof buildUpdateUserSchema
 // Default values for new user form
 export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   name: "",
+  employeeCode: "",
   email: "",
   password: "",
   confirmPassword: "",
@@ -252,6 +259,7 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
 // Default values for update user form
 export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   name: "",
+  employeeCode: "",
   email: "",
   countryCode: "",
   mobileNumber: "",

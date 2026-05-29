@@ -415,6 +415,7 @@ export class RecruiterAnalyticsService {
           OR: [
             { firstName: { contains: search, mode: 'insensitive' as const } },
             { lastName: { contains: search, mode: 'insensitive' as const } },
+            { candidateCode: { contains: search, mode: 'insensitive' as const } },
             { email: { contains: search, mode: 'insensitive' as const } },
             { mobileNumber: { contains: search } },
           ],
@@ -437,6 +438,7 @@ export class RecruiterAnalyticsService {
           candidate: {
             select: {
               id: true,
+              candidateCode: true,
               firstName: true,
               lastName: true,
               email: true,
@@ -466,6 +468,7 @@ export class RecruiterAnalyticsService {
     const candidates = assignments.map((a) => ({
       id: a.candidate.id,
       fullName: `${a.candidate.firstName} ${a.candidate.lastName}`,
+      candidateCode: a.candidate.candidateCode ?? null,
       phone: `${a.candidate.countryCode} ${a.candidate.mobileNumber}`,
       email: a.candidate.email || '',
       status: a.candidate.currentStatus?.statusName || 'Untouched',

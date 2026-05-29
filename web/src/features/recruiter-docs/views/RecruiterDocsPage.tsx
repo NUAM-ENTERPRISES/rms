@@ -513,6 +513,11 @@ const RecruiterDocsPage: React.FC = () => {
                           />
                           <div className="min-w-0">
                             <span className="text-sm font-semibold text-gray-900 truncate block max-w-[160px]">{item.candidate.firstName} {item.candidate.lastName}</span>
+                            {item.candidate.candidateCode ? (
+                              <span className="text-xs text-muted-foreground font-mono mt-0.5 truncate block">
+                                {item.candidate.candidateCode}
+                              </span>
+                            ) : null}
                             <span className="text-xs text-slate-400 mt-0.5 truncate block">{item.candidate.email}</span>
                           </div>
                         </div>

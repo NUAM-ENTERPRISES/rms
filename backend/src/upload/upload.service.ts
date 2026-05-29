@@ -545,7 +545,18 @@ export class UploadService implements OnModuleInit {
       'text/plain',
     ];
     const folder = `candidates/documents/${candidateId}/${docType}`;
-    return this.uploadFile(file, folder, allowedMimeTypes, 20);
+    const safeDocType = docType.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).slice(2, 8);
+    const extension = file.originalname.split(".").pop() || "bin";
+    const customFileName = `${safeDocType}_${timestamp}_${randomSuffix}.${extension}`;
+    return this.uploadFile(
+      file,
+      folder,
+      allowedMimeTypes,
+      20,
+      customFileName,
+    );
   }
 
   /**
@@ -574,6 +585,7 @@ export class UploadService implements OnModuleInit {
     file: Express.Multer.File,
     candidateId: string,
     roleCatalogId?: string,
+    docName?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
     const folder = `candidates/resumes/${candidateId}`;
@@ -588,21 +600,28 @@ export class UploadService implements OnModuleInit {
       throw new Error(`Candidate with ID ${candidateId} not found`);
     }
 
-    // Generate filename with candidate name and current date
-    const candidateName =
-      `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
-    const currentDate = new Date();
-    const dateStr = currentDate
-      .toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-      .replace(/\s+/g, '_')
-      .toUpperCase();
-
-    const originalExtension = file.originalname.split('.').pop() || 'pdf';
-    const newFileName = `${candidateName}_${dateStr}.${originalExtension}`;
+    // NOTE: Temporarily using the original uploaded file name directly.
+    // Custom resume file naming is intentionally commented out as requested.
+    //
+    // const candidateName =
+    //   `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
+    // const currentDate = new Date();
+    // const dateStr = currentDate
+    //   .toLocaleDateString('en-GB', {
+    //     day: '2-digit',
+    //     month: 'short',
+    //     year: 'numeric',
+    //   })
+    //   .replace(/\s+/g, '_')
+    //   .toUpperCase();
+    // const timeStr = [
+    //   String(currentDate.getHours()).padStart(2, '0'),
+    //   String(currentDate.getMinutes()).padStart(2, '0'),
+    //   String(currentDate.getSeconds()).padStart(2, '0'),
+    // ].join('');
+    // const originalExtension = file.originalname.split('.').pop() || 'pdf';
+    // const newFileName = `${candidateName}_${dateStr}_${timeStr}.${originalExtension}`;
+    const newFileName = file.originalname;
 
     // Upload file with custom name
     const uploadResult = await this.uploadFile(
@@ -618,6 +637,7 @@ export class UploadService implements OnModuleInit {
       data: {
         candidateId,
         docType: 'resume',
+        docName: docName || null,
         fileName: newFileName,
         fileUrl: uploadResult.fileUrl,
         fileSize: file.size,

@@ -38,6 +38,15 @@ export class QueryDocumentsDto {
   uploadedBy?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Filter by role catalog ID (includes role-agnostic documents with no role)',
+    example: 'role_123abc',
+  })
+  @IsOptional()
+  @IsString()
+  roleCatalogId?: string;
+
+  @ApiPropertyOptional({
     description: 'Page number',
     example: 1,
     minimum: 1,

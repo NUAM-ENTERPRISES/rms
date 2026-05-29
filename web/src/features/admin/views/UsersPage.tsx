@@ -282,6 +282,16 @@ export default function UsersPage() {
                             <div className="font-medium text-slate-800 text-sm truncate group-hover:text-blue-700 transition-colors">
                               {user.name}
                             </div>
+                            {user.employeeCode ? (
+                              <div className="mt-1">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200"
+                                >
+                                  {user.employeeCode}
+                                </Badge>
+                              </div>
+                            ) : null}
                             <div className="text-xs text-slate-400 truncate md:hidden">
                               {user.email}
                             </div>

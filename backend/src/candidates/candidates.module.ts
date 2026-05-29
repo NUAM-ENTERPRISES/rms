@@ -5,6 +5,7 @@ import { CandidateQualificationController } from './candidate-qualification.cont
 import { CandidateQualificationService } from './candidate-qualification.service';
 import { CandidateAssignmentController } from './controllers/candidate-assignment.controller';
 import { CandidateAssignmentValidatorService } from './services/candidate-assignment-validator.service';
+import { CandidateCodeService } from './services/candidate-code.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { PipelineService } from './pipeline.service';
@@ -33,6 +34,7 @@ import { RolesModule } from '../roles/roles.module';
     CandidatesService,
     CandidateQualificationService,
     CandidateAssignmentValidatorService,
+    CandidateCodeService,
     RecruiterAssignmentService,
     RnrCreAssignmentService,
     PipelineService,
@@ -42,6 +44,7 @@ import { RolesModule } from '../roles/roles.module';
   exports: [
     CandidatesService, 
     CandidateQualificationService,
+    CandidateCodeService,
     RecruiterAssignmentService, // Export for RNR CRE assignment
   ],
 })

@@ -24,7 +24,7 @@ import {
   RefreshCw,
   Calendar,
 } from "lucide-react";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
 import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
@@ -39,14 +39,14 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
-import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { useAppSelector } from "@/app/hooks";
+import { Badge } from "@/components/ui/badge";
+import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -63,6 +63,11 @@ import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profile
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
+const CandidatePipeline = React.lazy(() =>
+  import("../components/CandidatePipeline").then((m) => ({
+    default: m.CandidatePipeline,
+  }))
+);
 
 // Fallback avatar used when candidate has no profileImage
 const DEFAULT_PROFILE_IMAGE =
@@ -75,7 +80,6 @@ export default function CandidateDetailPage() {
   const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
     null
   );
-  const {} = useAppSelector((state) => state.auth);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,8 +121,9 @@ export default function CandidateDetailPage() {
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
-  // All roles can read candidate details
-  const canWriteCandidates = useCan("write:candidates");
+  // CRE can view candidate details but must not edit profile sections
+  const isCRE = useHasRole("CRE");
+  const canWriteCandidates = useCan("write:candidates") && !isCRE;
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -149,7 +154,7 @@ export default function CandidateDetailPage() {
   );
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 100 },
+    { candidateId: id!, page: 1, limit: 10 },
     { skip: !id }
   );
 
@@ -265,7 +270,6 @@ export default function CandidateDetailPage() {
   }
 
   if (!candidate) {
-    console.log("No candidate data received");
     return (
       <div className="p-8">
         <div className="text-center py-12">
@@ -368,12 +372,17 @@ export default function CandidateDetailPage() {
     <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
       {candidate.firstName} {candidate.lastName}
     </h1>
+    {candidate.candidateCode ? (
+      <div className="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-700 font-mono border border-red-200">
+        {candidate.candidateCode}
+      </div>
+    ) : null}
   </div>
 
   {/* Status (RIGHT - Clickable) */}
   <div
     onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer group ml-4"
+    className="cursor-pointer group ml-4 mb-6"
     title="Click to update status"
   >
     {isOnHold ? (
@@ -449,9 +458,9 @@ export default function CandidateDetailPage() {
 </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm text-slate-500">
+            {/* <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
-            </span>
+            </span> */}
             <span className="text-sm text-slate-400">
               Added {formatDate(candidate.createdAt)}
             </span>
@@ -461,6 +470,17 @@ export default function CandidateDetailPage() {
                 <span className="text-xs font-semibold text-blue-700">{candidate.createdBy.name}</span>
                 <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
               </div>
+            )}
+            {(candidate as { isCREReassigned?: boolean }).isCREReassigned && (
+              <>
+                <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
+                  CRE Reassigned
+                </Badge>
+                <CreReassignedStatusNote
+                  note={(candidate as { creStatusNote?: string | null }).creStatusNote}
+                  candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                />
+              </>
             )}
           </div>
         </div>
@@ -572,7 +592,19 @@ export default function CandidateDetailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
-                <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+                <React.Suspense
+                  fallback={
+                    <div
+                      className="flex justify-center py-8"
+                      role="status"
+                      aria-label="Loading status pipeline"
+                    >
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  }
+                >
+                  <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+                </React.Suspense>
               </CardContent>
             </Card>
           ) : null}
@@ -644,6 +676,24 @@ export default function CandidateDetailPage() {
               const formData = new FormData();
               formData.append("file", file);
               formData.append("docType", meta.docType);
+              if (meta.roleCatalogId) {
+                formData.append("roleCatalogId", meta.roleCatalogId);
+              }
+              if (meta.workExperienceId) {
+                formData.append("workExperienceId", meta.workExperienceId);
+              }
+              if (meta.docName) {
+                formData.append("docName", meta.docName);
+              }
+              if (meta.documentNumber) {
+                formData.append("documentNumber", meta.documentNumber);
+              }
+              if (meta.expiryDate) {
+                formData.append("expiryDate", meta.expiryDate);
+              }
+              if (meta.notes) {
+                formData.append("notes", meta.notes);
+              }
 
               const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
               const uploadData: any = uploadResp.data;

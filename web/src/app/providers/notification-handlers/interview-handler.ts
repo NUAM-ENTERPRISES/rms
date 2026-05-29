@@ -2,7 +2,6 @@ import { NotificationHandlerProps } from "./types";
 
 export const handleInterviewNotifications = ({ notification, dispatch, invalidateTags }: NotificationHandlerProps) => {
   const interviewNotificationTypes = [
-    "documents_forwarded",
     "role_notification",
   ];
 

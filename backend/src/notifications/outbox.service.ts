@@ -558,6 +558,7 @@ export class OutboxService {
     projectId: string,
     senderId: string,
     recipientEmail: string,
+    roleCatalogId?: string | null,
     tx?: any,
   ): Promise<void> {
     await this.publishEvent(
@@ -567,6 +568,7 @@ export class OutboxService {
         projectId,
         senderId,
         recipientEmail,
+        roleCatalogId: roleCatalogId ?? null,
       },
       tx,
     );

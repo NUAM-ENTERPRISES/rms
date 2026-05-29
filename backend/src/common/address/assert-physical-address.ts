@@ -1,10 +1,43 @@
 import { BadRequestException } from '@nestjs/common';
 import type { PrismaService } from '../../database/prisma.service';
+import { PHYSICAL_ADDRESS_INDIA_COUNTRY_CODE } from './physical-address.constants';
 
 export type EffectivePhysicalAddress = {
   addressCountryCode: string | null;
   addressStateId: string | null;
 };
+
+/** Treat blank strings as null so optional FK fields are not set to "". */
+export function normalizePhysicalAddressPatch(patch: {
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+}): {
+  addressCountryCode?: string | null;
+  addressStateId?: string | null;
+} {
+  const result: {
+    addressCountryCode?: string | null;
+    addressStateId?: string | null;
+  } = {};
+
+  if (patch.addressCountryCode !== undefined) {
+    const code =
+      typeof patch.addressCountryCode === 'string'
+        ? patch.addressCountryCode.trim()
+        : patch.addressCountryCode;
+    result.addressCountryCode = code || null;
+  }
+
+  if (patch.addressStateId !== undefined) {
+    const stateId =
+      typeof patch.addressStateId === 'string'
+        ? patch.addressStateId.trim()
+        : patch.addressStateId;
+    result.addressStateId = stateId || null;
+  }
+
+  return result;
+}
 
 export function mergePhysicalAddress<
   T extends EffectivePhysicalAddress,
@@ -15,15 +48,30 @@ export function mergePhysicalAddress<
     addressStateId?: string | null;
   },
 ): EffectivePhysicalAddress {
+  const normalized = normalizePhysicalAddressPatch(patch);
+
+  const addressCountryCode =
+    normalized.addressCountryCode !== undefined
+      ? normalized.addressCountryCode
+      : existing.addressCountryCode;
+
+  let addressStateId =
+    normalized.addressStateId !== undefined
+      ? normalized.addressStateId
+      : existing.addressStateId;
+
+  // Country changed without a new state selection — clear stale state FK
+  if (
+    normalized.addressCountryCode !== undefined &&
+    normalized.addressCountryCode !== existing.addressCountryCode &&
+    normalized.addressStateId === undefined
+  ) {
+    addressStateId = null;
+  }
+
   return {
-    addressCountryCode:
-      patch.addressCountryCode !== undefined
-        ? patch.addressCountryCode
-        : existing.addressCountryCode,
-    addressStateId:
-      patch.addressStateId !== undefined
-        ? patch.addressStateId
-        : existing.addressStateId,
+    addressCountryCode,
+    addressStateId,
   };
 }
 
@@ -59,6 +107,12 @@ export async function assertPhysicalAddressConsistent(
         `Country not found for code: ${countryCode}`,
       );
     }
+  }
+
+  if (countryCode === PHYSICAL_ADDRESS_INDIA_COUNTRY_CODE && !stateId) {
+    throw new BadRequestException(
+      'State is required when country is India',
+    );
   }
 
   if (stateId) {

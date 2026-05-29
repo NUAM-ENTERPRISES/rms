@@ -39,6 +39,7 @@ import { ROLE_NAMES } from '../common/constants/role-ids';
 import { normalizeProjectVisaType } from '../common/constants/project-visa-types';
 import { applyProjectClientVisibility } from '../common/utils/project-client-visibility.util';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 
 @Injectable()
 export class ProjectsService {
@@ -1572,6 +1573,7 @@ export class ProjectsService {
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
           { mobileNumber: { contains: search } },
+          { candidateCode: { contains: search, mode: 'insensitive' } },
           // Match candidate qualifications (qualification name / shortName / field / university)
           {
             qualifications: {
@@ -1852,6 +1854,7 @@ export class ProjectsService {
         // Candidate Fields (Same as Eligible)
         id: assignment.id,
         candidateId: c.id,
+        candidateCode: c.candidateCode,
         firstName: c.firstName,
         lastName: c.lastName,
         email: c.email,
@@ -2404,6 +2407,10 @@ export class ProjectsService {
 
       return {
         ...candidate,
+        careerGapAnalysis: calculateCareerGaps(
+          candidate.workExperiences ?? [],
+          candidate.qualifications ?? [],
+        ),
         matchScore: top
           ? {
               roleId: top.roleId,

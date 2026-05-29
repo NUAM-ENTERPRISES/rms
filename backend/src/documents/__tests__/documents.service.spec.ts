@@ -85,6 +85,109 @@ describe('DocumentsService - verifyOfferLetter', () => {
   });
 });
 
+describe('DocumentsService - create resume role mapping', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+    jest.spyOn(outbox, 'publishDataSync').mockResolvedValue(undefined as never);
+  });
+
+  it('rejects resume upload without roleCatalogId', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+
+    await expect(
+      service.create(
+        {
+          candidateId: 'cand-1',
+          docType: 'resume',
+          fileName: 'resume.pdf',
+          fileUrl: 'https://example.com/resume.pdf',
+        } as any,
+        'user-1',
+      ),
+    ).rejects.toThrow(
+      new BadRequestException('roleCatalogId is required for resume/cv documents'),
+    );
+  });
+
+  it('rejects resume upload with invalid roleCatalogId', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+    jest.spyOn(prisma.roleCatalog, 'findFirst' as any).mockResolvedValue(null);
+
+    await expect(
+      service.create(
+        {
+          candidateId: 'cand-1',
+          docType: 'resume',
+          fileName: 'resume.pdf',
+          fileUrl: 'https://example.com/resume.pdf',
+          roleCatalogId: 'invalid-role',
+        } as any,
+        'user-1',
+      ),
+    ).rejects.toThrow(
+      new BadRequestException(
+        'Valid active roleCatalogId is required for resume/cv documents',
+      ),
+    );
+  });
+
+  it('creates resume when valid active roleCatalogId is provided', async () => {
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      id: 'cand-1',
+    });
+    jest.spyOn(prisma.roleCatalog, 'findFirst' as any).mockResolvedValue({
+      id: 'role-1',
+    });
+    const createSpy = jest
+      .spyOn(prisma.document, 'create' as any)
+      .mockResolvedValue({ id: 'doc-1', roleCatalogId: 'role-1' });
+
+    await service.create(
+      {
+        candidateId: 'cand-1',
+        docType: 'resume',
+        fileName: 'resume.pdf',
+        fileUrl: 'https://example.com/resume.pdf',
+        roleCatalogId: 'role-1',
+      } as any,
+      'user-1',
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          docType: 'resume',
+          roleCatalogId: 'role-1',
+        }),
+      }),
+    );
+    expect(outbox.publishDataSync).toHaveBeenCalled();
+  });
+});
+
 
 // additional tests for reupload behaviour
 
@@ -153,6 +256,13 @@ describe('DocumentsService - reupload behaviour', () => {
       where: { id: existingVer.id },
       data: expect.objectContaining({
         isReuploaded: true,
+        isDeleted: true,
+      }),
+    });
+
+    expect(txMock.document.update).toHaveBeenCalledWith({
+      where: { id: documentId },
+      data: expect.objectContaining({
         isDeleted: true,
       }),
     });
@@ -282,6 +392,9 @@ describe('DocumentsService - getVerificationCandidates', () => {
         OutboxService,
         { provide: 'ProcessingService', useValue: {} },
         { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
       ],
     }).compile();
 
@@ -318,6 +431,140 @@ describe('DocumentsService - getVerificationCandidates', () => {
     expect(result.items[0].screening).toEqual(candidateProject.screenings[0]);
     expect(result.counts.pending).toBe(1);
     expect(result.pagination.total).toBe(1);
+  });
+
+  it('returns only client_revision_requested candidates when that status is requested', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockImplementation(
+      async ({ where }: { where: { name: { in: string[] } } }) =>
+        where.name.in.map((name, index) => ({ id: `ss-${index}`, name })),
+    );
+
+    const candidateProject = {
+      id: 'cpm-revision',
+      candidate: { id: 'cand-2', firstName: 'Abhi', lastName: 'Test', email: 'abhi@test.com', mobileNumber: '1234', countryCode: '91', profileImage: null },
+      project: { id: 'proj-1', title: 'Project A', client: { name: 'Client A' } },
+      roleNeeded: { id: 'role-1', designation: 'Dev', roleCatalog: { id: 'rc-1', name: 'Dev', label: 'Developer' } },
+      recruiter: { id: 'rec-1', name: 'Rec', email: 'rec@example.com' },
+      mainStatus: { label: 'Documents' },
+      subStatus: { name: 'client_revision_requested', label: 'Client Revision Requested' },
+      screenings: [],
+      documentVerifications: [{ id: 'dv-1', status: 'resubmission_required', document: { id: 'doc-1', docType: 'resume', fileName: 'resume.pdf', status: 'pending', uploadedBy: 'rec-1', createdAt: new Date(), roleCatalog: null } }],
+    };
+
+    const findManySpy = jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([candidateProject]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerificationCandidates({ status: 'client_revision_requested', page: 1, limit: 10 });
+
+    expect(prisma.candidateProjectSubStatus.findMany).toHaveBeenCalledWith({
+      where: { name: { in: ['client_revision_requested'] } },
+    });
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          subStatusId: { in: ['ss-0'] },
+        }),
+      }),
+    );
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].subStatus.name).toBe('client_revision_requested');
+    expect(result.counts.client_revision_requested).toBe(1);
+  });
+});
+
+describe('DocumentsService - getVerifiedRejectedDocuments', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('excludes client_revision_requested candidates from verified/rejected results', async () => {
+    const findManySpy = jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(0);
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockResolvedValue([]);
+
+    await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(findManySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          subStatus: { name: { in: ['documents_verified', 'submitted_to_client'] } },
+        }),
+      }),
+    );
+  });
+
+  it('includes client_revision_requested count in response counts', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-pending', name: 'verification_in_progress_document' },
+      { id: 'ss-screening', name: 'screening_passed' },
+      { id: 'ss-verified', name: 'documents_verified' },
+      { id: 'ss-submitted', name: 'submitted_to_client' },
+      { id: 'ss-rejected', name: 'rejected_documents' },
+      { id: 'ss-client-rev', name: 'client_revision_requested' },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockImplementation(async ({ where }: any) => {
+      if (where?.subStatusId?.in?.includes('ss-client-rev')) return 2;
+      return 0;
+    });
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockResolvedValue([]);
+
+    const result = await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(result.counts.client_revision_requested).toBe(2);
+  });
+
+  it('flags re-verified candidates after client revision as awaitingResubmitToClient', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-pending', name: 'verification_in_progress_document' },
+      { id: 'ss-screening', name: 'screening_passed' },
+      { id: 'ss-verified', name: 'documents_verified' },
+      { id: 'ss-submitted', name: 'submitted_to_client' },
+      { id: 'ss-rejected', name: 'rejected_documents' },
+      { id: 'ss-client-rev', name: 'client_revision_requested' },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([
+      {
+        id: 'cpm-1',
+        candidate: { id: 'cand-1', firstName: 'Abhi', lastName: 'Anand', email: 'a@test.com' },
+        project: { id: 'proj-1', title: 'Project A', documentRequirements: [] },
+        roleNeeded: { roleCatalog: { id: 'role-1' } },
+        subStatus: { name: 'documents_verified', label: 'Documents Verified' },
+        documentVerifications: [{ id: 'ver-1', status: 'verified', document: { id: 'doc-1' } }],
+        screenings: [],
+      },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockImplementation(async ({ where }: any) => {
+      if (where?.subStatus?.name === 'client_revision_requested') {
+        return [{ candidateProjectMapId: 'cpm-1' }];
+      }
+      return [];
+    });
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].awaitingResubmitToClient).toBe(true);
   });
 });
 
@@ -487,5 +734,103 @@ describe('DocumentsService - introduction video notifications', () => {
       'cpm-1',
     );
     expect(outbox.publishDocumentResubmitted).not.toHaveBeenCalled();
+  });
+});
+
+describe('DocumentsService - mergeVerifiedDocuments', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('rejects documentIds that are not verified for the nomination', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
+      id: 'cpm-1',
+      candidateId: 'cand-1',
+    });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findMany' as any).mockResolvedValue([
+      {
+        documentId: 'doc-verified',
+        status: 'verified',
+        isDeleted: false,
+        isReuploaded: false,
+        isUploadedByProcessingTeam: false,
+        document: {
+          id: 'doc-verified',
+          docType: 'passport_copy',
+          fileName: 'passport.pdf',
+          fileUrl: 'https://example.com/passport.pdf',
+          candidateId: 'cand-1',
+          isDeleted: false,
+          createdAt: new Date('2026-01-02'),
+        },
+      },
+      {
+        documentId: 'doc-pending',
+        status: 'pending',
+        isDeleted: false,
+        isReuploaded: false,
+        isUploadedByProcessingTeam: false,
+        document: {
+          id: 'doc-pending',
+          docType: 'degree_certificate',
+          fileName: 'degree.pdf',
+          fileUrl: 'https://example.com/degree.pdf',
+          candidateId: 'cand-1',
+          isDeleted: false,
+          createdAt: new Date('2026-01-03'),
+        },
+      },
+    ]);
+
+    await expect(
+      service.mergeVerifiedDocuments(
+        'cand-1',
+        'proj-1',
+        'role-1',
+        'cpm-1',
+        ['doc-pending'],
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
+});
+
+describe('isPdfMergeableDocument', () => {
+  const { isPdfMergeableDocument, DOCUMENT_TYPE } = jest.requireActual(
+    '../../common/constants/document-types',
+  );
+
+  it('excludes introduction video from PDF merge', () => {
+    expect(
+      isPdfMergeableDocument({
+        docType: DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+        fileName: 'intro.mp4',
+      }),
+    ).toBe(false);
+  });
+
+  it('includes passport copy PDF documents', () => {
+    expect(
+      isPdfMergeableDocument({
+        docType: DOCUMENT_TYPE.PASSPORT_COPY,
+        fileName: 'passport.pdf',
+      }),
+    ).toBe(true);
   });
 });

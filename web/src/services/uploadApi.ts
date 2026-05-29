@@ -112,13 +112,21 @@ export const uploadApi = baseApi.injectEndpoints({
 
     uploadResume: builder.mutation<
       UploadResponse,
-      { candidateId: string; file: File; roleCatalogId?: string }
+      {
+        candidateId: string;
+        file: File;
+        roleCatalogId?: string;
+        docName?: string;
+      }
     >({
-      query: ({ candidateId, file, roleCatalogId }) => {
+      query: ({ candidateId, file, roleCatalogId, docName }) => {
         const formData = new FormData();
         formData.append("file", file);
         if (roleCatalogId) {
           formData.append("roleCatalogId", roleCatalogId);
+        }
+        if (docName) {
+          formData.append("docName", docName);
         }
         return {
           url: `/upload/resume/${candidateId}`,

@@ -322,6 +322,11 @@ export default function ScreeningDetailsPage() {
                       <h2 className="text-lg font-bold text-slate-800 leading-tight">
                         {candidate?.firstName} {candidate?.lastName}
                       </h2>
+                      {candidate?.candidateCode ? (
+                        <div className="mt-1 inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                          {candidate.candidateCode}
+                        </div>
+                      ) : null}
                       <p className="text-sm text-indigo-600 font-medium mt-0.5">
                         {roleNeeded?.designation || candidate?.currentRole || "—"}
                       </p>

@@ -131,6 +131,7 @@ export interface RecruiterDocumentItem {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email: string;
     mobileNumber: string;
     countryCode: string;
@@ -278,6 +279,7 @@ export interface QueryDocumentsParams {
   status?: string;
   uploadedBy?: string;
   verifiedBy?: string;
+  roleCatalogId?: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -506,23 +508,16 @@ export interface ForwardingHistoryResponse {
 // ==================== API ====================
 
 export const documentsApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getDocuments: builder.query<
       { success: boolean; data: PaginatedDocuments },
       QueryDocumentsParams | void
     >({
-      query: (params) => {
-        const searchParams = new URLSearchParams();
-        if (params) {
-          Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              searchParams.append(key, String(value));
-            }
-          });
-        }
-        const queryString = searchParams.toString();
-        return `/documents${queryString ? `?${queryString}` : ""}`;
-      },
+      query: (params) => ({
+        url: "/documents",
+        params,
+      }),
       providesTags: ["Document"],
     }),
 
@@ -722,6 +717,7 @@ export const documentsApi = baseApi.injectEndpoints({
             rejected?: number;
             verification_in_progress?: number;
             verification_in_progress_document?: number;
+            client_revision_requested?: number;
           };
         };
         message: string;
@@ -735,12 +731,42 @@ export const documentsApi = baseApi.injectEndpoints({
         projectId?: string;
         roleCatalogId?: string;
         screening?: boolean | string;
+        /** Frontend-only flag to isolate RTK cache for dashboard tile counts */
+        forTileCounts?: boolean;
       }
     >({
-      query: (params = {}) => ({
+      query: ({ forTileCounts: _forTileCounts, ...params }) => ({
         url: "/documents/verification-candidates",
         params,
       }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: {
+          counts?: {
+            pending?: number;
+            verified?: number;
+            rejected?: number;
+            client_revision_requested?: number;
+            verification_in_progress_document?: number;
+          };
+          [key: string]: unknown;
+        };
+        message?: string;
+      }) => {
+        if (response?.data?.counts) {
+          const counts = response.data.counts;
+          response.data.counts = {
+            pending: Number(counts.pending ?? 0),
+            verified: Number(counts.verified ?? 0),
+            rejected: Number(counts.rejected ?? 0),
+            client_revision_requested: Number(counts.client_revision_requested ?? 0),
+            verification_in_progress_document: Number(
+              counts.verification_in_progress_document ?? counts.pending ?? 0,
+            ),
+          };
+        }
+        return response;
+      },
       providesTags: ["VerificationCandidates"],
     }),
 
@@ -755,7 +781,7 @@ export const documentsApi = baseApi.injectEndpoints({
             total: number;
             totalPages: number;
           };
-          counts?: { verified?: number; rejected?: number };
+          counts?: { verified?: number; rejected?: number; client_revision_requested?: number };
         };
         message: string;
       },

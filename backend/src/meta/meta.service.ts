@@ -2,6 +2,7 @@ import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
 import { nanoid } from 'nanoid';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
+import { CandidateCodeService } from '../candidates/services/candidate-code.service';
 
 interface BotState {
   step: 'name' | 'email' | 'phone' | 'completed';
@@ -22,6 +23,7 @@ export class MetaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly candidateCodeService: CandidateCodeService,
   ) {}
 
   /**
@@ -452,32 +454,45 @@ export class MetaService {
 
     const result = await this.prisma.$transaction(async (tx) => {
       // 1. Create/Update Candidate
-      const candidate = await tx.candidate.upsert({
+      const existing = await tx.candidate.findUnique({
         where: {
           countryCode_mobileNumber: {
             countryCode: details.countryCode,
             mobileNumber: details.mobileNumber,
           },
         },
-        update: {
-          firstName: details.firstName,
-          lastName: details.lastName,
-          email: details.email,
-          gender: details.gender,
-          dateOfBirth: details.dateOfBirth ? new Date(details.dateOfBirth) : undefined,
-          source: 'meta',
-        },
-        create: {
-          firstName: details.firstName,
-          lastName: details.lastName,
-          email: details.email,
-          gender: details.gender,
-          dateOfBirth: details.dateOfBirth ? new Date(details.dateOfBirth) : undefined,
-          countryCode: details.countryCode,
-          mobileNumber: details.mobileNumber,
-          source: 'meta',
-        },
+        select: { id: true },
       });
+
+      const dateOfBirth = details.dateOfBirth
+        ? new Date(details.dateOfBirth)
+        : undefined;
+
+      const candidate = existing
+        ? await tx.candidate.update({
+            where: { id: existing.id },
+            data: {
+              firstName: details.firstName,
+              lastName: details.lastName,
+              email: details.email,
+              gender: details.gender,
+              dateOfBirth,
+              source: 'meta',
+            },
+          })
+        : await tx.candidate.create({
+            data: {
+              candidateCode: await this.candidateCodeService.reserveNextCode(tx),
+              firstName: details.firstName,
+              lastName: details.lastName,
+              email: details.email,
+              gender: details.gender,
+              dateOfBirth,
+              countryCode: details.countryCode,
+              mobileNumber: details.mobileNumber,
+              source: 'meta',
+            },
+          });
 
       // 2. Update MetaLead
       await tx.metaLead.update({
@@ -678,6 +693,7 @@ export class MetaService {
 
         const created = await (tx as any).candidate.create({
           data: {
+            candidateCode: await this.candidateCodeService.reserveNextCode(tx),
             firstName: firstName || 'Unknown',
             lastName: lastName || 'Unknown',
             email: email || undefined,

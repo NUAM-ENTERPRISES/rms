@@ -40,6 +40,7 @@ export interface UploadDocumentRequest {
 // Types
 export interface Candidate {
   id: string;
+  candidateCode?: string | null;
   firstName: string;
   lastName: string;
   contact: string;
@@ -1116,6 +1117,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, arg) => [
         "WorkExperience",
         "Candidate",
+        "ProjectCandidates",
         { type: "Candidate", id: arg.candidateId },
       ],
     }),
@@ -1128,14 +1130,14 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: workExperienceData,
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: ["WorkExperience", "Candidate", "ProjectCandidates"],
     }),
     deleteWorkExperience: builder.mutation<void, string>({
       query: (id) => ({
         url: `/work-experience/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["WorkExperience", "Candidate"],
+      invalidatesTags: ["WorkExperience", "Candidate", "ProjectCandidates"],
     }),
 
     // Candidate Qualifications endpoints
@@ -1193,11 +1195,20 @@ export const candidatesApi = baseApi.injectEndpoints({
           };
         };
       },
-      { candidateId: string; page?: number; limit?: number; docType?: string }
+      {
+        candidateId?: string;
+        page?: number;
+        limit?: number;
+        docType?: string;
+        search?: string;
+        status?: string;
+        uploadedBy?: string;
+        roleCatalogId?: string;
+      } | void
     >({
-      query: ({ candidateId, page = 1, limit = 10, docType }) => ({
+      query: (params) => ({
         url: "/documents",
-        params: { candidateId, page, limit, docType },
+        params,
       }),
       providesTags: ["Document"],
     }),

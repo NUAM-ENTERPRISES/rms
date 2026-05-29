@@ -20,6 +20,7 @@ import { UploadService } from '../upload/upload.service';
 import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
+  normalizePhysicalAddressPatch,
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
@@ -102,6 +103,16 @@ export class UsersService {
     createUserDto: CreateUserDto,
     createdByUserId?: string,
   ): Promise<UserWithRoles> {
+    if (createUserDto.employeeCode) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: createUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     // Check for existing phone number + country code combination
     const existingPhone = await this.prisma.user.findUnique({
       where: {
@@ -125,9 +136,14 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const createAddress = normalizePhysicalAddressPatch({
+      addressCountryCode: createUserDto.addressCountryCode,
+      addressStateId: createUserDto.addressStateId,
+    });
+
     await assertPhysicalAddressConsistent(this.prisma, {
-      addressCountryCode: createUserDto.addressCountryCode ?? null,
-      addressStateId: createUserDto.addressStateId ?? null,
+      addressCountryCode: createAddress.addressCountryCode ?? null,
+      addressStateId: createAddress.addressStateId ?? null,
     });
 
     const hashedPassword = await argon2.hash(createUserDto.password);
@@ -137,6 +153,7 @@ export class UsersService {
       // Create the user
       const newUser = await tx.user.create({
         data: {
+          employeeCode: createUserDto.employeeCode,
           email: createUserDto.email,
           name: createUserDto.name,
           password: hashedPassword,
@@ -146,8 +163,8 @@ export class UsersService {
             ? new Date(createUserDto.dateOfBirth)
             : null,
           profileImage: createUserDto.profileImage,
-          addressCountryCode: createUserDto.addressCountryCode,
-          addressStateId: createUserDto.addressStateId,
+          addressCountryCode: createAddress.addressCountryCode ?? null,
+          addressStateId: createAddress.addressStateId ?? null,
           address: createUserDto.address,
         },
       });
@@ -355,13 +372,18 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    await assertPhysicalAddressConsistent(
-      this.prisma,
-      mergePhysicalAddress(existingUser, {
-        addressCountryCode: updateUserDto.addressCountryCode,
-        addressStateId: updateUserDto.addressStateId,
-      }),
-    );
+    const updateAddress = normalizePhysicalAddressPatch({
+      addressCountryCode: updateUserDto.addressCountryCode,
+      addressStateId: updateUserDto.addressStateId,
+    });
+
+    const hasAddressPatch =
+      updateUserDto.addressCountryCode !== undefined ||
+      updateUserDto.addressStateId !== undefined;
+
+    const effectiveAddress = mergePhysicalAddress(existingUser, updateAddress);
+
+    await assertPhysicalAddressConsistent(this.prisma, effectiveAddress);
 
     if (updateUserDto.email && updateUserDto.email !== existingUser.email) {
       const emailExists = await this.prisma.user.findUnique({
@@ -373,9 +395,30 @@ export class UsersService {
       }
     }
 
+    if (
+      updateUserDto.employeeCode &&
+      updateUserDto.employeeCode !== existingUser.employeeCode
+    ) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: updateUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     const updateData: any = { ...updateUserDto };
+    if (hasAddressPatch) {
+      updateData.addressCountryCode = effectiveAddress.addressCountryCode;
+      updateData.addressStateId = effectiveAddress.addressStateId;
+    }
     if (updateUserDto.dateOfBirth) {
       updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
+    }
+
+    if (updateUserDto.employeeCode !== undefined) {
+      updateData.employeeCode = updateUserDto.employeeCode || null;
     }
 
     // Handle role assignment if provided
@@ -639,6 +682,7 @@ export class UsersService {
       id: user.id,
       name: user.name,
       email: user.email,
+      employeeCode: (user as any).employeeCode ?? null,
       mobileNumber: user.mobileNumber,
       countryCode: user.countryCode,
       dateOfBirth: user.dateOfBirth,

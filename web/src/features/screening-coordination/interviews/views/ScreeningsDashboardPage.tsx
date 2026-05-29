@@ -231,19 +231,6 @@ export default function ScreeningsDashboardPage() {
     setNeedsTrainingFocusAreas((prev) => prev.filter((item) => item !== area));
   };
 
-  const openDecisionModal = (item: any) => {
-    setDecisionScreeningItem(item);
-    setDecisionValue(item.decision || SCREENING_DECISION.APPROVED);
-    setDecisionRemarks("");
-    setNeedsTrainingType("technical");
-    setNeedsTrainingFocusAreas([]);
-    setNeedsTrainingFocusAreaInput("");
-    setNeedsTrainingPriority("medium");
-    setNeedsTrainingTargetCompletionDate("");
-    setNeedsTrainingNotes("");
-    setIsDecisionModalOpen(true);
-  };
-
   const handleUpdateDecision = async () => {
     if (!decisionScreeningItem || !decisionValue) {
       return;
@@ -656,6 +643,7 @@ export default function ScreeningsDashboardPage() {
                       </TableHead>
                     )}
                     <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project & Role</TableHead>
                     {(activeTile === "training_assigned" || activeTile === "training_scheduled" || activeTile === "training_completed") && (
                       <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Attempt</TableHead>
@@ -748,7 +736,7 @@ export default function ScreeningsDashboardPage() {
                                 title={candidateName}
                                 className="h-10 w-10 shadow-sm"
                               />
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <button
                                   onClick={() => {
                                     if (targetScreeningsUrl) navigate(targetScreeningsUrl);
@@ -760,13 +748,26 @@ export default function ScreeningsDashboardPage() {
                                 >
                                   {candidateName}
                                 </button>
-                                <div className="text-[11px] text-slate-500 space-y-0.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <Mail className="h-3 w-3 text-gray-400" />
-                                    <span className="text-gray-700">{candidate?.email || "-"}</span>
+                                {candidate?.candidateCode ? (
+                                  <div className="text-[11px] text-muted-foreground font-mono truncate mt-0.5">
+                                    {candidate.candidateCode}
                                   </div>
-                                </div>
+                                ) : null}
                               </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-2 text-center">
+                            <div className="w-full min-w-0 text-center text-xs text-slate-500">
+                              {candidate?.email ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                                  <span className="text-gray-700 break-all">
+                                    {candidate.email}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="px-4 py-2">
@@ -955,13 +956,7 @@ export default function ScreeningsDashboardPage() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openDecisionModal(item)}
-                            >
-                              Decision
-                            </Button>
+                            {/* Decision updates are disabled from table actions */}
                             {activeTile === "assigned" ? (
                               <Button
                                 size="sm"
@@ -981,7 +976,7 @@ export default function ScreeningsDashboardPage() {
                                 variant="ghost"
                                 className="h-7 w-7 p-0"
                                 onClick={() => {
-                                  navigate(targetScreeningsUrl);
+                                  if (targetScreeningsUrl) navigate(targetScreeningsUrl);
                                 }}
                                 title="View details"
                               >

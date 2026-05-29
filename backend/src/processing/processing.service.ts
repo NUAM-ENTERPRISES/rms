@@ -4256,6 +4256,7 @@ export class ProcessingService {
               { firstName: { contains: search, mode: 'insensitive' } },
               { lastName: { contains: search, mode: 'insensitive' } },
               { email: { contains: search, mode: 'insensitive' } },
+              { candidateCode: { contains: search, mode: 'insensitive' } },
             ],
           },
         },
@@ -4284,6 +4285,7 @@ export class ProcessingService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               profileImage: true,
@@ -4488,6 +4490,7 @@ export class ProcessingService {
               { firstName: { contains: search, mode: 'insensitive' } },
               { lastName: { contains: search, mode: 'insensitive' } },
               { email: { contains: search, mode: 'insensitive' } },
+              { candidateCode: { contains: search, mode: 'insensitive' } },
             ],
           },
         },
@@ -4523,6 +4526,7 @@ export class ProcessingService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               profileImage: true,
@@ -4711,7 +4715,7 @@ export class ProcessingService {
       },
       include: {
         candidate: {
-          select: { firstName: true, lastName: true, email: true },
+          select: { firstName: true, lastName: true, candidateCode: true, email: true },
         },
         project: {
           select: { title: true },
@@ -4780,6 +4784,7 @@ export class ProcessingService {
           { firstName: { contains: search, mode: 'insensitive' } },
           { lastName: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
+          { candidateCode: { contains: search, mode: 'insensitive' } },
         ],
       };
     }
@@ -4793,6 +4798,7 @@ export class ProcessingService {
               id: true,
               firstName: true,
               lastName: true,
+              candidateCode: true,
               email: true,
               mobileNumber: true,
               profileImage: true,
