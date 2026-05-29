@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom";
+import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
-import { TransferCandidateModal } from "@/components/molecules/TransferCandidateModal";
+import {
+  TransferCandidateModal,
+  type TransferToRecruiterPayload,
+} from "@/components/molecules/TransferCandidateModal";
 import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery, useGetCREReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 
@@ -27,6 +31,7 @@ import {
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function CREDashboardPage() {
   const navigate = useNavigate();
@@ -80,7 +85,8 @@ export default function CREDashboardPage() {
   const totalCount = assignedCandidatesData?.total || 0;
   const totalPages = assignedCandidatesData?.totalPages || 0;
 
-  const { data: summaryData } = useGetCREAssignedSummaryQuery();
+  const { data: summaryData, refetch: refetchSummary } =
+    useGetCREAssignedSummaryQuery();
   const [markCandidateConverted, { isLoading: isConverting }] = useMarkCandidateConvertedMutation();
   const [transferCandidateToRecruiter, { isLoading: isTransferring }] = useTransferCandidateToRecruiterMutation();
 
@@ -129,7 +135,7 @@ export default function CREDashboardPage() {
 
   const getTableSubtitle = () => {
     if (statusFilter === 'rnr') return 'Candidates marked as RNR';
-    if (statusFilter === 'reassigned') return 'Candidates transferred by CRE to recruiter';
+    if (statusFilter === 'reassigned') return 'Candidates transferred by CRE to recruiter with CRE status';
     if (statusFilter === 'junk') return 'Candidates assigned for more than 5 days';
     if (statusFilter === 'on_hold') return 'Candidates currently on hold';
     if (statusFilter === 'untouched') return 'New untouched candidates';
@@ -142,6 +148,19 @@ export default function CREDashboardPage() {
     const raw = `${candidate.countryCode || ''}${candidate.mobileNumber || ''}`;
     const digits = raw.replace(/\D/g, '');
     return digits || null;
+  };
+
+  /** CRE status recorded on reassign — not recruiter currentStatus (always untouched). */
+  const getCreReassignedStatusName = (candidate: any): string => {
+    const reassignedAssignment = candidate.recruiterAssignments?.find(
+      (a: { assignmentType?: string }) =>
+        a.assignmentType === "cre_reassigned",
+    );
+    return (
+      candidate.creStatus?.statusName ||
+      reassignedAssignment?.creStatus?.statusName ||
+      "Unknown"
+    );
   };
 
   const handleConfirmConvert = async () => {
@@ -157,17 +176,30 @@ export default function CREDashboardPage() {
     }
   };
 
-  const handleConfirmTransfer = async (notes?: string) => {
+  const handleConfirmTransfer = async (payload: TransferToRecruiterPayload) => {
     if (!candidateToTransfer) return;
     try {
-      await transferCandidateToRecruiter({ id: candidateToTransfer.id, notes }).unwrap();
+      await transferCandidateToRecruiter({
+        id: candidateToTransfer.id,
+        ...payload,
+      }).unwrap();
+      toast.success("Candidate reassigned to recruiter");
       setIsTransferModalOpen(false);
       setCandidateToTransfer(null);
       setCurrentRecruiterForTransfer('');
       setPage(1);
-      refetch();
-    } catch (error) {
+      await Promise.all([
+        assignedCandidatesQuery.refetch(),
+        reassignedCandidatesQuery.refetch(),
+        createdCandidatesQuery.refetch(),
+        refetchSummary(),
+      ]);
+    } catch (error: unknown) {
       console.error('Transfer modal confirm failed', error);
+      const message =
+        (error as { data?: { message?: string } })?.data?.message ||
+        "Failed to reassign candidate";
+      toast.error(message);
     }
   };
 
@@ -344,7 +376,9 @@ export default function CREDashboardPage() {
                         <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned By</TableHead>
                       )}
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
-                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
+                      <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        {statusFilter === 'reassigned' ? 'CRE Status' : 'Status'}
+                      </TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned At</TableHead>
                       {statusFilter !== 'created' && (
                         <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</TableHead>
@@ -366,7 +400,10 @@ export default function CREDashboardPage() {
                         activeAssignment?.assignedByUser?.name ||
                         nonCreAssignment?.assignedByUser?.name ||
                         'System / Admin';
-                      const statusName = candidate.currentStatus?.statusName || 'Unknown';
+                      const statusName =
+                        statusFilter === "reassigned"
+                          ? getCreReassignedStatusName(candidate)
+                          : candidate.currentStatus?.statusName || "Unknown";
                       const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
                       const assignmentReason = activeAssignment?.reason || '';
                       const phoneDigits = formatPhoneForLink(candidate);
@@ -460,11 +497,14 @@ export default function CREDashboardPage() {
                             )}
                           </TableCell>
 
-                          {/* Status */}
+                          {/* Status / CRE status */}
                           <TableCell className="px-4 py-3">
-                            <Badge className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full", statusBadgeClass)}>
+                            <Badge className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize", statusBadgeClass)}>
                               {statusName}
                             </Badge>
+                            {statusFilter === 'reassigned' && (
+                              <p className="text-[10px] text-slate-400 mt-1">Set by CRE on reassign</p>
+                            )}
                           </TableCell>
 
                           {/* Assigned At */}
@@ -483,11 +523,31 @@ export default function CREDashboardPage() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (phoneDigits) window.location.href = `tel:${phoneDigits}`;
+                                    }}
+                                    disabled={!phoneDigits}
+                                    aria-label={`Call ${candidate.firstName || "candidate"}`}
+                                  >
+                                    <Phone className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p className="text-xs">Call</p></TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-8 w-8 rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-colors"
                                     onClick={(e) => { e.stopPropagation(); if (phoneDigits) window.open(`https://wa.me/${phoneDigits}`, '_blank'); }}
                                     disabled={!phoneDigits}
+                                    aria-label={`WhatsApp ${candidate.firstName || "candidate"}`}
                                   >
-                                    <Phone className="h-3.5 w-3.5" />
+                                    <FaWhatsapp className="h-3.5 w-3.5" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="top"><p className="text-xs">WhatsApp</p></TooltipContent>
@@ -604,6 +664,7 @@ export default function CREDashboardPage() {
           onConfirm={handleConfirmTransfer}
           candidateName={`${candidateToTransfer?.firstName || ''} ${candidateToTransfer?.lastName || ''}`.trim() || 'Selected candidate'}
           currentRecruiterName={currentRecruiterForTransfer}
+          currentStatus={candidateToTransfer?.currentStatus?.statusName || 'Unknown'}
           isSubmitting={isTransferring}
         />
         </div>

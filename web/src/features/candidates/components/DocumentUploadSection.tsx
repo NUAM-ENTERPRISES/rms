@@ -205,18 +205,34 @@ interface DocumentUploadSectionProps {
   onInitialUploadDocTypeHandled?: () => void;
 }
 
+const DOCUMENT_NAME_MAX_LENGTH = 40;
+
 function FileNameCell({ fileName }: { fileName: string }) {
-  const { display, full, isTruncated } = truncateFileName(fileName, 60);
+  const { display, full, isTruncated } = truncateFileName(
+    fileName,
+    DOCUMENT_NAME_MAX_LENGTH,
+  );
+
+  const label = (
+    <p
+      className="font-semibold text-slate-900 truncate max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem]"
+      title={full}
+    >
+      {display}
+    </p>
+  );
 
   if (!isTruncated) {
-    return <p className="font-semibold text-slate-900">{display}</p>;
+    return label;
   }
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <p className="font-semibold text-slate-900 cursor-help">{display}</p>
+          <span className="block min-w-0 max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem] cursor-help">
+            {label}
+          </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-md break-all">
           <p className="text-xs">{full}</p>
@@ -763,7 +779,9 @@ export function DocumentUploadSection({
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/70">
-              <TableHead className="font-semibold text-slate-700">Document</TableHead>
+              <TableHead className="min-w-0 max-w-[14rem] font-semibold text-slate-700 sm:max-w-[16rem] md:max-w-[18rem]">
+                Document
+              </TableHead>
               <TableHead className="font-semibold text-slate-700">Type</TableHead>
               <TableHead className="font-semibold text-slate-700">Status</TableHead>
               <TableHead className="font-semibold text-slate-700">Expiry Date</TableHead>
@@ -775,15 +793,23 @@ export function DocumentUploadSection({
           <TableBody>
             {documents.map((doc: any) => (
               <TableRow key={doc.id} className="hover:bg-indigo-50/30 transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
+                <TableCell className="min-w-0 max-w-[14rem] sm:max-w-[16rem] md:max-w-[18rem]">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="shrink-0 rounded-lg bg-red-100 p-2">
                       <FileText className="h-5 w-5 text-red-600" />
                     </div>
-                    <div>
-                      <FileNameCell fileName={doc.fileName} />
+                    <div className="min-w-0 flex-1">
+                      <FileNameCell
+                        fileName={
+                          (doc.docName && String(doc.docName).trim()) ||
+                          doc.fileName ||
+                          "Untitled"
+                        }
+                      />
                       {doc.documentNumber && (
-                        <p className="text-sm text-slate-600">#{doc.documentNumber}</p>
+                        <p className="truncate text-sm text-slate-600">
+                          #{doc.documentNumber}
+                        </p>
                       )}
                     </div>
                   </div>

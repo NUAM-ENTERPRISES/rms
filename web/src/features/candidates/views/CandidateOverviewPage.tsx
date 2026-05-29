@@ -58,6 +58,7 @@ import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
+import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -657,6 +658,12 @@ export default function CandidateOverviewPage() {
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
                       const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
+                      const isHandledByCRE = candidate.isHandledByCRE;
+                      const isCREReassigned = candidate.isCREReassigned;
+                      const creStatusNote = candidate.creStatusNote as
+                        | string
+                        | null
+                        | undefined;
 
                       return (
                         <TableRow
@@ -699,15 +706,35 @@ export default function CandidateOverviewPage() {
                                 enableHoverPreview={true}
                               />
                               <div className="flex-1 min-w-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-xs"
-                                >
-                                  {candidate.firstName} {candidate.lastName}
-                                </button>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/candidates/${candidate.id}`);
+                                    }}
+                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-xs"
+                                  >
+                                    {candidate.firstName} {candidate.lastName}
+                                  </button>
+
+                                  {isHandledByCRE && (
+                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
+                                      CRE Assigned
+                                    </Badge>
+                                  )}
+
+                                  {isCREReassigned && (
+                                    <>
+                                      <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
+                                        CRE Reassigned
+                                      </Badge>
+                                      <CreReassignedStatusNote
+                                        note={creStatusNote}
+                                        candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                                      />
+                                    </>
+                                  )}
+                                </div>
                                 {candidate.candidateCode ? (
                                   <div className="text-[11px] text-muted-foreground font-mono truncate">
                                     {candidate.candidateCode}

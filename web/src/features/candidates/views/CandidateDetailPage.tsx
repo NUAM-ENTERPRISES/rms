@@ -24,7 +24,7 @@ import {
   RefreshCw,
   Calendar,
 } from "lucide-react";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
 import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
@@ -45,7 +45,8 @@ import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { useAppSelector } from "@/app/hooks";
+import { Badge } from "@/components/ui/badge";
+import { CreReassignedStatusNote } from "@/components/molecules/CreReassignedStatusNote";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -79,7 +80,6 @@ export default function CandidateDetailPage() {
   const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
     null
   );
-  const {} = useAppSelector((state) => state.auth);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,8 +121,9 @@ export default function CandidateDetailPage() {
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
-  // All roles can read candidate details
-  const canWriteCandidates = useCan("write:candidates");
+  // CRE can view candidate details but must not edit profile sections
+  const isCRE = useHasRole("CRE");
+  const canWriteCandidates = useCan("write:candidates") && !isCRE;
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -469,6 +470,17 @@ export default function CandidateDetailPage() {
                 <span className="text-xs font-semibold text-blue-700">{candidate.createdBy.name}</span>
                 <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
               </div>
+            )}
+            {(candidate as { isCREReassigned?: boolean }).isCREReassigned && (
+              <>
+                <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
+                  CRE Reassigned
+                </Badge>
+                <CreReassignedStatusNote
+                  note={(candidate as { creStatusNote?: string | null }).creStatusNote}
+                  candidateName={`${candidate.firstName} ${candidate.lastName}`}
+                />
+              </>
             )}
           </div>
         </div>
