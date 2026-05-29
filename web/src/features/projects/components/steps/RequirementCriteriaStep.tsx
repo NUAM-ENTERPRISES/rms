@@ -30,14 +30,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  PROJECT_VISA_TYPE,
-  type ProjectVisaType,
-  isDirectVisaType,
-  normalizeProjectVisaType,
-  getProjectVisaTypeLabel,
-  getProjectVisaTypeShortLabel,
-} from "@/constants/project-visa-types";
 
 interface RequirementCriteriaStepProps {
   control: Control<ProjectFormData>;
@@ -76,7 +68,7 @@ export const RequirementCriteriaStep: React.FC<
   const [quickBuild, setQuickBuild] = React.useState({
     roleType: "nurse",
     departmentIds: [] as string[],
-    visaType: PROJECT_VISA_TYPE.COMPANY_VISA as ProjectVisaType,
+    visaType: "permanent" as "contract" | "permanent",
     quantity: 1,
   });
 
@@ -97,7 +89,7 @@ export const RequirementCriteriaStep: React.FC<
         roleCatalogId: "",
         designation: "",
         quantity: 1,
-        visaType: PROJECT_VISA_TYPE.DIRECT_VISA,
+        visaType: "contract",
         genderRequirement: "all",
       } as any,
     ]);
@@ -256,10 +248,8 @@ export const RequirementCriteriaStep: React.FC<
         roleCatalogId: "",
         designation: "",
         quantity: 1,
-        visaType: PROJECT_VISA_TYPE.DIRECT_VISA,
+        visaType: "contract",
         genderRequirement: "all",
-        minAge: 18,
-        maxAge: 35,
         requiredSkills: [],
         candidateStates: [],
         candidateReligions: [],
@@ -306,7 +296,7 @@ export const RequirementCriteriaStep: React.FC<
         roleCatalogId: "",
         designation: "",
         quantity: 1,
-        visaType: PROJECT_VISA_TYPE.DIRECT_VISA,
+        visaType: "contract",
         genderRequirement: "all",
       } as any]);
     }
@@ -530,17 +520,11 @@ export const RequirementCriteriaStep: React.FC<
                 onValueChange={(v: any) => setQuickBuild(p => ({...p, visaType: v}))}
               >
                 <SelectTrigger className="bg-white border-slate-200 h-9 rounded-lg shadow-sm text-xs">
-                  <SelectValue>
-                    {getProjectVisaTypeLabel(quickBuild.visaType)}
-                  </SelectValue>
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
-                  <SelectItem value={PROJECT_VISA_TYPE.COMPANY_VISA}>
-                    Company Visa
-                  </SelectItem>
-                  <SelectItem value={PROJECT_VISA_TYPE.DIRECT_VISA}>
-                    Direct Visa
-                  </SelectItem>
+                  <SelectItem value="permanent">Permanent</SelectItem>
+                  <SelectItem value="contract">Contract</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -703,7 +687,7 @@ export const RequirementCriteriaStep: React.FC<
                     <div className={cn(
                       "h-1 w-full",
                       !isFilled ? "bg-slate-200" :
-                      !isDirectVisaType(role.visaType) ? "bg-emerald-400" : "bg-amber-400"
+                      role.visaType === "permanent" ? "bg-emerald-400" : "bg-amber-400"
                     )} />
 
                     {/* Remove Button */}
@@ -823,23 +807,15 @@ export const RequirementCriteriaStep: React.FC<
                         <div className="flex-[1.4]">
                           <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Type</Label>
                           <Select
-                            value={normalizeProjectVisaType(role.visaType)}
-                            onValueChange={(v: ProjectVisaType) =>
-                              updateRole(index, "visaType", v)
-                            }
+                            value={role.visaType || "permanent"}
+                            onValueChange={(v: any) => updateRole(index, "visaType", v)}
                           >
                             <SelectTrigger className="h-8 rounded-md border-slate-200 text-[11px] focus:ring-1 focus:ring-indigo-200">
-                              <SelectValue>
-                                {getProjectVisaTypeShortLabel(role.visaType)}
-                              </SelectValue>
+                              <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="rounded-lg">
-                              <SelectItem value={PROJECT_VISA_TYPE.COMPANY_VISA}>
-                                Company
-                              </SelectItem>
-                              <SelectItem value={PROJECT_VISA_TYPE.DIRECT_VISA}>
-                                Direct
-                              </SelectItem>
+                              <SelectItem value="permanent">Perm</SelectItem>
+                              <SelectItem value="contract">Contract</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>

@@ -47,11 +47,7 @@ import {
   Check,
   Edit,
 } from "lucide-react";
-import {
-  useGetQualificationsQuery,
-  useGetQualificationQuery,
-  type Qualification,
-} from "@/shared/hooks/useQualificationsLookup";
+import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
@@ -209,8 +205,6 @@ export default function QualificationWorkExperienceModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [selectedQualification, setSelectedQualification] =
-    useState<Qualification | null>(null);
   type PendingCertBatch = { id: string; docName: string; files: File[] };
   const [pendingCertBatches, setPendingCertBatches] = useState<
     PendingCertBatch[]
@@ -284,39 +278,6 @@ export default function QualificationWorkExperienceModal({
     },
   });
 
-  const watchedQualificationId = qualificationForm.watch("qualificationId");
-  const { data: fetchedQualificationData } = useGetQualificationQuery(
-    watchedQualificationId,
-    { skip: !isOpen || !watchedQualificationId }
-  );
-
-  const resolveQualificationLabel = (qualificationId: string): string => {
-    if (selectedQualification?.id === qualificationId) {
-      return (
-        selectedQualification.shortName || selectedQualification.name
-      );
-    }
-    const fromPage = qualifications.find((q) => q.id === qualificationId);
-    if (fromPage) {
-      return fromPage.shortName || fromPage.name;
-    }
-    const fetched = fetchedQualificationData?.data;
-    if (fetched?.id === qualificationId) {
-      return fetched.shortName || fetched.name;
-    }
-    return "Selected qualification";
-  };
-
-  // Keep selected qualification metadata in sync when loaded by id
-  useEffect(() => {
-    const fetched = fetchedQualificationData?.data;
-    if (fetched && fetched.id === watchedQualificationId) {
-      setSelectedQualification((prev) =>
-        prev?.id === fetched.id ? prev : fetched
-      );
-    }
-  }, [fetchedQualificationData, watchedQualificationId]);
-
   const workExperienceForm = useForm<WorkExperienceFormData>({
     // z.preprocess on salary makes the resolver typing a bit too strict for RHF generics
     resolver: zodResolver(workExperienceSchema) as any,
@@ -347,33 +308,9 @@ export default function QualificationWorkExperienceModal({
   useEffect(() => {
     if (editData && isOpen) {
       if (type === "qualification") {
-        const qual = editData as CandidateQualification & {
-          qualification?: {
-            id: string;
-            name: string;
-            shortName?: string;
-            level: string;
-            field: string;
-          };
-        };
-        const resolvedQualificationId =
-          qual.qualificationId || qual.qualification?.id || "";
-        if (qual.qualification) {
-          setSelectedQualification({
-            id: qual.qualification.id,
-            name: qual.qualification.name,
-            shortName: qual.qualification.shortName,
-            level: qual.qualification.level as Qualification["level"],
-            field: qual.qualification.field,
-            isActive: true,
-            createdAt: "",
-            updatedAt: "",
-          });
-        } else {
-          setSelectedQualification(null);
-        }
+        const qual = editData as CandidateQualification;
         qualificationForm.reset({
-          qualificationId: resolvedQualificationId,
+          qualificationId: qual.qualificationId,
           university: qual.university || "",
           graduationYear: formatOptionalNumberInput(qual.graduationYear),
           gpa: formatOptionalNumberInput(qual.gpa),
@@ -403,7 +340,6 @@ export default function QualificationWorkExperienceModal({
       }
     } else if (!editData && isOpen) {
       // Reset forms for new entries
-      setSelectedQualification(null);
       qualificationForm.reset({
         qualificationId: "",
         university: "",
@@ -578,7 +514,6 @@ export default function QualificationWorkExperienceModal({
     setSkills([]);
     setNewSkill("");
     setSearchQuery("");
-    setSelectedQualification(null);
     setIsDropdownOpen(false);
     setPendingCertBatches([]);
     setCertModalOpen(false);
@@ -781,7 +716,8 @@ export default function QualificationWorkExperienceModal({
                         className="w-full justify-start text-slate-600"
                       >
                         {field.value
-                          ? resolveQualificationLabel(field.value)
+                          ? qualifications.find((q) => q.id === field.value)
+                              ?.name || "Select a qualification"
                           : "Select a qualification"}
                       </Button>
                     </DropdownMenuTrigger>
@@ -797,8 +733,6 @@ export default function QualificationWorkExperienceModal({
                             placeholder="Search qualifications..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
                             className="pl-8 h-8"
                           />
                         </div>
@@ -819,13 +753,10 @@ export default function QualificationWorkExperienceModal({
                           qualifications.map((qualification) => (
                             <DropdownMenuItem
                               key={qualification.id}
-                              onSelect={(event) => {
-                                event.preventDefault();
+                              onSelect={() => {
                                 field.onChange(qualification.id);
-                                setSelectedQualification(qualification);
                                 setIsDropdownOpen(false);
                                 setSearchQuery("");
-                                setPage(1);
                               }}
                               className="flex items-start gap-2 p-3"
                             >
@@ -842,12 +773,6 @@ export default function QualificationWorkExperienceModal({
                                   {qualification.level} • {qualification.field}
                                 </div>
                               </div>
-                              {field.value === qualification.id && (
-                                <Check
-                                  className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5"
-                                  aria-hidden
-                                />
-                              )}
                             </DropdownMenuItem>
                           ))
                         )}
@@ -858,10 +783,10 @@ export default function QualificationWorkExperienceModal({
                           Page {qualificationsData?.data?.pagination?.page || page} of {qualificationsData?.data?.pagination?.totalPages || 1}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button type="button" size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(qualificationsData?.data?.pagination?.page || page) <= 1}>
+                          <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={(qualificationsData?.data?.pagination?.page || page) <= 1}>
                             Prev
                           </Button>
-                          <Button type="button" size="sm" variant="outline" onClick={() => setPage((p) => (qualificationsData?.data?.pagination?.totalPages ? Math.min(qualificationsData?.data?.pagination?.totalPages, p + 1) : p + 1))} disabled={(qualificationsData?.data?.pagination?.page || page) >= (qualificationsData?.data?.pagination?.totalPages || 1)}>
+                          <Button size="sm" variant="outline" onClick={() => setPage((p) => (qualificationsData?.data?.pagination?.totalPages ? Math.min(qualificationsData?.data?.pagination?.totalPages, p + 1) : p + 1))} disabled={(qualificationsData?.data?.pagination?.page || page) >= (qualificationsData?.data?.pagination?.totalPages || 1)}>
                             Next
                           </Button>
                         </div>

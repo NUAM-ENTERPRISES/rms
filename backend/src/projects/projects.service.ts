@@ -36,10 +36,7 @@ import {
   assertAgentCandidateLinkedToAgentProject,
 } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
-import { normalizeProjectVisaType } from '../common/constants/project-visa-types';
-import { applyProjectClientVisibility } from '../common/utils/project-client-visibility.util';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 
 @Injectable()
 export class ProjectsService {
@@ -281,7 +278,7 @@ export class ProjectsService {
               employmentType: role.employmentType || 'permanent',
               contractDurationYears: role.contractDurationYears,
               genderRequirement: (role.genderRequirement || 'all') as any,
-              visaType: normalizeProjectVisaType(role.visaType),
+              visaType: role.visaType || 'contract',
               requiredSkills: role.requiredSkills
                 ? JSON.parse(role.requiredSkills)
                 : [],
@@ -609,10 +606,7 @@ export class ProjectsService {
   /**
    * Lightweight project list for pickers (id, title, status, deadline, client only).
    */
-  async findPickerList(
-    query: QueryProjectPickerDto,
-    userRoles: string[] = [],
-  ): Promise<PaginatedProjectPicker> {
+  async findPickerList(query: QueryProjectPickerDto): Promise<PaginatedProjectPicker> {
     const {
       search,
       status = 'active',
@@ -650,21 +644,19 @@ export class ProjectsService {
     });
 
     return {
-      projects: rows.map((p) =>
-        applyProjectClientVisibility({
-          id: p.id,
-          title: p.title,
-          status: p.status,
-          deadline: p.deadline ? p.deadline.toISOString() : null,
-          client: p.client
-            ? {
-                id: p.client.id,
-                name: p.client.name,
-                type: p.client.type,
-              }
-            : null,
-        }, userRoles),
-      ),
+      projects: rows.map((p) => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        deadline: p.deadline ? p.deadline.toISOString() : null,
+        client: p.client
+          ? {
+              id: p.client.id,
+              name: p.client.name,
+              type: p.client.type,
+            }
+          : null,
+      })),
       pagination: {
         page,
         limit,
@@ -674,10 +666,7 @@ export class ProjectsService {
     };
   }
 
-  async findOne(
-    id: string,
-    userRoles: string[] = [],
-  ): Promise<ProjectWithRelations> {
+  async findOne(id: string): Promise<ProjectWithRelations> {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
@@ -745,10 +734,7 @@ export class ProjectsService {
       })),
     };
 
-    return applyProjectClientVisibility(
-      projectWithParsedData,
-      userRoles,
-    ) as ProjectWithRelations;
+    return projectWithParsedData;
   }
 
   async update(
@@ -1008,7 +994,7 @@ export class ProjectsService {
           employmentType: role.employmentType || 'permanent',
           contractDurationYears: role.contractDurationYears,
           genderRequirement: (role.genderRequirement || 'all') as any,
-          visaType: normalizeProjectVisaType(role.visaType),
+          visaType: role.visaType || 'contract',
           requiredSkills: role.requiredSkills ? JSON.parse(role.requiredSkills) : [],
           candidateStates: role.candidateStates ? JSON.parse(role.candidateStates) : [],
           candidateReligions: role.candidateReligions ? JSON.parse(role.candidateReligions) : [],
@@ -2407,10 +2393,6 @@ export class ProjectsService {
 
       return {
         ...candidate,
-        careerGapAnalysis: calculateCareerGaps(
-          candidate.workExperiences ?? [],
-          candidate.qualifications ?? [],
-        ),
         matchScore: top
           ? {
               roleId: top.roleId,

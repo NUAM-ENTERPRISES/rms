@@ -24,7 +24,6 @@ import RequirementCriteriaStep from "../components/steps/RequirementCriteriaStep
 import CandidateCriteriaStep from "../components/steps/CandidateCriteriaStep";
 import DocumentRequirementsStep from "../components/steps/DocumentRequirementsStep";
 import PreviewStep from "../components/steps/PreviewStep";
-import { normalizeProjectVisaType } from "@/constants/project-visa-types";
 
 const STEPS = [
   { id: "details", title: "Project Details", description: "Basic information" },
@@ -292,7 +291,11 @@ export default function MultiStepEditProjectPage() {
               role.shiftType === "flexible"
                 ? role.shiftType
                 : undefined,
-            visaType: normalizeProjectVisaType((role as any).visaType),
+            visaType:
+              (role as any).visaType === "contract" ||
+              (role as any).visaType === "permanent"
+                ? (role as any).visaType
+                : "contract",
             requiredSkills: Array.isArray((role as any).requiredSkills)
               ? (role as any).requiredSkills
               : (role as any).requiredSkills

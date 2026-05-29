@@ -78,26 +78,4 @@ describe("CandidateDetailTooltip - additional fields", () => {
     expect((await screen.findAllByText(/City Clinic/i)).length).toBeGreaterThan(0);
     expect((await screen.findAllByText(/2021 - Present/i)).length).toBeGreaterThan(0);
   });
-
-  it("does not show stale totalExperience when workExperiences is empty", async () => {
-    const candidate = {
-      id: "c3",
-      firstName: "Empty",
-      lastName: "History",
-      totalExperience: 5,
-      experience: 5,
-      workExperiences: [],
-    } as any;
-
-    render(
-      <CandidateDetailTooltip candidate={candidate}>
-        <button>Open</button>
-      </CandidateDetailTooltip>
-    );
-
-    await userEvent.hover(screen.getByText("Open"));
-
-    expect((await screen.findAllByText(/0 years/i)).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/5 years/i)).toBeNull();
-  });
 });

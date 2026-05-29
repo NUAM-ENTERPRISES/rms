@@ -62,7 +62,7 @@ export const projectFormSchema = z.object({
         additionalRequirements: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
         // Changed from employmentType to visaType
-        visaType: z.enum(["direct_visa", "company_visa"]),
+        visaType: z.enum(["contract", "permanent"]),
         contractDurationYears: z
           .union([z.number().min(1).max(10), z.undefined()])
           .optional(),
@@ -138,7 +138,7 @@ export const defaultProjectValues = {
       drugScreeningRequired: true,
       onCallRequired: false,
       relocationAssistance: false,
-      visaType: "direct_visa" as const,
+      visaType: "contract" as const,
       genderRequirement: "all" as const,
       minAge: 18,
       maxAge: 35,

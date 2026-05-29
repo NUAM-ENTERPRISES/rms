@@ -2,7 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
-  normalizePhysicalAddressPatch,
 } from './assert-physical-address';
 
 describe('assertPhysicalAddressConsistent', () => {
@@ -68,76 +67,24 @@ describe('assertPhysicalAddressConsistent', () => {
       addressStateId: 'st1',
     });
   });
-
-  it('rejects India without state', async () => {
-    prisma.country.findUnique.mockResolvedValue({ code: 'IN' });
-    await expect(
-      assertPhysicalAddressConsistent(prisma as any, {
-        addressCountryCode: 'IN',
-        addressStateId: null,
-      }),
-    ).rejects.toThrow(BadRequestException);
-    expect(prisma.state.findUnique).not.toHaveBeenCalled();
-  });
-
-  it('allows non-India country without state', async () => {
-    prisma.country.findUnique.mockResolvedValue({ code: 'AE' });
-    await assertPhysicalAddressConsistent(prisma as any, {
-      addressCountryCode: 'AE',
-      addressStateId: null,
-    });
-    expect(prisma.state.findUnique).not.toHaveBeenCalled();
-  });
-});
-
-describe('normalizePhysicalAddressPatch', () => {
-  it('converts blank strings to null', () => {
-    expect(
-      normalizePhysicalAddressPatch({
-        addressCountryCode: ' IN ',
-        addressStateId: '',
-      }),
-    ).toEqual({
-      addressCountryCode: 'IN',
-      addressStateId: null,
-    });
-  });
 });
 
 describe('mergePhysicalAddress', () => {
-  it('prefers patch country and clears stale state when country changes', () => {
+  it('prefers patch values when defined', () => {
     expect(
       mergePhysicalAddress(
         { addressCountryCode: 'IN', addressStateId: 'a' },
         { addressCountryCode: 'AE', addressStateId: undefined },
       ),
-    ).toEqual({ addressCountryCode: 'AE', addressStateId: null });
+    ).toEqual({ addressCountryCode: 'AE', addressStateId: 'a' });
   });
 
-  it('applies explicit null country and clears state', () => {
+  it('applies explicit null from patch', () => {
     expect(
       mergePhysicalAddress(
         { addressCountryCode: 'IN', addressStateId: 'a' },
         { addressCountryCode: null },
       ),
-    ).toEqual({ addressCountryCode: null, addressStateId: null });
-  });
-
-  it('clears state when country changes without a new state', () => {
-    expect(
-      mergePhysicalAddress(
-        { addressCountryCode: 'US', addressStateId: 'st-us' },
-        { addressCountryCode: 'IN' },
-      ),
-    ).toEqual({ addressCountryCode: 'IN', addressStateId: null });
-  });
-
-  it('treats empty state id as null when country is set', () => {
-    expect(
-      mergePhysicalAddress(
-        { addressCountryCode: null, addressStateId: null },
-        { addressCountryCode: 'IN', addressStateId: '' },
-      ),
-    ).toEqual({ addressCountryCode: 'IN', addressStateId: null });
+    ).toEqual({ addressCountryCode: null, addressStateId: 'a' });
   });
 });

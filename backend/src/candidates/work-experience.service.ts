@@ -11,28 +11,10 @@ import {
   normalizeOptionalCountryCode,
 } from '../common/country/assert-optional-country-code';
 import { workExperienceReadInclude } from './includes/work-experience.include';
-import { calculateTotalExperienceYears } from './utils/employment-timeline.util';
 
 @Injectable()
 export class WorkExperienceService {
   constructor(private readonly prisma: PrismaService) {}
-
-  private async syncCandidateTotalExperience(candidateId: string): Promise<void> {
-    const workExperiences = await this.prisma.workExperience.findMany({
-      where: { candidateId },
-      orderBy: { startDate: 'asc' },
-    });
-
-    const totalYears = calculateTotalExperienceYears(workExperiences);
-
-    await this.prisma.candidate.update({
-      where: { id: candidateId },
-      data: {
-        totalExperience: totalYears,
-        experience: totalYears,
-      },
-    });
-  }
 
   async create(createWorkExperienceDto: CreateWorkExperienceDto) {
     const candidate = await this.prisma.candidate.findUnique({
@@ -92,7 +74,7 @@ export class WorkExperienceService {
       createWorkExperienceDto.countryCode,
     );
 
-    const created = await this.prisma.workExperience.create({
+    return this.prisma.workExperience.create({
       data: {
         candidateId: createWorkExperienceDto.candidateId,
         roleCatalogId: createWorkExperienceDto.roleCatalogId,
@@ -114,10 +96,6 @@ export class WorkExperienceService {
       },
       include: workExperienceReadInclude,
     });
-
-    await this.syncCandidateTotalExperience(createWorkExperienceDto.candidateId);
-
-    return created;
   }
 
   async findAll(candidateId?: string) {
@@ -206,7 +184,7 @@ export class WorkExperienceService {
         ? normalizeOptionalCountryCode(updateWorkExperienceDto.countryCode)
         : undefined;
 
-    const updated = await this.prisma.workExperience.update({
+    return this.prisma.workExperience.update({
       where: { id },
       data: {
         roleCatalogId: updateWorkExperienceDto.roleCatalogId,
@@ -230,10 +208,6 @@ export class WorkExperienceService {
       },
       include: workExperienceReadInclude,
     });
-
-    await this.syncCandidateTotalExperience(existingWorkExperience.candidateId);
-
-    return updated;
   }
 
   async remove(id: string) {
@@ -245,30 +219,9 @@ export class WorkExperienceService {
       throw new NotFoundException(`Work experience with ID ${id} not found`);
     }
 
-    const deleted = await this.prisma.$transaction(async (tx) => {
-      const removed = await tx.workExperience.delete({
-        where: { id },
-      });
-
-      const remaining = await tx.workExperience.findMany({
-        where: { candidateId: workExperience.candidateId },
-        orderBy: { startDate: 'asc' },
-      });
-
-      const totalYears = calculateTotalExperienceYears(remaining);
-
-      await tx.candidate.update({
-        where: { id: workExperience.candidateId },
-        data: {
-          totalExperience: totalYears,
-          experience: totalYears,
-        },
-      });
-
-      return removed;
+    return this.prisma.workExperience.delete({
+      where: { id },
     });
-
-    return deleted;
   }
 
   async findByCandidateId(candidateId: string) {

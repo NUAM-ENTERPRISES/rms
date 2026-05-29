@@ -12,12 +12,7 @@ import {
   Max,
   IsJSON,
 } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
-import {
-  PROJECT_VISA_TYPE,
-  PROJECT_VISA_TYPE_VALUES,
-  normalizeProjectVisaType,
-} from '../../common/constants/project-visa-types';
+import { Type } from 'class-transformer';
 import { EducationRequirementDto } from './education-requirement.dto';
 import { CreateDocumentRequirementDto } from './document-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -312,13 +307,12 @@ export class CreateRoleNeededDto {
 
   @ApiPropertyOptional({
     description: 'Visa type for this role',
-    enum: PROJECT_VISA_TYPE_VALUES,
-    default: PROJECT_VISA_TYPE.DIRECT_VISA,
+    enum: ['contract', 'permanent'],
+    default: 'contract',
   })
   @IsOptional()
-  @Transform(({ value }) => normalizeProjectVisaType(value))
-  @IsEnum(PROJECT_VISA_TYPE_VALUES)
-  visaType?: string = PROJECT_VISA_TYPE.DIRECT_VISA;
+  @IsEnum(['contract', 'permanent'])
+  visaType?: string = 'contract';
 
   @ApiPropertyOptional({
     description: 'Required skills as JSON array',

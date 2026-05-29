@@ -32,12 +32,6 @@ import {
   type EducationRequirement,
 } from "@/features/projects";
 import DocumentRequirementsSection from "../components/DocumentRequirementsSection";
-import {
-  PROJECT_VISA_TYPE,
-  isDirectVisaType,
-  normalizeProjectVisaType,
-  getProjectVisaTypeLabel,
-} from "@/constants/project-visa-types";
 import { useGetClientQuery, CreateClientModal } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { useCan } from "@/hooks/useCan";
@@ -187,7 +181,7 @@ export default function CreateProjectPage() {
         roleCatalogId: "",
         designation: "",
         quantity: 1,
-        visaType: PROJECT_VISA_TYPE.DIRECT_VISA,
+        visaType: "contract" as const,
         genderRequirement: "all" as const,
         requiredSkills: [],
         candidateStates: [],
@@ -532,37 +526,33 @@ export default function CreateProjectPage() {
                         Visa Type *
                       </Label>
                       <Select
-                        value={normalizeProjectVisaType(role.visaType)}
+                        value={role.visaType || "contract"}
                         onValueChange={(value) =>
                           updateRole(index, "visaType", value)
                         }
                       >
                         <SelectTrigger className="h-10 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20">
-                          <SelectValue>
-                            {getProjectVisaTypeLabel(
-                              normalizeProjectVisaType(role.visaType)
-                            )}
-                          </SelectValue>
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value={PROJECT_VISA_TYPE.COMPANY_VISA}>
+                          <SelectItem value="permanent">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              Company Visa
+                              Permanent
                             </div>
                           </SelectItem>
-                          <SelectItem value={PROJECT_VISA_TYPE.DIRECT_VISA}>
+                          <SelectItem value="contract">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                              Direct Visa
+                              Contract
                             </div>
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Contract duration (Direct Visa roles) */}
-                    {isDirectVisaType(role.visaType) && (
+                    {/* Contract Duration (only for contract roles) */}
+                    {role.visaType === "contract" && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-slate-700">
                           Contract Duration (years) *
@@ -963,7 +953,7 @@ export default function CreateProjectPage() {
                           </Badge>
                           {role.visaType && (
                             <Badge variant="outline" className="text-xs">
-                              {getProjectVisaTypeLabel(role.visaType)}
+                              {role.visaType}
                             </Badge>
                           )}
                         </div>
@@ -975,9 +965,7 @@ export default function CreateProjectPage() {
                           </span>
                         )}
                         {role.shiftType && <span>Shift: {role.shiftType}</span>}
-                        {role.visaType && (
-                          <span>Visa: {getProjectVisaTypeLabel(role.visaType)}</span>
-                        )}
+                        {role.visaType && <span>Visa: {role.visaType}</span>}
                       </div>
                       {/* Education Requirements */}
                       {role.educationRequirementsList &&

@@ -8,7 +8,6 @@ import { EmailService } from '../notifications/email.service';
 import { UploadService } from '../upload/upload.service';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { EmailTemplates } from '../notifications/templates/email.templates';
-import { OutboxService } from '../notifications/outbox.service';
 import { DeliveryMethod } from '../documents/dto/bulk-forward-to-client.dto';
 import { SendType } from '../documents/dto/forward-to-client.dto';
 
@@ -21,7 +20,6 @@ export class DocumentForwardProcessor extends WorkerHost {
     private readonly emailService: EmailService,
     private readonly uploadService: UploadService,
     private readonly googleDriveService: GoogleDriveService,
-    private readonly outboxService: OutboxService,
   ) {
     super();
   }
@@ -314,23 +312,6 @@ export class DocumentForwardProcessor extends WorkerHost {
           });
         } catch (historyError) {
           this.logger.error(`Failed to create history for candidate ${selection.candidateId}: ${historyError.message}`);
-        }
-      }
-
-      // 8. Notify recruiters and interview team (bulk combined / GDrive skips per-candidate processForwarding)
-      for (const selection of selections) {
-        try {
-          await this.outboxService.publishDocumentsForwardedToClient(
-            selection.candidateId,
-            projectId,
-            senderId,
-            recipientEmail,
-            selection.roleCatalogId,
-          );
-        } catch (notifyError) {
-          this.logger.warn(
-            `Failed to queue documents forwarded notification for ${selection.candidateId}: ${notifyError.message}`,
-          );
         }
       }
 
