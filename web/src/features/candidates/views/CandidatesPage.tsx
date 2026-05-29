@@ -45,7 +45,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { ImageViewer } from "@/components/molecules";
+import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
 import { parseISO, startOfDay, endOfDay, format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -59,7 +59,6 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
-import { CreReassignedHandoffBadge } from "@/components/molecules/CreReassignedHandoffBadge";
 import { toast } from "sonner";
 
 
@@ -1049,44 +1048,20 @@ export default function CandidatesPage() {
                                 enableHoverPreview={true} /* show hover preview on desktop */
                               />
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start gap-2 min-w-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/candidates/${candidate.id}`);
-                                    }}
-                                    className="min-w-0 flex-1 truncate text-left text-sm font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
-                                  >
-                                    {candidate.firstName} {candidate.lastName}
-                                  </button>
-
-                                  {isHandledByCRE && !isCREReassigned && (
-                                    <Badge className="shrink-0 text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
-                                      CRE Assigned
-                                    </Badge>
-                                  )}
-
-                                  {isCREReassigned && (
-                                    <CreReassignedHandoffBadge
-                                      note={creStatusNote}
-                                      creStatus={candidate.creStatus?.statusName}
-                                      candidateName={`${candidate.firstName} ${candidate.lastName}`}
-                                    />
-                                  )}
-                                </div>
-
-                                {candidate.candidateCode ? (
-                                  <div className="text-xs text-muted-foreground font-mono truncate">
-                                    {candidate.candidateCode}
-                                  </div>
-                                ) : null}
-
-                                <div className="text-xs text-slate-500 mt-0.5 font-medium truncate">
-                                  {candidate.currentRole || ""}
-                                </div>
-
+                              <div className="min-w-0 flex-1">
+                                <CandidateListIdentityCell
+                                  firstName={candidate.firstName}
+                                  lastName={candidate.lastName}
+                                  candidateCode={candidate.candidateCode}
+                                  currentRole={candidate.currentRole}
+                                  isHandledByCRE={isHandledByCRE}
+                                  isCREReassigned={isCREReassigned}
+                                  creStatusNote={creStatusNote}
+                                  creStatusName={candidate.creStatus?.statusName}
+                                  onNameClick={() =>
+                                    navigate(`/candidates/${candidate.id}`)
+                                  }
+                                />
                               </div>
                             </div>
                           </TableCell>

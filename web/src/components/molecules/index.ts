@@ -17,6 +17,8 @@ export { RoleSelect } from "./RoleSelect";
 export { UpdatePasswordDialog } from "./UpdatePasswordDialog";
 export { ProfileImageUpload } from "./ProfileImageUpload";
 export { ImageViewer } from "./ImageViewer";
+export { CandidateListIdentityCell } from "./CandidateListIdentityCell";
+export type { CandidateListIdentityCellProps } from "./CandidateListIdentityCell";
 export { DocumentUpload } from "./DocumentUpload";
 export { WorkExperienceForm } from "./WorkExperienceForm";
 export { default as CandidateQualificationSelect } from "./CandidateQualificationSelect";

@@ -58,7 +58,7 @@ import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
-import { CreReassignedHandoffBadge } from "@/components/molecules/CreReassignedHandoffBadge";
+import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -705,41 +705,22 @@ export default function CandidateOverviewPage() {
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true}
                               />
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start gap-2 min-w-0">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/candidates/${candidate.id}`);
-                                    }}
-                                    className="min-w-0 flex-1 truncate text-left text-xs font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200"
-                                  >
-                                    {candidate.firstName} {candidate.lastName}
-                                  </button>
-
-                                  {isHandledByCRE && !isCREReassigned && (
-                                    <Badge className="shrink-0 text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
-                                      CRE Assigned
-                                    </Badge>
-                                  )}
-
-                                  {isCREReassigned && (
-                                    <CreReassignedHandoffBadge
-                                      note={creStatusNote}
-                                      creStatus={candidate.creStatus?.statusName}
-                                      candidateName={`${candidate.firstName} ${candidate.lastName}`}
-                                    />
-                                  )}
-                                </div>
-                                {candidate.candidateCode ? (
-                                  <div className="text-[11px] text-muted-foreground font-mono truncate">
-                                    {candidate.candidateCode}
-                                  </div>
-                                ) : null}
-                                <div className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
-                                  {candidate.currentRole || ""}
-                                </div>
+                              <div className="min-w-0 flex-1">
+                                <CandidateListIdentityCell
+                                  firstName={candidate.firstName}
+                                  lastName={candidate.lastName}
+                                  candidateCode={candidate.candidateCode}
+                                  currentRole={candidate.currentRole}
+                                  isHandledByCRE={isHandledByCRE}
+                                  isCREReassigned={isCREReassigned}
+                                  creStatusNote={creStatusNote}
+                                  creStatusName={candidate.creStatus?.statusName}
+                                  onNameClick={() =>
+                                    navigate(`/candidates/${candidate.id}`)
+                                  }
+                                  nameClassName="text-xs font-semibold text-gray-900"
+                                  codeClassName="text-[11px] text-muted-foreground font-mono"
+                                />
                               </div>
                             </div>
                           </TableCell>
