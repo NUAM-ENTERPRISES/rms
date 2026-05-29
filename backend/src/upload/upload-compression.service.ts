@@ -8,7 +8,7 @@ export class UploadCompressionService {
 
   /**
    * Compress file buffer when it exceeds targetMaxBytes (images/PDF).
-   * Images use sharp; PDFs use qpdf-compress (output stays PDF).
+   * Images use sharp; PDFs use pdfjs render → sharp JPEG → pdf-lib rebuild.
    */
   async prepareFile(
     file: Express.Multer.File,
@@ -111,6 +111,10 @@ export class UploadCompressionService {
           '.pdf',
         );
       }
+
+      this.logger.warn(
+        `PDF ${file.originalname} still ${(buffer.length / (1024 * 1024)).toFixed(1)} MB after compression (target ${targetMb} MB, uploaded ${actualMb} MB)`,
+      );
     } catch (err) {
       this.logger.error(`PDF compression failed for ${file.originalname}`, err);
     }

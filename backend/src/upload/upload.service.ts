@@ -570,15 +570,23 @@ export class UploadService implements OnModuleInit {
     const safeDocType = docType.replace(/[^a-zA-Z0-9_-]/g, "_");
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).slice(2, 8);
-    const extension = file.originalname.split(".").pop() || "bin";
+    const extension =
+      prepared.originalname.split(".").pop() ||
+      file.originalname.split(".").pop() ||
+      "bin";
     const customFileName = `${safeDocType}_${timestamp}_${randomSuffix}.${extension}`;
-    return this.uploadFile(
-      file,
+    const uploadResult = await this.uploadFile(
+      prepared,
       folder,
       allowedMimeTypes,
-      20,
+      maxSizeMB,
       customFileName,
     );
+    if (prepared.size < originalFileSize) {
+      uploadResult.compressionApplied = true;
+      uploadResult.originalFileSize = originalFileSize;
+    }
+    return uploadResult;
   }
 
   /**

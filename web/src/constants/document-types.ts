@@ -475,7 +475,7 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     category: "employment",
     hasExpiry: false,
     expiryRequired: false,
-    maxSizeMB: 5,
+    maxSizeMB: 10,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Briefcase",
     commonlyRequired: false,

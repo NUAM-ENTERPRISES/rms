@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
 import { UploadCompressionService } from './upload-compression.service';
+import { UPLOAD_ACCEPT_BUFFER_BYTES } from './upload.constants';
 import { PrismaModule } from '../database/prisma.module';
 import { DocumentsModule } from '../documents/documents.module';
 
@@ -15,7 +16,7 @@ import { DocumentsModule } from '../documents/documents.module';
     MulterModule.register({
       storage: undefined, // Use memory storage (file.buffer)
       limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB max
+        fileSize: UPLOAD_ACCEPT_BUFFER_BYTES,
       },
     }),
   ],

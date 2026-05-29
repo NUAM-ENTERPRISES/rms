@@ -79,7 +79,7 @@ describe('UploadCompressionService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('compresses oversized PDF via qpdf-compress helper', async () => {
+  it('compresses oversized PDF via pdfjs/sharp/pdf-lib (mocked)', async () => {
     const original = Buffer.alloc(15 * 1024 * 1024);
     const compressed = Buffer.alloc(4 * 1024 * 1024);
     mockCompressPdfToTarget.mockResolvedValue({

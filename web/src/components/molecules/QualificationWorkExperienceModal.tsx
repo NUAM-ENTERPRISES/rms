@@ -70,6 +70,11 @@ import type {
   WorkExperience,
   Document,
 } from "@/features/candidates/api";
+import {
+  formatBytes,
+  getUploadErrorMessage,
+  prepareDocumentFileForUpload,
+} from "@/lib/document-upload";
 
 const formatOptionalNumberInput = (value?: number | null): string =>
   value != null ? String(value) : "";
@@ -213,6 +218,7 @@ export default function QualificationWorkExperienceModal({
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [certDocName, setCertDocName] = useState("");
   const [certFiles, setCertFiles] = useState<File[]>([]);
+  const [isPreparingCertFiles, setIsPreparingCertFiles] = useState(false);
   const certFileInputRef = useRef<HTMLInputElement>(null);
   const [existingDocs, setExistingDocs] = useState<Document[]>([]);
   const [deletingDocIds, setDeletingDocIds] = useState<Record<string, boolean>>(
@@ -528,8 +534,13 @@ export default function QualificationWorkExperienceModal({
                 ...res.data.failedFileNames.map((n) => `${batch.docName || "Batch"}: ${n}`)
               );
             }
-          } catch {
-            failedBatches.push(batch.docName || "Unnamed batch");
+          } catch (err: unknown) {
+            const detail = getUploadErrorMessage(err);
+            failedBatches.push(
+              batch.docName
+                ? `${batch.docName}: ${detail}`
+                : detail,
+            );
           }
         }
         if (failedBatches.length > 0) {
@@ -667,6 +678,7 @@ export default function QualificationWorkExperienceModal({
     setCertModalOpen(false);
     setCertDocName("");
     setCertFiles([]);
+    setIsPreparingCertFiles(false);
     if (certFileInputRef.current) certFileInputRef.current.value = "";
   };
 
@@ -682,11 +694,31 @@ export default function QualificationWorkExperienceModal({
     closeCertModal();
   };
 
-  const addCertFilesFromInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length > 0) {
-      setCertFiles((prev) => [...prev, ...files]);
-      e.target.value = "";
+  const addCertFilesFromInput = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (selected.length === 0) return;
+
+    setIsPreparingCertFiles(true);
+    const accepted: File[] = [];
+    try {
+      for (const file of selected) {
+        try {
+          const { file: prepared } = await prepareDocumentFileForUpload(
+            file,
+            DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+            { showToasts: true },
+          );
+          accepted.push(prepared);
+        } catch {
+          // prepareDocumentFileForUpload already toasts validation errors
+        }
+      }
+      if (accepted.length > 0) {
+        setCertFiles((prev) => [...prev, ...accepted]);
+      }
+    } finally {
+      setIsPreparingCertFiles(false);
     }
   };
 
@@ -1214,7 +1246,8 @@ export default function QualificationWorkExperienceModal({
                     Experience certificates
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    PDF or images. Add documents before saving; they upload after work experience is saved.
+                    PDF or images up to 10 MB each (larger files are compressed on upload).
+                    Add documents before saving; they upload after work experience is saved.
                   </p>
                 </div>
                 <Button
@@ -1306,6 +1339,11 @@ export default function QualificationWorkExperienceModal({
                             {" "}
                             · {batch.files.length} file
                             {batch.files.length === 1 ? "" : "s"}
+                            {" "}
+                            ·{" "}
+                            {formatBytes(
+                              batch.files.reduce((sum, f) => sum + f.size, 0),
+                            )}
                           </span>
                         </span>
                         <button
@@ -1382,7 +1420,7 @@ export default function QualificationWorkExperienceModal({
             <input
               ref={certFileInputRef}
               type="file"
-              accept="application/pdf,image/jpeg,image/png"
+              accept="application/pdf,image/jpeg,image/jpg,image/png,image/webp"
               multiple
               className="hidden"
               onChange={addCertFilesFromInput}
@@ -1395,7 +1433,10 @@ export default function QualificationWorkExperienceModal({
                     className="flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 max-w-full"
                   >
                     <FileText className="h-3 w-3 shrink-0" />
-                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <span className="truncate max-w-[160px]">{file.name}</span>
+                    <span className="text-slate-500 shrink-0">
+                      ({formatBytes(file.size)})
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeCertFileAt(idx)}
@@ -1413,10 +1454,15 @@ export default function QualificationWorkExperienceModal({
               variant="outline"
               size="sm"
               className="w-full"
+              disabled={isPreparingCertFiles}
               onClick={() => certFileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {certFiles.length > 0 ? "Add more files" : "Choose files"}
+              {isPreparingCertFiles
+                ? "Checking files…"
+                : certFiles.length > 0
+                  ? "Add more files"
+                  : "Choose files"}
             </Button>
           </div>
         </div>
@@ -1424,7 +1470,11 @@ export default function QualificationWorkExperienceModal({
           <Button type="button" variant="outline" onClick={closeCertModal}>
             Cancel
           </Button>
-          <Button type="button" onClick={confirmCertModal}>
+          <Button
+            type="button"
+            onClick={confirmCertModal}
+            disabled={isPreparingCertFiles || certFiles.length === 0}
+          >
             Add to list
           </Button>
         </DialogFooter>

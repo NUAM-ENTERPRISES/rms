@@ -42,6 +42,7 @@ import {
 import { OutboxService } from '../notifications/outbox.service';
 import { ProcessingService } from '../processing/processing.service';
 import { UploadService } from '../upload/upload.service';
+import { getEffectiveMaxBytes } from '../upload/upload.constants';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { validatePassportDocumentFields } from './utils/passport-document.util';
 
@@ -307,14 +308,11 @@ export class DocumentsService {
       );
     }
 
-    // Validate file size if provided
-    if (
-      createDocumentDto.fileSize &&
-      createDocumentDto.docType in DOCUMENT_TYPE_META
-    ) {
-      const maxSizeMB = DOCUMENT_TYPE_META[createDocumentDto.docType].maxSizeMB;
-      const fileSizeMB = createDocumentDto.fileSize / (1024 * 1024);
-      if (fileSizeMB > maxSizeMB) {
+    // Validate stored file size (upload route compresses before storage)
+    if (createDocumentDto.fileSize && createDocumentDto.docType) {
+      const maxBytes = getEffectiveMaxBytes(createDocumentDto.docType);
+      if (createDocumentDto.fileSize > maxBytes) {
+        const maxSizeMB = maxBytes / (1024 * 1024);
         throw new BadRequestException(
           `File size exceeds maximum allowed ${maxSizeMB}MB for ${createDocumentDto.docType}`,
         );
