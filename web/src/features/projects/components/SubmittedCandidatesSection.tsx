@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/ui";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import {
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
@@ -295,6 +296,7 @@ export default function SubmittedCandidatesSection({
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
+        className="sm:max-w-3xl"
         onClose={() =>
           setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })
         }
@@ -303,6 +305,14 @@ export default function SubmittedCandidatesSection({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

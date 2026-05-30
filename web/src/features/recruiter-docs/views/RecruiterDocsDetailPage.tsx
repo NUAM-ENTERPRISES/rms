@@ -109,10 +109,10 @@ import { LinkExistingDocumentModal } from "@/features/documents/components/LinkE
 
 const CandidateUploadDocumentModal = React.lazy(() => import("../components/CandidateUploadDocumentModal"));
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
-import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import { ImageViewer } from "@/components/molecules";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
@@ -122,71 +122,6 @@ import {
   useReuseIntroductionVideoMutation,
   useReuploadIntroductionVideoMutation,
 } from "@/features/introduction-videos/api";
-
-// Minimal colorful badge classes for match scores
-const getMinimalScoreBadgeClass = (score?: number) => {
-  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
-  if (score >= 90) return "bg-green-50 text-green-700";
-  if (score >= 80) return "bg-blue-50 text-blue-700";
-  if (score >= 70) return "bg-amber-50 text-amber-700";
-  return "bg-red-50 text-red-700";
-};
-
-// Format a single work experience item for display. Some records use
-// explicit yearsOfExperience while others provide start/end dates.
-const formatWorkExperienceEntry = (exp: {
-  jobTitle?: string;
-  designation?: string;
-  position?: string;
-  role?: string;
-  companyName?: string;
-  company?: string;
-  yearsOfExperience?: number;
-  startDate?: string;
-  endDate?: string;
-  isCurrent?: boolean;
-  location?: string;
-  countryCode?: string | null;
-  country?: { code: string; name: string } | null;
-}) => {
-  const title = exp.jobTitle || exp.designation || exp.position || exp.role || "";
-  const company = exp.companyName || exp.company || "";
-
-  // If yearsOfExperience provided, show it, otherwise compute from dates
-  let yearsLabel = "";
-  if (typeof exp.yearsOfExperience === "number") {
-    yearsLabel = ` (${exp.yearsOfExperience} years)`;
-  } else if (exp.startDate) {
-    try {
-      const start = new Date(exp.startDate);
-      const end = exp.endDate ? new Date(exp.endDate) : (exp.isCurrent ? new Date() : null);
-      if (end) {
-        const diffMs = Math.max(0, end.getTime() - start.getTime());
-        const years = Math.round((diffMs / (1000 * 60 * 60 * 24 * 365)) * 10) / 10;
-        if (!Number.isNaN(years) && years > 0) {
-          yearsLabel = ` (${years} years)`;
-        }
-      }
-    } catch (e) {
-      // ignore and leave blank
-    }
-  }
-
-  const countryLabel = exp.country?.name || exp.countryCode || "";
-  const locationLabel = exp.location?.trim() || "";
-
-  // Prefer showing title and company first, then years
-  const parts = [] as string[];
-  if (title) parts.push(title);
-  if (company) parts.push(`at ${company}`);
-  let result = `${parts.join(" ")}${yearsLabel}`.trim();
-  if (countryLabel) {
-    result = result ? `${result} · ${countryLabel}` : countryLabel;
-  } else if (locationLabel) {
-    result = result ? `${result} · ${locationLabel}` : locationLabel;
-  }
-  return result;
-};
 
 interface UploadData {
   fileName: string;
@@ -1914,7 +1849,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
       <ConfirmationDialog
         isOpen={isVerifyConfirmOpen}
-        className="sm:max-w-2xl"
+        className="sm:max-w-3xl"
         onClose={() => {
           setIsVerifyConfirmOpen(false);
           setVerificationNotes("");
@@ -1930,77 +1865,24 @@ const RecruiterDocsDetailPage: React.FC = () => {
               verification? This will notify the verification team.
             </p>
 
-            {/* Candidate Details */}
-            {candidate && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                {/* Match score summary */}
-                <MatchScoreSummary candidate={candidate} />
-
-                <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                  {/* Education column */}
-                  <div>
-                    <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
-                    <div className="space-y-1">
-                      {(candidate?.qualifications || candidate?.candidateQualifications || []).length > 0 ? (
-                        (candidate?.qualifications || candidate?.candidateQualifications || []).map((qual, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
-                            {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
-                            {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
-                            {qual.country?.name || qual.countryCode ? ` · ${qual.country?.name || qual.countryCode}` : ''}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-xs text-slate-500">No education details</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Experience column */}
-                  <div>
-                    <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
-                    <div className="space-y-1">
-                      {candidate?.workExperiences && candidate?.workExperiences.length > 0 ? (
-                        candidate?.workExperiences.map((exp: WorkExperience, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {formatWorkExperienceEntry(exp)}
-                          </p>
-                        ))
-                      ) : candidate?.candidateExperience ? (
-                        <p className="text-xs text-slate-700">{candidate?.candidateExperience} yrs</p>
-                      ) : (
-                        <p className="text-xs text-slate-500">No experience details</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Role match scores */}
-                {candidate?.roleMatches && candidate?.roleMatches.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
-                    <div className="flex flex-wrap gap-2">
-                      {candidate?.roleMatches.map((rm: { designation?: string; score?: number }, idx: number) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
-                        >
-                          <span className="text-xs text-slate-700 max-w-[160px] truncate">
-                            {rm.designation || "Role"}
-                          </span>
-                          <span
-                            className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
-                          >
-                            {rm.score ?? "-"}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={candidateId}
+                projectId={projectId}
+                isActive={isVerifyConfirmOpen}
+                preloadedData={
+                  isVerifyConfirmOpen
+                    ? {
+                        requirements,
+                        verifications,
+                        introductionVideoRequired,
+                        introductionVideo: introductionVideo ?? null,
+                        summary,
+                      }
+                    : null
+                }
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

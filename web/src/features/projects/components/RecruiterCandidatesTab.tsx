@@ -40,6 +40,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import {
   Select,
   SelectTrigger,
@@ -758,12 +759,21 @@ export default function RecruiterCandidatesTab({
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
+        className="sm:max-w-3xl"
         onClose={() => setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })}
         onConfirm={handleSendForVerification}
         title="Send for Verification"
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

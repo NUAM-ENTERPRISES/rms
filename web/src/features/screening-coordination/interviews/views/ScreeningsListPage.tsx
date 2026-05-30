@@ -65,6 +65,7 @@ import { ConfirmationDialog } from "@/components/ui";
 import { Textarea } from "@/components/ui/textarea";
 import { useAssignToMainScreeningMutation } from "../data";
 import { useSendForVerificationMutation } from "@/features/projects/api";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetCandidateProjectHistoryQuery } from "../data";
 import EditScreeningDialog from "../components/EditScreeningDialog";
@@ -1565,6 +1566,7 @@ export default function ScreeningsListPage() {
       {/* Send For Verification Confirmation (Document Verification) */}
       <ConfirmationDialog
         isOpen={sendForVerificationConfirm.isOpen}
+        className="sm:max-w-3xl"
         onClose={() =>
           setSendForVerificationConfirm((s) => ({ ...s, isOpen: false }))
         }
@@ -1575,6 +1577,15 @@ export default function ScreeningsListPage() {
         }
         description={
           <div className="space-y-3">
+            {sendForVerificationConfirm.candidateId &&
+            sendForVerificationConfirm.projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={sendForVerificationConfirm.candidateId}
+                projectId={sendForVerificationConfirm.projectId}
+                isActive={sendForVerificationConfirm.isOpen}
+              />
+            ) : null}
+
             {sendForVerificationConfirm.projectName && (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">

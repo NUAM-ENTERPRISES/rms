@@ -43,6 +43,7 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import {
   useGetProjectQuery,
@@ -1558,7 +1559,7 @@ export default function ProjectDetailPage() {
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
-        className="sm:max-w-2xl"
+        className="sm:max-w-3xl"
         onClose={() =>
           setVerifyConfirm({
             isOpen: false,
@@ -1578,82 +1579,15 @@ export default function ProjectDetailPage() {
               verification? This will notify the verification team.
             </p>
 
-            {/* Candidate Details */}
-            {(() => {
-              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
-                (c) => (c.candidateId || c.id) === verifyConfirm.candidateId
-              );
-              if (!candidate) return null;
-              return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                  {/* Match score summary */}
-                  <MatchScoreSummary candidate={candidate} />
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
-                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                    {/* Education column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
-                      <div className="space-y-1">
-                        {(candidate.qualifications || candidate.candidateQualifications) && (candidate.qualifications || candidate.candidateQualifications).length > 0 ? (
-                          (candidate.qualifications || candidate.candidateQualifications).map((qual: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
-                              {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
-                              {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-xs text-slate-500">No education details</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Experience column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
-                      <div className="space-y-1">
-                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
-                          candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {formatWorkExperienceEntry(exp)}
-                            </p>
-                          ))
-                        ) : candidate.candidateExperience ? (
-                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
-                        ) : (
-                          <p className="text-xs text-slate-500">No experience details</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Role match scores */}
-                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
-                      <div className="flex flex-wrap gap-2">
-                        {candidate.roleMatches.map((rm: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
-                          >
-                            <span className="text-xs text-slate-700 max-w-[160px] truncate">
-                              {rm.designation || "Role"}
-                            </span>
-                            <span
-                              className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
-                            >
-                              {rm.score ?? "-"}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Candidate profile (match scores, education, experience) — hidden in verification modal; use document checklist instead */}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
