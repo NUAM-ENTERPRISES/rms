@@ -549,9 +549,9 @@ export class CandidatesController {
   @Get('my-assigned')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get candidates assigned to logged-in CRE user',
+    summary: 'Get candidates assigned to logged-in Operations user',
     description:
-      'Retrieve all candidates that are currently assigned to the logged-in CRE user. This is specifically for CRE dashboard.',
+      'Retrieve all candidates that are currently assigned to the logged-in Operations user. This is specifically for the Operations dashboard.',
   })
   @ApiQuery({
     name: 'page',
@@ -577,7 +577,7 @@ export class CandidatesController {
   })
   @ApiResponse({
     status: 200,
-    description: 'CRE assigned candidates retrieved successfully',
+    description: 'Operations assigned candidates retrieved successfully',
   })
   @ApiResponse({
     status: 403,
@@ -609,20 +609,20 @@ export class CandidatesController {
     return {
       success: true,
       data: result,
-      message: 'CRE assigned candidates retrieved successfully',
+      message: 'Operations assigned candidates retrieved successfully',
     };
   }
 
   @Get('my-assigned/summary')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get CRE assigned candidate status summary',
+    summary: 'Get Operations assigned candidate status summary',
     description:
-      'Get counts for assigned candidates by status (assigned/rnr/onHold/untouched) for CRE dashboard tiles.',
+      'Get counts for assigned candidates by status (assigned/rnr/onHold/untouched) for Operations dashboard tiles.',
   })
   @ApiResponse({
     status: 200,
-    description: 'CRE assigned summary retrieved successfully',
+    description: 'Operations assigned summary retrieved successfully',
   })
   @ApiResponse({
     status: 403,
@@ -635,16 +635,16 @@ export class CandidatesController {
     return {
       success: true,
       data: summary,
-      message: 'CRE assigned candidate summary retrieved successfully',
+      message: 'Operations assigned candidate summary retrieved successfully',
     };
   }
 
   @Get('my-assigned/reassigned')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get CRE reassigned candidates',
+    summary: 'Get Operations reassigned candidates',
     description:
-      'Retrieve candidates transferred by CRE to recruiter with their CRE status',
+      'Retrieve candidates transferred by Operations to recruiter with their Operations status',
   })
   async getMyCREReassignedCandidates(
     @Request() req,
@@ -656,7 +656,7 @@ export class CandidatesController {
     return {
       success: true,
       data: result,
-      message: 'CRE reassigned candidate list retrieved successfully',
+      message: 'Operations reassigned candidate list retrieved successfully',
     };
   }
 
@@ -684,8 +684,8 @@ export class CandidatesController {
   @Post(':id/converted-response')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Mark candidate as converted response (CRE action)',
-    description: 'Mark assigned candidate as converted response from CRE dashboard',
+    summary: 'Mark candidate as converted response (Operations action)',
+    description: 'Mark assigned candidate as converted response from Operations dashboard',
   })
   async markAsConvertedResponse(@Param('id') id: string, @Request() req) {
     const userId = req.user.id;
@@ -706,7 +706,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Transfer converted candidate to recruiter',
     description:
-      'Transfer a CRE-assigned candidate back to the recruiter with a selected pipeline status',
+      'Transfer an Operations-assigned candidate back to the recruiter with a selected pipeline status',
   })
   async transferToRecruiter(
     @Param('id') id: string,
@@ -1383,7 +1383,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Transfer candidate back to previous recruiter',
     description:
-      'Transfer a candidate from a CRE back to the previous recruiter who was assigned before escalation.',
+      'Transfer a candidate from Operations back to the previous recruiter who was assigned before escalation.',
   })
   @ApiParam({
     name: 'id',
@@ -1496,13 +1496,13 @@ export class CandidatesController {
   @Permissions('manage:candidates')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Manually trigger RNR → CRE assignment',
+    summary: 'Manually trigger RNR → Operations assignment',
     description:
-      'Manually trigger the assignment of CREs to RNR candidates who have been in RNR status for 3+ days',
+      'Manually trigger the assignment of Operations users to RNR candidates who have been in RNR status for 3+ days',
   })
   @ApiResponse({
     status: 200,
-    description: 'RNR → CRE assignment triggered successfully',
+    description: 'RNR → Operations assignment triggered successfully',
     schema: {
       type: 'object',
       properties: {
@@ -1525,19 +1525,19 @@ export class CandidatesController {
     return {
       success: true,
       data: results,
-      message: `RNR → CRE assignment completed. Processed: ${results.processed}, Assigned: ${results.assigned}, Errors: ${results.errors}`,
+      message: `RNR → Operations assignment completed. Processed: ${results.processed}, Assigned: ${results.assigned}, Errors: ${results.errors}`,
     };
   }
 
   @Get('rnr-cre-assignment/statistics')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get RNR CRE assignment statistics',
-    description: 'Get statistics about RNR candidates and CRE assignments',
+    summary: 'Get RNR Operations assignment statistics',
+    description: 'Get statistics about RNR candidates and Operations assignments',
   })
   @ApiResponse({
     status: 200,
-    description: 'RNR CRE assignment statistics retrieved successfully',
+    description: 'RNR Operations assignment statistics retrieved successfully',
     schema: {
       type: 'object',
       properties: {
@@ -1560,7 +1560,7 @@ export class CandidatesController {
     return {
       success: true,
       data: statistics,
-      message: 'RNR CRE assignment statistics retrieved successfully',
+      message: 'RNR Operations assignment statistics retrieved successfully',
     };
   }
 

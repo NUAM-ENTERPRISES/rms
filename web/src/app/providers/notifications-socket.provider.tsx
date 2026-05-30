@@ -11,7 +11,7 @@ import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocume
 import { handleIntroductionVideoNotifications, registerIntroductionVideoSocketEvents } from "./notification-handlers/introduction-video-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
-import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
+import { handleOperationsNotifications, handleOperationsSync } from "./notification-handlers/operations-handler";
 import { handleProcessingNotifications, handleProcessingSync } from "./notification-handlers/processing-handler";
 import { handleSessionUpdated, type SessionEventPayload } from "./notification-handlers/session-handler";
 
@@ -277,7 +277,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleDocumentNotifications(context);
       handleIntroductionVideoNotifications(context);
       handleInterviewNotifications(context);
-      handleCRENotifications(context);
+      handleOperationsNotifications(context);
       handleProcessingNotifications(context);
     });
 
@@ -288,7 +288,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       
       if (handleScreeningSync(payload, context)) return;
       if (handleDocumentSync(payload, context)) return;
-      if (handleCRESync(payload, context)) return;
+      if (handleOperationsSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
       
       if (payload.type) {

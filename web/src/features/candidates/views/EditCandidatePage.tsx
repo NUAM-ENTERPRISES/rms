@@ -32,6 +32,7 @@ import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCan, useHasRole } from "@/hooks/useCan";
+import { ROLE_NAMES } from "@/config/role-names";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES, LICENSING_EXAMS, SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 
 // ==================== VALIDATION SCHEMA ====================
@@ -103,8 +104,10 @@ type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
 export default function EditCandidatePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isCRE = useHasRole("CRE");
-  const canWriteCandidates = useCan("write:candidates") && !isCRE;
+  const hasOperationsRole = useHasRole(ROLE_NAMES.OPERATIONS);
+  const hasLegacyCreRole = useHasRole("CRE");
+  const isOperations = hasOperationsRole || hasLegacyCreRole;
+  const canWriteCandidates = useCan("write:candidates") && !isOperations;
 
   // API
   const { data: candidateData, isLoading: isLoadingCandidate } =

@@ -11,12 +11,12 @@ import RouteErrorBoundary from "@/components/atoms/RouteErrorBoundary";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
 import AppLayout from "@/layout/AppLayout";
 import CandidateProjectDetailsPage from "@/features/candidates/views/CandidateProjectDetailsPage";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
 
 // Lazy load pages
 const LoginPage = lazy(() => import("@/pages/auth/LoginPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
-const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
+const OperationsDashboardPage = lazy(() => import("@/pages/OperationsDashboardPage"));
 const AdminDashboardPage = lazy(
   () => import("@/features/admin-dashboard/views/AdminDashboardPage")
 );
@@ -296,14 +296,26 @@ function App() {
                     }
                   />
 
-                  {/* CRE Dashboard */}
+                  {/* Operations Dashboard */}
+                  <Route
+                    path="/operations-dashboard"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={[ROLE_NAMES.OPERATIONS, LEGACY_CRE_ROLE_NAME]}>
+                          <AppLayout>
+                            <OperationsDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
                   <Route
                     path="/cre-dashboard"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute roles={["CRE"]}>
+                        <ProtectedRoute roles={[ROLE_NAMES.OPERATIONS, LEGACY_CRE_ROLE_NAME]}>
                           <AppLayout>
-                            <CREDashboardPage />
+                            <OperationsDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

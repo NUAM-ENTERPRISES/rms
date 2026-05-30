@@ -70,7 +70,7 @@ export const PERMISSIONS = {
   READ_RECRUITERS: 'read:recruiters',
   WRITE_RECRUITERS: 'write:recruiters',
 
-  // CRE (Customer Relationship Executive) management
+  // Operations (RNR escalation) management
   READ_CRE: 'read:cre',
   WRITE_CRE: 'write:cre',
   MANAGE_CRE: 'manage:cre',
@@ -202,7 +202,7 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.WRITE_RECRUITERS,
     PERMISSIONS.MANAGE_RECRUITERS,
   ],
-  CRE: [
+  OPERATIONS: [
     PERMISSIONS.READ_CRE,
     PERMISSIONS.WRITE_CRE,
     PERMISSIONS.MANAGE_CRE,

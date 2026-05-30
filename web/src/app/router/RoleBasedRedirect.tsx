@@ -2,9 +2,9 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
-import { ROLE_NAMES } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole } from "@/config/role-names";
 
-const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
+const OperationsDashboardPage = lazy(() => import("@/pages/OperationsDashboardPage"));
 const AdminDashboardPage = lazy(
   () => import("@/features/admin-dashboard/views/AdminDashboardPage")
 );
@@ -24,10 +24,10 @@ const ProcessingDashboardPage = lazy(
 export function RoleBasedRedirect() {
   const { user } = useAppSelector((state) => state.auth);
 
-  if (user?.roles.some((role) => role === "CRE")) {
+  if (user?.roles.some((role) => isOperationsRole(role))) {
     return (
       <AppLayout>
-        <CREDashboardPage />
+        <OperationsDashboardPage />
       </AppLayout>
     );
   }
@@ -76,7 +76,7 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes(ROLE_NAMES.AGENT_COORDINATOR)) {
+  if (user?.roles.some(isAgentCoordinatorRole)) {
     return <Navigate to="/agents" replace />;
   }
 

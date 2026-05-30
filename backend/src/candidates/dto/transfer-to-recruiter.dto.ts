@@ -18,8 +18,8 @@ export class TransferToRecruiterDto {
   currentStatusId: number;
 
   @ApiProperty({
-    description: 'CRE status note for the recruiter (required)',
-    example: 'CRE completed follow-up; candidate interested in UAE role',
+    description: 'Operations status note for the recruiter (required)',
+    example: 'Operations completed follow-up; candidate interested in UAE role',
   })
   @IsString()
   @IsNotEmpty()

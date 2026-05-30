@@ -163,7 +163,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Candidate"],
     }),
-    getCREAssignedSummary: builder.query<
+    getOperationsAssignedSummary: builder.query<
       {
         total: number;
         roleCounters: {
@@ -184,7 +184,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       transformResponse: (response: { success: boolean; data: any }) => response.data,
       providesTags: ["Candidate"],
     }),
-    getCREReassignedCandidates: builder.query<
+    getOperationsReassignedCandidates: builder.query<
       PaginatedCandidatesResponse,
       GetMyAssignedCandidatesParams
     >({
@@ -420,8 +420,8 @@ export const candidatesApi = baseApi.injectEndpoints({
 export const {
   useGetCandidatesQuery,
   useGetMyAssignedCandidatesQuery,
-  useGetCREAssignedSummaryQuery,
-  useGetCREReassignedCandidatesQuery,
+  useGetOperationsAssignedSummaryQuery,
+  useGetOperationsReassignedCandidatesQuery,
   useGetUserCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,

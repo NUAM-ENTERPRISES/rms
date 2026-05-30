@@ -59,7 +59,9 @@ import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
+import { ROLE_NAMES } from "@/config/role-names";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -67,7 +69,7 @@ export default function CandidateOverviewPage() {
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   const isManagerOrAdmin = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin", "CRE"].includes(role)
+    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
   );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
@@ -616,7 +618,7 @@ export default function CandidateOverviewPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Experience</TableHead>
                     <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
@@ -660,12 +662,7 @@ export default function CandidateOverviewPage() {
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
                       const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
-                      const isHandledByCRE = candidate.isHandledByCRE;
-                      const isCREReassigned = candidate.isCREReassigned;
-                      const creStatusNote = candidate.creStatusNote as
-                        | string
-                        | null
-                        | undefined;
+                      const operations = getCandidateOperationsState(candidate);
 
                       return (
                         <TableRow
@@ -695,15 +692,15 @@ export default function CandidateOverviewPage() {
                             </TableCell>
                           )}
                           {/* Candidate */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-3">
+                          <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                            <div className="flex items-start gap-3">
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
                                 src={candidate.profileImage || null}
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-10 w-10 rounded-full"
+                                className="h-10 w-10 shrink-0 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true}
                               />
@@ -713,10 +710,10 @@ export default function CandidateOverviewPage() {
                                   lastName={candidate.lastName}
                                   candidateCode={candidate.candidateCode}
                                   currentRole={candidate.currentRole}
-                                  isHandledByCRE={isHandledByCRE}
-                                  isCREReassigned={isCREReassigned}
-                                  creStatusNote={creStatusNote}
-                                  creStatusName={candidate.creStatus?.statusName}
+                                  isHandledByOperations={operations.isHandledByOperations}
+                                  isOperationsReassigned={operations.isOperationsReassigned}
+                                  operationsStatusNote={operations.operationsStatusNote}
+                                  operationsStatusName={operations.operationsStatusName}
                                   onNameClick={() =>
                                     navigate(`/candidates/${candidate.id}`)
                                   }

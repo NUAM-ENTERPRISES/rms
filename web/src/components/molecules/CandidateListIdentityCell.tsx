@@ -1,38 +1,39 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CreReassignedHandoffBadge } from "./CreReassignedHandoffBadge";
+import { OperationsReassignedHandoffBadge } from "./OperationsReassignedHandoffBadge";
 
 export type CandidateListIdentityCellProps = {
   firstName: string;
   lastName: string;
   candidateCode?: string | null;
   currentRole?: string | null;
-  isHandledByCRE?: boolean;
-  isCREReassigned?: boolean;
-  creStatusNote?: string | null;
-  creStatusName?: string | null;
+  isHandledByOperations?: boolean;
+  isOperationsReassigned?: boolean;
+  operationsStatusNote?: string | null;
+  operationsStatusName?: string | null;
   onNameClick?: () => void;
   nameClassName?: string;
   codeClassName?: string;
 };
 
-/** Table/list candidate identity: name → code → CRE badges → role. */
+/** Table/list candidate identity: name → code → Operations badges → role. */
 export function CandidateListIdentityCell({
   firstName,
   lastName,
   candidateCode,
   currentRole,
-  isHandledByCRE = false,
-  isCREReassigned = false,
-  creStatusNote,
-  creStatusName,
+  isHandledByOperations = false,
+  isOperationsReassigned = false,
+  operationsStatusNote,
+  operationsStatusName,
   onNameClick,
   nameClassName = "text-sm font-semibold text-gray-900",
   codeClassName = "text-xs text-muted-foreground font-mono",
 }: CandidateListIdentityCellProps) {
   const fullName = `${firstName} ${lastName}`.trim();
-  const showCreAssigned = isHandledByCRE && !isCREReassigned;
-  const showCreReassigned = isCREReassigned;
+  const showOperationsAssigned =
+    isHandledByOperations && !isOperationsReassigned;
+  const showOperationsReassigned = isOperationsReassigned;
 
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
@@ -58,17 +59,17 @@ export function CandidateListIdentityCell({
         <span className={cn("truncate", codeClassName)}>{candidateCode}</span>
       ) : null}
 
-      {showCreAssigned || showCreReassigned ? (
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-          {showCreAssigned ? (
-            <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
-              CRE Assigned
+      {showOperationsAssigned || showOperationsReassigned ? (
+        <div className="mt-0.5 flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
+          {showOperationsAssigned ? (
+            <Badge className="max-w-full whitespace-normal text-center text-[10px] font-semibold leading-tight px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
+              Operations Assigned
             </Badge>
           ) : null}
-          {showCreReassigned ? (
-            <CreReassignedHandoffBadge
-              note={creStatusNote}
-              creStatus={creStatusName}
+          {showOperationsReassigned ? (
+            <OperationsReassignedHandoffBadge
+              note={operationsStatusNote}
+              operationsStatus={operationsStatusName}
               candidateName={fullName}
             />
           ) : null}

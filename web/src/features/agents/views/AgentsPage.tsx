@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { useCan, useHasRole } from "@/hooks/useCan";
+import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks";
 import {
@@ -34,7 +34,7 @@ import {
 } from "@/features/candidates/api";
 import { TransferCandidateDialog } from "@/features/candidates/components/TransferCandidateDialog";
 import { useAppSelector } from "@/app/hooks";
-import { ROLE_NAMES } from "@/config/role-names";
+import TypedHeader from "@/components/molecules/TypedHeader";
 import { AgentCoordinatorCandidateTableRows } from "../components/AgentCoordinatorCandidateTableRows";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 
@@ -64,7 +64,7 @@ export default function AgentsPage() {
   const canTransferCandidates = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role),
   );
-  const isAgentCoordinator = useHasRole(ROLE_NAMES.AGENT_COORDINATOR);
+  const isAgentCoordinator = useIsAgentCoordinator();
 
   const [transferDialog, setTransferDialog] = useState<{
     isOpen: boolean;
@@ -225,7 +225,13 @@ export default function AgentsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="w-full mx-auto space-y-5 mt-2">
+      <div className="w-full mx-auto space-y-5 mt-2 px-6">
+        {isAgentCoordinator && (
+          <TypedHeader
+            userName={user?.name || "Agent Coordinator"}
+            subtitle="Manage agents, track agent-sourced candidates, and oversee referral pipeline."
+          />
+        )}
 
         {/* ── Stat Tiles ───────────────────────────────────────────── */}
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">

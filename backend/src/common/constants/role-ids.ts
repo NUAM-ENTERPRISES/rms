@@ -18,8 +18,18 @@ export const ROLE_NAMES = {
   PROCESSING_EXECUTIVE: 'Processing Executive',
   INTERVIEW_COORDINATOR: 'Interview Coordinator',
   SYSTEM_ADMIN: 'System Admin',
-  CRE: 'CRE',
+  OPERATIONS: 'Operations',
   AGENT_COORDINATOR: 'Agent Coordinator',
 } as const;
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];
+
+/** Legacy CRE role name retained for one release of backward compatibility. */
+export const LEGACY_CRE_ROLE_NAME = 'CRE';
+
+export function isOperationsRole(roleName: string): boolean {
+  return (
+    roleName === ROLE_NAMES.OPERATIONS ||
+    roleName.toUpperCase() === LEGACY_CRE_ROLE_NAME
+  );
+}

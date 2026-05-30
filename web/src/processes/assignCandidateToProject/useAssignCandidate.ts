@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { candidatesApi, CandidateProjectMap } from "@/features/candidates/api";
+import { getCandidateOperationsState } from "@/features/candidates/utils/operations-candidate";
 import { projectsApi } from "@/features/projects/api";
 
 interface AssignCandidateParams {
@@ -45,10 +46,10 @@ export function useAssignCandidate() {
         throw new Error("Candidate not found");
       }
 
-      // Check if candidate is currently handled by CRE
-      if (candidate.isHandledByCRE) {
+      // Check if candidate is currently handled by Operations
+      if (getCandidateOperationsState(candidate).isHandledByOperations) {
         throw new Error(
-          "Candidate is currently being handled by CRE and cannot be assigned to projects until handed back to recruiter."
+          "Candidate is currently being handled by Operations and cannot be assigned to projects until handed back to recruiter."
         );
       }
 

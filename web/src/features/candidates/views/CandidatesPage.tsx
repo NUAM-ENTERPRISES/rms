@@ -63,6 +63,7 @@ import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
 
 
 
@@ -557,7 +558,7 @@ export default function CandidatesPage() {
     {
       label: "Assigned to Me",
       value: derivedCounts.totalAssigned,
-      subtitle: derivedCounts.handledByCRE > 0 ? `${derivedCounts.handledByCRE} with CRE handler` : "Assigned candidates",
+      subtitle: derivedCounts.handledByCRE > 0 ? `${derivedCounts.handledByCRE} with Operations handler` : "Assigned candidates",
       icon: Users,
       statusFilter: "all",
       color: "from-blue-500 to-cyan-500",
@@ -573,7 +574,7 @@ export default function CandidatesPage() {
     {
       label: "Call Back (RNR)",
       value: derivedCounts.rnr,
-      subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with CRE handler` : "Ring not responded",
+      subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with Operations handler` : "Ring not responded",
       icon: Phone,
       statusFilter: "rnr",
       color: "from-orange-500 to-red-500",
@@ -1038,7 +1039,7 @@ export default function CandidatesPage() {
               <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Candidate
                     </TableHead>
                     <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -1080,12 +1081,7 @@ export default function CandidatesPage() {
                       // Determine active recruiter assignment
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const isHandledByCRE = candidate.isHandledByCRE;
-                      const isCREReassigned = candidate.isCREReassigned;
-                      const creStatusNote = candidate.creStatusNote as
-                        | string
-                        | null
-                        | undefined;
+                      const operations = getCandidateOperationsState(candidate);
 
                       return (
                         <TableRow
@@ -1093,8 +1089,8 @@ export default function CandidatesPage() {
                           className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-3">
+                          <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                            <div className="flex items-start gap-3">
                               {/* FULL VIBRANT COLOR AVATAR */}
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
@@ -1102,7 +1098,7 @@ export default function CandidatesPage() {
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-10 w-10 rounded-full"
+                                className="h-10 w-10 shrink-0 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true} /* show hover preview on desktop */
                               />
@@ -1113,10 +1109,10 @@ export default function CandidatesPage() {
                                   lastName={candidate.lastName}
                                   candidateCode={candidate.candidateCode}
                                   currentRole={candidate.currentRole}
-                                  isHandledByCRE={isHandledByCRE}
-                                  isCREReassigned={isCREReassigned}
-                                  creStatusNote={creStatusNote}
-                                  creStatusName={candidate.creStatus?.statusName}
+                                  isHandledByOperations={operations.isHandledByOperations}
+                                  isOperationsReassigned={operations.isOperationsReassigned}
+                                  operationsStatusNote={operations.operationsStatusNote}
+                                  operationsStatusName={operations.operationsStatusName}
                                   onNameClick={() =>
                                     navigate(`/candidates/${candidate.id}`)
                                   }

@@ -268,6 +268,26 @@ describe('ProjectsService', () => {
       );
     });
 
+    it('should apply isUrgent filter with calendar-day deadline window', async () => {
+      prismaService.project.count.mockResolvedValue(2);
+      prismaService.project.findMany.mockResolvedValue(mockProjects as any);
+
+      await service.findAll({ isUrgent: true, page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'active',
+            deadline: expect.objectContaining({
+              not: null,
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+    });
+
     it('should return summary rows when summary=true', async () => {
       const created = new Date('2026-01-15T10:00:00.000Z');
       const deadline = new Date('2026-06-01T00:00:00.000Z');
@@ -798,7 +818,8 @@ describe('ProjectsService', () => {
         .mockResolvedValueOnce(100) // total
         .mockResolvedValueOnce(60) // active
         .mockResolvedValueOnce(30) // completed
-        .mockResolvedValueOnce(10); // cancelled
+        .mockResolvedValueOnce(10) // cancelled
+        .mockResolvedValueOnce(5); // urgent
 
       prismaService.project.groupBy.mockResolvedValue([
         { clientId: 'client123', _count: { clientId: 50 } },
@@ -829,6 +850,7 @@ describe('ProjectsService', () => {
           client456: { count: 50, name: 'Client client456' },
         },
         upcomingDeadlines: [],
+        urgentProjectsCount: 5,
       });
     });
   });

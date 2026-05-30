@@ -5,6 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
+import { isOperationsRole } from '../common/constants/role-ids';
 
 export interface NotificationJobData {
   type: string;
@@ -1399,8 +1400,8 @@ export class NotificationsProcessor extends WorkerHost {
         select: { name: true },
       });
       const assignerName = creatingUserId === 'system' ? 'System' : (creatingUser?.name || 'A team member');
-      const isCreAssignment = newRecruiter?.userRoles.some(
-        (ur) => ur.role.name.toUpperCase() === 'CRE',
+      const isCreAssignment = newRecruiter?.userRoles.some((ur) =>
+        isOperationsRole(ur.role.name),
       );
       const isNewAssignment = !previousRecruiterId;
 
@@ -1411,7 +1412,7 @@ export class NotificationsProcessor extends WorkerHost {
         ? 'New RNR Candidate Assigned'
         : isNewAssignment
           ? 'Candidate Created Successfully'
-          : 'Candidate Ready from CRE';
+          : 'Candidate Ready from Operations';
 
       let notificationMessage = isCreAssignment
         ? `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for RNR handling.`
@@ -1465,8 +1466,8 @@ export class NotificationsProcessor extends WorkerHost {
           await this.notificationsService.createNotification({
             userId: previousRecruiterId,
             type: 'candidate_moved_to_cre',
-            title: 'Candidate in CRE Handling',
-            message: `Your candidate ${candidate.firstName} ${candidate.lastName} is now being handled by CRE ${newRecruiter?.name || 'team'} for RNR follow-up.`,
+            title: 'Candidate in Operations Handling',
+            message: `Your candidate ${candidate.firstName} ${candidate.lastName} is now being handled by Operations ${newRecruiter?.name || 'team'} for RNR follow-up.`,
             link: `/candidates/${candidateId}`,
             meta: { candidateId, creId: recruiterId },
             idemKey: idemKeyPrev,
@@ -1477,14 +1478,16 @@ export class NotificationsProcessor extends WorkerHost {
             where: { id: previousRecruiterId },
             include: { userRoles: { include: { role: true } } }
           });
-          const wasPrevCre = prevUser?.userRoles.some(ur => ur.role.name.toUpperCase() === 'CRE');
+          const wasPrevCre = prevUser?.userRoles.some((ur) =>
+            isOperationsRole(ur.role.name),
+          );
 
           if (wasPrevCre) {
             const idemKeyPrev = `${eventId}:${previousRecruiterId}:candidate_transferred_back`;
             await this.notificationsService.createNotification({
               userId: previousRecruiterId,
               type: 'candidate_transferred',
-              title: 'CRE Handoff Successful',
+              title: 'Operations Handoff Successful',
               message: `Candidate ${candidate.firstName} ${candidate.lastName} has been successfully handed back to recruiter ${newRecruiter?.name || 'team'}.`,
               link: `/candidates/${candidateId}`,
               meta: { candidateId, recruiterId: recruiterId },

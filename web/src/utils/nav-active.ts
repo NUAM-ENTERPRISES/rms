@@ -45,6 +45,19 @@ const PATH_ACTIVE_MATCHERS: Record<string, (pathname: string) => boolean> = {
   "/screenings/templates": (pathname) =>
     pathname === "/screenings/templates" ||
     pathname.startsWith("/screenings/templates/"),
+  "/projects": (pathname) => {
+    if (pathname === "/projects") return true;
+    if (
+      pathname === "/projects/overview" ||
+      pathname.startsWith("/projects/overview/")
+    ) {
+      return false;
+    }
+    return pathname.startsWith("/projects/");
+  },
+  "/projects/overview": (pathname) =>
+    pathname === "/projects/overview" ||
+    pathname.startsWith("/projects/overview/"),
 };
 
 function matchesPatterns(pathname: string, patterns: string[]): boolean {

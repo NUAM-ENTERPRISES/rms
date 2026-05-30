@@ -545,7 +545,7 @@ export class UsersController {
     summary: 'Admin — all user sessions with role filter',
     description: 'CEO / Director / Manager can monitor all login sessions, optionally filtered by role.',
   })
-  @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, CRE)' })
+  @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, Operations)' })
   @ApiQuery({ name: 'search', required: false, description: 'Search by user name or email' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter active/inactive sessions' })
   @ApiQuery({ name: 'status', required: false, description: 'Derived status filter: ACTIVE | IDLE | ENDED' })
@@ -600,7 +600,7 @@ export class UsersController {
   @ApiQuery({
     name: 'role',
     required: false,
-    description: 'Filter by role name (e.g. Recruiter, CRE)',
+    description: 'Filter by role name (e.g. Recruiter, Operations)',
   })
   @ApiQuery({
     name: 'search',

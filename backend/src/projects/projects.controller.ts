@@ -204,6 +204,13 @@ export class ProjectsController {
     example: 10,
   })
   @ApiQuery({
+    name: 'isUrgent',
+    required: false,
+    description:
+      'When true, return only active projects with deadlines in the next 7 calendar days',
+    schema: { type: 'boolean' },
+  })
+  @ApiQuery({
     name: 'summary',
     required: false,
     description:

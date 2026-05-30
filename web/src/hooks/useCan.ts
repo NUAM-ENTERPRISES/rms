@@ -1,4 +1,5 @@
 import { useAppSelector } from '@/app/hooks';
+import { isAgentCoordinatorRole } from '@/config/role-names';
 
 /**
  * Hook to check if user has required permissions
@@ -52,4 +53,13 @@ export function useHasRole(required: string | string[]): boolean {
   const requiredRoles = Array.isArray(required) ? required : [required];
   
   return requiredRoles.some(role => user.roles.includes(role));
+}
+
+/** Agent Coordinator (includes legacy Client Coordinator JWT role name). */
+export function useIsAgentCoordinator(): boolean {
+  const { user } = useAppSelector((state) => state.auth);
+
+  if (!user) return false;
+
+  return user.roles.some(isAgentCoordinatorRole);
 }

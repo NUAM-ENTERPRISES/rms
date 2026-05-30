@@ -115,8 +115,13 @@ export interface Candidate {
     name: string;
     email: string;
   } | null;
+  /** Legacy API field — use getCandidateOperationsState() in UI. */
+  isHandledByCRE?: boolean;
+  /** Legacy API field — use getCandidateOperationsState() in UI. */
   isCREReassigned?: boolean;
+  /** Legacy API field — use getCandidateOperationsState() in UI. */
   creStatusNote?: string | null;
+  /** Legacy API field — use getCandidateOperationsState() in UI. */
   creStatus?: { id: number; statusName: string } | null;
   assignedTo?: string;
   matchScore?: number;

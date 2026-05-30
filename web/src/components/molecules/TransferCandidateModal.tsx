@@ -37,7 +37,7 @@ const transferFormSchema = z.object({
   reason: z
     .string()
     .trim()
-    .min(1, "CRE status note is required for the recruiter"),
+    .min(1, "Operations status note is required for the recruiter"),
   onHoldUntil: z.string().optional(),
   futureDate: z.string().optional(),
 });
@@ -170,7 +170,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
               </DialogTitle>
             </div>
             <p className="text-indigo-100 text-sm mt-1 ml-0.5">
-              Record CRE status; recruiter will see candidate as untouched
+              Record Operations status; recruiter will see candidate as untouched
             </p>
           </DialogHeader>
         </div>
@@ -210,7 +210,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                       {currentRecruiterName || "Unassigned"}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      CRE status now:{" "}
+                      Operations status now:{" "}
                       <span className="font-medium capitalize">
                         {currentStatus || "Unknown"}
                       </span>
@@ -225,7 +225,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-slate-700">
-                      CRE status
+                      Operations status
                     </FormLabel>
                     <Select
                       onValueChange={field.onChange}
@@ -311,7 +311,7 @@ export const TransferCandidateModal: React.FC<TransferCandidateModalProps> = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-slate-700">
-                      CRE status note
+                      Operations status note
                       <span className="text-red-500 font-normal"> *</span>
                     </FormLabel>
                     <FormControl>

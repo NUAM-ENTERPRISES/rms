@@ -68,17 +68,21 @@ export default function ProjectsPage() {
         search: prev.search,
       }));
     } else {
-      // Set new filters, clearing conflicting ones
       setFilters((prev) => ({
         page: 1,
         limit: prev.limit,
         sortBy: prev.sortBy,
         sortOrder: prev.sortOrder,
         search: prev.search,
-        status: statFilters.status as any,
-        isUrgent: statFilters.isUrgent,
-        priority: statFilters.priority as any,
-        // Clear other filters that might conflict
+        ...(statFilters.status !== undefined && {
+          status: statFilters.status as QueryProjectsRequest["status"],
+        }),
+        ...(statFilters.isUrgent !== undefined && {
+          isUrgent: statFilters.isUrgent,
+        }),
+        ...(statFilters.priority !== undefined && {
+          priority: statFilters.priority as QueryProjectsRequest["priority"],
+        }),
         clientId: undefined,
         teamId: undefined,
         countryCode: undefined,
@@ -144,9 +148,13 @@ export default function ProjectsPage() {
               className="px-0"
               onSelect={handleStatsSelect}
               activeFilter={{
-                status: filters.status,
-                isUrgent: filters.isUrgent,
-                priority: filters.priority,
+                ...(filters.status !== undefined && { status: filters.status }),
+                ...(filters.isUrgent !== undefined && {
+                  isUrgent: filters.isUrgent,
+                }),
+                ...(filters.priority !== undefined && {
+                  priority: filters.priority,
+                }),
               }}
             />
           )}

@@ -354,7 +354,7 @@ export class RecruiterAssignmentService {
    * Get CRE (Customer Relationship Executive) with the least workload
    */
   async getCREWithLeastWorkload(): Promise<RecruiterInfo> {
-    const creRoleId = await this.rolesService.findIdByName(ROLE_NAMES.CRE);
+    const creRoleId = await this.rolesService.findIdByName(ROLE_NAMES.OPERATIONS);
 
     // Get all CREs with their active RNR candidate count
     const cres = await this.prisma.user.findMany({

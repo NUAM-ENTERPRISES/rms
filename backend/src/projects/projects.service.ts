@@ -20,6 +20,7 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
+import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -440,15 +441,15 @@ export class ProjectsService {
     }
 
     if (isUrgent) {
-      const now = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(now.getDate() + 7);
-
-      where.deadline = {
-        gte: now,
-        lte: nextWeek,
-      };
-      where.status = 'active';
+      Object.assign(where, buildUrgentProjectsWhere());
+    } else if (deadlineFrom || deadlineTo) {
+      where.deadline = { not: null };
+      if (deadlineFrom) {
+        where.deadline.gte = new Date(deadlineFrom);
+      }
+      if (deadlineTo) {
+        where.deadline.lte = new Date(deadlineTo);
+      }
     }
 
     if (clientId) {
@@ -461,16 +462,6 @@ export class ProjectsService {
 
     if (createdBy) {
       where.createdBy = createdBy;
-    }
-
-    if (deadlineFrom || deadlineTo) {
-      where.deadline = {};
-      if (deadlineFrom) {
-        where.deadline.gte = new Date(deadlineFrom);
-      }
-      if (deadlineTo) {
-        where.deadline.lte = new Date(deadlineTo);
-      }
     }
 
     const skip = (page - 1) * limit;
@@ -2122,18 +2113,8 @@ export class ProjectsService {
       {} as { [clientId: string]: { count: number; name: string } },
     );
 
-    // Get urgent projects count (next 7 days)
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
     const urgentProjectsCount = await this.prisma.project.count({
-      where: {
-        deadline: {
-          gte: new Date(),
-          lte: sevenDaysFromNow,
-        },
-        status: 'active',
-      },
+      where: buildUrgentProjectsWhere(),
     });
 
     // Get upcoming deadlines (next 30 days)

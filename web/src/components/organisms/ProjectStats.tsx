@@ -63,9 +63,24 @@ export default function ProjectStats({
       {statsData.map((stat, i) => {
         const Icon = stat.icon;
         const s = accentStyles[stat.accent];
-        const isActive = activeFilter &&
-          Object.keys(stat.filter).length === Object.keys(activeFilter).length &&
-          Object.entries(stat.filter).every(([key, value]) => activeFilter[key as keyof typeof activeFilter] === value);
+        const isActive = (() => {
+          if (!activeFilter) return false;
+
+          const statKeys = Object.keys(stat.filter);
+          if (statKeys.length === 0) {
+            return (
+              !activeFilter.status &&
+              !activeFilter.isUrgent &&
+              !activeFilter.priority
+            );
+          }
+
+          return statKeys.every(
+            (key) =>
+              activeFilter[key as keyof typeof activeFilter] ===
+              stat.filter[key as keyof typeof stat.filter],
+          );
+        })();
 
         return (
           <motion.button

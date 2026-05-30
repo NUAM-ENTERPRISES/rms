@@ -60,7 +60,7 @@ export const CANDIDATE_ASSIGNMENT_TYPE = {
 
 /** Written when CRE returns a candidate to the recruiter pipeline as untouched. */
 export const CRE_REASSIGN_RECRUITER_RETURN_REASON =
-  "Returned to recruiter pipeline as untouched after CRE reassign";
+  "Returned to recruiter pipeline as untouched after Operations reassign";
 
 /** Normalize legacy DB value `agents` to canonical `agent`. */
 export function normalizeCandidateSource(

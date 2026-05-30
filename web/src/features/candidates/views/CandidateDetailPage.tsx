@@ -25,6 +25,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useCan, useHasRole } from "@/hooks/useCan";
+import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
@@ -45,7 +46,8 @@ import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { CreReassignedHandoffBadge } from "@/components/molecules/CreReassignedHandoffBadge";
+import { OperationsReassignedHandoffBadge } from "@/components/molecules/OperationsReassignedHandoffBadge";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -120,9 +122,10 @@ export default function CandidateDetailPage() {
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
-  // CRE can view candidate details but must not edit profile sections
-  const isCRE = useHasRole("CRE");
-  const canWriteCandidates = useCan("write:candidates") && !isCRE;
+  const hasOperationsRole = useHasRole(ROLE_NAMES.OPERATIONS);
+  const hasLegacyCreRole = useHasRole("CRE");
+  const isOperations = hasOperationsRole || hasLegacyCreRole;
+  const canWriteCandidates = useCan("write:candidates") && !isOperations;
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -287,6 +290,8 @@ export default function CandidateDetailPage() {
       </div>
     );
   }
+
+  const operations = getCandidateOperationsState(candidate);
 
   // isOnHold: check candidate status directly (instant, no waiting on pipeline)
   const isOnHold =
@@ -470,10 +475,10 @@ export default function CandidateDetailPage() {
                 <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
               </div>
             )}
-            {candidate.isCREReassigned && (
-              <CreReassignedHandoffBadge
-                note={candidate.creStatusNote}
-                creStatus={candidate.creStatus?.statusName}
+            {operations.isOperationsReassigned && (
+              <OperationsReassignedHandoffBadge
+                note={operations.operationsStatusNote}
+                operationsStatus={operations.operationsStatusName}
                 candidateName={`${candidate.firstName} ${candidate.lastName}`}
               />
             )}

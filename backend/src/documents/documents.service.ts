@@ -2336,7 +2336,7 @@ export class DocumentsService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
         skip,
         take: Number(limit),
       }),
@@ -3334,7 +3334,7 @@ export class DocumentsService {
             orderBy: { updatedAt: 'desc' },
           },
         },
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
         skip,
         take: Number(limit),
       }),
@@ -3352,6 +3352,7 @@ export class DocumentsService {
 
       return {
         candidateProjectMapId: cp.id,
+        createdAt: cp.createdAt,
         candidate: cp.candidate,
         project: cp.project,
         roleNeeded: cp.roleNeeded,

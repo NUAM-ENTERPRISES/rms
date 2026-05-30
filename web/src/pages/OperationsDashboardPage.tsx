@@ -9,7 +9,7 @@ import {
   TransferCandidateModal,
   type TransferToRecruiterPayload,
 } from "@/components/molecules/TransferCandidateModal";
-import { useGetMyAssignedCandidatesQuery, useGetCREAssignedSummaryQuery, useGetCREReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
+import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
 
-export default function CREDashboardPage() {
+export default function OperationsDashboardPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   
@@ -185,13 +185,13 @@ export default function CREDashboardPage() {
     setFilters((f) => ({ ...f, page: 1 }));
   };
 
-  // Fetch only candidates assigned to this CRE with optional status filter
+  // Fetch only candidates assigned to this Operations user with optional status filter
   const assignedCandidatesQuery = useGetMyAssignedCandidatesQuery({
     ...listRequestPayload,
     currentStatus: (statusFilter === 'reassigned' || statusFilter === 'created') ? undefined : statusFilter,
   });
 
-  const reassignedCandidatesQuery = useGetCREReassignedCandidatesQuery(listRequestPayload);
+  const reassignedCandidatesQuery = useGetOperationsReassignedCandidatesQuery(listRequestPayload);
 
   const createdCandidatesQuery = useGetUserCandidatesQuery(listRequestPayload);
 
@@ -218,7 +218,7 @@ export default function CREDashboardPage() {
   const totalPages = assignedCandidatesData?.totalPages || 0;
 
   const { data: summaryData, refetch: refetchSummary } =
-    useGetCREAssignedSummaryQuery();
+    useGetOperationsAssignedSummaryQuery();
   const [markCandidateConverted, { isLoading: isConverting }] = useMarkCandidateConvertedMutation();
   const [transferCandidateToRecruiter, { isLoading: isTransferring }] = useTransferCandidateToRecruiterMutation();
 
@@ -267,11 +267,11 @@ export default function CREDashboardPage() {
 
   const getTableSubtitle = () => {
     if (statusFilter === 'rnr') return 'Candidates marked as RNR';
-    if (statusFilter === 'reassigned') return 'Candidates transferred by CRE to recruiter with CRE status';
+    if (statusFilter === 'reassigned') return 'Candidates transferred by Operations to recruiter with Operations status';
     if (statusFilter === 'junk') return 'Candidates assigned for more than 5 days';
     if (statusFilter === 'on_hold') return 'Candidates currently on hold';
     if (statusFilter === 'untouched') return 'New untouched candidates';
-    if (statusFilter === 'interested') return 'Candidates converted from CRE call';
+    if (statusFilter === 'interested') return 'Candidates converted from Operations call';
     if (statusFilter === 'created') return 'Candidates you personally added to the system';
     return 'Candidates assigned to you';
   };
@@ -282,8 +282,8 @@ export default function CREDashboardPage() {
     return digits || null;
   };
 
-  /** CRE status recorded on reassign — not recruiter currentStatus (always untouched). */
-  const getCreReassignedStatusName = (candidate: any): string => {
+  /** Operations status recorded on reassign — not recruiter currentStatus (always untouched). */
+  const getOperationsReassignedStatusName = (candidate: any): string => {
     const reassignedAssignment = candidate.recruiterAssignments?.find(
       (a: { assignmentType?: string }) =>
         a.assignmentType === "cre_reassigned",
@@ -385,7 +385,7 @@ export default function CREDashboardPage() {
 
           {/* Header */}
           <TypedHeader
-            userName={user?.name || "CRE"}
+            userName={user?.name || "Operations"}
             subtitle={`Roles: ${Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}`}
           />
 
@@ -532,7 +532,7 @@ export default function CREDashboardPage() {
                       )}
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                        {statusFilter === 'reassigned' ? 'CRE Status' : 'Status'}
+                        {statusFilter === 'reassigned' ? 'Operations Status' : 'Status'}
                       </TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Assigned At</TableHead>
                       {statusFilter !== 'created' && (
@@ -557,7 +557,7 @@ export default function CREDashboardPage() {
                         'System / Admin';
                       const statusName =
                         statusFilter === "reassigned"
-                          ? getCreReassignedStatusName(candidate)
+                          ? getOperationsReassignedStatusName(candidate)
                           : candidate.currentStatus?.statusName || "Unknown";
                       const assignedDate = activeAssignment?.assignedAt || candidate.createdAt;
                       const assignmentReason = activeAssignment?.reason || '';
@@ -652,13 +652,13 @@ export default function CREDashboardPage() {
                             )}
                           </TableCell>
 
-                          {/* Status / CRE status */}
+                          {/* Status / Operations status */}
                           <TableCell className="px-4 py-3">
                             <Badge className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize", statusBadgeClass)}>
                               {statusName}
                             </Badge>
                             {statusFilter === 'reassigned' && (
-                              <p className="text-[10px] text-slate-400 mt-1">Set by CRE on reassign</p>
+                              <p className="text-[10px] text-slate-400 mt-1">Set by Operations on reassign</p>
                             )}
                           </TableCell>
 

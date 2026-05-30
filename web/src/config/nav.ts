@@ -15,7 +15,7 @@ import {
   BarChart3,
   UserSquare2,
 } from "lucide-react";
-import { ROLE_NAMES } from "@/config/role-names";
+import { LEGACY_CLIENT_COORDINATOR_ROLE_NAME, ROLE_NAMES } from "@/config/role-names";
 
 export interface NavItem {
   id: string;
@@ -50,8 +50,8 @@ export const navigationConfig: NavItem[] = [
     label: "Dashboard",
     path: "/",
     icon: Home,
-    roles: ["CRE"],
-    // Only visible to CRE users
+    roles: [ROLE_NAMES.OPERATIONS, "CRE"],
+    // Only visible to Operations users
   },
   {
     id: "documentation-dashboard",
@@ -83,7 +83,7 @@ export const navigationConfig: NavItem[] = [
     label: "Dashboard",
     path: "/agents",
     icon: Home,
-    roles: [ROLE_NAMES.AGENT_COORDINATOR],
+    roles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
     permissions: ["read:agents"],
   },
   {
@@ -152,10 +152,11 @@ export const navigationConfig: NavItem[] = [
       "Recruiter",
       "Documentation Executive",
       "System Admin",
+      ROLE_NAMES.OPERATIONS,
       "CRE",
       // "Screening Trainer",
     ],
-    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR],
+    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
     children: [
       {
         id: "candidate-overview",
@@ -191,7 +192,7 @@ export const navigationConfig: NavItem[] = [
     path: "/clients",
     icon: Briefcase,
     permissions: ["read:clients"],
-    // Hidden from Recruiter, Documentation Executive, and CRE roles
+    // Hidden from Recruiter, Documentation Executive, and Operations roles
   },
   {
     id: "agents",
@@ -200,7 +201,7 @@ export const navigationConfig: NavItem[] = [
     icon: UserSquare2,
     permissions: ["read:agents"],
     // Agent Coordinator uses Dashboard → /agents; avoid duplicate sidebar label
-    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR],
+    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
   },
   {
     id: "teams",
@@ -208,7 +209,7 @@ export const navigationConfig: NavItem[] = [
     path: "/teams",
     icon: Users,
     permissions: ["read:teams"],
-    // Hidden from CRE - they work independently
+    // Hidden from Operations - they work independently
   },
   // {
   //   id: "basic-training",
@@ -239,7 +240,7 @@ export const navigationConfig: NavItem[] = [
       //   permissions: ["read:interviews"],
       // },
     ],
-    // Hidden from CRE - they focus on RNR candidates
+    // Hidden from Operations - they focus on RNR candidates
   },
   // Screening Trainer role: flatten screenings children to top-level items
   {
@@ -289,6 +290,7 @@ export const navigationConfig: NavItem[] = [
       "Documentation Executive",
       "Interview Coordinator",
       "Recruiter",
+      ROLE_NAMES.OPERATIONS,
       "CRE",
       "Processing Executive",
       ROLE_NAMES.AGENT_COORDINATOR,
@@ -333,6 +335,7 @@ export const navigationConfig: NavItem[] = [
     hiddenForRoles: [
       "Interview Coordinator",
       "Recruiter",
+      ROLE_NAMES.OPERATIONS,
       "CRE",
       "Documentation Executive",
       "Processing Executive",

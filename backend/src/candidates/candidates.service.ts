@@ -51,7 +51,7 @@ import {
   isCandidateStatusTerminal,
   normalizeCandidateSource,
 } from '../common/constants';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import { ROLE_NAMES, isOperationsRole } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
   assertPhysicalAddressConsistent,
@@ -1437,7 +1437,7 @@ export class CandidatesService {
     );
 
     if (!creAssignment) {
-      throw new ForbiddenException('CRE may only convert assigned candidates.');
+      throw new ForbiddenException('Operations may only convert assigned candidates.');
     }
 
     // Update assignment type to cre_converted instead of changing candidate status
@@ -1471,7 +1471,7 @@ export class CandidatesService {
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
-      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} marked as converted response by CRE`,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} marked as converted response by Operations`,
     });
 
     return updatedCandidate as any;
@@ -1545,7 +1545,7 @@ export class CandidatesService {
 
     if (disallowedForCreTransfer.has(normalizedStatus)) {
       throw new BadRequestException(
-        `Status "${status.statusName}" cannot be set during CRE reassignment`,
+        `Status "${status.statusName}" cannot be set during Operations reassignment`,
       );
     }
 
@@ -1580,7 +1580,7 @@ export class CandidatesService {
 
     if (!activeCREAssignment) {
       throw new ForbiddenException(
-        'CRE can only transfer candidates assigned to them',
+        'Operations can only transfer candidates assigned to them',
       );
     }
 
@@ -1603,7 +1603,7 @@ export class CandidatesService {
 
     const statusNote = dto.reason?.trim();
     if (!statusNote) {
-      throw new BadRequestException('CRE status note is required');
+      throw new BadRequestException('Operations status note is required');
     }
 
     const untouchedStatus = await this.prisma.candidateStatus.findFirst({
@@ -1631,7 +1631,7 @@ export class CandidatesService {
       }
     }
 
-    const reassignmentReason = 'Handed back from CRE converted response';
+    const reassignmentReason = 'Handed back from Operations converted response';
 
     // Update the primary recruiter assignment to mark it as cre_reassigned
     if (primaryAssignment) {
@@ -1684,7 +1684,7 @@ export class CandidatesService {
 
     const creUserName =
       (await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name ||
-      'CRE';
+      ROLE_NAMES.OPERATIONS;
 
     await this.prisma.candidateStatusHistory.create({
       data: {
@@ -1716,15 +1716,15 @@ export class CandidatesService {
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
-      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from CRE to recruiter ${primaryAssignment?.recruiter?.name || 'Primary Recruiter'}`,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from Operations to recruiter ${primaryAssignment?.recruiter?.name || 'Primary Recruiter'}`,
     });
 
     // Notify the target recruiter that a CRE has transferred a candidate to them
     if (primaryAssignment) {
       await this.outboxService.publishRecruiterNotification(
         primaryAssignment.recruiterId,
-        `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} has been transferred back to you by CRE ${(await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name || 'a team member'} after being converted from RNR.`,
-        'Candidate Transferred from CRE',
+        `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} has been transferred back to you by Operations ${(await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name || 'a team member'} after being converted from RNR.`,
+        'Candidate Transferred from Operations',
         `/candidates/${candidateId}`,
         {
           candidateId,
@@ -2095,8 +2095,8 @@ export class CandidatesService {
       },
     });
 
-    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
-      throw new ForbiddenException('CRE users cannot update candidate details.');
+    if (user?.userRoles?.some((ur) => isOperationsRole(ur.role?.name ?? ''))) {
+      throw new ForbiddenException('Operations users cannot update candidate details.');
     }
 
     // Check if countryCode and mobileNumber combination is being updated and if it already exists
@@ -2418,12 +2418,13 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', 'CRE'].includes(ur.role.name)
+        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ur.role.name === 'CRE'
       );
 
       if (!isAdminOrCRE) {
         throw new ForbiddenException(
-          'Candidate is currently being handled by CRE and cannot be assigned to projects until handed back to recruiter.',
+          'Candidate is currently being handled by Operations and cannot be assigned to projects until handed back to recruiter.',
         );
       }
     }
@@ -2991,12 +2992,13 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', 'CRE'].includes(ur.role.name)
+        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ur.role.name === 'CRE'
       );
 
       if (!isAdminOrCRE) {
         throw new ForbiddenException(
-          'Candidate is currently being handled by CRE and cannot be nominated to projects until handed back to recruiter.',
+          'Candidate is currently being handled by Operations and cannot be nominated to projects until handed back to recruiter.',
         );
       }
     }
@@ -3348,8 +3350,8 @@ export class CandidatesService {
       },
     });
 
-    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
-      throw new ForbiddenException('CRE users cannot update candidate status.');
+    if (user?.userRoles?.some((ur) => isOperationsRole(ur.role?.name ?? ''))) {
+      throw new ForbiddenException('Operations users cannot update candidate status.');
     }
 
     // Update candidate status
@@ -4032,7 +4034,7 @@ export class CandidatesService {
     roles: string[],
   ): Promise<any> {
     const isManagerOrAdmin = roles.some((role) =>
-      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin', 'CRE'].includes(role),
+      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin', ROLE_NAMES.OPERATIONS, 'CRE'].includes(role),
     );
 
     const isRecruiter = roles.includes('Recruiter');

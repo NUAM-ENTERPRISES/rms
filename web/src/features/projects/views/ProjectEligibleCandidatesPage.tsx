@@ -47,6 +47,7 @@ import { Can } from "@/components/auth/Can";
 import { CandidateStatusBadge } from "@/components/molecules";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getCandidateOperationsState } from "@/features/candidates/utils/operations-candidate";
 
 // Mock data for demonstration
 const mockEligibleCandidates = [
@@ -546,18 +547,24 @@ export default function ProjectEligibleCandidatesPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Can anyOf={["nominate:candidates"]}>
+                            {(() => {
+                              const handledByOperations =
+                                getCandidateOperationsState(candidate).isHandledByOperations;
+                              return (
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={candidate.isHandledByCRE}
-                              title={candidate.isHandledByCRE ? "Candidate is currently being handled by CRE" : "Nominate Candidate"}
+                              disabled={handledByOperations}
+                              title={handledByOperations ? "Candidate is currently being handled by Operations" : "Nominate Candidate"}
                               onClick={() =>
                                 handleNominateCandidate(candidate.id)
                               }
-                              className={candidate.isHandledByCRE ? "text-gray-400" : "text-green-600 hover:text-green-700"}
+                              className={handledByOperations ? "text-gray-400" : "text-green-600 hover:text-green-700"}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>
+                              );
+                            })()}
                           </Can>
                         </div>
                       </TableCell>

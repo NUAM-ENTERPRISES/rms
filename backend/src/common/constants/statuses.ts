@@ -546,7 +546,7 @@ export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, StatusConfig> = {
   },
   [CANDIDATE_STATUS.RNR]: {
     label: 'RNR',
-    description: 'Ringing No Response - requires CRE handling',
+    description: 'Ringing No Response - requires Operations handling',
     color: 'red',
     badgeClass: 'bg-red-50 text-red-700 border-red-200',
     icon: 'PhoneOff',

@@ -112,6 +112,23 @@ function extractVerificationCounts(queryResult: unknown): VerificationCountsPayl
   return root.counts ?? {};
 }
 
+/** Oldest candidates first (FIFO), matching verification queue order. */
+function sortVerificationCandidatesAscending(rows: any[]): any[] {
+  return [...rows].sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (aTime !== bTime) return aTime - bTime;
+
+    const aName = `${a.candidate?.firstName ?? ""} ${a.candidate?.lastName ?? ""}`
+      .trim()
+      .toLowerCase();
+    const bName = `${b.candidate?.firstName ?? ""} ${b.candidate?.lastName ?? ""}`
+      .trim()
+      .toLowerCase();
+    return aName.localeCompare(bName);
+  });
+}
+
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
   blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
   emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
@@ -315,6 +332,7 @@ export default function DocumentVerificationPage() {
 
       const existing2 = map.get(groupedId) || {
         id: groupedId,
+        createdAt: it.createdAt ?? null,
         candidate: it.candidate || null,
         project: it.project || null,
         documentVerifications: [],
@@ -351,6 +369,8 @@ export default function DocumentVerificationPage() {
     totalCandidates = verifiedRejectedData?.data?.pagination?.total || candidateProjects.length;
     totalPages = verifiedRejectedData?.data?.pagination?.totalPages || 1;
   }
+
+  candidateProjects = sortVerificationCandidatesAscending(candidateProjects);
 
   // Permission check
   if (!canReadDocuments) {

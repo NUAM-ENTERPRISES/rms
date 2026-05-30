@@ -61,6 +61,7 @@ import { BulkScheduleInterviewModal } from "../components/BulkScheduleInterviewM
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FaWhatsapp } from "react-icons/fa";
 
 type TileDef = {
   key: string;
@@ -237,6 +238,19 @@ const STATUS_BADGE: Record<
     borderColor: "border-pink-300",
   },
 };
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  mobile?: string | null;
+  contact?: string | null;
+}) {
+  const raw =
+    String(candidate?.countryCode ?? "") +
+    String(candidate?.mobileNumber ?? candidate?.mobile ?? candidate?.contact ?? "");
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
 
 export default function InterviewsPage() {
   const navigate = useNavigate();
@@ -1026,7 +1040,7 @@ export default function InterviewsPage() {
                           </TableHead>
                         )}
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
-                        <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
+                        <TableHead className="h-10 min-w-[10rem] whitespace-normal px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Stage</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Role</TableHead>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
@@ -1174,23 +1188,60 @@ export default function InterviewsPage() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="px-4 py-3 text-center">
-                              <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
-                                {candidate?.email ? (
+                            <TableCell className="min-w-[10rem] whitespace-normal px-4 py-3 text-center">
+                              <div className="flex flex-col items-stretch gap-2">
+                                <div className="flex items-center justify-center gap-1.5 w-full">
+                                  {(() => {
+                                    const phoneDigits = formatPhoneForLink(candidate ?? {});
+                                    return (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                          onClick={() =>
+                                            phoneDigits &&
+                                            window.open(`https://wa.me/${phoneDigits}`, "_blank")
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`WhatsApp ${candidate?.firstName ?? ""}`}
+                                          aria-label={`WhatsApp ${candidate?.firstName ?? "candidate"}`}
+                                        >
+                                          <FaWhatsapp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                          onClick={() =>
+                                            phoneDigits && (window.location.href = `tel:${phoneDigits}`)
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`Call ${candidate?.firstName ?? ""}`}
+                                          aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
+                                        >
+                                          <Phone className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                  {candidate?.email ? (
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Mail className="h-3 w-3 shrink-0 text-gray-400" />
+                                      <span className="break-all text-gray-700">
+                                        {candidate.email}
+                                      </span>
+                                    </div>
+                                  ) : null}
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                                    <span className="text-gray-700 break-all">
-                                      {candidate.email}
+                                    <Phone className="h-3 w-3 shrink-0 text-gray-400" />
+                                    <span className="text-gray-700">
+                                      {candidate?.countryCode ? `${candidate.countryCode} ` : ""}
+                                      {candidate?.mobileNumber || "—"}
                                     </span>
                                   </div>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <Phone className="h-3 w-3 text-gray-400 shrink-0" />
-                                  <span className="text-gray-700">
-                                    {candidate?.countryCode ? `${candidate.countryCode} ` : ""}{candidate?.mobileNumber || "—"}
-                                  </span>
                                 </div>
                               </div>
                             </TableCell>

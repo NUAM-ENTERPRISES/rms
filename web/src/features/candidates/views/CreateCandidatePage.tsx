@@ -104,13 +104,13 @@ export default function CreateCandidatePage() {
     useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruiter");
-  const isCRE = hasRole("CRE");
+  const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");
   const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
 
   const candidatesHomePath = isAgentCoordinator
     ? "/agents"
-    : isCRE
-      ? "/cre-dashboard"
+    : isOperations
+      ? "/operations-dashboard"
       : "/candidates";
 
   // API
@@ -160,7 +160,7 @@ export default function CreateCandidatePage() {
       countryCode: "+91",
       mobileNumber: "",
       email: "",
-      source: (isCRE
+      source: (isOperations
         ? "direct_enquiry"
         : isRecruiter
           ? "referral"
@@ -228,7 +228,7 @@ export default function CreateCandidatePage() {
           <CardContent>
             <Button onClick={() => navigate(candidatesHomePath)} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {isCRE ? "Back to CRE Dashboard" : isAgentCoordinator ? "Back to Agents" : "Back to Candidates"}
+              {isOperations ? "Back to Operations Dashboard" : isAgentCoordinator ? "Back to Agents" : "Back to Candidates"}
             </Button>
           </CardContent>
         </Card>
