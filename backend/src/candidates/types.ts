@@ -80,6 +80,7 @@ export interface PaginatedCandidates {
     onHold: number;
     interested: number;
     notInterested: number;
+    notEligible: number;
     otherEnquiry: number;
     qualified: number;
     future: number;

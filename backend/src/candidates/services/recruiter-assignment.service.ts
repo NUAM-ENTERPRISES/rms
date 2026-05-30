@@ -783,6 +783,16 @@ export class RecruiterAssignmentService {
       select: { id: true, statusName: true },
     });
 
+    const notEligibleStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        OR: [
+          { statusName: { equals: CANDIDATE_STATUS.NOT_ELIGIBLE, mode: 'insensitive' } },
+          { statusName: { equals: 'Not Eligible', mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, statusName: true },
+    });
+
     const qualifiedStatus = await this.prisma.candidateStatus.findFirst({
       where: { statusName: { equals: CANDIDATE_STATUS.QUALIFIED, mode: 'insensitive' } },
       select: { id: true, statusName: true },
@@ -809,6 +819,7 @@ export class RecruiterAssignmentService {
     const deployedId = deployedStatus?.id ?? null;
     const notInterestedId = notInterestedStatus?.id ?? null;
     const otherEnquiryId = otherEnquiryStatus?.id ?? null;
+    const notEligibleId = notEligibleStatus?.id ?? null;
 
     const countsMap = assignedCandidates.reduce(
       (acc, c) => {
@@ -846,6 +857,9 @@ export class RecruiterAssignmentService {
         if (!isCreReassignedForRecruiter && c.currentStatusId === notInterestedId) {
           acc.notInterested += 1;
         }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === notEligibleId) {
+          acc.notEligible += 1;
+        }
         if (!isCreReassignedForRecruiter && c.currentStatusId === otherEnquiryId) {
           acc.otherEnquiry += 1;
         }
@@ -869,6 +883,7 @@ export class RecruiterAssignmentService {
         onHold: 0,
         interested: 0,
         notInterested: 0,
+        notEligible: 0,
         otherEnquiry: 0,
         qualified: 0,
         future: 0,
@@ -877,7 +892,7 @@ export class RecruiterAssignmentService {
     );
 
     this.logger.log(
-      `Recruiter ${recruiterId} counts => totalAssigned: ${countsMap.totalAssigned}, untouched: ${countsMap.untouched}, rnr: ${countsMap.rnr}, onHold: ${countsMap.onHold}, notInterested: ${countsMap.notInterested}, otherEnquiry: ${countsMap.otherEnquiry}`,
+      `Recruiter ${recruiterId} counts => totalAssigned: ${countsMap.totalAssigned}, untouched: ${countsMap.untouched}, rnr: ${countsMap.rnr}, onHold: ${countsMap.onHold}, notInterested: ${countsMap.notInterested}, notEligible: ${countsMap.notEligible}, otherEnquiry: ${countsMap.otherEnquiry}`,
     );
 
     // Get candidates
@@ -1034,6 +1049,7 @@ export class RecruiterAssignmentService {
         onHold: countsMap.onHold,
         interested: countsMap.interested,
         notInterested: countsMap.notInterested,
+        notEligible: countsMap.notEligible,
         otherEnquiry: countsMap.otherEnquiry,
         qualified: countsMap.qualified,
         future: countsMap.future,

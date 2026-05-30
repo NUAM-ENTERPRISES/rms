@@ -730,6 +730,7 @@ export interface RecruiterMyCandidatesResponse {
     deployed: number; // new backend key
     working?: number; // legacy
     notInterested: number;
+    notEligible: number;
     otherEnquiry: number;
   };
   pagination: {
@@ -766,6 +767,7 @@ export interface AllCandidatesResponse {
     deployed?: number; // preferred new key
     working?: number; // legacy
     notInterested?: number;
+    notEligible?: number;
     otherEnquiry?: number;
   };
   message?: string;
@@ -1015,6 +1017,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           onHold?: number;
           interested?: number;
           notInterested?: number;
+          notEligible?: number;
           otherEnquiry?: number;
           qualified?: number;
           future?: number;

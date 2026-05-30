@@ -250,6 +250,7 @@ export class CandidatesController {
                 onHold: { type: 'number', example: 5 },
                 interested: { type: 'number', example: 15 },
                     notInterested: { type: 'number', example: 8 },
+                    notEligible: { type: 'number', example: 4 },
                     otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 7 },
                 future: { type: 'number', example: 12 },
@@ -288,6 +289,7 @@ export class CandidatesController {
       onHold: number;
       interested: number;
       notInterested: number;
+      notEligible: number;
       otherEnquiry: number;
       qualified: number;
       future: number;
@@ -431,6 +433,7 @@ export class CandidatesController {
                 onHold: { type: 'number', example: 5 },
                 interested: { type: 'number', example: 20 },
                 notInterested: { type: 'number', example: 8 },
+                notEligible: { type: 'number', example: 4 },
                 otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 12 },
                 future: { type: 'number', example: 15 },

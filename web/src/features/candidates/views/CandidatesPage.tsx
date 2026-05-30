@@ -45,6 +45,7 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
   FilterX,
+  UserX,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
@@ -551,6 +552,7 @@ export default function CandidatesPage() {
     future: serverCounts?.future ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
     deployed: serverCounts?.deployed ?? serverCounts?.working ?? candidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
     notInterested: serverCounts?.notInterested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
+    notEligible: serverCounts?.notEligible ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not eligible" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_eligible").length,
     otherEnquiry: serverCounts?.otherEnquiry ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
   };
 
@@ -620,6 +622,14 @@ export default function CandidatesPage() {
       color: "from-slate-500 to-stone-400",
     },
     {
+      label: "Not Eligible",
+      value: derivedCounts.notEligible,
+      subtitle: "Does not meet requirements",
+      icon: UserX,
+      statusFilter: "not_eligible",
+      color: "from-rose-500 to-red-500",
+    },
+    {
       label: "Other Enquiry",
       value: derivedCounts.otherEnquiry,
       subtitle: "Other enquiries",
@@ -640,6 +650,7 @@ export default function CandidatesPage() {
     const futureCount = recruiterCounts?.future ?? 0;
     const workingCount = recruiterCounts?.working ?? 0;
     const notInterestedCount = recruiterCounts?.notInterested ?? 0;
+    const notEligibleCount = recruiterCounts?.notEligible ?? 0;
     const otherEnquiryCount = recruiterCounts?.otherEnquiry ?? 0;
 
     stats = [
@@ -708,6 +719,14 @@ export default function CandidatesPage() {
         color: "from-slate-500 to-stone-400",
       },
       {
+        label: "Not Eligible",
+        value: notEligibleCount,
+        subtitle: "Does not meet requirements",
+        icon: UserX,
+        statusFilter: "not_eligible",
+        color: "from-rose-500 to-red-500",
+      },
+      {
         label: "Other Enquiry",
         value: otherEnquiryCount,
         subtitle: "Other enquiries",
@@ -729,6 +748,7 @@ export default function CandidatesPage() {
       const futureCount = allCounts?.future ?? 0;
       const workingCount = allCounts?.working ?? 0;
       const notInterestedCount = allCounts?.notInterested ?? 0;
+      const notEligibleCount = allCounts?.notEligible ?? 0;
       const otherEnquiryCount = allCounts?.otherEnquiry ?? 0;
 
       stats = [
@@ -797,6 +817,14 @@ export default function CandidatesPage() {
           color: "from-slate-500 to-stone-400",
         },
         {
+          label: "Not Eligible",
+          value: notEligibleCount,
+          subtitle: "Does not meet requirements",
+          icon: UserX,
+          statusFilter: "not_eligible",
+          color: "from-rose-500 to-red-500",
+        },
+        {
           label: "Other Enquiry",
           value: otherEnquiryCount,
           subtitle: "Other enquiries",
@@ -837,6 +865,8 @@ export default function CandidatesPage() {
         return "Interested";
       case "not_interested":
         return "Not Interested";
+      case "not_eligible":
+        return "Not Eligible";
       case "other_enquiry":
         return "Other Enquiries";
       case "qualified":
@@ -864,6 +894,8 @@ export default function CandidatesPage() {
         return "Candidates who expressed interest";
       case "not_interested":
         return "Candidates who declined or are not interested";
+      case "not_eligible":
+        return "Candidates who do not meet role requirements";
       case "other_enquiry":
         return "Candidates with other enquiries";
       case "qualified":
@@ -965,11 +997,12 @@ export default function CandidatesPage() {
             teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
             slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",    icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
             amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+            rose:    { card: "from-rose-50 via-white to-rose-50/30 border-rose-100",       icon: "text-rose-600",    iconBg: "bg-rose-100",    value: "text-rose-700",    ring: "ring-rose-400/50",    dot: "bg-rose-500"    },
           };
           const statusToAccent: Record<string, string> = {
             all: "blue", untouched: "emerald", rnr: "orange", on_hold: "purple",
             interested: "lime", future: "indigo", deployed: "teal",
-            not_interested: "slate", other_enquiry: "amber",
+            not_interested: "slate", not_eligible: "rose", other_enquiry: "amber",
           };
           return (
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">

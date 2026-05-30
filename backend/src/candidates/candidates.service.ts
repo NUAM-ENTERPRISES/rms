@@ -670,20 +670,27 @@ export class CandidatesService {
         statusName: {
           in: [
             'untouched', 'rnr', 'on_hold', 'interested', 'not_interested',
-            'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
+            'not_eligible', 'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
           ],
           mode: 'insensitive'
         }
       }
     });
 
-    const getStatusId = (name: string) => statuses.find(s => s.statusName.toLowerCase() === name.toLowerCase())?.id;
+    const getStatusId = (name: string) => {
+      const normalizedTarget = name.replace(/_/g, ' ').toLowerCase();
+      return statuses.find(
+        (s) =>
+          s.statusName.replace(/_/g, ' ').toLowerCase() === normalizedTarget,
+      )?.id;
+    };
     
     const untouchedId = getStatusId('untouched');
     const rnrId = getStatusId('rnr');
     const onHoldId = getStatusId('on_hold');
     const interestedId = getStatusId('interested');
     const notInterestedId = getStatusId('not_interested');
+    const notEligibleId = getStatusId('not_eligible');
     const otherEnquiryId = getStatusId('other_enquiry');
     const qualifiedId = getStatusId('qualified');
     const futureId = getStatusId('future');
@@ -734,6 +741,7 @@ export class CandidatesService {
       onHold: getCountForStatus(onHoldId),
       interested: getCountForStatus(interestedId),
       notInterested: getCountForStatus(notInterestedId),
+      notEligible: getCountForStatus(notEligibleId),
       otherEnquiry: getCountForStatus(otherEnquiryId),
       qualified: getCountForStatus(qualifiedId),
       future: getCountForStatus(futureId),
