@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { clearCredentials } from "@/features/auth/authSlice";
@@ -35,32 +35,29 @@ export default function UserMenu() {
   });
   const employeeCode = profileData?.data?.employeeCode ?? null;
 
-  if (!user) return null;
-
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await dispatch(authApi.endpoints.logout.initiate()).unwrap();
-    } 
-    catch (error) {
-      
+    } catch (error) {
       toast.error("Failed to log out from server. Please try again.");
       console.error("Logout API error:", error);
-      // Ignore logout API errors; session is cleared below regardless.
     }
     dispatch(clearCredentials());
     dispatch(baseApi.util.resetApiState());
-    toast.success("Logged out successfully");
     navigate("/login");
-  };
+    setShowLogoutSuccess(false);
+  }, [dispatch, navigate]);
+
+  const handleLogoutTransitionComplete = useCallback(() => {
+    void handleLogout();
+  }, [handleLogout]);
 
   const handleConfirmLogout = () => {
     setIsLogoutDialogOpen(false);
     setShowLogoutSuccess(true);
-
-    window.setTimeout(() => {
-      handleLogout();
-    }, 700);
   };
+
+  if (!user) return null;
 
   const handleProfile = () => {
     navigate("/profile");
@@ -232,7 +229,11 @@ export default function UserMenu() {
         cancelText="Cancel"
         variant="destructive"
       />
-      <LogoutSuccess isVisible={showLogoutSuccess} />
+      <LogoutSuccess
+        isVisible={showLogoutSuccess}
+        userName={user.name}
+        onComplete={handleLogoutTransitionComplete}
+      />
     </DropdownMenu>
   );
 }

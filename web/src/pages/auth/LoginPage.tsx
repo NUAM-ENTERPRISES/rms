@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { LoginSuccessTransition } from "@/components/organisms/LoginSuccessTransition";
 const loginSchema = z.object({
   countryCode: z
     .string()
@@ -216,12 +217,21 @@ function RmsRightPanel({
   );
 }
 
+interface LoginTransitionState {
+  userName: string;
+  nextUrl: string | null;
+}
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loginTransition, setLoginTransition] =
+    useState<LoginTransitionState | null>(null);
+  const pendingNavigationRef = useRef<string | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
+  const isTransitioning = loginTransition !== null;
 
   const {
     register,
@@ -238,6 +248,15 @@ export default function LoginPage() {
     },
   });
 
+  const completeLoginNavigation = useCallback(() => {
+    const nextUrl = pendingNavigationRef.current;
+    const destination =
+      nextUrl && nextUrl.startsWith("/") ? decodeURIComponent(nextUrl) : "/";
+
+    pendingNavigationRef.current = null;
+    navigate(destination);
+  }, [navigate]);
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await login(data).unwrap();
@@ -251,30 +270,46 @@ export default function LoginPage() {
           })
         );
 
-        toast.success(`Welcome back, ${result.data.user?.name || 'User'}!`);
+        const userName = result.data.user?.name || "User";
+        toast.success(`Welcome back, ${userName}!`);
 
-        // Handle deep link redirect
-        const nextUrl = searchParams.get("next");
-        if (nextUrl && nextUrl.startsWith("/")) {
-          navigate(decodeURIComponent(nextUrl));
-        } else {
-          // Redirect to root path, which will use RoleBasedRedirect to determine appropriate destination
-          navigate("/");
-        }
+        const nextParam = searchParams.get("next");
+        const nextUrl =
+          nextParam && nextParam.startsWith("/") ? nextParam : null;
+
+        pendingNavigationRef.current = nextUrl;
+        setLoginTransition({ userName, nextUrl });
       } else {
         setError("root", { message: result.message || "Login failed" });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { data?: { message?: string } };
       const errorMessage =
-        error?.data?.message || "Invalid mobile number or password";
+        apiError?.data?.message || "Invalid mobile number or password";
       setError("root", { message: errorMessage });
       toast.error(errorMessage);
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Background decorative elements */}
+    <div className="relative min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <LoginSuccessTransition
+        isVisible={isTransitioning}
+        userName={loginTransition?.userName}
+        onComplete={completeLoginNavigation}
+      />
+
+      <AnimatePresence>
+        {!isTransitioning && (
+          <motion.div
+            key="login-shell"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 0.98, filter: "blur(6px)" }}
+            transition={{ duration: 0.45, ease: "easeInOut" }}
+            className="relative flex min-h-screen w-full flex-1"
+          >
+            {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl"></div>
@@ -282,24 +317,35 @@ export default function LoginPage() {
       </div>
 
       {/* Left side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative z-10">
-        <div className="w-full max-w-lg">
+      <div className="relative z-10 flex flex-1 items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="w-full max-w-lg"
+        >
           {/* Login Card */}
-          <Card className="backdrop-blur-sm bg-white/70 border-white/20 shadow-2xl">
+          <Card className="overflow-hidden border-white/20 bg-white/70 shadow-2xl backdrop-blur-sm">
             <CardContent className="px-8 pt-8 pb-0">
               {/* Logo and Header */}
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-full h-25 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-2xl p-4">
-                  <img
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="relative mb-6 text-center"
+              >
+                <div className="relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-2xl">
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,theme(colors.accent.500/0.15),transparent_60%)]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,theme(colors.primary.500/0.15),transparent_60%)]" />
+                  <motion.img
                     src="/logo.png"
                     alt="Affiniks RMS"
-                    className="h-17 w-auto filter"
+                    whileHover={{ scale: 1.03 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    className="relative z-10 h-16 w-auto md:h-[4.25rem]"
                   />
                 </div>
-              </div>
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,rgba(139,92,246,0.12),transparent_60%)] pointer-events-none" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,rgba(217,70,239,0.12),transparent_60%)] pointer-events-none" />
-              <div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,rgba(139,92,246,0.02)_1px,transparent_1px),linear-gradient(-45deg,rgba(139,92,246,0.02)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+              </motion.div>
               {/* Header inside card */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -406,8 +452,8 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-                  disabled={isLoading}
+                  className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-primary/90 font-medium text-white shadow-lg transition-all duration-200 hover:from-primary/90 hover:to-primary hover:shadow-xl"
+                  disabled={isLoading || isTransitioning}
                 >
                   {isLoading ? (
                     <div className="flex items-center space-x-2">
@@ -457,11 +503,14 @@ export default function LoginPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
 
       {/* Right side - RmsRightPanel */}
       <RmsRightPanel logoSrc="/logo.png" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
