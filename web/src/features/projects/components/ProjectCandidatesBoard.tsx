@@ -54,6 +54,20 @@ type ProjectAssignment = {
   };
 };
 
+const getCandidateGlobalStatusLabel = (candidate: CandidateRecord): string => {
+  if (typeof candidate.currentStatus === "string") {
+    return candidate.currentStatus.trim();
+  }
+  return (
+    candidate.currentStatus?.label ||
+    candidate.currentStatus?.name ||
+    candidate.currentStatus?.statusName ||
+    ""
+  )
+    .toString()
+    .trim();
+};
+
 const normalizeRegisteredStatus = (statusRaw: string) => {
   const raw = (statusRaw || "").toString().trim().toLowerCase();
   return {
@@ -315,13 +329,15 @@ const buildAssignmentInfo = (
     assignmentFromManager?.mainStatus?.name ||
     candidate.projectMainStatus?.name;
 
+  const candidateGlobalStatus = getCandidateGlobalStatusLabel(candidate);
+
   const projectStatusToShow = isAssigned
     ? subStatusLabel ||
       subStatusName ||
       currentProjectStatus ||
       mainStatus ||
       "assigned"
-    : "not_in_project";
+    : candidateGlobalStatus || "not_in_project";
 
   const isNominated =
     isAssigned &&

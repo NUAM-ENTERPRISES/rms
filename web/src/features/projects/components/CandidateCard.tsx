@@ -408,8 +408,6 @@ const CandidateCard = memo(function CandidateCard({
       : candidate.currentStatus?.statusName || "") ||
     "";
 
-  const statusConfig = resolveProjectCandidateStatusDisplay(projectStatusRaw);
-
   const candidateStatusRaw: string =
     typeof candidate.currentStatus === "string"
       ? candidate.currentStatus
@@ -417,11 +415,33 @@ const CandidateCard = memo(function CandidateCard({
         candidate.currentStatus?.name ||
         candidate.currentStatus?.label ||
         "";
+
+  const normalizeStatusKey = (s: string | undefined) =>
+    (s || "").toString().toLowerCase().replace(/[\s_-]+/g, "");
+
+  const isGenericProjectStatus = (status: string) => {
+    const key = normalizeStatusKey(status);
+    return (
+      !key ||
+      key === "notinproject" ||
+      key === "assigned" ||
+      key === "unknown"
+    );
+  };
+
+  const primaryStatusRaw =
+    isGenericProjectStatus(projectStatusRaw) && candidateStatusRaw
+      ? candidateStatusRaw
+      : projectStatusRaw || candidateStatusRaw;
+
+  const statusConfig = resolveProjectCandidateStatusDisplay(primaryStatusRaw);
+
   const normalize = (s: string | undefined) =>
     (s || "").toString().toLowerCase().replace(/[\s_]+/g, "");
   const showCandidateStatusBadge =
     !!candidateStatusRaw &&
     !!projectStatusRaw &&
+    !isGenericProjectStatus(projectStatusRaw) &&
     normalize(candidateStatusRaw) !== normalize(projectStatusRaw);
   const candidateStatusConfig = candidateStatusRaw
     ? resolveProjectCandidateStatusDisplay(candidateStatusRaw)

@@ -65,12 +65,14 @@ import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCa
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
+import { FlagIcon } from "@/shared";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import {
   getConfigValueBadge,
   getProjectStatusBadge,
   statusBadgeClassNames,
 } from "@/features/projects/constants/statusBadges";
+import { cn } from "@/lib/utils";
 
 // Helper function to format date
 const formatDate = (dateString?: string) => {
@@ -955,6 +957,32 @@ export default function ProjectDetailPage() {
     ? project.documentRequirements
     : [];
 
+  const totalPositions = project.rolesNeeded.reduce(
+    (sum: number, role: { quantity?: number }) => sum + (role.quantity ?? 0),
+    0
+  );
+  const daysUntilDeadline = (() => {
+    if (!project.deadline) return null;
+    const deadline = new Date(project.deadline);
+    if (Number.isNaN(deadline.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+    const diffMs = deadline.getTime() - today.getTime();
+    return Math.ceil(diffMs / 86400000);
+  })();
+  const projectStatusBadge = getProjectStatusBadge(project.status);
+  const isDeadlineOverdue =
+    daysUntilDeadline !== null && daysUntilDeadline < 0;
+  const isDeadlineDueToday =
+    daysUntilDeadline !== null && daysUntilDeadline === 0;
+  const isDeadlineUrgent =
+    daysUntilDeadline !== null &&
+    daysUntilDeadline > 0 &&
+    daysUntilDeadline <= 14;
+  const showDeadlineBlink =
+    isDeadlineOverdue || isDeadlineDueToday || isDeadlineUrgent;
+
   // Access control
   if (!canReadProjects) {
     return (
@@ -981,63 +1009,145 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-          <CardContent className="p-5 lg:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-              {/* Left Side — Title + Status + Country */}
-              <div className="flex items-start gap-4 flex-1 min-w-0">
-                {/* Country flag */}
-                <div className="flex-shrink-0 mt-1">
-                  <ProjectCountryCell
-                    countryCode={project.countryCode}
-                    countryName={project.country?.name}
-                    size="2xl"
-                    fallbackText="—"
-                    className="shadow-md ring-3 ring-white/90 rounded-full"
+        <Card className="relative border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden ring-1 ring-slate-200/60">
+          <div
+            className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
+            aria-hidden
+          />
+
+          <CardContent className="relative px-3.5 py-3 lg:px-4 lg:py-3.5">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div
+                  className="relative flex-shrink-0"
+                  title={project.country?.name || project.countryCode || undefined}
+                >
+                  <div
+                    className="absolute -inset-2 rounded-2xl bg-gradient-to-br from-blue-400/45 via-indigo-500/40 to-violet-500/35 blur-[1px]"
+                    aria-hidden
                   />
+                  <div className="relative flex h-[3.75rem] w-[5.25rem] items-center justify-center rounded-2xl border border-indigo-300/70 bg-gradient-to-br from-blue-100 via-white to-indigo-100 p-2 shadow-lg ring-2 ring-white sm:h-16 sm:w-[5.75rem] sm:p-2.5">
+                    {project.countryCode ? (
+                      <FlagIcon
+                        countryCode={project.countryCode}
+                        size="2xl"
+                        className="!h-11 !w-[4.25rem] !min-w-0 rounded-lg border-2 border-white bg-cover shadow-md sm:!h-12 sm:!w-[4.75rem]"
+                        aria-label={`Flag of ${project.country?.name || project.countryCode}`}
+                      />
+                    ) : (
+                      <span className="text-xs font-medium text-slate-400">—</span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight truncate">
+
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h1 className="truncate text-base font-bold leading-tight text-slate-900 lg:text-lg">
                       {project.title}
                     </h1>
                     <Badge
                       variant="outline"
                       className={statusBadgeClassNames(
-                        getProjectStatusBadge(project.status)
+                        projectStatusBadge,
+                        "shrink-0 py-0"
                       )}
                     >
-                      {getProjectStatusBadge(project.status).label}
+                      <span
+                        className={cn(
+                          "mr-1 inline-block h-1 w-1 rounded-full",
+                          project.status?.toLowerCase() === "active"
+                            ? "bg-emerald-500"
+                            : project.status?.toLowerCase() === "cancelled"
+                              ? "bg-red-500"
+                              : "bg-slate-400"
+                        )}
+                        aria-hidden
+                      />
+                      {projectStatusBadge.label}
                     </Badge>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
+                    {project.country?.name && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
+                        <MapPin className="h-3 w-3 text-indigo-500" aria-hidden />
+                        {project.country.name}
+                      </span>
+                    )}
                     {project.client && (
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <Building2 className="h-3 w-3 text-slate-400" aria-hidden />
                         {project.client.name}
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      Due {formatDate(project.deadline)}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-medium",
+                        (isDeadlineOverdue || isDeadlineDueToday) &&
+                          "animate-project-deadline-blink-urgent border-red-200 bg-red-50 text-red-700",
+                        isDeadlineUrgent &&
+                          "animate-project-deadline-blink border-amber-200 bg-amber-50 text-amber-800",
+                        !showDeadlineBlink && "border-transparent text-slate-500"
+                      )}
+                      role={showDeadlineBlink ? "status" : undefined}
+                      aria-live={showDeadlineBlink ? "polite" : undefined}
+                    >
+                      <Calendar
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          isDeadlineOverdue || isDeadlineDueToday
+                            ? "text-red-500"
+                            : isDeadlineUrgent
+                              ? "text-amber-500"
+                              : "text-slate-400"
+                        )}
+                        aria-hidden
+                      />
+                      <span>
+                        Due {formatDate(project.deadline)}
+                        {daysUntilDeadline !== null && (
+                          <span
+                            className={cn(
+                              "ml-0.5 font-bold",
+                              (isDeadlineOverdue || isDeadlineDueToday) &&
+                                "text-red-600"
+                            )}
+                          >
+                            (
+                            {isDeadlineOverdue
+                              ? "overdue"
+                              : `${Math.max(0, daysUntilDeadline)}d`}
+                            )
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                      {project.rolesNeeded.reduce((s: number, r: any) => s + r.quantity, 0)} positions
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <Briefcase className="h-3 w-3 text-slate-400" aria-hidden />
+                      {totalPositions}{" "}
+                      {totalPositions === 1 ? "position" : "positions"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <Layers className="h-3 w-3 text-slate-400" aria-hidden />
+                      {project.rolesNeeded.length}{" "}
+                      {project.rolesNeeded.length === 1 ? "role" : "roles"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Side — Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div
+                className="flex items-center gap-0.5 self-start rounded-lg border border-slate-200/80 bg-slate-50/80 p-0.5 sm:self-center"
+                role="toolbar"
+                aria-label="Project actions"
+              >
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDetails(true)}
-                  className="text-slate-500 hover:text-blue-600 font-medium h-9 px-3 text-xs"
+                  className="h-7 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-white hover:text-blue-700"
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  <FileText className="mr-1 h-3 w-3" aria-hidden />
                   Details
                 </Button>
                 <Button
@@ -1045,29 +1155,27 @@ export default function ProjectDetailPage() {
                   size="sm"
                   onClick={handleRefreshAll}
                   disabled={isLoading || isLoadingCandidates}
-                  className="text-slate-500 hover:text-blue-600 font-medium h-9 w-9 p-0"
-                  title="Refresh all data"
+                  className="h-7 w-7 rounded-md p-0 text-slate-600 hover:bg-white hover:text-blue-700"
+                  aria-label="Refresh all project data"
                 >
                   <RefreshCcw
-                    className={`h-3.5 w-3.5 ${
-                      isLoading || isLoadingCandidates ? "animate-spin" : ""
-                    }`}
+                    className={cn(
+                      "h-3 w-3",
+                      (isLoading || isLoadingCandidates) && "animate-spin"
+                    )}
+                    aria-hidden
                   />
                 </Button>
                 {canManageProjects && !isProcessingExecutive && (
-                  <>
-                    <div className="w-px h-6 bg-slate-200" />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      className="font-semibold h-9 text-xs border-slate-200 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                    >
-                      <Edit className="h-3.5 w-3.5 mr-1.5" />
-                      Edit
-                    </Button>
-                   
-                  </>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate(`/projects/${project.id}/edit`)}
+                    className="h-7 rounded-md bg-blue-600 px-2 text-[11px] font-semibold text-white hover:bg-blue-700"
+                  >
+                    <Edit className="mr-1 h-3 w-3" aria-hidden />
+                    Edit
+                  </Button>
                 )}
               </div>
             </div>

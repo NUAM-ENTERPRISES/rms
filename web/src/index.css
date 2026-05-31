@@ -1,7 +1,56 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@config "../tailwind.config.ts";
 
 @custom-variant dark (&:is(.dark *));
+
+@keyframes project-deadline-blink-urgent {
+  0%,
+  100% {
+    background-color: rgb(254 242 242);
+    border-color: rgb(254 202 202);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  35% {
+    background-color: rgb(254 236 236);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 2px rgb(239 68 68 / 0.12);
+  }
+  50% {
+    background-color: rgb(254 230 230);
+    border-color: rgb(251 146 146);
+    box-shadow: 0 0 10px 1px rgb(239 68 68 / 0.22);
+  }
+  65% {
+    background-color: rgb(254 236 236);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 2px rgb(239 68 68 / 0.12);
+  }
+}
+
+@keyframes project-deadline-blink {
+  0%,
+  100% {
+    background-color: rgb(255 251 235);
+    border-color: rgb(253 230 138);
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0%);
+  }
+  35% {
+    background-color: rgb(254 248 220);
+    border-color: rgb(252 211 77);
+    box-shadow: 0 0 0 2px rgb(245 158 11 / 0.1);
+  }
+  50% {
+    background-color: rgb(254 243 199);
+    border-color: rgb(251 191 36);
+    box-shadow: 0 0 10px 1px rgb(245 158 11 / 0.2);
+  }
+  65% {
+    background-color: rgb(254 248 220);
+    border-color: rgb(252 211 77);
+    box-shadow: 0 0 0 2px rgb(245 158 11 / 0.1);
+  }
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -116,5 +165,24 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-project-deadline-blink-urgent {
+    animation: project-deadline-blink-urgent 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-deadline-blink {
+    animation: project-deadline-blink 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-project-deadline-blink-urgent,
+    .animate-project-deadline-blink {
+      animation: none;
+    }
   }
 }

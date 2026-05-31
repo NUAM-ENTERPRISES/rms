@@ -606,6 +606,69 @@ type StatusPattern = {
   badgeClass: string;
 };
 
+function resolveCandidateGlobalStatusBadge(
+  underscored: string,
+  lower: string,
+  compact: string
+): ProjectCandidateStatusBadge | null {
+  if (underscored in CANDIDATE_STATUS_CONFIG) {
+    const cfg = CANDIDATE_STATUS_CONFIG[underscored as CandidateStatus];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  for (const cfg of Object.values(CANDIDATE_STATUS_CONFIG)) {
+    if (cfg.label.toLowerCase() === lower) {
+      return { label: cfg.label, badgeClass: cfg.badgeClass };
+    }
+  }
+
+  if (
+    compact === "noteligible" ||
+    lower.includes("not eligible") ||
+    lower === "ineligible"
+  ) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.NOT_ELIGIBLE];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "notinterested" || lower.includes("not interested")) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.NOT_INTERESTED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "interested" || lower === "interested") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.INTERESTED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "untouched" || lower === "untouched") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.UNTOUCHED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "qualified" || lower === "qualified") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.QUALIFIED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (underscored === "rnr" || lower === "rnr") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.RNR];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "otherenquiry" || lower.includes("other enquiry")) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.OTHER_ENQUIRY];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (underscored === "future" || lower === "future") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.FUTURE];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  return null;
+}
+
 /** Ordered patterns — first match wins (sub-status names, labels, partials). */
 const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
   {
@@ -776,6 +839,18 @@ export function resolveProjectCandidateStatusDisplay(
   }
 
   const { raw, lower, underscored, compact } = normalizeProjectStatusKey(statusRaw);
+
+  const globalStatus = resolveCandidateGlobalStatusBadge(underscored, lower, compact);
+  if (globalStatus) {
+    return globalStatus;
+  }
+
+  if (underscored === "not_in_project" || compact === "notinproject") {
+    return {
+      label: "Not in Project",
+      badgeClass: "bg-slate-50 text-slate-600 border-slate-200",
+    };
+  }
 
   if (underscored in CANDIDATE_PROJECT_STATUS_CONFIG) {
     const config = getStatusConfig(underscored as CandidateProjectStatus);
