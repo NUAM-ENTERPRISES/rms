@@ -79,6 +79,48 @@ describe("CandidateDetailTooltip - additional fields", () => {
     expect((await screen.findAllByText(/2021 - Present/i)).length).toBeGreaterThan(0);
   });
 
+  it("renders candidate code in the tooltip header", async () => {
+    const candidate = {
+      id: "c-code",
+      firstName: "Code",
+      lastName: "Test",
+      candidateCode: "AFF-12345",
+    } as any;
+
+    render(
+      <CandidateDetailTooltip candidate={candidate}>
+        <button>Open</button>
+      </CandidateDetailTooltip>
+    );
+
+    await userEvent.hover(screen.getByText("Open"));
+
+    const codeEls = await screen.findAllByTestId("candidate-detail-tooltip-code");
+    expect(codeEls[0]).toHaveTextContent("AFF-12345");
+  });
+
+  it("resolves candidate code from nested candidate shape", async () => {
+    const candidate = {
+      id: "c-nested",
+      candidate: {
+        firstName: "Nested",
+        lastName: "User",
+        candidate_code: "AFF-99999",
+      },
+    } as any;
+
+    render(
+      <CandidateDetailTooltip candidate={candidate}>
+        <button>Open</button>
+      </CandidateDetailTooltip>
+    );
+
+    await userEvent.hover(screen.getByText("Open"));
+
+    const codeEls = await screen.findAllByTestId("candidate-detail-tooltip-code");
+    expect(codeEls[0]).toHaveTextContent("AFF-99999");
+  });
+
   it("does not show stale totalExperience when workExperiences is empty", async () => {
     const candidate = {
       id: "c3",

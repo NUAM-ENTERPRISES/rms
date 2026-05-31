@@ -1075,7 +1075,7 @@ const ProjectCandidatesBoard = ({
   }> = [
     {
       id: "nominated",
-      title: "Registered",
+      title: "Shortlisted to Projects",
       subtitle: "Currently cv registered to this project",
       count: nominatedTotal ?? sanitizedNominated.length,
       content: renderNominatedColumn(),
@@ -1219,33 +1219,33 @@ const ProjectCandidatesBoard = ({
               onDrop={column.id === "nominated" ? (e) => handleDrop(e, column.id) : undefined}
             >
               <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
-                      aria-hidden="true"
-                    >
-                      <column.icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
+                    aria-hidden="true"
+                  >
+                    <column.icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle
                         id={`column-${column.id}-title`}
-                        className="text-sm font-bold text-slate-800 truncate leading-tight"
+                        className="text-sm font-bold text-slate-800 truncate leading-tight min-w-0 flex-1"
                       >
                         {column.title}
                       </CardTitle>
-                      <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
-                        {column.subtitle}
-                      </p>
+                      <span
+                        className={`text-xs font-bold ${gradient.countText} ${gradient.countBg} px-2.5 py-1 rounded-lg flex-shrink-0 tabular-nums shadow-sm`}
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {column.count}
+                      </span>
                     </div>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-2">
+                      {column.subtitle}
+                    </p>
                   </div>
-                  <span
-                    className={`text-xs font-bold ${gradient.countText} ${gradient.countBg} px-2.5 py-1 rounded-lg flex-shrink-0 tabular-nums shadow-sm`}
-                    aria-live="polite"
-                    aria-atomic="true"
-                  >
-                    {column.count}
-                  </span>
                 </div>
               </CardHeader>
               {column.headerExtra}

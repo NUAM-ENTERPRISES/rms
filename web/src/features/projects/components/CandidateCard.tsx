@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { resolveProjectCandidateStatusDisplay } from "@/constants/statuses";
 import type { CareerGapAnalysis } from "@/features/candidates/api";
 import {
   formatMonthsAsDuration,
@@ -392,135 +393,6 @@ const CandidateCard = memo(function CandidateCard({
     }
   };
 
-  // Get status configuration
-  const getStatusConfig = (status: string) => {
-    const statusLower = status?.toLowerCase() || "";
-    switch (statusLower) {
-      case "interested":
-        return {
-          label: "Interested",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "untouched":
-        return {
-          label: "Untouched",
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
-      case "not interested":
-        return {
-          label: "Not Interested",
-          color: "bg-slate-100 text-slate-800 border-slate-200",
-        };
-      case "qualified":
-        return {
-          label: "Qualified",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "deployed":
-      case "working": // legacy
-        return {
-          label: "Deployed",
-          color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-        };
-      // Project statuses
-      case "nominated":
-        return {
-          label: "Nominated",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "pending_documents":
-        return {
-          label: "Pending Documents",
-          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        };
-      case "documents_submitted":
-        return {
-          label: "Documents Submitted",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "verification_in_progress":
-        return {
-          label: "Verification In Progress",
-          color: "bg-orange-100 text-orange-800 border-orange-200",
-        };
-      case "documents_verified":
-        return {
-          label: "Documents Verified",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "approved":
-        return {
-          label: "Approved",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "interview_scheduled":
-        return {
-          label: "Interview Scheduled",
-          color: "bg-purple-100 text-purple-800 border-purple-200",
-        };
-      case "interview_completed":
-        return {
-          label: "Interview Completed",
-          color: "bg-purple-100 text-purple-800 border-purple-200",
-        };
-      case "interview_passed":
-        return {
-          label: "Interview Passed",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "selected":
-        return {
-          label: "Selected",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "processing":
-        return {
-          label: "Processing",
-          color: "bg-orange-100 text-orange-800 border-orange-200",
-        };
-      case "hired":
-        return {
-          label: "Hired",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "rejected_documents":
-        return {
-          label: "Rejected - Documents",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "rejected_interview":
-        return {
-          label: "Rejected - Interview",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "rejected_selection":
-        return {
-          label: "Rejected - Selection",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "withdrawn":
-        return {
-          label: "Withdrawn",
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
-      case "on_hold":
-        return {
-          label: "On Hold",
-          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        };
-      case "not_in_project":
-        return {
-          label: "Not in Project",
-          color: "bg-red-50 text-red-600 border-red-200",
-        };
-      default:
-        return {
-          label: status,
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
-    }
-  };
-
   // Get match score color
   const getMatchScoreColor = (score: number) => {
     if (score >= 90) return "bg-green-100 text-green-800 border-green-200";
@@ -529,23 +401,31 @@ const CandidateCard = memo(function CandidateCard({
     return "bg-red-100 text-red-800 border-red-200";
   };
 
-  const statusConfig = getStatusConfig(
+  const projectStatusRaw =
     projectStatus ||
-      (typeof candidate.currentStatus === "string"
-        ? candidate.currentStatus
-        : candidate.currentStatus?.statusName || "") ||
-      ""
-  );
+    (typeof candidate.currentStatus === "string"
+      ? candidate.currentStatus
+      : candidate.currentStatus?.statusName || "") ||
+    "";
 
-  // Also compute explicit candidate.currentStatus (separate from projectStatus)
+  const statusConfig = resolveProjectCandidateStatusDisplay(projectStatusRaw);
+
   const candidateStatusRaw: string =
     typeof candidate.currentStatus === "string"
       ? candidate.currentStatus
-      : candidate.currentStatus?.statusName || candidate.currentStatus?.name || "";
+      : candidate.currentStatus?.statusName ||
+        candidate.currentStatus?.name ||
+        candidate.currentStatus?.label ||
+        "";
   const normalize = (s: string | undefined) =>
     (s || "").toString().toLowerCase().replace(/[\s_]+/g, "");
-  const showCandidateStatusBadge = !!candidateStatusRaw && !!projectStatus && normalize(candidateStatusRaw) !== normalize(projectStatus);
-  const candidateStatusConfig = candidateStatusRaw ? getStatusConfig(candidateStatusRaw) : null;
+  const showCandidateStatusBadge =
+    !!candidateStatusRaw &&
+    !!projectStatusRaw &&
+    normalize(candidateStatusRaw) !== normalize(projectStatusRaw);
+  const candidateStatusConfig = candidateStatusRaw
+    ? resolveProjectCandidateStatusDisplay(candidateStatusRaw)
+    : null;
 
   // Get initials for avatar
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -891,7 +771,10 @@ const CandidateCard = memo(function CandidateCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge
             variant="outline"
-            className={`${statusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
+            className={cn(
+              statusConfig.badgeClass,
+              "border text-[10px] px-2 py-0.5 rounded-md font-medium"
+            )}
           >
             {statusConfig.label}
           </Badge>
@@ -900,7 +783,10 @@ const CandidateCard = memo(function CandidateCard({
           {showCandidateStatusBadge && candidateStatusConfig && (
             <Badge
               variant="outline"
-              className={`${candidateStatusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
+              className={cn(
+                candidateStatusConfig.badgeClass,
+                "border text-[10px] px-2 py-0.5 rounded-md font-medium"
+              )}
               title={`Candidate status: ${candidateStatusConfig.label}`}
             >
               {candidateStatusConfig.label}

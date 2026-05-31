@@ -66,6 +66,11 @@ import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
+import {
+  getConfigValueBadge,
+  getProjectStatusBadge,
+  statusBadgeClassNames,
+} from "@/features/projects/constants/statusBadges";
 
 // Helper function to format date
 const formatDate = (dateString?: string) => {
@@ -998,15 +1003,11 @@ export default function ProjectDetailPage() {
                     </h1>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
-                        project.status === 'active'
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : project.status === 'completed'
-                          ? 'border-blue-200 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}
+                      className={statusBadgeClassNames(
+                        getProjectStatusBadge(project.status)
+                      )}
                     >
-                      {project.status}
+                      {getProjectStatusBadge(project.status).label}
                     </Badge>
                   </div>
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
@@ -1200,18 +1201,32 @@ export default function ProjectDetailPage() {
                 <div className="px-3.5 py-2.5 space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Configuration</p>
                   {[
-                    { icon: User, color: "text-indigo-500", label: "Creator", value: project.creator.name },
-                    { icon: Building2, color: "text-orange-500", label: "Type", value: project.projectType === "ministry" ? "Government" : "Private" },
-                    { icon: FileText, color: "text-cyan-500", label: "Resume", value: projectResumeEditable ? "Editable" : "Fixed" },
-                    { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—" },
-                    { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible" },
+                    { icon: User, color: "text-indigo-500", label: "Creator", value: project.creator.name, isStatus: false },
+                    { icon: Building2, color: "text-orange-500", label: "Type", value: project.projectType === "ministry" ? "Government" : "Private", isStatus: true },
+                    { icon: FileText, color: "text-cyan-500", label: "Resume", value: projectResumeEditable ? "Editable" : "Fixed", isStatus: true },
+                    { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—", isStatus: true },
+                    { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible", isStatus: true },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
                         <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                      {item.isStatus ? (
+                        <Badge
+                          variant="outline"
+                          className={statusBadgeClassNames(
+                            getConfigValueBadge(item.value),
+                            "max-w-[50%] truncate normal-case tracking-normal"
+                          )}
+                        >
+                          {item.value}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">
+                          {item.value}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1231,7 +1246,15 @@ export default function ProjectDetailPage() {
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
                         <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                      <Badge
+                        variant="outline"
+                        className={statusBadgeClassNames(
+                          getConfigValueBadge(item.value),
+                          "max-w-[55%] truncate normal-case tracking-normal"
+                        )}
+                      >
+                        {item.value}
+                      </Badge>
                     </div>
                   ))}
                 </div>

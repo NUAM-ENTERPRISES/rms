@@ -151,6 +151,19 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
     c.lastName || c.last_name || (candidate as any).lastName || (candidate as any).last_name || "";
   const fullName = `${firstName} ${lastName}`.trim();
 
+  const candidateCode =
+    c.candidateCode ??
+    c.candidate_code ??
+    inner.candidateCode ??
+    inner.candidate_code ??
+    (candidate as CandidateRecord).candidateCode ??
+    (candidate as any).candidate_code ??
+    null;
+  const candidateCodeDisplay =
+    candidateCode != null && String(candidateCode).trim() !== ""
+      ? String(candidateCode).trim()
+      : null;
+
   // Robust contact resolution
   const emailVal =
     c.email || c.emailAddress || (candidate as any).email || (candidate as any).emailAddress;
@@ -253,7 +266,15 @@ export function CandidateDetailTooltip({ candidate, children }: CandidateDetailT
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-sm truncate">{fullName}</h3>
+              <h3 className="font-bold text-sm truncate">{fullName || "Unnamed Candidate"}</h3>
+              {candidateCodeDisplay && (
+                <p
+                  className="mt-0.5 inline-block rounded border border-white/40 bg-white/95 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-red-700 shadow-sm"
+                  data-testid="candidate-detail-tooltip-code"
+                >
+                  {candidateCodeDisplay}
+                </p>
+              )}
               {/* contact in header */}
               {(emailVal || contactValue) && (
                 <div className="text-[10px] text-blue-100 truncate space-y-0.5">
