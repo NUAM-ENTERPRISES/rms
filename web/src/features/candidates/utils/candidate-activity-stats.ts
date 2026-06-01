@@ -1,17 +1,10 @@
-import type { CandidateProjectItem, Document } from "../api";
+import type {
+  CandidateActivitySnapshot,
+  CandidateProjectItem,
+  Document,
+} from "../api";
 
-export type CandidateActivitySnapshot = {
-  projectsAssigned: number;
-  inDocumentation: number;
-  inInterview: number;
-  processingOrDeployed: number;
-  offersInPipeline: number;
-  placements: number;
-  verifiedDocuments: number;
-  pendingDocuments: number;
-  profileCompletion: number;
-  pipelineUpdates: number;
-};
+export type { CandidateActivitySnapshot };
 
 type ComputeCandidateActivityStatsInput = {
   projects: CandidateProjectItem[];

@@ -808,6 +808,23 @@ export class CandidatesController {
             visaType: { type: 'string' },
             recruiter: { type: 'object' },
             team: { type: 'object' },
+            activitySnapshot: {
+              type: 'object',
+              description:
+                'Aggregated pipeline activity counts for overview sidebar',
+              properties: {
+                projectsAssigned: { type: 'number', example: 1 },
+                inDocumentation: { type: 'number', example: 1 },
+                inInterview: { type: 'number', example: 0 },
+                processingOrDeployed: { type: 'number', example: 0 },
+                offersInPipeline: { type: 'number', example: 0 },
+                placements: { type: 'number', example: 0 },
+                verifiedDocuments: { type: 'number', example: 1 },
+                pendingDocuments: { type: 'number', example: 0 },
+                profileCompletion: { type: 'number', example: 44 },
+                pipelineUpdates: { type: 'number', example: 1 },
+              },
+            },
           },
         },
         message: {

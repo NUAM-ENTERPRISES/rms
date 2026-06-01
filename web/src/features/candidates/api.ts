@@ -1,6 +1,20 @@
 import { baseApi } from "@/app/api/baseApi";
 import type { CandidateProfileCompletionPayload } from "./profileCompletion";
 
+/** Aggregated pipeline activity counts from GET /candidates/:id */
+export type CandidateActivitySnapshot = {
+  projectsAssigned: number;
+  inDocumentation: number;
+  inInterview: number;
+  processingOrDeployed: number;
+  offersInPipeline: number;
+  placements: number;
+  verifiedDocuments: number;
+  pendingDocuments: number;
+  profileCompletion: number;
+  pipelineUpdates: number;
+};
+
 // Document types
 export interface Document {
   id: string;
@@ -175,6 +189,9 @@ export interface Candidate {
 
   /** Computed on GET /candidates/:id from work experience + qualifications. */
   careerGapAnalysis?: CareerGapAnalysis;
+
+  /** Aggregated pipeline activity counts (GET /candidates/:id). */
+  activitySnapshot?: CandidateActivitySnapshot;
 
   // On hold tracking fields
   onHoldDuration?: number | null;

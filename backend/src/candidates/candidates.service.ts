@@ -70,6 +70,7 @@ import {
   resolveCreHandoffNote,
   resolveCreHandoffStatus,
 } from './utils/cre-handoff.util';
+import { computeCandidateActivitySnapshot } from './utils/candidate-activity-snapshot.util';
 import {
   assertOptionalCountryCode,
   normalizeOptionalCountryCode,
@@ -2046,7 +2047,32 @@ export class CandidatesService {
     const isCREReassigned = !!creReassignedAssignment;
     const histories = statusHistories ?? [];
 
-    // Pipeline data removed from response to reduce payload
+    const [projectAssignments, activityDocuments, pipelineUpdatesCount] =
+      await Promise.all([
+        this.prisma.candidateProjects.findMany({
+          where: { candidateId: id },
+          select: {
+            currentProjectStatus: {
+              select: { statusName: true },
+            },
+          },
+        }),
+        this.prisma.document.findMany({
+          where: { candidateId: id, isDeleted: false },
+          select: { status: true },
+        }),
+        this.prisma.candidateStatusHistory.count({
+          where: { candidateId: id },
+        }),
+      ]);
+
+    const activitySnapshot = computeCandidateActivitySnapshot({
+      projects: projectAssignments,
+      documents: activityDocuments,
+      pipelineSteps: pipelineUpdatesCount,
+      profileCompletion: base.profileCompletion?.percent ?? 0,
+    });
+
     return {
       ...base,
       currentStatus: base.currentStatus,
@@ -2062,6 +2088,7 @@ export class CandidatesService {
         candidateWithoutHistories.workExperiences ?? [],
         candidateWithoutHistories.qualifications ?? [],
       ),
+      activitySnapshot,
     } as any;
   }
 

@@ -52,7 +52,7 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type { PassportDocumentSummary } from "../../profileCompletion";
-import type { CandidateActivitySnapshot as ActivityStats } from "../../utils/candidate-activity-stats";
+import type { CandidateActivitySnapshot as ActivityStats } from "../../api";
 import {
   CandidateActivitySnapshot,
   type SnapshotTab,
@@ -152,6 +152,43 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
     if (!careerGaps || careerGaps.totalGapMonths === 0) return "No gaps";
     return formatMonthsAsDuration(careerGaps.totalGapMonths);
   }, [careerGaps, isCandidateLoading, workExperiences.length]);
+
+  const workExperienceSummary = useMemo(() => {
+    let totalExperience = "N/A";
+    if (workExperiences.length > 0) {
+      const { years, months, days } =
+        DateUtils.calculateTotalExperience(workExperiences);
+      totalExperience = DateUtils.formatDuration(years, months, days);
+    } else if (careerGaps) {
+      totalExperience = formatMonthsAsDuration(careerGaps.totalExperienceMonths);
+    } else {
+      totalExperience =
+        candidate.totalExperience?.toString() ||
+        candidate.experience?.toString() ||
+        "N/A";
+    }
+
+    const totalGap = isCandidateLoading
+      ? "…"
+      : careerGaps && careerGaps.totalGapMonths > 0
+        ? formatMonthsAsDuration(careerGaps.totalGapMonths)
+        : "None";
+
+    const hasGap = !isCandidateLoading && !!careerGaps && careerGaps.totalGapMonths > 0;
+
+    return {
+      totalExperience,
+      totalGap,
+      positions: workExperiences.length,
+      hasGap,
+    };
+  }, [
+    workExperiences,
+    careerGaps,
+    isCandidateLoading,
+    candidate.totalExperience,
+    candidate.experience,
+  ]);
 
   const qualificationsTotalPages = Math.max(
     1,
@@ -913,44 +950,61 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                     {workExperiences.length > 0 ? (
                       <div className="space-y-3">
-                        {/* Total Experience Banner */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200/50">
-                          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
-                          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
-                          <div className="relative flex items-center justify-between">
-                            <div>
-                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Experience</p>
-                              <p className="text-2xl font-extrabold tracking-tight">
-                                {(() => {
-                                  if (workExperiences.length > 0) {
-                                    const { years, months, days } =
-                                      DateUtils.calculateTotalExperience(workExperiences);
-                                    return DateUtils.formatDuration(years, months, days);
-                                  }
-                                  if (careerGaps) {
-                                    return formatMonthsAsDuration(careerGaps.totalExperienceMonths);
-                                  }
-                                  return (
-                                    candidate.totalExperience?.toString() ||
-                                    candidate.experience?.toString() ||
-                                    "N/A"
-                                  );
-                                })()}
+                        {/* Work experience summary — compact stat chips */}
+                        <div className="space-y-2" aria-label="Work experience summary">
+                          <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                              <Clock className="h-4 w-4" aria-hidden />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                Total experience
+                              </p>
+                              <p className="mt-1 text-base font-bold leading-snug text-slate-800 whitespace-normal">
+                                {workExperienceSummary.totalExperience}
                               </p>
                             </div>
-                            <div className="text-center">
-                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Gap</p>
-                              <p className="text-2xl font-extrabold tracking-tight">
-                                {isCandidateLoading
-                                  ? "…"
-                                  : careerGaps && careerGaps.totalGapMonths > 0
-                                    ? formatMonthsAsDuration(careerGaps.totalGapMonths)
-                                    : "None"}
-                              </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                              <div
+                                className={cn(
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                                  workExperienceSummary.hasGap
+                                    ? "bg-violet-100 text-violet-600"
+                                    : "bg-emerald-100 text-emerald-600"
+                                )}
+                              >
+                                <PauseCircle className="h-4 w-4" aria-hidden />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                  Total gap
+                                </p>
+                                <p
+                                  className={cn(
+                                    "mt-1 text-sm font-bold leading-snug whitespace-normal",
+                                    workExperienceSummary.hasGap
+                                      ? "text-violet-700"
+                                      : "text-emerald-700"
+                                  )}
+                                >
+                                  {workExperienceSummary.totalGap}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Positions</p>
-                              <p className="text-2xl font-extrabold">{workExperiences.length}</p>
+                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                                <Briefcase className="h-4 w-4" aria-hidden />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                  Positions
+                                </p>
+                                <p className="mt-1 text-sm font-bold leading-snug text-slate-800 whitespace-normal">
+                                  {workExperienceSummary.positions}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>

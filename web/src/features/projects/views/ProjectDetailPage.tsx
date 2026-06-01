@@ -1019,25 +1019,19 @@ export default function ProjectDetailPage() {
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 <div
-                  className="relative flex-shrink-0"
+                  className="flex-shrink-0"
                   title={project.country?.name || project.countryCode || undefined}
                 >
-                  <div
-                    className="absolute -inset-2 rounded-2xl bg-gradient-to-br from-blue-400/45 via-indigo-500/40 to-violet-500/35 blur-[1px]"
-                    aria-hidden
-                  />
-                  <div className="relative flex h-[3.75rem] w-[5.25rem] items-center justify-center rounded-2xl border border-indigo-300/70 bg-gradient-to-br from-blue-100 via-white to-indigo-100 p-2 shadow-lg ring-2 ring-white sm:h-16 sm:w-[5.75rem] sm:p-2.5">
-                    {project.countryCode ? (
-                      <FlagIcon
-                        countryCode={project.countryCode}
-                        size="2xl"
-                        className="!h-11 !w-[4.25rem] !min-w-0 rounded-lg border-2 border-white bg-cover shadow-md sm:!h-12 sm:!w-[4.75rem]"
-                        aria-label={`Flag of ${project.country?.name || project.countryCode}`}
-                      />
-                    ) : (
-                      <span className="text-xs font-medium text-slate-400">—</span>
-                    )}
-                  </div>
+                  {project.countryCode ? (
+                    <FlagIcon
+                      countryCode={project.countryCode}
+                      size="2xl"
+                      className="!h-11 !w-[4.25rem] !min-w-0 rounded sm:!h-12 sm:!w-[4.75rem]"
+                      aria-label={`Flag of ${project.country?.name || project.countryCode}`}
+                    />
+                  ) : (
+                    <span className="text-xs font-medium text-slate-400">—</span>
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1 space-y-1.5">

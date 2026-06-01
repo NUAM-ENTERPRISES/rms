@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -29,7 +29,6 @@ import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
 import {
   useGetCandidateByIdQuery,
-  useGetCandidateProjectsQuery,
   useGetDocumentsQuery,
   useUploadDocumentMutation,
   useDeleteWorkExperienceMutation,
@@ -61,7 +60,6 @@ import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
 import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
-import { computeCandidateActivityStats } from "../utils/candidate-activity-stats";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
@@ -139,59 +137,24 @@ export default function CandidateDetailPage() {
   const {
     data: candidate,
     isLoading,
+    isFetching: isCandidateFetching,
     error,
   } = useGetCandidateByIdQuery(id!, {
     skip: !id,
   });
 
-  // Fetch candidate status pipeline
-  const {
-    data: pipelineData,
-    isFetching: isPipelineFetching,
-  } = useGetCandidateStatusPipelineQuery(id!, {
+  const { data: pipelineData } = useGetCandidateStatusPipelineQuery(id!, {
     skip: !id,
   });
 
-  // Fetch projects for stat cards and live activity stats
-  const {
-    data: projectsData,
-    isLoading: isProjectsLoading,
-    isFetching: isProjectsFetching,
-  } = useGetCandidateProjectsQuery(
+  const { data: documentsData } = useGetDocumentsQuery(
     { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
 
-  const {
-    data: documentsData,
-    isLoading: isDocumentsLoading,
-    isFetching: isDocumentsFetching,
-  } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 100 },
-    { skip: !id }
-  );
-
-  const activityStats = useMemo(
-    () =>
-      computeCandidateActivityStats({
-        projects: projectsData?.data ?? [],
-        projectsTotal: projectsData?.meta?.total ?? 0,
-        documents: documentsData?.data?.documents ?? [],
-        documentsTotal: documentsData?.data?.pagination?.total ?? 0,
-        pipelineSteps: pipelineData?.data?.pipeline?.length ?? 0,
-        profileCompletion: candidate?.profileCompletion?.percent ?? 0,
-      }),
-    [
-      projectsData,
-      documentsData,
-      pipelineData,
-      candidate?.profileCompletion?.percent,
-    ]
-  );
-
-  const isActivityStatsLoading = isProjectsLoading || isDocumentsLoading;
-  const isActivityStatsFetching =
-    isProjectsFetching || isDocumentsFetching || isPipelineFetching;
+  const activityStats = candidate?.activitySnapshot;
+  const isActivityStatsLoading = isLoading;
+  const isActivityStatsFetching = isCandidateFetching;
 
   const passportDocument = getPassportDocument(
     documentsData?.data?.documents ?? []
@@ -346,7 +309,10 @@ export default function CandidateDetailPage() {
   const stats: Stat[] = [
     {
       label: "Overview",
-      value: candidate.profileCompletion?.percent ?? 0,
+      value:
+        candidate.activitySnapshot?.profileCompletion ??
+        candidate.profileCompletion?.percent ??
+        0,
       subtitle: "Profile ready",
       icon: Target,
       tab: "overview",
@@ -354,7 +320,7 @@ export default function CandidateDetailPage() {
     },
     {
       label: "Projects Assigned",
-      value: projectsData?.meta?.total ?? 0,
+      value: candidate.activitySnapshot?.projectsAssigned ?? 0,
       subtitle: "Assigned tasks",
       icon: Briefcase,
       tab: "projects",
@@ -370,7 +336,7 @@ export default function CandidateDetailPage() {
     },
     {
       label: "Status History",
-      value: pipelineData?.data?.pipeline?.length ?? 0,
+      value: candidate.activitySnapshot?.pipelineUpdates ?? 0,
       subtitle: "Status changes",
       icon: TrendingUp,
       tab: "history",

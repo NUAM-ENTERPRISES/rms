@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Activity,
 } from "lucide-react";
-import type { CandidateActivitySnapshot as ActivityStats } from "../utils/candidate-activity-stats";
+import type { CandidateActivitySnapshot as ActivityStats } from "../api";
 
 export type SnapshotTab = "projects" | "documents" | "overview" | "history";
 
