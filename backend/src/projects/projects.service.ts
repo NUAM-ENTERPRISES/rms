@@ -39,6 +39,7 @@ import {
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 @Injectable()
 export class ProjectsService {
@@ -3102,7 +3103,7 @@ export class ProjectsService {
    */
   private async getAllRecruiters(): Promise<any[]> {
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -3110,7 +3111,7 @@ export class ProjectsService {
             },
           },
         },
-      },
+      }),
       include: {
         userRoles: {
           include: {

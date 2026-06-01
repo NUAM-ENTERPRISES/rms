@@ -42,6 +42,10 @@ import {
 } from './account-status-notifications';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  resolveUserListAccountStatusFilter,
+  withActiveAccountStatus,
+} from './user-account-status.filter';
 
 /** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
@@ -252,7 +256,10 @@ export class UsersService {
     return userWithoutPassword as UserWithRoles;
   }
 
-  async findAll(query: QueryUsersDto): Promise<PaginatedUsers> {
+  async findAll(
+    query: QueryUsersDto,
+    options?: { listAllAccountStatuses?: boolean },
+  ): Promise<PaginatedUsers> {
     const {
       search,
       page = 1,
@@ -264,11 +271,12 @@ export class UsersService {
     } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-
-    if (accountStatus) {
-      where.accountStatus = accountStatus;
-    }
+    const where: any = {
+      ...resolveUserListAccountStatusFilter({
+        listAllAccountStatuses: options?.listAllAccountStatuses ?? false,
+        accountStatus,
+      }),
+    };
 
     if (search) {
       where.OR = [
@@ -1364,7 +1372,7 @@ export class UsersService {
 
     // Get all users with Recruiter role
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -1372,7 +1380,7 @@ export class UsersService {
             },
           },
         },
-      },
+      }),
       select: {
         id: true,
         name: true,

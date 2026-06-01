@@ -34,7 +34,7 @@ export const NotifyDocumentationModal: React.FC<NotifyDocumentationModalProps> =
   onSuccess,
 }) => {
   const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
-    { limit: 10, roles: ["Documentation Executive"] },
+    { limit: 10, roles: ["Documentation Executive"], accountStatus: "ACTIVE" },
     { skip: !isOpen }
   );
   const [recruiterNotify, { isLoading: isNotifying }] = useRecruiterNotifyMutation();

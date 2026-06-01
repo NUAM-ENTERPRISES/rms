@@ -39,6 +39,7 @@ import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 import { EmployeeCodeService } from './services/employee-code.service';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { SkipAudit } from '../common/audit/skip-audit.decorator';
@@ -59,6 +60,7 @@ export class UsersController {
     private readonly uploadService: UploadService,
     private readonly prisma: PrismaService,
     private readonly employeeCodeService: EmployeeCodeService,
+    private readonly rbacUtil: RbacUtil,
   ) {}
 
   @Post('employee-code/suggest')
@@ -261,12 +263,22 @@ export class UsersController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryUsersDto): Promise<{
+  async findAll(
+    @Query() query: QueryUsersDto,
+    @Request() req: { user?: { id?: string } },
+  ): Promise<{
     success: boolean;
     data: PaginatedUsers;
     message: string;
   }> {
-    const result = await this.usersService.findAll(query);
+    const userId = req.user?.id;
+    const listAllAccountStatuses = userId
+      ? await this.rbacUtil.hasPermission(userId, ['manage:users'])
+      : false;
+
+    const result = await this.usersService.findAll(query, {
+      listAllAccountStatuses,
+    });
     return {
       success: true,
       data: result,

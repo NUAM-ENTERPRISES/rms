@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import { isOperationsRole } from '../common/constants/role-ids';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface NotificationJobData {
   type: string;
@@ -94,12 +95,14 @@ export class NotificationsProcessor extends WorkerHost {
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process notification ${type}: ${error.message}`,
-        error.stack,
+        `Failed to process notification ${type}: ${err.message}`,
+        err.stack,
       );
-      throw error;
+      throw err;
     }
   }
 
@@ -164,12 +167,14 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Transfer request notifications created for ${recipients.length} recipients`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process transfer request: ${error.message}`,
-        error.stack,
+        `Failed to process transfer request: ${err.message}`,
+        err.stack,
       );
-      throw error;
+      throw err;
     }
   }
 
@@ -1165,7 +1170,7 @@ export class NotificationsProcessor extends WorkerHost {
       if (!assignedToExecutive) {
         // Find all users with 'Documentation Executive' role
         const documentationExecutives = await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -1173,7 +1178,7 @@ export class NotificationsProcessor extends WorkerHost {
                 },
               },
             },
-          },
+          }),
           select: { id: true },
         });
 
@@ -1823,7 +1828,7 @@ export class NotificationsProcessor extends WorkerHost {
 
         // Notify all Interview Coordinators (if different from the person who scheduled)
         const allInterviewCoordinators = await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -1831,7 +1836,7 @@ export class NotificationsProcessor extends WorkerHost {
                 },
               },
             },
-          },
+          }),
         });
 
         for (const ic of allInterviewCoordinators) {
@@ -2024,7 +2029,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Interview Coordinator role members (case-insensitive match)
       const coordinatorUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2035,7 +2040,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2083,7 +2088,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Documentation role members
       const documentationUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2094,7 +2099,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2119,7 +2124,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Documentation Executive role members
       const documentationExecutives = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2130,7 +2135,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2326,7 +2331,7 @@ export class NotificationsProcessor extends WorkerHost {
         'Team Lead',
       ];
       const targetUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2334,7 +2339,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2384,7 +2389,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // 3. Find Interview Coordinators, Directors, and CEOs
       const recipients = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2392,7 +2397,7 @@ export class NotificationsProcessor extends WorkerHost {
               }
             }
           }
-        },
+        }),
         select: { id: true },
       });
 
@@ -2519,7 +2524,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Interview Coordinator role members (case-insensitive match)
       const coordinatorUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2530,7 +2535,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2633,7 +2638,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Find all users with this role
       const users = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2641,7 +2646,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: {
           id: true,
         },
@@ -2707,10 +2712,12 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.debug(`DataSync event processed for type: ${type}`);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process DataSync event: ${error.message}`,
-        error.stack,
+        `Failed to process DataSync event: ${err.message}`,
+        err.stack,
       );
     }
   }

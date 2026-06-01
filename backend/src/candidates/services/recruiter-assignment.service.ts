@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { LanguageProficiency, Prisma, UserAccountStatus } from '@prisma/client';
+import { LanguageProficiency, Prisma } from '@prisma/client';
+import { ACTIVE_USER_ACCOUNT_WHERE } from '../../users/user-account-status.filter';
 import { PrismaService } from '../../database/prisma.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../../common/constants/candidate-constants';
@@ -17,11 +18,6 @@ import {
 import { calculateCareerGaps } from '../utils/employment-timeline.util';
 
 export type DirectAssignmentKind = 'recruiter' | 'agent_source';
-
-/** Only ACTIVE recruiters participate in automatic round-robin / workload assignment */
-const ACTIVE_RECRUITER_ACCOUNT_WHERE = {
-  accountStatus: UserAccountStatus.ACTIVE,
-} as const;
 
 /**
  * Agent-channel candidates: canonical/legacy source values OR any row linked to an Agent
@@ -229,7 +225,7 @@ export class RecruiterAssignmentService {
     );
     const recruiters = await this.prisma.user.findMany({
       where: {
-        ...ACTIVE_RECRUITER_ACCOUNT_WHERE,
+        ...ACTIVE_USER_ACCOUNT_WHERE,
         userRoles: {
           some: {
             roleId: recruiterRoleId,
@@ -312,7 +308,7 @@ export class RecruiterAssignmentService {
     // Get all recruiters with their active candidate count
     const recruiters = await this.prisma.user.findMany({
       where: {
-        ...ACTIVE_RECRUITER_ACCOUNT_WHERE,
+        ...ACTIVE_USER_ACCOUNT_WHERE,
         userRoles: {
           some: {
             roleId: recruiterRoleId,
