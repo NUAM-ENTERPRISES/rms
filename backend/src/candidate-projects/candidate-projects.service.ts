@@ -28,6 +28,7 @@ import {
   DOCUMENT_TYPE,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
+import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 
@@ -119,6 +120,8 @@ export class CandidateProjectsService {
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
+
+    assertProjectOpenForAssignment(project);
 
     // -------------------------------
     // AUTO-MATCH ROLE
@@ -3165,6 +3168,8 @@ export class CandidateProjectsService {
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
+
+    assertProjectOpenForAssignment(project);
 
     // Get common statuses once
     const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({

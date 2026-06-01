@@ -22,6 +22,11 @@ import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
 import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
+  assertProjectOpenForAssignment,
+  getStartOfToday,
+} from './utils/project-deadline.util';
+import { ProjectDeadlineAutoCompleteService } from './project-deadline-auto-complete.service';
+import {
   ProjectWithRelations,
   PaginatedProjects,
   PaginatedProjectPicker,
@@ -46,6 +51,7 @@ export class ProjectsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly projectDeadlineAutoComplete: ProjectDeadlineAutoCompleteService,
     private readonly countriesService: CountriesService,
     private readonly qualificationsService: QualificationsService,
     private readonly roleCatalogService: RoleCatalogService,
@@ -405,6 +411,8 @@ export class ProjectsService {
   async findAll(
     query: QueryProjectsDto,
   ): Promise<PaginatedProjects | PaginatedProjectSummaryList> {
+    await this.projectDeadlineAutoComplete.autoCompleteExpiredProjects();
+
     const {
       search,
       status,
@@ -432,8 +440,34 @@ export class ProjectsService {
       ];
     }
 
+    const now = new Date();
+    const startOfToday = getStartOfToday(now);
+
     if (status) {
-      where.status = status;
+      if (status === 'active') {
+        where.status = 'active';
+        where.AND = [
+          {
+            OR: [
+              { deadline: null },
+              { deadline: { gte: startOfToday } },
+            ],
+          },
+        ];
+      } else if (status === 'completed') {
+        where.OR = [
+          { status: 'completed' },
+          {
+            status: 'active',
+            deadline: {
+              not: null,
+              lt: startOfToday,
+            },
+          },
+        ];
+      } else {
+        where.status = status;
+      }
     }
 
     if (priority) {
@@ -1332,6 +1366,8 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
+    assertProjectOpenForAssignment(project);
+
     // Check if candidate exists
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: assignCandidateDto.candidateId },
@@ -2057,6 +2093,8 @@ export class ProjectsService {
   }
 
   async getProjectStats(): Promise<ProjectStats> {
+    await this.projectDeadlineAutoComplete.autoCompleteExpiredProjects();
+
     // Get total counts
     const [
       totalProjects,
@@ -2213,6 +2251,8 @@ export class ProjectsService {
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
+
+    assertProjectOpenForAssignment(project);
 
     // --------------------------------
     // 2. BUILD WHERE CLAUSE

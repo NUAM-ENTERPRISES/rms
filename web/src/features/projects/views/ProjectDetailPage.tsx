@@ -43,6 +43,10 @@ import {
   RefreshCcw,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+import {
+  getProjectClosureMessage,
+  isProjectOpenForAssignment,
+} from "@/features/projects/utils/project-assignment";
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import {
@@ -161,9 +165,13 @@ export default function ProjectDetailPage() {
     error,
     refetch: refetchProject,
   } = useGetProjectQuery(projectId!, {
-    refetchOnFocus: false,
-    refetchOnMountOrArgChange: false,
+    refetchOnFocus: true,
+    refetchOnMountOrArgChange: true,
   });
+  const assignmentOpen = isProjectOpenForAssignment(projectData?.data);
+  const assignmentClosureMessage = getProjectClosureMessage(projectData?.data);
+  const DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE =
+    "This project is closed. New candidate assignments are disabled.";
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -181,6 +189,7 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
+    skip: !projectId || !assignmentOpen,
     refetchOnFocus: false,
     refetchOnMountOrArgChange: false,
   });
@@ -640,6 +649,12 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!assignmentOpen) {
+      toast.error(
+        assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
+      );
+      return;
+    }
     // Find the candidate to determine top matched role
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -1205,9 +1220,15 @@ export default function ProjectDetailPage() {
                 onSendForScreening={(candidateId, candidateName) =>
                   showScreeningConfirmation(candidateId, candidateName)
                 }
-                onBulkAssign={(candidateIds) =>
-                  setBulkAssignState({ isOpen: true, candidateIds })
-                }
+                onBulkAssign={(candidateIds) => {
+                  if (!assignmentOpen) {
+                    toast.error(
+                      assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
+                    );
+                    return;
+                  }
+                  setBulkAssignState({ isOpen: true, candidateIds });
+                }}
                 onBulkSendForScreening={(candidateIds) =>
                   setBulkScreeningState({ isOpen: true, candidateIds })
                 }

@@ -36,6 +36,10 @@ import { cn } from "@/lib/utils";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
+import {
+  getProjectClosureMessage,
+  isProjectOpenForAssignment,
+} from "@/features/projects/utils/project-assignment";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
 
@@ -410,6 +414,8 @@ const ProjectCandidatesBoard = ({
   /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
   const canUseRecruiterPipelineActions = isRecruiter || isAgentCoordinator;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
+  const assignmentOpen = isProjectOpenForAssignment(project);
+  const assignmentClosureMessage = getProjectClosureMessage(project);
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
   const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
@@ -436,7 +442,12 @@ const ProjectCandidatesBoard = ({
     const candidateId = e.dataTransfer.getData("candidateId");
     
     // Only handle drop to "nominated" column
-    if (columnId === "nominated" && candidateId && canUseRecruiterPipelineActions) {
+    if (
+      columnId === "nominated" &&
+      candidateId &&
+      canUseRecruiterPipelineActions &&
+      assignmentOpen
+    ) {
       // Find candidate in eligible or all candidates
       const candidate = [...eligibleCandidates, ...allCandidates].find(
         (c) => (c.candidateId || c.id) === candidateId
@@ -460,9 +471,10 @@ const ProjectCandidatesBoard = ({
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
       page: eligiblePage,
       limit: PAGE_SIZE,
-    }, { 
+    }, {
+      skip: !assignmentOpen,
       refetchOnFocus: false,
-      refetchOnMountOrArgChange: false
+      refetchOnMountOrArgChange: false,
     });
 
   const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
@@ -820,7 +832,7 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={!hasProject}
+              showAssignButton={assignmentOpen && !hasProject}
               onAssignToProject={(id) =>
                 onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)
               }
@@ -901,7 +913,8 @@ const ProjectCandidatesBoard = ({
           const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
-          const canSelect = !assignmentInfo.isAssigned && !isNotEligible;
+          const canSelect =
+            assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible;
 
           const isSelected = selectedEligibleIds.has(assignmentInfo.candidateId);
 
@@ -934,9 +947,13 @@ const ProjectCandidatesBoard = ({
                 onVerify={() =>
                   onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
                 }
-                showAssignButton={!assignmentInfo.isAssigned}
+                showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
                 onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
-                onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
+                onDragStart={
+                  assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible
+                    ? handleDragStart
+                    : undefined
+                }
                 showSkipDocumentVerification={shouldSkipDocVerification}
                 skipDocumentVerificationMessage={
                   "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
@@ -1046,9 +1063,13 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={!assignmentInfo.isAssigned}
+              showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
-              onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
+              onDragStart={
+                assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible
+                  ? handleDragStart
+                  : undefined
+              }
               showSkipDocumentVerification={shouldSkipDocVerification}
               skipDocumentVerificationMessage={
                 "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
@@ -1152,7 +1173,7 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {selectedEligibleIds.size > 0 && (
+          {assignmentOpen && selectedEligibleIds.size > 0 && (
             <Button
               size="sm"
               className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
@@ -1192,6 +1213,14 @@ const ProjectCandidatesBoard = ({
 
   return (
     <div className="space-y-5">
+      {!assignmentOpen && assignmentClosureMessage ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {assignmentClosureMessage}
+        </div>
+      ) : null}
       {/* Search & Filter Bar */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">
         <div className="relative flex-1">

@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { ProjectDeadlineAutoCompleteService } from '../project-deadline-auto-complete.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -27,6 +28,7 @@ describe('ProjectsService', () => {
       delete: jest.fn(),
       count: jest.fn(),
       groupBy: jest.fn(),
+      updateMany: jest.fn(),
     },
     // client methods
     team: {
@@ -90,6 +92,12 @@ describe('ProjectsService', () => {
           provide: NotificationsGateway,
           useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() },
         },
+        {
+          provide: ProjectDeadlineAutoCompleteService,
+          useValue: {
+            autoCompleteExpiredProjects: jest.fn().mockResolvedValue(0),
+          },
+        },
       ],
     }).compile();
 
@@ -149,24 +157,26 @@ describe('ProjectsService', () => {
       const result = await service.create(createProjectDto, 'user123');
 
       expect(result).toEqual(mockProject);
-      expect(prismaService.project.create).toHaveBeenCalledWith({
-        data: {
-          clientId: 'client123',
-          title: 'Test Project',
-          description: 'Test Description',
-          deadline: null,
-          status: 'active',
-          createdBy: 'user123',
-          teamId: 'team123',
-          countryCode: null,
-          projectType: 'private',
-          resumeEditable: true,
-          groomingRequired: 'formal',
-          hideContactInfo: true,
-          requiredScreening: false,
-          priority: 'medium',
-        },
-      });
+      expect(prismaService.project.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            clientId: 'client123',
+            title: 'Test Project',
+            description: 'Test Description',
+            deadline: null,
+            status: 'active',
+            createdBy: 'user123',
+            teamId: 'team123',
+            countryCode: null,
+            projectType: 'private',
+            resumeEditable: true,
+            groomingRequired: 'formal',
+            hideContactInfo: true,
+            requiredScreening: false,
+            priority: 'medium',
+          }),
+        }),
+      );
 
       expect(prismaService.roleNeeded.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -340,6 +350,50 @@ describe('ProjectsService', () => {
         }),
       );
     });
+
+    it('should exclude expired active projects from active status results', async () => {
+      prismaService.project.count.mockResolvedValue(0);
+      prismaService.project.findMany.mockResolvedValue([]);
+
+      await service.findAll({ status: 'active', page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'active',
+            AND: [
+              {
+                OR: [
+                  { deadline: null },
+                  { deadline: { gte: expect.any(Date) } },
+                ],
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
+    it('should include expired active projects when status is completed', async () => {
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(mockProjects as any);
+
+      await service.findAll({ status: 'completed', page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { status: 'completed' },
+              {
+                status: 'active',
+                deadline: { not: null, lt: expect.any(Date) },
+              },
+            ],
+          }),
+        }),
+      );
+    });
   });
 
   describe('findPickerList', () => {
@@ -407,6 +461,8 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
         id: 'proj-1',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
         licensingExam: null,
         eligibility: false,
         rolesNeeded: [
@@ -476,6 +532,8 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates applies recruiterAssignments filter for Agent Coordinator', async () => {
       const project = {
         id: 'proj-1',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
         rolesNeeded: [
           {
             id: 'r1',
@@ -575,9 +633,13 @@ describe('ProjectsService', () => {
     };
 
     it('should update a project successfully', async () => {
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-      } as any);
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          rolesNeeded: [],
+          candidateProjects: [],
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
       prismaService.project.update.mockResolvedValue(mockProject as any);
 
       const result = await service.update(
@@ -657,6 +719,8 @@ describe('ProjectsService', () => {
     it('should assign candidate to project successfully', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
@@ -711,9 +775,23 @@ describe('ProjectsService', () => {
       );
     });
 
+    it('should throw BadRequestException when project deadline has passed', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+        status: 'active',
+        deadline: new Date('2020-01-01'),
+      } as any);
+
+      await expect(
+        service.assignCandidate('project123', assignCandidateDto, 'user123'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw NotFoundException when candidate does not exist', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue(null);
 
@@ -727,6 +805,8 @@ describe('ProjectsService', () => {
     it('should throw BadRequestException when agent-sourced candidate lacks AgentProject link', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
@@ -744,6 +824,8 @@ describe('ProjectsService', () => {
     it('should throw ConflictException when candidate is already assigned', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'active',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
