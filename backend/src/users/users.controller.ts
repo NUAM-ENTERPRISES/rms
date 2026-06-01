@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -41,7 +42,13 @@ import { EmployeeCodeService } from './services/employee-code.service';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { SkipAudit } from '../common/audit/skip-audit.decorator';
-import { UserWithRoles, PaginatedUsers } from './types';
+import {
+  UserWithRoles,
+  PaginatedUsers,
+  PaginatedAccountStatusHistory,
+} from './types';
+import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
+import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -192,6 +199,12 @@ export class UsersController {
     explode: true,
     type: String,
     isArray: true,
+  })
+  @ApiQuery({
+    name: 'accountStatus',
+    required: false,
+    enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'],
+    description: 'Filter by account status',
   })
   @ApiResponse({
     status: 200,
@@ -658,6 +671,65 @@ export class UsersController {
       success: true,
       data,
       message: 'Languages retrieved successfully',
+    };
+  }
+
+  @Patch(':id/account-status')
+  @Permissions('manage:users')
+  @ApiOperation({
+    summary: 'Update user account status',
+    description:
+      'Set account status to ACTIVE, INACTIVE, or BLOCKED with required remarks. Revokes sessions when deactivating.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Account status updated' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateAccountStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserAccountStatusDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateAccountStatus(
+      id,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data: user,
+      message: 'Account status updated successfully',
+    };
+  }
+
+  @Get(':id/account-status/history')
+  @Permissions('read:users')
+  @ApiOperation({
+    summary: 'Get user account status change history',
+    description:
+      'Paginated audit trail of account status changes with remarks and actor.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'History retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getAccountStatusHistory(
+    @Param('id') id: string,
+    @Query() query: QueryAccountStatusHistoryDto,
+  ): Promise<{
+    success: boolean;
+    data: PaginatedAccountStatusHistory;
+    message: string;
+  }> {
+    const data = await this.usersService.getAccountStatusHistory(id, query);
+    return {
+      success: true,
+      data,
+      message: 'Account status history retrieved successfully',
     };
   }
 

@@ -1,12 +1,15 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
-import { SessionAvailability } from '@prisma/client';
+import { SessionAvailability, UserAccountStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,7 +18,13 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
-import { UserWithRoles, PaginatedUsers } from './types';
+import {
+  UserWithRoles,
+  PaginatedUsers,
+  PaginatedAccountStatusHistory,
+} from './types';
+import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
+import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
 import { UploadService } from '../upload/upload.service';
 import {
   assertPhysicalAddressConsistent,
@@ -24,6 +33,13 @@ import {
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../auth/assert-user-not-blocked';
+import {
+  ACCOUNT_STATUS_SOCKET_EVENT,
+  ACCOUNT_STATUS_NOTIFICATION_TYPE,
+  getAccountStatusNotificationContent,
+} from './account-status-notifications';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 
@@ -32,6 +48,7 @@ const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   private idleThresholdMs = DEFAULT_IDLE_THRESHOLD_MS;
 
   constructor(
@@ -39,6 +56,8 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly uploadService: UploadService,
     private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
     private readonly systemConfigService: SystemConfigService,
   ) {}
 
@@ -241,10 +260,15 @@ export class UsersService {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       roles,
+      accountStatus,
     } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+
+    if (accountStatus) {
+      where.accountStatus = accountStatus;
+    }
 
     if (search) {
       where.OR = [
@@ -351,6 +375,196 @@ export class UsersService {
 
     const { password, ...userWithoutPassword } = user;
     return this.transformUserData(userWithoutPassword) as UserWithRoles;
+  }
+
+  async updateAccountStatus(
+    userId: string,
+    dto: UpdateUserAccountStatusDto,
+    actorId: string,
+  ): Promise<UserWithRoles> {
+    if (userId === actorId) {
+      throw new BadRequestException('You cannot change your own account status');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, accountStatus: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (existing.accountStatus === dto.status) {
+      throw new BadRequestException(
+        `User is already ${dto.status.toLowerCase()}`,
+      );
+    }
+
+    const remarks = dto.remarks.trim();
+    if (remarks.length < 3) {
+      throw new BadRequestException(
+        'Remarks are required and must be at least 3 characters',
+      );
+    }
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userAccountStatusHistory.create({
+        data: {
+          userId,
+          previousStatus: existing.accountStatus,
+          newStatus: dto.status,
+          remarks,
+          changedById: actorId,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          accountStatus: dto.status,
+          accountStatusUpdatedAt: now,
+        },
+      });
+    });
+
+    if (dto.status === UserAccountStatus.BLOCKED) {
+      await this.revokeUserAuthSessions(userId);
+      await this.notificationsGateway.emitToUser(userId, 'account:blocked', {
+        message: BLOCKED_ACCOUNT_MESSAGE,
+      });
+    } else {
+      await this.notifyAccountStatusChange(
+        userId,
+        existing.accountStatus,
+        dto.status,
+        now,
+      );
+    }
+
+    await this.auditService.logUserAction(
+      'status_change',
+      actorId,
+      userId,
+      {
+        previousStatus: existing.accountStatus,
+        newStatus: dto.status,
+        remarks,
+      },
+      { action: 'account_status_changed' },
+    );
+
+    return this.findOne(userId);
+  }
+
+  async getAccountStatusHistory(
+    userId: string,
+    query: QueryAccountStatusHistoryDto,
+  ): Promise<PaginatedAccountStatusHistory> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where = { userId };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.userAccountStatusHistory.count({ where }),
+      this.prisma.userAccountStatusHistory.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          changedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              employeeCode: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        previousStatus: row.previousStatus,
+        newStatus: row.newStatus,
+        remarks: row.remarks,
+        createdAt: row.createdAt,
+        changedBy: row.changedBy,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    };
+  }
+
+  private async notifyAccountStatusChange(
+    userId: string,
+    previousStatus: UserAccountStatus,
+    newStatus: UserAccountStatus,
+    changedAt: Date,
+  ): Promise<void> {
+    const content = getAccountStatusNotificationContent(newStatus);
+    if (!content) {
+      return;
+    }
+
+    const payload = {
+      accountStatus: newStatus,
+      previousStatus,
+      message: content.message,
+      updatedAt: changedAt.toISOString(),
+    };
+
+    await this.notificationsGateway.emitToUser(
+      userId,
+      ACCOUNT_STATUS_SOCKET_EVENT,
+      payload,
+    );
+
+    try {
+      await this.notificationsService.createNotification({
+        userId,
+        type: ACCOUNT_STATUS_NOTIFICATION_TYPE,
+        title: content.title,
+        message: content.message,
+        link: '/profile',
+        meta: payload,
+        idemKey: `account_status:${userId}:${newStatus}:${changedAt.getTime()}`,
+      });
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.warn(
+        `Account status socket sent but notification persist failed: ${err.message}`,
+      );
+    }
+  }
+
+  private async revokeUserAuthSessions(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    await this.prisma.userSession.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false },
+    });
   }
 
   async update(
@@ -693,6 +907,8 @@ export class UsersService {
         language: 'en',
       },
       stats,
+      accountStatus: user.accountStatus,
+      accountStatusUpdatedAt: user.accountStatusUpdatedAt,
     };
 
     return profile;

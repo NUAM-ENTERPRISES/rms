@@ -18,6 +18,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { assertUserNotBlocked } from './assert-user-not-blocked';
 
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
@@ -143,6 +144,7 @@ export class AuthService {
 
       console.log('Final password comparison result:', isValid);
       if (isValid) {
+        assertUserNotBlocked(user);
         const { password: _, ...result } = user;
         return result;
       }
@@ -214,6 +216,8 @@ export class AuthService {
     if (!row || row.revokedAt || row.expiresAt <= new Date()) {
       throw new UnauthorizedException('Refresh token invalid or expired');
     }
+
+    assertUserNotBlocked(row.user);
 
     // Verify secret value
     const ok = await argon2.verify(row.hash, rft);
@@ -319,7 +323,9 @@ export class AuthService {
 
     if (!user) {
       throw new BadRequestException('User not found');
-    };
+    }
+
+    assertUserNotBlocked(user);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
 
@@ -358,7 +364,9 @@ export class AuthService {
 
     if (!user) {
       throw new BadRequestException('User not found');
-    };
+    }
+
+    assertUserNotBlocked(user);
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
 
@@ -407,6 +415,8 @@ export class AuthService {
     if (!isOtpValid) {
       throw new BadRequestException('Invalid OTP');
     }
+
+    assertUserNotBlocked(user);
 
     // Clear OTP fields after successful verification
     await (this.prisma as any).user.update({

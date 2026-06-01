@@ -4,17 +4,23 @@ import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { UploadService } from '../../upload/upload.service';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { NotificationsService } from '../../notifications/notifications.service';
+import {
+  ACCOUNT_STATUS_SOCKET_EVENT,
+  ACCOUNT_STATUS_NOTIFICATION_TYPE,
+} from '../account-status-notifications';
 import { SystemConfigService } from '../../system-config/system-config.service';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SessionAvailability } from '@prisma/client';
+import { SessionAvailability, UserAccountStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 describe('UsersService', () => {
@@ -43,6 +49,15 @@ describe('UsersService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    refreshToken: {
+      updateMany: jest.fn(),
+    },
+    userAccountStatusHistory: {
+      create: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
     },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
@@ -55,6 +70,11 @@ describe('UsersService', () => {
 
   const mockNotificationsGateway = {
     broadcastToAdmins: jest.fn().mockResolvedValue(undefined),
+    emitToUser: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockNotificationsService = {
+    createNotification: jest.fn().mockResolvedValue({ id: 'notif-1' }),
   };
 
   const mockSystemConfigService = {
@@ -76,6 +96,10 @@ describe('UsersService', () => {
         {
           provide: NotificationsGateway,
           useValue: mockNotificationsGateway,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
         },
         {
           provide: SystemConfigService,
@@ -434,6 +458,153 @@ describe('UsersService', () => {
       await expect(
         service.changePassword('nonexistent', changePasswordDto),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateAccountStatus', () => {
+    it('should reject changing own account status', async () => {
+      await expect(
+        service.updateAccountStatus(
+          'user123',
+          { status: UserAccountStatus.BLOCKED, remarks: 'Policy issue' },
+          'user123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject when status is unchanged', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+
+      await expect(
+        service.updateAccountStatus(
+          'target',
+          { status: UserAccountStatus.ACTIVE, remarks: 'No change' },
+          'admin1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should create history, update user, and revoke sessions when blocking', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+      mockPrismaService.userAccountStatusHistory.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.userSession.updateMany.mockResolvedValue({ count: 1 });
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.BLOCKED,
+      } as any);
+
+      await service.updateAccountStatus(
+        'target',
+        { status: UserAccountStatus.BLOCKED, remarks: 'Policy violation' },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userAccountStatusHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'target',
+            previousStatus: UserAccountStatus.ACTIVE,
+            newStatus: UserAccountStatus.BLOCKED,
+            remarks: 'Policy violation',
+            changedById: 'admin1',
+          }),
+        }),
+      );
+      expect(mockPrismaService.refreshToken.updateMany).toHaveBeenCalled();
+      expect(mockPrismaService.userSession.updateMany).toHaveBeenCalled();
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'account:blocked',
+        expect.objectContaining({ message: expect.any(String) }),
+      );
+      expect(mockAuditService.logUserAction).toHaveBeenCalledWith(
+        'status_change',
+        'admin1',
+        'target',
+        expect.any(Object),
+        expect.any(Object),
+      );
+
+      findOneSpy.mockRestore();
+    });
+
+    it('should emit socket and create notification when setting inactive', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+      mockPrismaService.userAccountStatusHistory.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.INACTIVE,
+      } as any);
+
+      await service.updateAccountStatus(
+        'target',
+        { status: UserAccountStatus.INACTIVE, remarks: 'On leave' },
+        'admin1',
+      );
+
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        ACCOUNT_STATUS_SOCKET_EVENT,
+        expect.objectContaining({
+          accountStatus: UserAccountStatus.INACTIVE,
+          previousStatus: UserAccountStatus.ACTIVE,
+        }),
+      );
+      expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'target',
+          type: ACCOUNT_STATUS_NOTIFICATION_TYPE,
+          title: 'Account inactive',
+        }),
+      );
+      expect(mockPrismaService.refreshToken.updateMany).not.toHaveBeenCalled();
+
+      findOneSpy.mockRestore();
+    });
+  });
+
+  describe('getAccountStatusHistory', () => {
+    it('should return paginated history for a user', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.userAccountStatusHistory.count.mockResolvedValue(1);
+      mockPrismaService.userAccountStatusHistory.findMany.mockResolvedValue([
+        {
+          id: 'h1',
+          previousStatus: UserAccountStatus.ACTIVE,
+          newStatus: UserAccountStatus.BLOCKED,
+          remarks: 'Test',
+          createdAt: new Date(),
+          changedBy: {
+            id: 'admin1',
+            name: 'Admin',
+            email: 'a@test.com',
+            employeeCode: null,
+          },
+        },
+      ]);
+
+      const result = await service.getAccountStatusHistory('target', {
+        page: 1,
+        limit: 20,
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].newStatus).toBe(UserAccountStatus.BLOCKED);
     });
   });
 

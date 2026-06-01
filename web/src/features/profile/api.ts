@@ -2,11 +2,15 @@ import { baseApi } from "@/app/api/baseApi";
 import type { SessionAvailability } from "@/shared/types/session-availability";
 
 // Profile interfaces
+export type UserAccountStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
   employeeCode?: string | null;
+  accountStatus?: UserAccountStatus;
+  accountStatusUpdatedAt?: string | null;
   mobileNumber: string;
   countryCode: string;
   dateOfBirth?: string;
@@ -85,7 +89,7 @@ export const profileApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getProfile: builder.query<{ success: boolean; data: UserProfile }, void>({
       query: () => "/users/profile",
-      providesTags: ["User"],
+      providesTags: [{ type: "User", id: "PROFILE" }],
     }),
 
     getSessions: builder.query<
