@@ -52,6 +52,19 @@
   }
 }
 
+@keyframes login-panel-border-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-login-panel-border {
+  animation: login-panel-border-spin 6s linear infinite;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

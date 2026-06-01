@@ -16,6 +16,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion, AnimatePresence } from "framer-motion";
 import { LoginSuccessTransition } from "@/components/organisms/LoginSuccessTransition";
+import { LoginAmbientBackground } from "@/components/organisms/LoginAmbientBackground";
+import { cn } from "@/lib/utils";
+
 const loginSchema = z.object({
   countryCode: z
     .string()
@@ -52,20 +55,27 @@ function RmsRightPanel({
 }: RmsRightPanelProps) {
   return (
     <div
-      className={`hidden lg:flex flex-1 items-center justify-center p-8 relative z-10 ${className}`}
+      className={cn(
+        "relative z-10 hidden flex-1 items-center justify-center p-8 lg:flex",
+        className
+      )}
     >
-      <div className="bg-[#040f27] rounded-[28px] overflow-hidden relative w-full h-full">
-        {/* Background Texture & Vignette */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20"></div>
+      <div className="relative ml-[40px] h-full w-full min-h-[32rem] rounded-[28px] p-[2px] shadow-[0_0_48px_rgba(99,102,241,0.22)]">
+        {/* Animated gradient border */}
         <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E")`,
-          }}
-        ></div>
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]"
+          aria-hidden
+        >
+          <div className="absolute inset-[-160%] animate-login-panel-border bg-[conic-gradient(from_0deg,transparent_0deg,#818cf8_72deg,#c084fc_144deg,#6366f1_216deg,transparent_288deg)] opacity-90" />
+        </div>
+        <div
+          className="pointer-events-none absolute -inset-1 rounded-[30px] bg-gradient-to-br from-primary-500/25 via-accent-500/15 to-primary-400/25 blur-xl opacity-80"
+          aria-hidden
+        />
 
+        <div className="relative h-full overflow-hidden rounded-[26px] border border-white/10 bg-slate-950/35 backdrop-blur-xl">
         {/* Hero Mark - Stylized "A" */}
-        <div className="absolute top-20 right-16 w-48 h-48 opacity-10">
+        <div className="absolute top-20 right-16 w-48 h-48 opacity-10 pointer-events-none">
           <svg viewBox="0 0 200 200" className="w-full h-full">
             <defs>
               <linearGradient
@@ -162,24 +172,21 @@ function RmsRightPanel({
   </motion.p> */}
 </motion.div>
           {/* Main Heading */}
-          <h2 className="text-3xl md:text-4xl font-semibold text-white tracking-widest mt-2 leading-tight drop-shadow-2xl drop-shadow-amber-200">
+          <h2 className="text-3xl md:text-4xl font-semibold text-white tracking-widest mt-2 leading-tight drop-shadow-2xl drop-shadow-amber-200 ml-[90px]">
             {headline}
           </h2>
 
           {/* Body Copy */}
-          <p className="text-sm text-gray-300 mt-3 leading-relaxed max-w-md">
+          <p className="text-sm text-gray-300 mt-3 leading-relaxed max-w-md ml-[90px]">
             {subhead}
           </p>
 
           {/* Metric Line */}
-          <p className="text-xs text-gray-400 mt-4 font-medium">{statLine}</p>
+          <p className="text-xs text-gray-400 mt-4 font-medium ml-[90px]">{statLine}</p>
 
           {/* CTA Bubble Card */}
-          <div className="mt-16 w-3/4 ">
-            <div className="bg-white/5 backdrop-blur-sm ring-1 ring-white/10 rounded-2xl p-6 relative shadow-lg shadow-blue-100">
-              {/* Right-edge bite/tab */}
-              <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-4 h-8 bg-[#0D0E10] rounded-l-full"></div>
-
+          <div className="mt-16 w-3/4">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-lg shadow-primary/10 backdrop-blur-sm ring-1 ring-white/10 ml-[90px]">
               <div className="flex items-start justify-between">
                 <div className="flex-1 pr-4">
                   <h3 className="text-lg md:text-xl font-bold text-white leading-tight">
@@ -192,16 +199,16 @@ function RmsRightPanel({
 
                 {/* Avatar Stack */}
                 <div className="flex items-center -space-x-2">
-                  <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-[#0D0E10]">
+                  <div className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
                     JD
                   </div>
-                  <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-[#0D0E10]">
+                  <div className="w-7 h-7 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
                     SM
                   </div>
-                  <div className="w-7 h-7 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-[#0D0E10]">
+                  <div className="w-7 h-7 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
                     RK
                   </div>
-                  <div className="w-7 h-7 bg-gray-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-[#0D0E10]">
+                  <div className="w-7 h-7 bg-gray-500 rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-slate-950/80">
                     +2
                   </div>
                 </div>
@@ -209,8 +216,8 @@ function RmsRightPanel({
             </div>
           </div>
 
-          {/* Bottom Spacing */}
-          <div className="flex-1"></div>
+          <div className="flex-1" />
+        </div>
         </div>
       </div>
     </div>
@@ -292,7 +299,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="relative min-h-screen flex bg-slate-950">
       <LoginSuccessTransition
         isVisible={isTransitioning}
         userName={loginTransition?.userName}
@@ -309,12 +316,7 @@ export default function LoginPage() {
             transition={{ duration: 0.45, ease: "easeInOut" }}
             className="relative flex min-h-screen w-full flex-1"
           >
-            {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-      </div>
+            <LoginAmbientBackground />
 
       {/* Left side - Login Form */}
       <div className="relative z-10 flex flex-1 items-center justify-center p-8">
@@ -325,7 +327,7 @@ export default function LoginPage() {
           className="w-full max-w-lg"
         >
           {/* Login Card */}
-          <Card className="overflow-hidden border-white/20 bg-white/70 shadow-2xl backdrop-blur-sm">
+          <Card className="overflow-hidden border-white/10 bg-slate-950/75 shadow-[0_0_80px_-12px_rgba(99,102,241,0.4)] backdrop-blur-2xl">
             <CardContent className="px-8 pt-8 pb-0">
               {/* Logo and Header */}
               <motion.div
@@ -334,9 +336,9 @@ export default function LoginPage() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="relative mb-6 text-center"
               >
-                <div className="relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 shadow-2xl">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,theme(colors.accent.500/0.15),transparent_60%)]" />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,theme(colors.primary.500/0.15),transparent_60%)]" />
+                <div className="relative inline-flex w-full items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/80 p-4 shadow-2xl">
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,theme(colors.primary.500/0.2),transparent_60%)]" />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,theme(colors.accent.500/0.2),transparent_60%)]" />
                   <motion.img
                     src="/logo.png"
                     alt="Affiniks RMS"
@@ -348,10 +350,10 @@ export default function LoginPage() {
               </motion.div>
               {/* Header inside card */}
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-slate-900 mb-2">
+                <h1 className="text-2xl font-bold text-white mb-2">
                   Welcome back
                 </h1>
-                <p className="text-slate-600">
+                <p className="text-white text-sm">
                   Sign in to your Affiniks RMS account
                 </p>
               </div>
@@ -360,43 +362,45 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="mobileNumber"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-slate-300"
                   >
                     Mobile Number
                   </Label>
-                  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-                    <div>
+                  <div className="grid grid-cols-[10.5rem_1fr] gap-2 items-center">
+                    <div className="min-w-0">
                       <Controller
                         name="countryCode"
                         control={control}
                         render={({ field }) => (
                           <CountryCodeSelect
-                            {...field}
+                            name={field.name}
+                            value={field.value}
+                            onValueChange={field.onChange}
                             placeholder="Code"
                             error={errors.countryCode?.message}
-                            className=""
+                            className="h-12 min-h-12 w-full text-base md:text-sm bg-white/5 border-white/10 text-white shadow-xs focus:border-primary/50 focus:ring-primary/20 data-[placeholder]:text-slate-500 [&_svg]:text-slate-400"
                           />
                         )}
                       />
                     </div>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
                       <Input
                         id="mobileNumber"
                         type="tel"
                         placeholder="9876543210"
-                        className="pl-10 h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                        className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                         {...register("mobileNumber")}
                       />
                     </div>
                   </div>
                   {errors.countryCode && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm text-red-400 mt-1">
                       {errors.countryCode.message}
                     </p>
                   )}
                   {errors.mobileNumber && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm text-red-400 mt-1">
                       {errors.mobileNumber.message}
                     </p>
                   )}
@@ -405,35 +409,35 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-medium text-slate-300"
                   >
                     Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-500" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className="pl-10 pr-12 h-12 bg-white/50 border-slate-200 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
+                      className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
                       {...register("password")}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 hover:bg-slate-100/50"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 w-10 p-0 hover:bg-white/10 text-slate-400"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-slate-400" />
+                        <EyeOff className="h-4 w-4" />
                       ) : (
-                        <Eye className="h-4 w-4 text-slate-400" />
+                        <Eye className="h-4 w-4" />
                       )}
                     </Button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-red-600 mt-1">
+                    <p className="text-sm text-red-400 mt-1">
                       {errors.password.message}
                     </p>
                   )}
@@ -442,9 +446,9 @@ export default function LoginPage() {
                 {errors.root && (
                   <Alert
                     variant="destructive"
-                    className="bg-red-50 border-red-200"
+                    className="bg-red-950/50 border-red-500/30"
                   >
-                    <AlertDescription className="text-red-700">
+                    <AlertDescription className="text-red-300">
                       {errors.root.message}
                     </AlertDescription>
                   </Alert>
@@ -452,19 +456,50 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="h-12 w-full rounded-xl bg-gradient-to-r from-primary to-primary/90 font-medium text-white shadow-lg transition-all duration-200 hover:from-primary/90 hover:to-primary hover:shadow-xl"
                   disabled={isLoading || isTransitioning}
+                  className={cn(
+                    "group relative h-12 w-full overflow-hidden rounded-xl border-0 p-0",
+                    "bg-gradient-to-r from-primary via-primary to-accent",
+                    "font-semibold text-white shadow-lg shadow-primary/35",
+                    "transition-[box-shadow,transform] duration-300 ease-out",
+                    "hover:shadow-xl hover:shadow-primary/55 hover:scale-[1.02]",
+                    "active:scale-[0.98]",
+                    "focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950",
+                    "disabled:pointer-events-none disabled:opacity-60 disabled:scale-100 disabled:shadow-lg",
+                    "before:pointer-events-none before:absolute before:inset-0 before:rounded-xl",
+                    "before:bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.35)_50%,transparent_75%)]",
+                    "before:translate-x-[-120%] before:transition-transform before:duration-700 before:ease-out",
+                    "hover:before:translate-x-[120%]",
+                    "after:pointer-events-none after:absolute after:inset-0 after:rounded-xl",
+                    "after:ring-1 after:ring-inset after:ring-white/20 after:opacity-80",
+                    "hover:after:ring-white/40"
+                  )}
                 >
+                  {/* Ambient highlight pulse */}
+                  <span
+                    className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-primary-400/0 via-white/10 to-accent-400/0 opacity-60 animate-pulse group-hover:opacity-0 group-disabled:opacity-0"
+                    aria-hidden
+                  />
+                  <span
+                    className="pointer-events-none absolute -inset-px rounded-xl bg-gradient-to-r from-primary-400/50 via-accent-400/40 to-primary-400/50 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden
+                  />
+
                   {isLoading ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span className="relative z-10 flex items-center justify-center gap-2 px-4">
+                      <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                       <span>Signing in...</span>
-                    </div>
+                    </span>
                   ) : (
-                    <div className="flex items-center justify-center space-x-2">
-                      <span>Sign in to dashboard</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
+                    <span className="relative z-10 flex w-full items-center justify-center gap-2.5 px-4">
+                      <span className="bg-gradient-to-r from-white via-white to-white/85 bg-clip-text font-semibold text-transparent drop-shadow-[0_0_12px_rgba(255,255,255,0.35)] transition-all duration-300 ease-out group-hover:tracking-wide group-hover:drop-shadow-[0_0_18px_rgba(255,255,255,0.55)]">
+                        Sign in to dashboard
+                      </span>
+                      <ArrowRight
+                        className="h-4 w-4 shrink-0 text-white transition-all duration-300 ease-out group-hover:translate-x-1.5 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+                        aria-hidden
+                      />
+                    </span>
                   )}
                 </Button>
               </form>
@@ -497,7 +532,7 @@ export default function LoginPage() {
               </div> */}
               {/* Footer */}
               <div className="text-center mt-8">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-white">
                   Protected by enterprise-grade security
                 </p>
               </div>

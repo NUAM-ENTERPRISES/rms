@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -61,6 +61,7 @@ import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
 import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
+import { computeCandidateActivityStats } from "../utils/candidate-activity-stats";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
 );
@@ -144,21 +145,53 @@ export default function CandidateDetailPage() {
   });
 
   // Fetch candidate status pipeline
-  const { data: pipelineData } =
-    useGetCandidateStatusPipelineQuery(id!, {
-      skip: !id,
-    });
+  const {
+    data: pipelineData,
+    isFetching: isPipelineFetching,
+  } = useGetCandidateStatusPipelineQuery(id!, {
+    skip: !id,
+  });
 
-  // Fetch counts for stat cards
-  const { data: projectsData } = useGetCandidateProjectsQuery(
-    { candidateId: id!, page: 1, limit: 1 },
+  // Fetch projects for stat cards and live activity stats
+  const {
+    data: projectsData,
+    isLoading: isProjectsLoading,
+    isFetching: isProjectsFetching,
+  } = useGetCandidateProjectsQuery(
+    { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
 
-  const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 10 },
+  const {
+    data: documentsData,
+    isLoading: isDocumentsLoading,
+    isFetching: isDocumentsFetching,
+  } = useGetDocumentsQuery(
+    { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
+
+  const activityStats = useMemo(
+    () =>
+      computeCandidateActivityStats({
+        projects: projectsData?.data ?? [],
+        projectsTotal: projectsData?.meta?.total ?? 0,
+        documents: documentsData?.data?.documents ?? [],
+        documentsTotal: documentsData?.data?.pagination?.total ?? 0,
+        pipelineSteps: pipelineData?.data?.pipeline?.length ?? 0,
+        profileCompletion: candidate?.profileCompletion?.percent ?? 0,
+      }),
+    [
+      projectsData,
+      documentsData,
+      pipelineData,
+      candidate?.profileCompletion?.percent,
+    ]
+  );
+
+  const isActivityStatsLoading = isProjectsLoading || isDocumentsLoading;
+  const isActivityStatsFetching =
+    isProjectsFetching || isDocumentsFetching || isPipelineFetching;
 
   const passportDocument = getPassportDocument(
     documentsData?.data?.documents ?? []
@@ -581,6 +614,10 @@ export default function CandidateDetailPage() {
             workExperienceDocs={documentsData?.data?.documents ?? []}
             passportDocument={passportDocument}
             onOpenPassportDocuments={handleOpenPassportDocuments}
+            activityStats={activityStats}
+            isActivityStatsLoading={isActivityStatsLoading}
+            isActivityStatsFetching={isActivityStatsFetching}
+            onNavigateToTab={setActiveTab}
           />
 
           {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (

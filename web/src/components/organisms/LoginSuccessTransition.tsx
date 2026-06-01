@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { LoginAmbientBackground } from "@/components/organisms/LoginAmbientBackground";
 
 interface LoginSuccessTransitionProps {
   isVisible: boolean;
@@ -87,39 +88,9 @@ export function LoginSuccessTransition({
             delay: gatesOpening ? 0.42 : 0,
             ease: "easeInOut",
           }}
-          className="fixed inset-0 z-[100] overflow-hidden bg-slate-950/95 backdrop-blur-xl"
+          className="fixed inset-0 z-[100] overflow-hidden bg-slate-950"
         >
-          {/* Ambient — hidden once gates open */}
-          {!gatesOpening && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="pointer-events-none absolute inset-0"
-            >
-              <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-primary-500/20 blur-3xl" />
-              <div className="absolute -bottom-32 right-1/4 h-96 w-96 rounded-full bg-accent-500/25 blur-3xl" />
-              <div className="absolute top-1/2 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-600/10 blur-3xl" />
-            </motion.div>
-          )}
-
-          {!gatesOpening &&
-            [0, 1, 2].map((ring) => (
-              <motion.div
-                key={ring}
-                initial={{ opacity: 0.5, scale: 0.4 }}
-                animate={{ opacity: 0, scale: 2.8 }}
-                transition={{
-                  duration: 2,
-                  delay: ring * 0.35,
-                  ease: "easeOut",
-                  repeat: Infinity,
-                  repeatDelay: 0.4,
-                }}
-                className="pointer-events-none absolute h-64 w-64 rounded-full border border-primary-400/30"
-              />
-            ))}
+          <LoginAmbientBackground showRings={!gatesOpening} />
 
           {/* Vault gates — open outward (logout close inverse) */}
           {GATE_PANELS.map((panel, index) => (

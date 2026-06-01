@@ -35,7 +35,7 @@ import {
   PauseCircle,
   Plane,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, cn } from "@/lib/utils";
 import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
 import { getCandidateExperienceLabel } from "../../utils/experience-display";
@@ -52,6 +52,11 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import type { PassportDocumentSummary } from "../../profileCompletion";
+import type { CandidateActivitySnapshot as ActivityStats } from "../../utils/candidate-activity-stats";
+import {
+  CandidateActivitySnapshot,
+  type SnapshotTab,
+} from "../CandidateActivitySnapshot";
 
 interface CandidateOverviewProps {
   candidate: Candidate;
@@ -71,6 +76,10 @@ interface CandidateOverviewProps {
   workExperienceDocs?: Document[];
   passportDocument?: PassportDocumentSummary | null;
   onOpenPassportDocuments?: () => void;
+  activityStats?: ActivityStats;
+  isActivityStatsLoading?: boolean;
+  isActivityStatsFetching?: boolean;
+  onNavigateToTab?: (tab: SnapshotTab) => void;
 }
 
 const formatMonthsAsDuration = (totalMonths: number): string =>
@@ -104,6 +113,10 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   workExperienceDocs,
   passportDocument,
   onOpenPassportDocuments,
+  activityStats,
+  isActivityStatsLoading = false,
+  isActivityStatsFetching = false,
+  onNavigateToTab,
 }) => {
   const age = getAge(candidate.dateOfBirth);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string; isPdf: boolean } | null>(null);
@@ -169,9 +182,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         {/* Candidate Information */}
-        <Card className="xl:col-span-2 border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
+        <Card className="xl:col-span-2 h-full flex flex-col border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
           <CardHeader className="border-b border-gray-300 px-6 py-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
@@ -290,18 +303,37 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Career Gap
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <PauseCircle className="h-3 w-3 text-slate-400" aria-hidden />
-                    <span>{careerGapLabel}</span>
-                    {careerGaps && careerGaps.longestGapMonths >= 12 && (
-                      <Badge
-                        variant="outline"
-                        className="text-amber-700 border-amber-200 bg-amber-50 text-[10px] h-5 px-1.5"
-                      >
-                        Longest {formatMonthsAsDuration(careerGaps.longestGapMonths)}
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {isCandidateLoading ? (
+                      <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50 text-[10px] h-5 px-1.5">
+                        Loading…
                       </Badge>
+                    ) : (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-5 px-1.5",
+                            !workExperiences.length
+                              ? "text-slate-600 border-slate-200 bg-slate-50"
+                              : !careerGaps || careerGaps.totalGapMonths === 0
+                                ? "text-emerald-700 border-emerald-200 bg-emerald-50"
+                                : "text-violet-700 border-violet-200 bg-violet-50"
+                          )}
+                        >
+                          {careerGapLabel}
+                        </Badge>
+                        {careerGaps && careerGaps.longestGapMonths >= 12 && (
+                          <Badge
+                            variant="outline"
+                            className="text-amber-700 border-amber-200 bg-amber-50 text-[10px] h-5 px-1.5"
+                          >
+                            Longest {formatMonthsAsDuration(careerGaps.longestGapMonths)}
+                          </Badge>
+                        )}
+                      </>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -1284,106 +1316,18 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <Card
-          className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden 
-               ring-1 ring-gray-200/50 hover:ring-blue-400/30 hover:shadow-2xl 
-               transition-all duration-500"
-        >
-          <CardHeader className="border-b border-gray-200 bg-gradient-to-r px-6 py-5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-black/5" />
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-16 translate-x-16" />
-
-            <CardTitle className="relative flex items-center gap-3 text-black text-lg font-semibold tracking-tight">
-              <div className="p-2.5 backdrop-blur-md rounded-xl border shadow-lg">
-                <Plus className="h-6 w-6 text-black" />
-              </div>
-              <span>Quick Stats</span>
-              <div className="ml-auto flex items-center gap-1">
-                <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs font-medium opacity-90">Live</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white">
-            {[
-              {
-                label: "Applications",
-                value: candidate.metrics?.totalApplications ?? 0,
-                icon: "paper-plane",
-                color: "from-gray-500 to-slate-600",
-                bg: "bg-gray-100",
-                hoverBg: "hover:bg-gray-200",
-              },
-              {
-                label: "Interviews",
-                value: candidate.metrics?.interviewsScheduled ?? 0,
-                icon: "calendar-check",
-                color: "from-blue-500 to-blue-600",
-                bg: "bg-blue-50",
-                hoverBg: "hover:bg-blue-100",
-              },
-              {
-                label: "Offers",
-                value: candidate.metrics?.offersReceived ?? 0,
-                icon: "handshake",
-                color: "from-emerald-500 to-green-600",
-                bg: "bg-emerald-50",
-                hoverBg: "hover:bg-emerald-100",
-              },
-              {
-                label: "Placements",
-                value: candidate.metrics?.placements ?? 0,
-                icon: "trophy",
-                color: "from-purple-500 to-indigo-600",
-                bg: "bg-purple-50",
-                hoverBg: "hover:bg-purple-100",
-              },
-            ].map(({ label, value, color, bg, hoverBg }) => (
-              <div
-                key={label}
-                className={`group relative flex items-center justify-between px-5 py-4 rounded-xl ${bg} ${hoverBg} 
-                  border border-transparent hover:border-gray-300 shadow-sm hover:shadow-md 
-                  transition-all duration-300 cursor-default backdrop-blur-sm`}
-              >
-                <div
-                  className={`absolute inset-0 rounded-xl bg-gradient-to-r ${color} opacity-0 
-                       group-hover:opacity-10 blur-xl transition-opacity duration-500`}
-                />
-
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-2.5 rounded-lg bg-gradient-to-br ${color} shadow-md`}
-                  >
-                    {label === "Applications" && (
-                      <Mail className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Interviews" && (
-                      <Calendar className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Offers" && (
-                       <IndianRupee className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Placements" && (
-                      <Trophy className="h-5 w-5 text-white" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 tracking-wide">
-                    {label}
-                  </span>
-                </div>
-
-                <span
-                  className={`text-2xl font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent 
-                        drop-shadow-sm`}
-                >
-                  {value}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        {activityStats ? (
+          <div className="h-full min-h-0 flex flex-col">
+            <CandidateActivitySnapshot
+              stats={activityStats}
+              isLoading={isActivityStatsLoading}
+              isFetching={isActivityStatsFetching}
+              onNavigate={onNavigateToTab}
+              variant="sidebar"
+              className="h-full flex-1"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Resume List */}
