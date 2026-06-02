@@ -27,6 +27,7 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import {
   ProjectWithRelations,
@@ -1326,6 +1327,43 @@ export class ProjectsController {
       success: true,
       data: result,
       message: 'Document verification completed successfully',
+    };
+  }
+
+  @Post(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects')
+  @ApiOperation({
+    summary: 'Create agent candidate request for a project',
+    description:
+      'Managers can request additional agent-sourced candidates by role and quantity.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 201,
+    description: 'Agent candidate request created successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request payload or project-role mismatch',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async createAgentCandidateRequest(
+    @Param('id') projectId: string,
+    @Body() dto: CreateAgentCandidateRequestDto,
+    @Request() req,
+  ) {
+    const data = await this.projectsService.createAgentCandidateRequest(
+      projectId,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Agent candidate request created successfully',
     };
   }
 }

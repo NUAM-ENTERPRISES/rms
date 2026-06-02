@@ -109,6 +109,17 @@ export interface RoleNeeded {
   };
 }
 
+export interface AgentCandidateRequestItemInput {
+  roleNeededId: string;
+  requestedCount: number;
+}
+
+export interface CreateAgentCandidateRequestPayload {
+  projectId: string;
+  items: AgentCandidateRequestItemInput[];
+  notes?: string;
+}
+
 export interface EducationRequirement {
   qualificationId: string;
   mandatory: boolean;
@@ -916,6 +927,33 @@ export const projectsApi = baseApi.injectEndpoints({
         "CandidateProject",
       ],
     }),
+
+    createAgentCandidateRequest: builder.mutation<
+      ApiResponse<{
+        id: string;
+        projectId: string;
+        requestedById: string;
+        status: string;
+        notes?: string | null;
+        items: Array<{
+          id: string;
+          roleNeededId: string;
+          requestedCount: number;
+        }>;
+        createdAt: string;
+      }>,
+      CreateAgentCandidateRequestPayload
+    >({
+      query: ({ projectId, ...body }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Project", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -944,4 +982,5 @@ export const {
   useGetRoleDepartmentsQuery,
   useBulkSendForInterviewMutation,
   useBulkAssignToProjectMutation,
+  useCreateAgentCandidateRequestMutation,
 } = projectsApi;

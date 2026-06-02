@@ -49,6 +49,7 @@ import {
 } from "@/features/projects/utils/project-assignment";
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
+import RequestAgentCandidatesModal from "@/features/projects/components/RequestAgentCandidatesModal";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -61,6 +62,7 @@ import {
   useCheckBulkCandidateEligibilityQuery,
   useBulkAssignToProjectMutation,
   useBulkSendForScreeningMutation,
+  useCreateAgentCandidateRequestMutation,
 } from "@/features/projects";
 import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
@@ -248,6 +250,8 @@ export default function ProjectDetailPage() {
       useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
+  const [createAgentCandidateRequest, { isLoading: isRequestingAgentCandidates }] =
+    useCreateAgentCandidateRequestMutation();
 
   const handleRefreshAll = async () => {
     try {
@@ -419,6 +423,7 @@ export default function ProjectDetailPage() {
     isOpen: false,
     candidateIds: [],
   });
+  const [showAgentRequestModal, setShowAgentRequestModal] = useState(false);
 
   const [bulkScreeningState, setBulkScreeningState] = useState<{
     isOpen: boolean;
@@ -857,6 +862,25 @@ export default function ProjectDetailPage() {
     navigate(`/candidates/${candidateId}`);
   };
 
+  const handleCreateAgentCandidateRequest = async (payload: {
+    items: Array<{ roleNeededId: string; requestedCount: number }>;
+    notes?: string;
+  }) => {
+    try {
+      await createAgentCandidateRequest({
+        projectId: projectId!,
+        items: payload.items,
+        notes: payload.notes,
+      }).unwrap();
+      toast.success("Agent candidate request sent successfully");
+    } catch (requestError: any) {
+      toast.error(
+        requestError?.data?.message || "Failed to send agent candidate request"
+      );
+      throw requestError;
+    }
+  };
+
   const handleBoardSearchChange = (value: string) => {
     setSearchTerm(value);
   };
@@ -1189,6 +1213,17 @@ export default function ProjectDetailPage() {
                     aria-hidden
                   />
                 </Button>
+                {canManageProjects && !isProcessingExecutive && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAgentRequestModal(true)}
+                    className="h-7 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-white hover:text-blue-700"
+                  >
+                    <Send className="mr-1 h-3 w-3" aria-hidden />
+                    Request Agent Candidates
+                  </Button>
+                )}
                 {canManageProjects && !isProcessingExecutive && (
                   <Button
                     variant="default"
@@ -1638,6 +1673,14 @@ export default function ProjectDetailPage() {
           project={projectData?.data}
         />
       </Suspense>
+
+      <RequestAgentCandidatesModal
+        isOpen={showAgentRequestModal}
+        onClose={() => setShowAgentRequestModal(false)}
+        projectRoles={project.rolesNeeded}
+        isSubmitting={isRequestingAgentCandidates}
+        onSubmit={handleCreateAgentCandidateRequest}
+      />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog

@@ -19,6 +19,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
 import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
@@ -43,6 +44,7 @@ import {
 } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { OutboxService } from '../notifications/outbox.service';
 import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
@@ -57,6 +59,7 @@ export class ProjectsService {
     private readonly qualificationsService: QualificationsService,
     private readonly roleCatalogService: RoleCatalogService,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly outboxService: OutboxService,
   ) {}
 
   // Helper method to safely parse JSON fields
@@ -3529,5 +3532,87 @@ export class ProjectsService {
       allDocumentsVerified,
       canApproveCandidate: allDocumentsVerified,
     };
+  }
+
+  async createAgentCandidateRequest(
+    projectId: string,
+    dto: CreateAgentCandidateRequestDto,
+    requestedById: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        title: true,
+        rolesNeeded: {
+          select: {
+            id: true,
+            designation: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const roleMap = new Map(project.rolesNeeded.map((role) => [role.id, role]));
+    const uniqueRoleIds = new Set<string>();
+
+    for (const item of dto.items) {
+      if (!roleMap.has(item.roleNeededId)) {
+        throw new BadRequestException(
+          `Role ${item.roleNeededId} does not belong to this project`,
+        );
+      }
+      if (uniqueRoleIds.has(item.roleNeededId)) {
+        throw new BadRequestException(
+          `Duplicate role request found for role ${item.roleNeededId}`,
+        );
+      }
+      uniqueRoleIds.add(item.roleNeededId);
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.agentCandidateRequest.create({
+        data: {
+          projectId,
+          requestedById,
+          notes: dto.notes?.trim() || null,
+          items: {
+            create: dto.items.map((item) => ({
+              roleNeededId: item.roleNeededId,
+              requestedCount: item.requestedCount,
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      await this.outboxService.publishAgentCandidateRequestCreated(
+        {
+          requestId: request.id,
+          projectId: project.id,
+          projectTitle: project.title,
+          requestedById,
+          notes: request.notes,
+          items: dto.items.map((item) => ({
+            roleNeededId: item.roleNeededId,
+            requestedCount: item.requestedCount,
+            roleDesignation: roleMap.get(item.roleNeededId)?.designation ?? 'Role',
+          })),
+          link: `/projects/${project.id}`,
+        },
+        tx,
+      );
+
+      return request;
+    });
+
+    return created;
   }
 }
