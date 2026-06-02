@@ -769,17 +769,31 @@ export class CandidatesService {
           }
         },
         recruiterAssignments: {
-          where: {
-            isActive: true,
-          },
+          orderBy: { createdAt: 'asc' },
           select: {
             id: true,
+            isActive: true,
+            createdAt: true,
             assignmentType: true,
             creStatusNote: true,
             creStatus: {
               select: { id: true, statusName: true },
             },
             recruiter: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            createdByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            assignedByUser: {
               select: {
                 id: true,
                 name: true,
@@ -838,8 +852,11 @@ export class CandidatesService {
 
     const candidatesWithCreator = candidates.map((candidate: any) => {
       // Find the specific active assignment
-      const activeAssignment = candidate.recruiterAssignments?.[0];
+      const activeAssignment = candidate.recruiterAssignments?.find(
+        (a: any) => a.isActive,
+      );
 
+      const firstAssignment = candidate.recruiterAssignments?.[0];
       const creReassignedAssignment = candidate.recruiterAssignments.find(
         (a: any) =>
           a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
@@ -877,6 +894,12 @@ export class CandidatesService {
           email: creAssignment.recruiter.email,
         } : null,
         recruiter: activeAssignment?.recruiter || null,
+        createdBy:
+          firstAssignment?.createdByUser ||
+          firstAssignment?.assignedByUser ||
+          activeAssignment?.createdByUser ||
+          activeAssignment?.assignedByUser ||
+          null,
       };
     });
 
