@@ -457,6 +457,7 @@ export const CANDIDATE_STATUS = {
   FUTURE: 'future',
   ON_HOLD: 'on_hold',
   RNR: 'rnr', // Ringing No Response
+  CALL_BACK: 'call_back',
 
   // Qualification status
   QUALIFIED: 'qualified',
@@ -550,6 +551,14 @@ export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, StatusConfig> = {
     color: 'red',
     badgeClass: 'bg-red-50 text-red-700 border-red-200',
     icon: 'PhoneOff',
+    priority: 'urgent',
+  },
+  [CANDIDATE_STATUS.CALL_BACK]: {
+    label: 'Call Back',
+    description: 'Scheduled call back reminder',
+    color: 'orange',
+    badgeClass: 'bg-orange-50 text-orange-700 border-orange-200',
+    icon: 'Phone',
     priority: 'urgent',
   },
   [CANDIDATE_STATUS.QUALIFIED]: {
@@ -750,6 +759,7 @@ export function getCandidateStatusPriority(
     [CANDIDATE_STATUS.OTHER_ENQUIRY]: 'medium',
     [CANDIDATE_STATUS.NOT_INTERESTED]: 'low',
     [CANDIDATE_STATUS.NOT_ELIGIBLE]: 'low',
+    [CANDIDATE_STATUS.CALL_BACK]: 'high',
     [CANDIDATE_STATUS.QUALIFIED]: 'high',
     // Legacy statuses
     [CANDIDATE_STATUS.NEW]: 'high',

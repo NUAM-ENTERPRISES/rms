@@ -48,7 +48,8 @@ import {
   UserX,
   Target,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ const statusUpdateSchema = z.object({
   reason: z.string().optional(),
   onHoldUntil: z.string().optional(),
   futureDate: z.string().optional(),
+  callbackDateTime: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -99,6 +101,18 @@ const statusConfigMap: Record<string, any> = {
     bgColor: "bg-purple-50",
     iconColor: "text-purple-500",
     icon: Mail,
+  },
+  "call back": {
+    color: "from-orange-400 to-orange-600",
+    bgColor: "bg-orange-50",
+    iconColor: "text-orange-500",
+    icon: Phone,
+  },
+  "call_back": {
+    color: "from-orange-400 to-orange-600",
+    bgColor: "bg-orange-50",
+    iconColor: "text-orange-500",
+    icon: Phone,
   },
   future: {
     color: "from-indigo-400 to-indigo-600",
@@ -215,6 +229,7 @@ export function StatusUpdateModal({
       reason: "",
       onHoldUntil: "",
       futureDate: "",
+      callbackDateTime: "",
     },
   });
   const { reset, setValue, getValues } = form;
@@ -309,6 +324,24 @@ export function StatusUpdateModal({
       futureDateValue = data.futureDate;
     }
 
+    let callbackDateTimeValue: string | undefined;
+    if (selectedStatusName === "call back" || selectedStatusName === "call_back") {
+      if (!data.callbackDateTime) {
+        toast.error("Please select a callback date and time.");
+        return;
+      }
+      const callbackDate = new Date(data.callbackDateTime);
+      if (Number.isNaN(callbackDate.getTime())) {
+        toast.error("Please select a valid callback date and time.");
+        return;
+      }
+      if (callbackDate < new Date()) {
+        toast.error("Callback date and time cannot be in the past.");
+        return;
+      }
+      callbackDateTimeValue = data.callbackDateTime;
+    }
+
     try {
       await updateStatus({
         candidateId,
@@ -318,6 +351,7 @@ export function StatusUpdateModal({
           onHoldDurationDays: onHoldDuration,
           onHoldUntil: onHoldUntilDate,
           futureDate: futureDateValue,
+          callbackDateTime: callbackDateTimeValue,
         },
       }).unwrap();
 
@@ -524,6 +558,28 @@ export function StatusUpdateModal({
                         <FormControl>
                           <Input
                             type="date"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {(selectedStatusName === "call back" || selectedStatusName === "call_back") && (
+                  <FormField
+                    control={form.control}
+                    name="callbackDateTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Callback Date & Time
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
                             className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
                             {...field}
                           />

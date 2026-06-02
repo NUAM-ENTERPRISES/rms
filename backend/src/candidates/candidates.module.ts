@@ -14,6 +14,7 @@ import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
+import { CallbackRemindersModule } from '../callback-reminders/callback-reminders.module';
 import { RnrRemindersModule } from '../rnr-reminders/rnr-reminders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
@@ -23,6 +24,7 @@ import { RolesModule } from '../roles/roles.module';
     PrismaModule,
     WorkExperienceModule,
     RnrRemindersModule,
+    CallbackRemindersModule,
     NotificationsModule,
     RolesModule,
   ],

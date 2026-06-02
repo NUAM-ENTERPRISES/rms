@@ -405,7 +405,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     expect(result[0].isEligible).toBe(false);
     expect(result[0].roleEligibility[0].isEligible).toBe(false);
     expect(result[0].roleEligibility[0].reasons).toContain(
-      'Candidate must be in a positive status (interested, future, or on_hold) to be assigned to a project.',
+      'Candidate must be in a positive status (interested, future, on_hold, or call_back) to be assigned to a project.',
     );
   });
 });

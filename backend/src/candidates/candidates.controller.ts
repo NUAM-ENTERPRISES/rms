@@ -285,6 +285,7 @@ export class CandidatesController {
     counts?: {
       totalAssigned: number;
       untouched: number;
+      callBack: number;
       rnr: number;
       onHold: number;
       interested: number;
@@ -429,6 +430,7 @@ export class CandidatesController {
               properties: {
                 total: { type: 'number', example: 150 },
                 untouched: { type: 'number', example: 50 },
+                callBack: { type: 'number', example: 8 },
                 rnr: { type: 'number', example: 10 },
                 onHold: { type: 'number', example: 5 },
                 interested: { type: 'number', example: 20 },

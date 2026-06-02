@@ -796,6 +796,16 @@ export class RecruiterAssignmentService {
       select: { id: true, statusName: true },
     });
 
+    const callBackStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: CANDIDATE_STATUS.CALL_BACK,
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
     const qualifiedStatus = await this.prisma.candidateStatus.findFirst({
       where: { statusName: { equals: CANDIDATE_STATUS.QUALIFIED, mode: 'insensitive' } },
       select: { id: true, statusName: true },
@@ -820,6 +830,7 @@ export class RecruiterAssignmentService {
     const qualifiedId = qualifiedStatus?.id ?? null;
     const futureId = futureStatus?.id ?? null;
     const deployedId = deployedStatus?.id ?? null;
+    const callBackId = callBackStatus?.id ?? null;
     const notInterestedId = notInterestedStatus?.id ?? null;
     const otherEnquiryId = otherEnquiryStatus?.id ?? null;
     const notEligibleId = notEligibleStatus?.id ?? null;
@@ -854,6 +865,9 @@ export class RecruiterAssignmentService {
         if (!isCreReassignedForRecruiter && c.currentStatusId === onHoldId) {
           acc.onHold += 1;
         }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === callBackId) {
+          acc.callBack += 1;
+        }
         if (!isCreReassignedForRecruiter && c.currentStatusId === interestedId) {
           acc.interested += 1;
         }
@@ -884,6 +898,7 @@ export class RecruiterAssignmentService {
         rnr: 0,
         rnrHandledByCRE: 0,
         onHold: 0,
+        callBack: 0,
         interested: 0,
         notInterested: 0,
         notEligible: 0,
@@ -1050,6 +1065,7 @@ export class RecruiterAssignmentService {
         rnr: countsMap.rnr,
         rnrHandledByCRE: countsMap.rnrHandledByCRE,
         onHold: countsMap.onHold,
+        callBack: countsMap.callBack,
         interested: countsMap.interested,
         notInterested: countsMap.notInterested,
         notEligible: countsMap.notEligible,

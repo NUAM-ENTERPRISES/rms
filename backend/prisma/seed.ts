@@ -881,6 +881,7 @@ async function seedCandidateStatus() {
     'Future',
     'On Hold',
     'RNR',
+    'Call Back',
     'Qualified',
     'Deployed',
   ];

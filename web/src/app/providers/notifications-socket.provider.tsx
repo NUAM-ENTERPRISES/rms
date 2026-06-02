@@ -224,8 +224,9 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       
       const isProcessingReminder = 
         notification.type === "processing.reminder" || 
-        notification.type?.endsWith("_REMINDER") ||
+        (notification.type?.endsWith("_REMINDER") && notification.type !== "CALLBACK_REMINDER") ||
         notification.isSilent;
+      const isCallbackReminder = notification.type === "CALLBACK_REMINDER";
 
       // Notify components to refresh data
       window.dispatchEvent(new CustomEvent("notifications:refresh"));
@@ -273,11 +274,17 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         notification.type !== "candidate_sent_for_verification" &&
         notification.type !== "processing.reminder" &&
         notification.type !== "account_status_changed" &&
-        !notification.type?.endsWith("_REMINDER")
+        (!notification.type?.endsWith("_REMINDER") || isCallbackReminder)
       ) {
         toast(notification.title || "New Notification", {
           description: notification.message || ""
         });
+      }
+
+      if (isCallbackReminder) {
+        window.dispatchEvent(new CustomEvent("callback:reminder", {
+          detail: { notification, show: true }
+        }));
       }
       
       const context = { notification, dispatch, invalidateTags };

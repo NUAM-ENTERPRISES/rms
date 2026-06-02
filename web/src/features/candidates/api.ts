@@ -567,6 +567,7 @@ export interface UpdateCandidateStatusRequest {
   onHoldUntil?: string;
   futureDate?: string;
   futureYear?: number;
+  callbackDateTime?: string;
 }
 
 export interface AssignRecruiterRequest {
@@ -739,6 +740,7 @@ export interface RecruiterMyCandidatesResponse {
   counts: {
     totalAssigned: number;
     untouched: number;
+    callBack: number;
     rnr: number;
     onHold: number;
     interested: number;
@@ -776,6 +778,7 @@ export interface AllCandidatesResponse {
     total?: number;
     totalAssigned?: number;
     untouched?: number;
+    callBack?: number;
     rnr?: number;
     onHold?: number;
     interested?: number;

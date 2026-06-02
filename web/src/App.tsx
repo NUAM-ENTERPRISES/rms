@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import AuthProvider from "@/app/providers/auth-provider";
 import NotificationsSocketProvider from "@/app/providers/notifications-socket.provider";
 import { RNRReminderProvider } from "@/app/providers/rnr-reminder.provider";
+import { CallbackReminderProvider } from "@/app/providers/callback-reminder.provider";
 import { ProcessingReminderProvider } from "@/app/providers/processing-reminder.provider";
 import ProtectedRoute from "@/app/router/protected-route";
 import { RoleBasedRedirect } from "@/app/router/RoleBasedRedirect";
@@ -259,7 +260,8 @@ function App() {
       <AuthProvider>
         <NotificationsSocketProvider>
           <RNRReminderProvider>
-            <ProcessingReminderProvider>
+            <CallbackReminderProvider>
+              <ProcessingReminderProvider>
               <div className="min-h-screen bg-background">
                   <Suspense fallback={<LoadingScreen />}>
                   <Routes>
@@ -1374,10 +1376,11 @@ function App() {
               />
             </div>
             </ProcessingReminderProvider>
-          </RNRReminderProvider>
-        </NotificationsSocketProvider>
-      </AuthProvider>
-    </Router>
+          </CallbackReminderProvider>
+        </RNRReminderProvider>
+      </NotificationsSocketProvider>
+    </AuthProvider>
+  </Router>
   );
 }
 
