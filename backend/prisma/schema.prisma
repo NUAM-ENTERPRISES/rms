@@ -89,6 +89,7 @@ model User {
 
   statusChanges               CandidateStatusHistory[]        @relation("UserToHistory")
   rnrReminders                RNRReminder[]                   @relation("RecruiterRNRReminders")
+  callbackReminders           CallbackReminder[]              @relation("RecruiterCallbackReminders")
   processingRemindersAssigned ProcessingStepReminder[]
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
@@ -452,6 +453,7 @@ model Candidate {
   recruiterAssignments CandidateRecruiterAssignment[]
   statusHistories      CandidateStatusHistory[]       @relation("CandidateToHistory")
   rnrReminders         RNRReminder[]
+  callbackReminders    CallbackReminder[]
   processingTasks      ProcessingCandidate[]
   
   // Meta leads received for this candidate (incoming lead forms)
@@ -1688,12 +1690,14 @@ model CandidateStatusHistory {
   // Custom metadata for special status updates
   onHoldDurationDays Int?
   futureYear         Int?
+  callbackDateTime   DateTime?
 
   notificationCount Int       @default(0)
   lastNotifiedAt    DateTime?
   statusUpdatedAt   DateTime  @default(now())
 
-  rnrReminders RNRReminder[]
+  rnrReminders      RNRReminder[]
+  callbackReminders CallbackReminder[]
 
   @@index([candidateId])
   @@index([changedById])
@@ -1733,6 +1737,30 @@ model RNRReminder {
   @@index([candidateId])
   @@index([daysCompleted, status])
   @@map("rnr_reminders")
+}
+
+model CallbackReminder {
+  id              String @id @default(cuid())
+  candidateId     String
+  recruiterId     String
+  statusHistoryId String
+
+  scheduledFor DateTime
+  sentAt       DateTime?
+  status       String   @default("pending")
+  reminderCount Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidate     Candidate              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  recruiter     User                   @relation("RecruiterCallbackReminders", fields: [recruiterId], references: [id], onDelete: Cascade)
+  statusHistory CandidateStatusHistory @relation(fields: [statusHistoryId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledFor, status])
+  @@index([recruiterId, status])
+  @@index([candidateId])
+  @@map("callback_reminders")
 }
 
 model ProcessingStepReminder {

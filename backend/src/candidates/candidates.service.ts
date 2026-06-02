@@ -33,6 +33,7 @@ import { RecruiterAssignmentService } from './services/recruiter-assignment.serv
 import { CandidateCodeService } from './services/candidate-code.service';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
+import { CallbackRemindersService } from '../callback-reminders/callback-reminders.service';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
@@ -103,6 +104,7 @@ export class CandidatesService {
     private readonly candidateCodeService: CandidateCodeService,
     private readonly candidateListFilterService: CandidateListFilterService,
     private readonly rnrRemindersService: RnrRemindersService,
+    private readonly callbackRemindersService: CallbackRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
@@ -3326,6 +3328,11 @@ export class CandidatesService {
     // Check if candidate exists
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
+      include: {
+        currentStatus: {
+          select: { statusName: true },
+        },
+      },
     });
 
     if (!candidate) {
@@ -3369,6 +3376,25 @@ export class CandidatesService {
       if (futureDate < today) {
         throw new BadRequestException(
           'futureDate must be today or a future date when status is Future',
+        );
+      }
+    }
+
+    if (normalizedStatus === 'call back' || normalizedStatus === 'callback') {
+      if (!updateStatusDto.callbackDateTime) {
+        throw new BadRequestException(
+          'callbackDateTime is required when status is Call Back',
+        );
+      }
+      const callbackDate = new Date(updateStatusDto.callbackDateTime);
+      if (Number.isNaN(callbackDate.getTime())) {
+        throw new BadRequestException(
+          'callbackDateTime must be a valid ISO date string',
+        );
+      }
+      if (callbackDate <= new Date()) {
+        throw new BadRequestException(
+          'callbackDateTime must be a future date and time for Call Back',
         );
       }
     }
@@ -3425,6 +3451,9 @@ export class CandidatesService {
       reason: updateStatusDto.reason, // Save reason for status change
       onHoldDurationDays: updateStatusDto.onHoldDurationDays ?? null,
       futureYear: updateStatusDto.futureYear ?? null,
+      callbackDateTime: updateStatusDto.callbackDateTime
+        ? new Date(updateStatusDto.callbackDateTime)
+        : null,
     };
 
     const statusHistory = await this.prisma.candidateStatusHistory.create({
@@ -3462,6 +3491,29 @@ export class CandidatesService {
       }
     }
 
+    if (normalizedStatus === 'call back' || normalizedStatus === 'callback') {
+      this.logger.log(
+        `Candidate ${candidateId} status changed to Call Back. Creating reminder...`,
+      );
+
+      try {
+        await this.callbackRemindersService.createCallbackReminder(
+          candidateId,
+          userId,
+          statusHistory.id,
+          new Date(updateStatusDto.callbackDateTime!),
+        );
+        this.logger.log(
+          `Callback reminder created for candidate ${candidateId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to create callback reminder for candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+
     // If status is changing FROM RNR to something else, cancel pending reminders
     if (candidate.currentStatusId === 8 && updateStatusDto.currentStatusId !== 8) {
       this.logger.log(
@@ -3478,6 +3530,29 @@ export class CandidatesService {
           `Failed to cancel RNR reminders for candidate ${candidateId}:`,
           error,
         );
+      }
+    }
+
+    if (
+      candidate.currentStatus?.statusName?.toLowerCase() === 'call back' ||
+      candidate.currentStatus?.statusName?.toLowerCase() === 'callback'
+    ) {
+      if (normalizedStatus !== 'call back' && normalizedStatus !== 'callback') {
+        this.logger.log(
+          `Candidate ${candidateId} status changed from Call Back. Cancelling callback reminders...`,
+        );
+
+        try {
+          await this.callbackRemindersService.cancelCallbackReminders(candidateId);
+          this.logger.log(
+            `Callback reminders cancelled for candidate ${candidateId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            `Failed to cancel callback reminders for candidate ${candidateId}:`,
+            error,
+          );
+        }
       }
     }
     // ===== RNR REMINDER LOGIC END =====
@@ -4145,7 +4220,7 @@ export class CandidatesService {
         };
       } else if (statusValue === 'positive') {
         where.currentStatus = {
-          statusName: { in: ['Interested', 'Future', 'On Hold'] },
+          statusName: { in: ['Interested', 'Future', 'On Hold', 'Call Back'] },
         };
         where.projects = { none: {} };
       } else if (statusValue === 'negative') {
@@ -4299,11 +4374,11 @@ export class CandidatesService {
       // 2. Total Summary (Filtered for context)
       this.prisma.candidate.count({ where: baseWhereForCounts }),
 
-      // 3. Positive ('Interested', 'Future', 'On Hold' AND NOT nominated)
+      // 3. Positive ('Interested', 'Future', 'On Hold', 'Call Back' AND NOT nominated)
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
-          currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold'] } },
+          currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold', 'Call Back'] } },
           projects: { none: {} },
         },
       }),

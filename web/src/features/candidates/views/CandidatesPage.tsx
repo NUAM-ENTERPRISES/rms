@@ -445,6 +445,15 @@ export default function CandidatesPage() {
           bgColor: "bg-yellow-100",
           borderColor: "border-yellow-300",
         };
+      case "call back":
+      case "callback":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-amber-700",
+          bgColor: "bg-amber-50",
+          borderColor: "border-amber-200",
+        };
       case "qualified":
         return {
           variant: "default" as const,
@@ -586,7 +595,7 @@ export default function CandidatesPage() {
       color: "from-emerald-500 to-teal-500",
     },
     {
-      label: "Call Back (RNR)",
+      label: "Ring Not Responded (RNR)",
       value: derivedCounts.rnr,
       subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with Operations handler` : "Ring not responded",
       icon: Phone,
@@ -665,7 +674,10 @@ export default function CandidatesPage() {
     const assignedCount = recruiterCounts?.totalAssigned ?? totalCount;
     const untouchedCount = recruiterCounts?.untouched ?? 0;
     const rnrCount = recruiterCounts?.rnr ?? 0;
-    const callbackCount = recruiterCounts?.callback ?? 0;
+    const callbackCount = recruiterCounts?.callback ?? candidates.filter((c: any) => {
+      const status = (c?.currentStatus?.statusName || "").toLowerCase();
+      return status === "callback" || status === "call back" || status === "call_back";
+    }).length;
     const onHoldCount = recruiterCounts?.onHold ?? 0;
     const interestedCount = recruiterCounts?.interested ?? 0;
     const futureCount = recruiterCounts?.future ?? 0;

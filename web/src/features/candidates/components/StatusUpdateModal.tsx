@@ -18,6 +18,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -48,7 +49,8 @@ import {
   UserX,
   Target,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +59,7 @@ const statusUpdateSchema = z.object({
   reason: z.string().optional(),
   onHoldUntil: z.string().optional(),
   futureDate: z.string().optional(),
+  callbackDateTime: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -123,6 +126,18 @@ const statusConfigMap: Record<string, any> = {
     bgColor: "bg-pink-50",
     iconColor: "text-pink-500",
     icon: AlertCircle,
+  },
+  "call back": {
+    color: "from-orange-400 to-orange-600",
+    bgColor: "bg-orange-50",
+    iconColor: "text-orange-500",
+    icon: Phone,
+  },
+  callback: {
+    color: "from-orange-400 to-orange-600",
+    bgColor: "bg-orange-50",
+    iconColor: "text-orange-500",
+    icon: Phone,
   },
   qualified: {
     color: "from-emerald-400 to-emerald-600",
@@ -215,6 +230,7 @@ export function StatusUpdateModal({
       reason: "",
       onHoldUntil: "",
       futureDate: "",
+      callbackDateTime: "",
     },
   });
   const { reset, setValue, getValues } = form;
@@ -241,6 +257,7 @@ export function StatusUpdateModal({
           reason: "",
           onHoldUntil: "",
           futureDate: "",
+          callbackDateTime: "",
         });
       }
       wasOpenRef.current = false;
@@ -309,6 +326,24 @@ export function StatusUpdateModal({
       futureDateValue = data.futureDate;
     }
 
+    let callbackDateTimeValue: string | undefined;
+    if (selectedStatusName === "call back" || selectedStatusName === "callback") {
+      if (!data.callbackDateTime) {
+        toast.error("Please select a callback date and time.");
+        return;
+      }
+      const callbackDate = new Date(data.callbackDateTime);
+      if (Number.isNaN(callbackDate.getTime())) {
+        toast.error("Please enter a valid callback date and time.");
+        return;
+      }
+      if (callbackDate <= new Date()) {
+        toast.error("Callback date and time must be in the future.");
+        return;
+      }
+      callbackDateTimeValue = data.callbackDateTime;
+    }
+
     try {
       await updateStatus({
         candidateId,
@@ -318,6 +353,7 @@ export function StatusUpdateModal({
           onHoldDurationDays: onHoldDuration,
           onHoldUntil: onHoldUntilDate,
           futureDate: futureDateValue,
+          callbackDateTime: callbackDateTimeValue,
         },
       }).unwrap();
 
@@ -528,6 +564,31 @@ export function StatusUpdateModal({
                             {...field}
                           />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {(selectedStatusName === "call back" || selectedStatusName === "callback") && (
+                  <FormField
+                    control={form.control}
+                    name="callbackDateTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Callback Date & Time
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-[11px] text-slate-500">
+                          Schedule the recruiter callback reminder in local time.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
