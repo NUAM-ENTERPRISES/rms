@@ -477,6 +477,27 @@ export class ProjectsController {
     };
   }
 
+  @Get(':id/role-fill-summary')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get per-role candidate fill summary for a project',
+    description:
+      'Returns how many candidates each role has received vs. the target quantity. Scoped to the requesting user for Agent Coordinators.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiResponse({ status: 200, description: 'Role fill summary data' })
+  async getProjectRoleFillSummary(
+    @Param('id') projectId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.getProjectRoleFillSummary(
+      projectId,
+      req.user.id,
+      req.user.roles,
+    );
+    return { success: true, ...result };
+  }
+
   @Get('agent-candidate-requests')
   @Permissions('read:projects')
   @ApiOperation({

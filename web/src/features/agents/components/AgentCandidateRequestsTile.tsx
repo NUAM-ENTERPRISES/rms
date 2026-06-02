@@ -4,7 +4,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import {
   ChevronRight,
   Building2,
-  Users,
+  UserRoundSearch,
   Inbox,
   CalendarDays,
   User,
@@ -124,12 +124,6 @@ export function AgentCandidateRequestsPanel() {
                 (sum, item) => sum + item.requestedCount,
                 0
               );
-              const rolesSummary = req.items
-                .map(
-                  (item) =>
-                    `${item.requestedCount}× ${item.roleNeeded?.designation ?? "Role"}`
-                )
-                .join(", ");
 
               return (
                 <button
@@ -142,81 +136,96 @@ export function AgentCandidateRequestsPanel() {
                   )}
                   aria-label={`View project ${req.project.title}`}
                 >
-                  <div className="flex items-start gap-4">
-                    {/* Left icon */}
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 border border-amber-100 group-hover:bg-amber-100 transition-colors">
-                      <Users className="h-4.5 w-4.5 h-[18px] w-[18px]" />
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 border border-amber-100 group-hover:bg-amber-100 transition-colors">
+                      <UserRoundSearch className="h-[18px] w-[18px]" />
                     </div>
 
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    {/* Title row + badge */}
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-amber-700 transition-colors">
-                        {req.project.title}
-                      </p>
-                      <Badge
-                        variant="outline"
-                        className={cn("shrink-0 text-[10px] px-2 py-0", status.className)}
-                      >
-                        {status.label}
-                      </Badge>
-                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900 group-hover:text-amber-700 transition-colors">
+                            {req.project.title}
+                          </p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                            <span className="flex items-center gap-1 text-xs text-slate-500">
+                              <Building2 className="h-3 w-3 shrink-0" />
+                              {req.project.client?.name ?? "—"}
+                            </span>
+                            {req.project.countryCode && (
+                              <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <FlagIcon
+                                  countryCode={req.project.countryCode}
+                                  size="sm"
+                                  className="rounded-sm shadow-sm"
+                                  aria-label={
+                                    req.project.country?.name ?? req.project.countryCode
+                                  }
+                                />
+                                <span className="font-medium text-slate-600">
+                                  {req.project.country?.name ??
+                                    req.project.countryCode.toUpperCase()}
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <Badge
+                            variant="outline"
+                            className={cn("text-[10px] px-2 py-0", status.className)}
+                          >
+                            {status.label}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className="border-indigo-200 bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0 tabular-nums"
+                          >
+                            {totalRequested} to fill
+                          </Badge>
+                        </div>
+                      </div>
 
-                    {/* Client + Country flag row */}
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <Building2 className="h-3 w-3 shrink-0" />
-                        {req.project.client?.name ?? "—"}
-                      </span>
-                      {req.project.countryCode && (
-                        <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <FlagIcon
-                            countryCode={req.project.countryCode}
-                            size="sm"
-                            className="rounded-sm shadow-sm"
-                            aria-label={req.project.country?.name ?? req.project.countryCode}
-                          />
-                          <span className="font-medium text-slate-600">
-                            {req.project.country?.name ?? req.project.countryCode.toUpperCase()}
-                          </span>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                          Roles needed
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {req.items.map((item) => (
+                            <span
+                              key={item.id}
+                              className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1 text-xs shadow-sm"
+                            >
+                              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-amber-600 px-1 text-[11px] font-bold tabular-nums text-white">
+                                {item.requestedCount}
+                              </span>
+                              <span className="truncate font-medium text-amber-900">
+                                {item.roleNeeded?.designation ?? "Role"}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                          <User className="h-3 w-3 shrink-0" />
+                          {req.requestedBy.name}
                         </span>
-                      )}
-                    </div>
-
-                    {/* Roles summary */}
-                    <p className="mt-1.5 text-xs text-slate-500 line-clamp-1">
-                      <span className="font-semibold text-slate-700">
-                        {totalRequested} candidate{totalRequested !== 1 ? "s" : ""}
-                      </span>
-                      {" — "}
-                      {rolesSummary}
-                    </p>
-
-                    {/* Meta: requester + date */}
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                      <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                        <User className="h-3 w-3 shrink-0" />
-                        {req.requestedBy.name}
-                      </span>
-                      <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                        <CalendarDays className="h-3 w-3 shrink-0" />
-                        <span>
+                        <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                          <CalendarDays className="h-3 w-3 shrink-0" />
                           {format(new Date(req.createdAt), "d MMM yyyy")}
-                        </span>
-                        <span className="text-slate-300">·</span>
-                        <span>
+                          <span className="text-slate-300">·</span>
                           {formatDistanceToNow(new Date(req.createdAt), { addSuffix: true })}
                         </span>
-                      </span>
-                    </div>
+                      </div>
 
-                    {req.notes && (
-                      <p className="mt-1 line-clamp-1 text-xs italic text-slate-400">
-                        "{req.notes}"
-                      </p>
-                    )}
-                  </div>
+                      {req.notes && (
+                        <p className="line-clamp-2 text-xs italic text-slate-400">
+                          "{req.notes}"
+                        </p>
+                      )}
+                    </div>
 
                     <ChevronRight className="h-4 w-4 shrink-0 self-center text-slate-300 group-hover:text-amber-400 transition-colors" />
                   </div>

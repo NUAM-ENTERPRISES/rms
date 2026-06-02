@@ -152,6 +152,14 @@ export interface GetAgentCandidateRequestsParams {
   status?: AgentCandidateRequestStatus;
 }
 
+export interface RoleFillSummaryItem {
+  roleNeededId: string;
+  designation: string;
+  priority: string;
+  targetCount: number;
+  filledCount: number;
+}
+
 export interface ProjectAgentCandidateRequestHistoryItem {
   id: string;
   status: AgentCandidateRequestStatus;
@@ -1005,6 +1013,23 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getProjectRoleFillSummary: builder.query<
+      {
+        success: boolean;
+        data: RoleFillSummaryItem[];
+        summary: { totalFilled: number; totalTarget: number };
+      },
+      { projectId: string }
+    >({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/role-fill-summary`,
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: projectId },
+      ],
+    }),
+
     createAgentCandidateRequest: builder.mutation<
       ApiResponse<{
         id: string;
@@ -1029,6 +1054,9 @@ export const projectsApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { projectId }) => [
         { type: "Project", id: projectId },
         { type: "Project", id: "LIST" },
+        { type: "Project", id: "AGENT_REQUESTS" },
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
       ],
     }),
   }),
@@ -1062,4 +1090,5 @@ export const {
   useCreateAgentCandidateRequestMutation,
   useGetAgentCandidateRequestsQuery,
   useGetProjectAgentCandidateRequestsQuery,
+  useGetProjectRoleFillSummaryQuery,
 } = projectsApi;

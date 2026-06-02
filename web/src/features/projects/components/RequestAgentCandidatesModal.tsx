@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { RoleNeeded } from "@/features/projects";
+import { useGetProjectRoleFillSummaryQuery } from "@/features/projects/api";
 import AgentCandidateRequestHistoryModal from "./AgentCandidateRequestHistoryModal";
 
 const itemSchema = z.object({
@@ -105,15 +106,35 @@ export default function RequestAgentCandidatesModal({
   submitText = "Send Request",
 }: RequestAgentCandidatesModalProps) {
   const [showHistory, setShowHistory] = useState(false);
+
+  // Fetch the latest requested counts per role so we can pre-fill the form
+  const { data: fillSummaryData } = useGetProjectRoleFillSummaryQuery(
+    { projectId },
+    { skip: !isOpen }
+  );
+
+  // Build a lookup: roleNeededId → latest requested count from previous requests
+  const previousCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of fillSummaryData?.data ?? []) {
+      map.set(item.roleNeededId, item.targetCount);
+    }
+    return map;
+  }, [fillSummaryData]);
+
   const defaultItems = useMemo(
     () =>
-      projectRoles.map((role) => ({
-        roleNeededId: role.id,
-        selected: false,
-        requestedCount: 0,
-        maxCount: Math.max(role.quantity ?? 1, 1),
-      })),
-    [projectRoles]
+      projectRoles.map((role) => {
+        const prev = previousCounts.get(role.id) ?? 0;
+        return {
+          roleNeededId: role.id,
+          selected: prev > 0,            // auto-check if previously requested
+          requestedCount: prev > 0 ? prev : 0,
+          maxCount: Math.max(role.quantity ?? 1, 1),
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projectRoles, previousCounts]
   );
 
   const {
@@ -128,6 +149,14 @@ export default function RequestAgentCandidatesModal({
     resolver: zodResolver(formSchema),
     defaultValues: { items: defaultItems, notes: "" },
   });
+
+  // Re-sync form when previous counts arrive (query may resolve after modal opens)
+  useEffect(() => {
+    if (isOpen && previousCounts.size > 0) {
+      reset({ items: defaultItems, notes: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previousCounts]);
 
   const { fields } = useFieldArray({ control, name: "items" });
   const watchedItems = watch("items");
@@ -276,6 +305,15 @@ export default function RequestAgentCandidatesModal({
                                   </span>
                                 )}
                               </div>
+                              {previousCounts.get(field.roleNeededId) != null && (
+                                <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-600">
+                                  <History className="h-3 w-3 shrink-0" />
+                                  Previously requested:{" "}
+                                  <span className="font-semibold">
+                                    {previousCounts.get(field.roleNeededId)}
+                                  </span>
+                                </p>
+                              )}
                             </div>
 
                             {/* Stepper */}

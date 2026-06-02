@@ -53,6 +53,7 @@ import { SendForVerificationDocumentsChecklist } from "@/features/documents/comp
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import RequestAgentCandidatesModal from "@/features/projects/components/RequestAgentCandidatesModal";
 import AgentCandidateRequestHistoryModal from "@/features/projects/components/AgentCandidateRequestHistoryModal";
+import RoleFillSummaryCard from "@/features/projects/components/RoleFillSummaryCard";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -1359,6 +1360,11 @@ export default function ProjectDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* Role Fill Summary — Agent Coordinator only */}
+            {isAgentCoordinator && (
+              <RoleFillSummaryCard projectId={project.id} />
+            )}
 
             {/* Project Overview Card */}
             <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
