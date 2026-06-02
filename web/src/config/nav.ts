@@ -42,7 +42,7 @@ export const navigationConfig: NavItem[] = [
     label: "Dashboard",
     path: "/dashboard",
     icon: Home,
-    roles: ["CEO", "Director", "Manager"],
+    roles: ["CEO", "Director", "Manager", "Recruiter Manager"],
     // Admin CRM Dashboard for leadership roles
   },
   {
@@ -111,6 +111,7 @@ export const navigationConfig: NavItem[] = [
       "CEO",
       "Director",
       "Manager",
+      "Recruiter Manager",
       "Recruiter",
       "Documentation Executive",
       "Processing Executive",
@@ -176,13 +177,13 @@ export const navigationConfig: NavItem[] = [
     label: "Analytics",
     path: "/analytics/recruiter",
     icon: BarChart3,
-    roles: ["CEO", "Director", "Manager"],
+    roles: ["CEO", "Director", "Manager", "Recruiter Manager"],
     children: [
       {
         id: "recruiter-analytics",
         label: "Recruiter Analytics",
         path: "/analytics/recruiter",
-        roles: ["CEO", "Director", "Manager"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager"],
       },
     ],
   },
@@ -354,7 +355,7 @@ export const navigationConfig: NavItem[] = [
     id: "processing",
     label: "Processing",
     icon: ClipboardCheck,
-    roles: ["CEO", "Director", "Manager", "System Admin"],
+    roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
     activePathPatterns: [
       "^/processing-admin",
       "^/processingCandidateDetails/",
@@ -366,14 +367,15 @@ export const navigationConfig: NavItem[] = [
         id: "processing-admin-dashboard",
         label: "Dashboard",
         path: "/processing-admin",
-        roles: ["CEO", "Director", "Manager", "System Admin"],
+        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
       },
 
       {
         id: "ready-for-processing",
         label: "Ready for Processing",
         path: "/ready-for-processing",
-        roles: ["CEO", "Director", "Manager", "System Admin"],
+        icon: UserCheck,
+        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
       },
 
     ]
@@ -382,21 +384,21 @@ export const navigationConfig: NavItem[] = [
     id: "admin",
     label: "Administration",
     icon: Shield,
-    roles: ["CEO", "Director", "Manager", "System Admin"],
+    roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
     children: [
       {
         id: "admin-users",
         label: "Users",
         path: "/admin/users",
         permissions: ["read:users"],
-        roles: ["CEO", "Director", "Manager", "System Admin"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
       },
       {
         id: "admin-sessions",
         label: "Session Monitoring",
         path: "/admin/sessions",
         permissions: ["read:users"],
-        roles: ["CEO", "Director", "Manager", "System Admin"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
       },
       {
         id: "admin-system-settings",
@@ -404,7 +406,7 @@ export const navigationConfig: NavItem[] = [
         path: "/admin/system-settings",
         // icon: Settings,
         permissions: ["read:system_config"],
-        roles: ["CEO", "Director", "Manager", "System Admin"],
+        roles: ["CEO", "Director", "Manager", "Recruiter Manager", "System Admin"],
       },
     ],
   },

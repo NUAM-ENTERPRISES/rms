@@ -69,13 +69,13 @@ export default function CandidateOverviewPage() {
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
   const isManagerOrAdmin = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
   );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
 
   const canTransferCandidates = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
   );
 
   // Transfer candidate state

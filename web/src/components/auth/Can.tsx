@@ -97,7 +97,7 @@ export function IsManager({
   fallback?: ReactNode;
 }) {
   return (
-    <Can roles={["CEO", "Director", "Manager"]} fallback={fallback}>
+    <Can roles={["CEO", "Director", "Manager", "Recruiter Manager"]} fallback={fallback}>
       {children}
     </Can>
   );

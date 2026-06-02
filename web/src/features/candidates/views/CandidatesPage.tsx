@@ -77,13 +77,13 @@ export default function CandidatesPage() {
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
   const isManager = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
 
   // Transfer candidate state
