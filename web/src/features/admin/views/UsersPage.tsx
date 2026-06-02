@@ -50,7 +50,20 @@ import { DeleteConfirmationDialog } from "@/components/ui";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
-import { useGetUsersQuery, useDeleteUserMutation } from "@/features/admin/api";
+import {
+  useGetUsersQuery,
+  useDeleteUserMutation,
+  type UserAccountStatus,
+} from "@/features/admin/api";
+import { UserAccountStatusBadge } from "@/features/admin/components/UserAccountStatusBadge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export default function UsersPage() {
   const navigate = useNavigate();
@@ -58,12 +71,20 @@ export default function UsersPage() {
   const canReadUsers = useCan("read:users");
 
   // State for filters and pagination
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    search: string;
+    page: number;
+    limit: number;
+    sortBy: string;
+    sortOrder: "asc" | "desc";
+    accountStatus: UserAccountStatus | "ALL";
+  }>({
     search: "",
     page: 1,
     limit: 20,
     sortBy: "createdAt",
-    sortOrder: "desc" as "asc" | "desc",
+    sortOrder: "desc",
+    accountStatus: "ALL",
   });
 
   // State for delete confirmation
@@ -84,6 +105,8 @@ export default function UsersPage() {
     search: filters.search || undefined,
     sortBy: filters.sortBy,
     sortOrder: filters.sortOrder,
+    accountStatus:
+      filters.accountStatus === "ALL" ? undefined : filters.accountStatus,
   });
 
   const { data: systemConfig } = useSystemConfig();
@@ -219,15 +242,40 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search by name or email..."
-            value={filters.search}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-300 focus:ring-blue-200 rounded-lg"
-          />
+        {/* Search & filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              placeholder="Search by name or email..."
+              value={filters.search}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="pl-10 h-10 bg-white border-slate-200 focus:border-blue-300 focus:ring-blue-200 rounded-lg"
+            />
+          </div>
+          <Select
+            value={filters.accountStatus}
+            onValueChange={(value) =>
+              setFilters((prev) => ({
+                ...prev,
+                accountStatus: value as UserAccountStatus | "ALL",
+                page: 1,
+              }))
+            }
+          >
+            <SelectTrigger
+              className="w-full sm:w-[180px] h-10 bg-white"
+              aria-label="Filter by account status"
+            >
+              <SelectValue placeholder="Account status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+              <SelectItem value="BLOCKED">Blocked</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Users Table Card */}
@@ -244,6 +292,9 @@ export default function UsersPage() {
                       Contact
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider">
+                      Status
+                    </TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider">
                       Roles
                     </TableHead>
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden lg:table-cell">
@@ -254,10 +305,18 @@ export default function UsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {users.map((user) => {
+                    const accountStatus = user.accountStatus ?? "ACTIVE";
+                    const isNonActive = accountStatus !== "ACTIVE";
+                    return (
                     <TableRow
                       key={user.id}
-                      className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
+                      className={cn(
+                        "transition-colors cursor-pointer group",
+                        isNonActive
+                          ? "bg-destructive/10 hover:bg-destructive/15"
+                          : "hover:bg-blue-50/40",
+                      )}
                       onClick={() => navigate(`/admin/users/${user.id}`)}
                     >
                       <TableCell className="pl-6 py-3">
@@ -313,6 +372,9 @@ export default function UsersPage() {
                             </div>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <UserAccountStatusBadge status={accountStatus} />
                       </TableCell>
                       <TableCell className="py-3">
                         <div className="flex flex-wrap gap-1">
@@ -394,7 +456,8 @@ export default function UsersPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

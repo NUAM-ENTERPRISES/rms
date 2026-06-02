@@ -121,7 +121,7 @@ export function MultiTransferToProcessingModal({
   const dispatch = useAppDispatch();
 
   const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
-    { limit: 10, roles: ["Processing Executive"] },
+    { limit: 10, roles: ["Processing Executive"], accountStatus: "ACTIVE" },
     { skip: !isOpen }
   );
 

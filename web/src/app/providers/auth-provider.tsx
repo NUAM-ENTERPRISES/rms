@@ -1,4 +1,4 @@
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useLocation } from "react-router-dom";
 import {
@@ -19,6 +19,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const location = useLocation();
   const { accessToken, status } = useAppSelector((s) => s.auth);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const previousPathnameRef = useRef(location.pathname);
 
   useSessionActivityTracker(status === "authenticated");
 
@@ -30,6 +31,25 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     let mounted = true;
     (async () => {
       try {
+        const isOnLoginPage = location.pathname === "/login";
+        const enteredLoginPage =
+          isOnLoginPage && previousPathnameRef.current !== "/login";
+        previousPathnameRef.current = location.pathname;
+
+        if (isOnLoginPage) {
+          // Clear stale session only when navigating TO /login, not after a fresh login
+          if (enteredLoginPage && accessToken) {
+            dispatch(clearCredentials());
+            dispatch(setStatus("anonymous"));
+          } else if (accessToken) {
+            dispatch(setStatus("authenticated"));
+          } else {
+            dispatch(setStatus("anonymous"));
+          }
+          if (mounted) setBootstrapped(true);
+          return;
+        }
+
         // If user already has access token, they're authenticated
         if (accessToken) {
           console.time("auth:existing-token");
@@ -39,17 +59,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Only attempt refresh if:
-        // 1. User is on a protected route (not on login page)
-        // 2. User doesn't have existing tokens
-        const isOnLoginPage = location.pathname === "/login";
-
-        if (isOnLoginPage) {
-          // User is on login page, no need to attempt refresh
-          dispatch(setStatus("anonymous"));
-          if (mounted) setBootstrapped(true);
-          return;
-        }
+        // Protected route without tokens: attempt silent refresh
 
         // User is on a protected route, attempt silent refresh
         console.time("auth:refresh:call");

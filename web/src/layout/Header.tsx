@@ -2,6 +2,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/organisms/NotificationBell";
 import UserMenu from "@/components/organisms/UserMenu";
+import { AccountStatusNavIndicator } from "@/components/molecules/AccountStatusNavIndicator";
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
 import { ProcessingRemindersBadge } from "@/features/processing/components/ProcessingRemindersBadge";
 import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
@@ -35,6 +36,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
           {/* <SessionAvailabilityToggles /> */}
           <IdleUsersNotification />
           <NotificationBell />
+          <AccountStatusNavIndicator />
           <UserMenu />
         </div>
       </div>

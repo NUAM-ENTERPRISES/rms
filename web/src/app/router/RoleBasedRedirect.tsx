@@ -40,6 +40,10 @@ export function RoleBasedRedirect() {
     );
   }
 
+  if (user?.roles.some((role) => role === "Processing Manager")) {
+    return <Navigate to="/processing-admin" replace />;
+  }
+
   if (
     user?.roles.some((role) =>
       ["Recruiter", "Team Head", "Team Lead"].includes(role)
@@ -52,7 +56,11 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))) {
+  if (
+    user?.roles.some((role) =>
+      ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+    )
+  ) {
     return (
       <AppLayout>
         <AdminDashboardPage />

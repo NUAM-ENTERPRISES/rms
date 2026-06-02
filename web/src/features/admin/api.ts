@@ -8,6 +8,8 @@ interface ApiResponse<T> {
   message: string;
 }
 
+export type UserAccountStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
+
 // User Types matching backend structure
 export interface UserRole {
   id: string;
@@ -24,6 +26,8 @@ export interface UserWithRoles {
   mobileNumber: string;
   dateOfBirth?: string;
   profileImage?: string;
+  accountStatus?: UserAccountStatus;
+  accountStatusUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   userRoles: Array<{
@@ -151,6 +155,40 @@ export interface QueryUsersRequest {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   roles?: string | string[];
+  accountStatus?: UserAccountStatus;
+}
+
+export interface UpdateUserAccountStatusRequest {
+  status: UserAccountStatus;
+  remarks: string;
+}
+
+export interface UserAccountStatusHistoryItem {
+  id: string;
+  previousStatus: UserAccountStatus | null;
+  newStatus: UserAccountStatus;
+  remarks: string;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    name: string;
+    email: string;
+    employeeCode: string | null;
+  } | null;
+}
+
+export interface PaginatedAccountStatusHistoryData {
+  items: UserAccountStatusHistoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface AccountStatusHistoryResponse {
+  success: boolean;
+  data: PaginatedAccountStatusHistoryData;
+  message: string;
 }
 
 export interface UsersResponse {
@@ -240,6 +278,41 @@ export const usersApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateUserAccountStatus: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateUserAccountStatusRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/account-status`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        { type: "User", id },
+        "User",
+        { type: "UserAccountStatusHistory", id },
+      ],
+    }),
+
+    getUserAccountStatusHistory: builder.query<
+      AccountStatusHistoryResponse,
+      { userId: string; page?: number; limit?: number }
+    >({
+      query: ({ userId, page, limit }) => {
+        const searchParams = new URLSearchParams();
+        if (page) searchParams.set("page", String(page));
+        if (limit) searchParams.set("limit", String(limit));
+        const qs = searchParams.toString();
+        return {
+          url: `/users/${userId}/account-status/history${qs ? `?${qs}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: (_, __, { userId }) => [
+        { type: "UserAccountStatusHistory", id: userId },
+      ],
     }),
 
     // Update existing user
@@ -464,6 +537,8 @@ export const {
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
   useUpdateUserMutation,
+  useUpdateUserAccountStatusMutation,
+  useGetUserAccountStatusHistoryQuery,
   useDeleteUserMutation,
   useGetUserRolesQuery,
   useGetUserPermissionsQuery,

@@ -104,7 +104,7 @@ export default function RecruiterCandidatesTab({
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
   const isManager = user?.roles?.some(role => 
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
 
   // Use different APIs based on role

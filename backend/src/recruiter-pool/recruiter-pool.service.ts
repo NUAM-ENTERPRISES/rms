@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface RecruiterInfo {
   id: string;
@@ -21,7 +22,7 @@ export class RecruiterPoolService {
     this.logger.debug('Fetching recruiter pool');
 
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -29,7 +30,7 @@ export class RecruiterPoolService {
             },
           },
         },
-      },
+      }),
       include: {
         _count: {
           select: {

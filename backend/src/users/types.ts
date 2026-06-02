@@ -1,3 +1,5 @@
+import { UserAccountStatus } from '@prisma/client';
+
 export interface UserWithRoles {
   id: string;
   employeeCode?: string | null;
@@ -5,6 +7,8 @@ export interface UserWithRoles {
   name: string;
   phone?: string;
   dateOfBirth?: Date;
+  accountStatus?: UserAccountStatus;
+  accountStatusUpdatedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   userRoles: Array<{
@@ -18,6 +22,28 @@ export interface UserWithRoles {
 
 export interface PaginatedUsers {
   users: UserWithRoles[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface UserAccountStatusHistoryItem {
+  id: string;
+  previousStatus: UserAccountStatus | null;
+  newStatus: UserAccountStatus;
+  remarks: string;
+  createdAt: Date;
+  changedBy: {
+    id: string;
+    name: string;
+    email: string;
+    employeeCode: string | null;
+  } | null;
+}
+
+export interface PaginatedAccountStatusHistory {
+  items: UserAccountStatusHistoryItem[];
   total: number;
   page: number;
   limit: number;

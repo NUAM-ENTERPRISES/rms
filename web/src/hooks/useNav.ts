@@ -11,10 +11,22 @@ export function useNav(): NavItem[] {
 
   return useMemo(() => {
     if (!user) return [];
+    const isProcessingManager = user.roles.includes("Processing Manager");
+    const processingManagerAllowedIds = new Set([
+      "processing",
+      "processing-admin-dashboard",
+      "ready-for-processing",
+      "profile",
+    ]);
 
     const filterNavItem = (item: NavItem): NavItem | null => {
       // Check if item is disabled
       if (item.disabled) return null;
+
+      // Processing Manager sees only processing menu + profile.
+      if (isProcessingManager && !processingManagerAllowedIds.has(item.id)) {
+        return null;
+      }
 
       // Check explicit role exclusions
       if (item.hiddenForRoles?.some((role) => user.roles.includes(role))) {
@@ -59,9 +71,24 @@ export function useNav(): NavItem[] {
       return item;
     };
 
-    return navigationConfig
+    const filteredNav = navigationConfig
       .map(filterNavItem)
       .filter((item): item is NavItem => item !== null);
+
+    if (!isProcessingManager) {
+      return filteredNav;
+    }
+
+    // For Processing Manager, show processing links as plain top-level items.
+    return filteredNav.flatMap((item) => {
+      if (item.id === "processing" && item.children) {
+        return item.children.map((child) => ({
+          ...child,
+          icon: child.icon ?? item.icon,
+        }));
+      }
+      return [item];
+    });
   }, [user]);
 }
 

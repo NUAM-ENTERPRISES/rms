@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 @Injectable()
 export class InterviewReminderService {
@@ -170,7 +171,7 @@ export class InterviewReminderService {
 
     // 2. All Managers
     const managers = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -178,14 +179,14 @@ export class InterviewReminderService {
             },
           },
         },
-      },
+      }),
       select: { id: true },
     });
     managers.forEach((manager) => recipientIds.add(manager.id));
 
     // 3. All Interview Coordinators
     const coordinators = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -193,14 +194,14 @@ export class InterviewReminderService {
             },
           },
         },
-      },
+      }),
       select: { id: true },
     });
     coordinators.forEach((coord) => recipientIds.add(coord.id));
 
     // 4. System Admins (Keeping this as safety/requirement)
     const admins = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -208,7 +209,7 @@ export class InterviewReminderService {
             },
           },
         },
-      },
+      }),
       select: { id: true },
     });
     admins.forEach((admin) => recipientIds.add(admin.id));

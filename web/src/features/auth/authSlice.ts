@@ -10,6 +10,8 @@ interface User {
   userVersion?: number;
 }
 
+export type SessionAccountStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
@@ -18,6 +20,8 @@ interface AuthState {
   isLoading: boolean;
   status: "idle" | "loading" | "authenticated" | "anonymous";
   userVersion?: number;
+  /** Set by real-time socket; falls back to profile query when null. */
+  sessionAccountStatus: SessionAccountStatus | null;
 }
 
 const initialState: AuthState = {
@@ -27,6 +31,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   status: "idle",
+  sessionAccountStatus: null,
 };
 
 const authSlice = createSlice({
@@ -58,9 +63,16 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.userVersion = undefined;
+      state.sessionAccountStatus = null;
       state.isAuthenticated = false;
       state.status = "anonymous";
       state.isLoading = false;
+    },
+    setSessionAccountStatus: (
+      state,
+      action: PayloadAction<SessionAccountStatus>,
+    ) => {
+      state.sessionAccountStatus = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
@@ -82,5 +94,6 @@ export const {
   clearCredentials,
   setLoading,
   setStatus,
+  setSessionAccountStatus,
 } = authSlice.actions;
 export default authSlice.reducer;

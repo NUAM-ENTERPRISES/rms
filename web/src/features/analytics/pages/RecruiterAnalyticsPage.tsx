@@ -20,6 +20,7 @@ export default function RecruiterAnalyticsPage() {
     roles: "Recruiter",
     page: 1,
     limit: 10,
+    accountStatus: "ACTIVE",
   });
 
   const recruiters = recruitersData?.data?.users ?? [];

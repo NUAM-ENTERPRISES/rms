@@ -33,6 +33,20 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 describe("LoginPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+  });
+
+  it("does not show blocked message from stale sessionStorage", () => {
+    sessionStorage.setItem(
+      "rms:blocked-account-message",
+      "Status must be ACTIVE, INACTIVE, or BLOCKED",
+    );
+
+    render(<LoginPage />, { wrapper: TestWrapper });
+
+    expect(
+      screen.queryByText("Your account is blocked. Please contact admin."),
+    ).not.toBeInTheDocument();
   });
 
   it("renders login form with all required elements", () => {
