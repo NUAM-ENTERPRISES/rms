@@ -181,8 +181,13 @@ describe('CandidateProjectsService - sendForInterview', () => {
   it('assignCandidateToProject notifies interview coordinators when screening required', async () => {
     const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
 
-    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'John', lastName: 'Doe' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', rolesNeeded: [], requiredScreening: true });
+    (prisma.candidate.findUnique as any).mockResolvedValue({
+      id: 'c1',
+      firstName: 'John',
+      lastName: 'Doe',
+      currentStatus: { statusName: 'interested' },
+    });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', rolesNeeded: [], requiredScreening: true, status: 'active' });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Nominated' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Nominated Initial' });
@@ -207,6 +212,28 @@ describe('CandidateProjectsService - sendForInterview', () => {
         message: 'Project screening required: John Doe has been assigned to this project Project P. Please assign for screening.',
         link: '/projects/p1',
       }),
+    );
+  });
+
+  it('assignCandidateToProject blocks non-positive candidate from assignment', async () => {
+    const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({
+      id: 'c1',
+      firstName: 'John',
+      lastName: 'Doe',
+      currentStatus: { statusName: 'not_interested' },
+    });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'Project P',
+      rolesNeeded: [],
+      requiredScreening: false,
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+
+    await expect(service.assignCandidateToProject(dto, 'u1')).rejects.toThrow(
+      'Candidate must be in a positive status',
     );
   });
 
@@ -330,6 +357,55 @@ describe('CandidateProjectsService - sendForInterview', () => {
     expect(result[0].roleEligibility[0].isEligible).toBe(false);
     expect(result[0].roleEligibility[0].reasons).toContain(
       'Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.',
+    );
+  });
+
+  it('checkBulkEligibility marks non-positive candidate as not eligible across all roles', async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      rolesNeeded: [
+        {
+          id: 'r1',
+          designation: 'Emergency Staff Nurse',
+          genderRequirement: 'all',
+          minAge: 18,
+          maxAge: 70,
+          minExperience: 0,
+          maxExperience: null,
+          roleCatalogId: null,
+          minSalaryRange: null,
+          maxSalaryRange: null,
+          roleCatalog: null,
+        },
+      ],
+      licensingExam: null,
+      dataFlow: false,
+      eligibility: false,
+    });
+
+    (prisma.candidate.findMany as any).mockResolvedValue([
+      {
+        id: 'c1',
+        firstName: 'Brynne',
+        lastName: 'Moore',
+        dateOfBirth: '1990-01-01',
+        gender: 'female',
+        totalExperience: 1,
+        currentStatus: { statusName: 'not_interested' },
+        workExperiences: [],
+        preferredCountries: [],
+      },
+    ]);
+
+    const result = await service.checkBulkEligibility({ projectId: 'p1', candidateIds: ['c1'] } as any);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].candidateId).toBe('c1');
+    expect(result[0].isEligible).toBe(false);
+    expect(result[0].roleEligibility[0].isEligible).toBe(false);
+    expect(result[0].roleEligibility[0].reasons).toContain(
+      'Candidate must be in a positive status (interested, future, or on_hold) to be assigned to a project.',
     );
   });
 });

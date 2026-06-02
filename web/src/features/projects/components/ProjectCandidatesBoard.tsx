@@ -624,7 +624,11 @@ const ProjectCandidatesBoard = ({
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
         const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
         const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-        const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+        const normalizedCurrentStatus = typeof candidate.currentStatus === 'string'
+          ? candidate.currentStatus.toLowerCase()
+          : candidate.currentStatus?.statusName?.toLowerCase() || '';
+        const isPositiveStatus = ['interested', 'future', 'on_hold'].includes(normalizedCurrentStatus);
+        const isNotEligible = !isPositiveStatus || eligibilityData?.isEligible === false || !anyRoleEligible;
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);

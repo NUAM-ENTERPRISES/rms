@@ -85,6 +85,27 @@ export class CandidateProjectsService {
     });
   }
 
+  private isCandidatePositiveStatus(candidate: any): boolean {
+    const status = typeof candidate?.currentStatus === 'string'
+      ? candidate.currentStatus
+      : candidate?.currentStatus?.statusName;
+
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return [
+      CANDIDATE_STATUS.INTERESTED,
+      CANDIDATE_STATUS.FUTURE,
+      CANDIDATE_STATUS.ON_HOLD,
+    ].includes(normalizedStatus as any);
+  }
+
+  private ensureCandidatePositiveForProjectAssignment(candidate: any) {
+    if (!this.isCandidatePositiveStatus(candidate)) {
+      throw new BadRequestException(
+        `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+      );
+    }
+  }
+
   /**
    * Assign candidate to project with nominated status
    * Creates a new candidate-project assignment with status ID 1 (nominated)
@@ -103,10 +124,13 @@ export class CandidateProjectsService {
     // -------------------------------
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
+      include: { currentStatus: true },
     });
     if (!candidate) {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
     }
+
+    this.ensureCandidatePositiveForProjectAssignment(candidate);
 
     // -------------------------------
     // VERIFY project exists
@@ -662,7 +686,10 @@ export class CandidateProjectsService {
     // -------------------------------
     // VERIFY candidate
     // -------------------------------
-    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: { currentStatus: true },
+    });
     if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     // -------------------------------
@@ -729,6 +756,10 @@ export class CandidateProjectsService {
       where: { candidateId, projectId, roleNeededId: roleNeededId || null },
       include: { subStatus: true },
     });
+
+    if (!existingAssignment) {
+      this.ensureCandidatePositiveForProjectAssignment(candidate);
+    }
 
     if (existingAssignment?.subStatus) {
       const screeningStatuses = [
@@ -2330,7 +2361,10 @@ export class CandidateProjectsService {
     const { projectId, candidateId, type, recruiterId: providedRecruiterId, notes } = dto as any;
 
     // Validate candidate & project
-    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: { currentStatus: true },
+    });
     if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
@@ -2367,6 +2401,10 @@ export class CandidateProjectsService {
 
     // Check existing assignment for candidate & project
     const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+
+    if (!existingAssignment) {
+      this.ensureCandidatePositiveForProjectAssignment(candidate);
+    }
 
     const candidateProject = await this.prisma.$transaction(async (tx) => {
       let assignment;
@@ -2674,7 +2712,13 @@ export class CandidateProjectsService {
         experience: true,
       };
 
-      // Status Check (Hard) - Block assignment for RNR candidates
+      // Status Check (Hard) - Block assignment for non-positive candidates and RNR
+      if (!this.isCandidatePositiveStatus(candidate)) {
+        hardReasons.push(
+          `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+        );
+      }
+
       if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
         hardReasons.push(
           `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
@@ -2868,7 +2912,13 @@ export class CandidateProjectsService {
           experience: true,
         };
 
-        // Status Check (Hard) - Block assignment for RNR candidates
+        // Status Check (Hard) - Block assignment for non-positive candidates and RNR
+        if (!this.isCandidatePositiveStatus(candidate)) {
+          hardReasons.push(
+            `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+          );
+        }
+
         if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
           hardReasons.push(
             `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
@@ -3197,10 +3247,18 @@ export class CandidateProjectsService {
         // Simple verification - candidate exists
         const candidate = await this.prisma.candidate.findUnique({
           where: { id: candidateId },
+          include: { currentStatus: true },
         });
 
         if (!candidate) {
           errors.push({ candidateId, error: 'Candidate not found' });
+          continue;
+        }
+
+        try {
+          this.ensureCandidatePositiveForProjectAssignment(candidate);
+        } catch (error: any) {
+          errors.push({ candidateId, error: error.message || 'Candidate status not eligible for assignment' });
           continue;
         }
 

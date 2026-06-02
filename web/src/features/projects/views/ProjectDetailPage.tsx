@@ -717,6 +717,19 @@ export default function ProjectDetailPage() {
   }, [screeningEligibilityResponse, screeningConfirm.candidateId]);
 
   const handleAssignToProject = async () => {
+    if (
+      assignEligibilityData?.isEligible === false ||
+      assignEligibilityData?.roleEligibility?.every((r) => !r.isEligible)
+    ) {
+      const reasons = assignEligibilityData?.roleEligibility?.flatMap((r) => r.reasons || []) || [];
+      toast.error(
+        reasons.length > 0
+          ? reasons.join(' ')
+          : 'Candidate is not eligible to be assigned to this project.',
+      );
+      return;
+    }
+
     try {
       await assignToProject({
         candidateId: assignConfirm.candidateId,
