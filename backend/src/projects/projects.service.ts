@@ -3615,4 +3615,91 @@ export class ProjectsService {
 
     return created;
   }
+
+  async getProjectAgentCandidateRequests(
+    projectId: string,
+    query: { page: number; limit: number },
+  ) {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.agentCandidateRequest.findMany({
+        where: { projectId },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          requestedBy: {
+            select: { id: true, name: true, email: true },
+          },
+          items: {
+            include: {
+              roleNeeded: { select: { designation: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.agentCandidateRequest.count({ where: { projectId } }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getAgentCandidateRequests(query: {
+    page: number;
+    limit: number;
+    status?: string;
+  }) {
+    const { page, limit, status } = query;
+    const skip = (page - 1) * limit;
+
+    const where = status
+      ? { status: status as any }
+      : {};
+
+    const [data, total] = await Promise.all([
+      this.prisma.agentCandidateRequest.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+              countryCode: true,
+              country: { select: { name: true } },
+              client: { select: { name: true } },
+            },
+          },
+          requestedBy: {
+            select: { id: true, name: true, email: true },
+          },
+          items: {
+            include: {
+              roleNeeded: {
+                select: { designation: true },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.agentCandidateRequest.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

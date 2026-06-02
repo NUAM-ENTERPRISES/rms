@@ -41,6 +41,8 @@ import {
   ClipboardCheck,
   Activity,
   RefreshCcw,
+  UserRoundSearch,
+  History,
 } from "lucide-react";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
@@ -50,6 +52,7 @@ import {
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import RequestAgentCandidatesModal from "@/features/projects/components/RequestAgentCandidatesModal";
+import AgentCandidateRequestHistoryModal from "@/features/projects/components/AgentCandidateRequestHistoryModal";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -68,7 +71,7 @@ import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
 import { FlagIcon } from "@/shared";
@@ -157,6 +160,7 @@ export default function ProjectDetailPage() {
   // Permissions
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
+  const isAgentCoordinator = useIsAgentCoordinator();
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
@@ -424,6 +428,7 @@ export default function ProjectDetailPage() {
     candidateIds: [],
   });
   const [showAgentRequestModal, setShowAgentRequestModal] = useState(false);
+  const [showAgentRequestHistory, setShowAgentRequestHistory] = useState(false);
 
   const [bulkScreeningState, setBulkScreeningState] = useState<{
     isOpen: boolean;
@@ -1184,7 +1189,7 @@ export default function ProjectDetailPage() {
               </div>
 
               <div
-                className="flex items-center gap-0.5 self-start rounded-lg border border-slate-200/80 bg-slate-50/80 p-0.5 sm:self-center"
+                className="flex items-center gap-1.5 self-start rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 sm:self-center"
                 role="toolbar"
                 aria-label="Project actions"
               >
@@ -1215,13 +1220,24 @@ export default function ProjectDetailPage() {
                 </Button>
                 {canManageProjects && !isProcessingExecutive && (
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setShowAgentRequestModal(true)}
-                    className="h-7 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-white hover:text-blue-700"
+                    className="h-7 rounded-md border-indigo-200 bg-indigo-50 px-2 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800"
                   >
-                    <Send className="mr-1 h-3 w-3" aria-hidden />
-                    Request Agent Candidates
+                    <UserRoundSearch className="mr-1 h-3 w-3" aria-hidden />
+                    Request Agents
+                  </Button>
+                )}
+                {isAgentCoordinator && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAgentRequestHistory(true)}
+                    className="h-7 rounded-md border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800"
+                  >
+                    <History className="mr-1 h-3 w-3" aria-hidden />
+                    Agent Requests
                   </Button>
                 )}
                 {canManageProjects && !isProcessingExecutive && (
@@ -1677,9 +1693,18 @@ export default function ProjectDetailPage() {
       <RequestAgentCandidatesModal
         isOpen={showAgentRequestModal}
         onClose={() => setShowAgentRequestModal(false)}
+        projectId={project.id}
+        projectTitle={project.title}
         projectRoles={project.rolesNeeded}
         isSubmitting={isRequestingAgentCandidates}
         onSubmit={handleCreateAgentCandidateRequest}
+      />
+
+      <AgentCandidateRequestHistoryModal
+        isOpen={showAgentRequestHistory}
+        onClose={() => setShowAgentRequestHistory(false)}
+        projectId={project.id}
+        projectTitle={project.title}
       />
 
       {/* Delete Confirmation Dialog */}

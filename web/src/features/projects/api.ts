@@ -120,6 +120,51 @@ export interface CreateAgentCandidateRequestPayload {
   notes?: string;
 }
 
+export type AgentCandidateRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface AgentCandidateRequestListItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  project: {
+    id: string;
+    title: string;
+    countryCode: string | null;
+    country: { name: string } | null;
+    client: { name: string } | null;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
+}
+
+export interface GetAgentCandidateRequestsParams {
+  page?: number;
+  limit?: number;
+  status?: AgentCandidateRequestStatus;
+}
+
+export interface ProjectAgentCandidateRequestHistoryItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  requestedBy: { id: string; name: string; email: string };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
+}
+
 export interface EducationRequirement {
   qualificationId: string;
   mandatory: boolean;
@@ -928,6 +973,38 @@ export const projectsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: AgentCandidateRequestListItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      GetAgentCandidateRequestsParams
+    >({
+      query: ({ page = 1, limit = 20, status } = {}) => ({
+        url: "/projects/agent-candidate-requests",
+        params: { page, limit, ...(status ? { status } : {}) },
+      }),
+      providesTags: [{ type: "Project", id: "AGENT_REQUESTS" }],
+    }),
+
+    getProjectAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: ProjectAgentCandidateRequestHistoryItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      { projectId: string; page?: number; limit?: number }
+    >({
+      query: ({ projectId, page = 1, limit = 10 }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        params: { page, limit },
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
+      ],
+    }),
+
     createAgentCandidateRequest: builder.mutation<
       ApiResponse<{
         id: string;
@@ -983,4 +1060,6 @@ export const {
   useBulkSendForInterviewMutation,
   useBulkAssignToProjectMutation,
   useCreateAgentCandidateRequestMutation,
+  useGetAgentCandidateRequestsQuery,
+  useGetProjectAgentCandidateRequestsQuery,
 } = projectsApi;

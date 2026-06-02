@@ -477,6 +477,35 @@ export class ProjectsController {
     };
   }
 
+  @Get('agent-candidate-requests')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'List all agent candidate requests',
+    description:
+      'Returns paginated agent candidate requests with project, requester and role details. Intended for Agent Coordinators.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    description: 'Filter by request status',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of agent candidate requests' })
+  async getAgentCandidateRequests(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+  ) {
+    const data = await this.projectsService.getAgentCandidateRequests({
+      page: +page,
+      limit: +limit,
+      status,
+    });
+    return { success: true, ...data };
+  }
+
   @Get(':id')
   @Permissions('read:projects')
   @ApiOperation({
@@ -1328,6 +1357,28 @@ export class ProjectsController {
       data: result,
       message: 'Document verification completed successfully',
     };
+  }
+
+  @Get(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects', 'read:projects')
+  @ApiOperation({
+    summary: 'List agent candidate request history for a project',
+    description: 'Returns all agent candidate requests made for this project, newest first.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiResponse({ status: 200, description: 'Paginated request history' })
+  async getProjectAgentCandidateRequests(
+    @Param('id') projectId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const data = await this.projectsService.getProjectAgentCandidateRequests(
+      projectId,
+      { page: +page, limit: +limit },
+    );
+    return { success: true, ...data };
   }
 
   @Post(':id/agent-candidate-requests')
