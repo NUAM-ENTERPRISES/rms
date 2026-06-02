@@ -60,6 +60,10 @@ import {
   useAssignToProjectMutation,
 } from "@/features/candidates";
 import CandidateCard from "./CandidateCard";
+import {
+  getProjectClosureMessage,
+  isProjectOpenForAssignment,
+} from "@/features/projects/utils/project-assignment";
 
 interface RecruiterCandidatesTabProps {
   projectId: string;
@@ -131,6 +135,8 @@ export default function RecruiterCandidatesTab({
 
   // Get project details for comparison
   const { data: projectData } = useGetProjectQuery(projectId);
+  const assignmentOpen = isProjectOpenForAssignment(projectData?.data);
+  const assignmentClosureMessage = getProjectClosureMessage(projectData?.data);
 
   useEffect(() => {
     if (isAssignDialogOpen) {
@@ -256,6 +262,13 @@ export default function RecruiterCandidatesTab({
   };
 
   const showAssignConfirmation = (candidateId: string, candidateName: string) => {
+    if (!assignmentOpen) {
+      toast.error(
+        assignmentClosureMessage ??
+          "This project is closed. New candidate assignments are disabled."
+      );
+      return;
+    }
     // Find candidate to determine top matched role
     const candidate = getCandidateById(candidateId);
     let bestRoleNeededId = projectData?.data?.rolesNeeded?.[0]?.id;
@@ -313,6 +326,13 @@ export default function RecruiterCandidatesTab({
   };
 
   const handleAssignCandidates = async () => {
+    if (!assignmentOpen) {
+      toast.error(
+        assignmentClosureMessage ??
+          "This project is closed. New candidate assignments are disabled."
+      );
+      return;
+    }
     if (selectedCandidates.length === 0) {
       toast.error("Please select at least one candidate");
       return;
@@ -384,6 +404,14 @@ export default function RecruiterCandidatesTab({
 
   return (
     <div className="space-y-6">
+      {!assignmentOpen && assignmentClosureMessage ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {assignmentClosureMessage}
+        </div>
+      ) : null}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -682,7 +710,7 @@ export default function RecruiterCandidatesTab({
                         `${candidate.firstName} ${candidate.lastName}`
                       )
                     }
-                    showAssignButton={!isAssignedToProject}
+                    showAssignButton={assignmentOpen && !isAssignedToProject}
                     onAssignToProject={(candidateId) =>
                       showAssignConfirmation(
                         candidateId,

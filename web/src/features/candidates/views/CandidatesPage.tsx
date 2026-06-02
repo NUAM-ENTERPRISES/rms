@@ -1234,16 +1234,16 @@ export default function CandidatesPage() {
                         {/* Created By */}
                         <TableCell className="px-4 py-3">
                           <div className="text-xs">
-                            {(candidate as any).createdBy || activeAssignment?.createdByUser ? (
+                            {(candidate as any).createdBy || activeAssignment?.createdByUser || activeAssignment?.assignedByUser ? (
                               <div className="space-y-0.5">
                                 <div className="font-medium text-slate-900">
-                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name)}
+                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name || activeAssignment?.assignedByUser?.name)}
                                 </div>
-                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email) && (
+                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email) && (
                                   <div className="flex items-center gap-1.5 text-slate-700">
                                     <Mail className="h-3 w-3 text-gray-400" />
                                     <span className="truncate max-w-[120px]">
-                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email)}
+                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email)}
                                     </span>
                                   </div>
                                 )}

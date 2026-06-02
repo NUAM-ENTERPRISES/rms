@@ -46,6 +46,11 @@ import { useCan } from "@/hooks/useCan";
 import { Can } from "@/components/auth/Can";
 import { CandidateStatusBadge } from "@/components/molecules";
 import { format } from "date-fns";
+// import { toast } from "sonner";
+import {
+  getProjectClosureMessage,
+  isProjectOpenForAssignment,
+} from "@/features/projects/utils/project-assignment";
 import { toast } from "sonner";
 import { getCandidateOperationsState } from "@/features/candidates/utils/operations-candidate";
 
@@ -161,7 +166,9 @@ export default function ProjectEligibleCandidatesPage() {
     );
   }
 
-  const project = projectData;
+  const project = projectData?.data ?? projectData;
+  const assignmentOpen = isProjectOpenForAssignment(project);
+  const assignmentClosureMessage = getProjectClosureMessage(project);
   const eligibleCandidates = eligibleCandidatesData || mockEligibleCandidates;
 
   // Filter and sort candidates
@@ -207,6 +214,13 @@ export default function ProjectEligibleCandidatesPage() {
     });
 
   const handleNominateCandidate = (candidateId: string) => {
+    if (!assignmentOpen) {
+      toast.error(
+        assignmentClosureMessage ??
+          "This project is closed. New candidate nominations are disabled."
+      );
+      return;
+    }
     navigate(`/projects/${projectId}/nominate/${candidateId}`);
   };
 
@@ -316,12 +330,33 @@ export default function ProjectEligibleCandidatesPage() {
             </div>
           </div>
           <Can anyOf={["nominate:candidates"]}>
-            <Button onClick={() => navigate(`/projects/${projectId}/nominate`)}>
+            <Button
+              disabled={!assignmentOpen}
+              onClick={() => {
+                if (!assignmentOpen) {
+                  toast.error(
+                    assignmentClosureMessage ??
+                      "This project is closed. New candidate nominations are disabled."
+                  );
+                  return;
+                }
+                navigate(`/projects/${projectId}/nominate`);
+              }}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Nominate Candidates
             </Button>
           </Can>
         </div>
+
+        {!assignmentOpen && assignmentClosureMessage ? (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status"
+          >
+            {assignmentClosureMessage}
+          </div>
+        ) : null}
 
         {/* Project Summary */}
         <Card>
@@ -554,8 +589,14 @@ export default function ProjectEligibleCandidatesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={handledByOperations}
-                              title={handledByOperations ? "Candidate is currently being handled by Operations" : "Nominate Candidate"}
+                              disabled={handledByOperations || !assignmentOpen}
+                              title={
+                                !assignmentOpen
+                                  ? assignmentClosureMessage ?? "Project closed"
+                                  : handledByOperations
+                                    ? "Candidate is currently being handled by Operations"
+                                    : "Nominate Candidate"
+                              }
                               onClick={() =>
                                 handleNominateCandidate(candidate.id)
                               }

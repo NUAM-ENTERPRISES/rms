@@ -43,7 +43,7 @@ export default function ProjectStats({
     {
       label: "Completed",
       value: stats.completedProjects,
-      subtitle: "Delivered",
+      subtitle: "Delivered & deadline closed",
       icon: CheckCircle2,
       accent: "purple",
       filter: { status: "completed" },

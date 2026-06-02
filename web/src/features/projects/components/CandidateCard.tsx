@@ -342,7 +342,22 @@ const CandidateCard = memo(function CandidateCard({
 
   // Eligibility check: enable if ANY role is eligible (even with soft reasons)
   const anyRoleEligible = propEligibilityData?.roleEligibility?.some((r) => r.isEligible);
-  const isNotEligible = propEligibilityData?.isEligible === false || !anyRoleEligible;
+  const currentStatusLabel = String(
+    typeof candidate.currentStatus === 'string'
+      ? candidate.currentStatus
+      : candidate.currentStatus?.statusName ||
+        candidate.currentStatus?.name ||
+        candidate.currentStatus?.label ||
+        '',
+  ).trim();
+  const normalizedCurrentStatus = currentStatusLabel.toLowerCase();
+  const isPositiveStatus = [
+    'interested',
+    'future',
+    'on_hold',
+  ].includes(normalizedCurrentStatus);
+  const isNonPositiveStatus = !!currentStatusLabel && !isPositiveStatus;
+  const isNotEligible = isNonPositiveStatus || propEligibilityData?.isEligible === false || !anyRoleEligible;
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -810,6 +825,16 @@ const CandidateCard = memo(function CandidateCard({
               title={`Candidate status: ${candidateStatusConfig.label}`}
             >
               {candidateStatusConfig.label}
+            </Badge>
+          )}
+
+          {isNonPositiveStatus && (
+            <Badge
+              variant="outline"
+              className="border border-red-200 bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded-md font-medium"
+              title={`Candidate current status prevents project assignment.`}
+            >
+              Cannot assign: {currentStatusLabel}
             </Badge>
           )}
 

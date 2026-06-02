@@ -661,7 +661,11 @@ export default function CandidateOverviewPage() {
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
+                      const createdBy =
+                        (candidate as any).createdBy ||
+                        activeAssignment?.createdByUser ||
+                        activeAssignment?.assignedByUser ||
+                        null;
                       const operations = getCandidateOperationsState(candidate);
 
                       return (
