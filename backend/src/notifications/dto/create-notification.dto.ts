@@ -43,14 +43,6 @@ export class CreateNotificationDto {
   link?: string;
 
   @ApiPropertyOptional({
-    description: 'Notification status',
-    example: 'unread',
-  })
-  @IsString()
-  @IsOptional()
-  status?: string;
-
-  @ApiPropertyOptional({
     description: 'Additional metadata',
     example: { transferId: 'clx123', fromTeamId: 'clx456' },
   })

@@ -567,7 +567,6 @@ export interface UpdateCandidateStatusRequest {
   onHoldUntil?: string;
   futureDate?: string;
   futureYear?: number;
-  callbackDateTime?: string;
 }
 
 export interface AssignRecruiterRequest {
@@ -915,7 +914,6 @@ export const candidatesApi = baseApi.injectEndpoints({
           negative: number;
           nominated: number;
           registered?: number;
-          callback?: number;
           documentReceived: number;
           documentation?: number;
           interviewAssigned: number;

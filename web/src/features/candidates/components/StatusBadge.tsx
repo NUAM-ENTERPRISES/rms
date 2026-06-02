@@ -13,7 +13,6 @@ import {
   FileText,
   Award,
   UserX,
-  Phone
 } from "lucide-react";
 import { useStatusConfig } from "../hooks/useStatusConfig";
 
@@ -31,29 +30,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
     key.toLowerCase().trim().replace(/_/g, " ") === safeStatus
   )?.[1];
 
-  const fallbackClassMap: Record<string, string> = {
-    "call back": "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-100/50",
-    callback: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-100/50",
-  };
-
-  const fallbackIcons: Record<string, any> = {
-    "call back": Phone,
-    callback: Phone,
-  };
-
-  let finalConfig = config;
-  if (!finalConfig && fallbackClassMap[safeStatus]) {
-    finalConfig = {
-      label: label || "Call Back",
-      description: "Scheduled callback follow-up",
-      color: "amber",
-      badgeClass: fallbackClassMap[safeStatus],
-      icon: "Phone",
-      priority: "medium",
-    } as any;
-  }
-
-  if (!finalConfig) {
+  if (!config) {
     return (
       <Badge className="bg-slate-100 text-slate-800 border-slate-200 border gap-1 px-2 py-1 shadow-sm">
         <AlertTriangle className="h-3 w-3" />
@@ -85,7 +62,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
     UserX: UserX,
   };
 
-  const Icon = iconMap[finalConfig.icon] || AlertTriangle;
+  const Icon = iconMap[config.icon] || AlertTriangle;
 
   // Custom coloring logic to match CandidatePipeline/StatusUpdateModal
   const colorMap: Record<string, string> = {
@@ -108,16 +85,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
     offered: "bg-orange-50 text-orange-700 border-orange-200 shadow-orange-100/50",
     placed: "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-emerald-100/50",
     withdrawn: "bg-rose-50 text-rose-700 border-rose-200 shadow-rose-100/50",
-    "call back": "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-100/50",
-    callback: "bg-amber-50 text-amber-700 border-amber-200 shadow-amber-100/50",
   };
 
-  const customClass = colorMap[safeStatus] || finalConfig.badgeClass;
+  const customClass = colorMap[safeStatus] || config.badgeClass;
 
   return (
     <Badge className={`${customClass} border gap-1.5 px-2.5 py-1 font-bold shadow-sm transition-all hover:shadow-md`}>
       <Icon className="h-3.5 w-3.5" />
-      {label || finalConfig.label}
+      {label || config.label}
     </Badge>
   );
 };

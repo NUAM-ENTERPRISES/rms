@@ -39,7 +39,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CandidateStatusModule } from './candidate-status/candidate-status.module';
 import { CandidateStatusHistoryModule } from './candidate-status-history/candidate-status-history.module';
 import { RnrRemindersModule } from './rnr-reminders/rnr-reminders.module';
-import { CallbackRemindersModule } from './callback-reminders/callback-reminders.module';
 import { SystemConfigModule } from './system-config/system-config.module';
 import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
@@ -95,7 +94,6 @@ import { IntroductionVideosModule } from './introduction-videos/introduction-vid
     CandidateStatusModule,
     CandidateStatusHistoryModule,
     RnrRemindersModule,
-    CallbackRemindersModule,
     CandidateProjectStatusModule,
     CandidateProjectsModule,
     CandidateProjectStatusHistoryModule,

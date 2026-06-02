@@ -828,7 +828,6 @@ const ProjectCandidatesBoard = ({
                 candidate.projectStatus?.statusName ||
                 "nominated"
               }
-              useStatusBackground
               showMatchScore={
                 candidate.matchScore !== undefined && candidate.matchScore !== null
               }
@@ -926,7 +925,7 @@ const ProjectCandidatesBoard = ({
           return (
               <CandidateCard
                 key={`eligible-${assignmentInfo.candidateId}`}
-                className={isSelected ? "ring-1 ring-sky-400/60 bg-sky-50/30" : ""}
+                className={isSelected ? "ring-1 ring-emerald-400/60 bg-emerald-50/30" : ""}
                 selected={canSelect ? isSelected : undefined}
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
                 candidate={candidateWithProject}
@@ -946,7 +945,6 @@ const ProjectCandidatesBoard = ({
                 }}
                 actions={actions}
                 projectStatus={assignmentInfo.projectStatus}
-              useStatusBackground
                 showMatchScore
                 matchScore={candidate.matchScore}
                 showVerifyButton={!shouldSkipDocVerification && showVerifyButton}
@@ -1118,8 +1116,8 @@ const ProjectCandidatesBoard = ({
   }> = [
     {
       id: "nominated",
-      title: "Profiling Shortlisted",
-      subtitle: "CVs registered for this project",
+      title: "Shortlisted to Projects",
+      subtitle: "Currently cv registered to this project",
       count: nominatedTotal ?? sanitizedNominated.length,
       content: renderNominatedColumn(),
       ariaLabel: "Nominated candidates column",

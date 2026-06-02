@@ -56,7 +56,6 @@ export class NotificationsService {
           message: dto.message,
           link: dto.link,
           meta: dto.meta,
-          status: dto.status,
           idemKey: dto.idemKey,
         },
       });

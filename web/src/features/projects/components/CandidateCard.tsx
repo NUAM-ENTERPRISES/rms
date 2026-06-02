@@ -263,7 +263,6 @@ interface CandidateCardProps {
   onSendForInterview?: (candidateId: string) => void;
   isAlreadyInProject?: boolean;
   className?: string;
-  useStatusBackground?: boolean;
   /** Whether to show the document verification status icon and tooltip */
   showDocumentStatus?: boolean;
   /** When true, hide the verify button and show an alert icon with tooltip */
@@ -320,7 +319,6 @@ const CandidateCard = memo(function CandidateCard({
   onAssignToProject,
   isAlreadyInProject = false,
   className,
-  useStatusBackground = false,
   showDocumentStatus = true,
   showSkipDocumentVerification = false,
   skipDocumentVerificationMessage,
@@ -452,17 +450,6 @@ const CandidateCard = memo(function CandidateCard({
       : projectStatusRaw || candidateStatusRaw;
 
   const statusConfig = resolveProjectCandidateStatusDisplay(primaryStatusRaw);
-
-  const getStatusBackgroundClass = (badgeClass: string) => {
-    const bgClassMatch = badgeClass.match(/bg-[^\s]+/);
-    const borderClassMatch = badgeClass.match(/border-[^\s]+/);
-    return {
-      bg: bgClassMatch?.[0] || "bg-white",
-      border: borderClassMatch?.[0] || "border-slate-200/80",
-    };
-  };
-
-  const statusStyle = getStatusBackgroundClass(statusConfig.badgeClass);
 
   const normalize = (s: string | undefined) =>
     (s || "").toString().toLowerCase().replace(/[\s_]+/g, "");
@@ -623,12 +610,11 @@ const CandidateCard = memo(function CandidateCard({
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
-        "group relative overflow-hidden cursor-pointer rounded-xl border shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-100/30 focus-within:shadow-lg py-0",
-        useStatusBackground ? statusStyle.bg : undefined,
-        useStatusBackground ? statusStyle.border : undefined,
-        isAlreadyInProject && !showProcessingGlance && "border-l-[3px]",
+        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
+        isAlreadyInProject &&
+          !showProcessingGlance &&
+          "border-l-[3px] border-l-emerald-400",
         isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
-        isNotEligible && !isAlreadyInProject && "opacity-90",
         className
       )}
       onClick={() => onView?.(candidateId)}
