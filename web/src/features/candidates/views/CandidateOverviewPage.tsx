@@ -212,11 +212,12 @@ export default function CandidateOverviewPage() {
     lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
     fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
     teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
+    amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
   };
 
   const statTiles = [
     { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",           statusFilter: "all"           },
-    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold",  statusFilter: "positive"      },
+    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold/Call Back",  statusFilter: "positive"      },
     { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR",        statusFilter: "negative"      },
     { label: "Registered",          value: statsData.registered ?? statsData.nominated,                 icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",     statusFilter: "registered"    },
     { label: "Documentation",       value: statsData.documentation ?? statsData.documentReceived,       icon: FileSearch,accent: "purple",  subtitle: "Main status: Documents",    statusFilter: "documentation" },
@@ -390,6 +391,15 @@ export default function CandidateOverviewPage() {
           bgColor: "bg-amber-50",
           borderColor: "border-amber-200",
         };
+      case "call back":
+      case "callback":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-amber-700",
+          bgColor: "bg-amber-50",
+          borderColor: "border-amber-200",
+        };
       case "qualified":
         return {
           variant: "outline" as const,
@@ -461,7 +471,7 @@ export default function CandidateOverviewPage() {
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
-            const s = accentStyles[stat.accent];
+            const s = accentStyles[stat.accent] ?? accentStyles.blue;
             const isActive = filters.status === stat.statusFilter;
             return (
               <motion.button

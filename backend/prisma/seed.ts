@@ -795,6 +795,7 @@ async function seedCandidateStatus() {
     'Other Enquiry',
     'Future',
     'On Hold',
+    'Call Back',
     'RNR',
     'Qualified',
     'Deployed',
