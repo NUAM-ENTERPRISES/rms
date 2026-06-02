@@ -148,7 +148,7 @@ export default function ProjectCandidatesOverviewPage() {
 
   const user = useAppSelector((state) => state.auth.user);
   const isManagerOrAdmin = useMemo(() => 
-    user?.roles?.some(r => ["CEO", "Director", "Manager", "Team Head", "System Admin"].includes(r)) || false,
+    user?.roles?.some(r => ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "System Admin"].includes(r)) || false,
     [user]
   );
   const isRecruiter = useMemo(() => 

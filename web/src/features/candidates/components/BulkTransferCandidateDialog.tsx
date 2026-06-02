@@ -61,7 +61,13 @@ export function BulkTransferCandidateDialog({
   }, [search]);
 
   const { data: usersResponse, isLoading: isLoadingUsers } = usersApi.useGetUsersQuery(
-    { roles: ["Recruiter"], search: debouncedSearch || undefined, page, limit: LIMIT },
+    {
+      roles: ["Recruiter"],
+      search: debouncedSearch || undefined,
+      page,
+      limit: LIMIT,
+      accountStatus: "ACTIVE",
+    },
     { skip: !open }
   );
 

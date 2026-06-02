@@ -49,6 +49,8 @@ import {
   useUpdateUserPasswordMutation,
 } from "@/features/admin/api";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
+import { UserAccountStatusCard } from "@/features/admin/components/UserAccountStatusCard";
+import { UserAccountStatusHistoryCard } from "@/features/admin/components/UserAccountStatusHistoryCard";
 
 // Permission display mapping
 const PERMISSION_LABELS: Record<string, { label: string; description?: string }> = {
@@ -556,6 +558,16 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {canReadUsers && user && (
+              <>
+                <UserAccountStatusCard
+                  user={user}
+                  canManage={canManageUsers}
+                />
+                <UserAccountStatusHistoryCard userId={user.id} />
+              </>
+            )}
 
             {showRecruiterCapabilities && (
               <Card className="border border-slate-200 shadow-sm">

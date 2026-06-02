@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { assertUserNotBlocked } from '../assert-user-not-blocked';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -45,6 +46,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
+
+    assertUserNotBlocked(user);
 
     // Extract roles and permissions
     const roles = user.userRoles.map((ur) => ur.role.name);

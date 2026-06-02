@@ -450,7 +450,7 @@ const ProjectCandidatesBoard = ({
 
   const isManager =
     user?.roles?.some((role) =>
-      ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+      ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
     ) ?? false;
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =

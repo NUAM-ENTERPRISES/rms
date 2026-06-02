@@ -19,6 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
+import ProjectRoleFilter from "@/components/molecules/ProjectRoleFilter";
 import {
     Users,
     XCircle,
@@ -41,7 +42,6 @@ import { cn } from "@/lib/utils";
 import { Can } from "@/components/auth/Can";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
-import { useGetProjectsQuery } from "@/services/projectsApi";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -80,10 +80,6 @@ export default function ProcessingAdminDashboardPage() {
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
-
-    // Fetch projects for filters
-    const { data: projectsData } = useGetProjectsQuery({ limit: 50 });
-    const projects = projectsData?.data?.projects || [];
 
     // API call for admin processing candidates
     const adminQueryParams: any = {
@@ -211,7 +207,10 @@ export default function ProcessingAdminDashboardPage() {
     };
 
     return (
-        <Can roles={["CEO", "Director", "Manager", "System Admin"]} fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}>
+        <Can
+            roles={["CEO", "Director", "Manager", "System Admin", "Processing Manager"]}
+            fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}
+        >
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
                 <div className="mx-auto max-w-7xl space-y-8">
                     <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -289,29 +288,14 @@ export default function ProcessingAdminDashboardPage() {
                                         />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Select value={projectFilter} onValueChange={(val) => { setProjectFilter(val); setRoleFilter("all"); }}>
-                                            <SelectTrigger className="h-11 w-[200px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
-                                                <SelectValue placeholder="All Projects" />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="all">All Projects</SelectItem>
-                                                {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>))}
-                                            </SelectContent>
-                                        </Select>
-
-                                        {projectFilter !== "all" && (
-                                            <Select value={roleFilter} onValueChange={setRoleFilter}>
-                                                <SelectTrigger className="h-11 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
-                                                    <SelectValue placeholder="All Roles" />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    <SelectItem value="all">All Roles</SelectItem>
-                                                    {projects.find(p => p.id === projectFilter)?.rolesNeeded?.map((r: any) => (
-                                                        <SelectItem key={r.roleCatalogId} value={r.roleCatalogId}>{r.designation}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
+                                        <ProjectRoleFilter
+                                            value={{ projectId: projectFilter, roleCatalogId: roleFilter }}
+                                            onChange={({ projectId, roleCatalogId }) => {
+                                                setProjectFilter(projectId);
+                                                setRoleFilter(roleCatalogId);
+                                            }}
+                                            className="items-center"
+                                        />
 
                                         <Button
                                             variant="outline"

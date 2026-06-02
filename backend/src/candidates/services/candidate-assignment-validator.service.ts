@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { withActiveAccountStatus } from '../../users/user-account-status.filter';
 
 @Injectable()
 export class CandidateAssignmentValidatorService {
@@ -136,7 +137,7 @@ export class CandidateAssignmentValidatorService {
 
     // Get available recruiters
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -144,7 +145,7 @@ export class CandidateAssignmentValidatorService {
             },
           },
         },
-      },
+      }),
     });
 
     if (recruiters.length === 0) {
@@ -210,7 +211,7 @@ export class CandidateAssignmentValidatorService {
     }>
   > {
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -218,7 +219,7 @@ export class CandidateAssignmentValidatorService {
             },
           },
         },
-      },
+      }),
       include: {
         userRoles: {
           include: {

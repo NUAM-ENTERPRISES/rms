@@ -14,6 +14,15 @@ import { handleInterviewNotifications } from "./notification-handlers/interview-
 import { handleOperationsNotifications, handleOperationsSync } from "./notification-handlers/operations-handler";
 import { handleProcessingNotifications, handleProcessingSync } from "./notification-handlers/processing-handler";
 import { handleSessionUpdated, type SessionEventPayload } from "./notification-handlers/session-handler";
+import {
+  handleAccountBlocked,
+  type AccountBlockedPayload,
+} from "./notification-handlers/account-blocked-handler";
+import {
+  handleAccountStatusChanged,
+  handleAccountStatusNotifications,
+  type AccountStatusChangedPayload,
+} from "./notification-handlers/account-status-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -263,6 +272,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (
         notification.type !== "candidate_sent_for_verification" &&
         notification.type !== "processing.reminder" &&
+        notification.type !== "account_status_changed" &&
         !notification.type?.endsWith("_REMINDER")
       ) {
         toast(notification.title || "New Notification", {
@@ -279,6 +289,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleInterviewNotifications(context);
       handleOperationsNotifications(context);
       handleProcessingNotifications(context);
+      handleAccountStatusNotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
@@ -304,6 +315,22 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     socket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
       console.log("[Socket] Interview stats update received:", payload);
       dispatch(baseApi.util.invalidateTags([{ type: "Interview", id: "LIST" }]));
+    });
+
+    socket.on("account:blocked", (payload: AccountBlockedPayload) => {
+      handleAccountBlocked(payload, dispatch);
+    });
+
+    socket.on("account:status-changed", (payload: AccountStatusChangedPayload) => {
+      handleAccountStatusChanged(payload, dispatch);
+      if (payload.message) {
+        const isInactive = payload.accountStatus === "INACTIVE";
+        if (isInactive) {
+          toast.warning(payload.message);
+        } else {
+          toast.success(payload.message);
+        }
+      }
     });
 
     // Session monitoring — debounced to prevent refetch storms on rapid events

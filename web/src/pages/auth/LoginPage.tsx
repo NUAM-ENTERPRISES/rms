@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LoginSuccessTransition } from "@/components/organisms/LoginSuccessTransition";
 import { LoginAmbientBackground } from "@/components/organisms/LoginAmbientBackground";
 import { cn } from "@/lib/utils";
+import {
+  BLOCKED_ACCOUNT_MESSAGE,
+  BLOCKED_ACCOUNT_SESSION_KEY,
+  BLOCKED_ACCOUNT_QUERY_PARAM,
+  isBlockedAccountMessage,
+} from "@/shared/constants/account-status";
 
 const loginSchema = z.object({
   countryCode: z
@@ -234,7 +240,7 @@ export default function LoginPage() {
   const [loginTransition, setLoginTransition] =
     useState<LoginTransitionState | null>(null);
   const pendingNavigationRef = useRef<string | null>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
@@ -246,6 +252,7 @@ export default function LoginPage() {
     control,
     formState: { errors },
     setError,
+    clearErrors,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -254,6 +261,36 @@ export default function LoginPage() {
       password: "",
     },
   });
+
+  useEffect(() => {
+    const fromRedirect =
+      searchParams.get(BLOCKED_ACCOUNT_QUERY_PARAM) === "1";
+    const stored = sessionStorage.getItem(BLOCKED_ACCOUNT_SESSION_KEY);
+    sessionStorage.removeItem(BLOCKED_ACCOUNT_SESSION_KEY);
+
+    const message = isBlockedAccountMessage(stored ?? undefined)
+      ? stored!
+      : fromRedirect
+        ? BLOCKED_ACCOUNT_MESSAGE
+        : null;
+
+    if (message) {
+      setError("root", { message });
+      toast.error(message);
+    }
+
+    if (fromRedirect) {
+      const next = new URLSearchParams(searchParams);
+      next.delete(BLOCKED_ACCOUNT_QUERY_PARAM);
+      setSearchParams(next, { replace: true });
+    }
+  }, [setError, searchParams, setSearchParams]);
+
+  const clearRootError = useCallback(() => {
+    if (errors.root) {
+      clearErrors("root");
+    }
+  }, [clearErrors, errors.root]);
 
   const completeLoginNavigation = useCallback(() => {
     const nextUrl = pendingNavigationRef.current;
@@ -269,6 +306,8 @@ export default function LoginPage() {
       const result = await login(data).unwrap();
 
       if (result.success) {
+        sessionStorage.removeItem(BLOCKED_ACCOUNT_SESSION_KEY);
+
         dispatch(
           setCredentials({
             user: result.data.user,
@@ -290,9 +329,11 @@ export default function LoginPage() {
         setError("root", { message: result.message || "Login failed" });
       }
     } catch (error: unknown) {
-      const apiError = error as { data?: { message?: string } };
-      const errorMessage =
-        apiError?.data?.message || "Invalid mobile number or password";
+      const apiError = error as { data?: { message?: string | string[] } };
+      const rawMessage = apiError?.data?.message;
+      const errorMessage = Array.isArray(rawMessage)
+        ? rawMessage[0]
+        : rawMessage || "Invalid mobile number or password";
       setError("root", { message: errorMessage });
       toast.error(errorMessage);
     }
@@ -375,7 +416,10 @@ export default function LoginPage() {
                           <CountryCodeSelect
                             name={field.name}
                             value={field.value}
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              clearRootError();
+                              field.onChange(value);
+                            }}
                             placeholder="Code"
                             error={errors.countryCode?.message}
                             className="h-12 min-h-12 w-full text-base md:text-sm bg-white/5 border-white/10 text-white shadow-xs focus:border-primary/50 focus:ring-primary/20 data-[placeholder]:text-slate-500 [&_svg]:text-slate-400"
@@ -390,7 +434,9 @@ export default function LoginPage() {
                         type="tel"
                         placeholder="9876543210"
                         className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
-                        {...register("mobileNumber")}
+                        {...register("mobileNumber", {
+                          onChange: () => clearRootError(),
+                        })}
                       />
                     </div>
                   </div>
@@ -420,7 +466,9 @@ export default function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       className="pl-10 pr-12 h-12 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200"
-                      {...register("password")}
+                      {...register("password", {
+                        onChange: () => clearRootError(),
+                      })}
                     />
                     <Button
                       type="button"

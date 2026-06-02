@@ -73,8 +73,13 @@ export default function ProtectedRoute({
 
   function denyAccessToastAndRedirect(): React.ReactElement {
     toast.error("Insufficient permissions to access this page");
+    if (user?.roles.includes("Processing Manager")) {
+      return <Navigate to="/processing-admin" replace />;
+    }
     if (
-      user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+      user?.roles.some((role) =>
+        ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+      )
     ) {
       return <Navigate to="/dashboard" replace />;
     }

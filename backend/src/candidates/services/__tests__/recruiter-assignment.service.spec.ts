@@ -3,8 +3,9 @@ import { RecruiterAssignmentService } from '../recruiter-assignment.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { OutboxService } from '../../../notifications/outbox.service';
 import { RolesService } from '../../../roles/roles.service';
+import { CandidateListFilterService } from '../candidate-list-filter.service';
 import { ROLE_NAMES } from '../../../common/constants/role-ids';
-import { LanguageProficiency } from '@prisma/client';
+import { LanguageProficiency, UserAccountStatus } from '@prisma/client';
 
 describe('RecruiterAssignmentService', () => {
   let service: RecruiterAssignmentService;
@@ -45,6 +46,8 @@ describe('RecruiterAssignmentService', () => {
     findIdByName: jest.fn(),
   };
 
+  const mockCandidateListFilterService = {};
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockRolesService.findIdByName.mockImplementation(async (name: string) => {
@@ -58,6 +61,10 @@ describe('RecruiterAssignmentService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: OutboxService, useValue: mockOutboxService },
         { provide: RolesService, useValue: mockRolesService },
+        {
+          provide: CandidateListFilterService,
+          useValue: mockCandidateListFilterService,
+        },
       ],
     }).compile();
 
@@ -368,6 +375,31 @@ describe('RecruiterAssignmentService', () => {
                 OR: expect.any(Array),
               }),
             ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('getRecruiterWithLeastWorkload', () => {
+    it('only queries recruiters with ACTIVE account status', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rec-1',
+          name: 'Active Rec',
+          email: 'a@test.com',
+          mobileNumber: '1',
+          countryCode: '+91',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      await service.getRecruiterWithLeastWorkload();
+
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            accountStatus: UserAccountStatus.ACTIVE,
           }),
         }),
       );

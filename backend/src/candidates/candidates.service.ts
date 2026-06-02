@@ -30,6 +30,7 @@ import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 import { CandidateCodeService } from './services/candidate-code.service';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
@@ -2768,7 +2769,7 @@ export class CandidatesService {
    */
   private async getAllRecruiters(): Promise<any[]> {
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -2776,7 +2777,7 @@ export class CandidatesService {
             },
           },
         },
-      },
+      }),
       include: {
         userRoles: {
           include: {
@@ -3258,7 +3259,7 @@ export class CandidatesService {
 
     // Find document executive with least tasks
     const documentExecutives = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -3268,7 +3269,7 @@ export class CandidatesService {
             },
           },
         },
-      },
+      }),
       include: {
         _count: {
           select: {

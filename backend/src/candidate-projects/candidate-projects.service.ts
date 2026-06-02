@@ -30,6 +30,7 @@ import {
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 @Injectable()
 export class CandidateProjectsService {
@@ -69,7 +70,7 @@ export class CandidateProjectsService {
 
   private async getInterviewCoordinators(): Promise<Array<{ id: string }>> {
     return this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -77,7 +78,7 @@ export class CandidateProjectsService {
             },
           },
         },
-      },
+      }),
       select: {
         id: true,
       },
@@ -864,7 +865,7 @@ export class CandidateProjectsService {
 
         // Include all active interview coordinators/screening trainers for assigned-screenings updates
         const coordinators = (await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -874,7 +875,7 @@ export class CandidateProjectsService {
                 },
               },
             },
-          },
+          }),
           select: { id: true },
         })) || [];
 
@@ -924,7 +925,7 @@ export class CandidateProjectsService {
 
     if (!coordinatorId) {
       const coordinators = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -934,7 +935,7 @@ export class CandidateProjectsService {
               },
             },
           },
-        },
+        }),
         select: { id: true },
         orderBy: { id: 'asc' },
       });
