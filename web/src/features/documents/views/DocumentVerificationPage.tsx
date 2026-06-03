@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,6 @@ import {
   ChevronRight,
   Eye,
   ArrowUpRight,
-  FilterX,
   RotateCcw,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -57,10 +56,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
-
+// import TypedHeader from "@/components/molecules/TypedHeader";
 type VerificationCountsPayload = {
   pending?: number;
   verified?: number;
@@ -157,6 +156,22 @@ export default function DocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const handleStatusTileClick = (
+    status:
+      | "verification_in_progress_document"
+      | "documents_verified"
+      | "rejected_documents"
+      | "client_revision_requested"
+  ) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const [screeningFilter, setScreeningFilter] = useState(false);
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
@@ -475,8 +490,8 @@ export default function DocumentVerificationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-[98%] mx-auto space-y-4">
         {/* Compact Header */}
-        <TypedHeader 
-          userName={user?.name || "Verifier"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Verifier"}
           subtitle="Review and verify candidate documents with enterprise-grade precision"
         />
 
@@ -489,10 +504,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("verification_in_progress_document");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("verification_in_progress_document")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -527,10 +539,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("documents_verified");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("documents_verified")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -565,10 +574,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("rejected_documents");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("rejected_documents")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -603,10 +609,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("client_revision_requested");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("client_revision_requested")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -640,48 +643,35 @@ export default function DocumentVerificationPage() {
         </div>
 
         {/* Unified Table Container */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <Input
-                    placeholder="Search candidates or files..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
+        <div
+          ref={tableRef}
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+        >
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+              <div className="relative min-w-0 flex-1 w-full group">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                <Input
+                  placeholder="Search candidates or files..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                />
+              </div>
+
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:shrink-0">
+                <div className="w-full min-w-0 sm:flex-1 lg:w-auto lg:min-w-[280px] lg:max-w-[420px] [&_button]:h-11 [&_button]:rounded-xl">
                   <ProjectRoleFilter
                     value={projectRoleFilter}
                     onChange={handleProjectRoleChange}
-                    className="sm:w-80"
+                    className="w-full gap-2"
                   />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setProjectRoleFilter({ projectId: "all", roleCatalogId: "all" });
-                      setScreeningFilter(false);
-                      setStatusFilter("verification_in_progress_document");
-                      setCurrentPage(1);
-                    }}
-                    title="Reset Filters"
-                  >
-                    <FilterX className="h-4 w-4 text-slate-500" />
-                  </Button>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center space-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 transition-all">
+                <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
                   <Checkbox
                     id="screening-filter"
                     checked={screeningFilter}
@@ -690,7 +680,10 @@ export default function DocumentVerificationPage() {
                       setCurrentPage(1);
                     }}
                   />
-                  <label htmlFor="screening-filter" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  <label
+                    htmlFor="screening-filter"
+                    className="cursor-pointer whitespace-nowrap text-xs font-semibold text-slate-600"
+                  >
                     Screening Approved Only
                   </label>
                 </div>

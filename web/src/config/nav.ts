@@ -374,7 +374,6 @@ export const navigationConfig: NavItem[] = [
         id: "ready-for-processing",
         label: "Ready for Processing",
         path: "/ready-for-processing",
-        icon: UserCheck,
         roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
       },
 

@@ -34,7 +34,7 @@ import {
 } from "@/features/candidates/api";
 import { TransferCandidateDialog } from "@/features/candidates/components/TransferCandidateDialog";
 import { useAppSelector } from "@/app/hooks";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { AgentCoordinatorCandidateTableRows } from "../components/AgentCoordinatorCandidateTableRows";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 
@@ -227,7 +227,7 @@ export default function AgentsPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-5 mt-2 px-6">
         {isAgentCoordinator && (
-          <TypedHeader
+          <DashboardWelcomeHeader
             userName={user?.name || "Agent Coordinator"}
             subtitle="Manage agents, track agent-sourced candidates, and oversee referral pipeline."
           />

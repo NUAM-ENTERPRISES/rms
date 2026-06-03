@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Pencil,
   ArrowUpRight,
-  FilterX,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -59,7 +58,7 @@ import { cn } from "@/lib/utils";
 import ScheduleScreeningModal from "../components/ScheduleScreeningModal";
 import { UpdateScreeningTrainingModal } from "../components/UpdateScreeningTrainingModal";
 import { ImageViewer, ProjectRoleFilter, ProjectRoleFilterValue } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
 import { AssignToTrainerDialog } from "@/features/screening-coordination/training/components/AssignToTrainerDialog";
 import ScheduleTrainingModal from "@/features/screening-coordination/training/components/ScheduleTrainingModal";
@@ -465,7 +464,7 @@ export default function ScreeningsDashboardPage() {
       <div className="w-full max-w-full mx-auto space-y-3 mt-1 px-3">
         {/* ── Page Header ── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <TypedHeader
+          <DashboardWelcomeHeader
             userName={user?.name || "Coordinator"}
             subtitle="Overview of training screening assignments, scheduling, decisions, and performance."
             className="w-full"
@@ -515,38 +514,24 @@ export default function ScreeningsDashboardPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <Input
-                    placeholder="Search in list..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <ProjectRoleFilter
-                    value={filter}
-                    onChange={(newFilter) => setFilter(newFilter)}
-                    className="sm:w-80"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
-                    onClick={() => {
-                      setActiveTile("assigned");
-                      setFilter({ projectId: "all", roleCatalogId: "all" });
-                      setSearch("");
-                    }}
-                    title="Reset Filters"
-                  >
-                    <FilterX className="h-4 w-4 text-slate-500" />
-                  </Button>
-                </div>
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+              <div className="relative min-w-0 flex-1 w-full group">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <Input
+                  placeholder="Search in list..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                />
+              </div>
+
+              <div className="w-full min-w-0 lg:w-auto lg:min-w-[280px] lg:max-w-[420px] [&_button]:h-11 [&_button]:rounded-xl">
+                <ProjectRoleFilter
+                  value={filter}
+                  onChange={(newFilter) => setFilter(newFilter)}
+                  className="w-full gap-2"
+                />
               </div>
             </div>
           </div>

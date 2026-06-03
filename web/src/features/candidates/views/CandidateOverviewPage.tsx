@@ -51,7 +51,7 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
@@ -452,8 +452,8 @@ export default function CandidateOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
-        <TypedHeader 
-          userName={displayedRecruiterName || currentUser?.name || "Recruiter"} 
+        <DashboardWelcomeHeader
+          userName={displayedRecruiterName || currentUser?.name || "Recruiter"}
           subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
         />
 
@@ -468,6 +468,69 @@ export default function CandidateOverviewPage() {
             }
           />
         )} */}
+
+        {/* Search & Filter Bar */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                placeholder="Search candidates by name, email or role..."
+                value={filters.search}
+                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
+                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(isManagerOrAdmin && !isRecruiter) && (
+                <div className="w-full sm:w-[200px]">
+                  <UserSelect
+                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
+                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
+                    placeholder="All Recruiters"
+                    role="Recruiter"
+                    allowClear={true}
+                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
+                  />
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
+                >
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
+
+              <Button
+                onClick={() => navigate("/candidates/create")}
+                className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 font-medium shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Candidate</span>
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Dashboard Tiles */}
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
@@ -509,61 +572,6 @@ export default function CandidateOverviewPage() {
           })}
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <Input
-                placeholder="Search candidates by name, email or role..."
-                value={filters.search}
-                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
-              />
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              {(isManagerOrAdmin && !isRecruiter) && (
-                <div className="w-full sm:w-[200px]">
-                  <UserSelect
-                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
-                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
-                    placeholder="All Recruiters"
-                    role="Recruiter"
-                    allowClear={true}
-                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
-                  />
-                </div>
-              )}
-              
-              <Button
-                variant="outline"
-                onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Advanced Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={handleResetFilters}
-                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
-                >
-                  <FilterX className="h-4 w-4" />
-                  <span>Reset</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Candidates Table */}
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
@@ -596,13 +604,6 @@ export default function CandidateOverviewPage() {
                     Transfer ({selectedCandidateIds.size})
                   </Button>
                 )}
-                <Button
-                  onClick={() => navigate("/candidates/create")}
-                  size="sm"
-                  className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add Candidate
-                </Button>
               </div>
             </div>
           </div>

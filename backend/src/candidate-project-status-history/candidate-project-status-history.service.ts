@@ -20,6 +20,7 @@ export class CandidateProjectStatusHistoryService {
         candidate: {
           select: {
             id: true,
+            candidateCode: true,
             firstName: true,
             lastName: true,
             email: true,

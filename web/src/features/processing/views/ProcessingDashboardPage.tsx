@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import {
     Users,
     XCircle,
@@ -190,7 +190,9 @@ export default function ProcessingDashboardPage() {
       setStepFilter(null);
     }
     setPage(1);
-    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -241,8 +243,8 @@ export default function ProcessingDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <TypedHeader 
-          userName={user?.name || "Admin"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Admin"}
           subtitle="Monitor and manage candidate processing workflows"
         />
           
