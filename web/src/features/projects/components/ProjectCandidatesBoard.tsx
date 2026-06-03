@@ -37,7 +37,10 @@ import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
 import {
+  getCandidateAssignmentBlockReason,
+  getCandidateStatusLabel,
   getProjectClosureMessage,
+  isCandidatePositiveForAssignment,
   isProjectOpenForAssignment,
 } from "@/features/projects/utils/project-assignment";
 
@@ -58,20 +61,6 @@ type ProjectAssignment = {
   };
 };
 
-const getCandidateGlobalStatusLabel = (candidate: CandidateRecord): string => {
-  if (typeof candidate.currentStatus === "string") {
-    return candidate.currentStatus.trim();
-  }
-  return (
-    candidate.currentStatus?.label ||
-    candidate.currentStatus?.name ||
-    candidate.currentStatus?.statusName ||
-    ""
-  )
-    .toString()
-    .trim();
-};
-
 const normalizeRegisteredStatus = (statusRaw: string) => {
   const raw = (statusRaw || "").toString().trim().toLowerCase();
   return {
@@ -90,46 +79,153 @@ const isRegisteredProcessingStatus = (statusRaw: string) => {
   );
 };
 
-const getRegisteredAccentClass = (statusRaw: string) => {
+export type PipelineStatusCardAccent = {
+  cardClass: string;
+  isProcessing: boolean;
+};
+
+/** Card background accents by pipeline / global status (Tailwind tokens only). */
+export const getPipelineStatusCardClass = (
+  statusRaw: string,
+  options?: { columnId?: CandidateColumnType; isAssigned?: boolean },
+): PipelineStatusCardAccent => {
   const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
-  if (!raw) return "";
+  const { columnId, isAssigned } = options ?? {};
 
-  // Documentation
+  const base =
+    "border border-l-0 shadow-sm backdrop-blur-sm transition-colors duration-200";
+
+  // Eligible pool (column or unmatched pre-assignment)
   if (
-    underscored === "pending_documents" ||
-    underscored === "verification_in_progress" ||
-    compact === "pendingdocuments" ||
-    compact === "verificationinprogress"
+    columnId === "eligible" &&
+    (!raw || !isAssigned)
   ) {
-    return "border-l-[4px] border-l-red-400";
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/55 border-blue-200/80",
+      ),
+      isProcessing: false,
+    };
   }
 
-  // Interview
-  if (underscored.startsWith("interview_") || raw.includes("interview")) {
-    return "border-l-[4px] border-l-violet-400";
+  if (!raw) {
+    return { cardClass: "", isProcessing: false };
   }
 
-  // Processing — dark blue glass accent (Registered column only)
+  // Deployed
+  if (
+    underscored === "deployed" ||
+    underscored === "hired" ||
+    compact === "deployed" ||
+    raw.includes("deployed")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-green-50/95 via-white/90 to-emerald-100/55 border-green-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Processing
   if (isRegisteredProcessingStatus(statusRaw)) {
-    return cn(
-      "border-l-[4px] !border-l-blue-800",
-      "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/50",
-      "border-blue-200/70 shadow-md shadow-blue-200/30 backdrop-blur-sm",
-    );
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-orange-50/95 via-white/90 to-amber-100/50 border-orange-200/80",
+      ),
+      isProcessing: true,
+    };
   }
 
-  // Trainer
+  // Trainer / training
   if (
     underscored.startsWith("training_") ||
     underscored.startsWith("trainer_") ||
     raw.includes("training") ||
     raw.includes("trainer")
   ) {
-    return "border-l-[4px] border-l-amber-400";
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-stone-100/95 via-amber-50/85 to-stone-50/90 border-stone-300/80",
+      ),
+      isProcessing: false,
+    };
   }
 
-  return "";
+  // Interview & screening
+  if (
+    underscored.startsWith("interview_") ||
+    underscored.startsWith("screening_") ||
+    raw.includes("interview") ||
+    raw.includes("screening")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-violet-50/95 via-white/90 to-purple-100/50 border-violet-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Documentation & verification
+  if (
+    underscored === "pending_documents" ||
+    underscored === "documents_submitted" ||
+    underscored === "verification_in_progress" ||
+    underscored === "documents_verified" ||
+    underscored.includes("document") ||
+    underscored.includes("verification") ||
+    compact === "pendingdocuments" ||
+    compact === "verificationinprogress"
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-red-50/95 via-white/90 to-rose-100/50 border-red-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Eligible / positive CRM statuses
+  if (
+    underscored === "interested" ||
+    underscored === "qualified" ||
+    underscored === "future" ||
+    underscored === "on_hold" ||
+    raw.includes("eligible")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/55 border-blue-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  return { cardClass: "", isProcessing: false };
 };
+
+const getCardStatusRaw = (
+  candidate: CandidateRecord,
+  assignmentInfo?: { projectStatus?: string; isAssigned?: boolean },
+) =>
+  (
+    candidate.projectSubStatus?.label ||
+    candidate.projectSubStatus?.name ||
+    candidate.projectSubStatus?.statusName ||
+    candidate.currentProjectStatus?.statusName ||
+    candidate.projectStatus?.statusName ||
+    assignmentInfo?.projectStatus ||
+    getCandidateStatusLabel(candidate) ||
+    ""
+  ).toString();
 
 
 interface ProjectCandidatesBoardProps {
@@ -333,7 +429,7 @@ const buildAssignmentInfo = (
     assignmentFromManager?.mainStatus?.name ||
     candidate.projectMainStatus?.name;
 
-  const candidateGlobalStatus = getCandidateGlobalStatusLabel(candidate);
+  const candidateGlobalStatus = getCandidateStatusLabel(candidate);
 
   const projectStatusToShow = isAssigned
     ? subStatusLabel ||
@@ -624,11 +720,12 @@ const ProjectCandidatesBoard = ({
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
         const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
         const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-        const normalizedCurrentStatus = typeof candidate.currentStatus === 'string'
-          ? candidate.currentStatus.toLowerCase()
-          : candidate.currentStatus?.statusName?.toLowerCase() || '';
-        const isPositiveStatus = ['interested', 'future', 'on_hold'].includes(normalizedCurrentStatus);
-        const isNotEligible = !isPositiveStatus || eligibilityData?.isEligible === false || !anyRoleEligible;
+        const statusLabel = getCandidateStatusLabel(candidate);
+        const isPositiveStatus = isCandidatePositiveForAssignment(statusLabel);
+        const isNotEligible =
+          !isPositiveStatus ||
+          eligibilityData?.isEligible === false ||
+          !anyRoleEligible;
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
@@ -771,7 +868,6 @@ const ProjectCandidatesBoard = ({
 
           const showVerifyButton = subStatusName === "nominated_initial";
           const showInterviewButton = subStatusName === "documents_verified";
-          const hasProject = Boolean(candidate.project);
 
           const actions = (requiredScreening && !isAlreadyInScreening && isInterviewCoordinator)
             ? [
@@ -786,22 +882,19 @@ const ProjectCandidatesBoard = ({
 
           const isSelectable = selectableNominatedCandidates.some(c => (c.candidateId || c.id) === candidateId);
           const isSelected = selectedNominatedIds.has(candidateId);
-          const registeredAccentStatus =
-            candidate.projectSubStatus?.label ||
-            subStatusName ||
-            candidate.currentProjectStatus?.statusName ||
-            candidate.projectStatus?.statusName ||
-            "";
-          const registeredAccentClass = getRegisteredAccentClass(registeredAccentStatus);
-          const isProcessingCard = isRegisteredProcessingStatus(registeredAccentStatus);
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "nominated",
+            isAssigned: assignmentInfo.isAssigned,
+          });
 
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
-              showProcessingGlance={isProcessingCard}
+              showProcessingGlance={statusAccent.isProcessing}
               className={cn(
-                isSelected ? "ring-1 ring-purple-400/60 bg-purple-50/30" : "",
-                registeredAccentClass,
+                isSelected ? "ring-1 ring-purple-400/60" : "",
+                statusAccent.cardClass,
               )}
               selected={isSelectable ? isSelected : undefined}
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
@@ -836,7 +929,7 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={assignmentOpen && !hasProject}
+              showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) =>
                 onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)
               }
@@ -848,7 +941,7 @@ const ProjectCandidatesBoard = ({
               onSendForInterview={(id) =>
                 onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
               }
-              isAlreadyInProject={hasProject}
+              isAlreadyInProject={assignmentInfo.isAssigned}
               eligibilityData={eligibilityMap.get(candidateId)}
             />
           );
@@ -914,18 +1007,34 @@ const ProjectCandidatesBoard = ({
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+          const statusLabel = getCandidateStatusLabel(candidate);
+          const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isNotEligible =
+            !isPositiveForAssignment ||
+            eligibilityData?.isEligible === false ||
+            !anyRoleEligible;
+          const assignmentBlockReason = getCandidateAssignmentBlockReason(statusLabel);
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
           const canSelect =
             assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible;
 
           const isSelected = selectedEligibleIds.has(assignmentInfo.candidateId);
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "eligible",
+            isAssigned: assignmentInfo.isAssigned,
+          });
 
           return (
               <CandidateCard
                 key={`eligible-${assignmentInfo.candidateId}`}
-                className={isSelected ? "ring-1 ring-emerald-400/60 bg-emerald-50/30" : ""}
+                assignmentBlockReason={assignmentBlockReason}
+                showProcessingGlance={statusAccent.isProcessing}
+                className={cn(
+                  isSelected ? "ring-1 ring-blue-400/60" : "",
+                  statusAccent.cardClass,
+                )}
                 selected={canSelect ? isSelected : undefined}
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
                 candidate={candidateWithProject}
@@ -1041,11 +1150,25 @@ const ProjectCandidatesBoard = ({
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+          const statusLabel = getCandidateStatusLabel(candidate);
+          const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isNotEligible =
+            !isPositiveForAssignment ||
+            eligibilityData?.isEligible === false ||
+            !anyRoleEligible;
+          const assignmentBlockReason = getCandidateAssignmentBlockReason(statusLabel);
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "all",
+            isAssigned: assignmentInfo.isAssigned,
+          });
 
           return (
             <CandidateCard
               key={`all-${assignmentInfo.candidateId}`}
+              assignmentBlockReason={assignmentBlockReason}
+              showProcessingGlance={statusAccent.isProcessing}
+              className={statusAccent.cardClass}
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
@@ -1116,8 +1239,8 @@ const ProjectCandidatesBoard = ({
   }> = [
     {
       id: "nominated",
-      title: "Shortlisted to Projects",
-      subtitle: "Currently cv registered to this project",
+      title: "Profile Shortlisting",
+      subtitle: "Currently cv Shortlisted to this project",
       count: nominatedTotal ?? sanitizedNominated.length,
       content: renderNominatedColumn(),
       ariaLabel: "Nominated candidates column",
@@ -1158,9 +1281,9 @@ const ProjectCandidatesBoard = ({
       content: renderEligibleColumn(),
       ariaLabel: "Eligible candidates column",
       icon: ShieldCheck,
-      iconClasses: "bg-emerald-100 text-emerald-600",
+      iconClasses: "bg-blue-100 text-blue-600",
       headerExtra: selectableEligibleCandidates.length > 0 ? (
-        <div className="flex items-center justify-between px-4 py-1.5 border-t border-emerald-100/60 bg-emerald-50/40">
+        <div className="flex items-center justify-between px-4 py-1.5 border-t border-blue-100/60 bg-blue-50/40">
           <label
             htmlFor="select-all-eligible"
             className="flex items-center gap-1.5 cursor-pointer select-none"
@@ -1169,7 +1292,7 @@ const ProjectCandidatesBoard = ({
               id="select-all-eligible"
               checked={allSelectableSelected}
               onCheckedChange={toggleSelectAllEligible}
-              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
             <span className="text-[11px] font-medium text-slate-500">
               {selectedEligibleIds.size > 0
@@ -1180,7 +1303,7 @@ const ProjectCandidatesBoard = ({
           {assignmentOpen && selectedEligibleIds.size > 0 && (
             <Button
               size="sm"
-              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
+              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-colors"
               onClick={() => onBulkAssign?.(Array.from(selectedEligibleIds))}
             >
               <UserPlus className="h-3 w-3" />
@@ -1211,7 +1334,7 @@ const ProjectCandidatesBoard = ({
   // Column-specific gradient configs
   const columnGradients: Record<CandidateColumnType, { bg: string; border: string; countBg: string; countText: string }> = {
     nominated: { bg: "bg-gradient-to-br from-amber-50/80 to-orange-50/40", border: "border-amber-100/60", countBg: "bg-amber-100", countText: "text-amber-700" },
-    eligible: { bg: "bg-gradient-to-br from-emerald-50/80 to-green-50/40", border: "border-emerald-100/60", countBg: "bg-emerald-100", countText: "text-emerald-700" },
+    eligible: { bg: "bg-gradient-to-br from-blue-50/80 to-sky-50/40", border: "border-blue-100/60", countBg: "bg-blue-100", countText: "text-blue-700" },
     all: { bg: "bg-gradient-to-br from-sky-50/80 to-blue-50/40", border: "border-sky-100/60", countBg: "bg-sky-100", countText: "text-sky-700" },
   };
 

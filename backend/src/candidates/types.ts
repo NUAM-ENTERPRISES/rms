@@ -77,6 +77,7 @@ export interface PaginatedCandidates {
     total: number;
     untouched: number;
     rnr: number;
+    callBack?: number;
     onHold: number;
     interested: number;
     notInterested: number;

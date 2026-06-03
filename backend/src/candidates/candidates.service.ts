@@ -35,6 +35,7 @@ import { CandidateCodeService } from './services/candidate-code.service';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
+import { CallbackRemindersService } from '../callback-reminders/callback-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import {
@@ -104,6 +105,7 @@ export class CandidatesService {
     private readonly candidateCodeService: CandidateCodeService,
     private readonly candidateListFilterService: CandidateListFilterService,
     private readonly rnrRemindersService: RnrRemindersService,
+    private readonly callbackRemindersService: CallbackRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
@@ -671,7 +673,7 @@ export class CandidatesService {
       where: {
         statusName: {
           in: [
-            'untouched', 'rnr', 'on_hold', 'interested', 'not_interested',
+            'untouched', 'rnr', 'call back', 'on_hold', 'interested', 'not_interested',
             'not_eligible', 'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
           ],
           mode: 'insensitive'
@@ -689,6 +691,7 @@ export class CandidatesService {
     
     const untouchedId = getStatusId('untouched');
     const rnrId = getStatusId('rnr');
+    const callBackId = getStatusId('call back');
     const onHoldId = getStatusId('on_hold');
     const interestedId = getStatusId('interested');
     const notInterestedId = getStatusId('not_interested');
@@ -739,6 +742,7 @@ export class CandidatesService {
       handledByCRE: creCount,
       untouched: getCountForStatus(untouchedId),
       rnr: getCountForStatus(rnrId),
+      callBack: getCountForStatus(callBackId),
       rnrHandledByCRE: rnrCreCount,
       onHold: getCountForStatus(onHoldId),
       interested: getCountForStatus(interestedId),
@@ -1208,6 +1212,8 @@ export class CandidatesService {
     const statusNameMap: Record<string, string> = {
       interested: 'interested',
       rnr: 'rnr',
+      call_back: 'call back',
+      'call back': 'call back',
       'on_hold': 'on hold',
       'on hold': 'on hold',
       untouched: 'untouched',
@@ -3397,6 +3403,28 @@ export class CandidatesService {
       }
     }
 
+    const isCallBackTarget =
+      this.callbackRemindersService.isCallBackStatusName(status.statusName);
+    if (isCallBackTarget && !updateStatusDto.callbackAt) {
+      throw new BadRequestException(
+        'callbackAt is required when status is Call Back',
+      );
+    }
+
+    let previousStatusName = '';
+    if (candidate.currentStatusId) {
+      const previousStatus = await this.prisma.candidateStatus.findUnique({
+        where: { id: candidate.currentStatusId },
+      });
+      previousStatusName = previousStatus?.statusName ?? '';
+    }
+
+    const isRnrPrevious = previousStatusName.toLowerCase().trim() === 'rnr';
+    const isRnrNew = status.statusName.toLowerCase().trim() === 'rnr';
+    const isCallBackPrevious =
+      this.callbackRemindersService.isCallBackStatusName(previousStatusName);
+    const isCallBackNew = isCallBackTarget;
+
     // Get the user (who’s changing the status) and enforce CRE read-only behavior
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -3463,8 +3491,7 @@ export class CandidatesService {
     });
 
     // ===== RNR REMINDER LOGIC START =====
-    // If status is changing TO RNR (statusId = 8), create a reminder
-    if (updateStatusDto.currentStatusId === 8) {
+    if (isRnrNew) {
       this.logger.log(
         `Candidate ${candidateId} status changed to RNR. Creating reminder...`,
       );
@@ -3472,8 +3499,8 @@ export class CandidatesService {
       try {
         await this.rnrRemindersService.createRNRReminder(
           candidateId,
-          userId, // The recruiter who marked as RNR
-          statusHistory.id, // Link to the status history record
+          userId,
+          statusHistory.id,
         );
         this.logger.log(
           `RNR reminder created for candidate ${candidateId}`,
@@ -3486,8 +3513,7 @@ export class CandidatesService {
       }
     }
 
-    // If status is changing FROM RNR to something else, cancel pending reminders
-    if (candidate.currentStatusId === 8 && updateStatusDto.currentStatusId !== 8) {
+    if (isRnrPrevious && !isRnrNew) {
       this.logger.log(
         `Candidate ${candidateId} status changed from RNR. Cancelling reminders...`,
       );
@@ -3505,6 +3531,40 @@ export class CandidatesService {
       }
     }
     // ===== RNR REMINDER LOGIC END =====
+
+    // ===== CALLBACK REMINDER LOGIC START =====
+    if (isCallBackNew && updateStatusDto.callbackAt) {
+      this.logger.log(
+        `Candidate ${candidateId} status set to Call Back. Scheduling reminder...`,
+      );
+
+      try {
+        await this.callbackRemindersService.createCallbackReminder(
+          candidateId,
+          userId,
+          statusHistory.id,
+          updateStatusDto.callbackAt,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to create callback reminder for candidate ${candidateId}:`,
+          error,
+        );
+        throw error;
+      }
+    }
+
+    if (isCallBackPrevious && !isCallBackNew) {
+      try {
+        await this.callbackRemindersService.cancelCallbackReminders(candidateId);
+      } catch (error) {
+        this.logger.error(
+          `Failed to cancel callback reminders for candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+    // ===== CALLBACK REMINDER LOGIC END =====
 
     // ===== WHATSAPP NOTIFICATION START =====
     // Send WhatsApp notification to candidate about status change
@@ -4169,7 +4229,9 @@ export class CandidatesService {
         };
       } else if (statusValue === 'positive') {
         where.currentStatus = {
-          statusName: { in: ['Interested', 'Future', 'On Hold'] },
+          statusName: {
+            in: ['Interested', 'Future', 'On Hold', 'Call Back'],
+          },
         };
         where.projects = { none: {} };
       } else if (statusValue === 'negative') {
@@ -4178,6 +4240,12 @@ export class CandidatesService {
             in: ['Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible'],
           },
         };
+        where.projects = { none: {} };
+      } else if (statusValue === 'untouched') {
+        where.currentStatus = { statusName: 'Untouched' };
+        where.projects = { none: {} };
+      } else if (statusValue === 'call_back') {
+        where.currentStatus = { statusName: 'Call Back' };
         where.projects = { none: {} };
       } else if (statusValue === 'documentation') {
         where.projects = {
@@ -4210,13 +4278,26 @@ export class CandidatesService {
           { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
           { projects: { some: {} } },
         ];
-      } else if ([
-        'untouched', 'not_interested', 'not_eligible', 'other_enquiry', 'future', 'on_hold', 'rnr'
-      ].includes(statusValue)) {
+      } else if (
+        [
+          'not_interested',
+          'not_eligible',
+          'other_enquiry',
+          'future',
+          'on_hold',
+          'rnr',
+        ].includes(statusValue)
+      ) {
+        const statusNameMap: Record<string, string> = {
+          not_interested: 'Not Interested',
+          not_eligible: 'Not Eligible',
+          other_enquiry: 'Other Enquiry',
+          future: 'Future',
+          on_hold: 'On Hold',
+          rnr: 'RNR',
+        };
         where.currentStatus = {
-          statusName: {
-            in: ['Untouched', 'Not Interested', 'Not Eligible', 'Other Enquiry', 'Future', 'On Hold', 'RNR'],
-          },
+          statusName: statusNameMap[statusValue] ?? statusValue,
         };
         where.projects = { none: {} };
       } else if (statusValue === 'interview_assigned') {
@@ -4306,6 +4387,7 @@ export class CandidatesService {
       tableTotalCount,
       totalCandidatesCount,
       positiveCandidates,
+      untouchedCandidates,
       negativeCandidates,
       registeredCandidates,
       documentationCandidates,
@@ -4323,16 +4405,27 @@ export class CandidatesService {
       // 2. Total Summary (Filtered for context)
       this.prisma.candidate.count({ where: baseWhereForCounts }),
 
-      // 3. Positive ('Interested', 'Future', 'On Hold' AND NOT nominated)
+      // 3. Positive ('Interested', 'Future', 'On Hold', 'Call Back' AND NOT nominated)
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
-          currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold'] } },
+          currentStatus: {
+            statusName: { in: ['Interested', 'Future', 'On Hold', 'Call Back'] },
+          },
           projects: { none: {} },
         },
       }),
 
-      // 4. Negative ('Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible' AND NOT nominated)
+      // 4. Untouched (not nominated)
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          currentStatus: { statusName: 'Untouched' },
+          projects: { none: {} },
+        },
+      }),
+
+      // 5. Negative ('Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible' AND NOT nominated)
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4693,6 +4786,7 @@ export class CandidatesService {
       stats: {
         total: totalCandidatesCount,
         positive: positiveCandidates,
+        untouched: untouchedCandidates,
         negative: negativeCandidates,
         nominated: registeredCandidates, // Renamed for front end compatibility while keeping key name if needed
         registered: registeredCandidates,

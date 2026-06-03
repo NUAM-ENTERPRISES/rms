@@ -286,6 +286,7 @@ export class CandidatesController {
       totalAssigned: number;
       untouched: number;
       rnr: number;
+      callBack?: number;
       onHold: number;
       interested: number;
       notInterested: number;

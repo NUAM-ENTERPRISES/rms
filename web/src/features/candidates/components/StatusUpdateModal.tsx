@@ -48,7 +48,8 @@ import {
   UserX,
   Target,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,7 @@ const statusUpdateSchema = z.object({
   reason: z.string().optional(),
   onHoldUntil: z.string().optional(),
   futureDate: z.string().optional(),
+  callbackAt: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -123,6 +125,18 @@ const statusConfigMap: Record<string, any> = {
     bgColor: "bg-pink-50",
     iconColor: "text-pink-500",
     icon: AlertCircle,
+  },
+  "call back": {
+    color: "from-cyan-400 to-teal-600",
+    bgColor: "bg-cyan-50",
+    iconColor: "text-cyan-500",
+    icon: Phone,
+  },
+  call_back: {
+    color: "from-cyan-400 to-teal-600",
+    bgColor: "bg-cyan-50",
+    iconColor: "text-cyan-500",
+    icon: Phone,
   },
   qualified: {
     color: "from-emerald-400 to-emerald-600",
@@ -215,6 +229,7 @@ export function StatusUpdateModal({
       reason: "",
       onHoldUntil: "",
       futureDate: "",
+      callbackAt: "",
     },
   });
   const { reset, setValue, getValues } = form;
@@ -241,6 +256,7 @@ export function StatusUpdateModal({
           reason: "",
           onHoldUntil: "",
           futureDate: "",
+          callbackAt: "",
         });
       }
       wasOpenRef.current = false;
@@ -309,6 +325,24 @@ export function StatusUpdateModal({
       futureDateValue = data.futureDate;
     }
 
+    let callbackAtValue: string | undefined;
+    if (
+      selectedStatusName === "call back" ||
+      selectedStatusName === "call_back"
+    ) {
+      if (!data.callbackAt) {
+        toast.error("Please select when to call back.");
+        return;
+      }
+      const callbackDate = new Date(data.callbackAt);
+      const minTime = Date.now() + 60 * 1000;
+      if (callbackDate.getTime() < minTime) {
+        toast.error("Call back time must be at least 1 minute in the future.");
+        return;
+      }
+      callbackAtValue = callbackDate.toISOString();
+    }
+
     try {
       await updateStatus({
         candidateId,
@@ -318,6 +352,7 @@ export function StatusUpdateModal({
           onHoldDurationDays: onHoldDuration,
           onHoldUntil: onHoldUntilDate,
           futureDate: futureDateValue,
+          callbackAt: callbackAtValue,
         },
       }).unwrap();
 
@@ -525,6 +560,32 @@ export function StatusUpdateModal({
                           <Input
                             type="date"
                             className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {(selectedStatusName === "call back" ||
+                  selectedStatusName === "call_back") && (
+                  <FormField
+                    control={form.control}
+                    name="callbackAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Call back at
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            min={new Date(Date.now() + 60 * 1000)
+                              .toISOString()
+                              .slice(0, 16)}
                             {...field}
                           />
                         </FormControl>

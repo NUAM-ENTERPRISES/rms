@@ -744,6 +744,16 @@ export class RecruiterAssignmentService {
       select: { id: true, statusName: true },
     });
 
+    const callBackStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: {
+          equals: 'Call Back',
+          mode: 'insensitive',
+        },
+      },
+      select: { id: true, statusName: true },
+    });
+
     this.logger.log(
       `Resolved statuses => untouched: ${untouchedStatus?.statusName || 'NOT_FOUND'}(${untouchedStatus?.id || 'n/a'}), rnr: ${rnrStatus?.statusName || 'NOT_FOUND'}(${rnrStatus?.id || 'n/a'})`,
     );
@@ -814,6 +824,7 @@ export class RecruiterAssignmentService {
 
     const untouchedId = untouchedStatus?.id ?? null;
     const rnrId = rnrStatus?.id ?? null;
+    const callBackId = callBackStatus?.id ?? null;
     const onHoldId = onHoldStatus?.id ?? null;
 
     const interestedId = interestedStatus?.id ?? null;
@@ -850,6 +861,9 @@ export class RecruiterAssignmentService {
           acc.rnr += 1;
           if (isHandledByCRE) acc.rnrHandledByCRE += 1;
         }
+        if (!isCreReassignedForRecruiter && c.currentStatusId === callBackId) {
+          acc.callBack += 1;
+        }
 
         if (!isCreReassignedForRecruiter && c.currentStatusId === onHoldId) {
           acc.onHold += 1;
@@ -883,6 +897,7 @@ export class RecruiterAssignmentService {
         untouched: 0,
         rnr: 0,
         rnrHandledByCRE: 0,
+        callBack: 0,
         onHold: 0,
         interested: 0,
         notInterested: 0,
@@ -1049,6 +1064,7 @@ export class RecruiterAssignmentService {
         untouched: countsMap.untouched,
         rnr: countsMap.rnr,
         rnrHandledByCRE: countsMap.rnrHandledByCRE,
+        callBack: countsMap.callBack,
         onHold: countsMap.onHold,
         interested: countsMap.interested,
         notInterested: countsMap.notInterested,

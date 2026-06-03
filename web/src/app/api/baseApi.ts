@@ -37,6 +37,7 @@ export const baseApi = createApi({
     "AdminDashboard",
     "StatusConfig",
     "RNRReminder",
+    "CallbackReminder",
     "HRDReminder",
     // Screening Coordination
     "ScreeningTemplate",
