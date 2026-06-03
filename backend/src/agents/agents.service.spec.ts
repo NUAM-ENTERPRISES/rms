@@ -11,6 +11,13 @@ describe('AgentsService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
+    candidate: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    candidateProjectStatusHistory: {
+      findMany: jest.fn(),
+    },
     agentProject: {
       findMany: jest.fn(),
       count: jest.fn(),
@@ -107,6 +114,138 @@ describe('AgentsService', () => {
           projectLinks: [{ projectId: 'missing' }],
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findOne', () => {
+    it('returns agent without embedding interview passed count', async () => {
+      prisma.agent.findUnique.mockResolvedValue({
+        id: 'a1',
+        name: 'Agent One',
+        _count: { candidates: 5, agentProjects: 2 },
+        country: null,
+      });
+
+      const res = await service.findOne('a1');
+
+      expect(res.success).toBe(true);
+      expect(res.data._count.candidates).toBe(5);
+      expect(prisma.candidate.count).not.toHaveBeenCalled();
+    });
+
+    it('throws when agent missing', async () => {
+      prisma.agent.findUnique.mockResolvedValue(null);
+      await expect(service.findOne('missing')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getAgentCandidateStats', () => {
+    it('returns candidate stats from history-based interview passed count', async () => {
+      prisma.agent.findUnique.mockResolvedValue({ id: 'a1' });
+      prisma.candidate.count
+        .mockResolvedValueOnce(10)
+        .mockResolvedValueOnce(4);
+      prisma.agentProject.count.mockResolvedValue(2);
+
+      const res = await service.getAgentCandidateStats('a1');
+
+      expect(res.data).toEqual({
+        totalCandidates: 10,
+        interviewPassedCandidates: 4,
+        linkedProjects: 2,
+      });
+      expect(prisma.candidate.count).toHaveBeenNthCalledWith(2, {
+        where: {
+          agentId: 'a1',
+          projects: {
+            some: {
+              projectStatusHistory: {
+                some: {
+                  OR: [
+                    { subStatus: { name: 'interview_passed' } },
+                    {
+                      subStatusSnapshot: {
+                        equals: 'interview_passed',
+                        mode: 'insensitive',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      });
+    });
+  });
+
+  describe('getAgentInterviewPassedCandidates', () => {
+    it('applies history-based filter and attaches passed projects', async () => {
+      prisma.agent.findUnique.mockResolvedValue({ id: 'a1' });
+      prisma.candidate.count.mockResolvedValue(1);
+      prisma.candidate.findMany.mockResolvedValue([
+        {
+          id: 'c1',
+          firstName: 'Jane',
+          lastName: 'Doe',
+          countryCode: '+91',
+          mobileNumber: '999',
+          passportNumber: null,
+          email: null,
+          profileImage: null,
+          createdAt: new Date(),
+          currentStatus: null,
+          agentCandidateDeclaredProjects: [],
+          recruiterAssignments: [],
+        },
+      ]);
+      prisma.candidateProjectStatusHistory.findMany.mockResolvedValue([
+        {
+          statusChangedAt: new Date('2026-01-02'),
+          candidateProjectMap: {
+            candidateId: 'c1',
+            projectId: 'p2',
+            project: { title: 'Project B' },
+          },
+        },
+        {
+          statusChangedAt: new Date('2026-01-01'),
+          candidateProjectMap: {
+            candidateId: 'c1',
+            projectId: 'p1',
+            project: { title: 'Project A' },
+          },
+        },
+      ]);
+
+      const res = await service.getAgentInterviewPassedCandidates('a1', {
+        page: 1,
+        limit: 10,
+      });
+
+      expect(res.data).toHaveLength(1);
+      expect(res.data[0].interviewPassedCount).toBe(2);
+      expect(res.data[0].interviewPassedProjects).toEqual([
+        {
+          projectId: 'p2',
+          projectTitle: 'Project B',
+          passedAt: expect.any(String),
+        },
+        {
+          projectId: 'p1',
+          projectTitle: 'Project A',
+          passedAt: expect.any(String),
+        },
+      ]);
+    });
+  });
+
+  describe('getAgentCandidates', () => {
+    it('throws when agent missing', async () => {
+      prisma.agent.findUnique.mockResolvedValue(null);
+      await expect(service.getAgentCandidates('missing', {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

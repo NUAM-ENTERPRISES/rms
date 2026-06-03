@@ -308,6 +308,7 @@ model Country {
   userCountryCoverages          UserCountryCoverage[]
   workExperiences               WorkExperience[]               @relation("WorkExperienceCountry")
   candidateQualifications       CandidateQualification[]       @relation("CandidateQualificationCountry")
+  agents                        Agent[]                        @relation("AgentCountry")
 
   @@map("countries")
 }
@@ -525,20 +526,26 @@ model CandidateCodeSequence {
 }
 
 model Agent {
-  id           String   @id @default(cuid())
-  name         String
-  email        String?  @unique
-  mobileNumber String?
-  companyName  String?
-  agentType    String?
-  profileImage String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  email           String?  @unique
+  mobileNumber    String?
+  whatsappNumber  String?
+  alternatePhone1 String?
+  alternatePhone2 String?
+  companyName     String?
+  agentType       String?
+  countryCode     String?
+  profileImage    String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
+  country       Country?       @relation("AgentCountry", fields: [countryCode], references: [code], onDelete: SetNull)
   candidates    Candidate[]    @relation("AgentToCandidate")
   agentProjects AgentProject[]
 
+  @@index([countryCode])
   @@map("agents")
 }
 

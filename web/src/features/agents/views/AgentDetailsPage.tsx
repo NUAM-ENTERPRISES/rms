@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useGetAgentQuery, useGetAgentCandidatesQuery } from "../api";
+import {
+  useGetAgentQuery,
+  useGetAgentCandidateStatsQuery,
+  useGetAgentCandidatesQuery,
+  useGetAgentInterviewPassedCandidatesQuery,
+} from "../api";
 import { useDebounce } from "@/hooks";
 import { useCan } from "@/hooks/useCan";
 import { useHasRole } from "@/hooks/useCan";
@@ -12,12 +17,14 @@ import {
   AgentLinkedProjectsSection,
   AgentEditAgentDialog,
 } from "../components/agent-details";
+import type { CandidateListFilter } from "../components/agent-details/AgentDetailsStats";
 
 const LIMIT = 10;
 
 export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const tableRef = useRef<HTMLDivElement>(null);
   const canEditAgent = useCan("edit:agents");
   const canCreateCandidate = useCan("write:candidates");
   const canEditDeclaredProjects = useCan("write:candidates");
@@ -26,9 +33,11 @@ export default function AgentDetailsPage() {
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [candidateFilter, setCandidateFilter] = useState<CandidateListFilter>("all");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 350);
+  const isInterviewPassedFilter = candidateFilter === "interview_passed";
 
   const {
     data: agentResponse,
@@ -36,10 +45,12 @@ export default function AgentDetailsPage() {
     isError: isAgentError,
   } = useGetAgentQuery(id!, { skip: !id });
 
+  const { data: statsResponse } = useGetAgentCandidateStatsQuery(id!, { skip: !id });
+
   const {
-    data: candidatesResponse,
-    isLoading: isCandidatesLoading,
-    isFetching: isCandidatesFetching,
+    data: allCandidatesResponse,
+    isLoading: isAllCandidatesLoading,
+    isFetching: isAllCandidatesFetching,
   } = useGetAgentCandidatesQuery(
     {
       id: id!,
@@ -47,8 +58,32 @@ export default function AgentDetailsPage() {
       page,
       limit: LIMIT,
     },
-    { skip: !id },
+    { skip: !id || isInterviewPassedFilter },
   );
+
+  const {
+    data: passedCandidatesResponse,
+    isLoading: isPassedCandidatesLoading,
+    isFetching: isPassedCandidatesFetching,
+  } = useGetAgentInterviewPassedCandidatesQuery(
+    {
+      id: id!,
+      search: debouncedSearch || undefined,
+      page,
+      limit: LIMIT,
+    },
+    { skip: !id || !isInterviewPassedFilter },
+  );
+
+  const candidatesResponse = isInterviewPassedFilter
+    ? passedCandidatesResponse
+    : allCandidatesResponse;
+  const isCandidatesLoading = isInterviewPassedFilter
+    ? isPassedCandidatesLoading
+    : isAllCandidatesLoading;
+  const isCandidatesFetching = isInterviewPassedFilter
+    ? isPassedCandidatesFetching
+    : isAllCandidatesFetching;
 
   const agent = agentResponse?.data;
   const candidates = candidatesResponse?.data ?? [];
@@ -56,6 +91,12 @@ export default function AgentDetailsPage() {
   const totalPages = meta?.totalPages ?? 1;
   const totalCount = meta?.total ?? 0;
   const hasActiveSearch = Boolean(search.trim());
+
+  const handleCandidateFilterChange = (filter: CandidateListFilter) => {
+    setCandidateFilter(filter);
+    setPage(1);
+    tableRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   if (isAgentError) {
     return <AgentDetailsNotFound onBack={() => navigate("/agents")} />;
@@ -71,13 +112,18 @@ export default function AgentDetailsPage() {
         onEditClick={() => setIsEditModalOpen(true)}
       />
 
-      <AgentDetailsStats agent={agent} totalCount={totalCount} />
+      <AgentDetailsStats
+        stats={statsResponse?.data}
+        totalCount={totalCount}
+        candidateFilter={candidateFilter}
+        onCandidateFilterChange={handleCandidateFilterChange}
+      />
 
       <div className="px-6 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left: Candidates table (takes 2 cols on lg) */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" ref={tableRef}>
             <AgentDetailsCandidatesSection
+              candidateFilter={candidateFilter}
               search={search}
               onSearchChange={(value) => {
                 setSearch(value);
@@ -105,7 +151,6 @@ export default function AgentDetailsPage() {
             />
           </div>
 
-          {/* Right: Linked Projects (1 col on lg) */}
           <div className="lg:col-span-1">
             {id ? <AgentLinkedProjectsSection agentId={id} /> : null}
           </div>

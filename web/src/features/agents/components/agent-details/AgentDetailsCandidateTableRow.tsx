@@ -7,10 +7,12 @@ import type { AgentCandidate } from "../../api";
 import { formatAgentDetailDate, getAgentDetailInitials } from "./agent-details-utils";
 import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
 import { resolveCandidatePassportNumber } from "../../utils/candidate-passport.util";
+import { InterviewPassedProjectsBadges } from "./InterviewPassedProjectsBadges";
 
 type AgentDetailsCandidateTableRowProps = {
   candidate: AgentCandidate;
   index: number;
+  showProjectStatus?: boolean;
   onView: () => void;
   /** When true, show control to edit declared (linked) projects only — not nominations. */
   canEditDeclaredProjects?: boolean;
@@ -20,6 +22,7 @@ type AgentDetailsCandidateTableRowProps = {
 export function AgentDetailsCandidateTableRow({
   candidate,
   index: _index,
+  showProjectStatus = false,
   onView,
   canEditDeclaredProjects,
   onEditDeclaredProjects,
@@ -85,10 +88,15 @@ export function AgentDetailsCandidateTableRow({
         )}
       </TableCell>
 
-      <TableCell className="max-w-[300px] px-5 py-4 align-middle">
+      <TableCell className="max-w-[340px] px-5 py-4 align-middle">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            {candidate.declaredProjects && candidate.declaredProjects.length > 0 ? (
+            {showProjectStatus ? (
+              <InterviewPassedProjectsBadges
+                interviewPassedProjects={candidate.interviewPassedProjects}
+                interviewPassedCount={candidate.interviewPassedCount}
+              />
+            ) : candidate.declaredProjects && candidate.declaredProjects.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {candidate.declaredProjects.slice(0, 3).map((p) => (
                   <Badge
@@ -117,7 +125,7 @@ export function AgentDetailsCandidateTableRow({
               </span>
             )}
           </div>
-          {canEditDeclaredProjects && onEditDeclaredProjects ? (
+          {!showProjectStatus && canEditDeclaredProjects && onEditDeclaredProjects ? (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>

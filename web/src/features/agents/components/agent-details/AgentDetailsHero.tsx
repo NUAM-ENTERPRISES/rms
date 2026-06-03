@@ -33,6 +33,7 @@ export function AgentDetailsHero({
   onEditClick,
 }: AgentDetailsHeroProps) {
   const phoneDigits = formatAgentPhoneForLink(agent?.mobileNumber);
+  const whatsappDigits = formatAgentPhoneForLink(agent?.whatsappNumber ?? agent?.mobileNumber);
 
   return (
     <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 relative overflow-hidden">
@@ -102,6 +103,11 @@ export function AgentDetailsHero({
                     <span>{agent.companyName}</span>
                   </div>
                 )}
+                {agent.country?.name && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                    <span>{agent.country.name}</span>
+                  </div>
+                )}
                 {agent.email && (
                   <a
                     href={`mailto:${agent.email}`}
@@ -117,27 +123,47 @@ export function AgentDetailsHero({
                     <span>{agent.mobileNumber}</span>
                   </div>
                 )}
+                {agent.whatsappNumber && agent.whatsappNumber !== agent.mobileNumber && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                    <FaWhatsapp className="h-3.5 w-3.5" />
+                    <span>{agent.whatsappNumber}</span>
+                  </div>
+                )}
+                {agent.alternatePhone1 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{agent.alternatePhone1}</span>
+                  </div>
+                )}
+                {agent.alternatePhone2 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{agent.alternatePhone2}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                {phoneDigits && (
+                {whatsappDigits && (
                   <>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-8 gap-2 bg-white/20 hover:bg-white/30 text-white border-0"
-                      onClick={() => {
-                        window.location.href = `tel:${phoneDigits}`;
-                      }}
-                    >
-                      <Phone className="h-3.5 w-3.5" />
-                      Call
-                    </Button>
+                    {phoneDigits && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-8 gap-2 bg-white/20 hover:bg-white/30 text-white border-0"
+                        onClick={() => {
+                          window.location.href = `tel:${phoneDigits}`;
+                        }}
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                        Call
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="secondary"
                       className="h-8 gap-2 bg-emerald-500/80 hover:bg-emerald-500 text-white border-0"
-                      onClick={() => window.open(`https://wa.me/${phoneDigits}`, "_blank")}
+                      onClick={() => window.open(`https://wa.me/${whatsappDigits}`, "_blank")}
                     >
                       <FaWhatsapp className="h-3.5 w-3.5" />
                       WhatsApp

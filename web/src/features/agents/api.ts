@@ -6,6 +6,11 @@ export interface Agent {
   name: string;
   email?: string;
   mobileNumber?: string;
+  whatsappNumber?: string;
+  alternatePhone1?: string;
+  alternatePhone2?: string;
+  countryCode?: string;
+  country?: { code: string; name: string } | null;
   companyName?: string;
   agentType?: string;
   profileImage?: string;
@@ -16,6 +21,18 @@ export interface Agent {
     candidates: number;
     agentProjects?: number;
   };
+}
+
+export interface AgentInterviewPassedProject {
+  projectId: string;
+  projectTitle: string | null;
+  passedAt: string;
+}
+
+export interface AgentCandidateStats {
+  totalCandidates: number;
+  interviewPassedCandidates: number;
+  linkedProjects: number;
 }
 
 export interface AgentCandidate {
@@ -50,14 +67,26 @@ export interface AgentCandidate {
     projectId: string;
     projectTitle: string | null;
     mainStatusLabel: string | null;
+    mainStatusName?: string | null;
     subStatusLabel: string | null;
+    subStatusName?: string | null;
   }>;
+  /** From status history — interview passed projects for this candidate. */
+  interviewPassedCount?: number;
+  interviewPassedProjects?: AgentInterviewPassedProject[];
 }
 
 export interface GetAgentCandidatesParams {
   id: string;
   search?: string;
   status?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface GetAgentInterviewPassedCandidatesParams {
+  id: string;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -170,6 +199,13 @@ export const agentsApi = baseApi.injectEndpoints({
       query: (id) => `/agents/${id}`,
       providesTags: (_result, _error, id) => [{ type: "Agent", id }],
     }),
+    getAgentCandidateStats: builder.query<
+      { success: boolean; data: AgentCandidateStats },
+      string
+    >({
+      query: (id) => `/agents/${id}/candidate-stats`,
+      providesTags: (_result, _error, id) => [{ type: "Agent", id }],
+    }),
     createAgent: builder.mutation<{ success: boolean; data: Agent }, CreateAgentRequest>({
       query: (body) => ({
         url: "/agents",
@@ -205,6 +241,30 @@ export const agentsApi = baseApi.injectEndpoints({
         if (params.limit) searchParams.append("limit", String(params.limit));
         const qs = searchParams.toString();
         return qs ? `/agents/${id}/candidates?${qs}` : `/agents/${id}/candidates`;
+      },
+      transformResponse: (response: AgentCandidatesResponse) => ({
+        success: response.success,
+        meta: response.meta,
+        data: (response.data ?? []).map((row) => ({
+          ...row,
+          passportNumber: resolveCandidatePassportNumber(row),
+        })),
+      }),
+      providesTags: (_result, _error, { id }) => [{ type: "Agent", id }],
+    }),
+    getAgentInterviewPassedCandidates: builder.query<
+      AgentCandidatesResponse,
+      GetAgentInterviewPassedCandidatesParams
+    >({
+      query: ({ id, ...params }) => {
+        const searchParams = new URLSearchParams();
+        if (params.search) searchParams.append("search", params.search);
+        if (params.page) searchParams.append("page", String(params.page));
+        if (params.limit) searchParams.append("limit", String(params.limit));
+        const qs = searchParams.toString();
+        return qs
+          ? `/agents/${id}/candidates/interview-passed?${qs}`
+          : `/agents/${id}/candidates/interview-passed`;
       },
       transformResponse: (response: AgentCandidatesResponse) => ({
         success: response.success,
@@ -286,10 +346,12 @@ export const agentsApi = baseApi.injectEndpoints({
 export const {
   useGetAgentsQuery,
   useGetAgentQuery,
+  useGetAgentCandidateStatsQuery,
   useCreateAgentMutation,
   useUpdateAgentMutation,
   useDeleteAgentMutation,
   useGetAgentCandidatesQuery,
+  useGetAgentInterviewPassedCandidatesQuery,
   useGetAgentProjectsQuery,
   useLinkAgentProjectsMutation,
   useUnlinkAgentProjectMutation,

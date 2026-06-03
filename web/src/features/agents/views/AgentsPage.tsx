@@ -89,7 +89,9 @@ export default function AgentsPage() {
   const candidatePageSize = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates" | "candidate-requests">("all");
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "active" | "with-candidates" | "candidate-requests"
+  >(() => (isAgentCoordinator ? "candidate-requests" : "all"));
 
   /** Agent Coordinator: my-candidates (agent source) tile uses counts.totalAssigned from API */
   const { data: agentCoordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(

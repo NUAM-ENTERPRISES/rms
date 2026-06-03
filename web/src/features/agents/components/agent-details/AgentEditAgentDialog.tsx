@@ -8,36 +8,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { AGENT_TYPES } from "@/constants/agent-types";
 import { toast } from "sonner";
 import { useUpdateAgentMutation, type Agent } from "../../api";
+import { AgentFormFieldsSection } from "../AgentFormFields";
+import {
+  agentFormFieldsToPayload,
+  initialAgentFormFields,
+  type AgentFormFields,
+} from "../../utils/agent-form.utils";
 
-export type AgentEditFormState = {
-  name: string;
-  email: string;
-  mobileNumber: string;
-  companyName: string;
-  agentType: string;
+export type AgentEditFormState = AgentFormFields & {
   isActive: boolean;
 };
 
 function emptyForm(): AgentEditFormState {
   return {
-    name: "",
-    email: "",
-    mobileNumber: "",
-    companyName: "",
-    agentType: "",
+    ...initialAgentFormFields,
     isActive: true,
   };
 }
@@ -59,8 +47,12 @@ export function AgentEditAgentDialog({ open, onOpenChange, agentId, agent }: Age
         name: agent.name,
         email: agent.email ?? "",
         mobileNumber: agent.mobileNumber ?? "",
+        whatsappNumber: agent.whatsappNumber ?? "",
+        alternatePhone1: agent.alternatePhone1 ?? "",
+        alternatePhone2: agent.alternatePhone2 ?? "",
+        countryCode: agent.countryCode ?? agent.country?.code ?? "",
         companyName: agent.companyName ?? "",
-        agentType: agent.agentType ?? "",
+        agentType: (agent.agentType ?? "") as AgentFormFields["agentType"],
         isActive: agent.isActive,
       });
     }
@@ -76,11 +68,7 @@ export function AgentEditAgentDialog({ open, onOpenChange, agentId, agent }: Age
       await updateAgent({
         id: agentId,
         body: {
-          name: form.name.trim(),
-          email: form.email.trim() || undefined,
-          mobileNumber: form.mobileNumber.trim() || undefined,
-          companyName: form.companyName.trim() || undefined,
-          agentType: form.agentType.trim() || undefined,
+          ...agentFormFieldsToPayload(form),
           isActive: form.isActive,
         },
       }).unwrap();
@@ -99,75 +87,20 @@ export function AgentEditAgentDialog({ open, onOpenChange, agentId, agent }: Age
         if (!next) setForm(emptyForm());
       }}
     >
-      <DialogContent className="sm:max-w-[425px]" aria-describedby="edit-agent-description">
-        <DialogHeader>
-          <DialogTitle>Edit agent</DialogTitle>
-          <DialogDescription id="edit-agent-description">
+      <DialogContent className="sm:max-w-3xl w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto gap-3 p-6" aria-describedby="edit-agent-description">
+        <DialogHeader className="space-y-1 pb-0">
+          <DialogTitle className="text-lg">Edit agent</DialogTitle>
+          <DialogDescription id="edit-agent-description" className="text-sm">
             Update this partner agent&apos;s profile. Changes apply immediately.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label htmlFor="edit-agent-name">Agent name *</Label>
-            <Input
-              id="edit-agent-name"
-              required
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Full name of agent"
-              autoComplete="name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-agent-company">Agency / company name</Label>
-            <Input
-              id="edit-agent-company"
-              value={form.companyName}
-              onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))}
-              placeholder="e.g. Ace Recruitment Ltd"
-              autoComplete="organization"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-agent-type">Agent type</Label>
-            <Select
-              value={form.agentType || undefined}
-              onValueChange={(value) => setForm((f) => ({ ...f, agentType: value }))}
-            >
-              <SelectTrigger id="edit-agent-type" className="w-full">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {AGENT_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-agent-email">Email</Label>
-            <Input
-              id="edit-agent-email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder="agent@example.com"
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-agent-mobile">Mobile number</Label>
-            <Input
-              id="edit-agent-mobile"
-              value={form.mobileNumber}
-              onChange={(e) => setForm((f) => ({ ...f, mobileNumber: e.target.value }))}
-              placeholder="+91 9876543210"
-              autoComplete="tel"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-3 py-2">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
+          <AgentFormFieldsSection
+            idPrefix="edit-agent"
+            form={form}
+            onChange={(updates) => setForm((f) => ({ ...f, ...updates }))}
+          />
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-3 py-2 sm:col-span-2">
             <div className="space-y-0.5">
               <Label htmlFor="edit-agent-active" className="text-sm font-medium">
                 Active partner
