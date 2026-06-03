@@ -3714,48 +3714,35 @@ export class ProjectsService {
   ) {
     const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
 
-    // Only show roles that managers have explicitly requested via agent candidate requests.
-    // For each role, use the requestedCount from the LATEST request that included it,
-    // so if a manager first requests 3 then later requests 5 for the same role, show 5.
-    const requestItems = await this.prisma.agentCandidateRequestItem.findMany({
-      where: {
-        request: { projectId },
-      },
+    // Only roles from the most recent agent candidate request for this project.
+    // A new submission replaces the active requirement set (unchecked roles drop off).
+    const latestRequest = await this.prisma.agentCandidateRequest.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
       select: {
-        roleNeededId: true,
-        requestedCount: true,
-        roleNeeded: {
-          select: { id: true, designation: true, priority: true },
+        items: {
+          select: {
+            roleNeededId: true,
+            requestedCount: true,
+            roleNeeded: {
+              select: { designation: true, priority: true },
+            },
+          },
         },
-        request: {
-          select: { createdAt: true },
-        },
-      },
-      orderBy: {
-        request: { createdAt: 'asc' },
       },
     });
 
-    if (requestItems.length === 0) {
+    const latestItems = latestRequest?.items ?? [];
+    if (latestItems.length === 0) {
       return { data: [], summary: { totalFilled: 0, totalTarget: 0 } };
     }
 
-    // Iterate in ascending order — later entries overwrite earlier ones, so the map
-    // ends up holding the most recent requestedCount per role.
-    const roleMap = new Map<
-      string,
-      { roleNeededId: string; designation: string; priority: string; requestedCount: number }
-    >();
-    for (const item of requestItems) {
-      roleMap.set(item.roleNeededId, {
-        roleNeededId: item.roleNeededId,
-        designation: item.roleNeeded?.designation ?? 'Unknown role',
-        priority: item.roleNeeded?.priority ?? 'medium',
-        requestedCount: item.requestedCount,
-      });
-    }
-
-    const requestedRoles = Array.from(roleMap.values());
+    const requestedRoles = latestItems.map((item) => ({
+      roleNeededId: item.roleNeededId,
+      designation: item.roleNeeded?.designation ?? 'Unknown role',
+      priority: item.roleNeeded?.priority ?? 'medium',
+      requestedCount: item.requestedCount,
+    }));
 
     // Count how many candidates the AC has nominated for each requested role
     const scopeWhere = isAgentCoordinator

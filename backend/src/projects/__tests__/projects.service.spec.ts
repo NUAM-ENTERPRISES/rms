@@ -51,6 +51,7 @@ describe('ProjectsService', () => {
     },
     agentCandidateRequest: {
       create: jest.fn(),
+      findFirst: jest.fn(),
     },
     roleNeeded: {
       create: jest.fn(),
@@ -994,6 +995,57 @@ describe('ProjectsService', () => {
           'user-1',
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getProjectRoleFillSummary', () => {
+    it('returns only roles from the latest request, not older requests', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue({
+        items: [
+          {
+            roleNeededId: 'role-emergency',
+            requestedCount: 5,
+            roleNeeded: {
+              designation: 'Emergency Staff Nurse',
+              priority: 'high',
+            },
+          },
+        ],
+      });
+      prismaService.candidateProjects.count.mockResolvedValue(2);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        roleNeededId: 'role-emergency',
+        designation: 'Emergency Staff Nurse',
+        targetCount: 5,
+        filledCount: 2,
+      });
+      expect(prismaService.agentCandidateRequest.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { projectId: 'project-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('returns empty data when no requests exist', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue(null);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toEqual([]);
+      expect(result.summary).toEqual({ totalFilled: 0, totalTarget: 0 });
     });
   });
 });
