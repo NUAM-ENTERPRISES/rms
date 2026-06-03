@@ -99,8 +99,9 @@ export interface Candidate {
   eligibility?: boolean;
 
   // New fields for better contact management
-  countryCode?: string;
-  mobileNumber?: string;
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  passportNumber?: string | null;
   name?: string; // Computed field: firstName + lastName
 
   // Referral fields
@@ -463,11 +464,27 @@ export interface CandidateProjectMap {
   };
 }
 
+export interface PassportLookupCandidateSummary {
+  id: string;
+  candidateCode: string | null;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  countryCode: string | null;
+  mobileNumber: string | null;
+}
+
+export interface PassportLookupResult {
+  found: boolean;
+  candidate?: PassportLookupCandidateSummary;
+}
+
 export interface CreateCandidateRequest {
   firstName: string;
   lastName: string;
-  countryCode: string;
-  mobileNumber: string;
+  countryCode?: string;
+  mobileNumber?: string;
+  passportNumber?: string;
   email?: string;
   source?: string;
   dateOfBirth: string;
@@ -1020,6 +1037,25 @@ export const candidatesApi = baseApi.injectEndpoints({
 
         return `/candidates/overview?${queryParams.toString()}`;
       },
+      transformResponse: (response: {
+        success?: boolean;
+        data?: Candidate[];
+        stats?: Record<string, number>;
+        pagination?: unknown;
+        message?: string;
+      }) => {
+        const rows = Array.isArray(response?.data) ? response.data : [];
+        return {
+          ...response,
+          data: rows.map((row) => ({
+            ...row,
+            passportNumber:
+              row.passportNumber ??
+              (row as { passport_number?: string | null }).passport_number ??
+              null,
+          })),
+        };
+      },
       providesTags: ["Candidate"],
     }),
     getCandidates: builder.query<
@@ -1089,13 +1125,34 @@ export const candidatesApi = baseApi.injectEndpoints({
         data: Candidate;
         message: string;
       }) => {
-        return response.data;
+        const row = response.data;
+        return {
+          ...row,
+          passportNumber:
+            row.passportNumber ??
+            (row as { passport_number?: string | null }).passport_number ??
+            null,
+        };
       },
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
     }),
 
     getOriginalRecruiter: builder.query<{ success: boolean; data: { id: string; name: string; email: string; mobileNumber: string; countryCode: string }; message: string }, string>({
       query: (id) => `/candidates/${id}/original-recruiter`,
+    }),
+
+    lookupCandidateByPassport: builder.query<
+      PassportLookupResult,
+      { passportNumber: string }
+    >({
+      query: ({ passportNumber }) => ({
+        url: "/candidates/passport-lookup",
+        params: { passportNumber: passportNumber.trim() },
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        data: PassportLookupResult;
+      }) => response.data,
     }),
 
     createCandidate: builder.mutation<Candidate, CreateCandidateRequest>({
@@ -1449,6 +1506,16 @@ export const candidatesApi = baseApi.injectEndpoints({
           ? `/candidates/recruiter/my-candidates?${queryString}`
           : "/candidates/recruiter/my-candidates";
       },
+      transformResponse: (response: RecruiterMyCandidatesResponse) => ({
+        ...response,
+        data: (response.data ?? []).map((row) => ({
+          ...row,
+          passportNumber:
+            row.passportNumber ??
+            (row as { passport_number?: string | null }).passport_number ??
+            null,
+        })),
+      }),
       providesTags: ["Candidate"],
     }),
 
@@ -1586,6 +1653,7 @@ export const {
   useGetCandidateOverviewQuery,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
+  useLookupCandidateByPassportQuery,
   useCreateCandidateMutation,
   useUpdateCandidateMutation,
   useDeleteCandidateMutation,

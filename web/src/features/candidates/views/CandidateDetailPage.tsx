@@ -634,6 +634,7 @@ export default function CandidateDetailPage() {
         <TabsContent value="documents" className="space-y-6">
           <CandidateDocuments
             candidateId={id!}
+            candidatePassportNumber={candidate?.passportNumber}
             initialUploadDocType={pendingUploadDocType}
             onInitialUploadDocTypeHandled={() => setPendingUploadDocType(null)}
           />

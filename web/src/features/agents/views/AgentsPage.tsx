@@ -387,6 +387,7 @@ export default function AgentsPage() {
                   <TableHeader>
                     <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">Passport</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Agent</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created</TableHead>

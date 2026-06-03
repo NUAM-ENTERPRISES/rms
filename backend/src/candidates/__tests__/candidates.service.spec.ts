@@ -19,6 +19,7 @@ import { RnrRemindersService } from '../../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
 import { CandidateCodeService } from '../services/candidate-code.service';
+import { CandidateListFilterService } from '../services/candidate-list-filter.service';
 
 describe('CandidatesService', () => {
   let service: CandidatesService;
@@ -30,13 +31,18 @@ describe('CandidatesService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
       count: jest.fn(),
       groupBy: jest.fn(),
       aggregate: jest.fn(),
     },
+    document: {
+      findFirst: jest.fn(),
+    },
     candidateStatus: {
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
     },
     candidateStatusHistory: {
@@ -90,6 +96,7 @@ describe('CandidatesService', () => {
   const mockCandidateCodeService: any = {
     reserveNextCode: jest.fn(),
   };
+  const mockCandidateListFilterService = {};
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -110,6 +117,10 @@ describe('CandidatesService', () => {
           useValue: mockRecruiterAssignmentService,
         },
         { provide: CandidateCodeService, useValue: mockCandidateCodeService },
+        {
+          provide: CandidateListFilterService,
+          useValue: mockCandidateListFilterService,
+        },
         { provide: RnrRemindersService, useValue: mockRnrRemindersService },
         { provide: WhatsAppService, useValue: mockWhatsAppService },
         {
@@ -226,6 +237,190 @@ describe('CandidatesService', () => {
       await expect(service.create(futureDateDto, 'user123')).rejects.toThrow(
         new BadRequestException('Date of birth must be in the past'),
       );
+    });
+  });
+
+  describe('lookupByPassport', () => {
+    it('returns found when candidate has passportNumber', async () => {
+      prismaService.candidate.findFirst.mockResolvedValue({
+        id: 'c-1',
+        candidateCode: 'AFF001',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        email: 'j@test.com',
+        countryCode: '+91',
+        mobileNumber: '9999999999',
+      });
+
+      const result = await service.lookupByPassport('AB123');
+
+      expect(result.found).toBe(true);
+      expect(result.candidate?.firstName).toBe('Jane');
+      expect(prismaService.document.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('returns found from passport document when candidate field empty', async () => {
+      prismaService.candidate.findFirst.mockResolvedValue(null);
+      prismaService.document.findFirst.mockResolvedValue({
+        candidate: {
+          id: 'c-2',
+          candidateCode: null,
+          firstName: 'Doc',
+          lastName: 'Only',
+          email: null,
+          countryCode: null,
+          mobileNumber: null,
+        },
+      });
+
+      const result = await service.lookupByPassport('XY999');
+
+      expect(result.found).toBe(true);
+      expect(result.candidate?.lastName).toBe('Only');
+    });
+
+    it('returns not found for short passport input', async () => {
+      const result = await service.lookupByPassport('AB');
+      expect(result.found).toBe(false);
+    });
+  });
+
+  describe('create (agent coordinator passport)', () => {
+    const acUser = {
+      name: 'AC User',
+      email: 'ac@test.com',
+      userRoles: [{ role: { name: 'Agent Coordinator' } }],
+    };
+
+    const baseAcDto = {
+      firstName: 'Agent',
+      lastName: 'Candidate',
+      passportNumber: 'P1234567',
+      source: 'agent',
+      agentId: 'agent-1',
+      gender: 'MALE',
+    } as unknown as CreateCandidateDto;
+
+    let txCandidateCreate: ReturnType<typeof jest.fn>;
+
+    beforeEach(() => {
+      txCandidateCreate = jest.fn(async () => ({ id: 'cand-ac' }));
+      prismaService.user.findUnique.mockResolvedValue(acUser);
+      prismaService.candidate.findFirst.mockResolvedValue(null);
+      prismaService.document.findFirst.mockResolvedValue(null);
+      prismaService.candidate.findUnique.mockResolvedValue(null);
+      prismaService.agent.findUnique.mockResolvedValue({ id: 'agent-1' });
+      prismaService.candidateStatus.findFirst.mockResolvedValue({
+        id: 2,
+        statusName: 'Interested',
+      });
+      prismaService.candidateStatus.findUnique.mockResolvedValue({
+        statusName: 'Interested',
+      });
+      prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
+      (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue(
+        null,
+      );
+      mockCandidateCodeService.reserveNextCode.mockResolvedValue('AFFCD012026');
+      prismaService.$transaction.mockImplementation(async (fn: any) =>
+        fn({
+          candidate: {
+            create: txCandidateCreate,
+            findUniqueOrThrow: jest.fn(async () => ({
+              id: 'cand-ac',
+              candidateCode: 'AFFCD012026',
+            })),
+          },
+          agentCandidateDeclaredProject: {
+            deleteMany: jest.fn(),
+            createMany: jest.fn(),
+          },
+        }),
+      );
+    });
+
+    it('creates without phone and stores passportNumber', async () => {
+      await service.create(baseAcDto, 'ac-user');
+
+      expect(txCandidateCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            countryCode: null,
+            mobileNumber: null,
+            passportNumber: 'P1234567',
+            currentStatusId: 2,
+          }),
+        }),
+      );
+    });
+
+    it('defaults status to Interested when created by agent coordinator', async () => {
+      await service.create(baseAcDto, 'ac-user');
+
+      expect(prismaService.candidateStatus.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            statusName: {
+              equals: 'interested',
+              mode: 'insensitive',
+            },
+          },
+        }),
+      );
+      expect(prismaService.candidateStatusHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            statusId: 2,
+            statusNameSnapshot: 'Interested',
+          }),
+        }),
+      );
+    });
+
+    it('throws ConflictException when passport already exists', async () => {
+      prismaService.candidate.findFirst.mockResolvedValue({
+        id: 'existing',
+        candidateCode: 'AFFOLD',
+        firstName: 'Old',
+        lastName: 'Record',
+        email: null,
+        countryCode: null,
+        mobileNumber: null,
+      });
+
+      await expect(service.create(baseAcDto, 'ac-user')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('throws BadRequestException when passport missing', async () => {
+      await expect(
+        service.create(
+          { ...baseAcDto, passportNumber: '' } as CreateCandidateDto,
+          'ac-user',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('create (phone required for non-AC)', () => {
+    it('throws BadRequestException when phone omitted', async () => {
+      prismaService.user.findUnique.mockResolvedValue({
+        name: 'Recruiter',
+        email: 'r@test.com',
+        userRoles: [{ role: { name: 'Recruiter' } }],
+      });
+
+      await expect(
+        service.create(
+          {
+            firstName: 'John',
+            lastName: 'Doe',
+            source: 'manual',
+          } as CreateCandidateDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 

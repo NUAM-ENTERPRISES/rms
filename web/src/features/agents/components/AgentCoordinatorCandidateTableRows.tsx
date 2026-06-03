@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
+import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
+import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 
 function formatOverviewDate(dateString?: string) {
   if (!dateString) return "—";
@@ -45,7 +47,7 @@ function formatPhoneForLink(c: {
   return digits || null;
 }
 
-const TABLE_COL_SPAN = 6;
+const TABLE_COL_SPAN = 7;
 
 export interface AgentCoordinatorCandidateTableRowsProps {
   candidates: any[];
@@ -157,15 +159,26 @@ export function AgentCoordinatorCandidateTableRows({
                         </span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="h-3 w-3 text-gray-400" />
-                      <span className="text-gray-700">
-                        {candidate.countryCode} {candidate.mobileNumber}
-                      </span>
-                    </div>
+                    {(candidate.countryCode?.trim() || candidate.mobileNumber?.trim()) && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 text-gray-400" />
+                        <span className="text-gray-700">
+                          {[candidate.countryCode, candidate.mobileNumber]
+                            .filter(Boolean)
+                            .join(" ")
+                            .trim() || "—"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            </TableCell>
+
+            <TableCell className="px-4 py-3 min-w-[7.5rem] align-middle">
+              <TruncatedPassportText
+                passportNumber={resolveCandidatePassportNumber(candidate)}
+              />
             </TableCell>
 
             <TableCell className="px-4 py-3">

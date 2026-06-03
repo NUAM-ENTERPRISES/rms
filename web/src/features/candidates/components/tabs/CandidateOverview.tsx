@@ -298,33 +298,42 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                       Passport
                     </label>
-                    <button
-                      type="button"
-                      onClick={onOpenPassportDocuments}
-                      className="text-sm flex items-center gap-2 mt-1 text-left rounded-md transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
-                      aria-label={
-                        passportDocument?.documentNumber
-                          ? `Passport ${passportDocument.documentNumber}. Open passport document upload.`
-                          : "Add passport. Open passport document upload."
-                      }
-                    >
-                      <Plane className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
-                      {passportDocument?.documentNumber ? (
-                        <span>
-                          #{passportDocument.documentNumber}
-                          {passportDocument.expiryDate && (
-                            <span className="text-slate-500">
-                              {" "}
-                              · Exp {DateUtils.formatDate(passportDocument.expiryDate)}
+                    {(() => {
+                      const displayNumber =
+                        passportDocument?.documentNumber?.trim() ||
+                        (candidate as any).passportNumber?.trim() ||
+                        null;
+                      const hasPassport = Boolean(displayNumber);
+                      return (
+                        <button
+                          type="button"
+                          onClick={onOpenPassportDocuments}
+                          className="text-sm flex items-center gap-2 mt-1 text-left rounded-md transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                          aria-label={
+                            hasPassport
+                              ? `Passport ${displayNumber}. Open passport document upload.`
+                              : "Add passport. Open passport document upload."
+                          }
+                        >
+                          <Plane className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+                          {hasPassport ? (
+                            <span>
+                              #{displayNumber}
+                              {passportDocument?.expiryDate && (
+                                <span className="text-slate-500">
+                                  {" "}
+                                  · Exp {DateUtils.formatDate(passportDocument.expiryDate)}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 underline-offset-2 hover:underline">
+                              Add passport
                             </span>
                           )}
-                        </span>
-                      ) : (
-                        <span className="text-slate-500 underline-offset-2 hover:underline">
-                          Add passport
-                        </span>
-                      )}
-                    </button>
+                        </button>
+                      );
+                    })()}
                   </div>
                 )}
                 <div>

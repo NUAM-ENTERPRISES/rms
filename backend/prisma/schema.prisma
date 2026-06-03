@@ -451,8 +451,10 @@ model Candidate {
   /// when it is set – it lets us account for career breaks, gaps, etc.
   totalExperience     Int?
   university          String?
-  countryCode         String
-  mobileNumber        String
+  countryCode         String?
+  mobileNumber        String?
+  /// Intake passport number (Agent Coordinator create); also checked against passport documents.
+  passportNumber      String?          @map("passport_number")
   candidateContacts   Json             @default("[]") @map("candidate_contacts")
   referralCompanyName String?
   referralCountryCode String?
@@ -511,6 +513,7 @@ model Candidate {
   @@index([agentId])
   @@index([gender])
   @@index([candidateCode])
+  @@index([passportNumber])
   @@map("candidates")
 }
 

@@ -21,6 +21,7 @@ export class CandidateListFilterService {
       { lastName: { contains: s, mode: 'insensitive' } },
       { candidateCode: { contains: s, mode: 'insensitive' } },
       { mobileNumber: { contains: s, mode: 'insensitive' } },
+      { passportNumber: { contains: s, mode: 'insensitive' } },
       { email: { contains: s, mode: 'insensitive' } },
     ];
 

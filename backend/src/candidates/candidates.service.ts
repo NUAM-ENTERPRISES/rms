@@ -32,6 +32,11 @@ import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-quer
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 import { CandidateCodeService } from './services/candidate-code.service';
+import {
+  findExistingCandidateByPassport,
+  normalizePassportNumber,
+  resolvePassportNumberForCandidate,
+} from './utils/passport-number.util';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
@@ -206,24 +211,117 @@ export class CandidatesService {
   }
 
 
+  async lookupByPassport(passportNumber: string): Promise<{
+    found: boolean;
+    candidate?: {
+      id: string;
+      candidateCode: string | null;
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      countryCode: string | null;
+      mobileNumber: string | null;
+    };
+  }> {
+    const existing = await findExistingCandidateByPassport(
+      this.prisma,
+      passportNumber,
+    );
+    if (!existing) {
+      return { found: false };
+    }
+    return {
+      found: true,
+      candidate: {
+        id: existing.id,
+        candidateCode: existing.candidateCode,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        email: existing.email,
+        countryCode: existing.countryCode,
+        mobileNumber: existing.mobileNumber,
+      },
+    };
+  }
+
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
   ): Promise<CandidateWithRelations> {
-    // Check if countryCode and mobileNumber combination already exists (unique constraint)
-    const existingCandidate = await this.prisma.candidate.findUnique({
-      where: {
-        countryCode_mobileNumber: {
-          countryCode: createCandidateDto.countryCode,
-          mobileNumber: createCandidateDto.mobileNumber,
+    const creatingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        userRoles: {
+          include: {
+            role: { select: { name: true } },
+          },
         },
       },
     });
-    if (existingCandidate) {
-      throw new ConflictException(
-        `Candidate with contact ${createCandidateDto.countryCode}${createCandidateDto.mobileNumber} already exists`,
+
+    const isAgentCoordinator = Boolean(
+      creatingUser?.userRoles.some(
+        (ur) =>
+          ur.role?.name?.toLowerCase() ===
+          ROLE_NAMES.AGENT_COORDINATOR.toLowerCase(),
+      ),
+    );
+
+    const countryCode = createCandidateDto.countryCode?.trim() || undefined;
+    const mobileNumber = createCandidateDto.mobileNumber?.trim() || undefined;
+    const hasPhone = Boolean(countryCode && mobileNumber);
+    const hasPartialPhone = Boolean(countryCode || mobileNumber) && !hasPhone;
+
+    if (isAgentCoordinator) {
+      const normalizedPassport = normalizePassportNumber(
+        createCandidateDto.passportNumber,
+      );
+      if (!normalizedPassport || normalizedPassport.length < 3) {
+        throw new BadRequestException(
+          'Passport number is required for agent coordinator candidate creation',
+        );
+      }
+      if (hasPartialPhone) {
+        throw new BadRequestException(
+          'Provide both country code and mobile number, or leave contact empty',
+        );
+      }
+      const passportConflict = await findExistingCandidateByPassport(
+        this.prisma,
+        normalizedPassport,
+      );
+      if (passportConflict) {
+        throw new ConflictException(
+          `Candidate with passport number ${normalizedPassport} already exists`,
+        );
+      }
+    } else if (!hasPhone) {
+      throw new BadRequestException(
+        'Country code and mobile number are required',
       );
     }
+
+    if (hasPhone) {
+      const existingByPhone = await this.prisma.candidate.findUnique({
+        where: {
+          countryCode_mobileNumber: {
+            countryCode: countryCode!,
+            mobileNumber: mobileNumber!,
+          },
+        },
+      });
+      if (existingByPhone) {
+        throw new ConflictException(
+          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
+        );
+      }
+    }
+
+    const resolvedPassportNumber = isAgentCoordinator
+      ? normalizePassportNumber(createCandidateDto.passportNumber)!
+      : normalizePassportNumber(createCandidateDto.passportNumber) ?? undefined;
 
     // Validate team exists if provided
     if (createCandidateDto.teamId) {
@@ -299,25 +397,6 @@ export class CandidatesService {
 
     this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
 
-    const creatingUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        name: true,
-        email: true,
-        userRoles: {
-          include: {
-            role: { select: { name: true } },
-          },
-        },
-      },
-    });
-
-    const isAgentCoordinator = creatingUser?.userRoles.some(
-      (ur) =>
-        ur.role?.name?.toLowerCase() ===
-        ROLE_NAMES.AGENT_COORDINATOR.toLowerCase(),
-    );
-
     let resolvedSource =
       normalizeCandidateSource(createCandidateDto.source) ?? 'manual';
     if (isAgentCoordinator) {
@@ -356,7 +435,25 @@ export class CandidatesService {
     });
 
     // Get the default status info for history tracking
-    const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
+    let defaultStatusId = createCandidateDto.currentStatusId ?? 1;
+    if (isAgentCoordinator && createCandidateDto.currentStatusId == null) {
+      const interestedStatus = await this.prisma.candidateStatus.findFirst({
+        where: {
+          statusName: {
+            equals: CANDIDATE_STATUS.INTERESTED,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true, statusName: true },
+      });
+      if (interestedStatus) {
+        defaultStatusId = interestedStatus.id;
+      } else {
+        this.logger.warn(
+          'Interested candidate status not found; using default status id 1',
+        );
+      }
+    }
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
       where: { id: defaultStatusId },
       select: { statusName: true },
@@ -403,8 +500,9 @@ export class CandidatesService {
           candidateCode,
           firstName: createCandidateDto.firstName,
           lastName: createCandidateDto.lastName,
-          countryCode: createCandidateDto.countryCode,
-          mobileNumber: createCandidateDto.mobileNumber,
+          countryCode: hasPhone ? countryCode! : null,
+          mobileNumber: hasPhone ? mobileNumber! : null,
+          passportNumber: resolvedPassportNumber ?? null,
           email: createCandidateDto.email,
           profileImage: createCandidateDto.profileImage,
           addressCountryCode: createCandidateDto.addressCountryCode,
@@ -2031,7 +2129,7 @@ export class CandidatesService {
         },
         documents: {
           where: { isDeleted: false },
-          select: { docType: true },
+          select: { docType: true, documentNumber: true },
         },
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
@@ -2051,7 +2149,8 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
-    const { statusHistories, ...candidateWithoutHistories } = candidate;
+    const { statusHistories, documents, ...candidateWithoutHistories } =
+      candidate;
 
     // Extract the creator from the first active assignment
     const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
@@ -2099,6 +2198,10 @@ export class CandidatesService {
 
     return {
       ...base,
+      passportNumber: resolvePassportNumberForCandidate({
+        passportNumber: candidate.passportNumber,
+        documents: documents ?? [],
+      }),
       currentStatus: base.currentStatus,
       createdBy,
       isCREReassigned,
@@ -2165,22 +2268,24 @@ export class CandidatesService {
         updateCandidateDto.mobileNumber !== existingCandidate.mobileNumber)
     ) {
       const countryCode =
-        updateCandidateDto.countryCode || existingCandidate.countryCode;
+        updateCandidateDto.countryCode ?? existingCandidate.countryCode;
       const mobileNumber =
-        updateCandidateDto.mobileNumber || existingCandidate.mobileNumber;
+        updateCandidateDto.mobileNumber ?? existingCandidate.mobileNumber;
 
-      const candidateWithContact = await this.prisma.candidate.findUnique({
-        where: {
-          countryCode_mobileNumber: {
-            countryCode,
-            mobileNumber,
+      if (countryCode && mobileNumber) {
+        const candidateWithContact = await this.prisma.candidate.findUnique({
+          where: {
+            countryCode_mobileNumber: {
+              countryCode,
+              mobileNumber,
+            },
           },
-        },
-      });
-      if (candidateWithContact && candidateWithContact.id !== id) {
-        throw new ConflictException(
-          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
-        );
+        });
+        if (candidateWithContact && candidateWithContact.id !== id) {
+          throw new ConflictException(
+            `Candidate with contact ${countryCode}${mobileNumber} already exists`,
+          );
+        }
       }
     }
 
@@ -3509,10 +3614,13 @@ export class CandidatesService {
     // ===== WHATSAPP NOTIFICATION START =====
     // Send WhatsApp notification to candidate about status change
     try {
-      const phoneNumber = this.whatsAppService.validatePhoneNumber(
-        updatedCandidate.countryCode,
-        updatedCandidate.mobileNumber,
-      );
+      const phoneNumber =
+        updatedCandidate.countryCode && updatedCandidate.mobileNumber
+          ? this.whatsAppService.validatePhoneNumber(
+              updatedCandidate.countryCode,
+              updatedCandidate.mobileNumber,
+            )
+          : null;
 
       if (phoneNumber) {
         const candidateName = `${updatedCandidate.firstName} ${updatedCandidate.lastName}`;
@@ -4590,7 +4698,7 @@ export class CandidatesService {
         },
         documents: {
           where: { isDeleted: false },
-          select: { docType: true },
+          select: { docType: true, documentNumber: true },
         },
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
@@ -4644,7 +4752,7 @@ export class CandidatesService {
         statusHistories: _omitHistories,
         ...candidateRest
       } = c as typeof c & {
-        documents?: Array<{ docType: string }>;
+        documents?: Array<{ docType: string; documentNumber?: string | null }>;
       };
 
       const withCompletion = withProfileCompletion({
@@ -4655,6 +4763,10 @@ export class CandidatesService {
 
       return {
         ...withCompletion,
+        passportNumber: resolvePassportNumberForCandidate({
+          passportNumber: c.passportNumber,
+          documents: documents ?? [],
+        }),
         careerGapAnalysis: calculateCareerGaps(
           c.workExperiences ?? [],
           c.qualifications ?? [],

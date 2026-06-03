@@ -14,6 +14,7 @@ import {
   ValidateNested,
   IsBoolean,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -23,6 +24,12 @@ export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
   OTHER = 'OTHER',
+}
+
+/** Treat empty strings as absent so optional phone/passport fields validate correctly. */
+function emptyToUndefined({ value }: { value: unknown }): unknown {
+  if (value === '' || value === null) return undefined;
+  return value;
 }
 
 export class CreateCandidateDto {
@@ -42,26 +49,43 @@ export class CreateCandidateDto {
   @IsString()
   lastName!: string;
 
-  @ApiProperty({
-    description: 'Country calling code',
+  @ApiPropertyOptional({
+    description:
+      'Country calling code (required for non–Agent Coordinator create)',
     example: '+91',
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @Matches(/^\+[1-9]\d{0,3}$/, {
     message: 'Please provide a valid country code (e.g., +91, +1, +44)',
   })
-  countryCode!: string;
+  countryCode?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      'Mobile number without country code (must be unique with country code)',
+      'Mobile number without country code (required for non–Agent Coordinator create)',
     example: '9876543210',
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @Matches(/^\d{6,15}$/, {
     message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  mobileNumber!: string;
+  mobileNumber?: string;
+
+  @ApiProperty({
+    description:
+      'Passport number (required when created by Agent Coordinator)',
+    example: 'A1234567',
+    minLength: 3,
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  passportNumber?: string;
 
   @ApiPropertyOptional({
     description: 'Email address',
