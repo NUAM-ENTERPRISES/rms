@@ -187,6 +187,7 @@ export class AgentsService {
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { mobileNumber: { contains: search, mode: 'insensitive' } },
+        { passportNumber: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -208,6 +209,7 @@ export class AgentsService {
           lastName: true,
           countryCode: true,
           mobileNumber: true,
+          passportNumber: true,
           email: true,
           profileImage: true,
           createdAt: true,
@@ -251,7 +253,7 @@ export class AgentsService {
       const { recruiterAssignments, projects, agentCandidateDeclaredProjects, ...rest } = c;
       return {
         ...rest,
-        contact: `${c.countryCode}${c.mobileNumber}`,
+        contact: `${c.countryCode ?? ''}${c.mobileNumber ?? ''}`,
         recruiter: recruiterAssignments[0]?.recruiter ?? null,
         candidateProjects: projects.map((p) => ({
           id: p.id,

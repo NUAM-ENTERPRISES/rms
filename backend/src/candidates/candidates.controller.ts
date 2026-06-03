@@ -36,6 +36,7 @@ import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
+import { QueryPassportLookupDto } from './dto/query-passport-lookup.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -770,6 +771,28 @@ export class CandidatesController {
       success: true,
       data: CANDIDATE_STATUS_CONFIG,
       message: 'Status configuration retrieved successfully',
+    };
+  }
+
+  @Get('passport-lookup')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Look up candidate by passport number',
+    description:
+      'Returns a summary if a candidate already exists with this passport (intake field or passport document).',
+  })
+  @ApiQuery({ name: 'passportNumber', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Lookup result' })
+  async passportLookup(@Query() query: QueryPassportLookupDto) {
+    const result = await this.candidatesService.lookupByPassport(
+      query.passportNumber,
+    );
+    return {
+      success: true,
+      data: result,
+      message: result.found
+        ? 'Existing candidate found for this passport number'
+        : 'No existing candidate for this passport number',
     };
   }
 

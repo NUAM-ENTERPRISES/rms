@@ -18,6 +18,7 @@ import { useDebounce } from "@/hooks";
 
 interface CandidateDocumentsProps {
   candidateId: string;
+  candidatePassportNumber?: string | null;
   initialUploadDocType?: string | null;
   onInitialUploadDocTypeHandled?: () => void;
 }
@@ -26,6 +27,7 @@ const RING = 2 * Math.PI * 40;
 
 export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   candidateId,
+  candidatePassportNumber,
   initialUploadDocType,
   onInitialUploadDocTypeHandled,
 }) => {
@@ -238,6 +240,7 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
 
       <DocumentUploadSection
         candidateId={candidateId}
+        candidatePassportNumber={candidatePassportNumber}
         data={pagedDocuments}
         pagination={meta}
         currentPage={page}

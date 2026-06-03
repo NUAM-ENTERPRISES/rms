@@ -45,6 +45,7 @@ import { UploadService } from '../upload/upload.service';
 import { getEffectiveMaxBytes } from '../upload/upload.constants';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { validatePassportDocumentFields } from './utils/passport-document.util';
+import { syncCandidatePassportNumberFromDocument } from '../candidates/utils/passport-number.util';
 
 @Injectable()
 export class DocumentsService {
@@ -445,6 +446,13 @@ export class DocumentsService {
       },
     });
 
+    await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      createDocumentDto.candidateId,
+      createDocumentDto.docType,
+      createDocumentDto.documentNumber,
+    );
+
     // Attach to a processing step if requested
     if (createDocumentDto.processingStepId) {
       await this.processingService.attachDocumentToStep(createDocumentDto.processingStepId, document.id, userId);
@@ -744,6 +752,13 @@ export class DocumentsService {
         },
       },
     });
+
+    await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      existingDocument.candidateId,
+      docType,
+      mergedDocumentNumber,
+    );
 
     return document as DocumentWithRelations;
   }
@@ -1425,6 +1440,13 @@ export class DocumentsService {
 
       return { updatedDocument: newDocument, verification };
     });
+
+    await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      document.candidateId,
+      document.docType,
+      resolvedDocumentNumber,
+    );
 
     // Update CandidateProjectMap status
     await this.updateCandidateProjectStatus(reuploadDto.candidateProjectMapId);

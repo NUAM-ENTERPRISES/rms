@@ -12,7 +12,8 @@ web/src/app/providers/
 └── notification-handlers/             # Specialized domain logic
     ├── types.ts                       # Shared interfaces & types
     ├── document-handler.ts            # Logic for document-related events
-    └── screening-handler.ts           # Logic for screening-related events
+    ├── screening-handler.ts           # Logic for screening-related events
+    └── agent-candidate-request-handler.ts  # Agent candidate request + role fill sync
 ```
 
 ---
@@ -81,6 +82,25 @@ socket.on("notification:new", (notification: any) => {
   handleMyFeatureNotifications(context); // Add yours here
 });
 ```
+
+---
+
+## Agent candidate requests (example)
+
+When a manager submits **Request Agent Candidates**, the backend emits `agent_candidate_request_created` to Agent Coordinators.
+
+**RTK tags to invalidate:**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `{ type: "Project", id: "AGENT_REQUESTS" }` | Agents dashboard candidate-requests list + tile count |
+| `{ type: "Project", id: "<projectId>" }` | Project detail |
+| `{ type: "Project", id: "ROLE_FILL_<projectId>" }` | Role Fill Progress card (Agent Coordinator) |
+| `{ type: "Project", id: "AGENT_REQUESTS_<projectId>" }` | Request history modal |
+
+**Handler:** `notification-handlers/agent-candidate-request-handler.ts` (registered in `notifications-socket.provider.tsx`).
+
+**Mutation:** `createAgentCandidateRequest` invalidates the same tags so the submitter’s UI updates immediately without waiting for the socket.
 
 ---
 

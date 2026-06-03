@@ -59,6 +59,8 @@ import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
+import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
+import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
 import { ROLE_NAMES } from "@/config/role-names";
@@ -620,6 +622,7 @@ export default function CandidateOverviewPage() {
                     )}
                     <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Experience</TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">Passport</TableHead>
                     <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
@@ -637,12 +640,12 @@ export default function CandidateOverviewPage() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={canTransferCandidates ? 10 : 9} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 11 : 10} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canTransferCandidates ? 10 : 9} className="h-64 text-center">
+                      <TableCell colSpan={canTransferCandidates ? 11 : 10} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                             <UserCheck className="h-8 w-8 text-slate-300" />
@@ -733,6 +736,13 @@ export default function CandidateOverviewPage() {
                               <span>{getCandidateExperienceLabel(candidate)}</span>
                             </div>
                           </TableCell>
+                          <TableCell className="px-4 py-3 min-w-[7.5rem] align-middle">
+                            <TruncatedPassportText
+                              passportNumber={resolveCandidatePassportNumber(
+                                candidate,
+                              )}
+                            />
+                          </TableCell>
                           <TableCell className="px-4 py-3 text-center">
                             <div className="flex flex-col items-stretch gap-2">
                               <div className="flex items-center justify-center gap-1.5 w-full">
@@ -772,12 +782,18 @@ export default function CandidateOverviewPage() {
                                   </span>
                                 </div>
                               ) : null}
-                              <div className="flex items-center justify-center gap-1.5">
-                                <Phone className="h-3 w-3 text-gray-400" />
-                                <span className="text-gray-700 truncate max-w-[220px]">
-                                  {candidate.countryCode} {candidate.mobileNumber}
-                                </span>
-                              </div>
+                              {(candidate.countryCode?.trim() ||
+                                candidate.mobileNumber?.trim()) && (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-gray-400" />
+                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                    {[candidate.countryCode, candidate.mobileNumber]
+                                      .filter(Boolean)
+                                      .join(" ")
+                                      .trim()}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           </TableCell>

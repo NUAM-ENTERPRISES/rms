@@ -9,7 +9,7 @@ import { AgentDetailsCandidateTableRow } from "./AgentDetailsCandidateTableRow";
 import { EditDeclaredProjectsModal } from "./EditDeclaredProjectsModal";
 import { CandidatesTableSkeleton } from "./AgentDetailsSkeletons";
 
-const TABLE_COL_COUNT = 6;
+const TABLE_COL_COUNT = 7;
 
 type AgentDetailsCandidatesSectionProps = {
   search: string;
@@ -75,7 +75,7 @@ export function AgentDetailsCandidatesSection({
                 <div className="relative flex-1 sm:w-56">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search by name, email..."
+                    placeholder="Search by name, email, passport..."
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="h-10 pl-10 pr-8 w-full bg-slate-50 border-slate-200 focus:bg-white rounded-xl"
@@ -143,6 +143,9 @@ export function AgentDetailsCandidatesSection({
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Contact
+                    </TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Passport
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Assigned To

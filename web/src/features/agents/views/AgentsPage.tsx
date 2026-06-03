@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   Calendar,
   Eye,
+  UserRoundSearch,
 } from "lucide-react";
 import { useGetAgentsQuery } from "../api";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,10 @@ import { useAppSelector } from "@/app/hooks";
 import TypedHeader from "@/components/molecules/TypedHeader";
 import { AgentCoordinatorCandidateTableRows } from "../components/AgentCoordinatorCandidateTableRows";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
+import {
+  AgentCandidateRequestsPanel,
+  useAgentCandidateRequestsCount,
+} from "../components/AgentCandidateRequestsTile";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
@@ -84,7 +89,7 @@ export default function AgentsPage() {
   const candidatePageSize = 10;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "with-candidates" | "candidate-requests">("all");
 
   /** Agent Coordinator: my-candidates (agent source) tile uses counts.totalAssigned from API */
   const { data: agentCoordinatorCountsPayload } = useGetRecruiterMyCandidatesQuery(
@@ -204,18 +209,29 @@ export default function AgentsPage() {
   };
 
   const isCandidatePipelineFilter = activeFilter === "with-candidates";
+  const isRequestsFilter = activeFilter === "candidate-requests";
+
+  const pendingRequestsCount = useAgentCandidateRequestsCount(!isAgentCoordinator);
 
   const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
-    blue:   { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",     icon: "text-blue-600",   iconBg: "bg-blue-100",   value: "text-blue-700",   ring: "ring-blue-400/50",   dot: "bg-blue-500" },
+    amber:  { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",  iconBg: "bg-amber-100",  value: "text-amber-700",  ring: "ring-amber-400/50",  dot: "bg-amber-500" },
+    blue:   { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",      icon: "text-blue-600",   iconBg: "bg-blue-100",   value: "text-blue-700",   ring: "ring-blue-400/50",   dot: "bg-blue-500" },
     indigo: { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600", iconBg: "bg-indigo-100", value: "text-indigo-700", ring: "ring-indigo-400/50", dot: "bg-indigo-500" },
     purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
   };
 
-  const statTiles = [
-    { label: "Total Agents",     value: totalAgentsCount, icon: Handshake,  statusFilter: "all",             accent: "blue",   subtitle: "Registered partners" },
-    { label: "Total Candidates", value: totalCandidates,  icon: Users,      statusFilter: "with-candidates", accent: "indigo", subtitle: isAgentCoordinator ? "Agent-sourced assignments" : "Referral volume" },
-    { label: "Active Agents",    value: activeAgentsCount, icon: LayoutGrid, statusFilter: "active",          accent: "purple", subtitle: "Currently sourcing" },
+  const baseTiles = [
+    { label: "Total Agents",     value: totalAgentsCount,  icon: Handshake,       statusFilter: "all",             accent: "blue",   subtitle: "Registered partners" },
+    { label: "Total Candidates", value: totalCandidates,   icon: Users,           statusFilter: "with-candidates", accent: "indigo", subtitle: isAgentCoordinator ? "Agent-sourced assignments" : "Referral volume" },
+    { label: "Active Agents",    value: activeAgentsCount, icon: LayoutGrid,      statusFilter: "active",          accent: "purple", subtitle: "Currently sourcing" },
   ];
+
+  const statTiles = isAgentCoordinator
+    ? [
+        { label: "Candidate Requests", value: pendingRequestsCount, icon: UserRoundSearch, statusFilter: "candidate-requests", accent: "amber", subtitle: "Pending from managers" },
+        ...baseTiles,
+      ]
+    : baseTiles;
 
   const agentCoordinatorCandidates =
     agentCoordinatorCandidatesPayload?.data ?? [];
@@ -234,7 +250,7 @@ export default function AgentsPage() {
         )}
 
         {/* ── Stat Tiles ───────────────────────────────────────────── */}
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+        <div className={cn("grid gap-4 grid-cols-1", isAgentCoordinator ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3")}>
           {statTiles.map((stat) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -285,8 +301,15 @@ export default function AgentsPage() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
-                    {isCandidatePipelineFilter && isAgentCoordinator ? (
+                  <div className={cn(
+                    "shrink-0 rounded-xl p-2.5 shadow-md",
+                    isRequestsFilter
+                      ? "bg-gradient-to-br from-amber-400 to-orange-500"
+                      : "bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500"
+                  )}>
+                    {isRequestsFilter ? (
+                      <UserRoundSearch className="h-5 w-5 text-white" aria-hidden />
+                    ) : isCandidatePipelineFilter && isAgentCoordinator ? (
                       <Users className="h-5 w-5 text-white" aria-hidden />
                     ) : (
                       <Handshake className="h-5 w-5 text-white" aria-hidden />
@@ -294,66 +317,77 @@ export default function AgentsPage() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-base font-bold text-gray-900 truncate">
-                      {activeFilter === "all"
-                        ? "All Agents"
-                        : activeFilter === "active"
-                          ? "Active Agents"
-                          : isAgentCoordinator
-                            ? "Agent Coordinator candidates"
-                            : "Agents with Candidates"}
+                      {isRequestsFilter
+                        ? "Candidate Requests"
+                        : activeFilter === "all"
+                          ? "All Agents"
+                          : activeFilter === "active"
+                            ? "Active Agents"
+                            : isAgentCoordinator
+                              ? "Agent Coordinator Candidates"
+                              : "Agents with Candidates"}
                     </h2>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {showAgentCoordinatorCandidateTable
-                        ? `${agentCoordinatorPagination?.totalCount ?? 0} candidate${(agentCoordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
-                        : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? "s" : ""} on this page`}
+                      {isRequestsFilter
+                        ? "Requests from project managers for agent-sourced candidates"
+                        : showAgentCoordinatorCandidateTable
+                          ? `${agentCoordinatorPagination?.totalCount ?? 0} candidate${(agentCoordinatorPagination?.totalCount ?? 0) !== 1 ? "s" : ""} (total assigned: ${totalCandidates})`
+                          : `${filteredAgents.length} agent${filteredAgents.length !== 1 ? "s" : ""} on this page`}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {activeFilter === "with-candidates" && canCreateCandidateUi && (
-                    <Button
-                      type="button"
-                      onClick={() => navigate("/candidates/create")}
-                      size="sm"
-                      className="h-9 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm gap-1.5"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" /> Add Candidate
-                    </Button>
-                  )}
-                  {canWrite && !(activeFilter === "with-candidates" && canCreateCandidateUi) && (
-                    <Button
-                      type="button"
-                      onClick={() => setIsModalOpen(true)}
-                      size="sm"
-                      className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Add Agent
-                    </Button>
-                  )}
-                </div>
+                {!isRequestsFilter && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    {activeFilter === "with-candidates" && canCreateCandidateUi && (
+                      <Button
+                        type="button"
+                        onClick={() => navigate("/candidates/create")}
+                        size="sm"
+                        className="h-9 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm gap-1.5"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" /> Add Candidate
+                      </Button>
+                    )}
+                    {canWrite && !(activeFilter === "with-candidates" && canCreateCandidateUi) && (
+                      <Button
+                        type="button"
+                        onClick={() => setIsModalOpen(true)}
+                        size="sm"
+                        className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Agent
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Search */}
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder={showAgentCoordinatorCandidateTable ? "Search candidates…" : "Search agents…"}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
-                />
-              </div>
+              {/* Search (hidden for requests view) */}
+              {!isRequestsFilter && (
+                <div className="relative max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder={showAgentCoordinatorCandidateTable ? "Search candidates…" : "Search agents…"}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ── Agent Coordinator candidate table ─────────────────────── */}
-          {showAgentCoordinatorCandidateTable ? (
+          {/* ── Candidate Requests Panel ─────────────────────────────── */}
+          {isRequestsFilter ? (
+            <AgentCandidateRequestsPanel />
+          ) : showAgentCoordinatorCandidateTable ? (
             <>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                      <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">Passport</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Agent</TableHead>
                       <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created</TableHead>

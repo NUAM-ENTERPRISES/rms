@@ -12,6 +12,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { OutboxService } from '../../notifications/outbox.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
 import { ProjectDeadlineAutoCompleteService } from '../project-deadline-auto-complete.service';
 
@@ -47,6 +48,10 @@ describe('ProjectsService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       count: jest.fn(),
+    },
+    agentCandidateRequest: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
     },
     roleNeeded: {
       create: jest.fn(),
@@ -91,6 +96,10 @@ describe('ProjectsService', () => {
         {
           provide: NotificationsGateway,
           useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() },
+        },
+        {
+          provide: OutboxService,
+          useValue: { publishAgentCandidateRequestCreated: jest.fn() },
         },
         {
           provide: ProjectDeadlineAutoCompleteService,
@@ -934,6 +943,109 @@ describe('ProjectsService', () => {
         upcomingDeadlines: [],
         urgentProjectsCount: 5,
       });
+    });
+  });
+
+  describe('createAgentCandidateRequest', () => {
+    it('creates request with valid project roles and publishes outbox event', async () => {
+      const outboxService = (service as any).outboxService as {
+        publishAgentCandidateRequestCreated: jest.Mock;
+      };
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        title: 'ICU Staffing',
+        rolesNeeded: [
+          { id: 'role-1', designation: 'Emergency Nurse', quantity: 5 },
+          { id: 'role-2', designation: 'ICU Nurse', quantity: 5 },
+        ],
+      });
+      prismaService.agentCandidateRequest.create.mockResolvedValue({
+        id: 'req-1',
+        notes: 'Urgent requirement',
+        items: [{ id: 'i1', roleNeededId: 'role-1', requestedCount: 2 }],
+      });
+
+      const result = await service.createAgentCandidateRequest(
+        'project-1',
+        {
+          items: [{ roleNeededId: 'role-1', requestedCount: 2 }],
+          notes: 'Urgent requirement',
+        },
+        'user-1',
+      );
+
+      expect(prismaService.agentCandidateRequest.create).toHaveBeenCalled();
+      expect(outboxService.publishAgentCandidateRequestCreated).toHaveBeenCalled();
+      expect(result.id).toBe('req-1');
+    });
+
+    it('throws when request contains a role outside project roles', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        title: 'ICU Staffing',
+        rolesNeeded: [{ id: 'role-1', designation: 'Emergency Nurse', quantity: 5 }],
+      });
+
+      await expect(
+        service.createAgentCandidateRequest(
+          'project-1',
+          {
+            items: [{ roleNeededId: 'role-x', requestedCount: 2 }],
+          },
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getProjectRoleFillSummary', () => {
+    it('returns only roles from the latest request, not older requests', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue({
+        items: [
+          {
+            roleNeededId: 'role-emergency',
+            requestedCount: 5,
+            roleNeeded: {
+              designation: 'Emergency Staff Nurse',
+              priority: 'high',
+            },
+          },
+        ],
+      });
+      prismaService.candidateProjects.count.mockResolvedValue(2);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        roleNeededId: 'role-emergency',
+        designation: 'Emergency Staff Nurse',
+        targetCount: 5,
+        filledCount: 2,
+      });
+      expect(prismaService.agentCandidateRequest.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { projectId: 'project-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('returns empty data when no requests exist', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue(null);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toEqual([]);
+      expect(result.summary).toEqual({ totalFilled: 0, totalTarget: 0 });
     });
   });
 });

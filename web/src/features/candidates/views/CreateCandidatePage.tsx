@@ -1,13 +1,12 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  createCandidateSchema,
+  buildCreateCandidateSchema,
   type CreateCandidateFormData,
 } from "@/features/candidates/createCandidateFormSchema";
 import { toast } from "sonner";
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -146,19 +145,30 @@ export default function CreateCandidatePage() {
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [passportDuplicate, setPassportDuplicate] = useState(false);
 
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
+  const candidateSchema = useMemo(
+    () => buildCreateCandidateSchema({ isAgentCoordinator }),
+    [isAgentCoordinator],
+  );
+
+  const handlePassportDuplicateChange = useCallback((isDuplicate: boolean) => {
+    setPassportDuplicate(isDuplicate);
+  }, []);
+
   // Form
   const form = useForm<CreateCandidateFormData>({
-    resolver: zodResolver(createCandidateSchema),
+    resolver: zodResolver(candidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
       firstName: "",
       lastName: "",
-      countryCode: "+91",
+      countryCode: isAgentCoordinator ? "" : "+91",
       mobileNumber: "",
+      passportNumber: "",
       email: "",
       source: (isOperations
         ? "direct_enquiry"
@@ -241,8 +251,9 @@ export default function CreateCandidatePage() {
     const step1Fields = [
       "firstName",
       "lastName",
-      "countryCode",
-      "mobileNumber",
+      ...(isAgentCoordinator
+        ? ["passportNumber", "countryCode", "mobileNumber"]
+        : ["countryCode", "mobileNumber"]),
       "source",
       "agentId",
       "gender",
@@ -253,6 +264,13 @@ export default function CreateCandidatePage() {
       "languageProficiency",
     ];
     const isValid = await form.trigger(step1Fields as any);
+
+    if (isValid && isAgentCoordinator && passportDuplicate) {
+      toast.error(
+        "A candidate with this passport number already exists. Use the existing record.",
+      );
+      return false;
+    }
     
     if (isValid) {
       if (!completedSteps.includes(1)) {
@@ -320,22 +338,49 @@ export default function CreateCandidatePage() {
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    if (isAgentCoordinator && passportDuplicate) {
+      toast.error(
+        "A candidate with this passport number already exists. Use the existing record.",
+      );
+      return;
+    }
+    const step1Ok = await validateStep1();
+    if (!step1Ok) return;
     setShowPreview(true);
   };
 
   // Form submission
   const onSubmit = async (data: CreateCandidateFormData) => {
     try {
+      if (isAgentCoordinator && passportDuplicate) {
+        toast.error(
+          "A candidate with this passport number already exists. Use the existing record.",
+        );
+        return;
+      }
+
       const payload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
-        countryCode: data.countryCode,
-        mobileNumber: data.mobileNumber,
         source: data.source || "manual",
         gender: data.gender,
         dateOfBirth: data.dateOfBirth,
       };
+
+      const cc = data.countryCode?.trim();
+      const mn = data.mobileNumber?.trim();
+      if (cc && mn) {
+        payload.countryCode = cc;
+        payload.mobileNumber = mn;
+      }
+
+      if (isAgentCoordinator) {
+        const passport = data.passportNumber?.trim();
+        if (passport) {
+          payload.passportNumber = passport;
+        }
+      }
 
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {
@@ -601,6 +646,8 @@ export default function CreateCandidatePage() {
             uploadingImage={uploadingImage}
             isLoading={isLoading}
             lockSourceToAgent={isAgentCoordinator}
+            showPassportField={isAgentCoordinator}
+            onPassportDuplicateChange={handlePassportDuplicateChange}
             setValue={form.setValue}
           />
         );
@@ -755,7 +802,11 @@ export default function CreateCandidatePage() {
       candidateData={{
         firstName: form.getValues("firstName"),
         lastName: form.getValues("lastName"),
-        contact: `${form.getValues("countryCode")}${form.getValues("mobileNumber")}`,
+        contact: (() => {
+          const mn = form.getValues("mobileNumber")?.trim();
+          const cc = form.getValues("countryCode")?.trim();
+          return mn && cc ? `${cc}${mn}` : mn ? mn : "";
+        })(),
         email: form.getValues("email"),
         source: form.getValues("source"),
         gender: form.getValues("gender"),

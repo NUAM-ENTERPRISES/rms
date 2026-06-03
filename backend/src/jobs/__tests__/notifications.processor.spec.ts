@@ -9,6 +9,7 @@ describe('NotificationsProcessor', () => {
     },
     user: {
       findMany: jest.fn(),
+      findUnique: jest.fn(),
     },
   };
 
@@ -114,6 +115,48 @@ describe('NotificationsProcessor', () => {
     );
     expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'trainer-2' }),
+    );
+  });
+
+  it('notifies only agent coordinators for agent candidate requests', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-agent-1',
+        payload: {
+          requestId: 'req-1',
+          projectId: 'project-1',
+          projectTitle: 'Saudi MOH Nurses',
+          requestedById: 'manager-1',
+          items: [
+            {
+              roleNeededId: 'role-1',
+              requestedCount: 2,
+              roleDesignation: 'Emergency Staff Nurse',
+            },
+          ],
+          notes: 'Need urgent profiles',
+        },
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue({ name: 'Manager One' });
+    prisma.user.findMany.mockResolvedValue([{ id: 'ac-1' }, { id: 'ac-2' }]);
+
+    await processor.handleAgentCandidateRequestCreated(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ac-1',
+        type: 'agent_candidate_request_created',
+        link: '/projects/project-1',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ac-2',
+        type: 'agent_candidate_request_created',
+      }),
     );
   });
 });

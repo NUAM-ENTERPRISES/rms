@@ -49,6 +49,11 @@ export default function NotificationItem({
       } else {
         navigate(link);
       }
+    } else if (
+      notification.type === "agent_candidate_request_created" &&
+      notification.meta?.projectId
+    ) {
+      navigate(`/projects/${notification.meta.projectId as string}`);
     } else if (notification.meta?.candidateId) {
       navigate(`/candidates/${notification.meta.candidateId as string}`);
     }

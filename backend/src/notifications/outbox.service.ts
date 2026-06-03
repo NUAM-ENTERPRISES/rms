@@ -596,5 +596,24 @@ export class OutboxService {
     );
   }
 
+  async publishAgentCandidateRequestCreated(
+    payload: {
+      requestId: string;
+      projectId: string;
+      projectTitle: string;
+      requestedById: string;
+      items: Array<{
+        roleNeededId: string;
+        requestedCount: number;
+        roleDesignation: string;
+      }>;
+      notes?: string | null;
+      link?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('AgentCandidateRequestCreated', payload, tx);
+  }
+
 }
 

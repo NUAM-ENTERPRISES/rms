@@ -203,6 +203,8 @@ interface DocumentUploadSectionProps {
   /** When set, opens the upload modal for this doc type (e.g. from overview passport link). */
   initialUploadDocType?: string | null;
   onInitialUploadDocTypeHandled?: () => void;
+  /** Passport stored on the candidate record (e.g. AC create) before a passport doc exists. */
+  candidatePassportNumber?: string | null;
 }
 
 const DOCUMENT_NAME_MAX_LENGTH = 40;
@@ -258,6 +260,7 @@ export function DocumentUploadSection({
   onRefresh,
   initialUploadDocType,
   onInitialUploadDocTypeHandled,
+  candidatePassportNumber,
 }: DocumentUploadSectionProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadModalDocType, setUploadModalDocType] = useState<
@@ -308,6 +311,9 @@ export function DocumentUploadSection({
   const completion = getCandidateProfileCompletion(completionDocs);
   const repositorySlots = getDocumentRepositorySlots(completionDocs);
   const passportDocument = getPassportDocument(completionDocs);
+  const storedPassportNumber = candidatePassportNumber?.trim() || null;
+  const passportDocNumber = passportDocument?.documentNumber?.trim() || null;
+  const displayedPassportNumber = passportDocNumber || storedPassportNumber;
 
   const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
 
@@ -599,7 +605,11 @@ export function DocumentUploadSection({
               const passportNumberMissing =
                 slot.key === "passport" &&
                 slot.satisfied &&
-                !slotPassportDoc?.documentNumber?.trim();
+                !displayedPassportNumber;
+              const passportNumberFromCandidateOnly =
+                slot.key === "passport" &&
+                !slot.satisfied &&
+                Boolean(storedPassportNumber);
 
               return (
               <li
@@ -610,7 +620,9 @@ export function DocumentUploadSection({
                     ? passportNumberMissing
                       ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-background to-background shadow-sm"
                       : "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
-                    : "border-border bg-muted/20"
+                    : passportNumberFromCandidateOnly
+                      ? "border-sky-200/70 bg-gradient-to-br from-sky-50/90 via-background to-background shadow-sm"
+                      : "border-border bg-muted/20"
                 )}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
@@ -619,15 +631,17 @@ export function DocumentUploadSection({
                     {slot.satisfied
                       ? passportNumberMissing
                         ? "Passport on file — number missing"
-                        : slot.key === "passport" && slotPassportDoc?.documentNumber
+                        : slot.key === "passport" && displayedPassportNumber
                           ? "Passport on file with number recorded"
                           : "Document on file for this type"
-                      : "Mandatory document missing"}
+                      : passportNumberFromCandidateOnly
+                        ? "Passport number on file — upload copy to complete"
+                        : "Mandatory document missing"}
                   </p>
-                  {slot.key === "passport" && slotPassportDoc?.documentNumber && (
+                  {slot.key === "passport" && displayedPassportNumber && (
                     <p className="text-xs font-medium text-foreground">
-                      #{slotPassportDoc.documentNumber}
-                      {slotPassportDoc.expiryDate
+                      #{displayedPassportNumber}
+                      {slotPassportDoc?.expiryDate
                         ? ` · Exp ${DateUtils.formatDate(slotPassportDoc.expiryDate)}`
                         : ""}
                     </p>

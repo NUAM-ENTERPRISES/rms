@@ -109,6 +109,70 @@ export interface RoleNeeded {
   };
 }
 
+export interface AgentCandidateRequestItemInput {
+  roleNeededId: string;
+  requestedCount: number;
+}
+
+export interface CreateAgentCandidateRequestPayload {
+  projectId: string;
+  items: AgentCandidateRequestItemInput[];
+  notes?: string;
+}
+
+export type AgentCandidateRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface AgentCandidateRequestListItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  project: {
+    id: string;
+    title: string;
+    countryCode: string | null;
+    country: { name: string } | null;
+    client: { name: string } | null;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
+}
+
+export interface GetAgentCandidateRequestsParams {
+  page?: number;
+  limit?: number;
+  status?: AgentCandidateRequestStatus;
+}
+
+export interface RoleFillSummaryItem {
+  roleNeededId: string;
+  designation: string;
+  priority: string;
+  targetCount: number;
+  filledCount: number;
+}
+
+export interface ProjectAgentCandidateRequestHistoryItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  requestedBy: { id: string; name: string; email: string };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
+}
+
 export interface EducationRequirement {
   qualificationId: string;
   mandatory: boolean;
@@ -916,6 +980,85 @@ export const projectsApi = baseApi.injectEndpoints({
         "CandidateProject",
       ],
     }),
+
+    getAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: AgentCandidateRequestListItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      GetAgentCandidateRequestsParams
+    >({
+      query: ({ page = 1, limit = 20, status } = {}) => ({
+        url: "/projects/agent-candidate-requests",
+        params: { page, limit, ...(status ? { status } : {}) },
+      }),
+      providesTags: [{ type: "Project", id: "AGENT_REQUESTS" }],
+    }),
+
+    getProjectAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: ProjectAgentCandidateRequestHistoryItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      { projectId: string; page?: number; limit?: number }
+    >({
+      query: ({ projectId, page = 1, limit = 10 }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        params: { page, limit },
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
+      ],
+    }),
+
+    getProjectRoleFillSummary: builder.query<
+      {
+        success: boolean;
+        data: RoleFillSummaryItem[];
+        summary: { totalFilled: number; totalTarget: number };
+      },
+      { projectId: string }
+    >({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/role-fill-summary`,
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: projectId },
+      ],
+    }),
+
+    createAgentCandidateRequest: builder.mutation<
+      ApiResponse<{
+        id: string;
+        projectId: string;
+        requestedById: string;
+        status: string;
+        notes?: string | null;
+        items: Array<{
+          id: string;
+          roleNeededId: string;
+          requestedCount: number;
+        }>;
+        createdAt: string;
+      }>,
+      CreateAgentCandidateRequestPayload
+    >({
+      query: ({ projectId, ...body }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Project", id: "LIST" },
+        { type: "Project", id: "AGENT_REQUESTS" },
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
+      ],
+    }),
   }),
 });
 
@@ -944,4 +1087,8 @@ export const {
   useGetRoleDepartmentsQuery,
   useBulkSendForInterviewMutation,
   useBulkAssignToProjectMutation,
+  useCreateAgentCandidateRequestMutation,
+  useGetAgentCandidateRequestsQuery,
+  useGetProjectAgentCandidateRequestsQuery,
+  useGetProjectRoleFillSummaryQuery,
 } = projectsApi;

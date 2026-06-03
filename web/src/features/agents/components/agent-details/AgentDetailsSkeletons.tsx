@@ -39,11 +39,10 @@ export function CandidatesTableSkeleton() {
             </div>
           </TableCell>
           <TableCell className="px-5 py-4">
-            <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-slate-200" />
-              <div className="h-7 w-7 rounded-lg bg-slate-200" />
-              <div className="h-3 w-24 rounded bg-slate-100" />
-            </div>
+            <div className="h-3 w-24 rounded bg-slate-100" />
+          </TableCell>
+          <TableCell className="px-5 py-4">
+            <div className="h-3 w-20 rounded bg-slate-100 font-mono" />
           </TableCell>
           <TableCell className="px-5 py-4">
             <div className="flex items-center gap-2">

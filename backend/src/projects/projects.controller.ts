@@ -27,6 +27,7 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import {
   ProjectWithRelations,
@@ -474,6 +475,56 @@ export class ProjectsController {
       data,
       message: 'Projects retrieved successfully',
     };
+  }
+
+  @Get(':id/role-fill-summary')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get per-role candidate fill summary for a project',
+    description:
+      'Returns how many candidates each role has received vs. the target quantity. Scoped to the requesting user for Agent Coordinators.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiResponse({ status: 200, description: 'Role fill summary data' })
+  async getProjectRoleFillSummary(
+    @Param('id') projectId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.getProjectRoleFillSummary(
+      projectId,
+      req.user.id,
+      req.user.roles,
+    );
+    return { success: true, ...result };
+  }
+
+  @Get('agent-candidate-requests')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'List all agent candidate requests',
+    description:
+      'Returns paginated agent candidate requests with project, requester and role details. Intended for Agent Coordinators.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    description: 'Filter by request status',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of agent candidate requests' })
+  async getAgentCandidateRequests(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+  ) {
+    const data = await this.projectsService.getAgentCandidateRequests({
+      page: +page,
+      limit: +limit,
+      status,
+    });
+    return { success: true, ...data };
   }
 
   @Get(':id')
@@ -1326,6 +1377,65 @@ export class ProjectsController {
       success: true,
       data: result,
       message: 'Document verification completed successfully',
+    };
+  }
+
+  @Get(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects', 'read:projects')
+  @ApiOperation({
+    summary: 'List agent candidate request history for a project',
+    description: 'Returns all agent candidate requests made for this project, newest first.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiResponse({ status: 200, description: 'Paginated request history' })
+  async getProjectAgentCandidateRequests(
+    @Param('id') projectId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const data = await this.projectsService.getProjectAgentCandidateRequests(
+      projectId,
+      { page: +page, limit: +limit },
+    );
+    return { success: true, ...data };
+  }
+
+  @Post(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects')
+  @ApiOperation({
+    summary: 'Create agent candidate request for a project',
+    description:
+      'Managers can request additional agent-sourced candidates by role and quantity.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 201,
+    description: 'Agent candidate request created successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request payload or project-role mismatch',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async createAgentCandidateRequest(
+    @Param('id') projectId: string,
+    @Body() dto: CreateAgentCandidateRequestDto,
+    @Request() req,
+  ) {
+    const data = await this.projectsService.createAgentCandidateRequest(
+      projectId,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Agent candidate request created successfully',
     };
   }
 }

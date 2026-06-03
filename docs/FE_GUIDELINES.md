@@ -16,6 +16,10 @@ This document is a **contract**. Every contributor and AI tool (Cursor) **MUST**
 - **Accessibility** (WCAG AA): semantic HTML, labels, keyboard support.
 - **Tests & Lint pass** = merge. Husky blocks non-compliant commits.
 
+### Agent Coordinator candidate create
+
+When the logged-in user is **Agent Coordinator**, `CreateCandidatePage` uses `buildCreateCandidateSchema({ isAgentCoordinator: true })`: **passport number is required** and checked for duplicates via `GET /candidates/passport-lookup` (RTK Query `useLookupCandidateByPassportQuery`). **Phone is optional**; if provided, both country code and mobile number must be set. Other roles keep phone required and do not collect passport at create time.
+
 ---
 
 ## 1) Architecture & Folder Structure (Domain-Driven Design + Clean Architecture)

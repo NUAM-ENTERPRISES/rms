@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import { resolveCandidatePassportNumber } from "./utils/candidate-passport.util";
 
 export interface Agent {
   id: string;
@@ -21,8 +22,9 @@ export interface AgentCandidate {
   id: string;
   firstName: string;
   lastName: string;
-  countryCode: string;
-  mobileNumber: string;
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  passportNumber?: string | null;
   contact: string;
   email?: string;
   profileImage?: string;
@@ -204,6 +206,14 @@ export const agentsApi = baseApi.injectEndpoints({
         const qs = searchParams.toString();
         return qs ? `/agents/${id}/candidates?${qs}` : `/agents/${id}/candidates`;
       },
+      transformResponse: (response: AgentCandidatesResponse) => ({
+        success: response.success,
+        meta: response.meta,
+        data: (response.data ?? []).map((row) => ({
+          ...row,
+          passportNumber: resolveCandidatePassportNumber(row),
+        })),
+      }),
       providesTags: (_result, _error, { id }) => [{ type: "Agent", id }],
     }),
     getAgentProjects: builder.query<AgentProjectsListResponse, GetAgentProjectsParams | string>({

@@ -19,6 +19,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
 import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
@@ -43,6 +44,7 @@ import {
 } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { OutboxService } from '../notifications/outbox.service';
 import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
@@ -57,6 +59,7 @@ export class ProjectsService {
     private readonly qualificationsService: QualificationsService,
     private readonly roleCatalogService: RoleCatalogService,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly outboxService: OutboxService,
   ) {}
 
   // Helper method to safely parse JSON fields
@@ -3528,6 +3531,259 @@ export class ProjectsService {
       totalPending,
       allDocumentsVerified,
       canApproveCandidate: allDocumentsVerified,
+    };
+  }
+
+  async createAgentCandidateRequest(
+    projectId: string,
+    dto: CreateAgentCandidateRequestDto,
+    requestedById: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        title: true,
+        rolesNeeded: {
+          select: {
+            id: true,
+            designation: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const roleMap = new Map(project.rolesNeeded.map((role) => [role.id, role]));
+    const uniqueRoleIds = new Set<string>();
+
+    for (const item of dto.items) {
+      if (!roleMap.has(item.roleNeededId)) {
+        throw new BadRequestException(
+          `Role ${item.roleNeededId} does not belong to this project`,
+        );
+      }
+      if (uniqueRoleIds.has(item.roleNeededId)) {
+        throw new BadRequestException(
+          `Duplicate role request found for role ${item.roleNeededId}`,
+        );
+      }
+      uniqueRoleIds.add(item.roleNeededId);
+    }
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const request = await tx.agentCandidateRequest.create({
+        data: {
+          projectId,
+          requestedById,
+          notes: dto.notes?.trim() || null,
+          items: {
+            create: dto.items.map((item) => ({
+              roleNeededId: item.roleNeededId,
+              requestedCount: item.requestedCount,
+            })),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      await this.outboxService.publishAgentCandidateRequestCreated(
+        {
+          requestId: request.id,
+          projectId: project.id,
+          projectTitle: project.title,
+          requestedById,
+          notes: request.notes,
+          items: dto.items.map((item) => ({
+            roleNeededId: item.roleNeededId,
+            requestedCount: item.requestedCount,
+            roleDesignation: roleMap.get(item.roleNeededId)?.designation ?? 'Role',
+          })),
+          link: `/projects/${project.id}`,
+        },
+        tx,
+      );
+
+      return request;
+    });
+
+    return created;
+  }
+
+  async getProjectAgentCandidateRequests(
+    projectId: string,
+    query: { page: number; limit: number },
+  ) {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      this.prisma.agentCandidateRequest.findMany({
+        where: { projectId },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          requestedBy: {
+            select: { id: true, name: true, email: true },
+          },
+          items: {
+            include: {
+              roleNeeded: { select: { designation: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.agentCandidateRequest.count({ where: { projectId } }),
+    ]);
+
+    return {
+      data,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async getAgentCandidateRequests(query: {
+    page: number;
+    limit: number;
+    status?: string;
+  }) {
+    const { page, limit, status } = query;
+    const skip = (page - 1) * limit;
+
+    const where = status ? { status: status as any } : {};
+
+    // Count distinct projects that have at least one matching request
+    const distinctProjects = await this.prisma.agentCandidateRequest.groupBy({
+      by: ['projectId'],
+      where,
+    });
+    const total = distinctProjects.length;
+
+    // Return only the latest request per project using distinct + desc order
+    const data = await this.prisma.agentCandidateRequest.findMany({
+      where,
+      distinct: ['projectId'],
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        project: {
+          select: {
+            id: true,
+            title: true,
+            countryCode: true,
+            country: { select: { name: true } },
+            client: { select: { name: true } },
+          },
+        },
+        requestedBy: {
+          select: { id: true, name: true, email: true },
+        },
+        items: {
+          include: {
+            roleNeeded: {
+              select: { designation: true },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getProjectRoleFillSummary(
+    projectId: string,
+    userId: string,
+    userRoles: string[],
+  ) {
+    const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
+
+    // Only roles from the most recent agent candidate request for this project.
+    // A new submission replaces the active requirement set (unchecked roles drop off).
+    const latestRequest = await this.prisma.agentCandidateRequest.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        items: {
+          select: {
+            roleNeededId: true,
+            requestedCount: true,
+            roleNeeded: {
+              select: { designation: true, priority: true },
+            },
+          },
+        },
+      },
+    });
+
+    const latestItems = latestRequest?.items ?? [];
+    if (latestItems.length === 0) {
+      return { data: [], summary: { totalFilled: 0, totalTarget: 0 } };
+    }
+
+    const requestedRoles = latestItems.map((item) => ({
+      roleNeededId: item.roleNeededId,
+      designation: item.roleNeeded?.designation ?? 'Unknown role',
+      priority: item.roleNeeded?.priority ?? 'medium',
+      requestedCount: item.requestedCount,
+    }));
+
+    // Count how many candidates the AC has nominated for each requested role
+    const scopeWhere = isAgentCoordinator
+      ? {
+          OR: [
+            { recruiterId: userId },
+            {
+              candidate: {
+                recruiterAssignments: {
+                  some: { recruiterId: userId, isActive: true },
+                },
+              },
+            },
+          ],
+        }
+      : {};
+
+    const counts = await Promise.all(
+      requestedRoles.map((role) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            projectId,
+            roleNeededId: role.roleNeededId,
+            ...scopeWhere,
+          },
+        }),
+      ),
+    );
+
+    const totalFilled = counts.reduce((sum, c) => sum + c, 0);
+    const totalTarget = requestedRoles.reduce((sum, r) => sum + r.requestedCount, 0);
+
+    return {
+      data: requestedRoles.map((role, i) => ({
+        roleNeededId: role.roleNeededId,
+        designation: role.designation,
+        priority: role.priority,
+        targetCount: role.requestedCount,
+        filledCount: counts[i],
+      })),
+      summary: { totalFilled, totalTarget },
     };
   }
 }

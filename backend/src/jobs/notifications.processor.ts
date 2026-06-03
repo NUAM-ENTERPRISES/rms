@@ -89,6 +89,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleDocumentationNotification(job);
         case 'RoleNotification':
           return await this.handleRoleNotification(job);
+        case 'AgentCandidateRequestCreated':
+          return await this.handleAgentCandidateRequestCreated(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -2678,6 +2680,89 @@ export class NotificationsProcessor extends WorkerHost {
     } catch (error: any) {
       this.logger.error(
         `Failed to process role notification: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleAgentCandidateRequestCreated(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing agent candidate request created event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        projectId,
+        projectTitle,
+        requestedById,
+        items,
+        notes,
+        link,
+      } = payload as {
+        requestId: string;
+        projectId: string;
+        projectTitle: string;
+        requestedById: string;
+        items: Array<{
+          roleNeededId: string;
+          requestedCount: number;
+          roleDesignation: string;
+        }>;
+        notes?: string | null;
+        link?: string;
+      };
+
+      const requestedBy = await this.prisma.user.findUnique({
+        where: { id: requestedById },
+        select: { name: true },
+      });
+
+      const recipients = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: 'Agent Coordinator',
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      if (recipients.length === 0) {
+        this.logger.warn('No Agent Coordinator users found for notification');
+        return;
+      }
+
+      const roleSummary = items
+        .map((item) => `${item.roleDesignation}: ${item.requestedCount}`)
+        .join(', ');
+      const requesterName = requestedBy?.name || 'A manager';
+
+      for (const recipient of recipients) {
+        await this.notificationsService.createNotification({
+          userId: recipient.id,
+          type: 'agent_candidate_request_created',
+          title: 'New Agent Candidate Request',
+          message: `${requesterName} requested agent candidates for ${projectTitle} (${roleSummary})${notes ? `. Notes: ${notes}` : ''}`,
+          link: link || `/projects/${projectId}`,
+          meta: {
+            requestId,
+            projectId,
+            requestedById,
+            routeTarget: `/projects/${projectId}`,
+            roleSummary,
+          },
+          idemKey: `${eventId}:${recipient.id}:agent_candidate_request_created`,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to process agent candidate request created: ${error.message}`,
         error.stack,
       );
       throw error;
