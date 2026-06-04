@@ -65,6 +65,38 @@
   animation: login-panel-border-spin 6s linear infinite;
 }
 
+@keyframes nav-recruiter-star-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+}
+
+@keyframes nav-recruiter-star-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgb(251 191 36 / 0.35));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgb(251 191 36 / 0.9));
+  }
+}
+
+.animate-nav-recruiter-star-pulse {
+  animation: nav-recruiter-star-pulse 2.2s ease-in-out infinite;
+}
+
+.animate-nav-recruiter-star-glow {
+  animation: nav-recruiter-star-glow 2.5s ease-in-out infinite;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

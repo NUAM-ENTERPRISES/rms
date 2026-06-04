@@ -128,6 +128,25 @@ export const RATING_TIER_RANGES: Array<{
   { label: "Top Performer", min: 151, max: null },
 ];
 
+const RATING_STAR_COUNTS: Record<PerformanceRatingLabel, number> = {
+  Poor: 1,
+  Average: 2,
+  Good: 3,
+  Excellent: 4,
+  Outstanding: 5,
+  "Top Performer": 5,
+};
+
+export const NAV_RATING_STAR_TOTAL = 5;
+
+/** Maps overall rating label to filled star count (1–5) for compact UI such as the navbar. */
+export function getRatingStarCount(label: PerformanceRatingLabel | string): number {
+  if (label in RATING_STAR_COUNTS) {
+    return RATING_STAR_COUNTS[label as PerformanceRatingLabel];
+  }
+  return 1;
+}
+
 export function formatRatingScoreRange(label: PerformanceRatingLabel | string): string {
   const tier = RATING_TIER_RANGES.find((t) => t.label === label);
   if (!tier) return "";

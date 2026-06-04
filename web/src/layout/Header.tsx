@@ -6,6 +6,7 @@ import { AccountStatusNavIndicator } from "@/components/molecules/AccountStatusN
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
 import { ProcessingRemindersBadge } from "@/features/processing/components/ProcessingRemindersBadge";
 import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
+import { RecruiterNavPerformanceRating } from "@/features/candidates/components/RecruiterNavPerformanceRating";
 import SessionAvailabilityToggles from "@/features/staff/components/SessionAvailabilityToggles";
 
 interface HeaderProps {
@@ -30,6 +31,7 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <RecruiterNavPerformanceRating />
           <RNRReminderBadge />
           {/* Processing team unified badge */}
           <ProcessingRemindersBadge />

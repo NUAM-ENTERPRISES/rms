@@ -5,6 +5,8 @@ import {
   getOverallRatingInfo,
   getRatingProgress,
   resolvePerformanceRating,
+  getRatingStarCount,
+  NAV_RATING_STAR_TOTAL,
 } from "../recruiter-performance-rating.util";
 
 describe("recruiter-performance-rating.util", () => {
@@ -44,5 +46,16 @@ describe("recruiter-performance-rating.util", () => {
     const deployed = data.find((d) => d.key === "deployed");
     expect(deployed?.count).toBe(2);
     expect(deployed?.contribution).toBe(20);
+  });
+
+  it("getRatingStarCount maps tiers to 1–5 stars", () => {
+    expect(NAV_RATING_STAR_TOTAL).toBe(5);
+    expect(getRatingStarCount("Poor")).toBe(1);
+    expect(getRatingStarCount("Average")).toBe(2);
+    expect(getRatingStarCount("Good")).toBe(3);
+    expect(getRatingStarCount("Excellent")).toBe(4);
+    expect(getRatingStarCount("Outstanding")).toBe(5);
+    expect(getRatingStarCount("Top Performer")).toBe(5);
+    expect(getRatingStarCount("Unknown")).toBe(1);
   });
 });
