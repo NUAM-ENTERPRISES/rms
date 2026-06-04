@@ -870,6 +870,106 @@ describe('CandidatesService', () => {
       });
     });
 
+    describe('workflow sub-status history list filter', () => {
+      const projectsClauseFromWhere = (where: any) => {
+        if (where?.projects) {
+          return where.projects;
+        }
+        const andClauses = Array.isArray(where?.AND)
+          ? where.AND
+          : where?.AND
+            ? [where.AND]
+            : [];
+        return andClauses.find((clause: any) => clause?.projects)?.projects;
+      };
+
+      beforeEach(() => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+      });
+
+      it('should filter registered list by project status history when subStatus is set', async () => {
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'registered',
+            subStatus: 'documents_verified',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const projects = projectsClauseFromWhere(
+          prismaService.candidate.findMany.mock.calls[0][0].where,
+        );
+        expect(projects.some.mainStatus.name).toBe('documents');
+        expect(
+          projects.some.projectStatusHistory.some.subStatus.name,
+        ).toBe('documents_verified');
+        expect(projects.some.subStatus).toBeUndefined();
+      });
+
+      it('should filter interview list by project status history when subStatus is set', async () => {
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'interview',
+            subStatus: 'interview_passed',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const projects = projectsClauseFromWhere(
+          prismaService.candidate.findMany.mock.calls[0][0].where,
+        );
+        expect(projects.some.mainStatus.name).toBe('interview');
+        expect(
+          projects.some.projectStatusHistory.some.subStatus.name,
+        ).toBe('interview_passed');
+      });
+
+      it('should filter processing list by project status history when subStatus is set', async () => {
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'processing',
+            subStatus: 'processing_failed',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const projects = projectsClauseFromWhere(
+          prismaService.candidate.findMany.mock.calls[0][0].where,
+        );
+        expect(projects.some.mainStatus.name).toBe('processing');
+        expect(
+          projects.some.projectStatusHistory.some.subStatus.name,
+        ).toBe('processing_failed');
+      });
+
+      it('should scope workflow history list filter by recruiterId on projects', async () => {
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'recruiter-abc',
+            status: 'registered',
+            subStatus: 'documents_verified',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const projects = projectsClauseFromWhere(
+          prismaService.candidate.findMany.mock.calls[0][0].where,
+        );
+        expect(projects.some.recruiterId).toBe('recruiter-abc');
+        expect(
+          projects.some.projectStatusHistory.some.subStatus.name,
+        ).toBe('documents_verified');
+      });
+    });
+
     describe('getCandidateOverviewStats registeredSubStatus', () => {
       const projectsClauseFromWhere = (where: any) => {
         if (where?.projects) {

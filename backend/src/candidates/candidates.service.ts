@@ -4850,6 +4850,27 @@ export class CandidatesService {
     };
   }
 
+  /** List filter: candidates with project history entry for a workflow sub-status. */
+  private buildWorkflowSubStatusProjectFilter(
+    mainStatusName: string,
+    subStatusName: string,
+    targetRecruiterId?: string,
+  ): Prisma.CandidateWhereInput['projects'] {
+    return {
+      some: {
+        ...(targetRecruiterId && targetRecruiterId !== 'all'
+          ? { recruiterId: targetRecruiterId }
+          : {}),
+        mainStatus: { name: mainStatusName },
+        projectStatusHistory: {
+          some: {
+            subStatus: { name: subStatusName },
+          },
+        },
+      },
+    };
+  }
+
   /** Unique candidates who reached a project sub-status at least once (history). */
   private countCandidatesWithSubStatusHistory(
     baseWhereForCounts: Prisma.CandidateWhereInput,
@@ -4902,8 +4923,14 @@ export class CandidatesService {
 
     const tableWhere = this.cloneOverviewScopeWhere(baseWhereForCounts);
 
-    // New: Main and Sub Status filtering
-    if (query.mainStatus || query.subStatus) {
+    const rawTileStatus = query.currentStatus || query.status;
+    const statusValue = rawTileStatus ? rawTileStatus.toLowerCase() : '';
+    const usesWorkflowHistorySubStatus =
+      !!query.subStatus &&
+      ['registered', 'interview', 'processing'].includes(statusValue);
+
+    // Main and sub-status filtering (current status); skipped when workflow history filter applies
+    if ((query.mainStatus || query.subStatus) && !usesWorkflowHistorySubStatus) {
       if (!tableWhere.projects) {
         tableWhere.projects = {
           some: {
@@ -4936,9 +4963,6 @@ export class CandidatesService {
       };
     }
 
-    const rawTileStatus = query.currentStatus || query.status;
-    const statusValue = rawTileStatus ? rawTileStatus.toLowerCase() : '';
-
     if (statusValue && statusValue !== 'all') {
       if (
         statusValue === 'profile_shortlisting' ||
@@ -4951,18 +4975,20 @@ export class CandidatesService {
           },
         };
       } else if (statusValue === 'registered') {
-        tableWhere.projects = {
-          some: {
-            mainStatus: { name: 'documents' },
-            ...(query.subStatus
-              ? { subStatus: { name: query.subStatus } }
-              : {
-                  subStatus: {
-                    name: { in: [...REGISTERED_DOC_SUB_STATUSES] },
-                  },
-                }),
-          },
-        };
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'documents',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : {
+              some: {
+                mainStatus: { name: 'documents' },
+                subStatus: {
+                  name: { in: [...REGISTERED_DOC_SUB_STATUSES] },
+                },
+              },
+            };
       } else if (statusValue === 'positive') {
         const existingAnd = Array.isArray(tableWhere.AND)
           ? tableWhere.AND
@@ -4991,19 +5017,29 @@ export class CandidatesService {
           },
         };
       } else if (statusValue === 'interview') {
-        tableWhere.projects = {
-          some: {
-            mainStatus: { name: 'interview' },
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'interview',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : {
+              some: {
+                mainStatus: { name: 'interview' },
+              },
+            };
       } else if (statusValue === 'processing') {
-        tableWhere.projects = {
-          some: {
-            mainStatus: { name: 'processing' },
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'processing',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : {
+              some: {
+                mainStatus: { name: 'processing' },
+              },
+            };
       } else if (statusValue === 'deployed') {
         tableWhere.OR = [
           { currentStatus: { statusName: 'Deployed' } },
