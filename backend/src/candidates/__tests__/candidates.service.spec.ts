@@ -16,6 +16,7 @@ import { PipelineService } from '../pipeline.service';
 import { UnifiedEligibilityService } from '../../candidate-eligibility/unified-eligibility.service';
 import { RecruiterAssignmentService } from '../services/recruiter-assignment.service';
 import { RnrRemindersService } from '../../rnr-reminders/rnr-reminders.service';
+import { CallbackRemindersService } from '../../callback-reminders/callback-reminders.service';
 import { WhatsAppService } from '../../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
 import { CandidateCodeService } from '../services/candidate-code.service';
@@ -44,6 +45,7 @@ describe('CandidatesService', () => {
     candidateStatus: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     candidateStatusHistory: {
       create: jest.fn(),
@@ -91,12 +93,33 @@ describe('CandidatesService', () => {
     assignRecruiterToCandidate: jest.fn(),
   };
   const mockRnrRemindersService = {};
+  const mockCallbackRemindersService = {};
   const mockWhatsAppService = {};
   const mockWhatsAppNotificationService = {};
   const mockCandidateCodeService: any = {
     reserveNextCode: jest.fn(),
   };
-  const mockCandidateListFilterService = {};
+  const mockCandidateListFilterService: any = {
+    applyCreatedAtFilter: jest.fn(),
+    applySearchFilter: jest.fn(),
+    applyAdvancedListFilters: jest.fn((where: any, query: any) => {
+      if (query.minAge == null && query.maxAge == null) return;
+      const now = new Date();
+      where.dateOfBirth = {};
+      if (query.maxAge != null) {
+        const earliest = new Date(now);
+        earliest.setFullYear(now.getFullYear() - query.maxAge);
+        earliest.setHours(0, 0, 0, 0);
+        where.dateOfBirth.gte = earliest;
+      }
+      if (query.minAge != null) {
+        const latest = new Date(now);
+        latest.setFullYear(now.getFullYear() - query.minAge);
+        latest.setHours(23, 59, 59, 999);
+        where.dateOfBirth.lte = latest;
+      }
+    }),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -122,6 +145,10 @@ describe('CandidatesService', () => {
           useValue: mockCandidateListFilterService,
         },
         { provide: RnrRemindersService, useValue: mockRnrRemindersService },
+        {
+          provide: CallbackRemindersService,
+          useValue: mockCallbackRemindersService,
+        },
         { provide: WhatsAppService, useValue: mockWhatsAppService },
         {
           provide: WhatsAppNotificationService,
@@ -133,6 +160,26 @@ describe('CandidatesService', () => {
     service = module.get<CandidatesService>(CandidatesService);
     prismaService = module.get(PrismaService);
     prismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(null);
+    prismaService.candidateStatus.findMany.mockImplementation(
+      async ({ where }: { where?: { OR?: Array<{ statusName?: { equals?: string } }> } }) => {
+        const names = (where?.OR ?? []).map((o) => o.statusName?.equals?.toLowerCase());
+        const map: Record<string, number> = {
+          interested: 2,
+          future: 7,
+          'on hold': 8,
+          'call back': 11,
+          qualified: 5,
+          'not interested': 3,
+          'other enquiry': 9,
+          rnr: 6,
+          'not eligible': 4,
+          deployed: 10,
+        };
+        return names
+          .filter((n): n is string => !!n && n in map)
+          .map((n) => ({ id: map[n] }));
+      },
+    );
   });
 
   afterEach(() => {
@@ -604,6 +651,222 @@ describe('CandidatesService', () => {
 
         expect(firstFindCall.where.dateOfBirth.gte.getTime()).toBe(expectedFrom.getTime());
         expect(firstFindCall.where.dateOfBirth.lte.getTime()).toBe(expectedTo.getTime());
+      });
+
+      it('should filter positive by CRM status including nominated candidates', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'positive',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(prismaService.candidateStatus.findMany).toHaveBeenCalled();
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        const positiveTileFilter = listWhere.AND.find(
+          (clause: any) => clause?.OR?.[0]?.currentStatusId?.in,
+        );
+        expect(positiveTileFilter.OR[0].currentStatusId.in).toEqual(
+          expect.arrayContaining([2, 5, 7, 8, 11]),
+        );
+        expect(listWhere.projects).toBeUndefined();
+
+        await service.getCandidateOverviewStats(
+          { recruiterId: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        const positiveCountWhere = countWheres.find((w: any) =>
+          w?.AND?.some(
+            (clause: any) =>
+              clause?.OR?.[0]?.currentStatusId?.in?.includes(2) &&
+              clause?.OR?.[0]?.currentStatusId?.in?.includes(5),
+          ),
+        );
+        expect(positiveCountWhere).toBeDefined();
+      });
+
+      it('should scope overview to recruiter assignment or project recruiterId', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'recruiter-abc',
+            status: 'positive',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        const recruiterScope = listWhere.AND.find(
+          (clause: any) => clause?.OR?.[0]?.recruiterAssignments,
+        );
+        expect(recruiterScope.OR[0].recruiterAssignments.some.recruiterId).toBe(
+          'recruiter-abc',
+        );
+        expect(recruiterScope.OR[1].projects.some.recruiterId).toBe(
+          'recruiter-abc',
+        );
+      });
+
+      it('should filter negative by CRM status without requiring no project', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'negative',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        const negativeTileFilter = listWhere.AND.find(
+          (clause: any) => clause?.currentStatusId?.in,
+        );
+        expect(negativeTileFilter.currentStatusId.in).toEqual(
+          expect.arrayContaining([3, 4, 6, 9]),
+        );
+        expect(listWhere.projects).toBeUndefined();
+      });
+
+      it('should keep tile counts stable when a dashboard tile filter is active', async () => {
+        prismaService.candidate.count.mockImplementation(async ({ where }: any) => {
+          const hasPositiveInAnd = where?.AND?.some(
+            (clause: any) => clause?.OR?.[0]?.currentStatusId?.in,
+          );
+          const hasUntouched =
+            where?.currentStatus?.statusName === 'Untouched' ||
+            where?.AND?.some(
+              (clause: any) => clause?.currentStatus?.statusName === 'Untouched',
+            );
+          if (hasPositiveInAnd && hasUntouched) {
+            return 0;
+          }
+          if (hasPositiveInAnd) {
+            return 3;
+          }
+          if (hasUntouched) {
+            return 1;
+          }
+          return 0;
+        });
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        const stats = await service.getCandidateOverviewStats(
+          {
+            recruiterId: 'recruiter-abc',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(stats.positive).toBe(3);
+        expect(stats.untouched).toBe(1);
+      });
+
+      it('should ignore status=all so dashboard tiles are not filtered to zero', async () => {
+        prismaService.candidate.count.mockResolvedValue(1);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'all',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(listWhere.currentStatus).toBeUndefined();
+      });
+
+      it('should filter profile shortlisting by nominated main status', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'profile_shortlisting',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(listWhere.projects.some.mainStatus.name).toBe('nominated');
+
+        prismaService.candidate.count.mockClear();
+        await service.getCandidateOverviewStats(
+          { recruiterId: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        expect(
+          countWheres.some(
+            (w: any) => w?.projects?.some?.mainStatus?.name === 'nominated',
+          ),
+        ).toBe(true);
+      });
+
+      it('should filter registered by documents sub-statuses after send for verification', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'registered',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        expect(listWhere.projects.some.mainStatus.name).toBe('documents');
+        expect(listWhere.projects.some.subStatus.name.in).toEqual(
+          expect.arrayContaining(['verification_in_progress_document']),
+        );
+
+        prismaService.candidate.count.mockClear();
+        await service.getCandidateOverviewStats(
+          { recruiterId: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        expect(
+          countWheres.some(
+            (w: any) =>
+              w?.projects?.some?.mainStatus?.name === 'documents' &&
+              w?.projects?.some?.subStatus?.name?.in?.includes(
+                'verification_in_progress_document',
+              ),
+          ),
+        ).toBe(true);
       });
     });
   });

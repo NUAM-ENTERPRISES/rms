@@ -60,11 +60,36 @@ export class CandidatesController {
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
 
+  @Get('overview/stats')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get recruiter dashboard overview tile counts',
+    description:
+      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination).',
+  })
+  async getOverviewStats(
+    @Query() query: QueryCandidateOverviewDto,
+    @Request() req,
+  ) {
+    const roles = req.user.roles || [];
+    const userId = req.user.id;
+    const stats = await this.candidatesService.getCandidateOverviewStats(
+      query,
+      userId,
+      roles,
+    );
+    return {
+      success: true,
+      stats,
+      message: 'Candidate overview stats retrieved successfully',
+    };
+  }
+
   @Get('overview')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get candidate dashboard overview',
-    description: 'Returns dashboard tiles and a paginated list of candidates.',
+    summary: 'Get candidate dashboard overview list',
+    description: 'Returns a paginated, filterable list of candidates for the overview table.',
   })
   async getOverview(@Query() query: QueryCandidateOverviewDto, @Request() req) {
     const roles = req.user.roles || [];
@@ -77,7 +102,6 @@ export class CandidatesController {
     return {
       success: true,
       data: result.candidates,
-      stats: result.stats,
       pagination: result.pagination,
       message: 'Candidate overview retrieved successfully',
     };

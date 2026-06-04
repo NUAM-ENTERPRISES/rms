@@ -46,7 +46,12 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { useGetCandidateOverviewQuery, useTransferCandidateMutation, useBulkTransferCandidatesMutation } from "@/features/candidates/api";
+import {
+  useGetCandidateOverviewQuery,
+  useGetCandidateOverviewStatsQuery,
+  useTransferCandidateMutation,
+  useBulkTransferCandidatesMutation,
+} from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -169,14 +174,28 @@ export default function CandidateOverviewPage() {
   ].filter(Boolean).length;
 
   // Fetch live statuses from API only when a workflow tile is active
-  const isWorkflowActive = ["registered", "documentation", "interview", "processing"].includes(filters.status);
-  
-  // Use the new simplified endpoint for sub-statuses for the main stage
-  const activeMainStage = filters.status === 'documentation' ? 'documents' : filters.status;
+  const isWorkflowActive = [
+    "profile_shortlisting",
+    "nominated",
+    "registered",
+    "interview",
+    "processing",
+  ].includes(filters.status);
+
+  const activeMainStage = (() => {
+    if (filters.status === "registered") {
+      return "documents";
+    }
+    if (filters.status === "profile_shortlisting" || filters.status === "nominated") {
+      return "nominated";
+    }
+    return filters.status;
+  })();
 
   // Main Query
   const requestPayload = {
     ...filters,
+    status: filters.status === "all" ? undefined : filters.status,
     recruiterId: filters.recruiterId === "all" ? undefined : filters.recruiterId,
     gender: filters.gender === "all" ? undefined : filters.gender,
     dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
@@ -189,15 +208,29 @@ export default function CandidateOverviewPage() {
     maxAge: filters.maxAge,
   };
 
+  const {
+    status: _tileStatus,
+    currentStatus: _currentStatus,
+    mainStatus: _mainStatus,
+    subStatus: _subStatus,
+    processingStep: _processingStep,
+    page: _page,
+    limit: _limit,
+    ...statsRequestPayload
+  } = requestPayload;
+
+  const { data: statsResponse } = useGetCandidateOverviewStatsQuery(statsRequestPayload);
   const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
 
   const candidates = data?.data || [];
-  const statsData = data?.stats || {
+  const statsData = statsResponse?.stats || {
     total: 0,
     positive: 0,
     untouched: 0,
     negative: 0,
     nominated: 0,
+    profileShortlisting: 0,
+    registered: 0,
     interviewAssigned: 0,
     documentReceived: 0,
     medical: 0,
@@ -221,10 +254,10 @@ export default function CandidateOverviewPage() {
   const statTiles = [
     { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",                    statusFilter: "all"           },
     { label: "Untouched",           value: statsData.untouched ?? 0,                                    icon: UserCheck, accent: "amber",   subtitle: "Not yet contacted",               statusFilter: "untouched"     },
-    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold/Call Back", statusFilter: "positive"      },
-    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR/Not Eligible", statusFilter: "negative"      },
-    { label: "Registered",          value: statsData.registered ?? statsData.nominated,                 icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",     statusFilter: "registered"    },
-    { label: "Documentation",       value: statsData.documentation ?? statsData.documentReceived,       icon: FileSearch,accent: "purple",  subtitle: "Main status: Documents",    statusFilter: "documentation" },
+    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold/Call Back — stays after nomination", statusFilter: "positive"      },
+    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR/Not Eligible/Other Enquiry", statusFilter: "negative"      },
+    { label: "Profile Shortlisting", value: statsData.profileShortlisting ?? statsData.nominated,     icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",           statusFilter: "profile_shortlisting" },
+    { label: "Registered",           value: statsData.registered ?? 0,                                  icon: FileSearch,accent: "purple",  subtitle: "CV/docs sent for verification",   statusFilter: "registered"         },
     { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Main status: Interview",    statusFilter: "interview"     },
     { label: "Processing",          value: statsData.processing ?? (statsData.medical + statsData.visa),icon: Repeat,    accent: "fuchsia", subtitle: "Main status: Processing",   statusFilter: "processing"    },
     { label: "Deployed",            value: statsData.deployed,                                          icon: Building2, accent: "teal",    subtitle: "Placements / Hired",        statusFilter: "deployed"      },
@@ -232,11 +265,13 @@ export default function CandidateOverviewPage() {
 
   const handleTileClick = (statusFilter?: string) => {
     setFilters((prev) => {
-      const isWorkflowStatus = statusFilter && ["documentation", "interview", "processing"].includes(statusFilter);
+      const isWorkflowStatus =
+        statusFilter &&
+        ["registered", "interview", "processing"].includes(statusFilter);
       let mainStatus = undefined;
-      
+
       if (isWorkflowStatus) {
-        if (statusFilter === 'documentation') mainStatus = 'documents';
+        if (statusFilter === "registered") mainStatus = "documents";
         else mainStatus = statusFilter;
       }
       
@@ -858,7 +893,7 @@ export default function CandidateOverviewPage() {
                                   className="h-7 px-3 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 font-bold transition-all shadow-sm rounded-full gap-1.5"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (filters.status === "documentation") {
+                                    if (filters.status === "registered") {
                                       navigate(`/candidates/${candidate.id}/documentation-workflow`);
                                     } else if (filters.status === "interview") {
                                       navigate(`/candidates/${candidate.id}/interview-workflow`);

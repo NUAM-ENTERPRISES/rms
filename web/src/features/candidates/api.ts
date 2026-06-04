@@ -921,128 +921,230 @@ export interface GetCandidateProjectPipelineResponse {
     message: string;
 }
 
+export type CandidateOverviewStats = {
+  total: number;
+  positive: number;
+  untouched?: number;
+  negative: number;
+  /** Nominated to project (profile shortlisting). */
+  profileShortlisting?: number;
+  /** @deprecated Use profileShortlisting */
+  nominated: number;
+  /** Documents stage after Send for Verification. */
+  registered?: number;
+  documentReceived: number;
+  documentation?: number;
+  interviewAssigned: number;
+  interview?: number;
+  processing?: number;
+  medical: number;
+  visa: number;
+  deployed: number;
+};
+
+type CandidateOverviewQueryParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  currentStatus?: string;
+  recruiterId?: string;
+  dateFilter?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  gender?: string;
+  mainStatus?: string;
+  subStatus?: string;
+  processingStep?: string;
+  countryPreferences?: string[];
+  sectorTypes?: string[];
+  facilityPreferences?: string[];
+  sources?: string[];
+  source?: string;
+  minExperience?: number;
+  maxExperience?: number;
+  minSalary?: number;
+  maxSalary?: number;
+  minAge?: number;
+  maxAge?: number;
+  visaType?: string;
+  qualification?: string;
+  heightMin?: number;
+  heightMax?: number;
+  weightMin?: number;
+  weightMax?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
+  workExperienceCompany?: string;
+  workExperienceTitle?: string;
+};
+
+function appendCandidateOverviewQueryParams(
+  queryParams: URLSearchParams,
+  params: CandidateOverviewQueryParams,
+  options?: { includePagination?: boolean; includeTileFilters?: boolean },
+) {
+  const includePagination = options?.includePagination ?? true;
+  const includeTileFilters = options?.includeTileFilters ?? true;
+
+  if (includePagination && params.page) {
+    queryParams.append("page", params.page.toString());
+  }
+  if (includePagination && params.limit) {
+    queryParams.append("limit", params.limit.toString());
+  }
+  if (params.search) queryParams.append("search", params.search);
+  if (includeTileFilters && params.status) {
+    queryParams.append("status", params.status);
+  }
+  if (includeTileFilters && params.mainStatus) {
+    queryParams.append("mainStatus", params.mainStatus);
+  }
+  if (includeTileFilters && params.subStatus) {
+    queryParams.append("subStatus", params.subStatus);
+  }
+  if (includeTileFilters && params.processingStep) {
+    queryParams.append("processingStep", params.processingStep);
+  }
+  if (includeTileFilters && params.currentStatus) {
+    queryParams.append("currentStatus", params.currentStatus);
+  }
+  if (params.recruiterId) queryParams.append("recruiterId", params.recruiterId);
+  if (params.dateFilter) queryParams.append("dateFilter", params.dateFilter);
+  if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
+  if (params.dateTo) queryParams.append("dateTo", params.dateTo);
+  if (params.gender) queryParams.append("gender", params.gender);
+
+  if (params.countryPreferences) {
+    params.countryPreferences.forEach((cp) =>
+      queryParams.append("countryPreferences", cp),
+    );
+  }
+  if (params.sectorTypes) {
+    params.sectorTypes.forEach((st) => queryParams.append("sectorTypes", st));
+  }
+  if (params.facilityPreferences) {
+    params.facilityPreferences.forEach((fp) =>
+      queryParams.append("facilityPreferences", fp),
+    );
+  }
+  if (params.sources) {
+    params.sources.forEach((s) => queryParams.append("sources", s));
+  } else if (params.source) {
+    queryParams.append("source", params.source);
+  }
+
+  if (params.minExperience !== undefined) {
+    queryParams.append("minExperience", params.minExperience.toString());
+  }
+  if (params.maxExperience !== undefined) {
+    queryParams.append("maxExperience", params.maxExperience.toString());
+  }
+  if (params.minSalary !== undefined) {
+    queryParams.append("minSalary", params.minSalary.toString());
+  }
+  if (params.maxSalary !== undefined) {
+    queryParams.append("maxSalary", params.maxSalary.toString());
+  }
+  if (params.minAge !== undefined) {
+    queryParams.append("minAge", params.minAge.toString());
+  }
+  if (params.maxAge !== undefined) {
+    queryParams.append("maxAge", params.maxAge.toString());
+  }
+  if (params.visaType) queryParams.append("visaType", params.visaType);
+  if (params.qualification) {
+    queryParams.append("qualification", params.qualification);
+  }
+  if (params.heightMin !== undefined) {
+    queryParams.append("heightMin", params.heightMin.toString());
+  }
+  if (params.heightMax !== undefined) {
+    queryParams.append("heightMax", params.heightMax.toString());
+  }
+  if (params.weightMin !== undefined) {
+    queryParams.append("weightMin", params.weightMin.toString());
+  }
+  if (params.weightMax !== undefined) {
+    queryParams.append("weightMax", params.weightMax.toString());
+  }
+  if (params.skinTone) queryParams.append("skinTone", params.skinTone);
+  if (params.languageProficiency) {
+    queryParams.append("languageProficiency", params.languageProficiency);
+  }
+  if (params.smartness) queryParams.append("smartness", params.smartness);
+  if (params.licensingExam) {
+    queryParams.append("licensingExam", params.licensingExam);
+  }
+  if (params.dataFlow !== undefined) {
+    queryParams.append("dataFlow", String(params.dataFlow));
+  }
+  if (params.eligibility !== undefined) {
+    queryParams.append("eligibility", String(params.eligibility));
+  }
+  if (params.workExperienceCompany) {
+    queryParams.append("workExperienceCompany", params.workExperienceCompany);
+  }
+  if (params.workExperienceTitle) {
+    queryParams.append("workExperienceTitle", params.workExperienceTitle);
+  }
+}
+
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getCandidateOverviewStats: builder.query<
+      { stats: CandidateOverviewStats },
+      CandidateOverviewQueryParams
+    >({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        appendCandidateOverviewQueryParams(queryParams, params, {
+          includePagination: false,
+          includeTileFilters: false,
+        });
+        return `/candidates/overview/stats?${queryParams.toString()}`;
+      },
+      transformResponse: (response: {
+        success?: boolean;
+        stats?: CandidateOverviewStats;
+        message?: string;
+      }) => ({
+        stats: response.stats ?? {
+          total: 0,
+          positive: 0,
+          untouched: 0,
+          negative: 0,
+          nominated: 0,
+          profileShortlisting: 0,
+          registered: 0,
+          interviewAssigned: 0,
+          documentReceived: 0,
+          medical: 0,
+          visa: 0,
+          deployed: 0,
+        },
+      }),
+      providesTags: ["Candidate"],
+    }),
     getCandidateOverview: builder.query<
       {
         data: Candidate[];
-        stats: {
-          total: number;
-          positive: number;
-          untouched?: number;
-          negative: number;
-          nominated: number;
-          registered?: number;
-          documentReceived: number;
-          documentation?: number;
-          interviewAssigned: number;
-          interview?: number;
-          processing?: number;
-          medical: number;
-          visa: number;
-          deployed: number;
-        };
         pagination?: any;
       },
-      any
+      CandidateOverviewQueryParams
     >({
-      query: (params: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        status?: string;
-        currentStatus?: string;
-        recruiterId?: string;
-        dateFilter?: string;
-        dateFrom?: string;
-        dateTo?: string;
-        gender?: string;
-        mainStatus?: string;
-        subStatus?: string;
-        processingStep?: string;
-        countryPreferences?: string[];
-        sectorTypes?: string[];
-        facilityPreferences?: string[];
-        sources?: string[];
-        source?: string;
-        minExperience?: number;
-        maxExperience?: number;
-        minSalary?: number;
-        maxSalary?: number;
-        minAge?: number;
-        maxAge?: number;
-        visaType?: string;
-        qualification?: string;
-        heightMin?: number;
-        heightMax?: number;
-        weightMin?: number;
-        weightMax?: number;
-        skinTone?: string;
-        languageProficiency?: string;
-        smartness?: string;
-        licensingExam?: string;
-        dataFlow?: boolean;
-        eligibility?: boolean;
-        workExperienceCompany?: string;
-        workExperienceTitle?: string;
-      }) => {
+      query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        if (params.search) queryParams.append("search", params.search);
-        if (params.status) queryParams.append("status", params.status);
-        if (params.mainStatus) queryParams.append("mainStatus", params.mainStatus);
-        if (params.subStatus) queryParams.append("subStatus", params.subStatus);
-        if (params.processingStep) queryParams.append("processingStep", params.processingStep);
-        if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus);
-        if (params.recruiterId) queryParams.append("recruiterId", params.recruiterId);
-        if (params.dateFilter) queryParams.append("dateFilter", params.dateFilter);
-        if (params.dateFrom) queryParams.append("dateFrom", params.dateFrom);
-        if (params.dateTo) queryParams.append("dateTo", params.dateTo);
-        if (params.gender) queryParams.append("gender", params.gender);
-        
-        if (params.countryPreferences) {
-          params.countryPreferences.forEach((cp: string) => queryParams.append("countryPreferences", cp));
-        }
-        if (params.sectorTypes) {
-          params.sectorTypes.forEach((st: string) => queryParams.append("sectorTypes", st));
-        }
-        if (params.facilityPreferences) {
-          params.facilityPreferences.forEach((fp: string) => queryParams.append("facilityPreferences", fp));
-        }
-        if (params.sources) {
-          params.sources.forEach((s: string) => queryParams.append("sources", s));
-        } else if (params.source) {
-          queryParams.append("source", params.source);
-        }
-
-        if (params.minExperience !== undefined) queryParams.append("minExperience", params.minExperience.toString());
-        if (params.maxExperience !== undefined) queryParams.append("maxExperience", params.maxExperience.toString());
-        if (params.minSalary !== undefined) queryParams.append("minSalary", params.minSalary.toString());
-        if (params.maxSalary !== undefined) queryParams.append("maxSalary", params.maxSalary.toString());
-        if (params.minAge !== undefined) queryParams.append("minAge", params.minAge.toString());
-        if (params.maxAge !== undefined) queryParams.append("maxAge", params.maxAge.toString());
-        if (params.visaType) queryParams.append("visaType", params.visaType);
-        if (params.qualification) queryParams.append("qualification", params.qualification);
-        if (params.heightMin !== undefined) queryParams.append("heightMin", params.heightMin.toString());
-        if (params.heightMax !== undefined) queryParams.append("heightMax", params.heightMax.toString());
-        if (params.weightMin !== undefined) queryParams.append("weightMin", params.weightMin.toString());
-        if (params.weightMax !== undefined) queryParams.append("weightMax", params.weightMax.toString());
-        if (params.skinTone) queryParams.append("skinTone", params.skinTone);
-        if (params.languageProficiency) queryParams.append("languageProficiency", params.languageProficiency);
-        if (params.smartness) queryParams.append("smartness", params.smartness);
-        if (params.licensingExam) queryParams.append("licensingExam", params.licensingExam);
-        if (params.dataFlow !== undefined) queryParams.append("dataFlow", String(params.dataFlow));
-        if (params.eligibility !== undefined) queryParams.append("eligibility", String(params.eligibility));
-        if (params.workExperienceCompany) queryParams.append("workExperienceCompany", params.workExperienceCompany);
-        if (params.workExperienceTitle) queryParams.append("workExperienceTitle", params.workExperienceTitle);
-
+        appendCandidateOverviewQueryParams(queryParams, params);
         return `/candidates/overview?${queryParams.toString()}`;
       },
       transformResponse: (response: {
         success?: boolean;
         data?: Candidate[];
-        stats?: Record<string, number>;
         pagination?: unknown;
         message?: string;
       }) => {
@@ -1652,6 +1754,7 @@ export const candidatesApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useGetCandidateOverviewStatsQuery,
   useGetCandidateOverviewQuery,
   useGetCandidatesQuery,
   useGetCandidateByIdQuery,
