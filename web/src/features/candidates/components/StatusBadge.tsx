@@ -19,9 +19,24 @@ import { useStatusConfig } from "../hooks/useStatusConfig";
 interface StatusBadgeProps {
   status?: string;
   label?: string;
+  size?: "default" | "lg";
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
+const BADGE_SIZE_CLASSES = {
+  default: "gap-1.5 px-2.5 py-1 text-xs",
+  lg: "gap-2 px-4 py-1.5 text-sm",
+} as const;
+
+const BADGE_ICON_SIZE_CLASSES = {
+  default: "h-3.5 w-3.5",
+  lg: "h-4 w-4",
+} as const;
+
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  label,
+  size = "default",
+}) => {
   const { statusConfig } = useStatusConfig();
   const safeStatus = (status || "unknown").toLowerCase().trim().replace(/_/g, " ");
   
@@ -32,8 +47,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
 
   if (!config) {
     return (
-      <Badge className="bg-slate-100 text-slate-800 border-slate-200 border gap-1 px-2 py-1 shadow-sm">
-        <AlertTriangle className="h-3 w-3" />
+      <Badge
+        className={`border border-slate-200 bg-slate-100 text-slate-800 shadow-sm ${BADGE_SIZE_CLASSES[size]}`}
+      >
+        <AlertTriangle className={BADGE_ICON_SIZE_CLASSES[size]} aria-hidden />
         {label || (status ? status.charAt(0).toUpperCase() + status.slice(1) : "Unknown")}
       </Badge>
     );
@@ -90,8 +107,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label }) => {
   const customClass = colorMap[safeStatus] || config.badgeClass;
 
   return (
-    <Badge className={`${customClass} border gap-1.5 px-2.5 py-1 font-bold shadow-sm transition-all hover:shadow-md`}>
-      <Icon className="h-3.5 w-3.5" />
+    <Badge
+      className={`${customClass} border font-bold shadow-sm transition-all hover:shadow-md ${BADGE_SIZE_CLASSES[size]}`}
+    >
+      <Icon className={BADGE_ICON_SIZE_CLASSES[size]} aria-hidden />
       {label || config.label}
     </Badge>
   );

@@ -60,6 +60,35 @@ describe('CandidateProjectsService - getProjectOverview role scoping', () => {
     });
   });
 
+  it('filters by subStatus name when provided', async () => {
+    await service.getProjectOverview(
+      'proj-1',
+      { subStatus: 'interview_passed' } as any,
+      'user-1',
+      ['Manager'],
+    );
+
+    const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];
+    expect(findArgs.where).toMatchObject({
+      projectId: 'proj-1',
+      subStatus: { name: 'interview_passed' },
+    });
+  });
+
+  it('filters by multiple subStatuses when subStatuses is provided', async () => {
+    await service.getProjectOverview(
+      'proj-1',
+      { subStatuses: 'pending_documents,documents_submitted' } as any,
+      'user-1',
+      ['Manager'],
+    );
+
+    const findArgs = mockPrisma.candidateProjects.findMany.mock.calls[0]?.[0];
+    expect(findArgs.where).toMatchObject({
+      subStatus: { name: { in: ['pending_documents', 'documents_submitted'] } },
+    });
+  });
+
   it('does not add recruiterId scope when Agent Coordinator is also Manager', async () => {
     await service.getProjectOverview(
       'proj-1',

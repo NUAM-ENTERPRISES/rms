@@ -149,6 +149,8 @@ export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
 export interface QueryProjectsRequest {
   search?: string;
   status?: "active" | "completed" | "cancelled";
+  priority?: "low" | "medium" | "high" | "urgent";
+  isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
   page?: number;

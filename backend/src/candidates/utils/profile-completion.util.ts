@@ -66,6 +66,98 @@ const REQUIRED_DOC_LABELS: Record<CandidateProfileRequiredDocumentId, string> =
     registration_certificate: 'Registration certificate',
   };
 
+/** Display labels for repository / recruiter mandatory checklist UI. */
+export const DOCUMENT_REPOSITORY_LABELS: Record<
+  CandidateProfileRequiredDocumentId,
+  string
+> = {
+  resume: 'Resume',
+  degree: 'Degree Certificate',
+  photo: 'Passport Size Photo',
+  passport: 'Passport Copy',
+  aadhaar: 'Aadhaar Card',
+  registration_certificate: 'Registration Certificate',
+};
+
+export type DocumentRepositorySlotRow = {
+  key: CandidateProfileRequiredDocumentId;
+  label: string;
+  uploadDocType: string;
+  satisfied: boolean;
+};
+
+export function getDocumentRepositorySlots(
+  documents: Array<{ docType: string }>,
+): DocumentRepositorySlotRow[] {
+  const uploaded = collectUploadedDocTypes(documents);
+  return CANDIDATE_PROFILE_REQUIRED_DOCUMENTS.map((id) => ({
+    key: id,
+    label: DOCUMENT_REPOSITORY_LABELS[id],
+    uploadDocType: DOCUMENT_REPOSITORY_UPLOAD_TYPE[id],
+    satisfied: hasRequiredDocument(uploaded, id),
+  }));
+}
+
+/** Matches `DOCUMENT_REPOSITORY_UPLOAD_TYPE` in web profileCompletion.ts */
+export const DOCUMENT_REPOSITORY_UPLOAD_TYPE: Record<
+  CandidateProfileRequiredDocumentId,
+  string
+> = {
+  resume: 'resume',
+  degree: 'degree_certificate',
+  photo: 'passport_photo',
+  passport: 'passport_copy',
+  aadhaar: 'aadhaar',
+  registration_certificate: 'registration_certificate',
+};
+
+export type DocumentRepositoryMissingSlot = {
+  key: CandidateProfileRequiredDocumentId;
+  label: string;
+  uploadDocType: string;
+};
+
+export type DocumentRepositoryCompletion = {
+  percent: number;
+  requiredCount: number;
+  completedCount: number;
+  typeMissingCount: number;
+  missing: DocumentRepositoryMissingSlot[];
+};
+
+/** Document Repository tab scoring only (six mandatory document types). */
+export function computeDocumentRepositoryCompletion(
+  documents: Array<{ docType: string }>,
+): DocumentRepositoryCompletion {
+  const uploaded = collectUploadedDocTypes(documents);
+  const missing: DocumentRepositoryMissingSlot[] = [];
+
+  for (const id of CANDIDATE_PROFILE_REQUIRED_DOCUMENTS) {
+    if (!hasRequiredDocument(uploaded, id)) {
+      missing.push({
+        key: id,
+        label: REQUIRED_DOC_LABELS[id],
+        uploadDocType: DOCUMENT_REPOSITORY_UPLOAD_TYPE[id],
+      });
+    }
+  }
+
+  const requiredCount = CANDIDATE_PROFILE_REQUIRED_DOCUMENTS.length;
+  const completedCount = requiredCount - missing.length;
+  const percent =
+    requiredCount > 0
+      ? Math.round((completedCount / requiredCount) * 100)
+      : 0;
+
+  return {
+    percent,
+    requiredCount,
+    completedCount,
+    typeMissingCount: missing.length,
+    missing,
+  };
+}
+
 function hasEmail(email?: string | null): boolean {
   return Boolean(email && String(email).trim().length > 0);
 }
@@ -91,7 +183,7 @@ function collectUploadedDocTypes(
 ): Set<string> {
   const set = new Set<string>();
   for (const d of documents) {
-    if (d?.docType) set.add(String(d.docType).trim());
+    if (d?.docType) set.add(String(d.docType).trim().toLowerCase());
   }
   return set;
 }
@@ -102,7 +194,7 @@ function hasRequiredDocument(
 ): boolean {
   const satisfiers =
     PROFILE_DOCUMENT_SATISFIERS[canonicalId] ?? [canonicalId];
-  return satisfiers.some((t) => uploaded.has(t));
+  return satisfiers.some((t) => uploaded.has(String(t).toLowerCase()));
 }
 
 export type CandidateProfileCompletionInput = {

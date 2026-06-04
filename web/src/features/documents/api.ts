@@ -171,6 +171,27 @@ export interface RecruiterDocumentItem {
     totalDocsToUpload: number;
     docsPercentage: number;
   };
+  documentChecklist?: {
+    rows: Array<{
+      key: string;
+      docType: string;
+      mandatory: boolean;
+      isUploaded: boolean;
+      fileName?: string | null;
+    }>;
+  };
+  mandatoryDocuments?: {
+    percent: number;
+    uploaded: number;
+    required: number;
+    missingCount: number;
+    slots: Array<{
+      key: string;
+      label: string;
+      satisfied: boolean;
+      uploadDocType?: string;
+    }>;
+  };
   lastAction?: {
     status: string;
     performedBy: string;
@@ -194,11 +215,13 @@ export interface RecruiterDocumentsResponse {
     totalPages: number;
   };
   counts?: {
+    nominated?: number;
     pending: number;
     pendingUpload?: number;
     verified: number;
     rejected: number;
     inScreening?: number;
+    mandatoryDocuments?: number;
   };
 }
 
@@ -211,10 +234,12 @@ export interface RecruiterVerifiedRejectedDocumentsResponse {
     totalPages: number;
   };
   counts: {
+    nominated?: number;
     pending: number;
     verified: number;
     rejected: number;
     inScreening?: number;
+    mandatoryDocuments?: number;
   };
 }
 

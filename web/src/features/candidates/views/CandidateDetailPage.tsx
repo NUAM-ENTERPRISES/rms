@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
@@ -73,9 +73,15 @@ const CandidatePipeline = React.lazy(() =>
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
 
+export type CandidateDetailNavigateState = {
+  activeTab?: string;
+  uploadDocType?: string;
+};
+
 export default function CandidateDetailPage() { 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
   const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
     null
@@ -164,6 +170,17 @@ export default function CandidateDetailPage() {
     setActiveTab("documents");
     setPendingUploadDocType(DOCUMENT_REPOSITORY_UPLOAD_TYPE.passport);
   };
+
+  useEffect(() => {
+    const state = location.state as CandidateDetailNavigateState | null;
+    if (!state) return;
+    if (state.activeTab) {
+      setActiveTab(state.activeTab);
+    }
+    if (state.uploadDocType) {
+      setPendingUploadDocType(state.uploadDocType);
+    }
+  }, [location.key, location.state]);
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -389,57 +406,68 @@ export default function CandidateDetailPage() {
     title="Click to update status"
   >
     {isOnHold ? (
-      <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
-        <div className="flex flex-col items-start gap-1">
-          <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Status</span>
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+      <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">
+        <div className="flex flex-col items-start gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-amber-500">
+            Status
+          </span>
+          <div className="scale-105 origin-left">
+            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+          </div>
         </div>
-        <div className="w-px h-8 bg-amber-200" />
-        <div className="flex flex-col gap-0.5">
+        <div className="h-10 w-px bg-amber-200" />
+        <div className="flex flex-col gap-1">
           {candidate.updatedAt && (
-            <div className="flex items-center gap-1.5 opacity-70">
-              <RefreshCw className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
+            <div className="flex items-center gap-2 opacity-70">
+              <RefreshCw className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
                 Updated {formatDate(candidate.updatedAt)}
               </span>
             </div>
-          )}          {candidate.onHoldDuration != null && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Clock className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
-                Duration: {candidate.onHoldDuration} day{candidate.onHoldDuration !== 1 ? 's' : ''}
+          )}
+          {candidate.onHoldDuration != null && (
+            <div className="flex items-center gap-2 opacity-80">
+              <Clock className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
+                Duration: {candidate.onHoldDuration} day
+                {candidate.onHoldDuration !== 1 ? "s" : ""}
               </span>
             </div>
           )}
           {candidate.onHoldUntil && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Calendar className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
+            <div className="flex items-center gap-2 opacity-80">
+              <Calendar className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
                 Until: {formatDate(candidate.onHoldUntil)}
               </span>
             </div>
-          )}        </div>
+          )}
+        </div>
       </div>
     ) : isFuture ? (
-      <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
-        <div className="flex flex-col items-start gap-1">
-          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none">Status</span>
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+      <div className="flex items-center gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">
+        <div className="flex flex-col items-start gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-indigo-500">
+            Status
+          </span>
+          <div className="scale-105 origin-left">
+            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+          </div>
         </div>
-        <div className="w-px h-8 bg-indigo-200" />
-        <div className="flex flex-col gap-0.5">
+        <div className="h-10 w-px bg-indigo-200" />
+        <div className="flex flex-col gap-1">
           {candidate.updatedAt && (
-            <div className="flex items-center gap-1.5 opacity-70">
-              <RefreshCw className="h-2.5 w-2.5 text-indigo-500" />
-              <span className="text-[9px] font-medium text-indigo-600">
+            <div className="flex items-center gap-2 opacity-70">
+              <RefreshCw className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+              <span className="text-[10px] font-medium text-indigo-600">
                 Updated {formatDate(candidate.updatedAt)}
               </span>
             </div>
           )}
           {candidate.futureDate && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Calendar className="h-2.5 w-2.5 text-indigo-500" />
-              <span className="text-[9px] font-medium text-indigo-600">
+            <div className="flex items-center gap-2 opacity-80">
+              <Calendar className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+              <span className="text-[10px] font-medium text-indigo-600">
                 Available: {formatDate(candidate.futureDate)}
               </span>
             </div>
@@ -447,13 +475,14 @@ export default function CandidateDetailPage() {
         </div>
       </div>
     ) : (
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-[15px]">
+      <div className="flex items-center gap-4 rounded-2xl border border-transparent px-4 py-2.5 transition-all duration-200 group-hover:border-slate-200 group-hover:bg-slate-50/80 group-hover:shadow-sm">
+        <span className="ml-1 text-md font-bold uppercase tracking-widest leading-none text-slate-400">
           Status
         </span>
-        <div className="group-hover:scale-105 transition-transform duration-200">
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-        </div>
+        <StatusBadge
+          size="lg"
+          status={candidate.currentStatus?.statusName ?? "unknown"}
+        />
       </div>
     )}
   </div>

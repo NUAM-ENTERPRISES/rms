@@ -1,4 +1,4 @@
-import React, { useState, useRef, type ChangeEvent } from "react";
+import React, { useState, useRef, useEffect, type ChangeEvent } from "react";
 import {
   Card,
   CardContent,
@@ -294,19 +294,14 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   setNewSkill,
 }) => {
   const certFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(workExperiences.length === 0);
+  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [certDocName, setCertDocName] = useState("");
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [certModalTarget, setCertModalTarget] = useState<
     "draft" | string | null
   >(null);
-  const [formExpanded, setFormExpanded] = useState(
-    workExperiences.length === 0
-  );
-  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
-
-  const isEditing = editingExperienceId !== null;
-  const isFormVisible = formExpanded || isEditing;
 
   const resetCertModalFields = () => {
     setCertDocName("");
@@ -410,8 +405,31 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     pendingCertBatches: [],
   });
 
-  const closeForm = () => {
-    setFormExpanded(false);
+  useEffect(() => {
+    if (workExperiences.length === 0 && !editingExperienceId) {
+      setIsFormOpen(true);
+    }
+  }, [workExperiences.length, editingExperienceId]);
+
+  const scrollToWorkExperienceForm = () => {
+    requestAnimationFrame(() => {
+      document
+        .getElementById("work-experience-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const openAddForm = () => {
+    setEditingExperienceId(null);
+    setNewWorkExperience(emptyWorkExperience());
+    setNewSkill("");
+    setOptionalDetailsOpen(false);
+    setIsFormOpen(true);
+    scrollToWorkExperienceForm();
+  };
+
+  const closeWorkExperienceForm = () => {
+    setIsFormOpen(false);
     setEditingExperienceId(null);
     setNewWorkExperience(emptyWorkExperience());
     setNewSkill("");
@@ -442,8 +460,8 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       }
       setNewWorkExperience(emptyWorkExperience());
       setNewSkill("");
-      setFormExpanded(false);
       setOptionalDetailsOpen(false);
+      setIsFormOpen(false);
     } else {
       toast.error("Job title and start date are required.");
     }
@@ -452,30 +470,18 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   const removeWorkExperience = (id: string) => {
     setWorkExperiences(workExperiences.filter((exp) => exp.id !== id));
     if (editingExperienceId === id) {
-      closeForm();
+      closeWorkExperienceForm();
     }
   };
 
   const editWorkExperience = (id: string) => {
     const experienceToEdit = workExperiences.find((exp) => exp.id === id);
     if (experienceToEdit) {
-      const { id: _, ...expData } = experienceToEdit;
+      const { id: _expId, ...expData } = experienceToEdit;
       setNewWorkExperience(expData);
       setEditingExperienceId(id);
-      setFormExpanded(true);
-      setOptionalDetailsOpen(
-        Boolean(
-          expData.salary ||
-            expData.location ||
-            expData.countryCode ||
-            expData.description ||
-            expData.skills.length > 0 ||
-            expData.achievements ||
-            (expData.pendingCertBatches ?? []).length > 0
-        )
-      );
-      const formElement = document.getElementById("work-experience-form");
-      formElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setIsFormOpen(true);
+      scrollToWorkExperienceForm();
     }
   };
 
@@ -689,59 +695,53 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   );
                 })}
               </ul>
+
+              {!isFormOpen && !editingExperienceId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={openAddForm}
+                  className="w-full gap-2 border-dashed"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Add more work experience
+                </Button>
+              )}
             </section>
           )}
 
-          {!isFormVisible ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-12 border-dashed border-primary/40 text-primary hover:bg-primary/5 hover:border-primary/60"
-              onClick={() => setFormExpanded(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" aria-hidden />
-              Add work experience
-            </Button>
-          ) : (
-            <div
-              id="work-experience-form"
-              className={cn(
-                "rounded-xl border bg-muted/20 p-5 space-y-5 transition-all",
-                isEditing
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-border"
-              )}
-            >
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-base font-semibold text-foreground">
-                      {isEditing ? "Edit role" : "New role"}
-                    </h4>
-                    {isEditing && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Pencil className="h-3 w-3" aria-hidden />
-                        Editing
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Fill in the basics first. Everything else is optional.
-                  </p>
-                </div>
-                {(workExperiences.length > 0 || isEditing) && (
-                  <Button
+          {(isFormOpen || editingExperienceId) && (
+          <div
+            id="work-experience-form"
+            className="border border-slate-200 rounded-xl p-6 bg-gradient-to-b from-slate-50/80 to-white relative transition-all duration-300 shadow-sm"
+          >
+            {editingExperienceId && (
+              <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-300">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
+                  <Pencil className="h-3 w-3" />
+                  Editing Mode
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={closeForm}
-                    className="shrink-0 text-muted-foreground"
+                    onClick={closeWorkExperienceForm}
+                    className="ml-1 hover:text-blue-900"
                   >
-                    <X className="h-4 w-4 mr-1" aria-hidden />
-                    Close form
-                  </Button>
-                )}
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
               </div>
+            )}
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold text-slate-800">
+                {editingExperienceId
+                  ? "Edit Work Experience"
+                  : "Add New Work Experience (Optional)"}
+              </h4>
+              <p className="text-sm text-slate-500 italic">
+                {editingExperienceId
+                  ? "Modify your work experience details below"
+                  : "You can skip this step and add experience later"}
+              </p>
+            </div>
 
               <FormSection
                 title="Role"
@@ -1017,56 +1017,46 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                 </CollapsibleContent>
               </Collapsible>
 
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2 border-t border-border">
-                {isEditing ? (
-                  <Button
-                    type="button"
-                    onClick={closeForm}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
-                ) : workExperiences.length > 0 ? (
-                  <Button
-                    type="button"
-                    onClick={closeForm}
-                    variant="outline"
-                  >
-                    Done adding
-                  </Button>
-                ) : null}
+            <div className="flex justify-end mt-4 gap-2">
+              {(editingExperienceId ||
+                (isFormOpen && workExperiences.length > 0)) && (
                 <Button
                   type="button"
-                  onClick={addWorkExperience}
-                  disabled={!canSave}
-                  className="sm:min-w-[180px]"
+                  onClick={closeWorkExperienceForm}
+                  variant="outline"
+                  className="border-slate-300 text-slate-600"
                 >
-                  {isEditing ? (
-                    <>
-                      <Pencil className="h-4 w-4 mr-2" aria-hidden />
-                      Save changes
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" aria-hidden />
-                      Save this role
-                    </>
-                  )}
+                  Cancel
                 </Button>
-              </div>
-
-              {!canSave && (
-                <p className="text-xs text-muted-foreground text-right">
-                  Enter a job title and start date to save this role.
-                </p>
               )}
+              <Button
+                type="button"
+                onClick={addWorkExperience}
+                disabled={!canSave}
+                className={
+                  editingExperienceId
+                    ? "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
+                    : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                }
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                {editingExperienceId
+                  ? "Update Experience"
+                  : "Add Work Experience"}
+              </Button>
             </div>
+          </div>
           )}
 
-          {workExperiences.length === 0 && !isFormVisible && (
-            <p className="text-center text-sm text-muted-foreground">
-              No work experience added yet. You can continue without adding any.
-            </p>
+          {workExperiences.length === 0 && !isFormOpen && !editingExperienceId && (
+            <Button
+              type="button"
+              onClick={openAddForm}
+              className="w-full gap-2"
+            >
+              <Plus className="h-4 w-4" aria-hidden />
+              Add work experience
+            </Button>
           )}
         </CardContent>
       </Card>

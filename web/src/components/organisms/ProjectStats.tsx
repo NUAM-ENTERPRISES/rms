@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 interface ProjectStatsProps {
   stats: ProjectStatsType;
   className?: string;
+  /** When false, tiles are display-only (no click, no filter footer). Default true. */
+  interactive?: boolean;
   onSelect?: (filters: { status?: string; isUrgent?: boolean; priority?: string }) => void;
   activeFilter?: { status?: string; isUrgent?: boolean; priority?: string };
 }
@@ -19,7 +21,8 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
 
 export default function ProjectStats({ 
   stats, 
-  className, 
+  className,
+  interactive = true,
   onSelect,
   activeFilter 
 }: ProjectStatsProps) {
@@ -63,39 +66,35 @@ export default function ProjectStats({
       {statsData.map((stat, i) => {
         const Icon = stat.icon;
         const s = accentStyles[stat.accent];
-        const isActive = (() => {
-          if (!activeFilter) return false;
+        const isActive =
+          interactive &&
+          (() => {
+            if (!activeFilter) return false;
 
-          const statKeys = Object.keys(stat.filter);
-          if (statKeys.length === 0) {
-            return (
-              !activeFilter.status &&
-              !activeFilter.isUrgent &&
-              !activeFilter.priority
+            const statKeys = Object.keys(stat.filter);
+            if (statKeys.length === 0) {
+              return (
+                !activeFilter.status &&
+                !activeFilter.isUrgent &&
+                !activeFilter.priority
+              );
+            }
+
+            return statKeys.every(
+              (key) =>
+                activeFilter[key as keyof typeof activeFilter] ===
+                stat.filter[key as keyof typeof stat.filter],
             );
-          }
+          })();
 
-          return statKeys.every(
-            (key) =>
-              activeFilter[key as keyof typeof activeFilter] ===
-              stat.filter[key as keyof typeof stat.filter],
-          );
-        })();
+        const cardClassName = cn(
+          "relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200",
+          s.card,
+          interactive && (isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md cursor-pointer focus:outline-none")
+        );
 
-        return (
-          <motion.button
-            key={stat.label}
-            type="button"
-            onClick={() => onSelect?.(stat.filter)}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: i * 0.08 }}
-            className={cn(
-              "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
-              s.card,
-              isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
-            )}
-          >
+        const cardContent = (
+          <>
             {isActive && (
               <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
             )}
@@ -109,11 +108,37 @@ export default function ProjectStats({
                 <Icon className={cn("h-5 w-5", s.icon)} />
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
-              <span>{isActive ? "Viewing now" : "Click to filter"}</span>
-              <ArrowUpRight className="h-3 w-3" />
-            </div>
+            {interactive && (
+              <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </div>
+            )}
+          </>
+        );
+
+        return interactive ? (
+          <motion.button
+            key={stat.label}
+            type="button"
+            onClick={() => onSelect?.(stat.filter)}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: i * 0.08 }}
+            className={cn("group", cardClassName)}
+          >
+            {cardContent}
           </motion.button>
+        ) : (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: i * 0.08 }}
+            className={cardClassName}
+          >
+            {cardContent}
+          </motion.div>
         );
       })}
     </div>
