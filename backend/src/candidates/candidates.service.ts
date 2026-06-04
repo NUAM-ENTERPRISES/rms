@@ -5553,6 +5553,36 @@ export class CandidatesService {
       };
     }
 
+    const countBaseWhere: typeof projectWhere = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'documents',
+          mode: 'insensitive',
+        },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
+
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
       where: projectWhere,
@@ -5652,6 +5682,8 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithUserDetails,
+      subStatusCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,
@@ -5709,6 +5741,36 @@ export class CandidatesService {
         },
       };
     }
+
+    const countBaseWhere: typeof projectWhere = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
 
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
@@ -5819,6 +5881,8 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithSchedulingInfo,
+      subStatusCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,
@@ -5885,6 +5949,67 @@ export class CandidatesService {
         },
       };
     }
+
+    const countBaseWhere: typeof projectWhere = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'processing',
+          mode: 'insensitive',
+        },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+
+    const projectsForStepCounts = await this.prisma.candidateProjects.findMany({
+      where: countBaseWhere,
+      select: {
+        processing: { select: { step: true } },
+      },
+    });
+
+    const processingStepKeys = [
+      'offer_letter',
+      'documents_received',
+      'hrd',
+      'data_flow',
+      'eligibility',
+      'prometric',
+      'council_registration',
+      'document_attestation',
+      'medical',
+      'biometrics',
+      'visa',
+      'emigration',
+      'ticket',
+    ] as const;
+
+    const stepCounts = processingStepKeys.reduce<Record<string, number>>((acc, key) => {
+      acc[key] = projectsForStepCounts.filter((row) =>
+        row.processing?.step?.toLowerCase().includes(key),
+      ).length;
+      return acc;
+    }, {});
+
+    const totalAll = projectsForStepCounts.length;
 
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
@@ -5963,6 +6088,9 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithSectorSteps,
+      subStatusCounts,
+      stepCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,

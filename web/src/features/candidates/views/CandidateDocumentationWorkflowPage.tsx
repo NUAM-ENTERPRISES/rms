@@ -1,32 +1,35 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useGetCandidateDocumentationWorkflowQuery, useGetStatusConfigQuery } from "../api";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  FileText, 
-  CheckCircle2, 
-  Clock, 
+import {
+  ArrowLeft,
+  FileText,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   Building2,
   Calendar,
+  Mail,
+  User,
   ExternalLink,
   UserCheck,
   XCircle,
   History,
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
+  LayoutGrid,
+  Upload,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
   Eye,
   Briefcase,
-  ShieldCheck,
-  ShieldX,
-  ShieldAlert,
   FileWarning,
   Hash,
   X,
-  Upload
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,19 +45,87 @@ import {
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { 
   Tooltip, 
   TooltipContent, 
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import type { ElementType } from "react";
+
+const TILE_ACCENT_STYLES: Record<
+  string,
+  { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }
+> = {
+  blue: {
+    card: "from-blue-50 via-white to-blue-50/30 border-blue-100",
+    icon: "text-blue-600",
+    iconBg: "bg-blue-100",
+    value: "text-blue-700",
+    ring: "ring-blue-500/40",
+    dot: "bg-blue-500",
+  },
+  indigo: {
+    card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100",
+    icon: "text-indigo-600",
+    iconBg: "bg-indigo-100",
+    value: "text-indigo-700",
+    ring: "ring-indigo-500/40",
+    dot: "bg-indigo-500",
+  },
+  amber: {
+    card: "from-amber-50 via-white to-amber-50/30 border-amber-100",
+    icon: "text-amber-600",
+    iconBg: "bg-amber-100",
+    value: "text-amber-700",
+    ring: "ring-amber-500/40",
+    dot: "bg-amber-500",
+  },
+  orange: {
+    card: "from-orange-50 via-white to-orange-50/30 border-orange-100",
+    icon: "text-orange-600",
+    iconBg: "bg-orange-100",
+    value: "text-orange-700",
+    ring: "ring-orange-500/40",
+    dot: "bg-orange-500",
+  },
+  emerald: {
+    card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100",
+    icon: "text-emerald-600",
+    iconBg: "bg-emerald-100",
+    value: "text-emerald-700",
+    ring: "ring-emerald-500/40",
+    dot: "bg-emerald-500",
+  },
+  red: {
+    card: "from-red-50 via-white to-red-50/30 border-red-100",
+    icon: "text-red-600",
+    iconBg: "bg-red-100",
+    value: "text-red-700",
+    ring: "ring-red-500/40",
+    dot: "bg-red-500",
+  },
+  purple: {
+    card: "from-purple-50 via-white to-purple-50/30 border-purple-100",
+    icon: "text-purple-600",
+    iconBg: "bg-purple-100",
+    value: "text-purple-700",
+    ring: "ring-purple-500/40",
+    dot: "bg-purple-500",
+  },
+};
+
+const TILE_ACCENTS = ["blue", "indigo", "amber", "orange", "emerald", "red", "purple"] as const;
+
+function getSubStatusTileIcon(name?: string): ElementType {
+  const key = name?.toLowerCase() ?? "";
+  if (key.includes("verified") || key.includes("submitted_to_client")) return ShieldCheck;
+  if (key.includes("rejected")) return ShieldX;
+  if (key.includes("revision") || key.includes("re_submission") || key.includes("verification")) return ShieldAlert;
+  if (key.includes("submitted")) return Upload;
+  if (key.includes("pending")) return Clock;
+  return FileText;
+}
 
 export default function CandidateDocumentationWorkflowPage() {
   const { id: candidateId } = useParams<{ id: string }>();
@@ -89,6 +160,44 @@ export default function CandidateDocumentationWorkflowPage() {
   const candidate = response?.candidate;
   const projects = response?.projects || [];
   const pagination = response?.pagination;
+  const subStatusCounts = response?.subStatusCounts ?? [];
+  const totalAll = response?.totalAll ?? pagination?.total ?? 0;
+
+  const countBySubStatusId = useMemo(() => {
+    const counts = subStatusCounts as Array<{ subStatusId: string; count: number }>;
+    return counts.reduce<Record<string, number>>((acc, row) => {
+      acc[row.subStatusId] = row.count;
+      return acc;
+    }, {});
+  }, [subStatusCounts]);
+
+  const statusTiles = useMemo(() => {
+    const statusTilesFromConfig = subStatuses.map((ss: { id: string; label?: string; name?: string; order?: number }, index: number) => ({
+      id: ss.id,
+      label: ss.label || ss.name || "Unknown",
+      name: ss.name,
+      count: countBySubStatusId[ss.id] ?? 0,
+      accent: TILE_ACCENTS[index % TILE_ACCENTS.length],
+      icon: getSubStatusTileIcon(ss.name),
+    }));
+
+    return [
+      {
+        id: "all",
+        label: "All Statuses",
+        name: "all",
+        count: totalAll,
+        accent: "blue" as const,
+        icon: LayoutGrid,
+      },
+      ...statusTilesFromConfig,
+    ];
+  }, [subStatuses, countBySubStatusId, totalAll]);
+
+  const activeStatusTile = useMemo(
+    () => statusTiles.find((tile) => tile.id === filters.subStatus),
+    [statusTiles, filters.subStatus],
+  );
 
   const getProjectStats = (p: any) => {
     let totalDocs = 0, verified = 0, pending = 0, rejected = 0;
@@ -133,88 +242,207 @@ export default function CandidateDocumentationWorkflowPage() {
   return (
     <div className="container mx-auto py-6 px-4 md:px-6 space-y-6 min-h-screen">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-2xl shadow-lg text-white">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl hover:bg-white/10 text-white border border-white/20 shrink-0">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            
-            <div className="relative shrink-0">
-              <ImageViewer 
-                src={candidate.profileImage}
-                title={`${candidate.firstName} ${candidate.lastName}`}
-                className="h-16 w-16 rounded-2xl border-2 border-white/30 shadow-lg"
-                enableHoverPreview={true}
-              />
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-emerald-500 border-2 border-white rounded-full shadow-sm z-10" title="Active" />
+      <header className="relative overflow-hidden rounded-2xl border border-amber-200/50 bg-gradient-to-br from-amber-600 via-amber-500 to-orange-600 text-white shadow-lg">
+        <div
+          className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-white/15 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 left-1/4 h-48 w-48 rounded-full bg-orange-300/25 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.12),transparent_50%)]"
+          aria-hidden
+        />
+
+        <div className="relative p-5 md:p-7 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate(-1)}
+                className="rounded-xl hover:bg-white/15 text-white border border-white/25 shrink-0 h-9 w-9"
+                aria-label="Go back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs md:text-sm text-amber-100 min-w-0">
+                <Link to="/candidates" className="hover:text-white transition-colors shrink-0">
+                  Candidates
+                </Link>
+                <span className="text-white/40 shrink-0">/</span>
+                <Link
+                  to={`/candidates/${candidateId}`}
+                  className="hover:text-white transition-colors truncate max-w-[120px] md:max-w-[200px]"
+                >
+                  {candidate.firstName} {candidate.lastName}
+                </Link>
+                <span className="text-white/40 shrink-0">/</span>
+                <span className="text-white font-medium shrink-0">Documentation</span>
+              </nav>
             </div>
+            <Button
+              asChild
+              variant="secondary"
+              size="sm"
+              className="shrink-0 h-8 rounded-lg bg-white/15 text-white border border-white/25 hover:bg-white/25 shadow-none"
+            >
+              <Link to={`/candidates/${candidateId}`}>
+                <User className="h-3.5 w-3.5 mr-1.5" />
+                View profile
+              </Link>
+            </Button>
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-              <h1 className="text-2xl font-bold tracking-tight truncate">
-                {candidate.firstName} {candidate.lastName}
-              </h1>
-              <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-xs w-fit">
-                <FileText className="h-3 w-3 mr-1" /> Documentation Stage
-              </Badge>
+          <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="relative shrink-0">
+                <div className="rounded-2xl p-0.5 bg-gradient-to-br from-white/50 to-white/10 shadow-lg">
+                  <ImageViewer
+                    src={candidate.profileImage}
+                    title={`${candidate.firstName} ${candidate.lastName}`}
+                    className="h-[4.5rem] w-[4.5rem] md:h-20 md:w-20 rounded-[0.875rem] border-2 border-white/40"
+                    enableHoverPreview={true}
+                  />
+                </div>
+                <div
+                  className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 border-2 border-white shadow-sm"
+                  title="Active candidate"
+                >
+                  <FileText className="h-3 w-3 text-white" />
+                </div>
+              </div>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                  <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">
+                    {candidate.firstName} {candidate.lastName}
+                  </h1>
+                  <Badge className="bg-white/20 text-white border-white/30 font-semibold px-3 py-1 rounded-full text-[11px] w-fit backdrop-blur-sm">
+                    <FileText className="h-3 w-3 mr-1" />
+                    Documentation workflow
+                  </Badge>
+                </div>
+                <p className="text-sm text-amber-100/90 mt-1">
+                  Track document verification across nominated projects
+                </p>
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  {candidate.email && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate max-w-[220px] md:max-w-none">{candidate.email}</span>
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3 py-1 text-xs text-amber-50">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    {format(new Date(), "dd MMM yyyy")}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-blue-100 mt-2">
-              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {format(new Date(), "dd MMM yyyy")}</span>
-              <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> {pagination?.total || 0} Projects</span>
-              {candidate.email && (
-                <span className="flex items-center gap-1.5 opacity-80"><FileText className="h-3.5 w-3.5" /> {candidate.email}</span>
-              )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:min-w-[280px] lg:max-w-sm shrink-0 w-full lg:w-auto">
+              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100">Total projects</p>
+                <p className="text-2xl font-bold tabular-nums mt-0.5">{totalAll}</p>
+              </div>
+              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100 truncate">
+                  {filters.subStatus === "all" ? "Showing" : "Filtered"}
+                </p>
+                <p className="text-lg font-bold tabular-nums mt-0.5 leading-tight">
+                  {filters.subStatus === "all" ? pagination?.total ?? 0 : activeStatusTile?.count ?? 0}
+                </p>
+                <p className="text-[10px] text-amber-100/80 truncate mt-0.5">
+                  {activeStatusTile?.label ?? "All statuses"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm px-3 py-2.5 col-span-2 sm:col-span-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-100">Stage</p>
+                <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                  Documents
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
+      {/* Search */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center bg-white p-3 rounded-xl shadow-sm border border-slate-200">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Search projects by title..." 
+          <Input
+            placeholder="Search projects by title..."
             className="pl-10 h-10 border-slate-200 focus-visible:ring-blue-500 rounded-lg bg-slate-50"
             value={filters.search}
-            onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+            onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400 hidden md:block" />
-          <Select 
-            value={filters.subStatus} 
-            onValueChange={(val) => setFilters(prev => ({ ...prev, subStatus: val, page: 1 }))}
-          >
-            <SelectTrigger className="w-full md:w-[220px] h-10 border-slate-200 rounded-lg bg-slate-50">
-              <SelectValue placeholder="All Sub-Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sub-Statuses</SelectItem>
-              {subStatuses.map((ss: any) => (
-                <SelectItem key={ss.id} value={ss.id}>{ss.label || ss.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {hasActiveFilters && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-10 w-10 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50"
-                    onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Clear Filters</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+        {hasActiveFilters && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 rounded-lg text-slate-600 border-slate-200 shrink-0"
+                  onClick={() => setFilters({ search: "", subStatus: "all", page: 1, limit: 5 })}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear filters
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reset search and status filter</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+
+      {/* Status tiles */}
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 px-1">
+          Filter by documentation status
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          {statusTiles.map((tile) => {
+            const Icon = tile.icon;
+            const accent = TILE_ACCENT_STYLES[tile.accent] ?? TILE_ACCENT_STYLES.blue;
+            const isActive = filters.subStatus === tile.id;
+
+            return (
+              <button
+                key={tile.id}
+                type="button"
+                onClick={() => setFilters((prev) => ({ ...prev, subStatus: tile.id, page: 1 }))}
+                aria-pressed={isActive}
+                aria-label={`${tile.label}: ${tile.count} projects`}
+                className={cn(
+                  "group relative flex items-center gap-2.5 text-left rounded-xl border bg-gradient-to-br min-h-[4.25rem] px-3 py-3 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+                  accent.card,
+                  isActive ? `ring-2 shadow-sm ${accent.ring}` : "hover:shadow-md",
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-2 right-2 h-1.5 w-1.5 rounded-full animate-pulse", accent.dot)} />
+                )}
+                <div className={cn("shrink-0 self-center rounded-lg p-2", accent.iconBg)}>
+                  <Icon className={cn("h-3.5 w-3.5", accent.icon)} />
+                </div>
+                <div className="min-w-0 flex-1 flex flex-col justify-center gap-1 py-0.5">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-500 leading-snug line-clamp-2">
+                    {tile.label}
+                  </p>
+                  <p className={cn("text-lg font-bold tabular-nums leading-none", accent.value)}>
+                    {tile.count}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -231,13 +459,13 @@ export default function CandidateDocumentationWorkflowPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <Accordion type="single" collapsible className="space-y-3" defaultValue={`project-${projects[0].id}`}>
-            {projects.map((p: any, index: number) => (
+          <Accordion type="single" collapsible className="space-y-3">
+            {projects.map((p: any) => (
               <AccordionItem key={p.id} value={`project-${p.id}`} className="border-none">
                 <Card className="overflow-hidden border-slate-200 shadow-sm hover:shadow-md transition-all rounded-xl bg-white">
-                  <AccordionTrigger className="px-5 py-4 hover:no-underline [&[data-state=open]]:bg-gradient-to-r [&[data-state=open]]:from-slate-50 [&[data-state=open]]:to-blue-50/30">
-                    <div className="flex flex-1 items-center justify-between text-left gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2 px-5 py-4 [&:has([data-state=open])]:bg-gradient-to-r [&:has([data-state=open])]:from-slate-50 [&:has([data-state=open])]:to-blue-50/30">
+                    <AccordionTrigger className="flex-1 px-0 py-0 hover:no-underline">
+                      <div className="flex flex-1 items-center text-left gap-3 min-w-0 pr-2">
                         <div className="flex items-center justify-center h-10 w-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg font-bold text-sm shrink-0">
                           <Hash className="h-4 w-4" />
                         </div>
@@ -260,21 +488,18 @@ export default function CandidateDocumentationWorkflowPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="hidden md:block shrink-0">
-                         <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 group h-8 font-semibold text-xs rounded-lg border-blue-200"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/projects/${p.projectId}`);
-                            }}
-                         >
-                            View Project <ExternalLink className="ml-1.5 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
-                         </Button>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
+                    </AccordionTrigger>
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="hidden md:inline-flex shrink-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 group h-8 font-semibold text-xs rounded-lg border-blue-200"
+                    >
+                      <Link to={`/projects/${p.projectId}`}>
+                        View Project <ExternalLink className="ml-1.5 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    </Button>
+                  </div>
                   
                   <AccordionContent className="p-0">
                     <div className="px-5 pb-5 border-t border-slate-100">
