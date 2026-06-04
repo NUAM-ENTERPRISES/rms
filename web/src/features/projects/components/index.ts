@@ -8,3 +8,9 @@ export type {
   ProjectQualificationSelectProps,
   EducationRequirement,
 } from "./ProjectQualificationSelect";
+export {
+  ProjectAdvancedFiltersSheet,
+  countProjectAdvancedFilters,
+  draftFromProjectFilters,
+} from "./ProjectAdvancedFiltersSheet";
+export type { ProjectAdvancedFiltersDraft } from "./ProjectAdvancedFiltersSheet";

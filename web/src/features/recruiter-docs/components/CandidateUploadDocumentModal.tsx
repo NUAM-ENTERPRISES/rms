@@ -16,6 +16,7 @@ import {
 } from "@/lib/document-upload";
 import { Plus, Briefcase } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -58,9 +59,11 @@ interface Props {
   }) => Promise<void> | void;
   isUploading?: boolean;
   workExperiences?: WorkExperience[];
+  /** Raise above popovers/tooltips (e.g. recruiter docs table). */
+  layerClassName?: string;
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, onClose, onUpload, isUploading, workExperiences }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, onClose, onUpload, isUploading, workExperiences, layerClassName }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -291,7 +294,10 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="sm:max-w-xl gap-3 p-5 sm:p-6">
+      <DialogContent
+        overlayClassName={layerClassName}
+        className={cn("sm:max-w-xl gap-3 p-5 sm:p-6", layerClassName)}
+      >
         <DialogHeader className="gap-1 space-y-0 pb-0">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Plus className="h-5 w-5 shrink-0 text-green-600" />

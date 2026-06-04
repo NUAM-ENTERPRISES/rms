@@ -48,3 +48,4 @@ export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";
 // Tile used across dashboards
 export { StatusTile } from "./StatusTile";
+export { default as ProjectFilters } from "./ProjectFilters";

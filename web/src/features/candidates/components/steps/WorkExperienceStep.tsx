@@ -1,4 +1,4 @@
-import React, { useState, useRef, type ChangeEvent } from "react";
+import React, { useState, useRef, useEffect, type ChangeEvent } from "react";
 import {
   Card,
   CardContent,
@@ -251,12 +251,59 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   setNewSkill,
 }) => {
   const certFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(workExperiences.length === 0);
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [certDocName, setCertDocName] = useState("");
   const [certFiles, setCertFiles] = useState<File[]>([]);
   const [certModalTarget, setCertModalTarget] = useState<
     "draft" | string | null
   >(null);
+
+  const emptyWorkExperience = (): Omit<WorkExperience, "id"> => ({
+    companyName: "",
+    departmentId: undefined,
+    roleCatalogId: "",
+    jobTitle: "",
+    startDate: "",
+    endDate: "",
+    isCurrent: false,
+    description: "",
+    salary: undefined,
+    location: "",
+    countryCode: "",
+    skills: [],
+    achievements: "",
+    pendingCertBatches: [],
+  });
+
+  useEffect(() => {
+    if (workExperiences.length === 0 && !editingExperienceId) {
+      setIsFormOpen(true);
+    }
+  }, [workExperiences.length, editingExperienceId]);
+
+  const scrollToWorkExperienceForm = () => {
+    requestAnimationFrame(() => {
+      document
+        .getElementById("work-experience-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const openAddForm = () => {
+    setEditingExperienceId(null);
+    setNewWorkExperience(emptyWorkExperience());
+    setNewSkill("");
+    setIsFormOpen(true);
+    scrollToWorkExperienceForm();
+  };
+
+  const closeWorkExperienceForm = () => {
+    setIsFormOpen(false);
+    setEditingExperienceId(null);
+    setNewWorkExperience(emptyWorkExperience());
+    setNewSkill("");
+  };
 
   const resetCertModalFields = () => {
     setCertDocName("");
@@ -343,23 +390,6 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     }));
   };
 
-  const emptyWorkExperience = (): Omit<WorkExperience, "id"> => ({
-    companyName: "",
-    departmentId: undefined,
-    roleCatalogId: "",
-    jobTitle: "",
-    startDate: "",
-    endDate: "",
-    isCurrent: false,
-    description: "",
-    salary: undefined,
-    location: "",
-    countryCode: "",
-    skills: [],
-    achievements: "",
-    pendingCertBatches: [],
-  });
-
   const addWorkExperience = () => {
     if (
       newWorkExperience.jobTitle &&
@@ -387,6 +417,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       }
       setNewWorkExperience(emptyWorkExperience());
       setNewSkill("");
+      setIsFormOpen(false);
     } else {
       toast.error(
         "Please fill in the required fields (Job Title and Start Date) to add this work experience entry."
@@ -397,21 +428,18 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   const removeWorkExperience = (id: string) => {
     setWorkExperiences(workExperiences.filter((exp) => exp.id !== id));
     if (editingExperienceId === id) {
-      setEditingExperienceId(null);
-      setNewWorkExperience(emptyWorkExperience());
+      closeWorkExperienceForm();
     }
   };
 
   const editWorkExperience = (id: string) => {
     const experienceToEdit = workExperiences.find((exp) => exp.id === id);
     if (experienceToEdit) {
-      const { id: _, ...expData } = experienceToEdit;
+      const { id: _expId, ...expData } = experienceToEdit;
       setNewWorkExperience(expData);
       setEditingExperienceId(id);
-      const formElement = document.getElementById("work-experience-form");
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: "smooth" });
-      }
+      setIsFormOpen(true);
+      scrollToWorkExperienceForm();
     }
   };
 
@@ -591,9 +619,23 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   );
                 })}
               </ul>
+
+              {!isFormOpen && !editingExperienceId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={openAddForm}
+                  className="w-full h-11 gap-2 border-dashed border-blue-300 bg-blue-50/50 text-blue-700 font-semibold hover:bg-blue-50 hover:border-blue-400"
+                  aria-label="Add another work experience"
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Add more work experience
+                </Button>
+              )}
             </div>
           )}
 
+          {(isFormOpen || editingExperienceId) && (
           <div
             id="work-experience-form"
             className="border border-slate-200 rounded-xl p-6 bg-gradient-to-b from-slate-50/80 to-white relative transition-all duration-300 shadow-sm"
@@ -605,10 +647,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                   Editing Mode
                   <button
                     type="button"
-                    onClick={() => {
-                      setEditingExperienceId(null);
-                      setNewWorkExperience(emptyWorkExperience());
-                    }}
+                    onClick={closeWorkExperienceForm}
                     className="ml-1 hover:text-blue-900"
                   >
                     <X className="h-3 w-3" />
@@ -868,13 +907,11 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
             </div>
 
             <div className="flex justify-end mt-4 gap-2">
-              {editingExperienceId && (
+              {(editingExperienceId ||
+                (isFormOpen && workExperiences.length > 0)) && (
                 <Button
                   type="button"
-                  onClick={() => {
-                    setEditingExperienceId(null);
-                    setNewWorkExperience(emptyWorkExperience());
-                  }}
+                  onClick={closeWorkExperienceForm}
                   variant="outline"
                   className="border-slate-300 text-slate-600"
                 >
@@ -897,6 +934,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               </Button>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
 

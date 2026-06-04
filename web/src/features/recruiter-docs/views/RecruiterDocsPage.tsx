@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ import {
   ChevronDown,
   ArrowUpRight,
   Phone,
+  UserPlus,
+  ClipboardList,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { Input } from "@/components/ui/input";
@@ -53,8 +55,8 @@ import {
 } from "@/components/ui/popover";
 import {
   useGetRecruiterDocumentsQuery,
-  useGetDocumentStatsQuery,
   useGetRecruiterVerifiedRejectedDocumentsQuery,
+  type RecruiterDocumentsResponse,
 } from "@/features/documents/api";
 import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -67,6 +69,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { MandatoryDocumentsGrid } from "../components/MandatoryDocumentsGrid";
+import { ProjectDocumentsProgressGrid } from "../components/ProjectDocumentsProgressGrid";
+import {
+  useCreateDocumentMutation,
+  useUpdateDocumentMutation,
+} from "@/features/documents/api";
+import { useUploadDocumentMutation } from "@/features/candidates/api";
+import { getUploadErrorMessage } from "@/lib/document-upload";
+import { toast } from "sonner";
+
+const CandidateUploadDocumentModal = React.lazy(
+  () => import("../components/CandidateUploadDocumentModal"),
+);
 
 function formatPhoneForLink(candidate: {
   countryCode?: string;
@@ -92,7 +107,10 @@ const RecruiterDocsPage: React.FC = () => {
   const [projectPage, setProjectPage] = useState(1);
   const debouncedProjectSearch = useDebounce(projectSearch, 500);
   const [isProjectPopoverOpen, setIsProjectPopoverOpen] = useState(false);
-
+  const [mandatoryUpload, setMandatoryUpload] = useState<{
+    candidateId: string;
+    docType: string;
+  } | null>(null);
   const debouncedSearch = useDebounce(search, 500);
 
   const { data: projectsData } = useGetProjectsQuery({ 
@@ -107,8 +125,6 @@ const RecruiterDocsPage: React.FC = () => {
   
   const roles = projectDetails?.data?.rolesNeeded || [];
 
-  const { data: statsData } = useGetDocumentStatsQuery();
-  
   const handleClearFilters = () => {
     setSearch("");
     setShowScreeningOnly(false);
@@ -119,9 +135,33 @@ const RecruiterDocsPage: React.FC = () => {
     setPage(1);
   };
 
+  const isMandatoryView = statusFilter === "mandatory_documents";
+  const isProjectDocsProgressView =
+    statusFilter === "nominated" || statusFilter === "pending_documents";
   const isVerifiedOrRejected = statusFilter === "documents_verified" || statusFilter === "rejected_documents";
 
-  const { data: pendingDocsData, isLoading: isPendingLoading } = useGetRecruiterDocumentsQuery({
+  const [uploadDocument, { isLoading: isUploadingFile }] =
+    useUploadDocumentMutation();
+  const [createDocument, { isLoading: isCreatingDocument }] =
+    useCreateDocumentMutation();
+  const [updateDocument, { isLoading: isUpdatingDocument }] =
+    useUpdateDocumentMutation();
+
+  const dashboardCountsParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 1,
+      projectId: selectedProjectId === "all" ? undefined : selectedProjectId,
+      roleCatalogId: selectedRoleId === "all" ? undefined : selectedRoleId,
+    }),
+    [selectedProjectId, selectedRoleId],
+  );
+
+  const { data: dashboardCountsData } = useGetRecruiterDocumentsQuery(
+    dashboardCountsParams,
+  );
+
+  const { data: pendingDocsData, isLoading: isPendingLoading, refetch: refetchPendingDocs } = useGetRecruiterDocumentsQuery({
     page,
     limit,
     search: debouncedSearch,
@@ -142,13 +182,27 @@ const RecruiterDocsPage: React.FC = () => {
   const docsData = isVerifiedOrRejected ? verifiedRejectedDocsData : pendingDocsData;
   const isLoading = isVerifiedOrRejected ? isVerifiedRejectedLoading : isPendingLoading;
 
-  const apiCounts = isVerifiedOrRejected ? verifiedRejectedDocsData?.data?.counts : pendingDocsData?.data?.counts;
-  const stats = {
-    pendingDocuments: apiCounts?.pending ?? statsData?.data?.pendingDocuments ?? 0,
-    verifiedDocuments: apiCounts?.verified ?? statsData?.data?.verifiedDocuments ?? 0,
-    rejectedDocuments: apiCounts?.rejected ?? statsData?.data?.rejectedDocuments ?? 0,
-    inScreening: apiCounts?.inScreening ?? 0,
-  };
+  type RecruiterDocCounts = NonNullable<RecruiterDocumentsResponse["counts"]>;
+  const stableCountsRef = useRef<RecruiterDocCounts | null>(null);
+  const rawCounts = dashboardCountsData?.data?.counts;
+  useEffect(() => {
+    if (rawCounts) {
+      stableCountsRef.current = rawCounts;
+    }
+  }, [rawCounts]);
+
+  const displayCounts = rawCounts ?? stableCountsRef.current;
+  const stats = useMemo(
+    () => ({
+      nominated: displayCounts?.nominated ?? 0,
+      pendingDocuments: displayCounts?.pending ?? 0,
+      mandatoryDocuments: displayCounts?.mandatoryDocuments ?? 0,
+      verifiedDocuments: displayCounts?.verified ?? 0,
+      rejectedDocuments: displayCounts?.rejected ?? 0,
+      inScreening: displayCounts?.inScreening ?? 0,
+    }),
+    [displayCounts],
+  );
 
   const items = docsData?.data?.items || [];
   const pagination = docsData?.data?.pagination;
@@ -171,10 +225,114 @@ const RecruiterDocsPage: React.FC = () => {
     .slice(0, 2);
 
   const getProgressColor = (percentage: number) => {
-    if (percentage < 30) return "bg-red-500";
-    if (percentage < 70) return "bg-amber-500";
-    if (percentage < 100) return "bg-blue-500";
-    return "bg-emerald-500";
+    if (percentage < 30) return "from-rose-500 to-rose-600";
+    if (percentage < 70) return "from-amber-400 to-amber-500";
+    if (percentage < 100) return "from-sky-500 to-blue-600";
+    return "from-emerald-500 to-emerald-600";
+  };
+
+  const navigateToCandidateDocuments = (
+    candidateId: string,
+    uploadDocType?: string,
+  ) => {
+    navigate(`/candidates/${candidateId}`, {
+      state: {
+        activeTab: "documents",
+        ...(uploadDocType ? { uploadDocType } : {}),
+      },
+    });
+  };
+
+  const isMandatoryUploading =
+    isUploadingFile || isCreatingDocument || isUpdatingDocument;
+
+  const handleMandatoryUploadOpen = (candidateId: string, docType: string) => {
+    setMandatoryUpload({ candidateId, docType });
+  };
+
+  const handleMandatoryDocumentUpload = async (
+    file: File,
+    meta: {
+      docType: string;
+      docName?: string;
+      documentNumber?: string;
+      expiryDate?: string;
+      notes?: string;
+      roleCatalogId?: string;
+      workExperienceId?: string;
+    },
+  ) => {
+    const candidateId = mandatoryUpload?.candidateId;
+    if (!candidateId) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("docType", meta.docType);
+      if (meta.roleCatalogId) {
+        formData.append("roleCatalogId", meta.roleCatalogId);
+      }
+
+      const response = await uploadDocument({
+        candidateId,
+        formData,
+      }).unwrap();
+
+      const uploadData = response.data as {
+        fileName: string;
+        fileUrl: string;
+        fileSize?: number;
+        mimeType?: string;
+        document?: { id: string };
+        id?: string;
+      };
+
+      const uploadedDocument =
+        uploadData?.document?.id
+          ? uploadData.document
+          : uploadData?.id
+            ? uploadData
+            : null;
+
+      const desiredDocName = meta.docName?.trim() || undefined;
+
+      if (uploadedDocument?.id) {
+        await updateDocument({
+          id: uploadedDocument.id,
+          docName: desiredDocName,
+          documentNumber: meta.documentNumber,
+          expiryDate: meta.expiryDate
+            ? new Date(meta.expiryDate).toISOString()
+            : undefined,
+          notes: meta.notes,
+        }).unwrap();
+      } else {
+        await createDocument({
+          candidateId,
+          docType: meta.docType,
+          docName: desiredDocName,
+          fileName: uploadData.fileName,
+          fileUrl: uploadData.fileUrl,
+          fileSize: uploadData.fileSize,
+          mimeType: uploadData.mimeType,
+          documentNumber: meta.documentNumber,
+          expiryDate: meta.expiryDate
+            ? new Date(meta.expiryDate).toISOString()
+            : undefined,
+          notes: meta.notes,
+          roleCatalogId: meta.roleCatalogId,
+          workExperienceId: meta.workExperienceId,
+        }).unwrap();
+      }
+
+      toast.success("Document uploaded successfully");
+      setMandatoryUpload(null);
+      if (!isVerifiedOrRejected) {
+        void refetchPendingDocs();
+      }
+    } catch (error) {
+      toast.error(getUploadErrorMessage(error));
+    }
   };
 
   return (
@@ -193,8 +351,17 @@ const RecruiterDocsPage: React.FC = () => {
         const tileCards = [
           {
             label: "Upload Pending",
+            value: stats?.nominated || 0,
+            subtitle: "Awaiting documents",
+            icon: UserPlus,
+            accent: "indigo",
+            isActive: statusFilter === "nominated" && !showScreeningOnly,
+            onClick: () => { setStatusFilter("nominated"); setShowScreeningOnly(false); setPage(1); },
+          },
+          {
+            label: "Verification In Progress",
             value: stats?.pendingDocuments || 0,
-            subtitle: "Awaiting upload",
+            subtitle: "Awaiting verification",
             icon: Clock,
             accent: "amber",
             isActive: statusFilter === "pending_documents" && !showScreeningOnly,
@@ -218,14 +385,25 @@ const RecruiterDocsPage: React.FC = () => {
             isActive: statusFilter === "rejected_documents" && !showScreeningOnly,
             onClick: () => { setStatusFilter("rejected_documents"); setShowScreeningOnly(false); setPage(1); },
           },
+          {
+            label: "Mandatory Documents",
+            value: stats?.mandatoryDocuments || 0,
+            subtitle: "6 profile docs required",
+            icon: ClipboardList,
+            accent: "sky",
+            isActive: statusFilter === "mandatory_documents" && !showScreeningOnly,
+            onClick: () => { setStatusFilter("mandatory_documents"); setShowScreeningOnly(false); setPage(1); },
+          },
         ] as const;
         const accentMap: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
+          indigo:  { card: "from-indigo-50 via-white to-indigo-50/30 border-indigo-100", icon: "text-indigo-600",  iconBg: "bg-indigo-100",  value: "text-indigo-700",  ring: "ring-indigo-400/50",  dot: "bg-indigo-500"  },
+          sky:     { card: "from-sky-50 via-white to-sky-50/30 border-sky-100",         icon: "text-sky-600",     iconBg: "bg-sky-100",     value: "text-sky-700",     ring: "ring-sky-400/50",     dot: "bg-sky-500"     },
           amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
           emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
           red:     { card: "from-red-50 via-white to-red-50/30 border-red-100",         icon: "text-red-600",     iconBg: "bg-red-100",     value: "text-red-700",     ring: "ring-red-400/50",     dot: "bg-red-500"     },
         };
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {tileCards.map((tile, i) => {
               const Icon = tile.icon;
               const s = accentMap[tile.accent];
@@ -279,6 +457,8 @@ const RecruiterDocsPage: React.FC = () => {
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-gray-900 truncate">
                   {showScreeningOnly ? "In Screening Documents" :
+                   statusFilter === "nominated" ? "Nominated Candidates" :
+                   statusFilter === "mandatory_documents" ? "Candidate Mandatory Documents" :
                    statusFilter === "pending_documents" ? "Upload Pending Documents" :
                    statusFilter === "documents_verified" ? "Verified Documents" :
                    statusFilter === "rejected_documents" ? "Rejected Documents" :
@@ -286,6 +466,8 @@ const RecruiterDocsPage: React.FC = () => {
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {showScreeningOnly ? "Candidates currently in screening phase." :
+                   statusFilter === "nominated" ? "Candidates nominated to projects awaiting document upload." :
+                   statusFilter === "mandatory_documents" ? "Your assigned candidates missing one or more of the six mandatory profile documents." :
                    statusFilter === "pending_documents" ? "Candidates with pending document uploads." :
                    statusFilter === "documents_verified" ? "Candidates with all documents verified." :
                    statusFilter === "rejected_documents" ? "Candidates with rejected documents." :
@@ -485,7 +667,13 @@ const RecruiterDocsPage: React.FC = () => {
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Name</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Project Role</TableHead>
                 <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Status</TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Progress</TableHead>
+                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 min-w-[180px]">
+                  {isMandatoryView
+                    ? "Mandatory Documents (6)"
+                    : isProjectDocsProgressView
+                      ? "Upload Progress"
+                      : "Progress"}
+                </TableHead>
                 <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 w-[100px]">
                   Contact
                 </TableHead>
@@ -509,19 +697,40 @@ const RecruiterDocsPage: React.FC = () => {
                   const isInScreening = screeningStatuses.includes(item.status.main) || 
                                        ((item.status as any).sub && screeningStatuses.includes((item.status as any).sub));
                   const phoneDigits = formatPhoneForLink(item.candidate);
+                  const mandatorySlots = item.mandatoryDocuments?.slots ?? [];
+                  const handleRowNavigate = (e?: React.MouseEvent) => {
+                    if (
+                      e?.target instanceof Element &&
+                      e.target.closest("[data-recruiter-upload-action]")
+                    ) {
+                      return;
+                    }
+                    if (isMandatoryView) {
+                      return;
+                    }
+                    navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`);
+                  };
+
+                  const openCandidateDocuments = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    navigateToCandidateDocuments(item.candidate.id);
+                  };
                   
                   return (
                     <TableRow 
                       key={item.candidateProjectMapId}
                       className={cn(
-                        "cursor-pointer border-b border-gray-100 transition-colors last:border-b-0 group",
+                        "border-b border-gray-100 transition-colors last:border-b-0 group",
+                        !isMandatoryView && "cursor-pointer",
+                        isMandatoryView ? "hover:bg-sky-50/50" :
+                        statusFilter === "nominated" ? "hover:bg-indigo-50/50" :
                         isInScreening ? "bg-red-50/70 hover:bg-red-100/60" :
                         statusFilter === "documents_verified" ? "bg-emerald-50/50 hover:bg-emerald-100/50" :
                         statusFilter === "rejected_documents" ? "bg-rose-50/50 hover:bg-rose-100/50" :
                         hasResubmission ? "bg-amber-100/50 hover:bg-amber-200/50" : 
                         "hover:bg-blue-50/30"
                       )}
-                      onClick={() => navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`)}
+                      onClick={(e) => handleRowNavigate(e)}
                     >
                       <TableCell className="px-4 py-3 font-medium">
                         <div className="flex items-center gap-3">
@@ -533,7 +742,17 @@ const RecruiterDocsPage: React.FC = () => {
                             enableHoverPreview={true}
                           />
                           <div className="min-w-0">
+                            {isMandatoryView ? (
+                              <button
+                                type="button"
+                                className="text-sm font-semibold text-gray-900 truncate block max-w-[160px] text-left hover:text-sky-700 hover:underline"
+                                onClick={openCandidateDocuments}
+                              >
+                                {item.candidate.firstName} {item.candidate.lastName}
+                              </button>
+                            ) : (
                             <span className="text-sm font-semibold text-gray-900 truncate block max-w-[160px]">{item.candidate.firstName} {item.candidate.lastName}</span>
+                            )}
                             {item.candidate.candidateCode ? (
                               <span className="text-xs text-muted-foreground font-mono mt-0.5 truncate block">
                                 {item.candidate.candidateCode}
@@ -571,7 +790,44 @@ const RecruiterDocsPage: React.FC = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="px-4 py-3">
+                      <TableCell
+                        className="px-4 py-3"
+                        data-recruiter-upload-action
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      >
+                        {isMandatoryView ? (
+                          <MandatoryDocumentsGrid
+                            slots={mandatorySlots}
+                            uploaded={item.mandatoryDocuments?.uploaded}
+                            required={item.mandatoryDocuments?.required ?? 6}
+                            percent={item.mandatoryDocuments?.percent}
+                            getProgressColor={getProgressColor}
+                            onUploadInline={(docType) =>
+                              navigateToCandidateDocuments(
+                                item.candidate.id,
+                                docType,
+                              )
+                            }
+                            onNavigateToDocuments={() =>
+                              navigateToCandidateDocuments(item.candidate.id)
+                            }
+                          />
+                        ) : isProjectDocsProgressView ? (
+                          <ProjectDocumentsProgressGrid
+                            rows={item.documentChecklist?.rows ?? []}
+                            uploaded={item.progress.docsUploaded}
+                            required={item.progress.totalDocsToUpload}
+                            percent={item.progress.docsPercentage}
+                            getProgressColor={getProgressColor}
+                            onUploadDocuments={() =>
+                              navigate(
+                                `/recruiter-docs/${item.project.id}/${item.candidate.id}`,
+                              )
+                            }
+                          />
+                        ) : (
                         <div className="flex flex-col gap-1.5 min-w-[120px]">
                           <div className="flex items-center justify-between text-[10px] font-medium">
                             <span className="text-muted-foreground">{item.progress.docsUploaded} / {item.progress.totalDocsToUpload} docs</span>
@@ -579,13 +835,17 @@ const RecruiterDocsPage: React.FC = () => {
                               {item.progress.docsPercentage}%
                             </span>
                           </div>
-                          <div className="w-full bg-secondary/50 h-1.5 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-500 ${getProgressColor(item.progress.docsPercentage)}`}
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/80 shadow-inner ring-1 ring-inset ring-border/50">
+                            <div
+                              className={cn(
+                                "h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out",
+                                getProgressColor(item.progress.docsPercentage),
+                              )}
                               style={{ width: `${item.progress.docsPercentage}%` }}
                             />
                           </div>
                         </div>
+                        )}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-center">
                         <div
@@ -647,7 +907,15 @@ const RecruiterDocsPage: React.FC = () => {
                             size="icon" 
                             className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             title="View Details"
-                            onClick={() => navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`)}
+                            onClick={() => {
+                              if (isMandatoryView) {
+                                navigate(`/candidates/${item.candidate.id}`, {
+                                  state: { activeTab: "documents" },
+                                });
+                              } else {
+                                navigate(`/recruiter-docs/${item.project.id}/${item.candidate.id}`);
+                              }
+                            }}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </Button>
@@ -811,6 +1079,16 @@ const RecruiterDocsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <React.Suspense fallback={null}>
+        <CandidateUploadDocumentModal
+          isOpen={mandatoryUpload != null}
+          initialDocType={mandatoryUpload?.docType}
+          onClose={() => setMandatoryUpload(null)}
+          onUpload={handleMandatoryDocumentUpload}
+          isUploading={isMandatoryUploading}
+        />
+      </React.Suspense>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import {
   computeCandidateProfileCompletion,
+  computeDocumentRepositoryCompletion,
   CANDIDATE_PROFILE_REQUIRED_DOCUMENTS,
   withProfileCompletion,
 } from '../profile-completion.util';
@@ -48,6 +49,23 @@ describe('computeCandidateProfileCompletion', () => {
     ).toBe(true);
     expect(result.breakdown.personal.completed).toBe(0);
     expect(result.breakdown.documents.completed).toBe(0);
+  });
+
+  it('computeDocumentRepositoryCompletion counts six mandatory document slots', () => {
+    const complete = computeDocumentRepositoryCompletion([
+      { docType: 'resume' },
+      { docType: 'degree_certificate' },
+      { docType: 'passport_photo' },
+      { docType: 'passport_copy' },
+      { docType: 'aadhaar' },
+      { docType: 'registration_certificate' },
+    ]);
+    expect(complete.percent).toBe(100);
+    expect(complete.typeMissingCount).toBe(0);
+
+    const partial = computeDocumentRepositoryCompletion([{ docType: 'resume' }]);
+    expect(partial.typeMissingCount).toBe(5);
+    expect(partial.missing.some((m) => m.key === 'passport')).toBe(true);
   });
 
   it('withProfileCompletion strips documents from output', () => {

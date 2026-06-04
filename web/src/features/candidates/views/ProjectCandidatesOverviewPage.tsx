@@ -35,6 +35,9 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
 import { useGetProjectsQuery } from "@/services/projectsApi";
+import { useGetProjectStatsQuery } from "@/features/projects";
+import ProjectStats from "@/components/organisms/ProjectStats";
+import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { useAppSelector } from "@/app/hooks";
@@ -69,6 +72,55 @@ const TILES: TileDef[] = [
   { key: "processing", label: "Processing",         subtitle: "Under processing",        icon: Settings,     accent: "orange"  },
   { key: "final",      label: "Deployed",           subtitle: "Successfully deployed",   icon: CheckCircle,  accent: "emerald" },
 ];
+
+// Map mainStatus → badge style
+type SubStatusFilterOption = {
+  key: string;
+  label: string;
+  subStatus?: string;
+  subStatuses?: string[];
+};
+
+const DOCUMENT_SUB_FILTERS: SubStatusFilterOption[] = [
+  { key: "all", label: "All" },
+  {
+    key: "pending",
+    label: "Pending",
+    subStatuses: [
+      "pending_documents",
+      "documents_submitted",
+      "verification_in_progress_document",
+      "documents_re_submission_requested",
+      "client_revision_requested",
+      "rejected_documents",
+      "submitted_to_client",
+    ],
+  },
+  { key: "verified", label: "Verified", subStatus: "documents_verified" },
+];
+
+const INTERVIEW_SUB_FILTERS: SubStatusFilterOption[] = [
+  { key: "all", label: "All" },
+  { key: "scheduled", label: "Interview Scheduled", subStatus: "interview_scheduled" },
+  { key: "passed", label: "Passed", subStatus: "interview_passed" },
+  { key: "failed", label: "Failed", subStatus: "interview_failed" },
+  { key: "backout", label: "Backout", subStatus: "interview_backout" },
+];
+
+const PROCESSING_SUB_FILTERS: SubStatusFilterOption[] = [
+  { key: "all", label: "All" },
+  { key: "transferred", label: "Transferred", subStatus: "transfered_to_processing" },
+  { key: "in_progress", label: "In Progress", subStatus: "processing_in_progress" },
+  { key: "completed", label: "Completed", subStatus: "processing_completed" },
+  { key: "failed", label: "Failed", subStatus: "processing_failed" },
+  { key: "ready_final", label: "Ready for Final", subStatus: "ready_for_final" },
+];
+
+const STAGE_SUB_FILTERS: Record<string, SubStatusFilterOption[]> = {
+  documents: DOCUMENT_SUB_FILTERS,
+  interview: INTERVIEW_SUB_FILTERS,
+  processing: PROCESSING_SUB_FILTERS,
+};
 
 // Map mainStatus → badge style
 const STATUS_BADGE: Record<
@@ -111,6 +163,7 @@ export default function ProjectCandidatesOverviewPage() {
 
   // Filter states
   const [activeFilter, setActiveFilter] = useState("all");
+  const [subStatusFilter, setSubStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -118,14 +171,35 @@ export default function ProjectCandidatesOverviewPage() {
 
   const handleTileClick = (tileKey: string) => {
     setActiveFilter(tileKey);
+    setSubStatusFilter("all");
     setPage(1);
   };
+
+  const stageSubFilters = STAGE_SUB_FILTERS[activeFilter] ?? null;
+
+  const activeSubStatusParams = useMemo(() => {
+    if (!stageSubFilters || subStatusFilter === "all") return {};
+    const option = stageSubFilters.find((o) => o.key === subStatusFilter);
+    if (!option) return {};
+    if (option.subStatuses?.length) {
+      return { subStatuses: option.subStatuses.join(",") };
+    }
+    if (option.subStatus) {
+      return { subStatus: option.subStatus };
+    }
+    return {};
+  }, [stageSubFilters, subStatusFilter]);
 
   // Project and Role state
   const [projectRole, setProjectRole] = useState({
     projectId: "all",
     roleCatalogId: "all",
   });
+
+  const user = useAppSelector((state) => state.auth.user);
+  const canReadProjects = useCan("read:projects");
+  const isProcessingExecutive =
+    user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
   // Date filter state
   const [dateRange, setDateRange] = useState<string>("all");
@@ -146,7 +220,6 @@ export default function ProjectCandidatesOverviewPage() {
     maxAge: undefined as number | undefined,
   });
 
-  const user = useAppSelector((state) => state.auth.user);
   const isManagerOrAdmin = useMemo(() => 
     user?.roles?.some(r => ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "System Admin"].includes(r)) || false,
     [user]
@@ -173,11 +246,19 @@ export default function ProjectCandidatesOverviewPage() {
     setDateFrom(undefined);
     setDateTo(undefined);
     setActiveFilter("all");
+    setSubStatusFilter("all");
     setPage(1);
   };
 
+  const { data: statsData, isLoading: statsLoading } = useGetProjectStatsQuery(undefined, {
+    skip: !canReadProjects || isProcessingExecutive,
+  });
+
   // Auto-select the first project on initial load handled by ProjectRoleFilter via defaultProject prop
-  const { data: projectsData, isLoading: isLoadingProjects } = useGetProjectsQuery({ limit: 10, page: 1 });
+  const { data: projectsData, isLoading: isLoadingProjects } = useGetProjectsQuery({
+    limit: 10,
+    page: 1,
+  });
   const allProjects = useMemo(() => projectsData?.data?.projects || [], [projectsData]);
 
   // Fetch project overview data - skip until we have a real project ID
@@ -189,6 +270,7 @@ export default function ProjectCandidatesOverviewPage() {
       roleCatalogId: projectRole.roleCatalogId !== "all" ? projectRole.roleCatalogId : undefined,
       search: debouncedSearch || undefined,
       mainStatus: activeFilter !== "all" ? activeFilter : undefined,
+      ...activeSubStatusParams,
       period: dateRange !== "all" && dateRange !== "custom" ? dateRange : undefined,
       startDate: dateRange === "custom" && dateFrom ? format(dateFrom, "yyyy-MM-dd") : undefined,
       endDate: dateRange === "custom" && dateTo ? format(dateTo, "yyyy-MM-dd") : undefined,
@@ -211,6 +293,25 @@ export default function ProjectCandidatesOverviewPage() {
   const candidates = (overviewData?.data as any[]) || [];
   const meta = overviewData?.meta;
   const projectTitle = overviewData?.projectTitle;
+
+  const selectedProject = useMemo(
+    () => allProjects.find((p) => p.id === projectRole.projectId) ?? null,
+    [allProjects, projectRole.projectId]
+  );
+
+  const displayTitle = projectTitle || selectedProject?.title || "Candidate Overview";
+
+  const projectInitial = useMemo(
+    () => (displayTitle.charAt(0) || "P").toUpperCase(),
+    [displayTitle]
+  );
+
+  const projectStatusLabel = useMemo(() => {
+    const status = selectedProject?.status;
+    if (status === "completed") return "Completed Project";
+    if (status === "cancelled") return "Cancelled Project";
+    return "Active Project";
+  }, [selectedProject?.status]);
 
   const counts: Record<string, number> = useMemo(() => {
     if (!summary) {
@@ -294,35 +395,30 @@ export default function ProjectCandidatesOverviewPage() {
   return (
     <div className="min-h-screen">
       <div className="w-full max-w-[98%] mx-auto space-y-4 mt-2 px-4">
-        {/* ── Page Header ── */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Users className="h-6 w-6 text-blue-600" />
-              <span>{projectTitle || "Candidate Overview"}</span>
-            </h1>
-            <p className="text-slate-500 text-sm">
-              Comprehensive dashboard for candidate tracking and status overview
-            </p>
-          </div>
-        </div>
+      
 
-        {/* ── Search & Filter ── */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm px-4 py-3">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search by name, role, or email..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
-              />
+        {/* ── Project stats tiles (from ProjectsPage) ── */}
+        {!statsLoading && statsData?.data && canReadProjects && !isProcessingExecutive && (
+          <ProjectStats stats={statsData.data} className="px-0" interactive={false} />
+        )}
+          {/* ── Project header card ── */}
+          <div className="relative z-10 rounded-2xl border border-slate-200 bg-white shadow-sm p-5 md:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <div
+                className="relative z-0 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 text-xl font-bold text-white shadow-md"
+                aria-hidden
+              >
+                {projectInitial}
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-bold text-slate-900">{displayTitle}</h1>
+                <p className="mt-1 text-sm text-slate-500">
+                  Comprehensive dashboard for candidate tracking and status overview
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <div className="relative z-20 flex shrink-0 flex-wrap items-center justify-end gap-2">
               <ProjectRoleFilter
                 value={projectRole}
                 onChange={(v) => {
@@ -330,26 +426,21 @@ export default function ProjectCandidatesOverviewPage() {
                   setPage(1);
                 }}
                 defaultProject={true}
+                showRoleFilter={false}
+                projectTriggerHighlighted
+                className="relative z-20 [&>div]:w-auto"
+                projectTriggerClassName="h-10 min-w-[180px] px-4"
               />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsAdvancedFiltersOpen(true)}
-                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl border transition-all duration-200 shrink-0 ${
-                  isAdvancedFiltersOpen
-                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
-                }`}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">Filters</span>
-              </Button>
+              <Badge className="relative z-10 shrink-0 rounded-full border-0 bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-600">
+                {projectStatusLabel}
+              </Badge>
             </div>
           </div>
         </div>
+    
 
         {/* ── Status Tiles ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="relative z-0 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
           {TILES.map((tile, i) => {
             const Icon = tile.icon;
             const s = TILE_ACCENT_STYLES[tile.accent];
@@ -393,21 +484,111 @@ export default function ProjectCandidatesOverviewPage() {
             );
           })}
         </div>
+              {/* ── Search & filter bar ── */}
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 md:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+            <div className="flex-1 min-w-0 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Search
+              </p>
+              <div className="relative">
+                <Search
+                  className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  aria-hidden
+                />
+                <Input
+                  placeholder="Search by name, email, phone, or role..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-11 rounded-full border-slate-200 bg-slate-50 pl-11 text-sm shadow-sm transition-all focus:border-blue-200 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  aria-label="Search candidates"
+                />
+              </div>
+            </div>
 
+            <div className="space-y-2 lg:shrink-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Role
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <ProjectRoleFilter
+                  value={projectRole}
+                  onChange={(v) => {
+                    setProjectRole(v);
+                    setPage(1);
+                  }}
+                  showProjectFilter={false}
+                  className="gap-2"
+                  roleTriggerClassName="h-11 min-w-[160px] px-4"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAdvancedFiltersOpen(true)}
+                  className={cn(
+                    "flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-medium shadow-sm transition-all duration-200",
+                    isAdvancedFiltersOpen
+                      ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  )}
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                  Filters
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
         {/* ── Candidates Table ── */}
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
-                <Users className="h-5 w-5 text-white" />
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-4 sm:px-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                    <Users className="h-5 w-5 text-white" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="truncate text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900 truncate">{getActiveTileLabel()}</h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
-                </p>
-              </div>
+
+              {stageSubFilters && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                  <div className="flex h-8 shrink-0 items-center gap-1.5 pr-1">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      Filter
+                    </span>
+                  </div>
+                  {stageSubFilters.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => {
+                        setSubStatusFilter(option.key);
+                        setPage(1);
+                      }}
+                      className={cn(
+                        "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-all",
+                        subStatusFilter === option.key
+                          ? "border-blue-600 bg-blue-600 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

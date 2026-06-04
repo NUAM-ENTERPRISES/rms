@@ -50,6 +50,18 @@ export class ProjectOverviewQueryDto {
   @IsOptional()
   @IsString()
   mainStatus?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by sub-status name' })
+  @IsOptional()
+  @IsString()
+  subStatus?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by multiple sub-status names (comma-separated)',
+  })
+  @IsOptional()
+  @IsString()
+  subStatuses?: string;
   @ApiPropertyOptional({ 
     description: 'Filter by predefined date period',
     enum: DatePeriod 

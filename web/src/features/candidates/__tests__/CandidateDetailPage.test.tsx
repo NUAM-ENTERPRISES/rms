@@ -6,6 +6,7 @@ import CandidateDetailPage from "../views/CandidateDetailPage";
 vi.mock("react-router-dom", async () => ({
   useParams: () => ({ id: "c1" }),
   useNavigate: () => vi.fn(),
+  useLocation: () => ({ state: null, pathname: "/candidates/c1", key: "test" }),
 }));
 
 // Mock candidate hooks

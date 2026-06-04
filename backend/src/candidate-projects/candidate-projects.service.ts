@@ -1220,6 +1220,15 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
+    if (queryDto.subStatuses) {
+      const subStatusNames = queryDto.subStatuses.split(',').map((s) => s.trim()).filter(Boolean);
+      if (subStatusNames.length > 0) {
+        where.subStatus = { name: { in: subStatusNames } };
+      }
+    } else if (queryDto.subStatus && queryDto.subStatus !== 'all') {
+      where.subStatus = { name: queryDto.subStatus };
+    }
+
     // Role-based filtering: recruiters and Agent Coordinators only see candidates
     // assigned to them on the project row (aligned with recruiter pipeline / agent flow).
     const isRecruiter = userRoles.includes('Recruiter');

@@ -5,6 +5,8 @@ export interface ProjectOverviewParams {
   roleCatalogId?: string;
   search?: string;
   mainStatus?: string;
+  subStatus?: string;
+  subStatuses?: string;
   period?: string;
   startDate?: string;
   endDate?: string;

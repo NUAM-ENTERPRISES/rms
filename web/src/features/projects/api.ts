@@ -309,7 +309,8 @@ export interface QueryProjectsRequest {
   isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
-  countryCode?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
   page?: number;
   limit?: number;
   sortBy?: string;
