@@ -51,7 +51,7 @@ import { useAppSelector } from "@/app/hooks";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
@@ -195,6 +195,7 @@ export default function CandidateOverviewPage() {
   const statsData = data?.stats || {
     total: 0,
     positive: 0,
+    untouched: 0,
     negative: 0,
     nominated: 0,
     interviewAssigned: 0,
@@ -214,12 +215,14 @@ export default function CandidateOverviewPage() {
     lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
     fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
     teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
+    amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",     icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
   };
 
   const statTiles = [
-    { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",           statusFilter: "all"           },
-    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold",  statusFilter: "positive"      },
-    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR",        statusFilter: "negative"      },
+    { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",                    statusFilter: "all"           },
+    { label: "Untouched",           value: statsData.untouched ?? 0,                                    icon: UserCheck, accent: "amber",   subtitle: "Not yet contacted",               statusFilter: "untouched"     },
+    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold/Call Back", statusFilter: "positive"      },
+    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR/Not Eligible", statusFilter: "negative"      },
     { label: "Registered",          value: statsData.registered ?? statsData.nominated,                 icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",     statusFilter: "registered"    },
     { label: "Documentation",       value: statsData.documentation ?? statsData.documentReceived,       icon: FileSearch,accent: "purple",  subtitle: "Main status: Documents",    statusFilter: "documentation" },
     { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Main status: Interview",    statusFilter: "interview"     },
@@ -392,6 +395,15 @@ export default function CandidateOverviewPage() {
           bgColor: "bg-amber-50",
           borderColor: "border-amber-200",
         };
+      case "call back":
+      case "call_back":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-cyan-700",
+          bgColor: "bg-cyan-50",
+          borderColor: "border-cyan-200",
+        };
       case "qualified":
         return {
           variant: "outline" as const,
@@ -442,8 +454,8 @@ export default function CandidateOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
-        <TypedHeader 
-          userName={displayedRecruiterName || currentUser?.name || "Recruiter"} 
+        <DashboardWelcomeHeader
+          userName={displayedRecruiterName || currentUser?.name || "Recruiter"}
           subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
         />
 
@@ -458,6 +470,69 @@ export default function CandidateOverviewPage() {
             }
           />
         )} */}
+
+        {/* Search & Filter Bar */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                placeholder="Search candidates by name, email or role..."
+                value={filters.search}
+                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
+                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(isManagerOrAdmin && !isRecruiter) && (
+                <div className="w-full sm:w-[200px]">
+                  <UserSelect
+                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
+                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
+                    placeholder="All Recruiters"
+                    role="Recruiter"
+                    allowClear={true}
+                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
+                  />
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
+                >
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
+
+              <Button
+                onClick={() => navigate("/candidates/create")}
+                className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 font-medium shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Candidate</span>
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Dashboard Tiles */}
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
@@ -499,61 +574,6 @@ export default function CandidateOverviewPage() {
           })}
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <Input
-                placeholder="Search candidates by name, email or role..."
-                value={filters.search}
-                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
-              />
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              {(isManagerOrAdmin && !isRecruiter) && (
-                <div className="w-full sm:w-[200px]">
-                  <UserSelect
-                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
-                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
-                    placeholder="All Recruiters"
-                    role="Recruiter"
-                    allowClear={true}
-                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
-                  />
-                </div>
-              )}
-              
-              <Button
-                variant="outline"
-                onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Advanced Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={handleResetFilters}
-                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
-                >
-                  <FilterX className="h-4 w-4" />
-                  <span>Reset</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Candidates Table */}
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
@@ -586,13 +606,6 @@ export default function CandidateOverviewPage() {
                     Transfer ({selectedCandidateIds.size})
                   </Button>
                 )}
-                <Button
-                  onClick={() => navigate("/candidates/create")}
-                  size="sm"
-                  className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add Candidate
-                </Button>
               </div>
             </div>
           </div>

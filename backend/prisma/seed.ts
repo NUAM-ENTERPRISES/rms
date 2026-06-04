@@ -883,6 +883,7 @@ async function seedCandidateStatus() {
     'RNR',
     'Qualified',
     'Deployed',
+    'Call Back',
   ];
 
   for (const statusName of statuses) {

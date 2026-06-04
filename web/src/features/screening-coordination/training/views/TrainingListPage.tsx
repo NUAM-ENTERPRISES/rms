@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -86,6 +86,7 @@ export default function TrainingListPage() {
 
   const [page, setPage] = useState(1);
   const LIMIT = 10;
+  const listPanelRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useGetTrainingAssignmentsQuery({ page, limit: LIMIT });
   const [completeTraining, { isLoading: isCompleting }] =
@@ -311,6 +312,31 @@ export default function TrainingListPage() {
     return { active, completed, total };
   }, [trainings]);
 
+  const handleStatClick = (key: "active" | "completed" | "total") => {
+    if (key === "active") {
+      setFilters((prev) => ({
+        ...prev,
+        status:
+          prev.status === TRAINING_STATUS.IN_PROGRESS
+            ? "all"
+            : TRAINING_STATUS.IN_PROGRESS,
+      }));
+    } else if (key === "completed") {
+      setFilters((prev) => ({
+        ...prev,
+        status: prev.status === "completed" ? "all" : "completed",
+      }));
+    } else {
+      setFilters({ search: "", status: "all", priority: "all" });
+    }
+    window.requestAnimationFrame(() => {
+      listPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case TRAINING_STATUS.ASSIGNED:
@@ -494,99 +520,120 @@ export default function TrainingListPage() {
       {/* Compact Stats with Glass Cards */}
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-8 bg-white/70 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-100 shadow-sm">
-          <div className="text-center">
+          <button
+            type="button"
+            onClick={() => handleStatClick("active")}
+            className={cn(
+              "text-center rounded-lg px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300",
+              filters.status === TRAINING_STATUS.IN_PROGRESS && "bg-indigo-50"
+            )}
+          >
             <div className="text-2xl font-semibold text-indigo-600 tabular-nums">{stats.active}</div>
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Active</div>
-          </div>
+          </button>
 
           <Separator orientation="vertical" className="h-9 bg-slate-200" />
 
-          <div className="text-center">
+          <button
+            type="button"
+            onClick={() => handleStatClick("completed")}
+            className={cn(
+              "text-center rounded-lg px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300",
+              filters.status === "completed" && "bg-emerald-50"
+            )}
+          >
             <div className="text-2xl font-semibold text-emerald-600 tabular-nums">{stats.completed}</div>
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Completed</div>
-          </div>
+          </button>
 
           <Separator orientation="vertical" className="h-9 bg-slate-200" />
 
-          <div className="text-center">
+          <button
+            type="button"
+            onClick={() => handleStatClick("total")}
+            className={cn(
+              "text-center rounded-lg px-2 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+              filters.status === "all" &&
+                filters.priority === "all" &&
+                !filters.search &&
+                "bg-slate-100"
+            )}
+          >
             <div className="text-2xl font-semibold text-slate-700 tabular-nums">{stats.total}</div>
             <div className="text-[10px] font-semibold tracking-[0.5px] text-slate-400 uppercase">Total</div>
-          </div>
+          </button>
         </div>
       </div>
     </div>
 
-    {/* Enhanced Filters Bar */}
-    <div className="mt-6 flex items-center gap-3">
-      {/* Search */}
-      <div className="relative flex-1 max-w-lg group">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-        <Input
-          placeholder="Search programs, candidates, or mentors..."
-          value={filters.search}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="pl-11 h-11 bg-white border-slate-200 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 rounded-2xl text-sm placeholder:text-slate-400 transition-all shadow-sm"
-        />
+    {/* Search & filters */}
+    <div className="mt-6 space-y-3">
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+        <div className="relative min-w-0 flex-1 w-full group">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Input
+            placeholder="Search programs, candidates, or mentors..."
+            value={filters.search}
+            onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+            className="h-11 w-full pl-10 rounded-xl border-slate-200 bg-white text-sm shadow-sm transition-all placeholder:text-slate-400 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200"
+          />
+        </div>
+
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:shrink-0">
+          <Select
+            value={filters.status}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+          >
+            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-sm py-3">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filters.priority}
+            onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}
+          >
+            <SelectTrigger className="h-11 w-full min-w-[10rem] rounded-xl border-slate-200 bg-white text-sm focus:ring-1 focus:ring-indigo-200 sm:w-40">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {priorityOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-sm py-3">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {(filters.search || filters.status !== "all" || filters.priority !== "all") && (
+            <Button
+              variant="ghost"
+              onClick={() => setFilters({ search: "", status: "all", priority: "all" })}
+              className="h-11 shrink-0 gap-2 rounded-xl px-4 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-700"
+            >
+              <X className="h-4 w-4" />
+              <span>Clear</span>
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Status Filter */}
-      <Select
-        value={filters.status}
-        onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-      >
-        <SelectTrigger className="w-40 h-11 border-slate-200 bg-white rounded-2xl text-sm focus:ring-1 focus:ring-indigo-200">
-          <SelectValue placeholder="All Status" />
-        </SelectTrigger>
-        <SelectContent className="rounded-2xl">
-          {statusOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value} className="text-sm py-3">
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Priority Filter */}
-      <Select
-        value={filters.priority}
-        onValueChange={(value) => setFilters((prev) => ({ ...prev, priority: value }))}
-      >
-        <SelectTrigger className="w-40 h-11 border-slate-200 bg-white rounded-2xl text-sm focus:ring-1 focus:ring-indigo-200">
-          <SelectValue placeholder="Priority" />
-        </SelectTrigger>
-        <SelectContent className="rounded-2xl">
-          {priorityOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value} className="text-sm py-3">
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      {/* Clear Button */}
-      {(filters.search || filters.status !== "all" || filters.priority !== "all") && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setFilters({ search: "", status: "all", priority: "all" })}
-          className="h-11 px-5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-2xl transition-all"
-        >
-          <X className="h-4 w-4 mr-2" />
-          Clear Filters
-        </Button>
-      )}
-
-      {/* Bulk Actions - Right Aligned */}
       {selectedIds.length > 0 && (
-        <div className="ml-auto flex items-center gap-3 animate-in slide-in-from-right-3 duration-300">
-          <div className="bg-white px-4 py-2 rounded-2xl border border-slate-200 text-sm font-medium text-slate-600 flex items-center gap-2 shadow-sm">
-            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 animate-in slide-in-from-right-3 duration-300">
+          <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-600 shadow-sm">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
             {selectedIds.length} selected
           </div>
 
           <Button
-            size="lg"
-            className="h-11 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-lg shadow-indigo-500/30 text-white rounded-2xl px-6 font-medium transition-all active:scale-[0.985]"
+            className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 font-medium text-white shadow-lg shadow-indigo-500/30 transition-all hover:from-indigo-700 hover:to-violet-700 active:scale-[0.985] sm:px-6"
             onClick={() => {
               const selected = trainings.filter((t) => selectedIds.includes(t.id));
               setScheduledAssignments(selected);
@@ -594,20 +641,19 @@ export default function TrainingListPage() {
             }}
             disabled={trainings.filter(t => selectedIds.includes(t.id) && (getTrainingSessions(t).length > 0 || t.status === TRAINING_STATUS.COMPLETED)).length > 0}
           >
-            <Calendar className="h-4 w-4 mr-2" />
+            <Calendar className="mr-2 h-4 w-4" />
             Schedule Training
           </Button>
 
           {trainings.filter(t => selectedIds.includes(t.id) && getTrainingSessions(t).length > 0 && t.status !== TRAINING_STATUS.COMPLETED).length > 0 && (
             <Button
-              size="lg"
-              className="h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 text-white rounded-2xl px-6 font-medium transition-all active:scale-[0.985]"
+              className="h-11 shrink-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 font-medium text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-700 hover:to-teal-700 active:scale-[0.985] sm:px-6"
               onClick={() => {
                 const selected = trainings.filter((t) => selectedIds.includes(t.id) && getTrainingSessions(t).length > 0 && t.status !== TRAINING_STATUS.COMPLETED);
                 navigate("/screening-coordination/training/conduct", { state: { assignments: selected } });
               }}
             >
-              <Users className="h-4 w-4 mr-2" />
+              <Users className="mr-2 h-4 w-4" />
               Conduct Sessions
             </Button>
           )}
@@ -617,7 +663,7 @@ export default function TrainingListPage() {
   </div>
 </header>
     {/* Master-Detail Layout */}
-<div className="flex-1 flex overflow-hidden bg-slate-50">
+<div ref={listPanelRef} className="flex-1 flex overflow-hidden bg-slate-50">
   {/* Left Panel - Training List */}
   <div className="w-80 border-r border-slate-200 bg-white/95 backdrop-blur-2xl overflow-hidden flex flex-col shadow-sm">
     <div className="px-5 py-4 border-b bg-white">

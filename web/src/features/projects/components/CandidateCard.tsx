@@ -41,6 +41,10 @@ import {
   getGapTypeLabel,
   hasCareerGaps,
 } from "@/features/candidates/utils/career-gap-display";
+import {
+  getCandidateAssignmentBlockReason,
+  isCandidatePositiveForAssignment,
+} from "@/features/projects/utils/project-assignment";
 
 type StatusReference = {
   name?: string;
@@ -299,6 +303,8 @@ interface CandidateCardProps {
   onSelect?: (candidateId: string) => void;
   /** Subtle glass shimmer — Registered column processing cards only */
   showProcessingGlance?: boolean;
+  /** Hover reason for "Cannot assign" badge (from project board status rules). */
+  assignmentBlockReason?: string | null;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -332,6 +338,7 @@ const CandidateCard = memo(function CandidateCard({
   selected,
   onSelect,
   showProcessingGlance = false,
+  assignmentBlockReason: assignmentBlockReasonProp,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -350,13 +357,11 @@ const CandidateCard = memo(function CandidateCard({
         candidate.currentStatus?.label ||
         '',
   ).trim();
-  const normalizedCurrentStatus = currentStatusLabel.toLowerCase();
-  const isPositiveStatus = [
-    'interested',
-    'future',
-    'on_hold',
-  ].includes(normalizedCurrentStatus);
+  const isPositiveStatus = isCandidatePositiveForAssignment(currentStatusLabel);
   const isNonPositiveStatus = !!currentStatusLabel && !isPositiveStatus;
+  const assignmentBlockReason =
+    assignmentBlockReasonProp ??
+    getCandidateAssignmentBlockReason(currentStatusLabel);
   const isNotEligible = isNonPositiveStatus || propEligibilityData?.isEligible === false || !anyRoleEligible;
   const eligibilityData = propEligibilityData;
 
@@ -461,6 +466,11 @@ const CandidateCard = memo(function CandidateCard({
   const candidateStatusConfig = candidateStatusRaw
     ? resolveProjectCandidateStatusDisplay(candidateStatusRaw)
     : null;
+
+  const cannotAssignStatusLabel =
+    candidateStatusConfig?.label ||
+    resolveProjectCandidateStatusDisplay(currentStatusLabel).label ||
+    currentStatusLabel;
 
   // Get initials for avatar
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -749,6 +759,9 @@ const CandidateCard = memo(function CandidateCard({
                       </TooltipTrigger>
                       {isNotEligible && (
                         <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
+                          {isNonPositiveStatus && assignmentBlockReason ? (
+                            <p>{assignmentBlockReason}</p>
+                          ) : (
                           <div className="space-y-2">
                             <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
                               Eligibility Mismatch:
@@ -772,6 +785,7 @@ const CandidateCard = memo(function CandidateCard({
                               <p>Not eligible for this project.</p>
                             )}
                           </div>
+                          )}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -828,14 +842,29 @@ const CandidateCard = memo(function CandidateCard({
             </Badge>
           )}
 
-          {isNonPositiveStatus && (
-            <Badge
-              variant="outline"
-              className="border border-red-200 bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded-md font-medium"
-              title={`Candidate current status prevents project assignment.`}
-            >
-              Cannot assign: {currentStatusLabel}
-            </Badge>
+          {isNonPositiveStatus && !isAlreadyInProject && (
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="border border-red-200 bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded-md font-medium cursor-help"
+                  title={assignmentBlockReason ?? undefined}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  Cannot assign: {cannotAssignStatusLabel}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl z-[60]"
+              >
+                <p>
+                  {assignmentBlockReason ??
+                    "Candidate must be in a positive status (Interested, Future, or On Hold) to be assigned to a project."}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {showMatchScore && displayMatchScore !== undefined && (
@@ -1289,28 +1318,32 @@ const CandidateCard = memo(function CandidateCard({
                     </span>
                   </TooltipTrigger>
                   {isNotEligible && (
-                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl">
-                      <div className="space-y-2">
-                        <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
-                          Eligibility Mismatch:
-                        </p>
-                        {eligibilityData?.roleEligibility?.map((role, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <p className="text-slate-300 font-medium">
-                              {role.designation}:
-                            </p>
-                            <ul className="list-disc pl-3 space-y-0.5">
-                              {role.reasons.map((reason, ridx) => (
-                                <li key={ridx}>{reason}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                        {(!eligibilityData?.roleEligibility ||
-                          eligibilityData.roleEligibility.length === 0) && (
-                          <p>Not eligible for this project.</p>
-                        )}
-                      </div>
+                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
+                      {isNonPositiveStatus && assignmentBlockReason ? (
+                        <p>{assignmentBlockReason}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
+                            Eligibility Mismatch:
+                          </p>
+                          {eligibilityData?.roleEligibility?.map((role, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <p className="text-slate-300 font-medium">
+                                {role.designation}:
+                              </p>
+                              <ul className="list-disc pl-3 space-y-0.5">
+                                {role.reasons.map((reason, ridx) => (
+                                  <li key={ridx}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                          {(!eligibilityData?.roleEligibility ||
+                            eligibilityData.roleEligibility.length === 0) && (
+                            <p>Not eligible for this project.</p>
+                          )}
+                        </div>
+                      )}
                     </TooltipContent>
                   )}
                 </Tooltip>

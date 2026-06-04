@@ -29,7 +29,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { motion } from "framer-motion";
 import { useCan } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
@@ -792,8 +792,8 @@ export default function InterviewsPage() {
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
-        <TypedHeader 
-          userName={user?.name || "Recruiter"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Recruiter"}
           subtitle="Orchestrate every panel with clarity and track candidate progress"
         />
 
@@ -841,11 +841,11 @@ export default function InterviewsPage() {
 
         {/* ── Candidates Table ── */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+            <div className="flex flex-col gap-3 lg:gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+                <div className="relative min-w-0 flex-1 w-full group">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <Input
                     placeholder="Search candidates by name, project, or role..."
                     value={search}
@@ -853,33 +853,39 @@ export default function InterviewsPage() {
                       setSearch(e.target.value);
                       setPage(1);
                     }}
-                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
+                    className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
                   />
                 </div>
-                <ProjectRoleFilter
-                  value={projectRoleFilter}
-                  onChange={(value) => {
-                    setProjectRoleFilter(value);
-                    setPage(1);
-                  }}
-                  className="sm:w-72"
-                />
+
+                <div className="w-full min-w-0 lg:w-auto lg:min-w-[280px] lg:max-w-[420px] [&_button]:h-11 [&_button]:rounded-xl">
+                  <ProjectRoleFilter
+                    value={projectRoleFilter}
+                    onChange={(value) => {
+                      setProjectRoleFilter(value);
+                      setPage(1);
+                    }}
+                    className="w-full gap-2"
+                  />
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <div className="flex items-center gap-1.5 mr-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Filters</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex h-11 shrink-0 items-center gap-1.5 pr-1">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                  <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Date
+                  </span>
                 </div>
                 {["all", "today", "this_week", "this_month"].map((preset) => (
                   <button
                     key={preset}
+                    type="button"
                     onClick={() => {
                       setDateRange(preset);
                       setPage(1);
                     }}
                     className={cn(
-                      "px-3 py-1 text-xs font-medium rounded-full border transition-all",
+                      "h-9 shrink-0 px-3 text-xs font-medium rounded-full border transition-all",
                       dateRange === preset
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"

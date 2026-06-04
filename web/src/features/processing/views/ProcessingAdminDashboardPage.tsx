@@ -39,6 +39,8 @@ import {
     FilterX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { Can } from "@/components/auth/Can";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
@@ -58,6 +60,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const { user } = useAppSelector((state) => state.auth);
     const tableRef = useRef<HTMLDivElement>(null);
 
     const handleTileClick = (tile: any) => {
@@ -69,6 +72,9 @@ export default function ProcessingAdminDashboardPage() {
             setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
         }
         setPage(1);
+        window.requestAnimationFrame(() => {
+            tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
     };
 
     // Local UI state (same as production page)
@@ -213,7 +219,12 @@ export default function ProcessingAdminDashboardPage() {
         >
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
                 <div className="mx-auto max-w-7xl space-y-8">
-                    <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <DashboardWelcomeHeader
+                        userName={user?.name || "Processing Manager"}
+                        subtitle="Monitor and manage candidate processing workflows"
+                    />
+
+                    {/* <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 p-3 shadow-lg">
                                 <ClipboardList className="h-7 w-7 text-white" />
@@ -230,7 +241,7 @@ export default function ProcessingAdminDashboardPage() {
                                 <X className="h-3 w-3 cursor-pointer hover:text-rose-500" onClick={() => { setStepFilter(null); setStatusFilter('all'); }} />
                             </Badge>
                         )}
-                    </header>
+                    </header> */}
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
                         {processingTiles.map((tile) => {

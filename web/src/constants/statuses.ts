@@ -335,6 +335,7 @@ export const CANDIDATE_STATUS = {
   FUTURE: "future",
   ON_HOLD: "on_hold",
   RNR: "rnr", // Ringing No Response
+  CALL_BACK: "call_back",
 
   // Qualification status
   QUALIFIED: "qualified",
@@ -437,6 +438,14 @@ export const CANDIDATE_STATUS_CONFIG: Record<
     color: "red",
     badgeClass: "bg-red-50 text-red-700 border-red-200",
     icon: "PhoneOff",
+    priority: "urgent",
+  },
+  [CANDIDATE_STATUS.CALL_BACK]: {
+    label: "Call Back",
+    description: "Scheduled callback with the candidate",
+    color: "blue",
+    badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    icon: "Phone",
     priority: "urgent",
   },
   [CANDIDATE_STATUS.QUALIFIED]: {
@@ -653,6 +662,11 @@ function resolveCandidateGlobalStatusBadge(
 
   if (underscored === "rnr" || lower === "rnr") {
     const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.RNR];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "callback" || lower === "call back" || underscored === "call_back") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.CALL_BACK];
     return { label: cfg.label, badgeClass: cfg.badgeClass };
   }
 

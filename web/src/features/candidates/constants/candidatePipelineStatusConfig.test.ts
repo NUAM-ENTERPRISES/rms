@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { PhoneCall } from "lucide-react";
 import {
   CANDIDATE_PIPELINE_STATUS_CONFIG,
   getCandidatePipelineStatusConfig,
@@ -16,6 +17,7 @@ describe("candidatePipelineStatusConfig", () => {
       "future",
       "on hold",
       "rnr",
+      "call back",
       "qualified",
       "working",
       "deployed",
@@ -50,5 +52,14 @@ describe("candidatePipelineStatusConfig", () => {
     expect(getCandidatePipelineStatusConfig("on_hold").icon).toBe(
       getCandidatePipelineStatusConfig("on hold").icon
     );
+  });
+
+  it("resolves Call Back with PhoneCall icon (not default)", () => {
+    const config = getCandidatePipelineStatusConfig("Call Back");
+    expect(config.icon).toBe(PhoneCall);
+    expect(config.description).toBe("Scheduled callback with candidate");
+    expect(config.iconColor).toBe("text-cyan-600");
+    expect(getCandidatePipelineStatusConfig("call_back").icon).toBe(PhoneCall);
+    expect(getCandidatePipelineStatusConfig("callback").icon).toBe(PhoneCall);
   });
 });

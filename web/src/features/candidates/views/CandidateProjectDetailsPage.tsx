@@ -23,7 +23,8 @@ import {
     ClipboardList,
     Luggage,
     XCircle,
-    PauseCircle
+    PauseCircle,
+    Hash,
 } from "lucide-react";
 import { JSX, useRef, useEffect } from "react";
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -773,6 +774,14 @@ export default function CandidateProjectDetailsPage() {
                                 </div>
 
                                 <div className="space-y-2 pt-3 border-t">
+                                    {pipelineResponse?.data?.candidate?.candidateCode ? (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Hash className="h-4 w-4 text-gray-400 shrink-0" />
+                                            <span className="inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                                                {pipelineResponse.data.candidate.candidateCode}
+                                            </span>
+                                        </div>
+                                    ) : null}
                                     <div className="flex items-center gap-2 text-sm">
                                         <Mail className="h-4 w-4 text-gray-400" />
                                         <span className="text-gray-700 truncate">{pipelineResponse?.data?.candidate?.email}</span>

@@ -3,7 +3,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
 import {
   TransferCandidateModal,
@@ -384,7 +384,7 @@ export default function OperationsDashboardPage() {
         <div className="max-w-screen-2xl mx-auto space-y-6 p-4 md:p-6">
 
           {/* Header */}
-          <TypedHeader
+          <DashboardWelcomeHeader
             userName={user?.name || "Operations"}
             subtitle={`Roles: ${Array.isArray(user?.roles) ? user.roles.join(", ") : "N/A"}`}
           />

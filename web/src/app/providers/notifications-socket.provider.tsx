@@ -262,6 +262,58 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         }));
       }
 
+      if (notification.type === "CALLBACK_REMINDER") {
+        const meta = notification.meta ?? {};
+        const metaCandidate = meta.candidate as Record<string, unknown> | undefined;
+        const nameParts = String(meta.candidateName ?? "").trim().split(/\s+/);
+
+        dispatch(
+          baseApi.util.invalidateTags(["CallbackReminder", "Notification"]),
+        );
+
+        window.dispatchEvent(
+          new CustomEvent("callback:reminder", {
+            detail: {
+              show: true,
+              reminder: {
+                id: meta.reminderId ?? notification.id,
+                candidateId: meta.candidateId,
+                statusHistoryId: meta.statusHistoryId,
+                scheduledFor: meta.scheduledFor,
+                sentAt: notification.createdAt,
+                status: "sent",
+                createdAt: notification.createdAt,
+                updatedAt: notification.createdAt,
+                statusHistory: meta.statusHistory ?? {
+                  statusUpdatedAt: meta.scheduledFor,
+                  reason:
+                    (meta.statusHistory as { reason?: string } | undefined)
+                      ?.reason ??
+                    (typeof meta.reason === "string" ? meta.reason : undefined),
+                },
+                candidate: metaCandidate
+                  ? {
+                      id: metaCandidate.id ?? meta.candidateId,
+                      firstName: metaCandidate.firstName,
+                      lastName: metaCandidate.lastName,
+                      countryCode: metaCandidate.countryCode ?? meta.countryCode,
+                      mobileNumber:
+                        metaCandidate.mobileNumber ?? meta.mobileNumber,
+                      currentStatus: metaCandidate.currentStatus,
+                    }
+                  : {
+                      id: meta.candidateId,
+                      firstName: nameParts[0] ?? "",
+                      lastName: nameParts.slice(1).join(" ") ?? "",
+                      countryCode: meta.countryCode,
+                      mobileNumber: meta.mobileNumber,
+                    },
+              },
+            },
+          }),
+        );
+      }
+
       // Dispatch a specific event for processing reminders so the processing followup modal opens
       if (notification.type === "processing.reminder" || isProcessingReminder) {
         window.dispatchEvent(new CustomEvent("processing:reminder", {

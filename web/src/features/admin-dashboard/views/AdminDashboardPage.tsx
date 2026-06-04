@@ -1,5 +1,5 @@
 import { useAppSelector } from "@/app/hooks";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import StatsCards from "../components/StatsCards";
 import HiringTrendChart from "../components/HiringTrendChart";
 import TopRecruiterCard from "../components/TopRecruiterCard";
@@ -13,8 +13,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6 p-2">
       {/* Page header */}
-      <TypedHeader 
-        userName={user?.name || "Admin"} 
+      <DashboardWelcomeHeader
+        userName={user?.name || "Admin"}
         subtitle="Recruitment CRM overview at a glance"
       />
 

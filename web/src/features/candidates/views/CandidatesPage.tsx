@@ -437,6 +437,15 @@ export default function CandidatesPage() {
           bgColor: "bg-yellow-100",
           borderColor: "border-yellow-300",
         };
+      case "call back":
+      case "call_back":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-cyan-700",
+          bgColor: "bg-cyan-100",
+          borderColor: "border-cyan-300",
+        };
       case "qualified":
         return {
           variant: "default" as const,
@@ -545,6 +554,12 @@ export default function CandidatesPage() {
     handledByCRE: serverCounts?.handledByCRE ?? 0,
     untouched: serverCounts?.untouched ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
     rnr: serverCounts?.rnr ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    callBack:
+      serverCounts?.callBack ??
+      candidates.filter((c: any) => {
+        const s = (c?.currentStatus?.statusName || "").toLowerCase();
+        return s === "call back" || s === "call_back";
+      }).length,
     rnrHandledByCRE: serverCounts?.rnrHandledByCRE ?? 0,
     onHold: serverCounts?.onHold ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
     interested: serverCounts?.interested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
@@ -574,12 +589,20 @@ export default function CandidatesPage() {
       color: "from-emerald-500 to-teal-500",
     },
     {
-      label: "Call Back (RNR)",
+      label: "RNR",
       value: derivedCounts.rnr,
       subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with Operations handler` : "Ring not responded",
       icon: Phone,
       statusFilter: "rnr",
       color: "from-orange-500 to-red-500",
+    },
+    {
+      label: "Call Back",
+      value: derivedCounts.callBack,
+      subtitle: "Scheduled callbacks",
+      icon: Phone,
+      statusFilter: "call_back",
+      color: "from-cyan-500 to-teal-500",
     },
     {
       label: "On Hold",
@@ -645,6 +668,7 @@ export default function CandidatesPage() {
     const assignedCount = recruiterCounts?.totalAssigned ?? totalCount;
     const untouchedCount = recruiterCounts?.untouched ?? 0;
     const rnrCount = recruiterCounts?.rnr ?? 0;
+    const callBackCount = recruiterCounts?.callBack ?? 0;
     const onHoldCount = recruiterCounts?.onHold ?? 0;
     const interestedCount = recruiterCounts?.interested ?? 0;
     const futureCount = recruiterCounts?.future ?? 0;
@@ -677,6 +701,14 @@ export default function CandidatesPage() {
         icon: Phone,
         statusFilter: "rnr",
         color: "from-orange-500 to-red-500",
+      },
+      {
+        label: "Call Back",
+        value: callBackCount,
+        subtitle: "Scheduled callbacks",
+        icon: Phone,
+        statusFilter: "call_back",
+        color: "from-cyan-500 to-teal-500",
       },
       {
         label: "On Hold",
@@ -743,6 +775,7 @@ export default function CandidatesPage() {
       const assignedCount = (allCounts as any)?.total ?? (allCounts as any)?.totalAssigned ?? totalCount;
       const untouchedCount = allCounts?.untouched ?? 0;
       const rnrCount = allCounts?.rnr ?? 0;
+      const callBackCount = allCounts?.callBack ?? 0;
       const onHoldCount = allCounts?.onHold ?? 0;
       const interestedCount = allCounts?.interested ?? 0;
       const futureCount = allCounts?.future ?? 0;
@@ -769,12 +802,20 @@ export default function CandidatesPage() {
           color: "from-emerald-500 to-teal-500",
         },
         {
-          label: "Call Back (RNR)",
+          label: "RNR",
           value: rnrCount,
           subtitle: "Ring not responded",
           icon: Phone,
           statusFilter: "rnr",
           color: "from-orange-500 to-red-500",
+        },
+        {
+          label: "Call Back",
+          value: callBackCount,
+          subtitle: "Scheduled callbacks",
+          icon: Phone,
+          statusFilter: "call_back",
+          color: "from-cyan-500 to-teal-500",
         },
         {
           label: "On Hold",
@@ -860,7 +901,9 @@ export default function CandidatesPage() {
       case "untouched":
         return "Untouched";
       case "rnr":
-        return "Call Back (RNR)";
+        return "RNR";
+      case "call_back":
+        return "Call Back";
       case "interested":
         return "Interested";
       case "not_interested":
@@ -889,7 +932,9 @@ export default function CandidatesPage() {
       case "untouched":
         return "Candidates who want to work today";
       case "rnr":
-        return "Candidates to call back (no response)";
+        return "Ring not responded candidates";
+      case "call_back":
+        return "Candidates with scheduled callbacks";
       case "interested":
         return "Candidates who expressed interest";
       case "not_interested":

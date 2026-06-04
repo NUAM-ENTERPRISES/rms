@@ -51,4 +51,12 @@ export class UpdateCandidateStatusDto {
   @IsOptional()
   @IsDateString()
   futureDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Scheduled callback date-time for status "Call Back"',
+    example: '2026-06-02T15:30:00.000Z',
+  })
+  @IsOptional()
+  @IsDateString()
+  callbackAt?: string;
 }

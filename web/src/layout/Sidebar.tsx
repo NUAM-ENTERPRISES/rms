@@ -182,7 +182,7 @@ function NavItemComponent({
       )}
     >
       <div className="flex items-center gap-2.5">
-        {item.icon && (
+        {item.icon && depth === 0 && (
           <div
             className={cn(
               "flex items-center justify-center rounded-lg transition-all duration-300 shadow-sm",

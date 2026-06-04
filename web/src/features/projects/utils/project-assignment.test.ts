@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getCandidateAssignmentBlockReason,
   getProjectClosureMessage,
   isProjectDeadlineExpired,
   isProjectOpenForAssignment,
@@ -37,6 +38,11 @@ describe("project-assignment", () => {
         now
       )
     ).toBe(false);
+  });
+
+  it("getCandidateAssignmentBlockReason explains Call Back assignment block", () => {
+    expect(getCandidateAssignmentBlockReason("Call Back")).toContain("callback");
+    expect(getCandidateAssignmentBlockReason("call_back")).toContain("callback");
   });
 
   it("getProjectClosureMessage returns user-facing copy", () => {

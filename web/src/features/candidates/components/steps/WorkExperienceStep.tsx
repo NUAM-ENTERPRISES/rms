@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import {
   Briefcase,
   Plus,
@@ -25,8 +26,16 @@ import {
   Pencil,
   Upload,
   FileText,
+  Building2,
+  Calendar,
+  MapPin,
+  FileCheck,
+  Trash2,
+  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 
 export type PendingCertBatch = {
@@ -71,6 +80,165 @@ interface WorkExperienceStepProps {
 const newBatchId = () =>
   globalThis.crypto?.randomUUID?.() ??
   `batch-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const formatExperiencePeriod = (
+  startDate: string,
+  endDate: string,
+  isCurrent: boolean
+): string => {
+  const start = DateUtils.formatDate(startDate);
+  if (isCurrent) return `${start} – Present`;
+  const end = endDate ? DateUtils.formatDate(endDate) : "—";
+  return `${start} – ${end}`;
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const isPdfFile = (file: File) =>
+  file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+type ExperienceCertificatesPanelProps = {
+  batches: PendingCertBatch[];
+  onAdd: () => void;
+  onRemoveBatch: (batchId: string) => void;
+  className?: string;
+};
+
+function ExperienceCertificatesPanel({
+  batches,
+  onAdd,
+  onRemoveBatch,
+  className,
+}: ExperienceCertificatesPanelProps) {
+  const totalFiles = batches.reduce((sum, b) => sum + b.files.length, 0);
+  const hasQueued = batches.length > 0;
+
+  return (
+    <section
+      aria-labelledby="experience-certificates-heading"
+      className={cn(
+        "rounded-lg border overflow-hidden",
+        hasQueued
+          ? "border-indigo-200 bg-indigo-50/30"
+          : "border-slate-200 bg-slate-50/50",
+        className
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b border-slate-200/80 bg-white/80">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600"
+            aria-hidden
+          >
+            <FileCheck className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h5
+                id="experience-certificates-heading"
+                className="text-sm font-semibold text-slate-800 leading-tight"
+              >
+                Experience certificates
+              </h5>
+              {hasQueued && (
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-2 text-xs font-medium bg-indigo-100 text-indigo-700 border-0"
+                >
+                  {totalFiles} queued
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+              PDF or image · uploads when you save the candidate
+            </p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 shrink-0 px-2.5 text-sm border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          onClick={onAdd}
+        >
+          <Upload className="h-3.5 w-3.5 mr-1.5" aria-hidden />
+          Add document
+        </Button>
+      </div>
+
+      <div className="px-3 py-2.5">
+        {batches.length === 0 ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white/80 px-3 py-3 text-sm text-slate-600 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+          >
+            <Upload className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
+            <span>No files queued — tap to attach certificates</span>
+          </button>
+        ) : (
+          <ul className="space-y-2" aria-label="Queued certificate uploads">
+            {batches.map((batch) => (
+              <li
+                key={batch.id}
+                className="rounded-lg border border-indigo-100 bg-white overflow-hidden"
+              >
+                <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-b border-indigo-50 bg-indigo-50/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+                    <span className="text-sm font-medium text-slate-800 truncate">
+                      {batch.docName || "Experience letter"}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="h-5 px-1.5 text-xs font-medium bg-indigo-100 text-indigo-700 border-0 shrink-0"
+                    >
+                      {batch.files.length} file{batch.files.length === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                    onClick={() => onRemoveBatch(batch.id)}
+                    aria-label={`Remove ${batch.docName || "certificate group"}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <ul className="divide-y divide-slate-100">
+                  {batch.files.map((file, fileIdx) => (
+                    <li
+                      key={`${batch.id}-${file.name}-${fileIdx}`}
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-sm text-slate-600"
+                    >
+                      {isPdfFile(file) ? (
+                        <FileText className="h-4 w-4 shrink-0 text-red-500" aria-hidden />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                      )}
+                      <span className="truncate flex-1 font-medium text-slate-700">
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   workExperiences,
@@ -284,143 +452,151 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         <CardContent className="space-y-6">
           {workExperiences.length > 0 && (
             <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-slate-800">
-                Added Work Experiences
-              </h4>
-              {workExperiences.map((experience) => (
-                <div
-                  key={experience.id}
-                  className="p-4 border border-slate-200 rounded-lg bg-slate-50"
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-lg font-semibold text-slate-800">
+                  Added work experiences
+                </h4>
+                <Badge
+                  variant="secondary"
+                  className="bg-slate-100 text-slate-600 font-medium"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-slate-900">
-                        {experience.jobTitle}
-                      </h4>
-                      <p className="text-slate-600">{experience.companyName}</p>
-                      <p className="text-sm text-slate-500">
-                        {new Date(experience.startDate).toLocaleDateString()} -{" "}
-                        {experience.isCurrent
-                          ? "Present"
-                          : new Date(experience.endDate).toLocaleDateString()}
-                      </p>
-                      {experience.location && (
-                        <p className="text-sm text-slate-500">
-                          {experience.location}
-                        </p>
-                      )}
-                      {experience.countryCode && (
-                        <p className="text-sm text-slate-500">
-                          Country: {experience.countryCode}
-                        </p>
-                      )}
-                      {experience.skills && experience.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {experience.skills.map(
-                            (skill: string, index: number) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200"
-                              >
-                                <Star className="h-3 w-3" />
-                                {skill}
-                              </span>
-                            )
+                  {workExperiences.length}{" "}
+                  {workExperiences.length === 1 ? "entry" : "entries"}
+                </Badge>
+              </div>
+              <ul className="space-y-3" aria-label="Saved work experiences">
+                {workExperiences.map((experience) => {
+                  const certCount = (experience.pendingCertBatches ?? []).reduce(
+                    (sum, b) => sum + b.files.length,
+                    0
+                  );
+
+                  return (
+                  <li
+                    key={experience.id}
+                    className="rounded-xl border border-blue-100/80 bg-white shadow-sm overflow-hidden ring-1 ring-blue-50 hover:shadow-md hover:border-blue-200/80 transition-all"
+                  >
+                    <div className="relative flex flex-col sm:flex-row sm:items-start gap-3 p-4 border-b border-blue-100/60 bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/40">
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full"
+                        aria-hidden
+                      />
+                      <span
+                        className="relative ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200/40"
+                        aria-hidden
+                      >
+                        <Briefcase className="h-5 w-5" />
+                      </span>
+                      <div className="relative flex-1 min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0 space-y-1.5">
+                            <h4 className="text-base font-bold text-slate-900 leading-snug truncate">
+                              {experience.jobTitle}
+                            </h4>
+                            {experience.companyName ? (
+                              <p className="inline-flex items-center gap-2 rounded-lg border border-slate-200/90 bg-white/90 px-2.5 py-1 text-sm font-medium text-slate-700 shadow-sm">
+                                <Building2
+                                  className="h-4 w-4 shrink-0 text-blue-600"
+                                  aria-hidden
+                                />
+                                <span className="truncate max-w-[240px]">
+                                  {experience.companyName}
+                                </span>
+                              </p>
+                            ) : null}
+                          </div>
+                          {certCount > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 gap-1 border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold"
+                            >
+                              <FileCheck className="h-3.5 w-3.5" aria-hidden />
+                              {certCount} cert{certCount === 1 ? "" : "s"}
+                            </Badge>
                           )}
                         </div>
-                      )}
-
-                      <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-700">
-                              Experience certificates
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              PDF or image. Queued files upload when you create
-                              the candidate.
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs shrink-0"
-                            onClick={() => openCertModal(experience.id)}
-                          >
-                            <Upload className="h-3 w-3 mr-1" />
-                            Add document
-                          </Button>
-                        </div>
-                        {(experience.pendingCertBatches ?? []).length > 0 && (
-                          <ul className="space-y-1.5">
-                            {(experience.pendingCertBatches ?? []).map(
-                              (batch) => (
-                                <li
-                                  key={batch.id}
-                                  className="flex items-center justify-between gap-2 rounded-md border border-blue-100 bg-blue-50/80 px-2.5 py-1.5 text-[11px] text-blue-900"
-                                >
-                                  <span className="min-w-0 truncate">
-                                    <span className="font-medium">
-                                      {batch.docName || "Experience letter"}
-                                    </span>
-                                    <span className="text-blue-700/80">
-                                      {" "}
-                                      · {batch.files.length} file
-                                      {batch.files.length === 1 ? "" : "s"}
-                                    </span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeBatchFromExperience(
-                                        experience.id,
-                                        batch.id
-                                      )
-                                    }
-                                    className="shrink-0 text-blue-500 hover:text-red-600 transition-colors"
-                                    aria-label="Remove pending upload"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </li>
-                              )
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+                            <Calendar className="h-3.5 w-3.5" aria-hidden />
+                            {formatExperiencePeriod(
+                              experience.startDate,
+                              experience.endDate,
+                              experience.isCurrent
                             )}
-                          </ul>
-                        )}
+                          </span>
+                          {(experience.location || experience.countryCode) && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                              <MapPin
+                                className="h-3.5 w-3.5 shrink-0 text-slate-400"
+                                aria-hidden
+                              />
+                              {[experience.location, experience.countryCode]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="relative flex shrink-0 gap-2 sm:flex-col sm:items-stretch">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => editWorkExperience(experience.id)}
+                          className="h-9 border-blue-200 bg-white text-blue-700 font-semibold shadow-sm hover:bg-blue-50 hover:border-blue-300"
+                          aria-label={`Edit ${experience.jobTitle}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-1.5 text-blue-600" aria-hidden />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeWorkExperience(experience.id)}
+                          className="h-9 border-red-200 bg-white text-red-600 font-semibold shadow-sm hover:bg-red-50 hover:border-red-300"
+                          aria-label={`Remove ${experience.jobTitle}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1.5 text-red-500" aria-hidden />
+                          Remove
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-2 shrink-0">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => editWorkExperience(experience.id)}
-                        className="text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeWorkExperience(experience.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
+
+                    {experience.skills && experience.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 px-4 py-2.5 border-b border-slate-100 bg-slate-50/40">
+                        {experience.skills.map((skill: string, index: number) => (
+                          <Badge
+                            key={index}
+                            variant="outline"
+                            className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
+                          >
+                            <Star className="h-3 w-3" aria-hidden />
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="p-4">
+                      <ExperienceCertificatesPanel
+                        batches={experience.pendingCertBatches ?? []}
+                        onAdd={() => openCertModal(experience.id)}
+                        onRemoveBatch={(batchId) =>
+                          removeBatchFromExperience(experience.id, batchId)
+                        }
+                      />
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
 
           <div
             id="work-experience-form"
-            className="border border-slate-200 rounded-lg p-6 bg-slate-50 relative transition-all duration-300"
+            className="border border-slate-200 rounded-xl p-6 bg-gradient-to-b from-slate-50/80 to-white relative transition-all duration-300 shadow-sm"
           >
             {editingExperienceId && (
               <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-300">
@@ -683,56 +859,12 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               )}
             </div>
 
-            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-800">
-                    Experience certificates
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    PDF or image. Add one or more groups before saving this entry.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  onClick={() => openCertModal("draft")}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Add document
-                </Button>
-              </div>
-              {(newWorkExperience.pendingCertBatches ?? []).length > 0 && (
-                <ul className="space-y-1.5">
-                  {(newWorkExperience.pendingCertBatches ?? []).map((batch) => (
-                    <li
-                      key={batch.id}
-                      className="flex items-center justify-between gap-2 rounded-md border border-blue-100 bg-blue-50/80 px-3 py-2 text-xs text-blue-900"
-                    >
-                      <span className="min-w-0 truncate">
-                        <span className="font-medium">
-                          {batch.docName || "Experience letter"}
-                        </span>
-                        <span className="text-blue-700/80">
-                          {" "}
-                          · {batch.files.length} file
-                          {batch.files.length === 1 ? "" : "s"}
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeBatchFromDraft(batch.id)}
-                        className="shrink-0 text-blue-500 hover:text-red-600 transition-colors"
-                        aria-label="Remove pending upload"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <div className="mt-5 pt-4 border-t border-slate-200">
+              <ExperienceCertificatesPanel
+                batches={newWorkExperience.pendingCertBatches ?? []}
+                onAdd={() => openCertModal("draft")}
+                onRemoveBatch={removeBatchFromDraft}
+              />
             </div>
 
             <div className="flex justify-end mt-4 gap-2">
@@ -774,29 +906,38 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           if (!open) closeCertModal();
         }}
       >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add experience certificate</DialogTitle>
-            <DialogDescription>
-              Optional label for this group of files. Upload one or more PDFs or
-              images.
-            </DialogDescription>
+        <DialogContent className="max-w-lg gap-0 p-0 overflow-hidden">
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-slate-100">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+                <FileCheck className="h-4 w-4" aria-hidden />
+              </span>
+              <div>
+                <DialogTitle className="text-lg">Add experience certificate</DialogTitle>
+                <DialogDescription className="mt-1 text-sm">
+                  PDF or image — uploads when you save the candidate.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-1">
+          <div className="space-y-4 px-5 py-4">
             <div className="space-y-2">
-              <Label htmlFor="we-step-cert-doc-name">Document name</Label>
+              <Label htmlFor="we-step-cert-doc-name" className="text-slate-700">
+                Document label
+              </Label>
               <Input
                 id="we-step-cert-doc-name"
                 value={certDocName}
                 onChange={(e) => setCertDocName(e.target.value)}
-                placeholder="e.g. Aster Hospital"
+                placeholder="e.g. Aster Hospital experience letter"
+                className="h-10 bg-white border-slate-200"
               />
-              <p className="text-[11px] text-muted-foreground">
-                Shown as a prefix when viewing the certificate after upload.
+              <p className="text-xs text-muted-foreground">
+                Optional — helps identify this batch later.
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Files</Label>
+              <Label className="text-slate-700">Files</Label>
               <input
                 ref={certFileInputRef}
                 type="file"
@@ -805,45 +946,72 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                 className="hidden"
                 onChange={addCertFilesFromInput}
               />
+              <button
+                type="button"
+                onClick={() => certFileInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 px-4 py-5 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                  <Upload className="h-5 w-5" aria-hidden />
+                </span>
+                <span className="text-sm font-medium text-slate-700">
+                  {certFiles.length > 0 ? "Add more files" : "Choose PDF or images"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  JPEG, PNG, or PDF
+                </span>
+              </button>
               {certFiles.length > 0 && (
-                <ul className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50/80 p-2">
+                <ul
+                  className="rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 max-h-40 overflow-y-auto"
+                  aria-label="Selected files"
+                >
                   {certFiles.map((file, idx) => (
                     <li
                       key={`${file.name}-${idx}`}
-                      className="flex items-center gap-1.5 rounded-md bg-white px-2 py-1 text-xs text-slate-800 max-w-full border border-slate-100"
+                      className="flex items-center gap-2 px-3 py-2 text-sm"
                     >
-                      <FileText className="h-3 w-3 shrink-0" />
-                      <span className="truncate max-w-[200px]">{file.name}</span>
-                      <button
+                      {isPdfFile(file) ? (
+                        <FileText className="h-4 w-4 shrink-0 text-red-500" aria-hidden />
+                      ) : (
+                        <ImageIcon className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                      )}
+                      <span className="truncate flex-1 font-medium text-slate-800">
+                        {file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 shrink-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => removeCertFileAt(idx)}
-                        className="text-slate-500 hover:text-red-600"
-                        aria-label="Remove file"
+                        aria-label={`Remove ${file.name}`}
                       >
-                        <X className="h-3 w-3" />
-                      </button>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
                     </li>
                   ))}
                 </ul>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => certFileInputRef.current?.click()}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {certFiles.length > 0 ? "Add more files" : "Choose files"}
-              </Button>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-slate-100 px-5 py-4 sm:gap-2">
             <Button type="button" variant="outline" onClick={closeCertModal}>
               Cancel
             </Button>
-            <Button type="button" onClick={confirmCertModal}>
-              Add to list
+            <Button
+              type="button"
+              onClick={confirmCertModal}
+              disabled={certFiles.length === 0}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <FileCheck className="h-4 w-4 mr-2" aria-hidden />
+              {certFiles.length > 0
+                ? `Add ${certFiles.length} file${certFiles.length === 1 ? "" : "s"} to queue`
+                : "Add to queue"}
             </Button>
           </DialogFooter>
         </DialogContent>
