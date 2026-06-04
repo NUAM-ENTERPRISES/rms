@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/tooltip";
 import { MandatoryDocumentsGrid } from "../components/MandatoryDocumentsGrid";
 import { ProjectDocumentsProgressGrid } from "../components/ProjectDocumentsProgressGrid";
+import { VerificationDocumentsProgressGrid } from "../components/VerificationDocumentsProgressGrid";
 import {
   useCreateDocumentMutation,
   useUpdateDocumentMutation,
@@ -672,7 +673,9 @@ const RecruiterDocsPage: React.FC = () => {
                     ? "Mandatory Documents (6)"
                     : isProjectDocsProgressView
                       ? "Upload Progress"
-                      : "Progress"}
+                      : isVerifiedOrRejected
+                        ? "Verification Progress"
+                        : "Progress"}
                 </TableHead>
                 <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 w-[100px]">
                   Contact
@@ -827,24 +830,49 @@ const RecruiterDocsPage: React.FC = () => {
                               )
                             }
                           />
+                        ) : isVerifiedOrRejected ? (
+                          <VerificationDocumentsProgressGrid
+                            item={item}
+                            variant={
+                              statusFilter === "documents_verified"
+                                ? "verified"
+                                : "rejected"
+                            }
+                            onViewDetails={() =>
+                              navigate(
+                                `/recruiter-docs/${item.project.id}/${item.candidate.id}`,
+                              )
+                            }
+                          />
                         ) : (
-                        <div className="flex flex-col gap-1.5 min-w-[120px]">
-                          <div className="flex items-center justify-between text-[10px] font-medium">
-                            <span className="text-muted-foreground">{item.progress.docsUploaded} / {item.progress.totalDocsToUpload} docs</span>
-                            <span className={item.progress.docsPercentage === 100 ? "text-emerald-600" : ""}>
-                              {item.progress.docsPercentage}%
-                            </span>
+                          <div className="flex flex-col gap-1.5 min-w-[120px]">
+                            <div className="flex items-center justify-between text-[10px] font-medium">
+                              <span className="text-muted-foreground">
+                                {item.progress.docsUploaded} /{" "}
+                                {item.progress.totalDocsToUpload} docs
+                              </span>
+                              <span
+                                className={
+                                  item.progress.docsPercentage === 100
+                                    ? "text-emerald-600"
+                                    : ""
+                                }
+                              >
+                                {item.progress.docsPercentage}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/80 shadow-inner ring-1 ring-inset ring-border/50">
+                              <div
+                                className={cn(
+                                  "h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out",
+                                  getProgressColor(item.progress.docsPercentage),
+                                )}
+                                style={{
+                                  width: `${item.progress.docsPercentage}%`,
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/80 shadow-inner ring-1 ring-inset ring-border/50">
-                            <div
-                              className={cn(
-                                "h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out",
-                                getProgressColor(item.progress.docsPercentage),
-                              )}
-                              style={{ width: `${item.progress.docsPercentage}%` }}
-                            />
-                          </div>
-                        </div>
                         )}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-center">

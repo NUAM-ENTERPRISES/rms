@@ -23,7 +23,9 @@ type RecruiterUploadProgressProps = {
   percent: number;
   unitLabel: string;
   pendingWord: "pending" | "missing";
-  accent?: "amber" | "sky";
+  accent?: "amber" | "sky" | "emerald" | "rose";
+  /** Overrides the top-right chip (e.g. "2 rejected"). */
+  statusChipText?: string;
   getProgressColor?: (percentage: number) => string;
   checklistCompleteLabel: string;
   checklistPendingLabel: string;
@@ -38,26 +40,41 @@ type RecruiterUploadProgressProps = {
 
 function resolveStatusTone(
   isComplete: boolean,
-  accent: "amber" | "sky",
+  accent: "amber" | "sky" | "emerald" | "rose",
 ): {
   statusClass: string;
   iconWrap: string;
+  chipClass: string;
 } {
-  if (isComplete) {
+  if (isComplete || accent === "emerald") {
     return {
       statusClass: "text-emerald-700",
       iconWrap: "bg-emerald-500/10 text-emerald-600",
+      chipClass: isComplete
+        ? "bg-emerald-500/10 text-emerald-700"
+        : "bg-emerald-500/10 text-emerald-700",
+    };
+  }
+  if (accent === "rose") {
+    return {
+      statusClass: "text-rose-700",
+      iconWrap: "bg-rose-500/10 text-rose-600",
+      chipClass: "bg-rose-500/10 text-rose-700",
     };
   }
   if (accent === "sky") {
     return {
       statusClass: "text-sky-700",
       iconWrap: "bg-sky-500/10 text-sky-600",
+      chipClass: "bg-sky-500/10 text-sky-700",
     };
   }
   return {
     statusClass: "text-amber-700",
     iconWrap: "bg-amber-500/10 text-amber-600",
+    chipClass: isComplete
+      ? "bg-emerald-500/10 text-emerald-700"
+      : "bg-amber-500/10 text-amber-700",
   };
 }
 
@@ -73,6 +90,7 @@ export function RecruiterUploadProgress({
   checklistPendingLabel,
   progressAriaLabel,
   checklistContentClassName,
+  statusChipText,
   tooltipContent,
   className,
   onStopRowNav,
@@ -177,14 +195,11 @@ export function RecruiterUploadProgress({
             <span
               className={cn(
                 "rounded px-1 py-px text-[8px] font-bold uppercase leading-none tracking-wide",
-                isComplete
-                  ? "bg-emerald-500/10 text-emerald-700"
-                  : accent === "sky"
-                    ? "bg-sky-500/10 text-sky-700"
-                    : "bg-amber-500/10 text-amber-700",
+                tone.chipClass,
               )}
             >
-              {isComplete ? "Done" : `${missingCount} ${pendingWord}`}
+              {statusChipText ??
+                (isComplete ? "Done" : `${missingCount} ${pendingWord}`)}
             </span>
           </div>
 
