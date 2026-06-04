@@ -75,7 +75,7 @@ export function MultiCountrySelect({
         </Label>
       )}
 
-      <Popover open={open} onOpenChange={setOpen} modal={false}>
+      <Popover open={open} onOpenChange={setOpen} modal>
         <PopoverTrigger asChild disabled={disabled}>
           <div
             role="combobox"
@@ -125,22 +125,28 @@ export function MultiCountrySelect({
             <ChevronDown className="h-4 w-4 shrink-0 opacity-50 mt-1" aria-hidden />
           </div>
         </PopoverTrigger>
-          <PopoverContent className="w-[320px] p-0 shadow-xl border-slate-200 rounded-xl" align="start">
-          <div className="p-2 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search countries..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-10 text-sm border-slate-200 focus:ring-blue-500 rounded-lg"
-              />
+          <PopoverContent
+            className="z-[100] w-[320px] p-0 shadow-xl border-slate-200 rounded-xl pointer-events-auto"
+            align="start"
+            onWheel={(e) => e.stopPropagation()}
+          >
+          <div className="flex max-h-[min(320px,50vh)] flex-col">
+            <div className="shrink-0 p-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search countries..."
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                  className="pl-9 h-10 text-sm border-slate-200 focus:ring-blue-500 rounded-lg"
+                />
+              </div>
             </div>
 
-            <div className="max-h-[280px] overflow-y-auto pr-1 space-y-0.5 scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2 pr-1 space-y-0.5 [scrollbar-color:rgb(203_213_225)_rgb(248_250_252)] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-slate-100">
               {isLoading ? (
                 <div className="py-8 text-center text-sm text-slate-400 flex flex-col items-center gap-2">
                   <div className="h-4 w-4 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />

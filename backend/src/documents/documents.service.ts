@@ -3692,6 +3692,7 @@ export class DocumentsService {
         project: {
           id: cp.project.id,
           title: cp.project.title,
+          countryCode: cp.project.countryCode,
           client: cp.project.client,
           role: cp.roleNeeded
             ? {
@@ -4070,6 +4071,7 @@ export class DocumentsService {
             project: {
               id: '',
               title: '—',
+              countryCode: null,
               client: null,
               role: null,
             },
@@ -4112,6 +4114,7 @@ export class DocumentsService {
           project: {
             id: cp.project.id,
             title: cp.project.title,
+            countryCode: cp.project.countryCode,
             client: cp.project.client,
             role: cp.roleNeeded
               ? {
@@ -4365,6 +4368,7 @@ export class DocumentsService {
         project: {
           id: cp.project.id,
           title: cp.project.title,
+          countryCode: cp.project.countryCode,
           client: cp.project.client,
           role: cp.roleNeeded
             ? {

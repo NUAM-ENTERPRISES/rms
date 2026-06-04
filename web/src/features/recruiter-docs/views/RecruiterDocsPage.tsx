@@ -79,6 +79,7 @@ import {
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 import { toast } from "sonner";
+import { FlagIcon } from "@/shared";
 
 const CandidateUploadDocumentModal = React.lazy(
   () => import("../components/CandidateUploadDocumentModal"),
@@ -91,6 +92,30 @@ function formatPhoneForLink(candidate: {
   const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
   const digits = raw.replace(/\D/g, "");
   return digits || null;
+}
+
+function ProjectNameWithFlag({
+  title,
+  countryCode,
+  titleClassName = "text-sm font-medium text-slate-800",
+}: {
+  title: string;
+  countryCode?: string | null;
+  titleClassName?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      {countryCode ? (
+        <FlagIcon
+          countryCode={countryCode}
+          size="sm"
+          className="shrink-0 rounded-sm"
+          aria-label={`Project country ${countryCode}`}
+        />
+      ) : null}
+      <span className={cn("truncate", titleClassName)}>{title}</span>
+    </div>
+  );
 }
 
 const RecruiterDocsPage: React.FC = () => {
@@ -502,11 +527,20 @@ const RecruiterDocsPage: React.FC = () => {
                       aria-expanded={isProjectPopoverOpen}
                       className="w-[220px] justify-between bg-white border-slate-200 h-9 shadow-sm font-normal"
                     >
-                      <span className="truncate">
-                        {selectedProjectId === "all" 
-                          ? "All Projects" 
-                          : projectDetails?.data?.title || "Loading project..."}
-                      </span>
+                      <div className="truncate flex items-center gap-2 min-w-0">
+                        {selectedProjectId === "all" ? (
+                          "All Projects"
+                        ) : (
+                          <ProjectNameWithFlag
+                            title={projectDetails?.data?.title || "Loading project..."}
+                            countryCode={
+                              (projectDetails?.data as { countryCode?: string | null } | undefined)
+                                ?.countryCode
+                            }
+                            titleClassName="text-sm font-normal truncate"
+                          />
+                        )}
+                      </div>
                       <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -555,7 +589,13 @@ const RecruiterDocsPage: React.FC = () => {
                               setIsProjectPopoverOpen(false);
                             }}
                           >
-                            <span className="truncate">{project.title}</span>
+                            <ProjectNameWithFlag
+                              title={project.title}
+                              countryCode={
+                                (project as { countryCode?: string | null }).countryCode
+                              }
+                              titleClassName="text-sm font-normal truncate"
+                            />
                           </div>
                         ))}
                         {projectsData?.data?.projects?.length === 0 && (
@@ -766,7 +806,12 @@ const RecruiterDocsPage: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
-                        <span className="text-sm font-medium text-slate-800 truncate block max-w-[160px]">{item.project.title}</span>
+                        <div className="max-w-[180px]">
+                          <ProjectNameWithFlag
+                            title={item.project.title}
+                            countryCode={item.project.countryCode}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="px-4 py-3">
                         <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200 font-normal text-xs">
@@ -1080,8 +1125,13 @@ const RecruiterDocsPage: React.FC = () => {
                       <p className="text-sm font-semibold truncate">
                         {item.candidate.firstName} {item.candidate.lastName}
                       </p>
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Icons.Briefcase className="h-3 w-3" /> {item.project.title}
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5 min-w-0">
+                        <Icons.Briefcase className="h-3 w-3 shrink-0" />
+                        <ProjectNameWithFlag
+                          title={item.project.title}
+                          countryCode={item.project.countryCode}
+                          titleClassName="text-[11px] text-muted-foreground font-normal truncate"
+                        />
                       </p>
                       <p className="text-[10px] font-medium text-amber-600 mt-1">
                         {item.progress.totalDocsToUpload - item.progress.docsUploaded} documents pending

@@ -140,6 +140,7 @@ export interface RecruiterDocumentItem {
   project: {
     id: string;
     title: string;
+    countryCode?: string | null;
     client: {
       name: string;
     } | null;

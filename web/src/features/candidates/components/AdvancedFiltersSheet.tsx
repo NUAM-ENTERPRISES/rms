@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SECTOR_TYPES, VISA_TYPES, SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
+import { SECTOR_TYPES, VISA_TYPES, SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES } from "@/constants/candidate-constants";
 import { startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
 interface CandidateFilters {
@@ -213,15 +213,10 @@ export function AdvancedFiltersSheet({
             </label>
             <MultiSelect
               placeholder="Select"
-              options={[
-                { label: "Manual", value: "manual" },
-                { label: "WhatsApp", value: "whatsapp" },
-                { label: "Referral", value: "referral" },
-                { label: "LinkedIn", value: "linkedin" },
-                { label: "Facebook", value: "facebook" },
-                { label: "Indeed", value: "indeed" },
-                { label: "Other", value: "other" },
-              ]}
+              options={CANDIDATE_SOURCES.map((src) => ({
+                label: src.label,
+                value: src.value,
+              }))}
               value={localFilters.sources}
               onValueChange={(val) => setLocalFilters(f => ({ ...f, sources: val, page: 1 }))}
               className="bg-white shadow-sm scale-95 origin-left"
