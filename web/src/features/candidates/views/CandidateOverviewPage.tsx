@@ -57,6 +57,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ImageViewer } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import RecruiterPerformanceRatingSection from "../components/RecruiterPerformanceRatingSection";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
@@ -593,6 +594,10 @@ export default function CandidateOverviewPage() {
           userName={displayedRecruiterName || currentUser?.name || "Recruiter"}
           subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
         />
+
+        {isRecruiter && filters.recruiterId === currentUser?.id && (
+          <RecruiterPerformanceRatingSection />
+        )}
 
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
         {/* {(filters.recruiterId !== "all") && (

@@ -1,10 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AdminDashboardService } from '../admin-dashboard.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RecruiterAnalyticsService } from '../../analytics/recruiter/recruiter-analytics.service';
 
 describe('AdminDashboardService', () => {
   let service: AdminDashboardService;
   let prismaService: any;
+  let recruiterAnalyticsService: jest.Mocked<RecruiterAnalyticsService>;
+
+  const mockRecruiterAnalyticsService = {
+    getPerformanceLeaderboard: jest.fn(),
+    stageCountsToActivities: jest.fn(),
+  };
 
   const mockPrismaService = {
     user: {
@@ -35,11 +42,16 @@ describe('AdminDashboardService', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: RecruiterAnalyticsService,
+          useValue: mockRecruiterAnalyticsService,
+        },
       ],
     }).compile();
 
     service = module.get<AdminDashboardService>(AdminDashboardService);
     prismaService = module.get(PrismaService);
+    recruiterAnalyticsService = module.get(RecruiterAnalyticsService);
   });
 
   afterEach(() => {
@@ -168,7 +180,7 @@ describe('AdminDashboardService', () => {
       { projectId: 'proj-1', roleNeededId: 'role-1' },
     ]);
 
-    const result = await service.getProjectRoleHiringStatus('proj-1');
+    const result = await service.getProjectRoleHiringStatus({ projectId: 'proj-1' });
 
     expect(result.data.projectRoles).toHaveLength(1);
     expect(result.data.projectRoles[0].roles[0]).toEqual({ role: 'ICU Nurse', required: 5, filled: 2 });
@@ -188,82 +200,76 @@ describe('AdminDashboardService', () => {
     });
   });
 
-  it('should return top recruiter stats (Emma wins) for selected period', async () => {
-    prismaService.user.findMany = jest.fn().mockResolvedValue([
-      {
-        id: 'rec-1',
-        name: 'Emma',
-        email: 'emma@example.com',
-        countryCode: '+91',
-        mobileNumber: '9876543210',
-        profileImage: 'https://example.com/emma.png',
-      },
-      {
-        id: 'rec-2',
-        name: 'Anu',
-        email: 'anu@example.com',
-        countryCode: '+91',
-        mobileNumber: '9012345678',
-        profileImage: 'https://example.com/anu.png',
-      },
-      {
-        id: 'rec-3',
-        name: 'Abhi',
-        email: 'abhi@example.com',
-        countryCode: '+91',
-        mobileNumber: '9123456789',
-        profileImage: 'https://example.com/abhi.png',
-      },
+  it('should return month and year recruiter awards by performance score', async () => {
+    const stageCounts = {
+      positiveCandidate: 10,
+      documentVerified: 8,
+      interviewShortlisted: 7,
+      interviewPassed: 5,
+      processing: 3,
+      deployed: 4,
+    };
+
+    const monthEntry = {
+      id: 'rec-1',
+      name: 'Emma',
+      email: 'emma@example.com',
+      phone: '+919876543210',
+      role: 'Affinks Recruiter',
+      avatarUrl: 'https://example.com/emma.png',
+      performanceScore: 113,
+      rating: 'Outstanding',
+      placementsThisMonth: 4,
+      stageCounts,
+    };
+
+    const yearEntry = {
+      id: 'rec-2',
+      name: 'Alex',
+      email: 'alex@example.com',
+      phone: '+919999999999',
+      role: 'Affinks Recruiter',
+      avatarUrl: undefined,
+      performanceScore: 200,
+      rating: 'Top Performer',
+      placementsThisMonth: 8,
+      stageCounts,
+    };
+
+    mockRecruiterAnalyticsService.getPerformanceLeaderboard
+      .mockResolvedValueOnce({
+        success: true,
+        data: { year: 2026, month: 4, period: 'monthly', leaderboard: [monthEntry] },
+        message: 'ok',
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { year: 2026, period: 'yearly', leaderboard: [yearEntry] },
+        message: 'ok',
+      });
+
+    mockRecruiterAnalyticsService.stageCountsToActivities.mockReturnValue([
+      { activity: 'Positive Candidate', value: 10 },
+      { activity: 'Deployed', value: 4 },
     ]);
 
-    // Emma values
-    const emmaData = [
-      ...Array.from({ length: 20 }, () => ({ currentProjectStatus: { statusName: 'nominated' } })),
-      ...Array.from({ length: 10 }, () => ({ currentProjectStatus: { statusName: 'documents_verified' } })),
-      ...Array.from({ length: 6 }, () => ({ currentProjectStatus: { statusName: 'interview_passed' } })),
-      ...Array.from({ length: 4 }, () => ({ currentProjectStatus: { statusName: 'hired' } })),
-    ];
+    const result = await service.getTopRecruiterStats(2026, 4, 5);
 
-    const anuData = [
-      ...Array.from({ length: 80 }, () => ({ currentProjectStatus: { statusName: 'nominated' } })),
-      ...Array.from({ length: 40 }, () => ({ currentProjectStatus: { statusName: 'documents_verified' } })),
-      ...Array.from({ length: 30 }, () => ({ currentProjectStatus: { statusName: 'interview_passed' } })),
-      ...Array.from({ length: 1 }, () => ({ currentProjectStatus: { statusName: 'hired' } })),
-    ];
-
-    const abhiData = [
-      ...Array.from({ length: 100 }, () => ({ currentProjectStatus: { statusName: 'nominated' } })),
-      ...Array.from({ length: 95 }, () => ({ currentProjectStatus: { statusName: 'documents_verified' } })),
-      ...Array.from({ length: 30 }, () => ({ currentProjectStatus: { statusName: 'interview_passed' } })),
-      ...Array.from({ length: 0 }, () => ({ currentProjectStatus: { statusName: 'hired' } })),
-    ];
-
-    prismaService.candidateProjects.findMany
-      .mockResolvedValueOnce(emmaData)
-      .mockResolvedValueOnce(anuData)
-      .mockResolvedValueOnce(abhiData);
-
-    const result = await service.getTopRecruiterStats(2026, 4, 1);
-
-    expect(result).toEqual({
-      success: true,
-      data: {
-        topRecruiter: {
-          name: 'Emma',
-          role: 'Affinks Recruiter',
-          placementsThisMonth: 4,
-          email: 'emma@example.com',
-          phone: '+919876543210',
-          avatarUrl: 'https://example.com/emma.png',
-        },
-        recruiterActivities: [
-          { activity: 'Projects Assigned', value: 40 },
-          { activity: 'Documents Verified', value: 10 },
-          { activity: 'Interviews Passed', value: 6 },
-          { activity: 'Candidates Hired', value: 4 },
-        ],
-      },
-      message: 'Top recruiter stats retrieved successfully',
+    expect(recruiterAnalyticsService.getPerformanceLeaderboard).toHaveBeenNthCalledWith(1, {
+      year: 2026,
+      month: 4,
+      limit: 5,
+      period: 'monthly',
     });
+    expect(recruiterAnalyticsService.getPerformanceLeaderboard).toHaveBeenNthCalledWith(2, {
+      year: 2026,
+      limit: 5,
+      period: 'yearly',
+    });
+
+    expect(result.data.recruiterOfTheMonth?.name).toBe('Emma');
+    expect(result.data.recruiterOfTheYear?.name).toBe('Alex');
+    expect(result.data.period).toEqual({ year: 2026, month: 4 });
+    expect(result.data.topRecruiter.name).toBe('Emma');
   });
 });

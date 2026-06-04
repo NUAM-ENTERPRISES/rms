@@ -1285,7 +1285,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: candidateData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
 
@@ -1307,7 +1307,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `/candidates/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -1695,7 +1695,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: { targetRecruiterId, reason },
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     // Bulk transfer candidates to another recruiter
@@ -1708,7 +1708,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     // Transfer candidate back

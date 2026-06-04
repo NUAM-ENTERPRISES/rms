@@ -232,7 +232,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: candidateData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
     updateCandidate: builder.mutation<Candidate, UpdateCandidateRequest>({
       query: ({ id, ...candidateData }) => ({
@@ -250,7 +250,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `/candidates/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     markCandidateConverted: builder.mutation<Candidate, string>({
@@ -292,7 +292,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId, roleNeededId, recruiterId, notes },
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     nominateCandidate: builder.mutation<
@@ -304,7 +304,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: nominationData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     approveOrRejectCandidate: builder.mutation<
@@ -321,7 +321,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: approvalData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     getEligibleCandidates: builder.query<

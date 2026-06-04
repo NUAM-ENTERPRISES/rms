@@ -76,6 +76,32 @@ interface RecruiterCandidatesResponse {
   message: string;
 }
 
+export interface PerformanceStageCounts {
+  positiveCandidate: number;
+  documentVerified: number;
+  interviewShortlisted: number;
+  interviewPassed: number;
+  processing: number;
+  deployed: number;
+}
+
+export interface PerformanceRatingBlock {
+  score: number;
+  rating: string;
+  stageCounts: PerformanceStageCounts;
+  period: { year: number; month?: number };
+}
+
+export interface RecruiterPerformanceRatingResponse {
+  success: boolean;
+  data: {
+    recruiter: RecruiterBasic;
+    monthly: PerformanceRatingBlock;
+    yearly: PerformanceRatingBlock;
+  } | null;
+  message: string;
+}
+
 export const recruiterAnalyticsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getRecruitersList: builder.query<RecruitersListResponse, void>({
@@ -122,6 +148,21 @@ export const recruiterAnalyticsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getRecruiterPerformanceRating: builder.query<
+      RecruiterPerformanceRatingResponse,
+      { year?: number; month?: number; recruiterId?: string }
+    >({
+      query: ({ year, month, recruiterId }) => ({
+        url: "/analytics/recruiter/performance-rating",
+        params: {
+          ...(year ? { year } : {}),
+          ...(month ? { month } : {}),
+          ...(recruiterId ? { recruiterId } : {}),
+        },
+      }),
+      providesTags: ["Candidate", "RecruiterPerformanceRating"],
+    }),
+
     getRecruiterCandidates: builder.query<
       RecruiterCandidatesResponse,
       { recruiterId: string; search?: string; page?: number; limit?: number }
@@ -147,5 +188,6 @@ export const {
   useGetRecruiterActivityBreakdownQuery,
   useGetRecruiterFollowupStatusQuery,
   useGetRecruiterPerformanceStagesQuery,
+  useGetRecruiterPerformanceRatingQuery,
   useGetRecruiterCandidatesQuery,
 } = recruiterAnalyticsApi;

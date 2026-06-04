@@ -34,7 +34,21 @@ export interface TopRecruiter {
   name: string;
   role: string;
   placementsThisMonth: number;
+  performanceScore: number;
+  rating: string;
   email?: string;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export interface PerformanceLeaderboardEntry {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  performanceScore: number;
+  rating: string;
+  placementsThisMonth: number;
   phone?: string;
   avatarUrl?: string;
 }
@@ -44,11 +58,29 @@ export interface RecruiterActivity {
   value: number;
 }
 
+export interface RecruiterAwardWinner {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  performanceScore: number;
+  rating: string;
+  deployedCount: number;
+  phone?: string;
+  avatarUrl?: string;
+}
+
 export interface TopRecruiterStatsResponse {
   success: boolean;
   data: {
+    period: { year: number; month: number };
+    recruiterOfTheMonth: RecruiterAwardWinner | null;
+    recruiterOfTheYear: RecruiterAwardWinner | null;
+    monthlyLeaderboard: PerformanceLeaderboardEntry[];
+    yearlyLeaderboard: PerformanceLeaderboardEntry[];
     topRecruiter: TopRecruiter;
     recruiterActivities: RecruiterActivity[];
+    leaderboard: PerformanceLeaderboardEntry[];
   };
   message: string;
 }

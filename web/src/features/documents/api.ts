@@ -667,7 +667,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments", "Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     reuploadDocumentationDocument: builder.mutation<
@@ -679,7 +679,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments", "Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     getDocumentStats: builder.query<
