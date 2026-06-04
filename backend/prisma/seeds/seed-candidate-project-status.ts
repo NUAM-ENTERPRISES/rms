@@ -72,8 +72,9 @@ export async function seedCandidateProjectWorkflow() {
     {name : "transfered_to_processing", label: "Transferred to Processing", order: 1, main: "processing" },
     { name: "processing_in_progress", label: "Processing In Progress", order: 2, main: "processing" },
     { name: "processing_completed", label: "Processing Completed", order: 3, main: "processing" },
-    { name: "processing_failed", label: "Processing Failed", order: 4, main: "processing" },
-    { name: "ready_for_final", label: "Ready For Final", order: 5, main: "processing" },
+    { name: "processing_hold", label: "Processing On Hold", order: 4, main: "processing" },
+    { name: "processing_failed", label: "Processing Failed", order: 5, main: "processing" },
+    { name: "ready_for_final", label: "Ready For Final", order: 6, main: "processing" },
     // FINAL
     { name: "hired", label: "Hired", order: 1, main: "final" },
 

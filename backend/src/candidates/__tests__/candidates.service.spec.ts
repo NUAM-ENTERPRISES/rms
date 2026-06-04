@@ -869,6 +869,238 @@ describe('CandidatesService', () => {
         ).toBe(true);
       });
     });
+
+    describe('getCandidateOverviewStats registeredSubStatus', () => {
+      const projectsClauseFromWhere = (where: any) => {
+        if (where?.projects) {
+          return where.projects;
+        }
+        const andClauses = Array.isArray(where?.AND)
+          ? where.AND
+          : where?.AND
+            ? [where.AND]
+            : [];
+        return andClauses.find((clause: any) => clause?.projects)?.projects;
+      };
+
+      it('should include registered sub-status tiles via project status history', async () => {
+        let callIndex = 0;
+        const countSequence = [
+          ...Array(14).fill(0),
+          2,
+          5,
+          1,
+          3,
+          ...Array(11).fill(0),
+        ];
+        prismaService.candidate.count.mockImplementation(() =>
+          Promise.resolve(countSequence[callIndex++] ?? 0),
+        );
+
+        const result = await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(result.registeredSubStatus.tiles).toHaveLength(4);
+        expect(result.registeredSubStatus.tiles[0]).toMatchObject({
+          key: 'send_for_verification',
+          subStatusName: 'verification_in_progress_document',
+          count: 2,
+        });
+        expect(result.registeredSubStatus.tiles[1]).toMatchObject({
+          subStatusName: 'documents_verified',
+          count: 5,
+        });
+        expect(result.registeredSubStatus.tiles[2]).toMatchObject({
+          subStatusName: 'rejected_documents',
+          count: 1,
+        });
+        expect(result.registeredSubStatus.tiles[3]).toMatchObject({
+          subStatusName: 'submitted_to_client',
+          count: 3,
+        });
+        expect(prismaService.candidate.count).toHaveBeenCalledTimes(29);
+
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        const registeredHistoryNames = [
+          'verification_in_progress_document',
+          'documents_verified',
+          'rejected_documents',
+          'submitted_to_client',
+        ];
+        const historyFilters = countWheres
+          .map(
+            (w: any) =>
+              projectsClauseFromWhere(w)?.some?.projectStatusHistory?.some
+                ?.subStatus?.name,
+          )
+          .filter((name: string) => registeredHistoryNames.includes(name));
+        expect(historyFilters).toEqual(registeredHistoryNames);
+      });
+
+      it('should include interview sub-status tiles via project status history', async () => {
+        let callIndex = 0;
+        const countSequence = [...Array(29).fill(0)];
+        countSequence[18] = 4;
+        countSequence[19] = 2;
+        countSequence[20] = 6;
+        countSequence[21] = 3;
+        countSequence[22] = 5;
+        countSequence[23] = 1;
+        prismaService.candidate.count.mockImplementation(() =>
+          Promise.resolve(countSequence[callIndex++] ?? 0),
+        );
+
+        const result = await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(result.interviewSubStatus.tiles).toHaveLength(6);
+        expect(result.interviewSubStatus.tiles[0]).toMatchObject({
+          key: 'shortlisted',
+          subStatusName: 'shortlisted',
+          count: 4,
+        });
+        expect(result.interviewSubStatus.tiles[2]).toMatchObject({
+          key: 'scheduled',
+          subStatusName: 'interview_scheduled',
+          label: 'Scheduled',
+          count: 6,
+        });
+        expect(result.interviewSubStatus.tiles[3]).toMatchObject({
+          key: 'completed',
+          subStatusName: 'interview_completed',
+          label: 'Completed',
+        });
+        expect(result.interviewSubStatus.tiles[4]).toMatchObject({
+          key: 'passed',
+          subStatusName: 'interview_passed',
+          label: 'Passed',
+        });
+        expect(result.interviewSubStatus.tiles[5]).toMatchObject({
+          key: 'failed',
+          subStatusName: 'interview_failed',
+          label: 'Failed',
+          count: 1,
+        });
+
+        const interviewHistoryNames = [
+          'shortlisted',
+          'not_shortlisted',
+          'interview_scheduled',
+          'interview_completed',
+          'interview_passed',
+          'interview_failed',
+        ];
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        const historyFilters = countWheres
+          .map(
+            (w: any) =>
+              projectsClauseFromWhere(w)?.some?.projectStatusHistory?.some
+                ?.subStatus?.name,
+          )
+          .filter((name: string) => interviewHistoryNames.includes(name));
+        expect(historyFilters).toEqual(interviewHistoryNames);
+      });
+
+      it('should include processing sub-status tiles via project status history', async () => {
+        let callIndex = 0;
+        const countSequence = [
+          ...Array(14).fill(0),
+          ...Array(10).fill(0),
+          3,
+          7,
+          2,
+          4,
+          1,
+        ];
+        prismaService.candidate.count.mockImplementation(() =>
+          Promise.resolve(countSequence[callIndex++] ?? 0),
+        );
+
+        const result = await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(result.processingSubStatus.tiles).toHaveLength(5);
+        expect(result.processingSubStatus.tiles[0]).toMatchObject({
+          key: 'transferred',
+          subStatusName: 'transfered_to_processing',
+          label: 'Transferred',
+          count: 3,
+        });
+        expect(result.processingSubStatus.tiles[1]).toMatchObject({
+          label: 'In Progress',
+          subStatusName: 'processing_in_progress',
+          count: 7,
+        });
+        expect(result.processingSubStatus.tiles[2]).toMatchObject({
+          label: 'Completed',
+          count: 2,
+        });
+        expect(result.processingSubStatus.tiles[3]).toMatchObject({
+          key: 'hold',
+          subStatusName: 'processing_hold',
+          label: 'Hold',
+          count: 4,
+        });
+        expect(result.processingSubStatus.tiles[4]).toMatchObject({
+          key: 'cancelled',
+          subStatusName: 'processing_failed',
+          label: 'Cancelled',
+          count: 1,
+        });
+
+        const processingHistoryNames = [
+          'transfered_to_processing',
+          'processing_in_progress',
+          'processing_completed',
+          'processing_hold',
+          'processing_failed',
+        ];
+        const countWheres = prismaService.candidate.count.mock.calls.map(
+          (call: any) => call[0].where,
+        );
+        const historyFilters = countWheres
+          .map(
+            (w: any) =>
+              projectsClauseFromWhere(w)?.some?.projectStatusHistory?.some
+                ?.subStatus?.name,
+          )
+          .filter((name: string) => processingHistoryNames.includes(name));
+        expect(historyFilters).toEqual(processingHistoryNames);
+      });
+
+      it('should scope registered sub-status project history by recruiterId', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+
+        await service.getCandidateOverviewStats(
+          { recruiterId: 'recruiter-abc' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const historyWheres = prismaService.candidate.count.mock.calls
+          .map((call: any) => call[0].where)
+          .filter(
+            (w: any) =>
+              projectsClauseFromWhere(w)?.some?.projectStatusHistory,
+          );
+        expect(historyWheres.length).toBeGreaterThanOrEqual(15);
+        const projects = projectsClauseFromWhere(historyWheres[0]);
+        expect(projects.some.recruiterId).toBe('recruiter-abc');
+      });
+    });
   });
 
   describe('findOne', () => {

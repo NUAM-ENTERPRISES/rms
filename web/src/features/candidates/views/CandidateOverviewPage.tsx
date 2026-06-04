@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, type ElementType } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,6 @@ import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
-import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
 import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
@@ -69,6 +68,52 @@ import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
 import { ROLE_NAMES } from "@/config/role-names";
+
+type WorkflowSubStatusTileStyle = {
+  key: string;
+  icon: ElementType;
+  color: string;
+  bg: string;
+  ring: string;
+};
+
+function WorkflowSubStatusMiniTiles({
+  tileStyles,
+  statsByKey,
+  gridClassName,
+}: {
+  tileStyles: readonly WorkflowSubStatusTileStyle[];
+  statsByKey: Record<string, { label?: string; count?: number }>;
+  gridClassName: string;
+}) {
+  return (
+    <div className={cn("grid gap-2 shrink-0", gridClassName)}>
+      {tileStyles.map((tileStyle) => {
+        const tileStat = statsByKey[tileStyle.key];
+        const Icon = tileStyle.icon;
+        return (
+          <div
+            key={tileStyle.key}
+            className={cn(
+              "flex flex-col items-center p-2.5 rounded-xl ring-1 transition-shadow",
+              tileStyle.bg,
+              tileStyle.ring,
+            )}
+            aria-label={`${tileStat?.label ?? tileStyle.key}: ${tileStat?.count ?? 0}`}
+          >
+            <Icon className={cn("h-4 w-4 mb-1", tileStyle.color)} />
+            <span className={cn("text-lg font-extrabold tabular-nums leading-none", tileStyle.color)}>
+              {tileStat?.count ?? 0}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium mt-1 leading-none text-center line-clamp-2">
+              {tileStat?.label ?? tileStyle.key}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
@@ -238,6 +283,42 @@ export default function CandidateOverviewPage() {
     deployed: 0,
   };
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
+
+  const registeredSubStatusTiles = [
+    { key: "send_for_verification", icon: FileSearch, color: "text-purple-600", bg: "bg-purple-50", ring: "ring-purple-100" },
+    { key: "documents_verified", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "rejected_documents", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+    { key: "submitted_to_client", icon: Building2, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+  ] as const;
+
+  const registeredSubStatusStatsByKey = Object.fromEntries(
+    (statsData.registeredSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
+  const interviewSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "shortlisted", icon: Filter, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+    { key: "not_shortlisted", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+    { key: "scheduled", icon: Calendar, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+    { key: "completed", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
+    { key: "passed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+  ];
+
+  const interviewSubStatusStatsByKey = Object.fromEntries(
+    (statsData.interviewSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
+  const processingSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "transferred", icon: ArrowRightLeft, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+    { key: "in_progress", icon: Repeat, color: "text-fuchsia-600", bg: "bg-fuchsia-50", ring: "ring-fuchsia-100" },
+    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "hold", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+    { key: "cancelled", icon: XCircle, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-100" },
+  ];
+
+  const processingSubStatusStatsByKey = Object.fromEntries(
+    (statsData.processingSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
 
   const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
@@ -613,7 +694,7 @@ export default function CandidateOverviewPage() {
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" />
@@ -623,14 +704,28 @@ export default function CandidateOverviewPage() {
                   <p className="text-xs text-gray-500 mt-0.5">{pagination.total} candidate{pagination.total !== 1 ? "s" : ""} found</p>
                 </div>
               </div>
+              {filters.status === "registered" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={registeredSubStatusTiles}
+                  statsByKey={registeredSubStatusStatsByKey}
+                  gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-xl"
+                />
+              )}
+              {filters.status === "interview" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={interviewSubStatusTiles}
+                  statsByKey={interviewSubStatusStatsByKey}
+                  gridClassName="grid-cols-3 sm:grid-cols-6 lg:max-w-3xl"
+                />
+              )}
+              {filters.status === "processing" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={processingSubStatusTiles}
+                  statsByKey={processingSubStatusStatsByKey}
+                  gridClassName="grid-cols-3 sm:grid-cols-5 lg:max-w-3xl"
+                />
+              )}
               <div className="flex items-center gap-2 shrink-0">
-                {["processing"].includes(filters.status) && (
-                  <WorkflowStatusDropdown
-                    mainStatusName={activeMainStage as string}
-                    selectedSubStatus={filters.subStatus}
-                    onSubStatusSelect={handleSubStatusClick}
-                  />
-                )}
                 {canTransferCandidates && selectedCandidateIds.size > 0 && (
                   <Button
                     onClick={() => setBulkTransferDialog(true)}

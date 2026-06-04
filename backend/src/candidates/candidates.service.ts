@@ -127,6 +127,93 @@ const REGISTERED_DOC_SUB_STATUSES = [
   'submitted_to_client',
 ] as const;
 
+/** Registered dashboard sub-tiles: history-based counts per documents sub-status. */
+const REGISTERED_SUB_STATUS_TILES = [
+  {
+    key: 'send_for_verification',
+    subStatusName: 'verification_in_progress_document',
+    label: 'Send for Verification',
+  },
+  {
+    key: 'documents_verified',
+    subStatusName: 'documents_verified',
+    label: 'Document Verified',
+  },
+  {
+    key: 'rejected_documents',
+    subStatusName: 'rejected_documents',
+    label: 'Documents Rejected',
+  },
+  {
+    key: 'submitted_to_client',
+    subStatusName: 'submitted_to_client',
+    label: 'Submitted to Client',
+  },
+] as const;
+
+/** Interview dashboard sub-tiles: history-based counts per interview sub-status. */
+const INTERVIEW_SUB_STATUS_TILES = [
+  {
+    key: 'shortlisted',
+    subStatusName: 'shortlisted',
+    label: 'Shortlisted',
+  },
+  {
+    key: 'not_shortlisted',
+    subStatusName: 'not_shortlisted',
+    label: 'Not Shortlisted',
+  },
+  {
+    key: 'scheduled',
+    subStatusName: 'interview_scheduled',
+    label: 'Scheduled',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'interview_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'passed',
+    subStatusName: 'interview_passed',
+    label: 'Passed',
+  },
+  {
+    key: 'failed',
+    subStatusName: 'interview_failed',
+    label: 'Failed',
+  },
+] as const;
+
+/** Processing dashboard sub-tiles: history-based counts per processing sub-status. */
+const PROCESSING_SUB_STATUS_TILES = [
+  {
+    key: 'transferred',
+    subStatusName: 'transfered_to_processing',
+    label: 'Transferred',
+  },
+  {
+    key: 'in_progress',
+    subStatusName: 'processing_in_progress',
+    label: 'In Progress',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'processing_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'hold',
+    subStatusName: 'processing_hold',
+    label: 'Hold',
+  },
+  {
+    key: 'cancelled',
+    subStatusName: 'processing_failed',
+    label: 'Cancelled',
+  },
+] as const;
+
 @Injectable()
 export class CandidatesService {
   private readonly logger = new Logger(CandidatesService.name);
@@ -4451,9 +4538,54 @@ export class CandidatesService {
     query: QueryCandidateOverviewDto,
     userId: string,
     roles: string[],
-  ): Promise<Record<string, number>> {
+  ): Promise<{
+    total: number;
+    positive: number;
+    untouched: number;
+    negative: number;
+    profileShortlisting: number;
+    nominated: number;
+    registered: number;
+    documentation: number;
+    interview: number;
+    processing: number;
+    interviewAssigned: number;
+    documentReceived: number;
+    medical: number;
+    visa: number;
+    deployed: number;
+    registeredSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    interviewSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    processingSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+  }> {
     const { baseWhereForCounts, targetRecruiterId } =
       this.buildOverviewBaseScopeWhere(query, userId, roles);
+
+    const workflowProjectScope: Prisma.CandidateProjectsWhereInput =
+      targetRecruiterId && targetRecruiterId !== 'all'
+        ? { recruiterId: targetRecruiterId }
+        : {};
 
     const [positiveStatusIds, negativeStatusIds] = await Promise.all([
       this.resolveCrmStatusIds(POSITIVE_CRM_STATUS_NAMES),
@@ -4472,22 +4604,7 @@ export class CandidatesService {
             },
           };
 
-    const [
-      totalCandidatesCount,
-      positiveCandidates,
-      untouchedCandidates,
-      negativeCandidates,
-      profileShortlistingCandidates,
-      registeredCandidates,
-      documentationCandidates,
-      interviewCandidates,
-      processingCandidates,
-      deployedCandidatesCount,
-      interviewAssignedCandidates,
-      docReceivedCandidates,
-      medicalCandidates,
-      visaCandidates,
-    ] = await Promise.all([
+    const overviewCountResults = await Promise.all([
       this.prisma.candidate.count({ where: baseWhereForCounts }),
       this.prisma.candidate.count({
         where: this.mergeOverviewWhere(
@@ -4634,7 +4751,61 @@ export class CandidatesService {
           },
         },
       }),
+      ...REGISTERED_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      ...INTERVIEW_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      ...PROCESSING_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
     ]);
+
+    const [
+      totalCandidatesCount,
+      positiveCandidates,
+      untouchedCandidates,
+      negativeCandidates,
+      profileShortlistingCandidates,
+      registeredCandidates,
+      documentationCandidates,
+      interviewCandidates,
+      processingCandidates,
+      deployedCandidatesCount,
+      interviewAssignedCandidates,
+      docReceivedCandidates,
+      medicalCandidates,
+      visaCandidates,
+    ] = overviewCountResults.slice(0, 14) as number[];
+
+    const registeredSubStatusCounts = overviewCountResults.slice(
+      14,
+      14 + REGISTERED_SUB_STATUS_TILES.length,
+    ) as number[];
+    const interviewSubStatusCounts = overviewCountResults.slice(
+      14 + REGISTERED_SUB_STATUS_TILES.length,
+      14 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const processingSubStatusCounts = overviewCountResults.slice(
+      14 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
 
     return {
       total: totalCandidatesCount,
@@ -4652,7 +4823,53 @@ export class CandidatesService {
       medical: medicalCandidates,
       visa: visaCandidates,
       deployed: deployedCandidatesCount,
+      registeredSubStatus: {
+        tiles: REGISTERED_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: registeredSubStatusCounts[index],
+        })),
+      },
+      interviewSubStatus: {
+        tiles: INTERVIEW_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: interviewSubStatusCounts[index],
+        })),
+      },
+      processingSubStatus: {
+        tiles: PROCESSING_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: processingSubStatusCounts[index],
+        })),
+      },
     };
+  }
+
+  /** Unique candidates who reached a project sub-status at least once (history). */
+  private countCandidatesWithSubStatusHistory(
+    baseWhereForCounts: Prisma.CandidateWhereInput,
+    projectScope: Prisma.CandidateProjectsWhereInput,
+    subStatusName: string,
+  ) {
+    return this.prisma.candidate.count({
+      where: this.mergeOverviewWhere(baseWhereForCounts, {
+        projects: {
+          some: {
+            ...projectScope,
+            projectStatusHistory: {
+              some: {
+                subStatus: { name: subStatusName },
+              },
+            },
+          },
+        },
+      }),
+    });
   }
 
   /**

@@ -921,6 +921,17 @@ export interface GetCandidateProjectPipelineResponse {
     message: string;
 }
 
+export type RegisteredSubStatusTileStat = {
+  key: string;
+  subStatusName: string;
+  label: string;
+  count: number;
+};
+
+export type RegisteredSubStatusStats = {
+  tiles: RegisteredSubStatusTileStat[];
+};
+
 export type CandidateOverviewStats = {
   total: number;
   positive: number;
@@ -940,6 +951,12 @@ export type CandidateOverviewStats = {
   medical: number;
   visa: number;
   deployed: number;
+  /** History-based counts for Registered documentation sub-statuses. */
+  registeredSubStatus?: RegisteredSubStatusStats;
+  /** History-based counts for Interview sub-statuses. */
+  interviewSubStatus?: RegisteredSubStatusStats;
+  /** History-based counts for Processing sub-statuses. */
+  processingSubStatus?: RegisteredSubStatusStats;
 };
 
 type CandidateOverviewQueryParams = {
@@ -1126,6 +1143,9 @@ export const candidatesApi = baseApi.injectEndpoints({
           medical: 0,
           visa: 0,
           deployed: 0,
+          registeredSubStatus: { tiles: [] },
+          interviewSubStatus: { tiles: [] },
+          processingSubStatus: { tiles: [] },
         },
       }),
       providesTags: ["Candidate"],

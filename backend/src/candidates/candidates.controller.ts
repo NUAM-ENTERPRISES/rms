@@ -65,7 +65,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get recruiter dashboard overview tile counts',
     description:
-      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination).',
+      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination), including workflow sub-status history counts in stats.registeredSubStatus, stats.interviewSubStatus, and stats.processingSubStatus.',
   })
   async getOverviewStats(
     @Query() query: QueryCandidateOverviewDto,
