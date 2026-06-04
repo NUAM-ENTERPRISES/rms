@@ -9,6 +9,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +39,9 @@ import {
   FileCheck,
   Trash2,
   ImageIcon,
+  ChevronDown,
+  Info,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -106,6 +116,7 @@ type ExperienceCertificatesPanelProps = {
   onAdd: () => void;
   onRemoveBatch: (batchId: string) => void;
   className?: string;
+  compact?: boolean;
 };
 
 function ExperienceCertificatesPanel({
@@ -113,6 +124,7 @@ function ExperienceCertificatesPanel({
   onAdd,
   onRemoveBatch,
   className,
+  compact = false,
 }: ExperienceCertificatesPanelProps) {
   const totalFiles = batches.reduce((sum, b) => sum + b.files.length, 0);
   const hasQueued = batches.length > 0;
@@ -124,11 +136,11 @@ function ExperienceCertificatesPanel({
         "rounded-lg border overflow-hidden",
         hasQueued
           ? "border-indigo-200 bg-indigo-50/30"
-          : "border-slate-200 bg-slate-50/50",
+          : "border-border bg-muted/30",
         className
       )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b border-slate-200/80 bg-white/80">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3 py-2.5 border-b border-border/80 bg-background/80">
         <div className="flex items-center gap-2.5 min-w-0">
           <span
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600"
@@ -140,7 +152,7 @@ function ExperienceCertificatesPanel({
             <div className="flex flex-wrap items-center gap-2">
               <h5
                 id="experience-certificates-heading"
-                className="text-sm font-semibold text-slate-800 leading-tight"
+                className="text-sm font-semibold text-foreground leading-tight"
               >
                 Experience certificates
               </h5>
@@ -153,9 +165,11 @@ function ExperienceCertificatesPanel({
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-              PDF or image · uploads when you save the candidate
-            </p>
+            {!compact && (
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                Optional · PDF or image · uploads when you save the candidate
+              </p>
+            )}
           </div>
         </div>
         <Button
@@ -175,22 +189,22 @@ function ExperienceCertificatesPanel({
           <button
             type="button"
             onClick={onAdd}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-white/80 px-3 py-3 text-sm text-slate-600 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background/80 px-3 py-3 text-sm text-muted-foreground transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
           >
             <Upload className="h-4 w-4 shrink-0 text-indigo-500" aria-hidden />
-            <span>No files queued — tap to attach certificates</span>
+            <span>No files yet — tap to attach certificates</span>
           </button>
         ) : (
           <ul className="space-y-2" aria-label="Queued certificate uploads">
             {batches.map((batch) => (
               <li
                 key={batch.id}
-                className="rounded-lg border border-indigo-100 bg-white overflow-hidden"
+                className="rounded-lg border border-indigo-100 bg-background overflow-hidden"
               >
                 <div className="flex items-center justify-between gap-2 px-2.5 py-2 border-b border-indigo-50 bg-indigo-50/50">
                   <div className="flex items-center gap-2 min-w-0">
                     <FileText className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-                    <span className="text-sm font-medium text-slate-800 truncate">
+                    <span className="text-sm font-medium text-foreground truncate">
                       {batch.docName || "Experience letter"}
                     </span>
                     <Badge
@@ -204,25 +218,25 @@ function ExperienceCertificatesPanel({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
                     onClick={() => onRemoveBatch(batch.id)}
                     aria-label={`Remove ${batch.docName || "certificate group"}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-border">
                   {batch.files.map((file, fileIdx) => (
                     <li
                       key={`${batch.id}-${file.name}-${fileIdx}`}
-                      className="flex items-center gap-2 px-2.5 py-1.5 text-sm text-slate-600"
+                      className="flex items-center gap-2 px-2.5 py-1.5 text-sm text-muted-foreground"
                     >
                       {isPdfFile(file) ? (
                         <FileText className="h-4 w-4 shrink-0 text-red-500" aria-hidden />
                       ) : (
                         <ImageIcon className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
                       )}
-                      <span className="truncate flex-1 font-medium text-slate-700">
+                      <span className="truncate flex-1 font-medium text-foreground">
                         {file.name}
                       </span>
                       <span className="text-xs text-muted-foreground tabular-nums shrink-0">
@@ -236,6 +250,35 @@ function ExperienceCertificatesPanel({
           </ul>
         )}
       </div>
+    </section>
+  );
+}
+
+function FormSection({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-lg border border-border bg-background p-4 space-y-4",
+        className
+      )}
+    >
+      <div className="space-y-1">
+        <h5 className="text-sm font-semibold text-foreground">{title}</h5>
+        {description ? (
+          <p className="text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      {children}
     </section>
   );
 }
@@ -257,6 +300,13 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
   const [certModalTarget, setCertModalTarget] = useState<
     "draft" | string | null
   >(null);
+  const [formExpanded, setFormExpanded] = useState(
+    workExperiences.length === 0
+  );
+  const [optionalDetailsOpen, setOptionalDetailsOpen] = useState(false);
+
+  const isEditing = editingExperienceId !== null;
+  const isFormVisible = formExpanded || isEditing;
 
   const resetCertModalFields = () => {
     setCertDocName("");
@@ -360,11 +410,16 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     pendingCertBatches: [],
   });
 
+  const closeForm = () => {
+    setFormExpanded(false);
+    setEditingExperienceId(null);
+    setNewWorkExperience(emptyWorkExperience());
+    setNewSkill("");
+    setOptionalDetailsOpen(false);
+  };
+
   const addWorkExperience = () => {
-    if (
-      newWorkExperience.jobTitle &&
-      newWorkExperience.startDate
-    ) {
+    if (newWorkExperience.jobTitle && newWorkExperience.startDate) {
       if (editingExperienceId) {
         setWorkExperiences(
           workExperiences.map((exp) =>
@@ -374,7 +429,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           )
         );
         setEditingExperienceId(null);
-        toast.success("Work experience updated successfully.");
+        toast.success("Work experience updated.");
       } else {
         const newId = `work-exp-${Date.now()}-${Math.random()
           .toString(36)
@@ -383,22 +438,21 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           ...workExperiences,
           { ...newWorkExperience, id: newId },
         ]);
-        toast.success("Work experience added successfully.");
+        toast.success("Work experience added.");
       }
       setNewWorkExperience(emptyWorkExperience());
       setNewSkill("");
+      setFormExpanded(false);
+      setOptionalDetailsOpen(false);
     } else {
-      toast.error(
-        "Please fill in the required fields (Job Title and Start Date) to add this work experience entry."
-      );
+      toast.error("Job title and start date are required.");
     }
   };
 
   const removeWorkExperience = (id: string) => {
     setWorkExperiences(workExperiences.filter((exp) => exp.id !== id));
     if (editingExperienceId === id) {
-      setEditingExperienceId(null);
-      setNewWorkExperience(emptyWorkExperience());
+      closeForm();
     }
   };
 
@@ -408,10 +462,20 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
       const { id: _, ...expData } = experienceToEdit;
       setNewWorkExperience(expData);
       setEditingExperienceId(id);
+      setFormExpanded(true);
+      setOptionalDetailsOpen(
+        Boolean(
+          expData.salary ||
+            expData.location ||
+            expData.countryCode ||
+            expData.description ||
+            expData.skills.length > 0 ||
+            expData.achievements ||
+            (expData.pendingCertBatches ?? []).length > 0
+        )
+      );
       const formElement = document.getElementById("work-experience-form");
-      if (formElement) {
-        formElement.scrollIntoView({ behavior: "smooth" });
-      }
+      formElement?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
@@ -437,466 +501,573 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
     });
   };
 
+  const canSave =
+    Boolean(newWorkExperience.jobTitle) &&
+    Boolean(newWorkExperience.startDate);
+
   return (
     <>
       <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-800">
-            <Briefcase className="h-5 w-5 text-blue-600" />
+          <CardTitle className="flex items-center gap-2 text-xl font-semibold text-foreground">
+            <Briefcase className="h-5 w-5 text-primary" />
             Work Experience
           </CardTitle>
           <CardDescription>
-            Add work experience entries for the candidate (optional)
+            Add past or current roles for this candidate. This step is optional
+            — you can skip it and add experience later.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div
+            className="flex gap-3 rounded-lg border border-blue-100 bg-blue-50/60 p-4"
+            role="note"
+          >
+            <Info className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" aria-hidden />
+            <div className="space-y-1 text-sm text-foreground">
+              <p className="font-medium">How this works</p>
+              <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                <li>
+                  Click <span className="font-medium text-foreground">Add work experience</span>{" "}
+                  to open the form for one role.
+                </li>
+                <li>
+                  Only <span className="font-medium text-foreground">job title</span> and{" "}
+                  <span className="font-medium text-foreground">start date</span> are required.
+                </li>
+                <li>
+                  Save the entry, then add another role or continue to the next step.
+                </li>
+              </ol>
+            </div>
+          </div>
+
           {workExperiences.length > 0 && (
-            <div className="space-y-4">
+            <section aria-labelledby="saved-experiences-heading" className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h4 className="text-lg font-semibold text-slate-800">
-                  Added work experiences
-                </h4>
-                <Badge
-                  variant="secondary"
-                  className="bg-slate-100 text-slate-600 font-medium"
+                <h4
+                  id="saved-experiences-heading"
+                  className="text-base font-semibold text-foreground"
                 >
+                  Saved roles
+                </h4>
+                <Badge variant="secondary">
                   {workExperiences.length}{" "}
                   {workExperiences.length === 1 ? "entry" : "entries"}
                 </Badge>
               </div>
-              <ul className="space-y-3" aria-label="Saved work experiences">
+              <ul className="space-y-2" aria-label="Saved work experiences">
                 {workExperiences.map((experience) => {
                   const certCount = (experience.pendingCertBatches ?? []).reduce(
                     (sum, b) => sum + b.files.length,
                     0
                   );
+                  const isBeingEdited = editingExperienceId === experience.id;
 
                   return (
-                  <li
-                    key={experience.id}
-                    className="rounded-xl border border-blue-100/80 bg-white shadow-sm overflow-hidden ring-1 ring-blue-50 hover:shadow-md hover:border-blue-200/80 transition-all"
-                  >
-                    <div className="relative flex flex-col sm:flex-row sm:items-start gap-3 p-4 border-b border-blue-100/60 bg-gradient-to-r from-blue-50/70 via-white to-indigo-50/40">
-                      <div
-                        className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-500 rounded-r-full"
-                        aria-hidden
-                      />
-                      <span
-                        className="relative ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-200/40"
-                        aria-hidden
-                      >
-                        <Briefcase className="h-5 w-5" />
-                      </span>
-                      <div className="relative flex-1 min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
+                    <li
+                      key={experience.id}
+                      className={cn(
+                        "rounded-lg border bg-background overflow-hidden transition-colors",
+                        isBeingEdited
+                          ? "border-primary ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex gap-3 min-w-0 flex-1">
+                          <span
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            aria-hidden
+                          >
+                            <Briefcase className="h-5 w-5" />
+                          </span>
                           <div className="min-w-0 space-y-1.5">
-                            <h4 className="text-base font-bold text-slate-900 leading-snug truncate">
+                            <p className="font-semibold text-foreground leading-snug">
                               {experience.jobTitle}
-                            </h4>
+                            </p>
                             {experience.companyName ? (
-                              <p className="inline-flex items-center gap-2 rounded-lg border border-slate-200/90 bg-white/90 px-2.5 py-1 text-sm font-medium text-slate-700 shadow-sm">
-                                <Building2
-                                  className="h-4 w-4 shrink-0 text-blue-600"
-                                  aria-hidden
-                                />
-                                <span className="truncate max-w-[240px]">
-                                  {experience.companyName}
-                                </span>
+                              <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                {experience.companyName}
                               </p>
                             ) : null}
-                          </div>
-                          {certCount > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="shrink-0 gap-1 border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold"
-                            >
-                              <FileCheck className="h-3.5 w-3.5" aria-hidden />
-                              {certCount} cert{certCount === 1 ? "" : "s"}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
-                            <Calendar className="h-3.5 w-3.5" aria-hidden />
-                            {formatExperiencePeriod(
-                              experience.startDate,
-                              experience.endDate,
-                              experience.isCurrent
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" aria-hidden />
+                                {formatExperiencePeriod(
+                                  experience.startDate,
+                                  experience.endDate,
+                                  experience.isCurrent
+                                )}
+                              </span>
+                              {(experience.location || experience.countryCode) && (
+                                <span className="inline-flex items-center gap-1">
+                                  <MapPin className="h-3.5 w-3.5" aria-hidden />
+                                  {[experience.location, experience.countryCode]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              )}
+                              {certCount > 0 && (
+                                <Badge
+                                  variant="outline"
+                                  className="h-5 gap-1 text-xs"
+                                >
+                                  <FileCheck className="h-3 w-3" aria-hidden />
+                                  {certCount} cert{certCount === 1 ? "" : "s"}
+                                </Badge>
+                              )}
+                            </div>
+                            {experience.skills.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {experience.skills.map((skill, index) => (
+                                  <Badge
+                                    key={index}
+                                    variant="secondary"
+                                    className="h-5 px-2 text-xs font-normal"
+                                  >
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
                             )}
-                          </span>
-                          {(experience.location || experience.countryCode) && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
-                              <MapPin
-                                className="h-3.5 w-3.5 shrink-0 text-slate-400"
-                                aria-hidden
-                              />
-                              {[experience.location, experience.countryCode]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          )}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-2 sm:flex-col">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => editWorkExperience(experience.id)}
+                            aria-label={`Edit ${experience.jobTitle}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-1.5" aria-hidden />
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeWorkExperience(experience.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            aria-label={`Remove ${experience.jobTitle}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1.5" aria-hidden />
+                            Remove
+                          </Button>
                         </div>
                       </div>
-                      <div className="relative flex shrink-0 gap-2 sm:flex-col sm:items-stretch">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => editWorkExperience(experience.id)}
-                          className="h-9 border-blue-200 bg-white text-blue-700 font-semibold shadow-sm hover:bg-blue-50 hover:border-blue-300"
-                          aria-label={`Edit ${experience.jobTitle}`}
-                        >
-                          <Pencil className="h-4 w-4 mr-1.5 text-blue-600" aria-hidden />
-                          Edit
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeWorkExperience(experience.id)}
-                          className="h-9 border-red-200 bg-white text-red-600 font-semibold shadow-sm hover:bg-red-50 hover:border-red-300"
-                          aria-label={`Remove ${experience.jobTitle}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1.5 text-red-500" aria-hidden />
-                          Remove
-                        </Button>
-                      </div>
+
+                      {certCount > 0 && !isBeingEdited && (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between border-t border-border px-4 py-2.5 text-sm text-muted-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <FileCheck className="h-4 w-4" aria-hidden />
+                                View queued certificates
+                              </span>
+                              <ChevronDown className="h-4 w-4" aria-hidden />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="px-4 pb-4">
+                            <ExperienceCertificatesPanel
+                              batches={experience.pendingCertBatches ?? []}
+                              onAdd={() => openCertModal(experience.id)}
+                              onRemoveBatch={(batchId) =>
+                                removeBatchFromExperience(experience.id, batchId)
+                              }
+                              compact
+                            />
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
+          {!isFormVisible ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 border-dashed border-primary/40 text-primary hover:bg-primary/5 hover:border-primary/60"
+              onClick={() => setFormExpanded(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" aria-hidden />
+              Add work experience
+            </Button>
+          ) : (
+            <div
+              id="work-experience-form"
+              className={cn(
+                "rounded-xl border bg-muted/20 p-5 space-y-5 transition-all",
+                isEditing
+                  ? "border-primary ring-2 ring-primary/20"
+                  : "border-border"
+              )}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-base font-semibold text-foreground">
+                      {isEditing ? "Edit role" : "New role"}
+                    </h4>
+                    {isEditing && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Pencil className="h-3 w-3" aria-hidden />
+                        Editing
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Fill in the basics first. Everything else is optional.
+                  </p>
+                </div>
+                {(workExperiences.length > 0 || isEditing) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={closeForm}
+                    className="shrink-0 text-muted-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" aria-hidden />
+                    Close form
+                  </Button>
+                )}
+              </div>
+
+              <FormSection
+                title="Role"
+                description="Pick a department first, then choose the job title."
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <DepartmentSelect
+                    value={newWorkExperience.departmentId}
+                    onValueChange={(value) => {
+                      setNewWorkExperience({
+                        ...newWorkExperience,
+                        departmentId: value,
+                        roleCatalogId: "",
+                        jobTitle: "",
+                      });
+                    }}
+                    label="Department"
+                    placeholder="Select department"
+                  />
+                  <JobTitleSelect
+                    value={newWorkExperience.jobTitle}
+                    onRoleChange={(role) => {
+                      if (role) {
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          roleCatalogId: role.id,
+                          jobTitle: role.label || role.name,
+                        });
+                      } else {
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          roleCatalogId: "",
+                          jobTitle: "",
+                        });
+                      }
+                    }}
+                    label="Job title"
+                    placeholder="e.g. Registered Nurse"
+                    required
+                    allowEmpty={false}
+                    departmentId={newWorkExperience.departmentId}
+                  />
+                </div>
+              </FormSection>
+
+              <FormSection
+                title="Employment period"
+                description="When did this role start and end?"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="we-company-name">Organization name</Label>
+                    <Input
+                      id="we-company-name"
+                      value={newWorkExperience.companyName}
+                      onChange={(e) =>
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          companyName: e.target.value,
+                        })
+                      }
+                      placeholder="e.g. Aster Hospital"
+                      className="h-11 bg-background"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="we-start-date">
+                      Start date <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="we-start-date"
+                      type="date"
+                      value={newWorkExperience.startDate}
+                      onChange={(e) =>
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          startDate: e.target.value,
+                        })
+                      }
+                      className="h-11 bg-background"
+                      aria-required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="we-end-date">End date</Label>
+                    <Input
+                      id="we-end-date"
+                      type="date"
+                      value={newWorkExperience.endDate}
+                      onChange={(e) =>
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          endDate: e.target.value,
+                        })
+                      }
+                      disabled={newWorkExperience.isCurrent}
+                      className="h-11 bg-background"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2.5">
+                  <Checkbox
+                    id="we-is-current"
+                    checked={newWorkExperience.isCurrent}
+                    onCheckedChange={(checked) =>
+                      setNewWorkExperience({
+                        ...newWorkExperience,
+                        isCurrent: checked === true,
+                        endDate: checked === true ? "" : newWorkExperience.endDate,
+                      })
+                    }
+                  />
+                  <Label
+                    htmlFor="we-is-current"
+                    className="cursor-pointer font-normal"
+                  >
+                    Currently working in this role
+                  </Label>
+                </div>
+              </FormSection>
+
+              <Collapsible
+                open={optionalDetailsOpen}
+                onOpenChange={setOptionalDetailsOpen}
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-lg border border-border bg-background px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden />
+                      Additional details (optional)
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform",
+                        optionalDetailsOpen && "rotate-180"
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="we-salary">Salary</Label>
+                      <Input
+                        id="we-salary"
+                        type="number"
+                        value={newWorkExperience.salary ?? ""}
+                        onChange={(e) =>
+                          setNewWorkExperience({
+                            ...newWorkExperience,
+                            salary: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          })
+                        }
+                        placeholder="Optional"
+                        min="0"
+                        className="h-11 bg-background"
+                      />
                     </div>
 
-                    {experience.skills && experience.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 px-4 py-2.5 border-b border-slate-100 bg-slate-50/40">
-                        {experience.skills.map((skill: string, index: number) => (
+                    <div className="space-y-2">
+                      <Label htmlFor="we-location">Location</Label>
+                      <Input
+                        id="we-location"
+                        value={newWorkExperience.location}
+                        onChange={(e) =>
+                          setNewWorkExperience({
+                            ...newWorkExperience,
+                            location: e.target.value,
+                          })
+                        }
+                        placeholder="City or region"
+                        className="h-11 bg-background"
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <CountrySelect
+                        label="Country"
+                        value={newWorkExperience.countryCode || ""}
+                        onValueChange={(code) =>
+                          setNewWorkExperience({
+                            ...newWorkExperience,
+                            countryCode: code,
+                          })
+                        }
+                        allowEmpty
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="we-description">Job description</Label>
+                    <Textarea
+                      id="we-description"
+                      value={newWorkExperience.description}
+                      onChange={(e) =>
+                        setNewWorkExperience({
+                          ...newWorkExperience,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Responsibilities, team, or context for this role"
+                      className="min-h-[88px] bg-background"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="we-skill-input">Skills used in this role</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="we-skill-input"
+                        value={newSkill}
+                        onChange={(e) => setNewSkill(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addSkillToNewExperience();
+                          }
+                        }}
+                        placeholder="Type a skill and press Enter"
+                        className="flex-1 bg-background"
+                      />
+                      <Button
+                        type="button"
+                        onClick={addSkillToNewExperience}
+                        variant="outline"
+                        size="sm"
+                        className="px-3"
+                        aria-label="Add skill"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {newWorkExperience.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {newWorkExperience.skills.map((skill, index) => (
                           <Badge
                             key={index}
-                            variant="outline"
-                            className="gap-1 bg-blue-50 text-blue-700 border-blue-200 text-xs font-medium"
+                            variant="secondary"
+                            className="gap-1 pr-1"
                           >
                             <Star className="h-3 w-3" aria-hidden />
                             {skill}
+                            <button
+                              type="button"
+                              onClick={() => removeSkillFromNewExperience(skill)}
+                              className="ml-0.5 rounded-full p-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`Remove ${skill}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </Badge>
                         ))}
                       </div>
                     )}
+                  </div>
 
-                    <div className="p-4">
-                      <ExperienceCertificatesPanel
-                        batches={experience.pendingCertBatches ?? []}
-                        onAdd={() => openCertModal(experience.id)}
-                        onRemoveBatch={(batchId) =>
-                          removeBatchFromExperience(experience.id, batchId)
-                        }
-                      />
-                    </div>
-                  </li>
-                  );
-                })}
-              </ul>
+                  <ExperienceCertificatesPanel
+                    batches={newWorkExperience.pendingCertBatches ?? []}
+                    onAdd={() => openCertModal("draft")}
+                    onRemoveBatch={removeBatchFromDraft}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2 border-t border-border">
+                {isEditing ? (
+                  <Button
+                    type="button"
+                    onClick={closeForm}
+                    variant="outline"
+                  >
+                    Cancel
+                  </Button>
+                ) : workExperiences.length > 0 ? (
+                  <Button
+                    type="button"
+                    onClick={closeForm}
+                    variant="outline"
+                  >
+                    Done adding
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={addWorkExperience}
+                  disabled={!canSave}
+                  className="sm:min-w-[180px]"
+                >
+                  {isEditing ? (
+                    <>
+                      <Pencil className="h-4 w-4 mr-2" aria-hidden />
+                      Save changes
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" aria-hidden />
+                      Save this role
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {!canSave && (
+                <p className="text-xs text-muted-foreground text-right">
+                  Enter a job title and start date to save this role.
+                </p>
+              )}
             </div>
           )}
 
-          <div
-            id="work-experience-form"
-            className="border border-slate-200 rounded-xl p-6 bg-gradient-to-b from-slate-50/80 to-white relative transition-all duration-300 shadow-sm"
-          >
-            {editingExperienceId && (
-              <div className="absolute top-4 right-4 animate-in fade-in zoom-in duration-300">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">
-                  <Pencil className="h-3 w-3" />
-                  Editing Mode
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingExperienceId(null);
-                      setNewWorkExperience(emptyWorkExperience());
-                    }}
-                    className="ml-1 hover:text-blue-900"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-lg font-semibold text-slate-800">
-                {editingExperienceId
-                  ? "Edit Work Experience"
-                  : "Add New Work Experience (Optional)"}
-              </h4>
-              <p className="text-sm text-slate-500 italic">
-                {editingExperienceId
-                  ? "Modify your work experience details below"
-                  : "You can skip this step and add experience later"}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <DepartmentSelect
-                  value={newWorkExperience.departmentId}
-                  onValueChange={(value) => {
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      departmentId: value,
-                      roleCatalogId: "",
-                      jobTitle: "",
-                    });
-                  }}
-                  label="Department"
-                  placeholder="Select department"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <JobTitleSelect
-                  value={newWorkExperience.jobTitle}
-                  onRoleChange={(role) => {
-                    if (role) {
-                      setNewWorkExperience({
-                        ...newWorkExperience,
-                        roleCatalogId: role.id,
-                        jobTitle: role.label || role.name,
-                      });
-                    } else {
-                      setNewWorkExperience({
-                        ...newWorkExperience,
-                        roleCatalogId: "",
-                        jobTitle: "",
-                      });
-                    }
-                  }}
-                  label="Job Title"
-                  placeholder="e.g., Registered Nurse"
-                  required
-                  allowEmpty={false}
-                  departmentId={newWorkExperience.departmentId}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-medium">
-                  Organization Name
-                </Label>
-                <Input
-                  value={newWorkExperience.companyName}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      companyName: e.target.value,
-                    })
-                  }
-                  placeholder="ABC Hospital"
-                  className="h-11 bg-white border-slate-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-medium">
-                  Start Date *
-                </Label>
-                <Input
-                  type="date"
-                  value={newWorkExperience.startDate}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      startDate: e.target.value,
-                    })
-                  }
-                  className="h-11 bg-white border-slate-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-medium">End Date</Label>
-                <Input
-                  type="date"
-                  value={newWorkExperience.endDate}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      endDate: e.target.value,
-                    })
-                  }
-                  disabled={newWorkExperience.isCurrent}
-                  className="h-11 bg-white border-slate-200"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isCurrent"
-                  checked={newWorkExperience.isCurrent}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      isCurrent: e.target.checked,
-                    })
-                  }
-                  className="border-slate-300"
-                />
-                <Label
-                  htmlFor="isCurrent"
-                  className="text-slate-700 font-medium cursor-pointer"
-                >
-                  This is my current position
-                </Label>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-medium">Salary</Label>
-                <Input
-                  type="number"
-                  value={newWorkExperience.salary || ""}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      salary: e.target.value
-                        ? Number(e.target.value)
-                        : undefined,
-                    })
-                  }
-                  placeholder="50000"
-                  min="0"
-                  className="h-11 bg-white border-slate-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-slate-700 font-medium">Location</Label>
-                <Input
-                  value={newWorkExperience.location}
-                  onChange={(e) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      location: e.target.value,
-                    })
-                  }
-                  placeholder="New York, NY"
-                  className="h-11 bg-white border-slate-200"
-                />
-              </div>
-
-              <div className="space-y-2 md:col-span-2">
-                <CountrySelect
-                  label="Country (optional)"
-                  value={newWorkExperience.countryCode || ""}
-                  onValueChange={(code) =>
-                    setNewWorkExperience({
-                      ...newWorkExperience,
-                      countryCode: code,
-                    })
-                  }
-                  allowEmpty
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 mt-4">
-              <Label className="text-slate-700 font-medium">
-                Job Description
-              </Label>
-              <textarea
-                value={newWorkExperience.description}
-                onChange={(e) =>
-                  setNewWorkExperience({
-                    ...newWorkExperience,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Describe your responsibilities and achievements..."
-                className="w-full min-h-[80px] p-3 border border-slate-200 rounded-md bg-white"
-              />
-            </div>
-
-            <div className="space-y-3 mt-4">
-              <Label className="text-slate-700 font-medium">
-                Skills Gained/Used
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addSkillToNewExperience();
-                    }
-                  }}
-                  placeholder="Add a skill..."
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  onClick={addSkillToNewExperience}
-                  variant="outline"
-                  size="sm"
-                  className="px-3"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {newWorkExperience.skills.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {newWorkExperience.skills.map((skill, index) => (
-                    <div
-                      key={index}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full border border-blue-200 text-sm"
-                    >
-                      <Star className="h-3 w-3" />
-                      {skill}
-                      <button
-                        type="button"
-                        onClick={() => removeSkillFromNewExperience(skill)}
-                        className="ml-1 hover:bg-blue-100 rounded-full p-0.5 transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-slate-200">
-              <ExperienceCertificatesPanel
-                batches={newWorkExperience.pendingCertBatches ?? []}
-                onAdd={() => openCertModal("draft")}
-                onRemoveBatch={removeBatchFromDraft}
-              />
-            </div>
-
-            <div className="flex justify-end mt-4 gap-2">
-              {editingExperienceId && (
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setEditingExperienceId(null);
-                    setNewWorkExperience(emptyWorkExperience());
-                  }}
-                  variant="outline"
-                  className="border-slate-300 text-slate-600"
-                >
-                  Cancel
-                </Button>
-              )}
-              <Button
-                type="button"
-                onClick={addWorkExperience}
-                className={
-                  editingExperienceId
-                    ? "bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800"
-                    : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
-                }
-              >
-                <Pencil className="h-4 w-4 mr-2" />
-                {editingExperienceId
-                  ? "Update Experience"
-                  : "Add Work Experience"}
-              </Button>
-            </div>
-          </div>
+          {workExperiences.length === 0 && !isFormVisible && (
+            <p className="text-center text-sm text-muted-foreground">
+              No work experience added yet. You can continue without adding any.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -907,7 +1078,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
         }}
       >
         <DialogContent className="max-w-lg gap-0 p-0 overflow-hidden">
-          <DialogHeader className="px-5 pt-5 pb-4 border-b border-slate-100">
+          <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
                 <FileCheck className="h-4 w-4" aria-hidden />
@@ -922,22 +1093,20 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
           </DialogHeader>
           <div className="space-y-4 px-5 py-4">
             <div className="space-y-2">
-              <Label htmlFor="we-step-cert-doc-name" className="text-slate-700">
-                Document label
-              </Label>
+              <Label htmlFor="we-step-cert-doc-name">Document label</Label>
               <Input
                 id="we-step-cert-doc-name"
                 value={certDocName}
                 onChange={(e) => setCertDocName(e.target.value)}
                 placeholder="e.g. Aster Hospital experience letter"
-                className="h-10 bg-white border-slate-200"
+                className="h-10 bg-background"
               />
               <p className="text-xs text-muted-foreground">
                 Optional — helps identify this batch later.
               </p>
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-700">Files</Label>
+              <Label>Files</Label>
               <input
                 ref={certFileInputRef}
                 type="file"
@@ -949,12 +1118,12 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               <button
                 type="button"
                 onClick={() => certFileInputRef.current?.click()}
-                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 px-4 py-5 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center transition-colors hover:border-indigo-300 hover:bg-indigo-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                   <Upload className="h-5 w-5" aria-hidden />
                 </span>
-                <span className="text-sm font-medium text-slate-700">
+                <span className="text-sm font-medium text-foreground">
                   {certFiles.length > 0 ? "Add more files" : "Choose PDF or images"}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -963,7 +1132,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               </button>
               {certFiles.length > 0 && (
                 <ul
-                  className="rounded-lg border border-slate-200 bg-white divide-y divide-slate-100 max-h-40 overflow-y-auto"
+                  className="rounded-lg border border-border bg-background divide-y divide-border max-h-40 overflow-y-auto"
                   aria-label="Selected files"
                 >
                   {certFiles.map((file, idx) => (
@@ -976,7 +1145,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                       ) : (
                         <ImageIcon className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
                       )}
-                      <span className="truncate flex-1 font-medium text-slate-800">
+                      <span className="truncate flex-1 font-medium text-foreground">
                         {file.name}
                       </span>
                       <span className="text-xs text-muted-foreground tabular-nums shrink-0">
@@ -986,7 +1155,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 p-0 shrink-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                        className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={() => removeCertFileAt(idx)}
                         aria-label={`Remove ${file.name}`}
                       >
@@ -998,7 +1167,7 @@ export const WorkExperienceStep: React.FC<WorkExperienceStepProps> = ({
               )}
             </div>
           </div>
-          <DialogFooter className="gap-2 border-t border-slate-100 px-5 py-4 sm:gap-2">
+          <DialogFooter className="gap-2 border-t border-border px-5 py-4 sm:gap-2">
             <Button type="button" variant="outline" onClick={closeCertModal}>
               Cancel
             </Button>
