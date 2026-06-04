@@ -56,6 +56,7 @@ import {
   type UserAccountStatus,
 } from "@/features/admin/api";
 import { UserAccountStatusBadge } from "@/features/admin/components/UserAccountStatusBadge";
+import { UserRatingCell } from "@/features/admin/components/UserRatingCell";
 import {
   Select,
   SelectContent,
@@ -297,6 +298,9 @@ export default function UsersPage() {
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider">
                       Roles
                     </TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden xl:table-cell">
+                      Rating
+                    </TableHead>
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden lg:table-cell">
                       Joined
                     </TableHead>
@@ -401,6 +405,9 @@ export default function UsersPage() {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="py-3 hidden xl:table-cell">
+                        <UserRatingCell userId={user.id} userRoles={user.userRoles} />
                       </TableCell>
                       <TableCell className="py-3 hidden lg:table-cell">
                         <span className="text-sm text-slate-500">

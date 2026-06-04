@@ -51,6 +51,7 @@ import {
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 import { UserAccountStatusCard } from "@/features/admin/components/UserAccountStatusCard";
 import { UserAccountStatusHistoryCard } from "@/features/admin/components/UserAccountStatusHistoryCard";
+import { UserRecruiterPerformanceCard } from "@/features/admin/components/UserRecruiterPerformanceCard";
 
 // Permission display mapping
 const PERMISSION_LABELS: Record<string, { label: string; description?: string }> = {
@@ -789,6 +790,11 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Recruiter Performance Card */}
+            {showRecruiterCapabilities && (
+              <UserRecruiterPerformanceCard userId={user.id} userName={user.name} />
+            )}
           </div>
         </div>
       </div>
