@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { skipToken } from "@reduxjs/toolkit/query/react";
-import { Star, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { useAppSelector } from "@/app/hooks";
 import { useHasRole } from "@/hooks/useCan";
 import { useGetRecruiterPerformanceRatingQuery } from "@/services/recruiterAnalyticsApi";
@@ -13,10 +13,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { RecruiterPerformanceRatingStars } from "./RecruiterPerformanceRatingStars";
 import {
   formatRatingScoreRange,
-  getRatingStarCount,
-  NAV_RATING_STAR_TOTAL,
   RATING_STYLES,
   type PerformanceRatingLabel,
 } from "../utils/recruiter-performance-rating.util";
@@ -47,53 +46,6 @@ function useIsRecruiterNavUser() {
   );
 }
 
-function AnimatedRatingStars({
-  filled,
-  isTopTier,
-  size = "sm",
-}: {
-  filled: number;
-  isTopTier: boolean;
-  size?: "sm" | "md";
-}) {
-  const iconClass = size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
-
-  return (
-    <div
-      className="flex items-center gap-0.5"
-      role="img"
-      aria-label={`${filled} of ${NAV_RATING_STAR_TOTAL} stars`}
-    >
-      {Array.from({ length: NAV_RATING_STAR_TOTAL }, (_, index) => {
-        const isFilled = index < filled;
-        return (
-          <Star
-            key={index}
-            className={cn(
-              iconClass,
-              "shrink-0 transition-colors",
-              isFilled
-                ? cn(
-                    "fill-amber-400 text-amber-400",
-                    isTopTier
-                      ? "animate-nav-recruiter-star-glow"
-                      : "animate-nav-recruiter-star-pulse",
-                  )
-                : "fill-transparent text-violet-400/35",
-            )}
-            style={
-              isFilled
-                ? { animationDelay: `${index * 0.15}s` }
-                : undefined
-            }
-            aria-hidden
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 function PeriodRatingRow({
   label,
   score,
@@ -105,8 +57,6 @@ function PeriodRatingRow({
   rating: string;
   periodLabel: string;
 }) {
-  const filled = getRatingStarCount(rating);
-  const isTopTier = rating === "Top Performer";
   const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
 
   return (
@@ -116,7 +66,7 @@ function PeriodRatingRow({
         <p className="text-[10px] text-slate-500">{periodLabel}</p>
       </div>
       <div className="flex items-center justify-between gap-3">
-        <AnimatedRatingStars filled={filled} isTopTier={isTopTier} size="md" />
+        <RecruiterPerformanceRatingStars rating={rating} size="md" variant="dashboard" />
         <div className="text-right">
           <p className="text-xl font-bold tabular-nums text-amber-600">{score}</p>
           <p className="text-[10px] text-slate-500">points</p>
@@ -154,9 +104,6 @@ export function RecruiterNavPerformanceRating() {
 
   const displayScore = monthly?.score ?? 0;
   const displayRating = (monthly?.rating ?? "Poor") as PerformanceRatingLabel;
-  const filledStars = getRatingStarCount(displayRating);
-  const isTopTier = displayRating === "Top Performer";
-
   const periodLabels = useMemo(() => {
     const now = new Date();
     const month = monthly?.period?.month ?? now.getMonth() + 1;
@@ -179,14 +126,7 @@ export function RecruiterNavPerformanceRating() {
         aria-busy="true"
         aria-label="Loading performance rating"
       >
-        <div className="flex gap-0.5">
-          {Array.from({ length: NAV_RATING_STAR_TOTAL }).map((_, i) => (
-            <div
-              key={i}
-              className="h-3.5 w-3.5 animate-pulse rounded-sm bg-amber-400/30"
-            />
-          ))}
-        </div>
+        <RecruiterPerformanceRatingStars rating="Poor" size="sm" variant="nav" className="opacity-40" />
         <div className="h-4 w-10 animate-pulse rounded bg-amber-400/20" />
       </div>
     );
@@ -208,7 +148,11 @@ export function RecruiterNavPerformanceRating() {
           )}
           aria-label={`Your performance rating: ${displayRating}, ${displayScore} points this month`}
         >
-          <AnimatedRatingStars filled={filledStars} isTopTier={isTopTier} />
+          <RecruiterPerformanceRatingStars
+            rating={displayRating}
+            size="sm"
+            variant="nav"
+          />
           <span className="flex flex-col items-start leading-none min-w-0">
             <span className="text-sm font-bold tabular-nums text-amber-300 group-hover:text-amber-200">
               {displayScore}

@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
+import { RecruiterPerformanceRatingStars } from "./RecruiterPerformanceRatingStars";
 import { cn } from "@/lib/utils";
 import {
   useGetRecruiterPerformanceRatingQuery,
@@ -36,6 +37,7 @@ import {
   buildChartData,
   CHART_COLORS,
   getOverallRatingInfo,
+  getRatingStarCount,
   hasAnyStageActivity,
   RATING_CARD_BORDER,
   RATING_STYLES,
@@ -141,6 +143,12 @@ function PeriodSnapshot({
         {label}
       </p>
       <p className="text-2xl font-bold tabular-nums text-slate-900 mt-1">{score}</p>
+      <RecruiterPerformanceRatingStars
+        rating={rating}
+        size="md"
+        variant="dashboard"
+        className="mt-2 justify-center"
+      />
       <Badge variant="outline" className={cn("mt-2 text-[10px] font-semibold", ratingClass)}>
         {rating}
       </Badge>
@@ -200,6 +208,18 @@ function OverallRatingHero({
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
             Overall rating · {periodLabel}
           </p>
+
+          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/40 px-6 py-4 shadow-sm shadow-amber-100/50">
+            <RecruiterPerformanceRatingStars
+              rating={rating}
+              size="lg"
+              variant="dashboard"
+              className="justify-center"
+            />
+            <p className="text-[10px] font-medium text-amber-800/80 mt-2 tabular-nums">
+              {getRatingStarCount(rating)} of 5 stars
+            </p>
+          </div>
 
           <div
             className={cn(
@@ -383,6 +403,27 @@ export default function RecruiterPerformanceRatingSection() {
                 <CalendarDays className="h-3.5 w-3.5" aria-hidden />
                 Overall score and rating from candidate funnel progress
               </p>
+              {!isLoading && !isError && (
+                <div className="flex items-center gap-2 mt-2">
+                  <RecruiterPerformanceRatingStars
+                    rating={rating}
+                    size="sm"
+                    variant="dashboard"
+                  />
+                  <span className="text-xs font-semibold text-amber-700 tabular-nums">
+                    {score} pts
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] font-semibold border-amber-200 text-amber-900",
+                      RATING_STYLES[rating],
+                    )}
+                  >
+                    {rating}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
 

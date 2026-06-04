@@ -70,6 +70,9 @@ describe("RecruiterPerformanceRatingSection", () => {
     expect(screen.getByRole("heading", { name: /Recruiter Performance Rating/i })).toBeInTheDocument();
     expect(screen.getAllByText("113").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Outstanding").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole("img", { name: /5 stars for Outstanding rating/i }).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(/Overall rating/i)).toBeInTheDocument();
     expect(screen.getByText(/How your score was built/i)).toBeInTheDocument();
     expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
