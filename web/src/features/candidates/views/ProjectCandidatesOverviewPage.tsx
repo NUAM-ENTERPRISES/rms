@@ -27,6 +27,10 @@ import {
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  XCircle,
+  Calendar,
+  Building2,
 } from "lucide-react";
 import { ProjectRoleFilter, ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
@@ -40,6 +44,10 @@ import ProjectStats from "@/components/organisms/ProjectStats";
 import { useCan } from "@/hooks/useCan";
 import { useDebounce } from "@/hooks/useDebounce";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
+import {
+  WorkflowSubStatusMiniTiles,
+  type WorkflowSubStatusTileStyle,
+} from "../components/WorkflowSubStatusMiniTiles";
 import { useAppSelector } from "@/app/hooks";
 import { FaWhatsapp } from "react-icons/fa";
 
@@ -92,11 +100,15 @@ const DOCUMENT_SUB_FILTERS: SubStatusFilterOption[] = [
       "verification_in_progress_document",
       "documents_re_submission_requested",
       "client_revision_requested",
-      "rejected_documents",
-      "submitted_to_client",
     ],
   },
   { key: "verified", label: "Verified", subStatus: "documents_verified" },
+  { key: "rejected", label: "Rejected", subStatus: "rejected_documents" },
+  {
+    key: "submitted_to_client",
+    label: "Send to Client",
+    subStatus: "submitted_to_client",
+  },
 ];
 
 const INTERVIEW_SUB_FILTERS: SubStatusFilterOption[] = [
@@ -121,6 +133,28 @@ const STAGE_SUB_FILTERS: Record<string, SubStatusFilterOption[]> = {
   interview: INTERVIEW_SUB_FILTERS,
   processing: PROCESSING_SUB_FILTERS,
 };
+
+const DOCUMENT_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
+  { key: "pending", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+  { key: "verified", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+  { key: "rejected", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+  { key: "submitted_to_client", icon: Building2, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+];
+
+const INTERVIEW_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
+  { key: "scheduled", icon: Calendar, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+  { key: "passed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+  { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+  { key: "backout", icon: AlertTriangle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+];
+
+const PROCESSING_SUB_STATUS_TILE_STYLES: readonly WorkflowSubStatusTileStyle[] = [
+  { key: "transferred", icon: Send, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+  { key: "in_progress", icon: Settings, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+  { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+  { key: "failed", icon: XCircle, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-100" },
+  { key: "ready_final", icon: CheckCircle, color: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-100" },
+];
 
 // Map mainStatus → badge style
 const STATUS_BADGE: Record<
@@ -172,6 +206,11 @@ export default function ProjectCandidatesOverviewPage() {
   const handleTileClick = (tileKey: string) => {
     setActiveFilter(tileKey);
     setSubStatusFilter("all");
+    setPage(1);
+  };
+
+  const handleSubStatusClick = (filterKey: string) => {
+    setSubStatusFilter((prev) => (prev === filterKey ? "all" : filterKey));
     setPage(1);
   };
 
@@ -312,6 +351,30 @@ export default function ProjectCandidatesOverviewPage() {
     if (status === "cancelled") return "Cancelled Project";
     return "Active Project";
   }, [selectedProject?.status]);
+
+  const documentsSubStatusStatsByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        (summary?.documentsSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+      ),
+    [summary?.documentsSubStatus?.tiles],
+  );
+
+  const interviewSubStatusStatsByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        (summary?.interviewSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+      ),
+    [summary?.interviewSubStatus?.tiles],
+  );
+
+  const processingSubStatusStatsByKey = useMemo(
+    () =>
+      Object.fromEntries(
+        (summary?.processingSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+      ),
+    [summary?.processingSubStatus?.tiles],
+  );
 
   const counts: Record<string, number> = useMemo(() => {
     if (!summary) {
@@ -546,48 +609,44 @@ export default function ProjectCandidatesOverviewPage() {
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 py-4 sm:px-6">
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
-                    <Users className="h-5 w-5 text-white" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <h2 className="truncate text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
-                    </p>
-                  </div>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex min-w-0 items-center gap-3 flex-1">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
+                  <Users className="h-5 w-5 text-white" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
+                  </p>
                 </div>
               </div>
-
-              {stageSubFilters && (
-                <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-                  <div className="flex h-8 shrink-0 items-center gap-1.5 pr-1">
-                    <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
-                    <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      Filter
-                    </span>
-                  </div>
-                  {stageSubFilters.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => {
-                        setSubStatusFilter(option.key);
-                        setPage(1);
-                      }}
-                      className={cn(
-                        "h-8 shrink-0 rounded-full border px-3 text-xs font-medium transition-all",
-                        subStatusFilter === option.key
-                          ? "border-blue-600 bg-blue-600 text-white shadow-sm"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
+              {activeFilter === "documents" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={DOCUMENT_SUB_STATUS_TILE_STYLES}
+                  statsByKey={documentsSubStatusStatsByKey}
+                  gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-xl"
+                  selectedSubStatus={subStatusFilter === "all" ? undefined : subStatusFilter}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {activeFilter === "interview" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={INTERVIEW_SUB_STATUS_TILE_STYLES}
+                  statsByKey={interviewSubStatusStatsByKey}
+                  gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-2xl"
+                  selectedSubStatus={subStatusFilter === "all" ? undefined : subStatusFilter}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {activeFilter === "processing" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={PROCESSING_SUB_STATUS_TILE_STYLES}
+                  statsByKey={processingSubStatusStatsByKey}
+                  gridClassName="grid-cols-3 sm:grid-cols-5 lg:max-w-3xl"
+                  selectedSubStatus={subStatusFilter === "all" ? undefined : subStatusFilter}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
               )}
             </div>
           </div>

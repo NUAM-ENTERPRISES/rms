@@ -33,6 +33,71 @@ import { ROLE_NAMES } from '../common/constants/role-ids';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
+/** Project overview sub-status tiles (aligned with web ProjectCandidatesOverviewPage filters). */
+const PROJECT_DOCUMENT_SUB_STATUS_TILES = [
+  {
+    key: 'pending',
+    label: 'Pending',
+    subStatusNames: [
+      'pending_documents',
+      'documents_submitted',
+      'verification_in_progress_document',
+      'documents_re_submission_requested',
+      'client_revision_requested',
+    ],
+  },
+  {
+    key: 'verified',
+    label: 'Verified',
+    subStatusNames: ['documents_verified'],
+  },
+  {
+    key: 'rejected',
+    label: 'Rejected',
+    subStatusNames: ['rejected_documents'],
+  },
+  {
+    key: 'submitted_to_client',
+    label: 'Send to Client',
+    subStatusNames: ['submitted_to_client'],
+  },
+] as const;
+
+const PROJECT_INTERVIEW_SUB_STATUS_TILES = [
+  {
+    key: 'scheduled',
+    label: 'Interview Scheduled',
+    subStatusName: 'interview_scheduled',
+  },
+  { key: 'passed', label: 'Passed', subStatusName: 'interview_passed' },
+  { key: 'failed', label: 'Failed', subStatusName: 'interview_failed' },
+  { key: 'backout', label: 'Backout', subStatusName: 'interview_backout' },
+] as const;
+
+const PROJECT_PROCESSING_SUB_STATUS_TILES = [
+  {
+    key: 'transferred',
+    label: 'Transferred',
+    subStatusName: 'transfered_to_processing',
+  },
+  {
+    key: 'in_progress',
+    label: 'In Progress',
+    subStatusName: 'processing_in_progress',
+  },
+  {
+    key: 'completed',
+    label: 'Completed',
+    subStatusName: 'processing_completed',
+  },
+  { key: 'failed', label: 'Failed', subStatusName: 'processing_failed' },
+  {
+    key: 'ready_final',
+    label: 'Ready for Final',
+    subStatusName: 'ready_for_final',
+  },
+] as const;
+
 @Injectable()
 export class CandidateProjectsService {
   private readonly logger = new Logger(CandidateProjectsService.name);
@@ -1339,9 +1404,7 @@ export class CandidateProjectsService {
       interviewCount,
       processingCount,
       finalCount,
-      data,
-      project,
-      filteredCount,
+      ...documentSubStatusCounts
     ] = await Promise.all([
       // Total count should use baseWhereForCounts to ignore current status filter
       this.prisma.candidateProjects.count({ where: baseWhereForCounts }),
@@ -1362,7 +1425,50 @@ export class CandidateProjectsService {
       this.prisma.candidateProjects.count({
         where: { ...baseWhereForCounts, mainStatus: { name: 'final' } },
       }),
+      ...PROJECT_DOCUMENT_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'documents' },
+            subStatus: { name: { in: [...tile.subStatusNames] } },
+          },
+        }),
+      ),
+      ...PROJECT_INTERVIEW_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'interview' },
+            subStatus: { name: tile.subStatusName },
+          },
+        }),
+      ),
+      ...PROJECT_PROCESSING_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'processing' },
+            subStatus: { name: tile.subStatusName },
+          },
+        }),
+      ),
+    ]);
 
+    const interviewSubStatusCounts = documentSubStatusCounts.slice(
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length,
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length +
+        PROJECT_INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const processingSubStatusCounts = documentSubStatusCounts.slice(
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length +
+        PROJECT_INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const documentSubStatusCountsOnly = documentSubStatusCounts.slice(
+      0,
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length,
+    ) as number[];
+
+    const [data, project, filteredCount] = await Promise.all([
       // Paginated candidate list uses 'where' (which includes mainStatus)
       this.prisma.candidateProjects.findMany({
         where,
@@ -1407,6 +1513,30 @@ export class CandidateProjectsService {
         interviewCount,
         processingCount,
         finalCount, // aka Deployed counts as per user request
+        documentsSubStatus: {
+          tiles: PROJECT_DOCUMENT_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: documentSubStatusCountsOnly[index],
+            subStatusName: tile.key,
+          })),
+        },
+        interviewSubStatus: {
+          tiles: PROJECT_INTERVIEW_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: interviewSubStatusCounts[index],
+            subStatusName: tile.key,
+          })),
+        },
+        processingSubStatus: {
+          tiles: PROJECT_PROCESSING_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: processingSubStatusCounts[index],
+            subStatusName: tile.key,
+          })),
+        },
       },
       data,
       meta: {
