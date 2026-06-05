@@ -80,7 +80,7 @@ export function MissingDocumentActions({
             onClick={() => setIsRequestModalOpen(true)}
           >
             <Send className="h-3.5 w-3.5 mr-1.5" aria-hidden />
-            Request
+            Request for resubmission
           </Button>
         ) : null}
       </div>

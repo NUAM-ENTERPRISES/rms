@@ -21,7 +21,7 @@ describe("MissingDocumentActions", () => {
 
     expect(screen.queryByRole("button", { name: "Reupload" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Request" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Request for resubmission" })).toBeInTheDocument();
   });
 
   it("shows requested state and hides request when upload already requested", () => {
@@ -41,7 +41,7 @@ describe("MissingDocumentActions", () => {
 
     expect(screen.getByText("Requested from recruiter")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reupload" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Request" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request for resubmission" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
   });
 
