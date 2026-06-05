@@ -31,6 +31,8 @@ import {
   XCircle,
   Calendar,
   Building2,
+  Globe,
+  MapPin,
 } from "lucide-react";
 import { ProjectRoleFilter, ImageViewer } from "@/components/molecules";
 import { cn } from "@/lib/utils";
@@ -38,7 +40,8 @@ import { SlidersHorizontal } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { useGetProjectOverviewQuery } from "@/services/candidateProjectsApi";
-import { useGetProjectsQuery } from "@/services/projectsApi";
+import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
+import { FlagIcon } from "@/shared";
 import { useGetProjectStatsQuery } from "@/features/projects";
 import ProjectStats from "@/components/organisms/ProjectStats";
 import { useCan } from "@/hooks/useCan";
@@ -333,6 +336,10 @@ export default function ProjectCandidatesOverviewPage() {
   const meta = overviewData?.meta;
   const projectTitle = overviewData?.projectTitle;
 
+  const { data: projectDetails } = useGetProjectQuery(projectRole.projectId, {
+    skip: !projectRole.projectId || projectRole.projectId === "all",
+  });
+
   const selectedProject = useMemo(
     () => allProjects.find((p) => p.id === projectRole.projectId) ?? null,
     [allProjects, projectRole.projectId]
@@ -340,16 +347,41 @@ export default function ProjectCandidatesOverviewPage() {
 
   const displayTitle = projectTitle || selectedProject?.title || "Candidate Overview";
 
-  const projectInitial = useMemo(
-    () => (displayTitle.charAt(0) || "P").toUpperCase(),
-    [displayTitle]
-  );
+  const projectCountryCode = useMemo(() => {
+    const fromDetails = (projectDetails?.data as { countryCode?: string | null } | undefined)
+      ?.countryCode;
+    if (fromDetails) return fromDetails;
+    return (selectedProject as { countryCode?: string | null } | null)?.countryCode ?? null;
+  }, [projectDetails?.data, selectedProject]);
+
+  const projectCountryName = useMemo(() => {
+    const country = (projectDetails?.data as { country?: { name?: string } } | undefined)?.country;
+    return country?.name ?? projectCountryCode ?? undefined;
+  }, [projectDetails?.data, projectCountryCode]);
 
   const projectStatusLabel = useMemo(() => {
     const status = selectedProject?.status;
-    if (status === "completed") return "Completed Project";
-    if (status === "cancelled") return "Cancelled Project";
-    return "Active Project";
+    if (status === "completed") return "Completed";
+    if (status === "cancelled") return "Cancelled";
+    return "Active";
+  }, [selectedProject?.status]);
+
+  const projectStatusBadgeClass = useMemo(() => {
+    const status = selectedProject?.status;
+    if (status === "completed") {
+      return "border-purple-200 bg-purple-50 text-purple-700";
+    }
+    if (status === "cancelled") {
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    }
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }, [selectedProject?.status]);
+
+  const projectStatusDotClass = useMemo(() => {
+    const status = selectedProject?.status;
+    if (status === "completed") return "bg-purple-500";
+    if (status === "cancelled") return "bg-rose-500";
+    return "bg-emerald-500";
   }, [selectedProject?.status]);
 
   const documentsSubStatusStatsByKey = useMemo(
@@ -465,41 +497,85 @@ export default function ProjectCandidatesOverviewPage() {
           <ProjectStats stats={statsData.data} className="px-0" interactive={false} />
         )}
           {/* ── Project header card ── */}
-          <div className="relative z-10 rounded-2xl border border-slate-200 bg-white shadow-sm p-5 md:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              <div
-                className="relative z-0 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-600 text-xl font-bold text-white shadow-md"
-                aria-hidden
-              >
-                {projectInitial}
+          <div className="relative z-10 overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/40 to-indigo-50/30 shadow-sm ring-1 ring-slate-200/60">
+            <div
+              className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
+              aria-hidden
+            />
+            <div className="flex flex-col gap-4 p-5 md:p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-5">
+                <div className="shrink-0">
+                  {projectCountryCode ? (
+                    <FlagIcon
+                      countryCode={projectCountryCode}
+                      size="2xl"
+                      className="!border-0 !bg-transparent !rounded-none !shadow-none w-[5.5rem] h-[4.25rem] md:w-[6rem] md:h-[4.5rem]"
+                      aria-label={
+                        projectCountryName
+                          ? `Flag of ${projectCountryName}`
+                          : `Flag of ${projectCountryCode}`
+                      }
+                    />
+                  ) : (
+                    <Globe className="h-12 w-12 text-slate-400 md:h-14 md:w-14" aria-hidden />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-indigo-600/90">
+                    Project Candidates
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+                    <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 md:text-2xl lg:text-[1.65rem]">
+                      {displayTitle}
+                    </h1>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                        projectStatusBadgeClass,
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mr-1.5 inline-block h-1.5 w-1.5 rounded-full",
+                          projectStatusDotClass,
+                        )}
+                        aria-hidden
+                      />
+                      {projectStatusLabel}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                    {projectCountryName ? (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-indigo-700">
+                        <MapPin className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+                        {projectCountryName}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1.5 font-medium text-slate-600">
+                      <Users className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                      {(summary?.totalCandidates ?? 0).toLocaleString()} candidate
+                      {(summary?.totalCandidates ?? 0) === 1 ? "" : "s"} in pipeline
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h1 className="truncate text-2xl font-bold text-slate-900">{displayTitle}</h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Comprehensive dashboard for candidate tracking and status overview
-                </p>
+              <div className="relative z-20 flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pl-4">
+                <ProjectRoleFilter
+                  value={projectRole}
+                  onChange={(v) => {
+                    setProjectRole(v);
+                    setPage(1);
+                  }}
+                  defaultProject={true}
+                  showRoleFilter={false}
+                  projectTriggerHighlighted
+                  className="relative z-20 [&>div]:w-auto"
+                  projectTriggerClassName="h-10 min-w-[180px] rounded-xl border-slate-200 bg-white/90 px-4 shadow-sm"
+                />
               </div>
-            </div>
-            <div className="relative z-20 flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <ProjectRoleFilter
-                value={projectRole}
-                onChange={(v) => {
-                  setProjectRole(v);
-                  setPage(1);
-                }}
-                defaultProject={true}
-                showRoleFilter={false}
-                projectTriggerHighlighted
-                className="relative z-20 [&>div]:w-auto"
-                projectTriggerClassName="h-10 min-w-[180px] px-4"
-              />
-              <Badge className="relative z-10 shrink-0 rounded-full border-0 bg-blue-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-blue-600">
-                {projectStatusLabel}
-              </Badge>
             </div>
           </div>
-        </div>
     
 
         {/* ── Status Tiles ── */}

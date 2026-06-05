@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/select";
 import {
   Award,
+  BarChart3,
   CalendarDays,
   ChevronRight,
+  Sparkles,
   Target,
   TrendingUp,
   Trophy,
@@ -35,11 +37,14 @@ import {
 } from "@/services/recruiterAnalyticsApi";
 import {
   buildChartData,
+  buildStageBreakdown,
   CHART_COLORS,
   getOverallRatingInfo,
+  getRatingProgress,
   getRatingStarCount,
   hasAnyStageActivity,
   RATING_CARD_BORDER,
+  RATING_PROGRESS_FILL,
   RATING_STYLES,
   STAGE_CONFIG,
 } from "../utils/recruiter-performance-rating.util";
@@ -57,6 +62,15 @@ const MONTH_LABELS = [
   "October",
   "November",
   "December",
+] as const;
+
+const STAGE_ACCENT_CLASSES = [
+  "bg-chart-1",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+  "bg-chart-1",
 ] as const;
 
 const EMPTY_STAGE_COUNTS: PerformanceStageCounts = {
@@ -105,8 +119,14 @@ function SectionSkeleton() {
       aria-busy="true"
       aria-label="Loading performance rating"
     >
-      <div className="lg:col-span-2 h-[340px] rounded-2xl bg-slate-100/80" />
-      <div className="lg:col-span-3 h-[340px] rounded-2xl bg-slate-100/80" />
+      <div className="lg:col-span-2 space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="h-28 rounded-2xl bg-slate-100/90" />
+          <div className="h-28 rounded-2xl bg-slate-100/90" />
+        </div>
+        <div className="h-[280px] rounded-2xl bg-slate-100/80" />
+      </div>
+      <div className="lg:col-span-3 h-[420px] rounded-2xl bg-slate-100/80" />
     </div>
   );
 }
@@ -126,34 +146,110 @@ function PeriodSnapshot({
   const rating = block?.rating ?? "Poor";
   const info = getOverallRatingInfo(score);
   const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
+  const progress = getRatingProgress(score);
 
   return (
     <button
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full text-left rounded-xl border p-3 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40",
+        "group relative w-full overflow-hidden rounded-2xl border p-3.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40",
         isActive
-          ? "border-indigo-300 bg-white shadow-md ring-1 ring-indigo-200"
-          : "border-slate-200 bg-slate-50/80 hover:bg-white hover:border-slate-300",
+          ? "border-indigo-300 bg-white shadow-md ring-2 ring-indigo-200/80"
+          : "border-slate-200/90 bg-slate-50/60 hover:border-slate-300 hover:bg-white hover:shadow-sm",
       )}
       aria-pressed={isActive}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 w-1 rounded-l-2xl transition-colors",
+          isActive ? "bg-indigo-500" : "bg-slate-200 group-hover:bg-slate-300",
+        )}
+        aria-hidden
+      />
+      <p className="pl-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
-      <p className="text-2xl font-bold tabular-nums text-slate-900 mt-1">{score}</p>
-      <RecruiterPerformanceRatingStars
-        rating={rating}
-        size="md"
-        variant="dashboard"
-        className="mt-2 justify-center"
-      />
-      <Badge variant="outline" className={cn("mt-2 text-[10px] font-semibold", ratingClass)}>
-        {rating}
-      </Badge>
-      <p className="text-[10px] text-slate-500 mt-1.5">{info.scoreRange}</p>
+      <div className="pl-2 mt-2 flex items-end justify-between gap-2">
+        <div>
+          <p className="text-3xl font-extrabold tabular-nums leading-none text-slate-900">
+            {score}
+          </p>
+          <p className="text-[10px] font-medium text-slate-500 mt-1">points</p>
+        </div>
+        <RecruiterPerformanceRatingStars
+          rating={rating}
+          size="sm"
+          variant="dashboard"
+          className="shrink-0"
+        />
+      </div>
+      <div className="pl-2 mt-2.5 flex flex-wrap items-center gap-1.5">
+        <Badge variant="outline" className={cn("text-[10px] font-semibold", ratingClass)}>
+          {rating}
+        </Badge>
+        <span className="text-[10px] text-slate-500">{info.scoreRange}</span>
+      </div>
+      <div className="pl-2 mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            RATING_PROGRESS_FILL[rating] ?? "bg-slate-400",
+          )}
+          style={{ width: `${progress.tierProgressPercent}%` }}
+        />
+      </div>
     </button>
+  );
+}
+
+function TierProgressCard({
+  score,
+  rating,
+}: {
+  score: number;
+  rating: string;
+}) {
+  const info = getOverallRatingInfo(score);
+  const progress = getRatingProgress(score);
+
+  return (
+    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3.5 text-left shadow-sm space-y-2.5">
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+          <Target className="h-3.5 w-3.5 text-indigo-500 shrink-0" aria-hidden />
+          Current tier
+        </span>
+        <span className="tabular-nums font-bold text-indigo-700">
+          {progress.tierProgressPercent}%
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-700",
+            RATING_PROGRESS_FILL[rating] ?? "bg-slate-400",
+          )}
+          style={{ width: `${progress.tierProgressPercent}%` }}
+        />
+      </div>
+      <p className="text-xs text-slate-600">
+        <span className="font-semibold text-slate-800">{rating}</span> requires{" "}
+        {info.scoreRange}
+      </p>
+      {info.nextStep ? (
+        <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5">
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {info.nextStep}
+        </p>
+      ) : null}
+      {info.isTopTier ? (
+        <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
+          <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Highest performance tier achieved
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -178,7 +274,7 @@ function OverallRatingHero({
   const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
 
   return (
-    <div className="flex flex-col gap-4 h-full min-h-[340px]">
+    <div className="flex h-full min-h-[380px] flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
         <PeriodSnapshot
           label="Monthly"
@@ -196,76 +292,107 @@ function OverallRatingHero({
 
       <div
         className={cn(
-          "relative flex-1 overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-white to-slate-50 shadow-md",
+          "relative flex flex-1 overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-white via-slate-50/30 to-indigo-50/20 shadow-md",
           RATING_CARD_BORDER[rating] ?? "border-slate-200",
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-violet-500/10"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/8 via-transparent to-violet-500/5"
           aria-hidden
         />
-        <div className="relative p-5 flex flex-col items-center text-center h-full justify-center gap-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+        <div className="relative flex h-full w-full flex-col items-center justify-center gap-4 p-5 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
             Overall rating · {periodLabel}
           </p>
 
-          <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-b from-amber-50/90 to-amber-100/40 px-6 py-4 shadow-sm shadow-amber-100/50">
+          <div className="relative">
+            <div
+              className={cn(
+                "flex h-28 w-28 items-center justify-center rounded-full border-4 bg-white shadow-inner",
+                RATING_CARD_BORDER[rating] ?? "border-slate-200",
+              )}
+            >
+              <div>
+                <p className="text-4xl font-extrabold tabular-nums leading-none text-slate-900">
+                  {score}
+                </p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  points
+                </p>
+              </div>
+            </div>
+            {info.isTopTier ? (
+              <div className="absolute -right-1 -top-1 rounded-full bg-violet-100 p-1.5 text-violet-600 shadow-sm">
+                <Sparkles className="h-4 w-4" aria-hidden />
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-b from-amber-50/90 to-white px-5 py-3 shadow-sm">
             <RecruiterPerformanceRatingStars
               rating={rating}
               size="lg"
               variant="dashboard"
               className="justify-center"
             />
-            <p className="text-[10px] font-medium text-amber-800/80 mt-2 tabular-nums">
+            <p className="mt-2 text-[10px] font-medium text-amber-800/80 tabular-nums">
               {getRatingStarCount(rating)} of 5 stars
             </p>
           </div>
 
           <div
             className={cn(
-              "inline-flex items-center gap-2 rounded-2xl border-2 px-5 py-3 shadow-sm",
+              "inline-flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm",
               ratingClass,
             )}
             aria-label={`Overall rating: ${rating}`}
           >
             {info.isTopTier ? (
-              <Trophy className="h-6 w-6 shrink-0" aria-hidden />
+              <Trophy className="h-5 w-5 shrink-0" aria-hidden />
             ) : (
-              <Award className="h-6 w-6 shrink-0" aria-hidden />
+              <Award className="h-5 w-5 shrink-0" aria-hidden />
             )}
-            <span className="text-2xl sm:text-3xl font-bold tracking-tight">{rating}</span>
+            <span className="text-xl font-bold tracking-tight sm:text-2xl">{rating}</span>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-5xl font-extrabold tabular-nums text-slate-900 leading-none">
-              {score}
-            </p>
-            <p className="text-sm font-medium text-slate-500">performance points</p>
-          </div>
-
-          <div className="w-full max-w-xs rounded-xl bg-slate-100/80 border border-slate-200/80 px-4 py-3 text-left space-y-2">
-            <p className="text-xs text-slate-600 flex items-center gap-2">
-              <Target className="h-3.5 w-3.5 text-indigo-500 shrink-0" aria-hidden />
-              <span>
-                <span className="font-semibold text-slate-800">{rating}</span>
-                {" "}requires {info.scoreRange}
-              </span>
-            </p>
-            {info.nextStep && (
-              <p className="text-xs text-indigo-700 font-medium flex items-center gap-1.5">
-                <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {info.nextStep}
-              </p>
-            )}
-            {info.isTopTier && (
-              <p className="text-xs text-emerald-700 font-medium flex items-center gap-1.5">
-                <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Highest performance tier achieved
-              </p>
-            )}
-          </div>
+          <TierProgressCard score={score} rating={rating} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function StageContributionGrid({
+  stageCounts,
+}: {
+  stageCounts: PerformanceStageCounts;
+}) {
+  const rows = useMemo(() => buildStageBreakdown(stageCounts), [stageCounts]);
+
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {rows.map((row, idx) => (
+        <div
+          key={row.key}
+          className="rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-white"
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_ACCENT_CLASSES[idx])}
+              aria-hidden
+            />
+            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              {row.shortLabel}
+            </span>
+          </div>
+          <p className="mt-1.5 text-xl font-bold tabular-nums text-slate-900">
+            {row.contribution}
+          </p>
+          <p className="text-[10px] text-slate-500">
+            {row.count} × {row.weight} pts
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -287,23 +414,31 @@ function ContributionChart({
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col items-center justify-center h-[300px] gap-2 text-slate-400">
-        <TrendingUp className="h-10 w-10 text-slate-300" aria-hidden />
-        <p className="text-sm font-medium">No stage progress in this period yet</p>
-        <p className="text-xs text-slate-400">Scores update as candidates move through the funnel</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/40 py-12 text-slate-400">
+        <div className="rounded-2xl bg-white p-4 shadow-sm">
+          <TrendingUp className="h-10 w-10 text-slate-300" aria-hidden />
+        </div>
+        <p className="text-sm font-semibold text-slate-600">
+          No stage progress in this period yet
+        </p>
+        <p className="max-w-xs text-center text-xs text-slate-400">
+          Scores update as candidates move through the funnel
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 mb-3 rounded-xl bg-indigo-50/80 border border-indigo-100 px-4 py-2.5">
-        <span className="text-xs font-medium text-indigo-900">
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/90 to-violet-50/50 px-4 py-3">
+        <span className="text-xs font-semibold text-indigo-900">
           Total points from pipeline ({periodLabel})
         </span>
-        <span className="text-lg font-bold tabular-nums text-indigo-700">{totalContribution}</span>
+        <span className="text-2xl font-extrabold tabular-nums text-indigo-700">
+          {totalContribution}
+        </span>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={240}>
         <BarChart
           layout="vertical"
           data={chartData}
@@ -326,22 +461,22 @@ function ContributionChart({
             tickLine={false}
           />
           <Tooltip content={<ContributionTooltip />} cursor={{ fill: "var(--muted)" }} />
-          <Bar dataKey="contribution" name="Points" radius={[0, 6, 6, 0]} maxBarSize={30}>
+          <Bar dataKey="contribution" name="Points" radius={[0, 8, 8, 0]} maxBarSize={28}>
             {chartData.map((entry, idx) => (
               <Cell key={entry.key} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
             ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
-      <div className="flex flex-wrap gap-3 pt-3 border-t border-slate-100">
+      <StageContributionGrid stageCounts={stageCounts} />
+      <div className="mt-3 flex flex-wrap gap-3 border-t border-slate-100 pt-3">
         {STAGE_CONFIG.map(({ label }, idx) => (
           <span
             key={label}
             className="inline-flex items-center gap-1.5 text-xs text-slate-500"
           >
             <span
-              className="h-2 w-2 rounded-full shrink-0"
-              style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }}
+              className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_ACCENT_CLASSES[idx])}
               aria-hidden
             />
             {label}
@@ -383,51 +518,67 @@ export default function RecruiterPerformanceRatingSection() {
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-slate-50/50 to-white shadow-sm"
+      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white via-slate-50/30 to-white shadow-sm ring-1 ring-slate-200/60"
       aria-labelledby="recruiter-performance-rating-heading"
     >
-      <div className="px-5 pt-5 pb-4 border-b border-slate-100">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-indigo-600 p-2.5 shadow-md shadow-indigo-200/60">
+      <div
+        className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-400 via-indigo-500 to-violet-500"
+        aria-hidden
+      />
+
+      <div className="border-b border-slate-100 px-5 pb-4 pt-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 p-3 shadow-lg shadow-indigo-200/50">
               <TrendingUp className="h-5 w-5 text-white" aria-hidden />
             </div>
-            <div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-600/90">
+                Performance insights
+              </p>
               <h2
                 id="recruiter-performance-rating-heading"
-                className="text-lg font-semibold text-slate-900"
+                className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl"
               >
                 Recruiter Performance Rating
               </h2>
-              <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                Overall score and rating from candidate funnel progress
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  Overall score and rating from candidate funnel progress
+                </span>
               </p>
-              {!isLoading && !isError && (
-                <div className="flex items-center gap-2 mt-2">
+              {!isLoading && !isError ? (
+                <div className="mt-2.5 flex flex-wrap items-center gap-2">
                   <RecruiterPerformanceRatingStars
                     rating={rating}
                     size="sm"
                     variant="dashboard"
                   />
-                  <span className="text-xs font-semibold text-amber-700 tabular-nums">
+                  <span className="text-xs font-bold tabular-nums text-indigo-700">
                     {score} pts
                   </span>
                   <Badge
                     variant="outline"
                     className={cn(
-                      "text-[10px] font-semibold border-amber-200 text-amber-900",
+                      "text-[10px] font-semibold",
                       RATING_STYLES[rating],
                     )}
                   >
                     {rating}
                   </Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-slate-200 bg-slate-50 text-[10px] font-medium text-slate-600"
+                  >
+                    {periodLabel}
+                  </Badge>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
             <div
               className="flex rounded-xl border border-slate-200 bg-white p-0.5 shadow-sm"
               role="group"
@@ -439,7 +590,7 @@ export default function RecruiterPerformanceRatingSection() {
                   type="button"
                   onClick={() => setPeriodView(view)}
                   className={cn(
-                    "px-4 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer capitalize",
+                    "cursor-pointer rounded-lg px-4 py-2 text-xs font-semibold capitalize transition-all",
                     periodView === view
                       ? "bg-indigo-600 text-white shadow-sm"
                       : "text-slate-600 hover:bg-slate-50",
@@ -450,10 +601,10 @@ export default function RecruiterPerformanceRatingSection() {
                 </button>
               ))}
             </div>
-            {periodView === "monthly" && (
+            {periodView === "monthly" ? (
               <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
                 <SelectTrigger
-                  className="w-[140px] h-10 rounded-xl border-slate-200 bg-white"
+                  className="h-10 w-[140px] rounded-xl border-slate-200 bg-white"
                   aria-label="Select month"
                 >
                   <SelectValue placeholder="Month" />
@@ -466,10 +617,10 @@ export default function RecruiterPerformanceRatingSection() {
                   ))}
                 </SelectContent>
               </Select>
-            )}
+            ) : null}
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
               <SelectTrigger
-                className="w-[100px] h-10 rounded-xl border-slate-200 bg-white"
+                className="h-10 w-[100px] rounded-xl border-slate-200 bg-white"
                 aria-label="Select year"
               >
                 <SelectValue placeholder="Year" />
@@ -487,11 +638,14 @@ export default function RecruiterPerformanceRatingSection() {
       </div>
 
       <div className="p-5">
-        {isError && (
-          <p className="text-sm text-red-600 mb-4 rounded-lg bg-red-50 px-3 py-2" role="alert">
+        {isError ? (
+          <p
+            className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600"
+            role="alert"
+          >
             Failed to load performance rating. Please try again later.
           </p>
-        )}
+        ) : null}
 
         {isLoading ? (
           <SectionSkeleton />
@@ -503,7 +657,7 @@ export default function RecruiterPerformanceRatingSection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.22 }}
-              className="grid grid-cols-1 lg:grid-cols-5 gap-5"
+              className="grid grid-cols-1 gap-5 lg:grid-cols-5"
             >
               <div className="lg:col-span-2">
                 <OverallRatingHero
@@ -517,13 +671,20 @@ export default function RecruiterPerformanceRatingSection() {
                 />
               </div>
               <div className="lg:col-span-3">
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm h-full min-h-[340px] flex flex-col">
-                  <h3 className="text-sm font-semibold text-slate-800">
-                    How your score was built
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5 mb-1">
-                    Weighted points per funnel stage for {periodLabel}
-                  </p>
+                <div className="flex h-full min-h-[380px] flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                  <div className="mb-4 flex items-start gap-3">
+                    <div className="rounded-xl bg-indigo-50 p-2 text-indigo-600">
+                      <BarChart3 className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        How your score was built
+                      </h3>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Weighted points per funnel stage for {periodLabel}
+                      </p>
+                    </div>
+                  </div>
                   <ContributionChart
                     stageCounts={stageCounts}
                     isEmpty={isEmpty}
