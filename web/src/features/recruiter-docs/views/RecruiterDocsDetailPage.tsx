@@ -209,7 +209,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const { data: requirementsData, isLoading: isRequirementsLoading, refetch: refetchRequirements } = useGetCandidateProjectRequirementsQuery(
     { candidateId: candidateId || "", projectId: projectId || "" },
-    { skip: !candidateId || !projectId }
+    {
+      skip: !candidateId || !projectId,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    },
   );
 
   const { data: candidate } = useGetCandidateByIdQuery(candidateId || "", { skip: !candidateId });

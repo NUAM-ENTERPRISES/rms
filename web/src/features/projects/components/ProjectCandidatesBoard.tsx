@@ -84,16 +84,30 @@ export type PipelineStatusCardAccent = {
   isProcessing: boolean;
 };
 
+const isNominatedPipelineStatus = (statusRaw: string) => {
+  const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
+  return (
+    underscored === "nominated" ||
+    underscored.startsWith("nominated_") ||
+    compact.startsWith("nominated") ||
+    raw.includes("nominated")
+  );
+};
+
 /** Card background accents by pipeline / global status (Tailwind tokens only). */
 export const getPipelineStatusCardClass = (
   statusRaw: string,
-  options?: { columnId?: CandidateColumnType; isAssigned?: boolean },
+  options?: {
+    columnId?: CandidateColumnType;
+    isAssigned?: boolean;
+    isNominated?: boolean;
+  },
 ): PipelineStatusCardAccent => {
   const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
-  const { columnId, isAssigned } = options ?? {};
+  const { columnId, isAssigned, isNominated } = options ?? {};
 
   const base =
-    "border border-l-0 shadow-sm backdrop-blur-sm transition-colors duration-200";
+    "pipeline-status-accent border border-l-0 shadow-sm backdrop-blur-sm transition-colors duration-200";
 
   // Eligible pool (column or unmatched pre-assignment)
   if (
@@ -103,13 +117,22 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/55 border-blue-200/80",
+        "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
       ),
       isProcessing: false,
     };
   }
 
   if (!raw) {
+    if (columnId === "nominated" && isAssigned && isNominated) {
+      return {
+        cardClass: cn(
+          base,
+          "bg-purple-100 border-purple-300/80",
+        ),
+        isProcessing: false,
+      };
+    }
     return { cardClass: "", isProcessing: false };
   }
 
@@ -123,7 +146,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-green-50/95 via-white/90 to-emerald-100/55 border-green-200/80",
+        "bg-green-50 bg-gradient-to-br from-green-50 via-emerald-50 to-emerald-100 border-green-200/80",
       ),
       isProcessing: false,
     };
@@ -134,7 +157,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-orange-50/95 via-white/90 to-amber-100/50 border-orange-200/80",
+        "bg-orange-50 bg-gradient-to-br from-orange-50 via-amber-50 to-amber-100 border-orange-200/80",
       ),
       isProcessing: true,
     };
@@ -150,7 +173,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-stone-100/95 via-amber-50/85 to-stone-50/90 border-stone-300/80",
+        "bg-stone-100 bg-gradient-to-br from-stone-100 via-amber-50 to-stone-50 border-stone-300/80",
       ),
       isProcessing: false,
     };
@@ -166,7 +189,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-violet-50/95 via-white/90 to-purple-100/50 border-violet-200/80",
+        "bg-violet-50 bg-gradient-to-br from-violet-50 via-purple-50 to-purple-100 border-violet-200/80",
       ),
       isProcessing: false,
     };
@@ -186,7 +209,18 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-red-50/95 via-white/90 to-rose-100/50 border-red-200/80",
+        "bg-red-50 bg-gradient-to-br from-red-50 via-rose-50 to-rose-100 border-red-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Nominated / profile shortlisting
+  if (isNominatedPipelineStatus(statusRaw) || isNominated) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-purple-100 border-purple-300/80",
       ),
       isProcessing: false,
     };
@@ -203,7 +237,7 @@ export const getPipelineStatusCardClass = (
     return {
       cardClass: cn(
         base,
-        "bg-gradient-to-br from-blue-50/95 via-white/90 to-sky-100/55 border-blue-200/80",
+        "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
       ),
       isProcessing: false,
     };
@@ -886,6 +920,7 @@ const ProjectCandidatesBoard = ({
           const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
             columnId: "nominated",
             isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
           });
 
           return (
@@ -1024,6 +1059,7 @@ const ProjectCandidatesBoard = ({
           const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
             columnId: "eligible",
             isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
           });
 
           return (
@@ -1161,6 +1197,7 @@ const ProjectCandidatesBoard = ({
           const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
             columnId: "all",
             isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
           });
 
           return (

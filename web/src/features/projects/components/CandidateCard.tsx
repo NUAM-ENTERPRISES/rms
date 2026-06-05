@@ -615,16 +615,26 @@ const CandidateCard = memo(function CandidateCard({
   // DEBUG: In tests, help verify whether interview button is expected to render
   
 
+  const hasPipelineStatusAccent =
+    typeof className === "string" && className.includes("pipeline-status-accent");
+
   return (
     <Card
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
-        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
+        "group relative overflow-hidden cursor-pointer rounded-xl shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-within:shadow-lg py-0",
+        hasPipelineStatusAccent
+          ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
+          : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300",
         isAlreadyInProject &&
           !showProcessingGlance &&
+          !hasPipelineStatusAccent &&
           "border-l-[3px] border-l-emerald-400",
-        isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
+        isNotEligible &&
+          !isAlreadyInProject &&
+          !hasPipelineStatusAccent &&
+          "border-l-[3px] border-l-red-300 opacity-75",
         className
       )}
       onClick={() => onView?.(candidateId)}

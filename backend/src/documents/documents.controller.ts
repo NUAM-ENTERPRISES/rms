@@ -30,6 +30,7 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
+import { RequestMissingDocumentDto } from './dto/request-missing-document.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload-offer-letter.dto';
@@ -696,6 +697,32 @@ export class DocumentsController {
       success: true,
       data: result,
       message: 'Resubmission request sent successfully',
+    };
+  }
+
+  @Post('request-missing-upload')
+  @Permissions('request:resubmission')
+  @ApiOperation({
+    summary: 'Request recruiter to upload a missing required document',
+    description:
+      'Notifies the assigned recruiter when a mandatory project document was never submitted.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Missing document upload request sent to recruiter',
+  })
+  async requestMissingDocumentUpload(
+    @Body() dto: RequestMissingDocumentDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.requestMissingDocumentUpload(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Missing document upload request sent successfully',
     };
   }
 
