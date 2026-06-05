@@ -18,6 +18,14 @@ export function useNav(): NavItem[] {
       "ready-for-processing",
       "profile",
     ]);
+    const isDocumentationExecutive = user.roles.includes("Documentation Executive");
+    const documentationExecutiveAllowedIds = new Set([
+      "documentation-dashboard",
+      "projects",
+      "projects-overview",
+      "projects-management",
+      "profile",
+    ]);
 
     const filterNavItem = (item: NavItem): NavItem | null => {
       // Check if item is disabled
@@ -25,6 +33,14 @@ export function useNav(): NavItem[] {
 
       // Processing Manager sees only processing menu + profile.
       if (isProcessingManager && !processingManagerAllowedIds.has(item.id)) {
+        return null;
+      }
+
+      // Documentation Executive sees only dashboard, projects, and profile.
+      if (
+        isDocumentationExecutive &&
+        !documentationExecutiveAllowedIds.has(item.id)
+      ) {
         return null;
       }
 

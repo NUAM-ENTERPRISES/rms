@@ -604,7 +604,15 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: documentData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: (_result, _error, { candidateId }) => [
+        "Document",
+        "DocumentStats",
+        "DocumentSummary",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+        { type: "DocumentVerification", id: candidateId },
+        "DocumentVerification",
+      ],
     }),
 
     updateDocument: builder.mutation<
@@ -670,6 +678,29 @@ export const documentsApi = baseApi.injectEndpoints({
         body: data,
       }),
       invalidatesTags: ["Document", "DocumentSummary", "CandidateProject"],
+    }),
+
+    requestMissingDocumentUpload: builder.mutation<
+      { success: boolean; data: { success: boolean }; message: string },
+      {
+        candidateProjectMapId: string;
+        docType: string;
+        reason: string;
+        roleCatalogId?: string;
+      }
+    >({
+      query: (body) => ({
+        url: `/documents/request-missing-upload`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        "Document",
+        "DocumentSummary",
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+      ],
     }),
 
     reuploadDocument: builder.mutation<
@@ -880,7 +911,12 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId, roleCatalogId },
       }),
-      invalidatesTags: ["DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: (_result, _error, { projectId }) => [
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+        { type: "Project", id: projectId },
+      ],
     }),
 
     completeVerification: builder.mutation<
@@ -1049,4 +1085,5 @@ export const {
   useForwardToClientMutation,
   useBulkForwardToClientMutation,
   useRequestClientReuploadMutation,
+  useRequestMissingDocumentUploadMutation,
 } = documentsApi;

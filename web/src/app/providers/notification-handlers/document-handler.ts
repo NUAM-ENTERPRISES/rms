@@ -6,6 +6,7 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "document_verified",
     "document_rejected",
     "document_resubmission_requested",
+    "document_upload_requested",
     "document_resubmitted",
     "documentation_notification",
     "recruiter_notification",
@@ -60,13 +61,38 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
   return true;
 };
 
+const buildDocumentVerificationSyncTags = (payload: {
+  candidateId?: string;
+  projectId?: string;
+}) => {
+  const tags: Array<string | { type: string; id?: string }> = [
+    { type: "RecruiterDocuments" },
+    { type: "VerificationCandidates" },
+    { type: "IntroductionVideo" },
+  ];
+
+  if (payload.candidateId) {
+    tags.push({ type: "DocumentVerification", id: payload.candidateId });
+    if (payload.projectId) {
+      tags.push({
+        type: "IntroductionVideo",
+        id: `${payload.candidateId}-${payload.projectId}`,
+      });
+    }
+  } else {
+    tags.push({ type: "DocumentVerification" });
+  }
+
+  return tags;
+};
+
 export const handleDocumentSync = (payload: any, { dispatch, invalidateTags }: { dispatch: any, invalidateTags: any }) => {
-  if (payload.type === "RecruiterDocuments") {
-    console.log("[Socket] Recruiter documents data sync");
-    dispatch(invalidateTags([
-      { type: "RecruiterDocuments" },
-      { type: "IntroductionVideo" },
-    ]));
+  if (
+    payload.type === "RecruiterDocuments" ||
+    payload.type === "DocumentVerification"
+  ) {
+    console.log("[Socket] Document verification data sync", payload.type);
+    dispatch(invalidateTags(buildDocumentVerificationSyncTags(payload)));
     return true;
   }
   return false;

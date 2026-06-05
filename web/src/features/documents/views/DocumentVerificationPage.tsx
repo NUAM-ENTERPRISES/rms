@@ -1055,10 +1055,37 @@ export default function DocumentVerificationPage() {
                   }
 
                   if (statusFilter === "verification_in_progress_document") {
+                    const documentSummary = candidateProject.documentSummary;
+                    const hasMissing =
+                      documentSummary && documentSummary.missingCount > 0;
+
                     return (
                       <div className="text-sm text-gray-700">
                         <div className="font-medium">Pending: {pendingCount}</div>
                         <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                        {hasMissing ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                                <span
+                                  className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                                  aria-hidden
+                                />
+                                {documentSummary.submittedCount}/
+                                {documentSummary.requiredCount} submitted ·{" "}
+                                {documentSummary.missingCount} missing
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs">
+                              <p className="font-semibold mb-1">Missing documents</p>
+                              <ul className="list-disc pl-4 space-y-0.5">
+                                {documentSummary.missingDocTypes.map((docType: string) => (
+                                  <li key={docType}>{docType}</li>
+                                ))}
+                              </ul>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
                         {renderSubStatus()}
                       </div>
                     );

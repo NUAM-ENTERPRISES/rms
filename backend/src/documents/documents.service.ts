@@ -18,6 +18,7 @@ import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
+import { RequestMissingDocumentDto } from './dto/request-missing-document.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
@@ -343,6 +344,26 @@ export class DocumentsService {
 
   private readonly logger = new Logger(DocumentsService.name);
 
+  /** Broadcast requirements/verification cache refresh to all connected clients. */
+  private async publishDocumentVerificationSync(params: {
+    candidateId: string;
+    projectId?: string;
+    message: string;
+  }): Promise<void> {
+    try {
+      await this.outboxService.publishDataSync({
+        type: 'DocumentVerification',
+        candidateId: params.candidateId,
+        projectId: params.projectId,
+        message: params.message,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to publish document verification sync: ${(err as Error).message}`,
+      );
+    }
+  }
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly outboxService: OutboxService,
@@ -518,17 +539,10 @@ export class DocumentsService {
       await this.processingService.attachDocumentToStep(createDocumentDto.processingStepId, document.id, userId);
     }
 
-    // Notify for real-time update
-    try {
-      await this.outboxService.publishDataSync({
-        userId,
-        type: 'RecruiterDocuments',
-        id: 'LIST',
-        message: 'Document uploaded successfully',
-      });
-    } catch (err) {
-      this.logger.error(`Failed to publish data sync event for document creation: ${err.message}`);
-    }
+    await this.publishDocumentVerificationSync({
+      candidateId: createDocumentDto.candidateId,
+      message: 'Document uploaded successfully',
+    });
 
     return document as DocumentWithRelations;
   }
@@ -1162,6 +1176,198 @@ export class DocumentsService {
     return verification;
   }
 
+  private static readonly UPLOAD_REQUESTED_ACTION = 'upload_requested';
+
+  /**
+   * Request recruiter to upload a missing required document for a project.
+   */
+  async requestMissingDocumentUpload(
+    dto: RequestMissingDocumentDto,
+    requesterId: string,
+  ): Promise<{ success: boolean }> {
+    const { candidateProjectMapId, docType, reason, roleCatalogId } = dto;
+
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        candidate: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        project: {
+          select: {
+            id: true,
+            title: true,
+            documentRequirements: {
+              where: { isDeleted: false } as any,
+              select: { docType: true },
+            },
+          },
+        },
+        recruiter: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    if (!candidateProject.recruiterId) {
+      throw new BadRequestException(
+        'Recruiter ID is missing for this candidate project',
+      );
+    }
+
+    const requirement = candidateProject.project.documentRequirements.find(
+      (r) => r.docType === docType,
+    );
+    if (!requirement) {
+      throw new BadRequestException(
+        `Document type "${docType}" is not a requirement for this project`,
+      );
+    }
+
+    const existingVerification =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId,
+          isDeleted: false,
+          document: {
+            docType,
+            isDeleted: false,
+          },
+        },
+      });
+
+    if (existingVerification) {
+      throw new BadRequestException(
+        `A document of type "${docType}" is already submitted for this project`,
+      );
+    }
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+
+    const docLabel =
+      DOCUMENT_TYPE_META[docType as DocumentType]?.displayName ??
+      this.formatDocTypeKey(docType);
+
+    await this.prisma.documentVerificationHistory.create({
+      data: {
+        verificationId: null,
+        action: DocumentsService.UPLOAD_REQUESTED_ACTION,
+        performedBy: requesterId,
+        performedByName: requester?.name || null,
+        reason,
+        notes: JSON.stringify({ docType, candidateProjectMapId, roleCatalogId }),
+      },
+    });
+
+    const candidateName = `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`;
+    const projectTitle = candidateProject.project.title;
+
+    await this.outboxService.publishRecruiterNotification(
+      candidateProject.recruiterId,
+      `Missing document "${docLabel}" requested for ${candidateName} on project ${projectTitle}. Reason: ${reason}`,
+      'Missing Document Upload Requested',
+      `/recruiter-docs/${candidateProject.project.id}/${candidateProject.candidate.id}`,
+      {
+        type: 'document_upload_requested',
+        docType,
+        candidateProjectMapId,
+        candidateId: candidateProject.candidate.id,
+        projectId: candidateProject.project.id,
+        requestedBy: requesterId,
+        reason,
+        roleCatalogId: roleCatalogId ?? null,
+      },
+    );
+
+    return { success: true };
+  }
+
+  private async getUploadRequestsForCandidateProject(
+    candidateProjectMapId: string,
+  ): Promise<
+    Map<string, { reason: string; requestedAt: string }>
+  > {
+    const histories = await this.prisma.documentVerificationHistory.findMany({
+      where: {
+        action: DocumentsService.UPLOAD_REQUESTED_ACTION,
+        notes: { contains: candidateProjectMapId },
+      },
+      orderBy: { performedAt: 'desc' },
+    });
+
+    const byDocType = new Map<string, { reason: string; requestedAt: string }>();
+
+    for (const entry of histories) {
+      if (!entry.notes) continue;
+      try {
+        const parsed = JSON.parse(entry.notes) as {
+          docType?: string;
+          candidateProjectMapId?: string;
+        };
+        if (
+          parsed.candidateProjectMapId !== candidateProjectMapId ||
+          !parsed.docType
+        ) {
+          continue;
+        }
+        if (!byDocType.has(parsed.docType)) {
+          byDocType.set(parsed.docType, {
+            reason: entry.reason || '',
+            requestedAt: entry.performedAt.toISOString(),
+          });
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return byDocType;
+  }
+
+  private computeDocumentSummaryForCandidateProject(cp: {
+    project?: {
+      introductionVideoRequired?: boolean;
+      documentRequirements?: Array<{ docType: string }>;
+    };
+    documentVerifications?: Array<{ document?: { docType?: string } }>;
+  }) {
+    const requirements = cp.project?.documentRequirements ?? [];
+    const introRequired = cp.project?.introductionVideoRequired === true;
+    const requiredDocTypes = requirements.map((r) => r.docType);
+    if (introRequired) {
+      requiredDocTypes.push(DOCUMENT_TYPE.INTRODUCTION_VIDEO);
+    }
+
+    const submittedDocTypes = new Set(
+      (cp.documentVerifications ?? [])
+        .map((v) => v.document?.docType)
+        .filter((t): t is string => Boolean(t)),
+    );
+
+    const missingDocTypes = requiredDocTypes.filter(
+      (type) => !submittedDocTypes.has(type),
+    );
+
+    const requiredCount = requiredDocTypes.length;
+    const submittedCount = requiredDocTypes.filter((type) =>
+      submittedDocTypes.has(type),
+    ).length;
+
+    return {
+      requiredCount,
+      submittedCount,
+      missingCount: missingDocTypes.length,
+      missingDocTypes,
+    };
+  }
+
   /**
    * Request document re-upload after a client has requested revisions
    */
@@ -1528,17 +1734,11 @@ export class DocumentsService {
       }
     }
 
-    // Notify for real-time update
-    try {
-      await this.outboxService.publishDataSync({
-        userId,
-        type: 'RecruiterDocuments',
-        id: 'LIST',
-        message: 'Document re-uploaded successfully',
-      });
-    } catch (err) {
-      this.logger.error(`Failed to publish data sync event for document re-upload: ${err.message}`);
-    }
+    await this.publishDocumentVerificationSync({
+      candidateId: document.candidateId,
+      projectId: candidateProjectMap.projectId,
+      message: 'Document re-uploaded successfully',
+    });
 
     return result;
   }
@@ -2371,7 +2571,12 @@ export class DocumentsService {
             select: {
               id: true,
               title: true,
+              introductionVideoRequired: true,
               client: { select: { name: true } },
+              documentRequirements: {
+                where: { isDeleted: false } as any,
+                select: { docType: true },
+              },
             },
           },
           roleNeeded: {
@@ -2476,6 +2681,7 @@ export class DocumentsService {
         return {
           ...cp,
           sendToClient: latestForward ?? null,
+          documentSummary: this.computeDocumentSummaryForCandidateProject(cp),
         };
       }),
     );
@@ -2816,17 +3022,35 @@ export class DocumentsService {
         ].includes(h.subStatus?.name || ''),
     );
 
+    const uploadRequests = await this.getUploadRequestsForCandidateProject(
+      candidateProject.id,
+    );
+    const submittedDocTypes = new Set(verifications.map((v) => v.document.docType));
+
     return {
       candidateProject,
       introductionVideoRequired:
         candidateProject.project.introductionVideoRequired,
       introductionVideo,
       isSendedForDocumentVerification,
-      requirements: requirements.map((r) =>
-        this.enrichProjectRequirementRow(
+      requirements: requirements.map((r) => {
+        const enriched = this.enrichProjectRequirementRow(
           r as Record<string, unknown> & { docType: string },
-        ),
-      ),
+        );
+        if (submittedDocTypes.has(r.docType)) {
+          return enriched;
+        }
+        const pendingRequest = uploadRequests.get(r.docType);
+        if (!pendingRequest) {
+          return enriched;
+        }
+        return {
+          ...enriched,
+          uploadRequested: true,
+          uploadRequestReason: pendingRequest.reason,
+          uploadRequestedAt: pendingRequest.requestedAt,
+        };
+      }),
       verifications, // ONLY LATEST DOCUMENT PER DOCTYPE
       allCandidateDocuments, // FULL HISTORY
       isDocumentationReviewed,
@@ -3034,17 +3258,11 @@ export class DocumentsService {
         },
       });
 
-    // Notify for real-time update
-    try {
-      await this.outboxService.publishDataSync({
-        userId,
-        type: 'RecruiterDocuments',
-        id: 'LIST',
-        message: 'Document linked successfully',
-      });
-    } catch (err) {
-      this.logger.error(`Failed to publish data sync event for document reuse: ${err.message}`);
-    }
+    await this.publishDocumentVerificationSync({
+      candidateId: document.candidateId,
+      projectId,
+      message: 'Document linked successfully',
+    });
 
     return verification;
   }

@@ -471,6 +471,157 @@ describe('DocumentsService - getVerificationCandidates', () => {
     expect(result.items[0].subStatus.name).toBe('client_revision_requested');
     expect(result.counts.client_revision_requested).toBe(1);
   });
+
+  it('attaches documentSummary with missing mandatory documents', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-1', name: 'verification_in_progress_document' },
+    ]);
+
+    const candidateProject = {
+      id: 'cpm-1',
+      candidate: { id: 'cand-1', firstName: 'Alice', lastName: 'Test', email: 'a@test.com', mobileNumber: '1234', countryCode: '91', profileImage: null },
+      project: {
+        id: 'proj-1',
+        title: 'Project A',
+        introductionVideoRequired: false,
+        client: { name: 'Client A' },
+        documentRequirements: [
+          { docType: 'passport' },
+          { docType: 'resume' },
+        ],
+      },
+      roleNeeded: { id: 'role-1', designation: 'Dev', roleCatalog: { id: 'rc-1', name: 'Dev', label: 'Developer' } },
+      recruiter: { id: 'rec-1', name: 'Rec', email: 'rec@example.com' },
+      mainStatus: { label: 'Documents' },
+      subStatus: { name: 'verification_in_progress_document', label: 'In Progress' },
+      screenings: [],
+      documentVerifications: [
+        {
+          id: 'dv-1',
+          status: 'pending',
+          document: { docType: 'passport', fileName: 'passport.pdf' },
+        },
+      ],
+    };
+
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([candidateProject]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerificationCandidates({
+      status: 'verification_in_progress_document',
+      page: 1,
+      limit: 10,
+    });
+
+    expect(result.items[0].documentSummary).toEqual({
+      requiredCount: 2,
+      submittedCount: 1,
+      missingCount: 1,
+      missingDocTypes: ['resume'],
+    });
+  });
+});
+
+describe('DocumentsService - requestMissingDocumentUpload', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+
+    jest.spyOn(outbox, 'publishRecruiterNotification').mockResolvedValue(undefined as never);
+  });
+
+  it('notifies recruiter and records history for a missing document', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      recruiterId: 'rec-1',
+      candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+      project: {
+        id: 'proj-1',
+        title: 'UAE Nurses',
+        documentRequirements: [{ docType: 'passport' }, { docType: 'resume' }],
+      },
+      recruiter: { id: 'rec-1', name: 'Recruiter' },
+    });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue(null);
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'Doc Lead' });
+    jest.spyOn(prisma.documentVerificationHistory, 'create' as any).mockResolvedValue({ id: 'hist-1' });
+
+    const result = await service.requestMissingDocumentUpload(
+      {
+        candidateProjectMapId: 'cpm-1',
+        docType: 'resume',
+        reason: 'Resume was not uploaded before sending for verification.',
+      },
+      'user-doc',
+    );
+
+    expect(result.success).toBe(true);
+    expect(prisma.documentVerificationHistory.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'upload_requested',
+          reason: 'Resume was not uploaded before sending for verification.',
+        }),
+      }),
+    );
+    expect(outbox.publishRecruiterNotification).toHaveBeenCalledWith(
+      'rec-1',
+      expect.stringContaining('Resume'),
+      'Missing Document Upload Requested',
+      '/recruiter-docs/proj-1/cand-1',
+      expect.objectContaining({
+        type: 'document_upload_requested',
+        docType: 'resume',
+      }),
+    );
+  });
+
+  it('blocks request when document type is already submitted', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      recruiterId: 'rec-1',
+      candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+      project: {
+        id: 'proj-1',
+        title: 'UAE Nurses',
+        documentRequirements: [{ docType: 'resume' }],
+      },
+      recruiter: { id: 'rec-1', name: 'Recruiter' },
+    });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue({
+      id: 'dv-1',
+    });
+
+    await expect(
+      service.requestMissingDocumentUpload(
+        {
+          candidateProjectMapId: 'cpm-1',
+          docType: 'resume',
+          reason: 'Please upload the missing resume document.',
+        },
+        'user-doc',
+      ),
+    ).rejects.toThrow(BadRequestException);
+  });
 });
 
 describe('DocumentsService - getVerifiedRejectedDocuments', () => {

@@ -89,6 +89,7 @@ import { VerificationDocumentStatusBadge } from "@/components/molecules/Verifica
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
 import { RequestClientRevisionModal } from "../components/RequestClientRevisionModal";
+import { MissingDocumentActions } from "../components/MissingDocumentActions";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
@@ -215,7 +216,12 @@ export default function CandidateDocumentVerificationPage() {
   const { data: requirementsData, isLoading: requirementsLoading, refetch: refetchRequirements } =
     useGetCandidateProjectRequirementsQuery(
       { candidateId: candidateId!, projectId: selectedProjectId },
-      { skip: !selectedProjectId }
+      {
+        skip: !selectedProjectId,
+        refetchOnMountOrArgChange: true,
+        refetchOnFocus: true,
+        refetchOnReconnect: true,
+      },
     );
 
   // selectedProject should be the candidateProject mapping object.
@@ -330,6 +336,15 @@ export default function CandidateDocumentVerificationPage() {
     setIsReuploadMode(true);
     setReuploadDocId(verification.document.id);
     setReuploadMeta({ previousFileName: verification.document.fileName });
+    setShowUploadDialog(true);
+  }, []);
+
+  const openMissingDocUpload = useCallback((requirement: any) => {
+    setSelectedRequirement(requirement);
+    setUploadDocType(requirement.docType);
+    setIsReuploadMode(false);
+    setReuploadDocId(null);
+    setReuploadMeta(null);
     setShowUploadDialog(true);
   }, []);
 
@@ -1349,7 +1364,22 @@ export default function CandidateDocumentVerificationPage() {
                             rejectionReason={verification.rejectionReason}
                           />
                         ) : (
-                          <Badge variant="outline">Not Submitted</Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold w-fit"
+                            >
+                              Missing
+                            </Badge>
+                            {requirement.uploadRequested ? (
+                              <Badge
+                                variant="outline"
+                                className="border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-medium w-fit"
+                              >
+                                Requested from recruiter
+                              </Badge>
+                            ) : null}
+                          </div>
                         )}
                       </TableCell>
 
@@ -1396,6 +1426,21 @@ export default function CandidateDocumentVerificationPage() {
                               setSelectedResubmitVerification(v);
                               setIsResubmitDialogOpen(true);
                             }}
+                            emptyActions={
+                              !verification && canVerifyDocuments ? (
+                                <MissingDocumentActions
+                                  requirement={requirement}
+                                  candidateProjectMapId={candidateProjectMapId || ""}
+                                  roleCatalogId={
+                                    selectedProject?.roleNeeded?.roleCatalog?.id
+                                  }
+                                  canUpload={canVerifyDocuments}
+                                  canRequest={canRequestResubmission}
+                                  onUpload={() => openMissingDocUpload(requirement)}
+                                  onRequested={refetchRequirements}
+                                />
+                              ) : undefined
+                            }
                           />
                           {isRejectedDocumentStatus(displayedStatus) && verification && (
                             <div className="flex items-center gap-2">

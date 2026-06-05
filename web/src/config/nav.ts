@@ -133,7 +133,7 @@ export const navigationConfig: NavItem[] = [
       },
       {
         id: "recruiter-docs",
-        label: "Documentation",
+        label: "Documentation & Projects",
         path: "/recruiter-docs",
         roles: ["Recruiter", "System Admin", ROLE_NAMES.AGENT_COORDINATOR],
       },
@@ -151,13 +151,16 @@ export const navigationConfig: NavItem[] = [
       "Team Head",
       "Team Lead",
       "Recruiter",
-      "Documentation Executive",
       "System Admin",
       ROLE_NAMES.OPERATIONS,
       "CRE",
       // "Screening Trainer",
     ],
-    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
+    hiddenForRoles: [
+      ROLE_NAMES.AGENT_COORDINATOR,
+      LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
+      "Documentation Executive",
+    ],
     children: [
       {
         id: "candidate-overview",

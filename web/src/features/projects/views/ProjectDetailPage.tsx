@@ -71,6 +71,7 @@ import {
 import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
+import { PipelineStatusDotLegend } from "@/features/projects/components/PipelineStatusDotLegend";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
@@ -1263,7 +1264,9 @@ export default function ProjectDetailPage() {
             {isProcessingExecutive ? (
               <ProcessingCandidatesTab projectId={projectId!} />
             ) : (
-              <ProjectCandidatesBoard
+              <div className="space-y-2">
+                <PipelineStatusDotLegend />
+                <ProjectCandidatesBoard
                 projectId={projectId!}
                 project={project}
                 nominatedCandidates={projectCandidates}
@@ -1305,6 +1308,7 @@ export default function ProjectDetailPage() {
                 requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
               />
+              </div>
             )}
           </div>
 
