@@ -31,7 +31,13 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <RecruiterNavPerformanceRating />
+          <div className="relative">
+            <div
+              className="pointer-events-none absolute -inset-1 hidden rounded-2xl bg-amber-400/10 blur-md sm:block"
+              aria-hidden
+            />
+            <RecruiterNavPerformanceRating />
+          </div>
           <RNRReminderBadge />
           {/* Processing team unified badge */}
           <ProcessingRemindersBadge />

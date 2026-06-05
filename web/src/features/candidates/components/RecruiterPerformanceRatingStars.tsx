@@ -40,7 +40,12 @@ export function RecruiterPerformanceRatingStars({
 
   return (
     <div
-      className={cn("flex items-center", GAP_SIZE[size], className)}
+      className={cn(
+        "flex items-center",
+        GAP_SIZE[size],
+        variant === "dashboard" && size === "lg" && "rounded-2xl px-1",
+        className,
+      )}
       role="img"
       aria-label={`${filled} of ${NAV_RATING_STAR_TOTAL} stars for ${rating} rating`}
     >
@@ -51,10 +56,10 @@ export function RecruiterPerformanceRatingStars({
             key={index}
             className={cn(
               ICON_SIZE[size],
-              "shrink-0 transition-colors",
+              "shrink-0 transition-all duration-300",
               isFilled
                 ? cn(
-                    "fill-amber-400 text-amber-500",
+                    "fill-amber-400 text-amber-500 drop-shadow-sm",
                     isTopTier
                       ? "animate-nav-recruiter-star-glow"
                       : "animate-nav-recruiter-star-pulse",

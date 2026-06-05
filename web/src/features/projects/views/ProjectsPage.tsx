@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import { Plus } from "lucide-react";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const projectsListRef = useRef<HTMLDivElement>(null);
   const canReadProjects = useCan("read:projects");
   const canCreateProject = useCan(["manage:projects", "write:projects"]);
   const { user } = useAppSelector((state) => state.auth);
@@ -66,6 +67,7 @@ export default function ProjectsPage() {
         deadlineTo: prev.deadlineTo,
         priority: prev.priority,
       }));
+      projectsListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
 
@@ -92,6 +94,8 @@ export default function ProjectsPage() {
         priority: statFilters.priority as QueryProjectsRequest["priority"],
       }),
     }));
+
+    projectsListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const getActiveFilterLabel = () => {
@@ -175,7 +179,10 @@ export default function ProjectsPage() {
         )}
 
         {canReadProjects ? (
-          <div className="rounded-3xl border border-border/60 bg-card shadow-lg shadow-muted/30">
+          <div
+            ref={projectsListRef}
+            className="rounded-3xl border border-border/60 bg-card shadow-lg shadow-muted/30"
+          >
             <div className="flex flex-col gap-2 border-b border-border p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">

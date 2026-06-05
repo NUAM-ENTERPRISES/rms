@@ -140,6 +140,13 @@ export const navigationConfig: NavItem[] = [
     ],
   },
   {
+    id: "follow-up",
+    label: "Follow Up",
+    path: "/candidates",
+    icon: UserCheck,
+    roles: ["Recruiter"],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
@@ -151,6 +158,7 @@ export const navigationConfig: NavItem[] = [
       "Team Head",
       "Team Lead",
       "Recruiter",
+      "Documentation Executive",
       "System Admin",
       ROLE_NAMES.OPERATIONS,
       "CRE",
@@ -160,6 +168,7 @@ export const navigationConfig: NavItem[] = [
       ROLE_NAMES.AGENT_COORDINATOR,
       LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
       "Documentation Executive",
+      "Recruiter",
     ],
     children: [
       {
