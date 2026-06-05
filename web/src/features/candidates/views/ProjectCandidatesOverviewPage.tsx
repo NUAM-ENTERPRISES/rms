@@ -560,7 +560,10 @@ export default function ProjectCandidatesOverviewPage() {
                   </div>
                 </div>
               </div>
-              <div className="relative z-20 flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pl-4">
+              <div className="relative z-20 flex shrink-0 flex-col items-end gap-2 sm:pl-4">
+                <p className="w-full text-right text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Current project
+                </p>
                 <ProjectRoleFilter
                   value={projectRole}
                   onChange={(v) => {

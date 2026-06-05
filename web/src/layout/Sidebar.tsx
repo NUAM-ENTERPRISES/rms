@@ -44,6 +44,13 @@ const getIconColor = (itemId: string) => {
       hover:
         "group-hover:bg-indigo-500/15 dark:group-hover:bg-indigo-500/25 group-hover:text-indigo-700 dark:group-hover:text-indigo-300",
     },
+    "follow-up": {
+      bg: "bg-indigo-500/10 dark:bg-indigo-500/20",
+      text: "text-indigo-600 dark:text-indigo-400",
+      border: "border-indigo-500/30 dark:border-indigo-500/40",
+      hover:
+        "group-hover:bg-indigo-500/15 dark:group-hover:bg-indigo-500/25 group-hover:text-indigo-700 dark:group-hover:text-indigo-300",
+    },
     clients: {
       bg: "bg-amber-500/10 dark:bg-amber-500/20",
       text: "text-amber-600 dark:text-amber-400",

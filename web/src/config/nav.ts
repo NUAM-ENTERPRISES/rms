@@ -140,6 +140,13 @@ export const navigationConfig: NavItem[] = [
     ],
   },
   {
+    id: "follow-up",
+    label: "Follow Up",
+    path: "/candidates",
+    icon: UserCheck,
+    roles: ["Recruiter"],
+  },
+  {
     id: "candidates",
     label: "Candidates",
     path: "/candidates",
@@ -150,14 +157,17 @@ export const navigationConfig: NavItem[] = [
       "Manager",
       "Team Head",
       "Team Lead",
-      "Recruiter",
       "Documentation Executive",
       "System Admin",
       ROLE_NAMES.OPERATIONS,
       "CRE",
       // "Screening Trainer",
     ],
-    hiddenForRoles: [ROLE_NAMES.AGENT_COORDINATOR, LEGACY_CLIENT_COORDINATOR_ROLE_NAME],
+    hiddenForRoles: [
+      ROLE_NAMES.AGENT_COORDINATOR,
+      LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
+      "Recruiter",
+    ],
     children: [
       {
         id: "candidate-overview",
