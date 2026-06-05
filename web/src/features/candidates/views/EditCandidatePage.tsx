@@ -968,7 +968,7 @@ export default function EditCandidatePage() {
                         htmlFor="eligibility"
                         className="text-sm font-medium leading-none cursor-pointer text-slate-700"
                       >
-                        Eligible
+                        Eligibllity
                       </FormLabel>
                       <p className="text-xs text-slate-500">
                         Candidate meets the eligibility criteria.

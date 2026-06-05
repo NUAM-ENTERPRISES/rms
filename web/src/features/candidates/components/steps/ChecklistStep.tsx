@@ -126,7 +126,7 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                   htmlFor="eligibility"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
                 >
-                  Eligible
+                  Eligibllity
                 </Label>
                 <p className="text-xs text-slate-500">
                   Candidate meets the eligibility criteria.
