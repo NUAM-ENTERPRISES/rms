@@ -20,6 +20,7 @@ export type AgentFormFields = {
   alternatePhone2: string;
   countryCode: string;
   companyName: string;
+  location: string;
   agentType: AgentType | "";
 };
 
@@ -32,6 +33,7 @@ export const initialAgentFormFields: AgentFormFields = {
   alternatePhone2: "",
   countryCode: "",
   companyName: "",
+  location: "",
   agentType: "",
 };
 
@@ -45,6 +47,7 @@ export function agentFormFieldsToPayload(form: AgentFormFields) {
     alternatePhone2: form.alternatePhone2.trim() || undefined,
     countryCode: form.countryCode.trim() || undefined,
     companyName: form.companyName.trim() || undefined,
+    location: form.location.trim() || undefined,
     agentType: form.agentType.trim() || undefined,
   };
 }

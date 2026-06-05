@@ -12,6 +12,7 @@ export interface Agent {
   countryCode?: string;
   country?: { code: string; name: string } | null;
   companyName?: string;
+  location?: string;
   agentType?: string;
   profileImage?: string;
   isActive: boolean;

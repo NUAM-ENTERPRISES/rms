@@ -103,6 +103,17 @@ export function AgentFormFieldsSection({
         />
       </FieldGroup>
 
+      <FieldGroup id={`${idPrefix}-location`} label="Location">
+        <Input
+          id={`${idPrefix}-location`}
+          value={form.location}
+          onChange={(e) => onChange({ location: e.target.value })}
+          placeholder="e.g. Mumbai, Maharashtra"
+          autoComplete="address-level2"
+          className="h-9"
+        />
+      </FieldGroup>
+
       <FieldGroup id={`${idPrefix}-email`} label="Email Address">
         <Input
           id={`${idPrefix}-email`}

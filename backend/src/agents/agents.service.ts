@@ -187,6 +187,7 @@ export class AgentsService {
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { companyName: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (isActive !== undefined) {

@@ -536,6 +536,7 @@ model Agent {
   alternatePhone1 String?
   alternatePhone2 String?
   companyName     String?
+  location        String?
   agentType       String?
   countryCode     String?
   profileImage    String?

@@ -52,6 +52,7 @@ export function AgentEditAgentDialog({ open, onOpenChange, agentId, agent }: Age
         alternatePhone2: agent.alternatePhone2 ?? "",
         countryCode: agent.countryCode ?? agent.country?.code ?? "",
         companyName: agent.companyName ?? "",
+        location: agent.location ?? "",
         agentType: (agent.agentType ?? "") as AgentFormFields["agentType"],
         isActive: agent.isActive,
       });

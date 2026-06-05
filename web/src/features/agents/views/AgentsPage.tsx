@@ -13,6 +13,7 @@ import {
   Calendar,
   Eye,
   UserRoundSearch,
+  MapPin,
 } from "lucide-react";
 import { useGetAgentsQuery } from "../api";
 import { Button } from "@/components/ui/button";
@@ -515,6 +516,12 @@ export default function AgentsPage() {
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Building2 className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                             <span className="truncate">{agent.companyName}</span>
+                          </div>
+                        )}
+                        {agent.location && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <MapPin className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate">{agent.location}</span>
                           </div>
                         )}
                         {agent.email && (

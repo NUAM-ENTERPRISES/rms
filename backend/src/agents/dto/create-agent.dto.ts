@@ -69,6 +69,12 @@ export class CreateAgentDto {
   @IsString()
   companyName?: string;
 
+  @ApiPropertyOptional({ description: 'Agent location (city, region, or address)' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  location?: string;
+
   @ApiPropertyOptional({ description: 'Agent type', enum: AGENT_TYPES })
   @Transform(optionalString)
   @IsOptional()

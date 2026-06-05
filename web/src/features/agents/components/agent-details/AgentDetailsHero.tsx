@@ -5,6 +5,7 @@ import {
   Building2,
   Clock,
   Pencil,
+  MapPin,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { motion } from "framer-motion";
@@ -106,6 +107,12 @@ export function AgentDetailsHero({
                 {agent.country?.name && (
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
                     <span>{agent.country.name}</span>
+                  </div>
+                )}
+                {agent.location && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-sm">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{agent.location}</span>
                   </div>
                 )}
                 {agent.email && (
