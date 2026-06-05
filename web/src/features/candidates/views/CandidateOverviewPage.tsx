@@ -44,6 +44,9 @@ import {
   Repeat,
   ArrowRightLeft,
   ArrowUpRight,
+  ClipboardCheck,
+  GraduationCap,
+  Target,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import {
@@ -182,6 +185,7 @@ export default function CandidateOverviewPage() {
     "profile_shortlisting",
     "nominated",
     "registered",
+    "screening",
     "interview",
     "processing",
   ].includes(filters.status);
@@ -254,6 +258,21 @@ export default function CandidateOverviewPage() {
     (statsData.registeredSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
   );
 
+  const screeningSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "assigned", icon: ClipboardCheck, color: "text-cyan-600", bg: "bg-cyan-50", ring: "ring-cyan-100" },
+    { key: "scheduled", icon: Calendar, color: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-100" },
+    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "passed", icon: UserCheck, color: "text-green-600", bg: "bg-green-50", ring: "ring-green-100" },
+    { key: "needs_training", icon: Target, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+    { key: "on_hold", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
+    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+    { key: "training", icon: GraduationCap, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+  ];
+
+  const screeningSubStatusStatsByKey = Object.fromEntries(
+    (statsData.screeningSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
   const interviewSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
     { key: "shortlisted", icon: Filter, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
     { key: "not_shortlisted", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
@@ -288,6 +307,7 @@ export default function CandidateOverviewPage() {
     lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
     fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
     teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
+    cyan:    { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100",       icon: "text-cyan-600",    iconBg: "bg-cyan-100",    value: "text-cyan-700",    ring: "ring-cyan-400/50",    dot: "bg-cyan-500"    },
     amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",     icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
   };
 
@@ -298,7 +318,8 @@ export default function CandidateOverviewPage() {
     { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR/Not Eligible/Other Enquiry", statusFilter: "negative"      },
     { label: "Profile Shortlisting", value: statsData.profileShortlisting ?? statsData.nominated,     icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",           statusFilter: "profile_shortlisting" },
     { label: "Registered",           value: statsData.registered ?? 0,                                  icon: FileSearch,accent: "purple",  subtitle: "CV/docs sent for verification",   statusFilter: "registered"         },
-    { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Main status: Interview",    statusFilter: "interview"     },
+    { label: "Screening",           value: statsData.screening ?? 0,                                    icon: ClipboardCheck, accent: "cyan", subtitle: "Screening & training",          statusFilter: "screening"     },
+    { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Client interview pipeline",     statusFilter: "interview"     },
     { label: "Processing",          value: statsData.processing ?? (statsData.medical + statsData.visa),icon: Repeat,    accent: "fuchsia", subtitle: "Main status: Processing",   statusFilter: "processing"    },
     { label: "Deployed",            value: statsData.deployed,                                          icon: Building2, accent: "teal",    subtitle: "Placements / Hired",        statusFilter: "deployed"      },
   ];
@@ -307,11 +328,12 @@ export default function CandidateOverviewPage() {
     setFilters((prev) => {
       const isWorkflowStatus =
         statusFilter &&
-        ["registered", "interview", "processing"].includes(statusFilter);
+        ["registered", "screening", "interview", "processing"].includes(statusFilter);
       let mainStatus = undefined;
 
       if (isWorkflowStatus) {
         if (statusFilter === "registered") mainStatus = "documents";
+        else if (statusFilter === "screening") mainStatus = "interview";
         else mainStatus = statusFilter;
       }
       
@@ -614,7 +636,7 @@ export default function CandidateOverviewPage() {
         </div>
 
         {/* Dashboard Tiles */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -672,6 +694,15 @@ export default function CandidateOverviewPage() {
                   tileStyles={registeredSubStatusTiles}
                   statsByKey={registeredSubStatusStatsByKey}
                   gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-xl"
+                  selectedSubStatus={filters.subStatus}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {filters.status === "screening" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={screeningSubStatusTiles}
+                  statsByKey={screeningSubStatusStatsByKey}
+                  gridClassName="grid-cols-4 sm:grid-cols-8 lg:max-w-4xl"
                   selectedSubStatus={filters.subStatus}
                   onSubStatusSelect={handleSubStatusClick}
                 />
@@ -959,6 +990,8 @@ export default function CandidateOverviewPage() {
                                     e.stopPropagation();
                                     if (filters.status === "registered") {
                                       navigate(`/candidates/${candidate.id}/documentation-workflow`);
+                                    } else if (filters.status === "screening") {
+                                      navigate(`/candidates/${candidate.id}/screening-workflow`);
                                     } else if (filters.status === "interview") {
                                       navigate(`/candidates/${candidate.id}/interview-workflow`);
                                     } else if (filters.status === "processing") {

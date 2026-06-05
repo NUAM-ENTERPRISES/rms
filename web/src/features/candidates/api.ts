@@ -946,6 +946,7 @@ export type CandidateOverviewStats = {
   documentReceived: number;
   documentation?: number;
   interviewAssigned: number;
+  screening?: number;
   interview?: number;
   processing?: number;
   medical: number;
@@ -953,6 +954,8 @@ export type CandidateOverviewStats = {
   deployed: number;
   /** History-based counts for Registered documentation sub-statuses. */
   registeredSubStatus?: RegisteredSubStatusStats;
+  /** History-based counts for Screening sub-statuses. */
+  screeningSubStatus?: RegisteredSubStatusStats;
   /** History-based counts for Interview sub-statuses. */
   interviewSubStatus?: RegisteredSubStatusStats;
   /** History-based counts for Processing sub-statuses. */
@@ -1138,12 +1141,14 @@ export const candidatesApi = baseApi.injectEndpoints({
           nominated: 0,
           profileShortlisting: 0,
           registered: 0,
+          screening: 0,
           interviewAssigned: 0,
           documentReceived: 0,
           medical: 0,
           visa: 0,
           deployed: 0,
           registeredSubStatus: { tiles: [] },
+          screeningSubStatus: { tiles: [] },
           interviewSubStatus: { tiles: [] },
           processingSubStatus: { tiles: [] },
         },
@@ -1763,6 +1768,13 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `INTERVIEW-WORKFLOW-${candidateId}` }],
     }),
+    getCandidateScreeningWorkflow: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({
+      query: ({ candidateId, ...params }) => ({
+        url: `candidates/${candidateId}/screening-workflow`,
+        params,
+      }),
+      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: `SCREENING-WORKFLOW-${candidateId}` }],
+    }),
     getCandidateProcessingWorkflow: builder.query<any, { candidateId: string; subStatus?: string; step?: string; search?: string; page?: number; limit?: number }>({
       query: ({ candidateId, ...params }) => ({
         url: `candidates/${candidateId}/processing-workflow`,
@@ -1813,5 +1825,6 @@ export const {
   useGetCandidateProjectsWorkflowDetailsQuery,
   useGetCandidateDocumentationWorkflowQuery,
   useGetCandidateInterviewWorkflowQuery,
+  useGetCandidateScreeningWorkflowQuery,
   useGetCandidateProcessingWorkflowQuery,
 } = candidatesApi;

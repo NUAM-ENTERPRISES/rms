@@ -56,6 +56,55 @@ export const CANDIDATE_PROJECT_STATUS = {
 export type CandidateProjectStatus =
   (typeof CANDIDATE_PROJECT_STATUS)[keyof typeof CANDIDATE_PROJECT_STATUS];
 
+/**
+ * Screening + training sub-statuses (under main stage `interview` in DB).
+ * MUST match backend: backend/src/common/constants/statuses.ts
+ */
+export const SCREENING_TRAINING_SUB_STATUS_NAMES = [
+  "screening_assigned",
+  "screening_scheduled",
+  "screening_completed",
+  "screening_passed",
+  "screening_failed",
+  "screening_needs_training",
+  "screening_on_hold",
+  "training_assigned",
+  "training_scheduled",
+  "training_in_progress",
+  "training_completed",
+  "ready_for_reassessment",
+] as const;
+
+export type ScreeningTrainingSubStatusName =
+  (typeof SCREENING_TRAINING_SUB_STATUS_NAMES)[number];
+
+/**
+ * Client interview sub-statuses (shortlist + client interview rounds).
+ * MUST match backend: backend/src/common/constants/statuses.ts
+ */
+export const CLIENT_INTERVIEW_SUB_STATUS_NAMES = [
+  "shortlisted",
+  "not_shortlisted",
+  "interview_assigned",
+  "interview_scheduled",
+  "interview_rescheduled",
+  "interview_completed",
+  "interview_passed",
+  "interview_failed",
+  "interview_backout",
+  "interview_selected",
+] as const;
+
+export type ClientInterviewSubStatusName =
+  (typeof CLIENT_INTERVIEW_SUB_STATUS_NAMES)[number];
+
+export const TRAINING_SUB_STATUS_NAMES = [
+  "training_assigned",
+  "training_scheduled",
+  "training_in_progress",
+  "training_completed",
+] as const;
+
 // ==================== STATUS UI CONFIGURATION ====================
 
 /**
