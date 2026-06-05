@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import { MissingDocumentActions } from "./MissingDocumentActions";
 
@@ -8,58 +7,48 @@ vi.mock("./RequestMissingDocumentModal", () => ({
 }));
 
 describe("MissingDocumentActions", () => {
-  it("renders upload and request actions for missing documents", () => {
+  it("renders only request for resubmission for missing documents", () => {
     render(
       <MissingDocumentActions
         requirement={{ docType: "resume", documentName: "Resume" }}
         candidateProjectMapId="cpm-1"
-        canUpload
         canRequest
-        onUpload={vi.fn()}
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Reupload" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Request for resubmission" })).toBeInTheDocument();
   });
 
-  it("shows requested state and hides request when upload already requested", () => {
+  it("shows requested state without upload or request buttons when upload already requested", () => {
     render(
       <MissingDocumentActions
         requirement={{
           docType: "resume",
           documentName: "Resume",
           uploadRequested: true,
+          uploadRequestReason: "Please upload the certificate.",
         }}
         candidateProjectMapId="cpm-1"
-        canUpload
         canRequest
-        onUpload={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Requested from recruiter")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reupload" })).not.toBeInTheDocument();
+    expect(screen.getByText("Please upload the certificate.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Upload" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Request for resubmission" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
   });
 
-  it("calls onUpload when upload is clicked", async () => {
-    const onUpload = vi.fn();
-    const user = userEvent.setup();
-
-    render(
+  it("renders nothing when request action is not allowed", () => {
+    const { container } = render(
       <MissingDocumentActions
         requirement={{ docType: "passport", documentName: "Passport" }}
         candidateProjectMapId="cpm-1"
-        canUpload
-        canRequest
-        onUpload={onUpload}
+        canRequest={false}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Upload" }));
-    expect(onUpload).toHaveBeenCalledTimes(1);
+    expect(container).toBeEmptyDOMElement();
   });
 });

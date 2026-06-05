@@ -624,6 +624,96 @@ describe('DocumentsService - requestMissingDocumentUpload', () => {
   });
 });
 
+describe('DocumentsService - reuseDocument missing upload notification', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+
+    jest.spyOn(outbox, 'publishDataSync').mockResolvedValue(undefined as never);
+    jest
+      .spyOn(outbox, 'publishDocumentationNotification')
+      .mockResolvedValue(undefined as never);
+  });
+
+  it('notifies documentation requester when recruiter links a previously requested missing document', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      candidateId: 'cand-1',
+      docType: 'resume',
+      fileName: 'resume.pdf',
+    });
+    jest.spyOn(prisma.project, 'findUnique' as any).mockResolvedValue({
+      id: 'proj-1',
+      title: 'UAE Nurses',
+    });
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
+      id: 'cpm-1',
+    });
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any)
+      .mockResolvedValue(null);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'create' as any)
+      .mockResolvedValue({ id: 'ver-1' });
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      firstName: 'Jane',
+      lastName: 'Doe',
+    });
+    jest.spyOn(prisma.documentVerificationHistory, 'findMany' as any).mockResolvedValue([
+      {
+        action: 'upload_requested',
+        performedBy: 'user-doc',
+        reason: 'Please upload resume.',
+        performedAt: new Date('2026-06-01T10:00:00.000Z'),
+        notes: JSON.stringify({
+          docType: 'resume',
+          candidateProjectMapId: 'cpm-1',
+        }),
+      },
+    ]);
+
+    await service.reuseDocument('doc-1', 'proj-1', 'role-1', 'rec-user');
+
+    expect(outbox.publishDocumentationNotification).toHaveBeenCalledWith(
+      'user-doc',
+      expect.stringContaining('resume'),
+      'Missing Document Uploaded',
+      '/candidates/cand-1/documents/proj-1',
+      expect.objectContaining({
+        type: 'document_missing_uploaded',
+        docType: 'resume',
+        candidateId: 'cand-1',
+        projectId: 'proj-1',
+      }),
+    );
+    expect(outbox.publishDataSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'DocumentVerification',
+        candidateId: 'cand-1',
+        projectId: 'proj-1',
+      }),
+    );
+  });
+});
+
 describe('DocumentsService - getVerifiedRejectedDocuments', () => {
   let service: DocumentsService;
   let prisma: any;

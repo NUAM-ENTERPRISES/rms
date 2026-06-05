@@ -141,6 +141,9 @@ interface DocumentRequirement {
   documentName?: string;
   /** Same as docType; stable binding for the Document Type column */
   documentType?: string;
+  uploadRequested?: boolean;
+  uploadRequestReason?: string;
+  uploadRequestedAt?: string;
 }
 
 interface DocumentVerification {
@@ -795,7 +798,14 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     const verification = verifications.find((v: DocumentVerification) => v.document.docType === requirement.docType);
                     
                     return (
-                      <TableRow key={requirement.id}>
+                      <TableRow
+                        key={requirement.id}
+                        className={
+                          !verification && requirement.uploadRequested
+                            ? "bg-amber-50/40"
+                            : undefined
+                        }
+                      >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -859,6 +869,31 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 </TooltipProvider>
                               )}
                             </div>
+                          ) : requirement.uploadRequested ? (
+                            <div className="space-y-1">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold"
+                              >
+                                Upload requested
+                              </Badge>
+                              {requirement.uploadRequestReason ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-amber-800 font-medium italic mt-1 line-clamp-2 max-w-[220px] cursor-help">
+                                        Reason: {requirement.uploadRequestReason}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <p className="text-xs whitespace-pre-wrap">
+                                        {requirement.uploadRequestReason}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : null}
+                            </div>
                           ) : (
                             <Badge variant="outline" className="text-slate-400 border-slate-200">Not Submitted</Badge>
                           )}
@@ -877,6 +912,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          ) : requirement.uploadRequested ? (
+                            <span className="text-xs text-amber-700 italic">
+                              Awaiting recruiter upload
+                            </span>
                           ) : (
                             <span className="text-xs text-muted-foreground italic">No file</span>
                           )}

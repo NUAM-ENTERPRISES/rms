@@ -339,15 +339,6 @@ export default function CandidateDocumentVerificationPage() {
     setShowUploadDialog(true);
   }, []);
 
-  const openMissingDocUpload = useCallback((requirement: any) => {
-    setSelectedRequirement(requirement);
-    setUploadDocType(requirement.docType);
-    setIsReuploadMode(false);
-    setReuploadDocId(null);
-    setReuploadMeta(null);
-    setShowUploadDialog(true);
-  }, []);
-
   // Documents that are verified and have a file URL
   const verifiedDocuments = (verifications || [])
     .filter((v: any) => v.status === "verified" && v.document?.fileUrl)
@@ -1364,7 +1355,7 @@ export default function CandidateDocumentVerificationPage() {
                             rejectionReason={verification.rejectionReason}
                           />
                         ) : (
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1 max-w-[220px]">
                             <Badge
                               variant="outline"
                               className="border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold w-fit"
@@ -1372,12 +1363,19 @@ export default function CandidateDocumentVerificationPage() {
                               Missing
                             </Badge>
                             {requirement.uploadRequested ? (
-                              <Badge
-                                variant="outline"
-                                className="border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-medium w-fit"
-                              >
-                                Requested from recruiter
-                              </Badge>
+                              <>
+                                <Badge
+                                  variant="outline"
+                                  className="border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-medium w-fit"
+                                >
+                                  Requested from recruiter
+                                </Badge>
+                                {requirement.uploadRequestReason ? (
+                                  <p className="text-[11px] leading-snug text-slate-600 italic line-clamp-3">
+                                    Reason: {requirement.uploadRequestReason}
+                                  </p>
+                                ) : null}
+                              </>
                             ) : null}
                           </div>
                         )}
@@ -1434,9 +1432,7 @@ export default function CandidateDocumentVerificationPage() {
                                   roleCatalogId={
                                     selectedProject?.roleNeeded?.roleCatalog?.id
                                   }
-                                  canUpload={canVerifyDocuments}
                                   canRequest={canRequestResubmission}
-                                  onUpload={() => openMissingDocUpload(requirement)}
                                   onRequested={refetchRequirements}
                                 />
                               ) : undefined

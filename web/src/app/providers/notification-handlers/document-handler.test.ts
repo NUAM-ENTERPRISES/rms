@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleDocumentSync } from "./document-handler";
+import {
+  handleDocumentNotifications,
+  handleDocumentSync,
+} from "./document-handler";
 
 describe("document-handler sync", () => {
   it("invalidates verification tags for DocumentVerification data sync", () => {
@@ -54,5 +57,32 @@ describe("document-handler sync", () => {
     );
 
     expect(handled).toBe(false);
+  });
+});
+
+describe("document-handler notifications", () => {
+  it("invalidates verification tags for missing document uploaded bell notification", () => {
+    const invalidateTags = vi.fn();
+
+    const handled = handleDocumentNotifications({
+      notification: {
+        type: "documentation_notification",
+        meta: {
+          type: "document_missing_uploaded",
+          candidateId: "cand-1",
+          projectId: "proj-1",
+        },
+      },
+      dispatch: vi.fn(),
+      invalidateTags,
+    });
+
+    expect(handled).toBe(true);
+    expect(invalidateTags).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { type: "DocumentVerification", id: "cand-1" },
+        { type: "VerificationCandidates" },
+      ]),
+    );
   });
 });

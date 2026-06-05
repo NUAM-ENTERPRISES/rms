@@ -1331,6 +1331,91 @@ export class DocumentsService {
     return byDocType;
   }
 
+  private async getLatestUploadRequest(
+    candidateProjectMapId: string,
+    docType: string,
+  ): Promise<{
+    reason: string;
+    requestedAt: string;
+    requestedBy: string;
+  } | null> {
+    const histories = await this.prisma.documentVerificationHistory.findMany({
+      where: {
+        action: DocumentsService.UPLOAD_REQUESTED_ACTION,
+        notes: { contains: candidateProjectMapId },
+      },
+      orderBy: { performedAt: 'desc' },
+    });
+
+    for (const entry of histories) {
+      if (!entry.notes || !entry.performedBy) continue;
+      try {
+        const parsed = JSON.parse(entry.notes) as {
+          docType?: string;
+          candidateProjectMapId?: string;
+        };
+        if (
+          parsed.candidateProjectMapId !== candidateProjectMapId ||
+          parsed.docType !== docType
+        ) {
+          continue;
+        }
+        return {
+          reason: entry.reason || '',
+          requestedAt: entry.performedAt.toISOString(),
+          requestedBy: entry.performedBy,
+        };
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  private async notifyDocumentationTeamOfMissingDocumentUpload(params: {
+    candidateProjectMapId: string;
+    candidateId: string;
+    projectId: string;
+    projectTitle: string;
+    candidateFirstName: string;
+    candidateLastName: string;
+    docType: string;
+    fileName: string;
+    documentId: string;
+    uploadedByUserId: string;
+  }): Promise<void> {
+    const latestRequest = await this.getLatestUploadRequest(
+      params.candidateProjectMapId,
+      params.docType,
+    );
+    if (!latestRequest?.requestedBy) {
+      return;
+    }
+
+    const docLabel =
+      DOCUMENT_TYPE_META[params.docType as DocumentType]?.displayName ??
+      this.formatDocTypeKey(params.docType);
+    const candidateName =
+      `${params.candidateFirstName} ${params.candidateLastName}`.trim();
+
+    await this.outboxService.publishDocumentationNotification(
+      latestRequest.requestedBy,
+      `Recruiter uploaded the requested missing document "${docLabel}" (${params.fileName}) for ${candidateName} on project ${params.projectTitle}.`,
+      'Missing Document Uploaded',
+      `/candidates/${params.candidateId}/documents/${params.projectId}`,
+      {
+        type: 'document_missing_uploaded',
+        docType: params.docType,
+        documentId: params.documentId,
+        candidateId: params.candidateId,
+        projectId: params.projectId,
+        candidateProjectMapId: params.candidateProjectMapId,
+        uploadedBy: params.uploadedByUserId,
+      },
+    );
+  }
+
   private computeDocumentSummaryForCandidateProject(cp: {
     project?: {
       introductionVideoRequired?: boolean;
@@ -3262,6 +3347,24 @@ export class DocumentsService {
       candidateId: document.candidateId,
       projectId,
       message: 'Document linked successfully',
+    });
+
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: document.candidateId },
+      select: { firstName: true, lastName: true },
+    });
+
+    await this.notifyDocumentationTeamOfMissingDocumentUpload({
+      candidateProjectMapId: candidateProject.id,
+      candidateId: document.candidateId,
+      projectId,
+      projectTitle: project.title,
+      candidateFirstName: candidate?.firstName ?? '',
+      candidateLastName: candidate?.lastName ?? '',
+      docType: document.docType,
+      fileName: document.fileName,
+      documentId: document.id,
+      uploadedByUserId: userId,
     });
 
     return verification;

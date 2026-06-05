@@ -7,6 +7,7 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "document_rejected",
     "document_resubmission_requested",
     "document_upload_requested",
+    "document_missing_uploaded",
     "document_resubmitted",
     "documentation_notification",
     "recruiter_notification",
@@ -16,7 +17,13 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "client_revision_requested"
   ];
 
-  if (!documentNotificationTypes.includes(notification.type)) return false;
+  const notificationType =
+    notification.type === "documentation_notification" &&
+    notification.meta?.type
+      ? notification.meta.type
+      : notification.type;
+
+  if (!documentNotificationTypes.includes(notificationType)) return false;
 
   console.log(`[Socket] Handling document notification: ${notification.type}`);
 
