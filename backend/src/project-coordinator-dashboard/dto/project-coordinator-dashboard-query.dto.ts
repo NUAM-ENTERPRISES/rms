@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsInt, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional, ApiProperty } from '@nestjs/swagger';
 
 export class ProjectRoleHiringStatusQueryDto {
   @ApiPropertyOptional({ description: 'Filter by project ID' })
@@ -28,7 +28,12 @@ export class ProjectRoleHiringStatusQueryDto {
   limit?: number = 10;
 }
 
-export class ClientProjectsQueryDto {
+export class MyProjectsQueryDto {
+  @ApiPropertyOptional({ description: 'Search projects by title' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -36,10 +41,16 @@ export class ClientProjectsQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ default: 20 })
+  @ApiPropertyOptional({ default: 10 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit?: number = 20;
+  limit?: number = 10;
+}
+
+export class ProjectPipelineQueryDto {
+  @ApiProperty({ description: 'Project ID to load pipeline counts for' })
+  @IsString()
+  projectId: string;
 }

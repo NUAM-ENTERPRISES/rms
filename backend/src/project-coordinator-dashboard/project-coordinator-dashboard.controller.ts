@@ -8,7 +8,8 @@ import {
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { ProjectCoordinatorDashboardService } from './project-coordinator-dashboard.service';
 import {
-  ClientProjectsQueryDto,
+  MyProjectsQueryDto,
+  ProjectPipelineQueryDto,
   ProjectRoleHiringStatusQueryDto,
 } from './dto/project-coordinator-dashboard-query.dto';
 
@@ -48,15 +49,31 @@ export class ProjectCoordinatorDashboardController {
     );
   }
 
-  @Get('client-projects')
+  @Get('my-projects')
   @Permissions('read:projects')
-  @ApiOperation({ summary: 'Get client/project rows with role fill progress' })
-  @ApiResponse({ status: 200, description: 'Client projects retrieved' })
-  getClientProjects(
+  @ApiOperation({ summary: 'List coordinator-owned projects for dashboard pickers' })
+  @ApiResponse({ status: 200, description: 'Coordinator projects retrieved' })
+  getMyProjects(
     @Request() req: { user: { id: string } },
-    @Query() query: ClientProjectsQueryDto,
+    @Query() query: MyProjectsQueryDto,
   ) {
-    return this.projectCoordinatorDashboardService.getClientProjects(
+    return this.projectCoordinatorDashboardService.getMyProjects(
+      req.user.id,
+      query,
+    );
+  }
+
+  @Get('project-pipeline')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get candidate pipeline stage counts for a coordinator-owned project',
+  })
+  @ApiResponse({ status: 200, description: 'Project pipeline retrieved' })
+  getProjectPipeline(
+    @Request() req: { user: { id: string } },
+    @Query() query: ProjectPipelineQueryDto,
+  ) {
+    return this.projectCoordinatorDashboardService.getProjectPipeline(
       req.user.id,
       query,
     );

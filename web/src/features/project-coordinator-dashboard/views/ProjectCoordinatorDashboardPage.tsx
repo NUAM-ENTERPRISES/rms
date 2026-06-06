@@ -4,7 +4,7 @@ import CoordinatorStatsCards from "../components/CoordinatorStatsCards";
 import ProjectsByStatusChart from "../components/ProjectsByStatusChart";
 import ClientsOverviewChart from "../components/ClientsOverviewChart";
 import CoordinatorProjectRoleHiringStatus from "../components/CoordinatorProjectRoleHiringStatus";
-import ClientProjectsTable from "../components/ClientProjectsTable";
+import CoordinatorProjectPipelineChart from "../components/CoordinatorProjectPipelineChart";
 import CoordinatorQuickActions from "../components/CoordinatorQuickActions";
 
 export default function ProjectCoordinatorDashboardPage() {
@@ -24,9 +24,9 @@ export default function ProjectCoordinatorDashboardPage() {
         <ClientsOverviewChart />
       </div>
 
-      <CoordinatorProjectRoleHiringStatus />
+      <CoordinatorProjectPipelineChart />
 
-      <ClientProjectsTable />
+      <CoordinatorProjectRoleHiringStatus />
 
       <CoordinatorQuickActions />
     </div>

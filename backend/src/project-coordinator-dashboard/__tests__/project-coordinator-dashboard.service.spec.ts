@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ProjectCoordinatorDashboardService } from '../project-coordinator-dashboard.service';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -7,6 +8,8 @@ describe('ProjectCoordinatorDashboardService', () => {
   let prisma: {
     project: {
       findMany: jest.Mock;
+      findFirst: jest.Mock;
+      findUnique: jest.Mock;
       count: jest.Mock;
     };
     client: {
@@ -25,6 +28,8 @@ describe('ProjectCoordinatorDashboardService', () => {
     prisma = {
       project: {
         findMany: jest.fn(),
+        findFirst: jest.fn(),
+        findUnique: jest.fn(),
         count: jest.fn(),
       },
       client: {
@@ -107,21 +112,89 @@ describe('ProjectCoordinatorDashboardService', () => {
     });
   });
 
-  it('does not include another coordinator projects in client projects', async () => {
-    prisma.project.count.mockResolvedValue(0);
-    prisma.project.findMany.mockResolvedValue([]);
+  it('returns only coordinator-owned projects from my-projects', async () => {
+    prisma.project.count.mockResolvedValue(1);
+    prisma.project.findMany.mockResolvedValue([
+      {
+        id: 'p1',
+        title: 'ICU Nurses',
+        status: 'active',
+        client: { id: 'c1', name: 'City Hospital' },
+      },
+    ]);
 
-    await service.getClientProjects(coordinatorB);
+    const result = await service.getMyProjects(coordinatorB);
 
     expect(prisma.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { createdBy: coordinatorB },
       }),
     );
-    expect(prisma.project.findMany).not.toHaveBeenCalledWith(
+    expect(result.data.projects).toEqual([
+      {
+        projectId: 'p1',
+        projectName: 'ICU Nurses',
+        clientName: 'City Hospital',
+        status: 'active',
+      },
+    ]);
+  });
+
+  it('returns pipeline stage counts for an owned project', async () => {
+    prisma.project.findFirst.mockResolvedValue({
+      id: 'p1',
+      title: 'ICU Nurses',
+      status: 'active',
+      client: { id: 'c1', name: 'City Hospital' },
+    });
+    prisma.candidateProjects.count
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1);
+
+    const result = await service.getProjectPipeline(coordinatorA, {
+      projectId: 'p1',
+    });
+
+    expect(prisma.project.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { createdBy: coordinatorA },
+        where: { id: 'p1', createdBy: coordinatorA },
       }),
     );
+    expect(result.data.pipeline).toEqual({
+      total: 10,
+      nominated: 3,
+      documents: 2,
+      interview: 2,
+      processing: 2,
+      deployed: 1,
+    });
+    expect(result.data.stages).toHaveLength(5);
+    expect(result.data.stages[0]).toMatchObject({
+      key: 'nominated',
+      label: 'Nominated',
+      count: 3,
+    });
+  });
+
+  it('throws ForbiddenException when accessing another coordinator project pipeline', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+    prisma.project.findUnique.mockResolvedValue({ id: 'p1' });
+
+    await expect(
+      service.getProjectPipeline(coordinatorB, { projectId: 'p1' }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('throws NotFoundException when project does not exist', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+    prisma.project.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.getProjectPipeline(coordinatorA, { projectId: 'missing' }),
+    ).rejects.toThrow(NotFoundException);
   });
 });

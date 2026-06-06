@@ -39,25 +39,17 @@ export interface CoordinatorClientsOverviewResponse {
   message: string;
 }
 
-export interface CoordinatorClientProjectRole {
-  name: string;
-  filled: number;
-  target: number;
-}
-
-export interface CoordinatorClientProjectRow {
-  clientId: string;
-  clientName: string;
+export interface CoordinatorMyProjectItem {
   projectId: string;
   projectName: string;
+  clientName: string;
   status: "active" | "completed" | "cancelled";
-  roles: CoordinatorClientProjectRole[];
 }
 
-export interface CoordinatorClientProjectsResponse {
+export interface CoordinatorMyProjectsResponse {
   success: boolean;
   data: {
-    rows: CoordinatorClientProjectRow[];
+    projects: CoordinatorMyProjectItem[];
     pagination: {
       total: number;
       totalPages: number;
@@ -66,6 +58,42 @@ export interface CoordinatorClientProjectsResponse {
     };
   };
   message: string;
+}
+
+export interface CoordinatorMyProjectsParams {
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface CoordinatorProjectPipelineCounts {
+  total: number;
+  nominated: number;
+  documents: number;
+  interview: number;
+  processing: number;
+  deployed: number;
+}
+
+export interface CoordinatorPipelineStage {
+  key: string;
+  label: string;
+  count: number;
+  color: string;
+}
+
+export interface CoordinatorProjectPipelineResponse {
+  success: boolean;
+  data: {
+    project: CoordinatorMyProjectItem;
+    pipeline: CoordinatorProjectPipelineCounts;
+    stages: CoordinatorPipelineStage[];
+  };
+  message: string;
+}
+
+export interface CoordinatorProjectPipelineParams {
+  projectId: string;
 }
 
 export interface CoordinatorProjectRoleHiringStatusRole {
@@ -97,11 +125,6 @@ export interface CoordinatorProjectRoleHiringStatusResponse {
 export interface CoordinatorProjectRoleHiringStatusParams {
   projectId?: string;
   search?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface CoordinatorClientProjectsParams {
   page?: number;
   limit?: number;
 }
@@ -138,14 +161,25 @@ export const projectCoordinatorDashboardApi = baseApi.injectEndpoints({
       }),
       providesTags: ["ProjectCoordinatorDashboard"],
     }),
-    getCoordinatorClientProjects: builder.query<
-      CoordinatorClientProjectsResponse,
-      CoordinatorClientProjectsParams | void
+    getCoordinatorMyProjects: builder.query<
+      CoordinatorMyProjectsResponse,
+      CoordinatorMyProjectsParams | void
     >({
       query: (params) => ({
-        url: "/project-coordinator/dashboard/client-projects",
+        url: "/project-coordinator/dashboard/my-projects",
         method: "GET",
         params: params || undefined,
+      }),
+      providesTags: ["ProjectCoordinatorDashboard"],
+    }),
+    getCoordinatorProjectPipeline: builder.query<
+      CoordinatorProjectPipelineResponse,
+      CoordinatorProjectPipelineParams
+    >({
+      query: ({ projectId }) => ({
+        url: "/project-coordinator/dashboard/project-pipeline",
+        method: "GET",
+        params: { projectId },
       }),
       providesTags: ["ProjectCoordinatorDashboard"],
     }),
@@ -167,6 +201,7 @@ export const {
   useGetCoordinatorDashboardStatsQuery,
   useGetCoordinatorProjectsByStatusQuery,
   useGetCoordinatorClientsOverviewQuery,
-  useGetCoordinatorClientProjectsQuery,
+  useGetCoordinatorMyProjectsQuery,
+  useGetCoordinatorProjectPipelineQuery,
   useGetCoordinatorProjectRoleHiringStatusQuery,
 } = projectCoordinatorDashboardApi;

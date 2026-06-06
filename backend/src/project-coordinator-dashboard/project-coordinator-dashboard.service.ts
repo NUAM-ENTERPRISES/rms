@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import {
   buildProjectRoleHiringRows,
   countFilledCandidatesForProjects,
 } from '../common/dashboard/project-role-hiring.util';
+import { getProjectPipelineCounts } from '../common/dashboard/project-pipeline-status.util';
 import { getProjectCoordinatorClientIds } from '../common/scoping/project-coordinator-scope.util';
 import {
-  ClientProjectsQueryDto,
+  MyProjectsQueryDto,
+  ProjectPipelineQueryDto,
   ProjectRoleHiringStatusQueryDto,
 } from './dto/project-coordinator-dashboard-query.dto';
 
@@ -127,12 +129,15 @@ export class ProjectCoordinatorDashboardService {
     };
   }
 
-  async getClientProjects(userId: string, query?: ClientProjectsQueryDto) {
-    const page = query?.page ?? 1;
-    const limit = query?.limit ?? 20;
+  async getMyProjects(userId: string, query?: MyProjectsQueryDto) {
+    const { search, page = 1, limit = 10 } = query ?? {};
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProjectWhereInput = { createdBy: userId };
+
+    if (search) {
+      where.title = { contains: search, mode: 'insensitive' };
+    }
 
     const [total, projects] = await Promise.all([
       this.prisma.project.count({ where }),
@@ -151,40 +156,19 @@ export class ProjectCoordinatorDashboardService {
               name: true,
             },
           },
-          rolesNeeded: {
-            select: {
-              id: true,
-              designation: true,
-              quantity: true,
-            },
-          },
         },
       }),
     ]);
 
-    const projectRoles = await buildProjectRoleHiringRows(this.prisma, projects);
-
-    const roleMap = new Map(
-      projectRoles.map((entry) => [entry.projectId, entry.roles]),
-    );
-
-    const rows = projects.map((project) => ({
-      clientId: project.client?.id ?? '',
-      clientName: project.client?.name ?? 'Unassigned client',
-      projectId: project.id,
-      projectName: project.title,
-      status: project.status as 'active' | 'completed' | 'cancelled',
-      roles: (roleMap.get(project.id) ?? []).map((role) => ({
-        name: role.role,
-        filled: role.filled,
-        target: role.required,
-      })),
-    }));
-
     return {
       success: true,
       data: {
-        rows,
+        projects: projects.map((project) => ({
+          projectId: project.id,
+          projectName: project.title,
+          clientName: project.client?.name ?? 'Unassigned client',
+          status: project.status as 'active' | 'completed' | 'cancelled',
+        })),
         pagination: {
           total,
           totalPages: Math.ceil(total / limit),
@@ -192,7 +176,57 @@ export class ProjectCoordinatorDashboardService {
           limit,
         },
       },
-      message: 'Client projects retrieved successfully',
+      message: 'Coordinator projects retrieved successfully',
+    };
+  }
+
+  async getProjectPipeline(userId: string, query: ProjectPipelineQueryDto) {
+    const { projectId } = query;
+
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, createdBy: userId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      const exists = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true },
+      });
+      if (exists) {
+        throw new ForbiddenException('You do not have access to this project');
+      }
+      throw new NotFoundException('Project not found');
+    }
+
+    const { pipeline, stages } = await getProjectPipelineCounts(
+      this.prisma,
+      projectId,
+    );
+
+    return {
+      success: true,
+      data: {
+        project: {
+          projectId: project.id,
+          projectName: project.title,
+          clientName: project.client?.name ?? 'Unassigned client',
+          status: project.status as 'active' | 'completed' | 'cancelled',
+        },
+        pipeline,
+        stages,
+      },
+      message: 'Project pipeline retrieved successfully',
     };
   }
 
