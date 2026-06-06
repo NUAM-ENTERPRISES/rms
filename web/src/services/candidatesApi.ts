@@ -174,6 +174,8 @@ export const candidatesApi = baseApi.injectEndpoints({
           onHold: number;
           untouched: number;
           junk: number;
+          weekOne: number;
+          weekTwo: number;
           other: number;
           created: number;
         };
@@ -282,6 +284,46 @@ export const candidatesApi = baseApi.injectEndpoints({
         { type: "Candidate", id },
         "Candidate",
       ],
+    }),
+    logOperationsCall: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/log-call`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    moveOperationsToWeekOne: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-one`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    moveOperationsToWeekTwo: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-two`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    markOperationsJunk: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/mark-junk`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
     }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
@@ -429,6 +471,10 @@ export const {
   useDeleteCandidateMutation,
   useMarkCandidateConvertedMutation,
   useTransferCandidateToRecruiterMutation,
+  useLogOperationsCallMutation,
+  useMoveOperationsToWeekOneMutation,
+  useMoveOperationsToWeekTwoMutation,
+  useMarkOperationsJunkMutation,
   useAssignToProjectMutation,
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,

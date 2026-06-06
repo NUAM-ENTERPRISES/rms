@@ -62,6 +62,18 @@ export const CANDIDATE_ASSIGNMENT_TYPE = {
 export const CRE_REASSIGN_RECRUITER_RETURN_REASON =
   "Returned to recruiter pipeline as untouched after Operations reassign";
 
+export const OPERATIONS_FOLLOW_UP_STAGE = {
+  INITIAL: 'initial',
+  WEEK_ONE: 'week_one',
+  WEEK_TWO: 'week_two',
+  JUNK: 'junk',
+} as const;
+
+export type OperationsFollowUpStage =
+  (typeof OPERATIONS_FOLLOW_UP_STAGE)[keyof typeof OPERATIONS_FOLLOW_UP_STAGE];
+
+export const OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE = 3;
+
 /** Normalize legacy DB value `agents` to canonical `agent`. */
 export function normalizeCandidateSource(
   source: string | null | undefined,

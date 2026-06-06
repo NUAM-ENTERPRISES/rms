@@ -1659,6 +1659,11 @@ model CandidateRecruiterAssignment {
   creStatusId    Int?
   /// CRE status note for the recruiter
   creStatusNote  String?
+  /// Operations follow-up stage: initial | week_one | week_two | junk
+  operationsFollowUpStage   String    @default("initial")
+  operationsCallAttempts    Int       @default(0)
+  operationsLastCallAt      DateTime?
+  operationsStageEnteredAt  DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1676,6 +1681,8 @@ model CandidateRecruiterAssignment {
   @@index([assignmentType])
   @@index([recruiterId, isActive])
   @@index([candidateId, isActive])
+  @@index([operationsFollowUpStage])
+  @@index([recruiterId, isActive, operationsFollowUpStage])
   @@map("candidate_recruiter_assignments")
 }
 

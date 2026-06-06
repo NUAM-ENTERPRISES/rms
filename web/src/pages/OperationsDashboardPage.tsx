@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { FaWhatsapp } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX } from "lucide-react";
+import { Users, UserCheck, AlertCircle, Eye, Search, ChevronLeft, ChevronRight, CalendarDays, Phone, Mail, RefreshCw, ArrowUpRight, PlusCircle, SlidersHorizontal, FilterX, CalendarClock } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { ConvertCandidateModal } from "@/components/molecules/ConvertCandidateModal";
@@ -9,7 +9,7 @@ import {
   TransferCandidateModal,
   type TransferToRecruiterPayload,
 } from "@/components/molecules/TransferCandidateModal";
-import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation } from "@/services/candidatesApi";
+import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation, useLogOperationsCallMutation, useMoveOperationsToWeekOneMutation, useMoveOperationsToWeekTwoMutation, useMarkOperationsJunkMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,19 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
+import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import {
+  canLogOperationsCall,
+  canMarkOperationsJunk,
+  canMoveToWeekOne,
+  canMoveToWeekTwo,
+  formatOperationsStageEnteredAt,
+  getActiveOperationsAssignment,
+  getOperationsCallAttempts,
+  getOperationsFollowUpStage,
+  OPERATIONS_FOLLOW_UP_STAGE,
+  OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+} from "@/features/candidates/utils/operations-follow-up.util";
 
 export default function OperationsDashboardPage() {
   const navigate = useNavigate();
@@ -221,6 +234,15 @@ export default function OperationsDashboardPage() {
     useGetOperationsAssignedSummaryQuery();
   const [markCandidateConverted, { isLoading: isConverting }] = useMarkCandidateConvertedMutation();
   const [transferCandidateToRecruiter, { isLoading: isTransferring }] = useTransferCandidateToRecruiterMutation();
+  const [logOperationsCall, { isLoading: isLoggingCall }] = useLogOperationsCallMutation();
+  const [moveOperationsToWeekOne, { isLoading: isMovingToWeekOne }] = useMoveOperationsToWeekOneMutation();
+  const [moveOperationsToWeekTwo, { isLoading: isMovingToWeekTwo }] = useMoveOperationsToWeekTwoMutation();
+  const [markOperationsJunk, { isLoading: isMarkingJunk }] = useMarkOperationsJunkMutation();
+
+  const [followUpConfirm, setFollowUpConfirm] = useState<{
+    type: "week_one" | "week_two" | "junk";
+    candidate: any;
+  } | null>(null);
 
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [candidateToConvert, setCandidateToConvert] = useState<any>(null);
@@ -231,6 +253,8 @@ export default function OperationsDashboardPage() {
   const assignedCount = summaryData?.total ?? totalCount;
   const reassignedCount = summaryData?.roleCounters?.reassigned ?? 0;
   const junkCount = summaryData?.roleCounters?.junk ?? 0;
+  const weekOneCount = summaryData?.roleCounters?.weekOne ?? 0;
+  const weekTwoCount = summaryData?.roleCounters?.weekTwo ?? 0;
   const createdCount = summaryData?.roleCounters?.created ?? createdCandidatesQuery.data?.total ?? 0;
  
 
@@ -243,6 +267,10 @@ export default function OperationsDashboardPage() {
       ? 'Reassigned'
       : statusFilter === 'junk'
       ? 'Junk'
+      : statusFilter === 'week_one'
+      ? '1 Week Follow-up'
+      : statusFilter === 'week_two'
+      ? '2 Week Follow-up'
       : statusFilter === 'on_hold'
       ? 'On Hold'
       : statusFilter === 'untouched'
@@ -258,6 +286,8 @@ export default function OperationsDashboardPage() {
     if (statusFilter === 'rnr') return 'Ring No Response (RNR) Candidates';
     if (statusFilter === 'reassigned') return 'Reassigned Candidates';
     if (statusFilter === 'junk') return 'Junk Candidates';
+    if (statusFilter === 'week_one') return '1 Week Follow-up Candidates';
+    if (statusFilter === 'week_two') return '2 Week Follow-up Candidates';
     if (statusFilter === 'on_hold') return 'On Hold Candidates';
     if (statusFilter === 'untouched') return 'Untouched Candidates';
     if (statusFilter === 'interested') return 'Converted Responses';
@@ -268,7 +298,9 @@ export default function OperationsDashboardPage() {
   const getTableSubtitle = () => {
     if (statusFilter === 'rnr') return 'Candidates marked as RNR';
     if (statusFilter === 'reassigned') return 'Candidates transferred by Operations to recruiter with Operations status';
-    if (statusFilter === 'junk') return 'Candidates assigned for more than 5 days';
+    if (statusFilter === 'junk') return 'Manually marked after 2-week follow-up with no response';
+    if (statusFilter === 'week_one') return 'Candidates moved after 3 logged no-answer calls';
+    if (statusFilter === 'week_two') return 'Candidates moved after 1-week follow-up with no response';
     if (statusFilter === 'on_hold') return 'Candidates currently on hold';
     if (statusFilter === 'untouched') return 'New untouched candidates';
     if (statusFilter === 'interested') return 'Candidates converted from Operations call';
@@ -335,12 +367,60 @@ export default function OperationsDashboardPage() {
     }
   };
 
+  const handleFollowUpAction = async () => {
+    if (!followUpConfirm) return;
+
+    const candidateId = followUpConfirm.candidate.id;
+    try {
+      if (followUpConfirm.type === "week_one") {
+        await moveOperationsToWeekOne(candidateId).unwrap();
+        toast.success("Candidate moved to 1 Week follow-up");
+      } else if (followUpConfirm.type === "week_two") {
+        await moveOperationsToWeekTwo(candidateId).unwrap();
+        toast.success("Candidate moved to 2 Week follow-up");
+      } else {
+        await markOperationsJunk(candidateId).unwrap();
+        toast.success("Candidate marked as junk");
+      }
+
+      setFollowUpConfirm(null);
+      setFilters((f) => ({ ...f, page: 1 }));
+      await Promise.all([
+        assignedCandidatesQuery.refetch(),
+        reassignedCandidatesQuery.refetch(),
+        createdCandidatesQuery.refetch(),
+        refetchSummary(),
+      ]);
+    } catch (error: unknown) {
+      const message =
+        (error as { data?: { message?: string } })?.data?.message ||
+        "Follow-up action failed";
+      toast.error(message);
+    }
+  };
+
+  const handleLogOperationsCall = async (candidate: any) => {
+    try {
+      await logOperationsCall(candidate.id).unwrap();
+      toast.success("Call logged (no answer)");
+      await Promise.all([refetch(), refetchSummary()]);
+    } catch (error: unknown) {
+      const message =
+        (error as { data?: { message?: string } })?.data?.message ||
+        "Failed to log call";
+      toast.error(message);
+    }
+  };
+
+  const isFollowUpActionLoading =
+    isMovingToWeekOne || isMovingToWeekTwo || isMarkingJunk;
+
   // Tile config — Junk is last
   const statCards = [
     {
       label: 'Untouched Candidates',
       value: assignedCount,
-      subtitle: 'Auto-assigned to you',
+      subtitle: 'Active follow-up (initial stage)',
       icon: Users,
       accent: 'blue',
       statusId: undefined as string | undefined,
@@ -362,9 +442,25 @@ export default function OperationsDashboardPage() {
       statusId: 'created',
     },
     {
+      label: '1 Week Follow-up',
+      value: weekOneCount,
+      subtitle: 'After 3 no-answer calls',
+      icon: CalendarClock,
+      accent: 'violet',
+      statusId: 'week_one',
+    },
+    {
+      label: '2 Week Follow-up',
+      value: weekTwoCount,
+      subtitle: 'After 1-week follow-up',
+      icon: CalendarClock,
+      accent: 'amber',
+      statusId: 'week_two',
+    },
+    {
       label: 'Junk Candidates',
       value: junkCount,
-      subtitle: 'Assigned for > 5 days',
+      subtitle: 'Manually marked unresponsive',
       icon: AlertCircle,
       accent: 'orange',
       statusId: 'junk',
@@ -375,6 +471,8 @@ export default function OperationsDashboardPage() {
     blue:   { card: 'from-blue-50 via-white to-blue-50/30 border-blue-100',   icon: 'text-blue-600',   iconBg: 'bg-blue-100',   value: 'text-blue-700',   ring: 'ring-blue-400/50',   dot: 'bg-blue-500' },
     indigo: { card: 'from-indigo-50 via-white to-indigo-50/30 border-indigo-100', icon: 'text-indigo-600', iconBg: 'bg-indigo-100', value: 'text-indigo-700', ring: 'ring-indigo-400/50', dot: 'bg-indigo-500' },
     green:  { card: 'from-green-50 via-white to-green-50/30 border-green-100',  icon: 'text-green-600',  iconBg: 'bg-green-100',  value: 'text-green-700',  ring: 'ring-green-400/50',  dot: 'bg-green-500' },
+    violet: { card: 'from-violet-50 via-white to-violet-50/30 border-violet-100', icon: 'text-violet-600', iconBg: 'bg-violet-100', value: 'text-violet-700', ring: 'ring-violet-400/50', dot: 'bg-violet-500' },
+    amber:  { card: 'from-amber-50 via-white to-amber-50/30 border-amber-100', icon: 'text-amber-600', iconBg: 'bg-amber-100', value: 'text-amber-700', ring: 'ring-amber-400/50', dot: 'bg-amber-500' },
     orange: { card: 'from-orange-50 via-white to-orange-50/30 border-orange-100', icon: 'text-orange-600', iconBg: 'bg-orange-100', value: 'text-orange-700', ring: 'ring-orange-400/50', dot: 'bg-orange-500' },
   };
 
@@ -390,7 +488,7 @@ export default function OperationsDashboardPage() {
           />
 
           {/* Stat Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {statCards.map((stat) => {
               const Icon = stat.icon;
               const s = accentStyles[stat.accent];
@@ -544,6 +642,15 @@ export default function OperationsDashboardPage() {
                   <TableBody>
                     {candidates.map((candidate: any) => {
                       const activeAssignment = candidate.recruiterAssignments?.find((a: any) => a.isActive);
+                      const operationsAssignment = getActiveOperationsAssignment(
+                        candidate.recruiterAssignments,
+                        user?.id,
+                      );
+                      const followUpStage = getOperationsFollowUpStage(operationsAssignment);
+                      const callAttempts = getOperationsCallAttempts(operationsAssignment);
+                      const stageEnteredLabel = formatOperationsStageEnteredAt(
+                        operationsAssignment?.operationsStageEnteredAt,
+                      );
                       const nonCreAssignment = candidate.recruiterAssignments?.find(
                         (a: any) => a.recruiter?.id && a.recruiter?.id !== user?.id
                       );
@@ -660,6 +767,17 @@ export default function OperationsDashboardPage() {
                             {statusFilter === 'reassigned' && (
                               <p className="text-[10px] text-slate-400 mt-1">Set by Operations on reassign</p>
                             )}
+                            {(statusFilter === undefined || statusFilter === 'week_one' || statusFilter === 'week_two') &&
+                              followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL && (
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                Calls logged: {callAttempts}/{OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}
+                              </p>
+                            )}
+                            {(statusFilter === 'week_one' || statusFilter === 'week_two') && stageEnteredLabel && (
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                In bucket since {stageEnteredLabel}
+                              </p>
+                            )}
                           </TableCell>
 
                           {/* Assigned At */}
@@ -672,7 +790,7 @@ export default function OperationsDashboardPage() {
                           {/* Actions */}
                           {statusFilter !== 'created' && (
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-1">
+                            <div className="flex flex-wrap items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -722,7 +840,61 @@ export default function OperationsDashboardPage() {
                                 <TooltipContent side="top"><p className="text-xs">View Profile</p></TooltipContent>
                               </Tooltip>
 
-                              {statusFilter !== 'reassigned' && (
+                              {canLogOperationsCall(followUpStage) && statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-2 text-[11px] font-semibold border-slate-200"
+                                  disabled={isLoggingCall}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handleLogOperationsCall(candidate);
+                                  }}
+                                >
+                                  Log Call
+                                </Button>
+                              )}
+
+                              {canMoveToWeekOne(followUpStage, callAttempts) && statusFilter !== 'reassigned' && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2 text-[11px] font-semibold bg-violet-600 hover:bg-violet-700 text-white rounded-lg shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFollowUpConfirm({ type: "week_one", candidate });
+                                  }}
+                                >
+                                  Move to 1 Week
+                                </Button>
+                              )}
+
+                              {canMoveToWeekTwo(followUpStage) && statusFilter === 'week_one' && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFollowUpConfirm({ type: "week_two", candidate });
+                                  }}
+                                >
+                                  Move to 2nd Week
+                                </Button>
+                              )}
+
+                              {canMarkOperationsJunk(followUpStage) && statusFilter === 'week_two' && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-2 text-[11px] font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFollowUpConfirm({ type: "junk", candidate });
+                                  }}
+                                >
+                                  Mark as Junk
+                                </Button>
+                              )}
+
+                              {statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
                                 <Button
                                   size="sm"
                                   className="h-8 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors"
@@ -822,6 +994,37 @@ export default function OperationsDashboardPage() {
           currentStatus={candidateToTransfer?.currentStatus?.statusName || 'Unknown'}
           isSubmitting={isTransferring}
         />
+
+          <ConfirmationDialog
+            isOpen={followUpConfirm?.type === "week_one"}
+            onClose={() => setFollowUpConfirm(null)}
+            onConfirm={handleFollowUpAction}
+            title="Move to 1 Week follow-up?"
+            description={`Move ${followUpConfirm?.candidate?.firstName || ""} ${followUpConfirm?.candidate?.lastName || ""} to the 1 Week follow-up bucket after 3 logged no-answer calls.`}
+            confirmText="Move to 1 Week"
+            isLoading={isFollowUpActionLoading}
+          />
+
+          <ConfirmationDialog
+            isOpen={followUpConfirm?.type === "week_two"}
+            onClose={() => setFollowUpConfirm(null)}
+            onConfirm={handleFollowUpAction}
+            title="Move to 2nd Week follow-up?"
+            description={`Move ${followUpConfirm?.candidate?.firstName || ""} ${followUpConfirm?.candidate?.lastName || ""} to the 2 Week follow-up bucket.`}
+            confirmText="Move to 2nd Week"
+            isLoading={isFollowUpActionLoading}
+          />
+
+          <ConfirmationDialog
+            isOpen={followUpConfirm?.type === "junk"}
+            onClose={() => setFollowUpConfirm(null)}
+            onConfirm={handleFollowUpAction}
+            title="Mark candidate as junk?"
+            description={`Mark ${followUpConfirm?.candidate?.firstName || ""} ${followUpConfirm?.candidate?.lastName || ""} as junk after no response in the 2 Week follow-up stage.`}
+            confirmText="Mark as Junk"
+            variant="destructive"
+            isLoading={isFollowUpActionLoading}
+          />
 
           <AdvancedFiltersSheet
             isOpen={isFilterSheetOpen}

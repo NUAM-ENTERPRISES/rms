@@ -53,6 +53,8 @@ import {
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
   CRE_REASSIGN_RECRUITER_RETURN_REASON,
+  OPERATIONS_FOLLOW_UP_STAGE,
+  OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
@@ -1547,7 +1549,29 @@ export class CandidatesService {
       'on hold': 'on hold',
       untouched: 'untouched',
       junk: 'junk',
+      week_one: 'week_one',
+      week_two: 'week_two',
     };
+
+    const followUpStageFilters: Record<string, string> = {
+      junk: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      week_one: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+      week_two: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+    };
+
+    const buildActiveCreAssignmentWhere = (
+      followUpStage?: string,
+    ): Prisma.CandidateRecruiterAssignmentWhereInput => ({
+      recruiterId: creUserId,
+      isActive: true,
+      assignmentType: {
+        notIn: [
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+        ],
+      },
+      ...(followUpStage ? { operationsFollowUpStage: followUpStage } : {}),
+    });
 
     if (normalizedStatusInput) {
       if (normalizedStatusInput === 'interested') {
@@ -1559,23 +1583,11 @@ export class CandidatesService {
             assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
           },
         };
-      } else if (normalizedStatusInput === 'junk') {
-        // Junk Candidates logic: Assigned > 5 days ago, active, not converted/reassigned
-        const threshold = new Date();
-        threshold.setDate(threshold.getDate() - 5);
-
+      } else if (followUpStageFilters[normalizedStatusInput]) {
         where.recruiterAssignments = {
-          some: {
-            recruiterId: creUserId,
-            isActive: true,
-            assignedAt: { lt: threshold },
-            assignmentType: {
-              notIn: [
-                CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
-                CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-              ],
-            },
-          },
+          some: buildActiveCreAssignmentWhere(
+            followUpStageFilters[normalizedStatusInput],
+          ),
         };
       } else {
         const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
@@ -1583,26 +1595,24 @@ export class CandidatesService {
 
         if (!Number.isNaN(statusId)) {
           where.currentStatusId = statusId;
+          where.recruiterAssignments = {
+            some: buildActiveCreAssignmentWhere(
+              OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            ),
+          };
         } else {
           where.currentStatus = { statusName: { equals: normalizedStatus, mode: 'insensitive' } };
+          where.recruiterAssignments = {
+            some: buildActiveCreAssignmentWhere(
+              OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            ),
+          };
         }
       }
     } else {
-      // Default CRE assigned listing: exclude converted, reassigned, and junk (assigned > 5 days ago) candidates
-      const junkThreshold = new Date();
-      junkThreshold.setDate(junkThreshold.getDate() - 5);
+      // Default Operations listing: active initial-stage candidates only
       where.recruiterAssignments = {
-        some: {
-          recruiterId: creUserId,
-          isActive: true,
-          assignedAt: { gte: junkThreshold },
-          assignmentType: {
-            notIn: [
-              CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
-              CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-            ],
-          },
-        },
+        some: buildActiveCreAssignmentWhere(OPERATIONS_FOLLOW_UP_STAGE.INITIAL),
       };
     }
 
@@ -1692,6 +1702,10 @@ export class CandidatesService {
           select: {
             assignmentType: true,
             assignedAt: true,
+            operationsFollowUpStage: true,
+            operationsCallAttempts: true,
+            operationsLastCallAt: true,
+            operationsStageEnteredAt: true,
           },
           where: {
             recruiterId: creUserId,
@@ -1701,9 +1715,6 @@ export class CandidatesService {
       },
     });
 
-    const threshold = new Date();
-    threshold.setDate(threshold.getDate() - 5);
-
     const roleCounters = {
       assigned: 0,
       converted: 0,
@@ -1712,26 +1723,39 @@ export class CandidatesService {
       onHold: 0,
       untouched: 0,
       junk: 0,
+      weekOne: 0,
+      weekTwo: 0,
       other: 0,
     };
 
     allAssigned.forEach((candidate) => {
       const assignment = candidate.recruiterAssignments[0];
       const assignmentType = assignment?.assignmentType;
-      const assignedAt = assignment?.assignedAt;
-      
-      if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED || 
+      const followUpStage =
+        assignment?.operationsFollowUpStage ??
+        OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+
+      if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED ||
           assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED) {
         if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED) {
           roleCounters.converted += 1;
         }
-        return; // Don't count converted or reassigned in "Total Assigned" status-based buckets
+        return;
       }
 
-      // Check for junk (assigned > 5 days ago)
-      if (assignedAt && assignedAt < threshold) {
+      if (followUpStage === OPERATIONS_FOLLOW_UP_STAGE.JUNK) {
         roleCounters.junk += 1;
-        return; // Don't count junk candidates in status-based buckets or total
+        return;
+      }
+
+      if (followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+        roleCounters.weekOne += 1;
+        return;
+      }
+
+      if (followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+        roleCounters.weekTwo += 1;
+        return;
       }
 
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
@@ -1742,7 +1766,6 @@ export class CandidatesService {
       } else if (status === 'untouched') {
         roleCounters.untouched += 1;
       } else if (status === 'interested') {
-        // Legacy check for interested status
         roleCounters.converted += 1;
         return;
       } else {
@@ -1843,6 +1866,170 @@ export class CandidatesService {
     });
 
     return updatedCandidate as any;
+  }
+
+  private async getActiveOperationsAssignmentForUser(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        recruiterId: operationsUserId,
+        isActive: true,
+        assignmentType: {
+          in: [
+            CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+            CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+          ],
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'Operations may only update follow-up for candidates assigned to them.',
+      );
+    }
+
+    return assignment;
+  }
+
+  async logOperationsCall(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+      throw new BadRequestException(
+        'Call logging is only available during the initial follow-up stage.',
+      );
+    }
+
+    const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsCallAttempts: assignment.operationsCallAttempts + 1,
+        operationsLastCallAt: new Date(),
+      },
+    });
+
+    await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: { updatedAt: new Date() },
+    });
+
+    return { assignment: updatedAssignment };
+  }
+
+  async moveOperationsToWeekOne(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+      throw new BadRequestException(
+        'Candidate must be in the initial follow-up stage to move to 1 Week.',
+      );
+    }
+
+    if (
+      assignment.operationsCallAttempts <
+      OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+    ) {
+      throw new BadRequestException(
+        `At least ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} logged calls are required before moving to 1 Week.`,
+      );
+    }
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        operationsCallAttempts: 0,
+        operationsStageEnteredAt: now,
+      },
+    });
+
+    await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: { updatedAt: now },
+    });
+
+    return { assignment: updatedAssignment };
+  }
+
+  async moveOperationsToWeekTwo(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+      throw new BadRequestException(
+        'Candidate must be in the 1 Week follow-up stage to move to 2nd Week.',
+      );
+    }
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+        operationsStageEnteredAt: now,
+      },
+    });
+
+    await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: { updatedAt: now },
+    });
+
+    return { assignment: updatedAssignment };
+  }
+
+  async markOperationsJunk(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+      throw new BadRequestException(
+        'Candidate must be in the 2 Week follow-up stage to mark as junk.',
+      );
+    }
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+        operationsStageEnteredAt: now,
+      },
+    });
+
+    await this.prisma.candidate.update({
+      where: { id: candidateId },
+      data: { updatedAt: now },
+    });
+
+    return { assignment: updatedAssignment };
   }
 
   private validateCandidateStatusTransitionFields(

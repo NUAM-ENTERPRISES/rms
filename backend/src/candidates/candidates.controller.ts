@@ -756,6 +756,80 @@ export class CandidatesController {
     };
   }
 
+  @Post(':id/operations/log-call')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Log Operations call attempt (no answer)',
+    description:
+      'Increment the no-answer call count for an Operations-assigned candidate in the initial follow-up stage',
+  })
+  async logOperationsCall(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.logOperationsCall(id, req.user.id);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Operations call logged successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-one')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 1 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate to the 1 Week follow-up stage after 3 logged no-answer calls',
+  })
+  async moveOperationsToWeekOne(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekOne(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 1 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-two')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 2 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate from 1 Week to 2 Week follow-up stage',
+  })
+  async moveOperationsToWeekTwo(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekTwo(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 2 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/mark-junk')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as junk',
+    description:
+      'Mark an Operations-assigned candidate as junk after 2 Week follow-up with no response',
+  })
+  async markOperationsJunk(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.markOperationsJunk(id, req.user.id);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as junk successfully',
+    };
+  }
+
   @Get('status-config')
   @Public()
   @ApiOperation({
