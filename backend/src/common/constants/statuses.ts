@@ -77,6 +77,55 @@ export type CandidateProjectStatus =
   (typeof CANDIDATE_PROJECT_STATUS)[keyof typeof CANDIDATE_PROJECT_STATUS];
 
 /**
+ * Screening + training sub-statuses (under main stage `interview` in DB).
+ * Used to split recruiter dashboard screening workflow from client interview.
+ */
+export const SCREENING_TRAINING_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_PASSED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING,
+  CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD,
+  CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+  CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
+] as const;
+
+export type ScreeningTrainingSubStatusName =
+  (typeof SCREENING_TRAINING_SUB_STATUS_NAMES)[number];
+
+/**
+ * Client interview sub-statuses (shortlist + client interview rounds).
+ */
+export const CLIENT_INTERVIEW_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.SHORTLISTED,
+  CANDIDATE_PROJECT_STATUS.NOT_SHORTLISTED,
+  'interview_assigned',
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED,
+  'interview_rescheduled',
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_PASSED,
+  'interview_failed',
+  'interview_backout',
+  'interview_selected',
+] as const;
+
+export type ClientInterviewSubStatusName =
+  (typeof CLIENT_INTERVIEW_SUB_STATUS_NAMES)[number];
+
+/** Training-only sub-status names for grouped dashboard tile counts. */
+export const TRAINING_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+  CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+] as const;
+
+/**
  * Valid state transitions for Candidate-Project status
  * Enforces workflow rules and prevents invalid transitions
  */

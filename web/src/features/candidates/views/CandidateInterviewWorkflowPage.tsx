@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMemo, useState } from "react";
 import type { ElementType } from "react";
 import { useGetCandidateInterviewWorkflowQuery, useGetStatusConfigQuery } from "../api";
+import { CLIENT_INTERVIEW_SUB_STATUS_NAMES } from "@/constants/statuses";
 import {
   WorkflowFilterTiles,
   WorkflowPageHeader,
@@ -20,15 +21,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Briefcase,
-  Star,
   MessageSquare,
-  ClipboardList,
   Video,
   MapPin,
   Hash,
   X,
-  Target,
 } from "lucide-react";
+
+const CLIENT_INTERVIEW_NAME_SET = new Set<string>(CLIENT_INTERVIEW_SUB_STATUS_NAMES);
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -53,8 +53,6 @@ function getInterviewSubStatusTileIcon(name?: string): ElementType {
   if (key.includes("passed") || key.includes("selected")) return UserCheck;
   if (key.includes("failed") || key.includes("not_shortlisted")) return XCircle;
   if (key.includes("scheduled") || key.includes("assigned") || key.includes("rescheduled")) return Clock;
-  if (key.includes("screening")) return ClipboardList;
-  if (key.includes("training")) return Target;
   if (key.includes("shortlisted")) return CheckCircle2;
   return Phone;
 }
@@ -71,9 +69,14 @@ export default function CandidateInterviewWorkflowPage() {
   });
 
   const { data: statusConfigResponse } = useGetStatusConfigQuery({ mainStage: "interview" });
-  const subStatuses = Array.isArray(statusConfigResponse?.data?.subStatuses)
-    ? statusConfigResponse.data.subStatuses
-    : [];
+  const subStatuses = useMemo(() => {
+    const all = Array.isArray(statusConfigResponse?.data?.subStatuses)
+      ? statusConfigResponse.data.subStatuses
+      : [];
+    return all.filter((ss: { name?: string }) =>
+      ss.name ? CLIENT_INTERVIEW_NAME_SET.has(ss.name) : false,
+    );
+  }, [statusConfigResponse]);
 
   const { data: response, isLoading, error } = useGetCandidateInterviewWorkflowQuery({
     candidateId: candidateId!,
@@ -140,8 +143,6 @@ export default function CandidateInterviewWorkflowPage() {
       case "failed":
       case "rejected":
         return <Badge className="bg-red-50 text-red-700 border border-red-200 font-semibold text-[10px] gap-1"><XCircle className="h-3 w-3" /> Failed</Badge>;
-      case "needs_training":
-        return <Badge className="bg-amber-50 text-amber-700 border border-amber-200 font-semibold text-[10px] gap-1"><Target className="h-3 w-3" /> Needs Training</Badge>;
       case "pending":
       case "scheduled":
       default:
@@ -156,9 +157,9 @@ export default function CandidateInterviewWorkflowPage() {
         candidateId={candidateId!}
         candidate={candidate}
         breadcrumbSegment="Interview"
-        workflowBadge="Interview workflow"
-        description="Track screenings and client interviews across nominated projects"
-        stageLabel="Interview"
+        workflowBadge="Client interview workflow"
+        description="Track client interviews and shortlisting across nominated projects"
+        stageLabel="Client Interview"
         badgeIcon={Phone}
         avatarBadgeIcon={Phone}
         totalAll={totalAll}
@@ -241,7 +242,7 @@ export default function CandidateInterviewWorkflowPage() {
                                {p.subStatus?.label || p.subStatus?.name || "N/A"}
                              </Badge>
                              <Badge variant="outline" className="text-[10px] h-5 px-2 font-semibold bg-slate-50 text-slate-500 border-slate-200 gap-1">
-                               <Phone className="h-3 w-3" /> {(p.screenings?.length || 0) + (p.interviews?.length || 0)} Rounds
+                               <Phone className="h-3 w-3" /> {p.interviews?.length || 0} Interviews
                              </Badge>
                           </div>
                         </div>
@@ -261,111 +262,8 @@ export default function CandidateInterviewWorkflowPage() {
                   
                   <AccordionContent className="p-0">
                     <div className="px-5 pb-5 border-t border-slate-100">
-                     
-                      {/* Internal Screenings Section */}
-                      <div className="mt-6">
-                        <div className="flex items-center justify-between mb-3">
-                           <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                              <ClipboardList className="h-3.5 w-3.5 text-blue-500" /> Internal Screenings
-                           </h4>
-                           <span className="text-[10px] text-slate-400">{p.screenings?.length || 0} screenings</span>
-                        </div>
-                        
-                        <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
-                          <Table>
-                            <TableHeader className="bg-slate-50">
-                              <TableRow className="hover:bg-transparent border-b border-slate-200">
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase px-4 h-9 w-[25%]">Details</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[15%]">Badge</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[15%]">Status</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[15%]">Scheduled By</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[8%] text-center">Rating</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase h-9 w-[22%]">Remarks</TableHead>
-                                <TableHead className="text-[11px] font-semibold text-slate-500 uppercase text-right px-4 h-9 w-[15%]">Scheduled At</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {p.screenings?.length > 0 ? (
-                                p.screenings.map((s: any, sIndex: number) => (
-                                  <TableRow key={s.id} className={`hover:bg-blue-50/40 transition-colors ${sIndex % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
-                                    <TableCell className="px-4 py-3">
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="p-1.5 bg-blue-50 rounded-md text-blue-500 shrink-0">
-                                          <User className="h-3.5 w-3.5" />
-                                        </div>
-                                        <div className="min-w-0">
-                                          <p className="text-[12px] font-semibold text-slate-800">
-                                            Internal Screening
-                                          </p>
-                                          <p className="text-[10px] text-slate-500 mt-0.5">
-                                            {s.interviewer || "Coordinator"}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 text-[9px] px-1.5 py-0">Screening</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      {getOutcomeBadge(s.status || s.decision)}
-                                    </TableCell>
-                                    <TableCell>
-                                      {s.scheduledBy ? (
-                                        <div className="flex items-center gap-1.5">
-                                          <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-500 border border-slate-200 overflow-hidden shrink-0">
-                                            {s.scheduledBy.profileImage ? (
-                                              <img src={s.scheduledBy.profileImage} alt={s.scheduledBy.name} className="h-full w-full object-cover" />
-                                            ) : (
-                                              s.scheduledBy.name?.charAt(0) || "U"
-                                            )}
-                                          </div>
-                                          <span className="text-[10px] font-medium text-slate-600 truncate max-w-[80px]">
-                                            {s.scheduledBy.name || "System"}
-                                          </span>
-                                        </div>
-                                      ) : (
-                                        <span className="text-[10px] text-slate-400">—</span>
-                                      )}
-                                    </TableCell>
-                                    <TableCell className="text-center font-bold text-slate-700">
-                                      {s.overallRating ? (
-                                        <div className="flex items-center justify-center gap-1 text-amber-500">
-                                          <Star className="h-3 w-3 fill-current" />
-                                          <span className="text-xs">{s.overallRating}</span>
-                                        </div>
-                                      ) : "—"}
-                                    </TableCell>
-                                    <TableCell>
-                                      <div className="max-w-[180px]">
-                                        <p className="text-[10px] text-slate-500 line-clamp-2">
-                                          {s.remarks || "No remarks provided."}
-                                        </p>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-right px-4">
-                                      <p className="text-[11px] font-medium text-slate-600">
-                                        {s.scheduledTime ? format(new Date(s.scheduledTime), "dd MMM yyyy") : "—"}
-                                      </p>
-                                      <p className="text-[10px] text-slate-400">
-                                        {s.scheduledTime ? format(new Date(s.scheduledTime), "HH:mm") : ""}
-                                      </p>
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                              ) : (
-                                <TableRow>
-                                  <TableCell colSpan={6} className="h-20 text-center">
-                                    <span className="text-sm text-slate-400">No screenings recorded</span>
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </div>
-
                       {/* Client Interviews Section */}
-                      <div className="mt-8">
+                      <div className="mt-6">
                         <div className="flex items-center justify-between mb-3">
                            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                               <Video className="h-3.5 w-3.5 text-purple-500" /> Client Interviews

@@ -65,7 +65,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get recruiter dashboard overview tile counts',
     description:
-      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination), including workflow sub-status history counts in stats.registeredSubStatus, stats.interviewSubStatus, and stats.processingSubStatus.',
+      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination), including workflow sub-status history counts in stats.registeredSubStatus, stats.screeningSubStatus, stats.interviewSubStatus, and stats.processingSubStatus.',
   })
   async getOverviewStats(
     @Query() query: QueryCandidateOverviewDto,
@@ -1747,8 +1747,8 @@ export class CandidatesController {
   @Get(':id/interview-workflow')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get consolidated interview workflow details for a candidate',
-    description: 'Returns ONLY interview and screening details for all projects a candidate is nominated for.',
+    summary: 'Get consolidated client interview workflow details for a candidate',
+    description: 'Returns client interview details for projects in the client interview pipeline (excludes screening/training).',
   })
   @ApiParam({ name: 'id', description: 'Candidate ID' })
   async getInterviewWorkflow(
@@ -1763,6 +1763,28 @@ export class CandidatesController {
       success: true,
       ...data,
       message: 'Interview workflow details retrieved successfully',
+    };
+  }
+
+  @Get(':id/screening-workflow')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated screening workflow details for a candidate',
+    description: 'Returns internal screening and training details for projects in the screening/training pipeline (excludes client interviews).',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getScreeningWorkflow(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateScreeningWorkflow(id, { subStatus, search, page: Number(page), limit: Number(limit) });
+    return {
+      success: true,
+      ...data,
+      message: 'Screening workflow details retrieved successfully',
     };
   }
 

@@ -53,6 +53,9 @@ import {
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
   CRE_REASSIGN_RECRUITER_RETURN_REASON,
+  CLIENT_INTERVIEW_SUB_STATUS_NAMES,
+  SCREENING_TRAINING_SUB_STATUS_NAMES,
+  TRAINING_SUB_STATUS_NAMES,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
@@ -148,6 +151,45 @@ const REGISTERED_SUB_STATUS_TILES = [
     key: 'submitted_to_client',
     subStatusName: 'submitted_to_client',
     label: 'Submitted to Client',
+  },
+] as const;
+
+/** Screening dashboard sub-tiles: history-based counts per screening/training sub-status. */
+const SCREENING_SUB_STATUS_TILES = [
+  {
+    key: 'assigned',
+    subStatusName: 'screening_assigned',
+    label: 'Assigned',
+  },
+  {
+    key: 'scheduled',
+    subStatusName: 'screening_scheduled',
+    label: 'Scheduled',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'screening_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'passed',
+    subStatusName: 'screening_passed',
+    label: 'Passed',
+  },
+  {
+    key: 'needs_training',
+    subStatusName: 'screening_needs_training',
+    label: 'Needs Training',
+  },
+  {
+    key: 'on_hold',
+    subStatusName: 'screening_on_hold',
+    label: 'On Hold',
+  },
+  {
+    key: 'failed',
+    subStatusName: 'screening_failed',
+    label: 'Failed',
   },
 ] as const;
 
@@ -4547,6 +4589,7 @@ export class CandidatesService {
     nominated: number;
     registered: number;
     documentation: number;
+    screening: number;
     interview: number;
     processing: number;
     interviewAssigned: number;
@@ -4555,6 +4598,14 @@ export class CandidatesService {
     visa: number;
     deployed: number;
     registeredSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    screeningSubStatus: {
       tiles: Array<{
         key: string;
         subStatusName: string;
@@ -4650,12 +4701,16 @@ export class CandidatesService {
           projects: { some: { mainStatus: { name: 'documents' } } },
         },
       }),
-      this.prisma.candidate.count({
-        where: {
-          ...baseWhereForCounts,
-          projects: { some: { mainStatus: { name: 'interview' } } },
-        },
-      }),
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...SCREENING_TRAINING_SUB_STATUS_NAMES],
+      ),
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...CLIENT_INTERVIEW_SUB_STATUS_NAMES],
+      ),
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4758,6 +4813,18 @@ export class CandidatesService {
           tile.subStatusName,
         ),
       ),
+      ...SCREENING_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...TRAINING_SUB_STATUS_NAMES],
+      ),
       ...INTERVIEW_SUB_STATUS_TILES.map((tile) =>
         this.countCandidatesWithSubStatusHistory(
           baseWhereForCounts,
@@ -4782,6 +4849,7 @@ export class CandidatesService {
       profileShortlistingCandidates,
       registeredCandidates,
       documentationCandidates,
+      screeningCandidates,
       interviewCandidates,
       processingCandidates,
       deployedCandidatesCount,
@@ -4789,21 +4857,39 @@ export class CandidatesService {
       docReceivedCandidates,
       medicalCandidates,
       visaCandidates,
-    ] = overviewCountResults.slice(0, 14) as number[];
+    ] = overviewCountResults.slice(0, 15) as number[];
 
     const registeredSubStatusCounts = overviewCountResults.slice(
-      14,
-      14 + REGISTERED_SUB_STATUS_TILES.length,
+      15,
+      15 + REGISTERED_SUB_STATUS_TILES.length,
     ) as number[];
-    const interviewSubStatusCounts = overviewCountResults.slice(
-      14 + REGISTERED_SUB_STATUS_TILES.length,
-      14 +
+    const screeningSubStatusCounts = overviewCountResults.slice(
+      15 + REGISTERED_SUB_STATUS_TILES.length,
+      15 +
         REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length,
+    ) as number[];
+    const screeningTrainingGroupedCount = overviewCountResults[
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length
+    ] as number;
+    const interviewSubStatusCounts = overviewCountResults.slice(
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1,
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1 +
         INTERVIEW_SUB_STATUS_TILES.length,
     ) as number[];
     const processingSubStatusCounts = overviewCountResults.slice(
-      14 +
+      15 +
         REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1 +
         INTERVIEW_SUB_STATUS_TILES.length,
     ) as number[];
 
@@ -4816,6 +4902,7 @@ export class CandidatesService {
       nominated: profileShortlistingCandidates,
       registered: registeredCandidates,
       documentation: documentationCandidates,
+      screening: screeningCandidates,
       interview: interviewCandidates,
       processing: processingCandidates,
       interviewAssigned: interviewAssignedCandidates,
@@ -4830,6 +4917,22 @@ export class CandidatesService {
           label: tile.label,
           count: registeredSubStatusCounts[index],
         })),
+      },
+      screeningSubStatus: {
+        tiles: [
+          ...SCREENING_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            subStatusName: tile.subStatusName,
+            label: tile.label,
+            count: screeningSubStatusCounts[index],
+          })),
+          {
+            key: 'training',
+            subStatusName: 'training_assigned',
+            label: 'Training',
+            count: screeningTrainingGroupedCount,
+          },
+        ],
       },
       interviewSubStatus: {
         tiles: INTERVIEW_SUB_STATUS_TILES.map((tile, index) => ({
@@ -4893,6 +4996,47 @@ export class CandidatesService {
     });
   }
 
+  /** Unique candidates who reached any of the given sub-statuses at least once (history). */
+  private countCandidatesWithAnySubStatusHistory(
+    baseWhereForCounts: Prisma.CandidateWhereInput,
+    projectScope: Prisma.CandidateProjectsWhereInput,
+    subStatusNames: readonly string[],
+  ) {
+    return this.prisma.candidate.count({
+      where: this.mergeOverviewWhere(baseWhereForCounts, {
+        projects: {
+          some: {
+            ...projectScope,
+            projectStatusHistory: {
+              some: {
+                subStatus: { name: { in: [...subStatusNames] } },
+              },
+            },
+          },
+        },
+      }),
+    });
+  }
+
+  /** List filter: candidates with project history in any of the given sub-statuses. */
+  private buildWorkflowAnySubStatusProjectFilter(
+    subStatusNames: readonly string[],
+    targetRecruiterId?: string,
+  ): Prisma.CandidateWhereInput['projects'] {
+    return {
+      some: {
+        ...(targetRecruiterId && targetRecruiterId !== 'all'
+          ? { recruiterId: targetRecruiterId }
+          : {}),
+        projectStatusHistory: {
+          some: {
+            subStatus: { name: { in: [...subStatusNames] } },
+          },
+        },
+      },
+    };
+  }
+
   /**
    * Get candidate overview list for a specific recruiter or all (admin)
    */
@@ -4927,7 +5071,7 @@ export class CandidatesService {
     const statusValue = rawTileStatus ? rawTileStatus.toLowerCase() : '';
     const usesWorkflowHistorySubStatus =
       !!query.subStatus &&
-      ['registered', 'interview', 'processing'].includes(statusValue);
+      ['registered', 'screening', 'interview', 'processing'].includes(statusValue);
 
     // Main and sub-status filtering (current status); skipped when workflow history filter applies
     if ((query.mainStatus || query.subStatus) && !usesWorkflowHistorySubStatus) {
@@ -5016,6 +5160,24 @@ export class CandidatesService {
             ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
           },
         };
+      } else if (statusValue === 'screening') {
+        if (query.subStatus === 'training_assigned') {
+          tableWhere.projects = this.buildWorkflowAnySubStatusProjectFilter(
+            [...TRAINING_SUB_STATUS_NAMES],
+            targetRecruiterId,
+          );
+        } else {
+          tableWhere.projects = query.subStatus
+            ? this.buildWorkflowSubStatusProjectFilter(
+                'interview',
+                query.subStatus,
+                targetRecruiterId,
+              )
+            : this.buildWorkflowAnySubStatusProjectFilter(
+                [...SCREENING_TRAINING_SUB_STATUS_NAMES],
+                targetRecruiterId,
+              );
+        }
       } else if (statusValue === 'interview') {
         tableWhere.projects = query.subStatus
           ? this.buildWorkflowSubStatusProjectFilter(
@@ -5023,11 +5185,10 @@ export class CandidatesService {
               query.subStatus,
               targetRecruiterId,
             )
-          : {
-              some: {
-                mainStatus: { name: 'interview' },
-              },
-            };
+          : this.buildWorkflowAnySubStatusProjectFilter(
+              [...CLIENT_INTERVIEW_SUB_STATUS_NAMES],
+              targetRecruiterId,
+            );
       } else if (statusValue === 'processing') {
         tableWhere.projects = query.subStatus
           ? this.buildWorkflowSubStatusProjectFilter(
@@ -5694,8 +5855,8 @@ export class CandidatesService {
   }
 
   /**
-   * Get interview-specific workflow details for a candidate
-   * Includes only project info, screenings, and interviews
+   * Get client interview workflow details for a candidate
+   * Includes only project info and client interviews (excludes screening/training)
    */
   async getCandidateInterviewWorkflow(
     candidateId: string,
@@ -5704,7 +5865,6 @@ export class CandidatesService {
     const { subStatus, search, page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    // First find the candidate details
     const candidateInfo = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       select: {
@@ -5718,14 +5878,16 @@ export class CandidatesService {
 
     if (!candidateInfo) return null;
 
-    // Define where clause for filtering projects
-    const projectWhere: any = {
+    const projectWhere: Prisma.CandidateProjectsWhereInput = {
       candidateId,
       mainStatus: {
         name: {
           equals: 'interview',
           mode: 'insensitive',
         },
+      },
+      subStatus: {
+        name: { in: [...CLIENT_INTERVIEW_SUB_STATUS_NAMES] },
       },
     };
 
@@ -5742,13 +5904,16 @@ export class CandidatesService {
       };
     }
 
-    const countBaseWhere: typeof projectWhere = {
+    const countBaseWhere: Prisma.CandidateProjectsWhereInput = {
       candidateId,
       mainStatus: {
         name: {
           equals: 'interview',
           mode: 'insensitive',
         },
+      },
+      subStatus: {
+        name: { in: [...CLIENT_INTERVIEW_SUB_STATUS_NAMES] },
       },
     };
     if (search) {
@@ -5799,20 +5964,6 @@ export class CandidatesService {
         },
         mainStatus: true,
         subStatus: true,
-        screenings: {
-          include: {
-            checklistItems: true,
-            template: true,
-            candidateProjectMap: {
-              select: {
-                id: true,
-                project: { select: { title: true } },
-                candidate: { select: { firstName: true, lastName: true } },
-              },
-            },
-          },
-          orderBy: { scheduledTime: 'desc' },
-        },
         interviews: {
           include: {
             candidateProjectMap: {
@@ -5831,27 +5982,8 @@ export class CandidatesService {
       take: limit,
     });
 
-    // For each screening and interview, fetch who scheduled it from InterviewStatusHistory
     const projectsWithSchedulingInfo = await Promise.all(
       projects.map(async (project) => {
-        const screeningsWithScheduler = await Promise.all(
-          project.screenings.map(async (screening) => {
-            const history = await this.prisma.interviewStatusHistory.findFirst({
-              where: {
-                interviewId: screening.id,
-                interviewType: 'screening',
-                status: 'scheduled',
-              },
-              orderBy: { statusAt: 'asc' },
-              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
-            });
-            return {
-              ...screening,
-              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
-            };
-          }),
-        );
-
         const interviewsWithScheduler = await Promise.all(
           project.interviews.map(async (interview) => {
             const history = await this.prisma.interviewStatusHistory.findFirst({
@@ -5872,7 +6004,6 @@ export class CandidatesService {
 
         return {
           ...project,
-          screenings: screeningsWithScheduler,
           interviews: interviewsWithScheduler,
         };
       }),
@@ -5881,6 +6012,208 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithSchedulingInfo,
+      subStatusCounts,
+      totalAll,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.ceil(totalProjects / limit),
+      },
+    };
+  }
+
+  /**
+   * Get screening + training workflow details for a candidate
+   * Includes internal screenings and training assignments (excludes client interviews)
+   */
+  async getCandidateScreeningWorkflow(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    const candidateInfo = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileImage: true,
+      },
+    });
+
+    if (!candidateInfo) return null;
+
+    const projectWhere: Prisma.CandidateProjectsWhereInput = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+      subStatus: {
+        name: { in: [...SCREENING_TRAINING_SUB_STATUS_NAMES] },
+      },
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (search) {
+      projectWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const countBaseWhere: Prisma.CandidateProjectsWhereInput = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+      subStatus: {
+        name: { in: [...SCREENING_TRAINING_SUB_STATUS_NAMES] },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
+
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: true,
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+        screenings: {
+          include: {
+            checklistItems: true,
+            template: true,
+            candidateProjectMap: {
+              select: {
+                id: true,
+                project: { select: { title: true } },
+                candidate: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+          orderBy: { scheduledTime: 'desc' },
+        },
+        trainingAssignments: {
+          orderBy: { assignedAt: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    const trainerIds = new Set<string>();
+    projects.forEach((project) => {
+      project.trainingAssignments.forEach((training) => {
+        if (training.trainerId) {
+          trainerIds.add(training.trainerId);
+        }
+      });
+    });
+
+    const trainers =
+      trainerIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(trainerIds) } },
+            select: { id: true, name: true, email: true, profileImage: true },
+          })
+        : [];
+    const trainerMap = trainers.reduce(
+      (acc, trainer) => {
+        acc[trainer.id] = trainer;
+        return acc;
+      },
+      {} as Record<string, (typeof trainers)[number]>,
+    );
+
+    const projectsWithDetails = await Promise.all(
+      projects.map(async (project) => {
+        const screeningsWithScheduler = await Promise.all(
+          project.screenings.map(async (screening) => {
+            const history = await this.prisma.interviewStatusHistory.findFirst({
+              where: {
+                interviewId: screening.id,
+                interviewType: 'screening',
+                status: 'scheduled',
+              },
+              orderBy: { statusAt: 'asc' },
+              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
+            });
+            return {
+              ...screening,
+              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
+            };
+          }),
+        );
+
+        const trainingWithTrainer = project.trainingAssignments.map((training) => ({
+          ...training,
+          trainer: training.trainerId ? trainerMap[training.trainerId] ?? { id: training.trainerId } : null,
+        }));
+
+        return {
+          ...project,
+          screenings: screeningsWithScheduler,
+          trainingAssignments: trainingWithTrainer,
+        };
+      }),
+    );
+
+    return {
+      candidate: candidateInfo,
+      projects: projectsWithDetails,
       subStatusCounts,
       totalAll,
       pagination: {

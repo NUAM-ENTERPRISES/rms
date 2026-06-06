@@ -41,6 +41,7 @@ describe('CandidatesService', () => {
     },
     document: {
       findFirst: jest.fn(),
+      findMany: jest.fn(async () => []),
     },
     candidateStatus: {
       findFirst: jest.fn(),
@@ -49,6 +50,7 @@ describe('CandidatesService', () => {
     },
     candidateStatusHistory: {
       create: jest.fn(),
+      count: jest.fn(async () => 0),
     },
     team: {
       findUnique: jest.fn(),
@@ -68,18 +70,23 @@ describe('CandidatesService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
+      groupBy: jest.fn(),
     },
     candidateRecruiterAssignment: {
       findFirst: jest.fn(),
     },
     user: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     country: {
       findUnique: jest.fn(),
     },
     state: {
       findUnique: jest.fn(),
+    },
+    interviewStatusHistory: {
+      findFirst: jest.fn(),
     },
   };
 
@@ -986,12 +993,12 @@ describe('CandidatesService', () => {
       it('should include registered sub-status tiles via project status history', async () => {
         let callIndex = 0;
         const countSequence = [
-          ...Array(14).fill(0),
+          ...Array(15).fill(0),
           2,
           5,
           1,
           3,
-          ...Array(11).fill(0),
+          ...Array(20).fill(0),
         ];
         prismaService.candidate.count.mockImplementation(() =>
           Promise.resolve(countSequence[callIndex++] ?? 0),
@@ -1021,7 +1028,7 @@ describe('CandidatesService', () => {
           subStatusName: 'submitted_to_client',
           count: 3,
         });
-        expect(prismaService.candidate.count).toHaveBeenCalledTimes(29);
+        expect(prismaService.candidate.count).toHaveBeenCalledTimes(38);
 
         const countWheres = prismaService.candidate.count.mock.calls.map(
           (call: any) => call[0].where,
@@ -1044,13 +1051,13 @@ describe('CandidatesService', () => {
 
       it('should include interview sub-status tiles via project status history', async () => {
         let callIndex = 0;
-        const countSequence = [...Array(29).fill(0)];
-        countSequence[18] = 4;
-        countSequence[19] = 2;
-        countSequence[20] = 6;
-        countSequence[21] = 3;
-        countSequence[22] = 5;
-        countSequence[23] = 1;
+        const countSequence = [...Array(38).fill(0)];
+        countSequence[27] = 4;
+        countSequence[28] = 2;
+        countSequence[29] = 6;
+        countSequence[30] = 3;
+        countSequence[31] = 5;
+        countSequence[32] = 1;
         prismaService.candidate.count.mockImplementation(() =>
           Promise.resolve(countSequence[callIndex++] ?? 0),
         );
@@ -1114,8 +1121,8 @@ describe('CandidatesService', () => {
       it('should include processing sub-status tiles via project status history', async () => {
         let callIndex = 0;
         const countSequence = [
-          ...Array(14).fill(0),
-          ...Array(10).fill(0),
+          ...Array(15).fill(0),
+          ...Array(18).fill(0),
           3,
           7,
           2,
@@ -1196,9 +1203,140 @@ describe('CandidatesService', () => {
             (w: any) =>
               projectsClauseFromWhere(w)?.some?.projectStatusHistory,
           );
-        expect(historyWheres.length).toBeGreaterThanOrEqual(15);
+        expect(historyWheres.length).toBeGreaterThanOrEqual(22);
         const projects = projectsClauseFromWhere(historyWheres[0]);
         expect(projects.some.recruiterId).toBe('recruiter-abc');
+      });
+
+      it('should include screening sub-status tiles via project status history', async () => {
+        let callIndex = 0;
+        const countSequence = [...Array(38).fill(0)];
+        countSequence[19] = 3;
+        countSequence[20] = 2;
+        countSequence[21] = 4;
+        countSequence[22] = 1;
+        countSequence[23] = 2;
+        countSequence[24] = 1;
+        countSequence[25] = 0;
+        countSequence[26] = 5;
+        prismaService.candidate.count.mockImplementation(() =>
+          Promise.resolve(countSequence[callIndex++] ?? 0),
+        );
+
+        const result = await service.getCandidateOverviewStats(
+          { recruiterId: 'all', dateFilter: 'all' } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        expect(result.screening).toBeDefined();
+        expect(result.screeningSubStatus.tiles).toHaveLength(8);
+        expect(result.screeningSubStatus.tiles[0]).toMatchObject({
+          key: 'assigned',
+          subStatusName: 'screening_assigned',
+          count: 3,
+        });
+        expect(result.screeningSubStatus.tiles[7]).toMatchObject({
+          key: 'training',
+          subStatusName: 'training_assigned',
+          label: 'Training',
+          count: 5,
+        });
+      });
+    });
+
+    describe('getCandidateOverview screening filter', () => {
+      it('should filter screening candidates by screening/training sub-status history', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'screening',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        const historyFilter =
+          listWhere.projects?.some?.projectStatusHistory?.some?.subStatus?.name;
+        expect(historyFilter?.in).toEqual(
+          expect.arrayContaining(['screening_assigned', 'training_completed']),
+        );
+      });
+
+      it('should filter interview candidates by client interview sub-status history by default', async () => {
+        prismaService.candidate.count.mockResolvedValue(0);
+        prismaService.candidate.findMany.mockResolvedValue([]);
+
+        await service.getCandidateOverview(
+          {
+            recruiterId: 'all',
+            status: 'interview',
+          } as any,
+          'user1',
+          ['Manager'],
+        );
+
+        const listWhere = prismaService.candidate.findMany.mock.calls[0][0].where;
+        const historyFilter =
+          listWhere.projects?.some?.projectStatusHistory?.some?.subStatus?.name;
+        expect(historyFilter?.in).toEqual(
+          expect.arrayContaining(['shortlisted', 'interview_scheduled']),
+        );
+        expect(historyFilter?.in).not.toContain('screening_assigned');
+      });
+    });
+
+    describe('getCandidateScreeningWorkflow', () => {
+      it('should return screening projects with trainings and sub-status counts', async () => {
+        const candidateId = 'candidate-screening-1';
+        prismaService.candidate.findUnique.mockResolvedValue({
+          id: candidateId,
+          firstName: 'Jane',
+          lastName: 'Doe',
+          email: 'jane@example.com',
+          profileImage: null,
+        });
+        prismaService.candidateProjects.groupBy.mockResolvedValue([
+          { subStatusId: 'sub-1', _count: { _all: 1 } },
+        ]);
+        prismaService.candidateProjects.count.mockResolvedValue(1);
+        prismaService.candidateProjects.findMany.mockResolvedValue([
+          {
+            id: 'cp-1',
+            projectId: 'proj-1',
+            screenings: [],
+            trainingAssignments: [
+              { id: 'tr-1', trainerId: 'trainer-1', status: 'assigned' },
+            ],
+          },
+        ]);
+        prismaService.user.findMany.mockResolvedValue([
+          { id: 'trainer-1', name: 'Trainer One', email: 't@example.com', profileImage: null },
+        ]);
+        prismaService.interviewStatusHistory.findFirst.mockResolvedValue(null);
+
+        const result = await service.getCandidateScreeningWorkflow(candidateId);
+
+        expect(result).not.toBeNull();
+        expect(result?.candidate.id).toBe(candidateId);
+        expect(result?.projects).toHaveLength(1);
+        expect(result?.projects[0].trainingAssignments[0].trainer).toMatchObject({
+          name: 'Trainer One',
+        });
+        expect(prismaService.candidateProjects.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              candidateId,
+              subStatus: {
+                name: { in: expect.arrayContaining(['screening_assigned', 'training_completed']) },
+              },
+            }),
+          }),
+        );
       });
     });
   });

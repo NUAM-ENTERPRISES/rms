@@ -94,7 +94,7 @@ export type WorkflowFilterTile = {
   icon: ElementType;
 };
 
-type WorkflowTheme = "documents" | "interview" | "processing";
+type WorkflowTheme = "documents" | "screening" | "interview" | "processing";
 
 const THEME_CONFIG: Record<
   WorkflowTheme,
@@ -112,6 +112,13 @@ const THEME_CONFIG: Record<
     muted: "text-amber-100",
     chip: "text-amber-50",
     statLabel: "text-amber-100",
+  },
+  screening: {
+    border: "border-cyan-200/50",
+    gradient: "from-cyan-600 via-teal-500 to-emerald-600",
+    muted: "text-cyan-100",
+    chip: "text-cyan-50",
+    statLabel: "text-cyan-100",
   },
   interview: {
     border: "border-purple-200/50",
