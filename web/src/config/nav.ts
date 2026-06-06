@@ -38,6 +38,13 @@ export interface NavItem {
 
 export const navigationConfig: NavItem[] = [
   {
+    id: "project-coordinator-dashboard",
+    label: "Dashboard",
+    path: "/project-coordinator/dashboard",
+    icon: Home,
+    roles: [ROLE_NAMES.PROJECT_COORDINATOR],
+  },
+  {
     id: "admin-dashboard",
     label: "Dashboard",
     path: "/dashboard",
@@ -117,6 +124,7 @@ export const navigationConfig: NavItem[] = [
       "Processing Executive",
       "System Admin",
       "Interview Coordinator",
+      ROLE_NAMES.PROJECT_COORDINATOR,
       ROLE_NAMES.AGENT_COORDINATOR,
       // "Screening Trainer",
     ],
@@ -167,6 +175,7 @@ export const navigationConfig: NavItem[] = [
     hiddenForRoles: [
       ROLE_NAMES.AGENT_COORDINATOR,
       LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
+      ROLE_NAMES.PROJECT_COORDINATOR,
       "Documentation Executive",
       "Recruiter",
     ],

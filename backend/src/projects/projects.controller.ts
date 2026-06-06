@@ -29,6 +29,7 @@ import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dt
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { isProjectCoordinator } from '../common/scoping/project-coordinator-scope.util';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -304,12 +305,16 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryProjectsDto): Promise<{
+  async findAll(@Query() query: QueryProjectsDto, @Request() req): Promise<{
     success: boolean;
     data: PaginatedProjects | PaginatedProjectSummaryList;
     message: string;
   }> {
-    const result = await this.projectsService.findAll(query);
+    const scopedQuery = { ...query };
+    if (isProjectCoordinator(req.user.roles)) {
+      scopedQuery.createdBy = req.user.id;
+    }
+    const result = await this.projectsService.findAll(scopedQuery);
     return {
       success: true,
       data: result,
@@ -367,12 +372,15 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async getStats(): Promise<{
+  async getStats(@Request() req): Promise<{
     success: boolean;
     data: ProjectStats;
     message: string;
   }> {
-    const stats = await this.projectsService.getProjectStats();
+    const scopedUserId = isProjectCoordinator(req.user.roles)
+      ? req.user.id
+      : undefined;
+    const stats = await this.projectsService.getProjectStats(scopedUserId);
     return {
       success: true,
       data: stats,

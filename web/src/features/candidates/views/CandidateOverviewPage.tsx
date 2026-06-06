@@ -72,6 +72,7 @@ import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
 import { ROLE_NAMES } from "@/config/role-names";
+import { hasAllCandidatesView } from "@/config/role-capabilities";
 import {
   WorkflowSubStatusMiniTiles,
   type WorkflowSubStatusTileStyle,
@@ -82,14 +83,25 @@ export default function CandidateOverviewPage() {
   const tableRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
-  const isManagerOrAdmin = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
-  );
+  const isManagerOrAdmin =
+    hasAllCandidatesView(currentUser?.roles) ||
+    currentUser?.roles?.some((role) =>
+      ["System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
+    );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
 
   const canTransferCandidates = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
+    [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter Manager",
+      "Team Head",
+      "Team Lead",
+      "System Admin",
+      ROLE_NAMES.PROJECT_COORDINATOR,
+    ].includes(role)
   );
 
   // Transfer candidate state

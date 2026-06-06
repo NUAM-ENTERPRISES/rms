@@ -21,6 +21,12 @@ const OperationsDashboardPage = lazy(() => import("@/pages/OperationsDashboardPa
 const AdminDashboardPage = lazy(
   () => import("@/features/admin-dashboard/views/AdminDashboardPage")
 );
+const ProjectCoordinatorDashboardPage = lazy(
+  () =>
+    import(
+      "@/features/project-coordinator-dashboard/views/ProjectCoordinatorDashboardPage"
+    )
+);
 
 // Feature-based views
 const ProjectsPage = lazy(
@@ -295,6 +301,19 @@ function App() {
                         <ProtectedRoute roles={["CEO", "Director", "Manager", "Recruiter Manager"]}>
                           <AppLayout>
                             <AdminDashboardPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/project-coordinator/dashboard"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute roles={[ROLE_NAMES.PROJECT_COORDINATOR]}>
+                          <AppLayout>
+                            <ProjectCoordinatorDashboardPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

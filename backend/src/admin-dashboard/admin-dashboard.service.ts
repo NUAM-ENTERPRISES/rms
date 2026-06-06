@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RecruiterAnalyticsService } from '../analytics/recruiter/recruiter-analytics.service';
+import { buildProjectRoleHiringRows } from '../common/dashboard/project-role-hiring.util';
 import { AdminDashboardStats } from './types';
 
 @Injectable()
@@ -190,39 +191,7 @@ export class AdminDashboardService {
       }),
     ]);
 
-    const projectIds = projects.map((p) => p.id);
-
-    const filledStatuses = ['hired', 'deployed'];
-    const candidateProjects = await this.prisma.candidateProjects.findMany({
-      where: {
-        projectId: { in: projectIds },
-        roleNeededId: { not: null },
-        currentProjectStatus: {
-          statusName: { in: filledStatuses },
-        },
-      },
-      select: {
-        projectId: true,
-        roleNeededId: true,
-      },
-    });
-
-    const filledMap = new Map<string, number>();
-    candidateProjects.forEach((cp) => {
-      if (!cp.roleNeededId) return;
-      const key = `${cp.projectId}:${cp.roleNeededId}`;
-      filledMap.set(key, (filledMap.get(key) ?? 0) + 1);
-    });
-
-    const projectRoles = projects.map((project) => ({
-      projectId: project.id,
-      projectName: project.title,
-      roles: project.rolesNeeded.map((role) => ({
-        role: role.designation,
-        required: role.quantity,
-        filled: filledMap.get(`${project.id}:${role.id}`) ?? 0,
-      })),
-    }));
+    const projectRoles = await buildProjectRoleHiringRows(this.prisma, projects);
 
     return {
       success: true,

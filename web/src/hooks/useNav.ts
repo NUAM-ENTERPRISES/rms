@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useAppSelector } from "@/app/hooks";
 import { NavItem, navigationConfig } from "@/config/nav";
+import { hasAllCandidatesView } from "@/config/role-capabilities";
+import { ROLE_NAMES } from "@/config/role-names";
 
 /**
  * Hook to filter navigation items based on user permissions and roles
@@ -26,8 +28,29 @@ export function useNav(): NavItem[] {
       "projects-management",
       "profile",
     ]);
+    const isProjectCoordinator = user.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR);
+    const projectCoordinatorAllowedIds = new Set([
+      "project-coordinator-dashboard",
+      "projects",
+      "projects-overview",
+      "projects-management",
+      "clients",
+      "profile",
+    ]);
+
+    const mapNavItemForUser = (item: NavItem): NavItem => {
+      if (
+        item.id === "candidates-list" &&
+        hasAllCandidatesView(user.roles) &&
+        !user.roles.includes("Recruiter")
+      ) {
+        return { ...item, label: "All Candidates" };
+      }
+      return item;
+    };
 
     const filterNavItem = (item: NavItem): NavItem | null => {
+      item = mapNavItemForUser(item);
       // Check if item is disabled
       if (item.disabled) return null;
 
@@ -40,6 +63,14 @@ export function useNav(): NavItem[] {
       if (
         isDocumentationExecutive &&
         !documentationExecutiveAllowedIds.has(item.id)
+      ) {
+        return null;
+      }
+
+      // Project Coordinator sees only dashboard, projects, clients, profile.
+      if (
+        isProjectCoordinator &&
+        !projectCoordinatorAllowedIds.has(item.id)
       ) {
         return null;
       }

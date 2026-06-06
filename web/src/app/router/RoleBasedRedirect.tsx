@@ -2,7 +2,11 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
-import { isAgentCoordinatorRole, isOperationsRole } from "@/config/role-names";
+import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES } from "@/config/role-names";
+
+const ProjectCoordinatorDashboardPage = lazy(
+  () => import("@/features/project-coordinator-dashboard/views/ProjectCoordinatorDashboardPage")
+);
 
 const OperationsDashboardPage = lazy(() => import("@/pages/OperationsDashboardPage"));
 const AdminDashboardPage = lazy(
@@ -64,6 +68,14 @@ export function RoleBasedRedirect() {
     return (
       <AppLayout>
         <AdminDashboardPage />
+      </AppLayout>
+    );
+  }
+
+  if (user?.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR)) {
+    return (
+      <AppLayout>
+        <ProjectCoordinatorDashboardPage />
       </AppLayout>
     );
   }

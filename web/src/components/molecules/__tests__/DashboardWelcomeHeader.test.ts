@@ -66,4 +66,14 @@ describe("shouldShowDashboardWelcomeHeader", () => {
     expect(shouldShowDashboardWelcomeHeader("/candidates/overview", roles)).toBe(true);
     expect(shouldShowDashboardWelcomeHeader("/interviews", roles)).toBe(false);
   });
+
+  it("shows on project coordinator home paths only", () => {
+    const roles = ["Project Coordinator"];
+    expect(
+      shouldShowDashboardWelcomeHeader("/project-coordinator/dashboard", roles)
+    ).toBe(true);
+    expect(shouldShowDashboardWelcomeHeader("/", roles)).toBe(true);
+    expect(shouldShowDashboardWelcomeHeader("/clients", roles)).toBe(false);
+    expect(shouldShowDashboardWelcomeHeader("/candidates", roles)).toBe(false);
+  });
 });

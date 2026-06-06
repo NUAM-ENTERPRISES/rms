@@ -2,6 +2,7 @@
 export const ROLE_NAMES = {
   OPERATIONS: "Operations",
   AGENT_COORDINATOR: "Agent Coordinator",
+  PROJECT_COORDINATOR: "Project Coordinator",
 } as const;
 
 /** @deprecated Legacy CRE role name — prefer ROLE_NAMES.OPERATIONS */

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -156,7 +156,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-// Mock metrics and history data (to be replaced with real API calls)
+// Mock metrics data (to be replaced with real API calls)
 const mockMetrics = {
   totalProjects: 0,
   activeProjects: 0,
@@ -166,16 +166,6 @@ const mockMetrics = {
   successRate: 0,
   averageTimeToFill: 0,
 };
-
-const mockHistory = [
-  {
-    id: "1",
-    action: "Client Created",
-    description: "Client was added to the system",
-    date: new Date().toISOString(),
-    user: "System",
-  },
-];
 
 const CLIENT_PROJECTS_PAGE_SIZE = 10;
 
@@ -241,6 +231,20 @@ export default function ClientDetailPage() {
     );
 
   const client = clientData?.data;
+
+  const clientHistory = useMemo(() => {
+    if (!client) return [];
+    const creatorName = client.creator?.name?.trim() || "Unknown";
+    return [
+      {
+        id: "created",
+        action: "Client Created",
+        description: `${client.name} was added to the system`,
+        date: client.createdAt,
+        user: creatorName,
+      },
+    ];
+  }, [client]);
 
   const clientProjectsTab = projectsListReply?.data?.projects ?? [];
   const projectsPagination = projectsListReply?.data?.pagination;
@@ -1116,7 +1120,7 @@ export default function ClientDetailPage() {
                 <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 via-blue-100 to-transparent" />
 
                 <div className="space-y-6">
-                  {mockHistory.map((item, index) => (
+                  {clientHistory.map((item) => (
                     <div key={item.id} className="relative flex gap-4 pl-10">
                       {/* Timeline dot */}
                       <div className="absolute left-0 flex h-8 w-8 items-center justify-center">
@@ -1152,7 +1156,7 @@ export default function ClientDetailPage() {
                   ))}
                 </div>
 
-                {mockHistory.length === 1 && (
+                {clientHistory.length === 1 && (
                   <div className="text-center py-8 mt-6 border-t border-dashed border-slate-200">
                     <p className="text-sm text-muted-foreground">
                       More activity will appear here as you work with this client.

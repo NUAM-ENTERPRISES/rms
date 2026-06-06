@@ -20,6 +20,7 @@ export const ROLE_NAMES = {
   SYSTEM_ADMIN: 'System Admin',
   OPERATIONS: 'Operations',
   AGENT_COORDINATOR: 'Agent Coordinator',
+  PROJECT_COORDINATOR: 'Project Coordinator',
 } as const;
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];

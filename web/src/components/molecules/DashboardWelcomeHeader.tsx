@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { isAgentCoordinatorRole, isOperationsRole } from "@/config/role-names";
+import { PROJECT_COORDINATOR_ROLE } from "@/config/role-capabilities";
 import TypedHeader from "@/components/molecules/TypedHeader";
 
 const ADMIN_PANEL_ROLES = new Set([
@@ -8,6 +9,11 @@ const ADMIN_PANEL_ROLES = new Set([
   "Director",
   "Manager",
   "System Admin",
+]);
+
+const PROJECT_COORDINATOR_HOME_PATHS = new Set([
+  "/",
+  "/project-coordinator/dashboard",
 ]);
 
 const RECRUITER_MANAGER_HOME_PATHS = new Set([
@@ -51,6 +57,10 @@ export function shouldShowDashboardWelcomeHeader(
   roles: string[],
 ): boolean {
   const path = normalizeDashboardPath(pathname);
+
+  if (roles.includes(PROJECT_COORDINATOR_ROLE)) {
+    return PROJECT_COORDINATOR_HOME_PATHS.has(path);
+  }
 
   if (roles.includes("Processing Manager")) {
     return PROCESSING_MANAGER_HOME_PATHS.has(path);

@@ -11,7 +11,7 @@ import {
 import { Search, ChevronDown, ChevronLeft, ChevronRight, X, Building2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
-import RoleHiringChart from "./RoleHiringChart";
+import RoleHiringChart from "@/components/molecules/RoleHiringChart";
 import { useGetProjectRoleHiringStatusQuery } from "../../admin/api/adminDashboardApi";
 
 

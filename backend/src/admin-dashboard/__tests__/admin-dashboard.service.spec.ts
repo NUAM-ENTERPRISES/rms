@@ -113,6 +113,7 @@ describe('AdminDashboardService', () => {
   });
 
   it('should return project role hiring status for a specific project', async () => {
+    prismaService.project.count = jest.fn().mockResolvedValue(2);
     prismaService.project.findMany = jest.fn().mockResolvedValue([
       {
         id: 'proj-1',
@@ -158,6 +159,12 @@ describe('AdminDashboardService', () => {
             roles: [{ role: 'Pharmacist', required: 2, filled: 3 }],
           },
         ],
+        pagination: {
+          total: 2,
+          totalPages: 1,
+          page: 1,
+          limit: 10,
+        },
       },
       message: 'Project role hiring status retrieved successfully',
     });
@@ -167,6 +174,7 @@ describe('AdminDashboardService', () => {
   });
 
   it('should return project role hiring status filtered by projectId', async () => {
+    prismaService.project.count = jest.fn().mockResolvedValue(1);
     prismaService.project.findMany = jest.fn().mockResolvedValue([
       {
         id: 'proj-1',
@@ -184,20 +192,22 @@ describe('AdminDashboardService', () => {
 
     expect(result.data.projectRoles).toHaveLength(1);
     expect(result.data.projectRoles[0].roles[0]).toEqual({ role: 'ICU Nurse', required: 5, filled: 2 });
-    expect(prismaService.project.findMany).toHaveBeenCalledWith({
-      where: { status: 'active', id: 'proj-1' },
-      select: {
-        id: true,
-        title: true,
-        rolesNeeded: {
-          select: {
-            id: true,
-            designation: true,
-            quantity: true,
+    expect(prismaService.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: 'active', id: 'proj-1' },
+        select: {
+          id: true,
+          title: true,
+          rolesNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              quantity: true,
+            },
           },
         },
-      },
-    });
+      }),
+    );
   });
 
   it('should return month and year recruiter awards by performance score', async () => {

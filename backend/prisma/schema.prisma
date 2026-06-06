@@ -73,6 +73,7 @@ model User {
   auditLogs                        AuditLog[]
   notifications                    Notification[]
   createdProjects                  Project[]                      @relation("ProjectCreator")
+  createdClients                   Client[]                       @relation("ClientCreator")
   refreshTokens                    RefreshToken[]
   sessions                         UserSession[]
   transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
@@ -256,16 +257,19 @@ model Client {
   specialties        Json                    @default("[]")
   taxId              String?
   type               ClientType
+  createdBy          String?
   addressCountryCode String?
   addressStateId     String?
   addressCountry     Country?                @relation("PhysicalAddressCountryClient", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState       State?                  @relation("PhysicalAddressStateClient", fields: [addressStateId], references: [id], onDelete: SetNull)
+  creator            User?                   @relation("ClientCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   projects           Project[]
   subClientLinks     ClientSubClient[]       @relation("ClientSubClientParent")
   parentClientLinks  ClientSubClient[]       @relation("ClientSubClientChild")
 
   @@index([addressCountryCode])
   @@index([addressStateId])
+  @@index([createdBy])
   @@map("clients")
 }
 

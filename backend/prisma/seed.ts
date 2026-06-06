@@ -257,6 +257,32 @@ const roles = [
     ],
   },
   {
+    name: 'Project Coordinator',
+    description:
+      'Project Coordinator - Manages clients, projects, and candidate pipeline overview',
+    permissions: [
+      'read:projects',
+      'write:projects',
+      'manage:projects',
+      'read:assigned_projects',
+      'write:assigned_projects',
+      'read:candidates',
+      'write:candidates',
+      'manage:candidates',
+      'read:assigned_candidates',
+      'write:assigned_candidates',
+      'nominate:candidates',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'transfer:candidates',
+      'transfer_back:candidates',
+      'read:clients',
+      'write:clients',
+      'manage:clients',
+    ],
+  },
+  {
     name: 'Screening Trainer',
     description: 'Screening Trainer - Manages screenings and training',
     permissions: [
@@ -1471,6 +1497,14 @@ async function main() {
       countryCode: '+91',
       phone: '9876543242',
       role: 'Agent Coordinator',
+    },
+    {
+      email: 'projectcoordinator@nuam.com',
+      name: 'Sam Project Coordinator',
+      password: 'projectcoordinator123',
+      countryCode: '+91',
+      phone: '9876543245',
+      role: 'Project Coordinator',
     },
   ];
 

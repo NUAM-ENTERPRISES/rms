@@ -2096,8 +2096,10 @@ export class ProjectsService {
     return assignments;
   }
 
-  async getProjectStats(): Promise<ProjectStats> {
+  async getProjectStats(scopedUserId?: string): Promise<ProjectStats> {
     await this.projectDeadlineAutoComplete.autoCompleteExpiredProjects();
+
+    const scopeWhere = scopedUserId ? { createdBy: scopedUserId } : {};
 
     // Get total counts
     const [
@@ -2106,10 +2108,16 @@ export class ProjectsService {
       completedProjects,
       cancelledProjects,
     ] = await Promise.all([
-      this.prisma.project.count(),
-      this.prisma.project.count({ where: { status: 'active' } }),
-      this.prisma.project.count({ where: { status: 'completed' } }),
-      this.prisma.project.count({ where: { status: 'cancelled' } }),
+      this.prisma.project.count({ where: scopeWhere }),
+      this.prisma.project.count({
+        where: { ...scopeWhere, status: 'active' },
+      }),
+      this.prisma.project.count({
+        where: { ...scopeWhere, status: 'completed' },
+      }),
+      this.prisma.project.count({
+        where: { ...scopeWhere, status: 'cancelled' },
+      }),
     ]);
 
     // Get projects by status
@@ -2122,6 +2130,7 @@ export class ProjectsService {
     // Get projects by client with client names
     const projectsByClientData = await this.prisma.project.groupBy({
       by: ['clientId'],
+      where: scopeWhere,
       _count: { clientId: true },
     });
 
@@ -2156,7 +2165,10 @@ export class ProjectsService {
     );
 
     const urgentProjectsCount = await this.prisma.project.count({
-      where: buildUrgentProjectsWhere(),
+      where: {
+        ...scopeWhere,
+        ...buildUrgentProjectsWhere(),
+      },
     });
 
     // Get upcoming deadlines (next 30 days)
@@ -2165,6 +2177,7 @@ export class ProjectsService {
 
     const upcomingDeadlines = await this.prisma.project.findMany({
       where: {
+        ...scopeWhere,
         deadline: {
           gte: new Date(),
           lte: thirtyDaysFromNow,
