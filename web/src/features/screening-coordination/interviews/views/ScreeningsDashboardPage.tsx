@@ -176,6 +176,9 @@ export default function ScreeningsDashboardPage() {
   const handleTileClick = (tile: TileConfig) => {
     setActiveTile(tile.key);
     setCurrentPage(1);
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const [activeTile, setActiveTile] = useState<TileKey>("assigned");
@@ -513,7 +516,10 @@ export default function ScreeningsDashboardPage() {
           })}
         </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        <div
+          ref={tableRef}
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden scroll-mt-4"
+        >
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
               <div className="relative min-w-0 flex-1 w-full group">
@@ -609,7 +615,7 @@ export default function ScreeningsDashboardPage() {
           </div>
 
           <div className="p-0">
-            <div ref={tableRef} className="overflow-hidden">
+            <div className="overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/80 border-b border-gray-200">

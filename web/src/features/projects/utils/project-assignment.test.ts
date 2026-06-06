@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getCandidateAssignmentBlockReason,
+  getProjectClosureDetails,
   getProjectClosureMessage,
   isProjectDeadlineExpired,
   isProjectOpenForAssignment,
@@ -54,6 +55,21 @@ describe("project-assignment", () => {
     );
     expect(
       getProjectClosureMessage({ status: "active", deadline: "2030-01-01" })
+    ).toBeNull();
+  });
+
+  it("getProjectClosureDetails returns structured closure metadata", () => {
+    expect(
+      getProjectClosureDetails({ status: "active", deadline: "2026-05-30" })
+    ).toMatchObject({
+      reason: "deadline",
+      title: "Deadline passed",
+    });
+    expect(getProjectClosureDetails({ status: "cancelled" })?.reason).toBe(
+      "cancelled"
+    );
+    expect(
+      getProjectClosureDetails({ status: "active", deadline: "2030-01-01" })
     ).toBeNull();
   });
 });

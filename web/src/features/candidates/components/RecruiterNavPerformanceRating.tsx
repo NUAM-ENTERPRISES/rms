@@ -10,13 +10,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RecruiterPerformanceRatingStars } from "./RecruiterPerformanceRatingStars";
+import { PerformanceRatingMedalBadge } from "./PerformanceRatingMedalBadge";
 import {
+  DEFAULT_PERFORMANCE_RATING,
   formatRatingScoreRange,
-  RATING_STYLES,
   type PerformanceRatingLabel,
 } from "../utils/recruiter-performance-rating.util";
 
@@ -57,8 +57,6 @@ function PeriodRatingRow({
   rating: string;
   periodLabel: string;
 }) {
-  const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
-
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/50 bg-white/55 p-3 space-y-2.5 shadow-sm backdrop-blur-md">
       <div
@@ -80,9 +78,12 @@ function PeriodRatingRow({
         </div>
       </div>
       <div className="flex items-center justify-between gap-2 border-t border-white/40 pt-2">
-        <Badge variant="outline" className={cn("text-[10px] font-semibold bg-white/50", ratingClass)}>
-          {rating}
-        </Badge>
+        <PerformanceRatingMedalBadge
+          rating={rating}
+          size="sm"
+          showTopTierLabel={rating === "Elite"}
+          className="bg-white/50"
+        />
         <span className="text-[10px] text-slate-500">
           {formatRatingScoreRange(rating)}
         </span>
@@ -111,7 +112,8 @@ export function RecruiterNavPerformanceRating() {
   const yearly = data?.data?.yearly;
 
   const displayScore = monthly?.score ?? 0;
-  const displayRating = (monthly?.rating ?? "Poor") as PerformanceRatingLabel;
+  const displayRating = (monthly?.rating ??
+    DEFAULT_PERFORMANCE_RATING) as PerformanceRatingLabel;
   const periodLabels = useMemo(() => {
     const now = new Date();
     const month = monthly?.period?.month ?? now.getMonth() + 1;
@@ -139,7 +141,7 @@ export function RecruiterNavPerformanceRating() {
           aria-hidden
         />
         <RecruiterPerformanceRatingStars
-          rating="Poor"
+          rating={DEFAULT_PERFORMANCE_RATING}
           size="sm"
           variant="nav"
           className="relative z-10 opacity-40"

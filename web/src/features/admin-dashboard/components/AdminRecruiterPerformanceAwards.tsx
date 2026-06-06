@@ -33,11 +33,12 @@ import {
   type PerformanceLeaderboardEntry,
   type RecruiterAwardWinner,
 } from "@/features/admin/api/adminDashboardApi";
+import { PerformanceRatingMedalBadge } from "@/features/candidates/components/PerformanceRatingMedalBadge";
 import {
   CHART_COLORS,
+  DEFAULT_PERFORMANCE_RATING,
   formatRatingScoreRange,
   RATING_CARD_BORDER,
-  RATING_STYLES,
 } from "@/features/candidates/utils/recruiter-performance-rating.util";
 
 const MONTH_LABELS = [
@@ -78,8 +79,10 @@ function AwardWinnerCard({
   isLoading: boolean;
 }) {
   const rating = winner?.rating ?? "—";
-  const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
-  const borderClass = RATING_CARD_BORDER[rating] ?? "border-slate-200";
+  const borderClass =
+    rating !== "—"
+      ? RATING_CARD_BORDER[rating] ?? RATING_CARD_BORDER[DEFAULT_PERFORMANCE_RATING]
+      : "border-slate-200";
 
   const accentStyles =
     accent === "month"
@@ -148,9 +151,17 @@ function AwardWinnerCard({
             <div className="rounded-xl border border-slate-200/80 bg-white/90 p-4 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-slate-500">Overall rating</span>
-                <Badge variant="outline" className={cn("font-semibold", ratingClass)}>
-                  {rating}
-                </Badge>
+                {rating !== "—" ? (
+                  <PerformanceRatingMedalBadge
+                    rating={rating}
+                    size="sm"
+                    showTopTierLabel={rating === "Elite"}
+                  />
+                ) : (
+                  <Badge variant="outline" className="font-semibold">
+                    —
+                  </Badge>
+                )}
               </div>
               <div className="flex items-end justify-between gap-2">
                 <div>
@@ -218,7 +229,6 @@ function LeaderboardTable({
         <tbody>
           {rows.map((row, index) => {
             const isWinner = row.id === highlightId;
-            const ratingClass = RATING_STYLES[row.rating] ?? RATING_STYLES.Poor;
             return (
               <tr
                 key={row.id}
@@ -252,9 +262,11 @@ function LeaderboardTable({
                   {row.performanceScore}
                 </td>
                 <td className="py-3 pr-3">
-                  <Badge variant="outline" className={cn("text-[10px]", ratingClass)}>
-                    {row.rating}
-                  </Badge>
+                  <PerformanceRatingMedalBadge
+                    rating={row.rating}
+                    size="sm"
+                    showTopTierLabel={row.rating === "Elite"}
+                  />
                 </td>
                 <td className="py-3 text-right tabular-nums text-slate-600">
                   {row.placementsThisMonth}

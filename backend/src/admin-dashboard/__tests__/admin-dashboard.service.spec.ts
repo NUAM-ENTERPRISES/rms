@@ -218,7 +218,7 @@ describe('AdminDashboardService', () => {
       role: 'Affinks Recruiter',
       avatarUrl: 'https://example.com/emma.png',
       performanceScore: 113,
-      rating: 'Outstanding',
+      rating: 'Platinum',
       placementsThisMonth: 4,
       stageCounts,
     };
@@ -231,7 +231,7 @@ describe('AdminDashboardService', () => {
       role: 'Affinks Recruiter',
       avatarUrl: undefined,
       performanceScore: 200,
-      rating: 'Top Performer',
+      rating: 'Elite',
       placementsThisMonth: 8,
       stageCounts,
     };

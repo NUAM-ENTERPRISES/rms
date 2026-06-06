@@ -114,20 +114,58 @@ export function getCandidateAssignmentBlockReason(statusLabel: string): string |
 export function getProjectClosureMessage(
   project: ProjectAssignmentGate | null | undefined
 ): string | null {
+  return getProjectClosureDetails(project)?.message ?? null;
+}
+
+export type ProjectClosureReason = "deadline" | "completed" | "cancelled" | "inactive";
+
+export interface ProjectClosureDetails {
+  reason: ProjectClosureReason;
+  message: string;
+  title: string;
+  detail: string;
+}
+
+export function getProjectClosureDetails(
+  project: ProjectAssignmentGate | null | undefined
+): ProjectClosureDetails | null {
   if (!project) {
     return null;
   }
   if (project.status === "completed") {
-    return "This project is completed. New candidate assignments are disabled.";
+    return {
+      reason: "completed",
+      title: "Project completed",
+      detail: "This project has been marked as completed.",
+      message:
+        "This project is completed. New candidate assignments are disabled.",
+    };
   }
   if (project.status === "cancelled") {
-    return "This project is cancelled. New candidate assignments are disabled.";
+    return {
+      reason: "cancelled",
+      title: "Project cancelled",
+      detail: "This project is no longer active.",
+      message:
+        "This project is cancelled. New candidate assignments are disabled.",
+    };
   }
   if (project.status !== "active") {
-    return "This project is not open for new candidate assignments.";
+    return {
+      reason: "inactive",
+      title: "Assignments closed",
+      detail: "This project is not open for new nominations.",
+      message: "This project is not open for new candidate assignments.",
+    };
   }
   if (isProjectDeadlineExpired(project.deadline)) {
-    return "Project deadline has passed. New candidate assignments are disabled.";
+    return {
+      reason: "deadline",
+      title: "Deadline passed",
+      detail: "The project deadline has passed and the assignment window is closed.",
+      message:
+        "Project deadline has passed. New candidate assignments are disabled.",
+    };
   }
   return null;
 }

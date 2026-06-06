@@ -39,13 +39,13 @@ const sampleResponse = {
     data: {
       monthly: {
         score: 113,
-        rating: "Outstanding",
+        rating: "Platinum",
         stageCounts: sampleStageCounts,
         period: { year: 2026, month: 6 },
       },
       yearly: {
         score: 200,
-        rating: "Top Performer",
+        rating: "Elite",
         stageCounts: {
           ...sampleStageCounts,
           deployed: 5,
@@ -69,9 +69,9 @@ describe("RecruiterPerformanceRatingSection", () => {
 
     expect(screen.getByRole("heading", { name: /Recruiter Performance Rating/i })).toBeInTheDocument();
     expect(screen.getAllByText("113").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Outstanding").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Platinum").length).toBeGreaterThan(0);
     expect(
-      screen.getAllByRole("img", { name: /5 stars for Outstanding rating/i }).length,
+      screen.getAllByRole("img", { name: /5 stars for Platinum rating/i }).length,
     ).toBeGreaterThan(0);
     expect(screen.getByText(/Overall rating/i)).toBeInTheDocument();
     expect(screen.getByText(/How your score was built/i)).toBeInTheDocument();
@@ -94,13 +94,14 @@ describe("RecruiterPerformanceRatingSection", () => {
     await user.click(yearlyButtons[0]);
 
     expect(screen.getAllByText("200").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Top Performer").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Elite").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Top Tier").length).toBeGreaterThan(0);
   });
 
   it("shows overall rating context and next step helper", () => {
     render(<RecruiterPerformanceRatingSection />);
     expect(screen.getByText(/requires 101–150 points/i)).toBeInTheDocument();
-    expect(screen.getByText(/points to Top Performer/i)).toBeInTheDocument();
+    expect(screen.getByText(/points to Elite/i)).toBeInTheDocument();
     expect(screen.queryByText(/Tier progress/i)).not.toBeInTheDocument();
   });
 
@@ -110,7 +111,7 @@ describe("RecruiterPerformanceRatingSection", () => {
         data: {
           monthly: {
             score: 0,
-            rating: "Poor",
+            rating: "Bronze",
             stageCounts: {
               positiveCandidate: 0,
               documentVerified: 0,
@@ -123,7 +124,7 @@ describe("RecruiterPerformanceRatingSection", () => {
           },
           yearly: {
             score: 0,
-            rating: "Poor",
+            rating: "Bronze",
             stageCounts: {
               positiveCandidate: 0,
               documentVerified: 0,

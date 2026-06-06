@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 const PIPELINE_STATUS_LEGEND = [
   { label: "Nominated", dotClass: "bg-purple-400" },
   { label: "Documents", dotClass: "bg-red-400" },
+  { label: "Submitted to Client", dotClass: "bg-indigo-400" },
   { label: "Interview", dotClass: "bg-violet-400" },
   { label: "Processing", dotClass: "bg-orange-400" },
   { label: "Training", dotClass: "bg-stone-400" },
@@ -14,7 +15,7 @@ export function PipelineStatusDotLegend({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-slate-100 bg-white/70 px-2.5 py-1.5 shadow-sm",
+        "flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1.5 rounded-lg border border-slate-100 bg-white/70 px-3 py-1.5 shadow-sm",
         className,
       )}
       role="list"
@@ -23,7 +24,7 @@ export function PipelineStatusDotLegend({ className }: { className?: string }) {
       {PIPELINE_STATUS_LEGEND.map((item) => (
         <span
           key={item.label}
-          className="inline-flex items-center gap-1.5"
+          className="inline-flex shrink-0 items-center gap-1.5"
           role="listitem"
         >
           <span

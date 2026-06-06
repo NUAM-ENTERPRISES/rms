@@ -4,6 +4,7 @@ import {
   computePerformanceScore,
   getOverallRatingInfo,
   getRatingProgress,
+  getRatingTierSubtitle,
   resolvePerformanceRating,
   getRatingStarCount,
   NAV_RATING_STAR_TOTAL,
@@ -23,22 +24,22 @@ describe("recruiter-performance-rating.util", () => {
     expect(computePerformanceScore(counts)).toBe(113);
   });
 
-  it("resolvePerformanceRating assigns Outstanding for 113", () => {
-    expect(resolvePerformanceRating(113)).toBe("Outstanding");
+  it("resolvePerformanceRating assigns Platinum for 113", () => {
+    expect(resolvePerformanceRating(113)).toBe("Platinum");
   });
 
   it("getRatingProgress returns next tier message", () => {
     const progress = getRatingProgress(113);
-    expect(progress.nextLabel).toBe("Top Performer");
+    expect(progress.nextLabel).toBe("Elite");
     expect(progress.pointsToNext).toBe(38);
-    expect(progress.helperText).toContain("Top Performer");
+    expect(progress.helperText).toContain("Elite");
   });
 
   it("getOverallRatingInfo returns score range without tier percent", () => {
     const info = getOverallRatingInfo(113);
-    expect(info.rating).toBe("Outstanding");
+    expect(info.rating).toBe("Platinum");
     expect(info.scoreRange).toBe("101–150 points");
-    expect(info.nextStep).toContain("Top Performer");
+    expect(info.nextStep).toContain("Elite");
   });
 
   it("buildChartData includes contribution per stage", () => {
@@ -48,14 +49,19 @@ describe("recruiter-performance-rating.util", () => {
     expect(deployed?.contribution).toBe(20);
   });
 
-  it("getRatingStarCount maps tiers to 1–5 stars", () => {
+  it("getRatingStarCount maps medal tiers to 1–5 stars", () => {
     expect(NAV_RATING_STAR_TOTAL).toBe(5);
-    expect(getRatingStarCount("Poor")).toBe(1);
-    expect(getRatingStarCount("Average")).toBe(2);
-    expect(getRatingStarCount("Good")).toBe(3);
-    expect(getRatingStarCount("Excellent")).toBe(4);
-    expect(getRatingStarCount("Outstanding")).toBe(5);
-    expect(getRatingStarCount("Top Performer")).toBe(5);
+    expect(getRatingStarCount("Bronze")).toBe(1);
+    expect(getRatingStarCount("Silver")).toBe(2);
+    expect(getRatingStarCount("Gold")).toBe(3);
+    expect(getRatingStarCount("Diamond")).toBe(4);
+    expect(getRatingStarCount("Platinum")).toBe(5);
+    expect(getRatingStarCount("Elite")).toBe(5);
     expect(getRatingStarCount("Unknown")).toBe(1);
+  });
+
+  it("getRatingTierSubtitle shows Top Tier for Elite", () => {
+    expect(getRatingTierSubtitle("Elite")).toBe("Top Tier");
+    expect(getRatingTierSubtitle("Gold")).toBe("3 of 5 stars");
   });
 });

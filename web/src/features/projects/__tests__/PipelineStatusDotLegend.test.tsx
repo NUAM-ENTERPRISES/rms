@@ -10,6 +10,7 @@ describe("PipelineStatusDotLegend", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Nominated")).toBeInTheDocument();
     expect(screen.getByText("Documents")).toBeInTheDocument();
+    expect(screen.getByText("Submitted to Client")).toBeInTheDocument();
     expect(screen.getByText("Interview")).toBeInTheDocument();
     expect(screen.getByText("Processing")).toBeInTheDocument();
     expect(screen.getByText("Deployed")).toBeInTheDocument();

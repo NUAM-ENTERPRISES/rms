@@ -1,8 +1,11 @@
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  DEFAULT_PERFORMANCE_RATING,
   getRatingStarCount,
+  isEliteRating,
   NAV_RATING_STAR_TOTAL,
+  RATING_MEDAL_CONFIG,
   type PerformanceRatingLabel,
 } from "../utils/recruiter-performance-rating.util";
 
@@ -27,6 +30,13 @@ const GAP_SIZE: Record<NonNullable<RecruiterPerformanceRatingStarsProps["size"]>
   lg: "gap-1 sm:gap-1.5",
 };
 
+function resolveStarFill(rating: PerformanceRatingLabel | string) {
+  if (rating in RATING_MEDAL_CONFIG) {
+    return RATING_MEDAL_CONFIG[rating as PerformanceRatingLabel].starFill;
+  }
+  return RATING_MEDAL_CONFIG[DEFAULT_PERFORMANCE_RATING].starFill;
+}
+
 export function RecruiterPerformanceRatingStars({
   rating,
   size = "md",
@@ -34,9 +44,10 @@ export function RecruiterPerformanceRatingStars({
   className,
 }: RecruiterPerformanceRatingStarsProps) {
   const filled = getRatingStarCount(rating);
-  const isTopTier = rating === "Top Performer";
+  const isElite = isEliteRating(rating);
+  const filledStarClass = resolveStarFill(rating);
   const emptyStarClass =
-    variant === "nav" ? "fill-transparent text-violet-400/35" : "fill-transparent text-amber-200/50";
+    variant === "nav" ? "fill-transparent text-violet-400/35" : "fill-transparent text-slate-200/70";
 
   return (
     <div
@@ -47,7 +58,11 @@ export function RecruiterPerformanceRatingStars({
         className,
       )}
       role="img"
-      aria-label={`${filled} of ${NAV_RATING_STAR_TOTAL} stars for ${rating} rating`}
+      aria-label={
+        isElite
+          ? `Elite top tier performance rating`
+          : `${filled} of ${NAV_RATING_STAR_TOTAL} stars for ${rating} rating`
+      }
     >
       {Array.from({ length: NAV_RATING_STAR_TOTAL }, (_, index) => {
         const isFilled = index < filled;
@@ -59,8 +74,9 @@ export function RecruiterPerformanceRatingStars({
               "shrink-0 transition-all duration-300",
               isFilled
                 ? cn(
-                    "fill-amber-400 text-amber-500 drop-shadow-sm",
-                    isTopTier
+                    "drop-shadow-sm",
+                    filledStarClass,
+                    isElite
                       ? "animate-nav-recruiter-star-glow"
                       : "animate-nav-recruiter-star-pulse",
                   )

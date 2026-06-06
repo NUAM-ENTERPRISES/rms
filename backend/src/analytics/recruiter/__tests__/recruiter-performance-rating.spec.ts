@@ -48,17 +48,17 @@ describe('Recruiter performance rating', () => {
 
   describe('resolvePerformanceRating', () => {
     it('assigns rating bands at boundaries', () => {
-      expect(resolvePerformanceRating(0)).toBe('Poor');
-      expect(resolvePerformanceRating(25)).toBe('Poor');
-      expect(resolvePerformanceRating(26)).toBe('Average');
-      expect(resolvePerformanceRating(50)).toBe('Average');
-      expect(resolvePerformanceRating(51)).toBe('Good');
-      expect(resolvePerformanceRating(75)).toBe('Good');
-      expect(resolvePerformanceRating(76)).toBe('Excellent');
-      expect(resolvePerformanceRating(100)).toBe('Excellent');
-      expect(resolvePerformanceRating(101)).toBe('Outstanding');
-      expect(resolvePerformanceRating(150)).toBe('Outstanding');
-      expect(resolvePerformanceRating(151)).toBe('Top Performer');
+      expect(resolvePerformanceRating(0)).toBe('Bronze');
+      expect(resolvePerformanceRating(25)).toBe('Bronze');
+      expect(resolvePerformanceRating(26)).toBe('Silver');
+      expect(resolvePerformanceRating(50)).toBe('Silver');
+      expect(resolvePerformanceRating(51)).toBe('Gold');
+      expect(resolvePerformanceRating(75)).toBe('Gold');
+      expect(resolvePerformanceRating(76)).toBe('Diamond');
+      expect(resolvePerformanceRating(100)).toBe('Diamond');
+      expect(resolvePerformanceRating(101)).toBe('Platinum');
+      expect(resolvePerformanceRating(150)).toBe('Platinum');
+      expect(resolvePerformanceRating(151)).toBe('Elite');
     });
   });
 
@@ -116,7 +116,7 @@ describe('Recruiter performance rating', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.monthly.score).toBe(113);
-      expect(result.data?.monthly.rating).toBe('Outstanding');
+      expect(result.data?.monthly.rating).toBe('Platinum');
       expect(result.data?.yearly.score).toBe(113);
     });
 

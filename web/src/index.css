@@ -226,7 +226,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .animate-project-deadline-blink-urgent,
-    .animate-project-deadline-blink {
+    .animate-project-deadline-blink,
+    .animate-processing-glance {
       animation: none;
     }
   }

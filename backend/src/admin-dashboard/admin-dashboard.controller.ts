@@ -286,7 +286,7 @@ export class AdminDashboardController {
                 role: { type: 'string', example: 'Senior IT Recruiter' },
                 placementsThisMonth: { type: 'number', example: 4 },
                 performanceScore: { type: 'number', example: 113 },
-                rating: { type: 'string', example: 'Outstanding' },
+                rating: { type: 'string', example: 'Platinum' },
                 email: { type: 'string', example: 'emma@example.com' },
                 phone: { type: 'string', example: '+912345678901' },
                 avatarUrl: { type: 'string', example: 'https://example.com/avatar.png' },

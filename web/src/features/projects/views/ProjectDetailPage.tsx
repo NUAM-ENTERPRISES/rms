@@ -71,6 +71,7 @@ import {
 import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
+import { ProjectAssignmentClosedBanner } from "@/features/projects/components/ProjectAssignmentClosedBanner";
 import { PipelineStatusDotLegend } from "@/features/projects/components/PipelineStatusDotLegend";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
 import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
@@ -178,8 +179,8 @@ export default function ProjectDetailPage() {
   });
   const assignmentOpen = isProjectOpenForAssignment(projectData?.data);
   const assignmentClosureMessage = getProjectClosureMessage(projectData?.data);
-  const DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE =
-    "This project is closed. New candidate assignments are disabled.";
+  // const DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE =
+  //   "";
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -1258,6 +1259,10 @@ export default function ProjectDetailPage() {
           </CardContent>
         </Card>
 
+        {!assignmentOpen && assignmentClosureMessage ? (
+          <ProjectAssignmentClosedBanner project={project} />
+        ) : null}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Candidates */}
           <div className="lg:col-span-8">
@@ -1269,6 +1274,7 @@ export default function ProjectDetailPage() {
                 <ProjectCandidatesBoard
                 projectId={projectId!}
                 project={project}
+                hideClosureBanner
                 nominatedCandidates={projectCandidates}
                 isLoadingNominated={isLoadingCandidates}
                 searchTerm={searchTerm}

@@ -19,7 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Award,
   BarChart3,
   CalendarDays,
   ChevronRight,
@@ -28,6 +27,7 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
+import { PerformanceRatingMedalBadge } from "./PerformanceRatingMedalBadge";
 import { RecruiterPerformanceRatingStars } from "./RecruiterPerformanceRatingStars";
 import { cn } from "@/lib/utils";
 import {
@@ -39,14 +39,19 @@ import {
   buildChartData,
   buildStageBreakdown,
   CHART_COLORS,
+  DEFAULT_PERFORMANCE_RATING,
   getOverallRatingInfo,
   getRatingProgress,
-  getRatingStarCount,
+  getRatingTierSubtitle,
   hasAnyStageActivity,
+  isEliteRating,
   RATING_CARD_BORDER,
+  RATING_GLANCE_ACCENT,
   RATING_PROGRESS_FILL,
   RATING_STYLES,
+  RATING_TILE_GRADIENT,
   STAGE_CONFIG,
+  STAGE_TILE_STYLES,
 } from "../utils/recruiter-performance-rating.util";
 
 const MONTH_LABELS = [
@@ -64,13 +69,13 @@ const MONTH_LABELS = [
   "December",
 ] as const;
 
-const STAGE_ACCENT_CLASSES = [
-  "bg-chart-1",
-  "bg-chart-2",
-  "bg-chart-3",
-  "bg-chart-4",
-  "bg-chart-5",
-  "bg-chart-1",
+const STAGE_GLANCE_ACCENT = [
+  "via-chart-1/50",
+  "via-chart-2/50",
+  "via-chart-3/50",
+  "via-chart-4/50",
+  "via-chart-5/50",
+  "via-chart-1/50",
 ] as const;
 
 const EMPTY_STAGE_COUNTS: PerformanceStageCounts = {
@@ -143,10 +148,12 @@ function PeriodSnapshot({
   onSelect: () => void;
 }) {
   const score = block?.score ?? 0;
-  const rating = block?.rating ?? "Poor";
+  const rating = block?.rating ?? DEFAULT_PERFORMANCE_RATING;
   const info = getOverallRatingInfo(score);
-  const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
+  const tileGradient =
+    RATING_TILE_GRADIENT[rating] ?? RATING_TILE_GRADIENT[DEFAULT_PERFORMANCE_RATING];
   const progress = getRatingProgress(score);
+  const isMonthly = label === "Monthly";
 
   return (
     <button
@@ -155,18 +162,50 @@ function PeriodSnapshot({
       className={cn(
         "group relative w-full overflow-hidden rounded-2xl border p-3.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40",
         isActive
-          ? "border-indigo-300 bg-white shadow-md ring-2 ring-indigo-200/80"
-          : "border-slate-200/90 bg-slate-50/60 hover:border-slate-300 hover:bg-white hover:shadow-sm",
+          ? cn(
+              "border-indigo-300 shadow-md ring-2 ring-indigo-200/80",
+              tileGradient.active,
+            )
+          : cn(
+              "border-slate-300/80 hover:border-slate-400 hover:shadow-sm",
+              tileGradient.base,
+            ),
       )}
       aria-pressed={isActive}
     >
       <div
         className={cn(
-          "absolute inset-y-0 left-0 w-1 rounded-l-2xl transition-colors",
-          isActive ? "bg-indigo-500" : "bg-slate-200 group-hover:bg-slate-300",
+          "pointer-events-none absolute inset-0 opacity-60",
+          isMonthly
+            ? "bg-[radial-gradient(ellipse_at_top_left,_rgba(99,102,241,0.14),_transparent_55%)]"
+            : "bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.12),_transparent_55%)]",
         )}
         aria-hidden
       />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-90 mix-blend-overlay",
+          isMonthly ? "[animation-delay:0s]" : "[animation-delay:1.2s]",
+        )}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 w-[40%] animate-processing-glance bg-gradient-to-r from-transparent to-transparent opacity-70 mix-blend-soft-light",
+          isMonthly
+            ? "via-indigo-200/55 [animation-delay:0.6s]"
+            : "via-violet-200/50 [animation-delay:1.8s]",
+        )}
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 z-[1] w-1.5 rounded-l-2xl transition-colors",
+          isActive ? "bg-indigo-500" : tileGradient.accent,
+        )}
+        aria-hidden
+      />
+      <div className="relative z-[1]">
       <p className="pl-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
         {label}
       </p>
@@ -185,9 +224,7 @@ function PeriodSnapshot({
         />
       </div>
       <div className="pl-2 mt-2.5 flex flex-wrap items-center gap-1.5">
-        <Badge variant="outline" className={cn("text-[10px] font-semibold", ratingClass)}>
-          {rating}
-        </Badge>
+        <PerformanceRatingMedalBadge rating={rating} size="sm" />
         <span className="text-[10px] text-slate-500">{info.scoreRange}</span>
       </div>
       <div className="pl-2 mt-2.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -198,6 +235,7 @@ function PeriodSnapshot({
           )}
           style={{ width: `${progress.tierProgressPercent}%` }}
         />
+      </div>
       </div>
     </button>
   );
@@ -212,43 +250,75 @@ function TierProgressCard({
 }) {
   const info = getOverallRatingInfo(score);
   const progress = getRatingProgress(score);
+  const tileGradient =
+    RATING_TILE_GRADIENT[rating] ?? RATING_TILE_GRADIENT[DEFAULT_PERFORMANCE_RATING];
+  const glanceAccent =
+    RATING_GLANCE_ACCENT[rating] ?? RATING_GLANCE_ACCENT[DEFAULT_PERFORMANCE_RATING];
+  const ratingClass =
+    RATING_STYLES[rating] ?? RATING_STYLES[DEFAULT_PERFORMANCE_RATING];
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-3.5 text-left shadow-sm space-y-2.5">
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="font-semibold text-slate-700 flex items-center gap-1.5">
-          <Target className="h-3.5 w-3.5 text-indigo-500 shrink-0" aria-hidden />
-          Current tier
-        </span>
-        <span className="tabular-nums font-bold text-indigo-700">
-          {progress.tierProgressPercent}%
-        </span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all duration-700",
-            RATING_PROGRESS_FILL[rating] ?? "bg-slate-400",
-          )}
-          style={{ width: `${progress.tierProgressPercent}%` }}
-        />
-      </div>
-      <p className="text-xs text-slate-600">
-        <span className="font-semibold text-slate-800">{rating}</span> requires{" "}
-        {info.scoreRange}
-      </p>
-      {info.nextStep ? (
-        <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5">
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {info.nextStep}
+    <div
+      className={cn(
+        "relative w-full overflow-hidden rounded-2xl border px-4 py-3.5 text-left shadow-sm",
+        RATING_CARD_BORDER[rating] ?? RATING_CARD_BORDER[DEFAULT_PERFORMANCE_RATING],
+        tileGradient.active,
+      )}
+    >
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 z-[1] w-1.5 rounded-l-2xl",
+          tileGradient.accent,
+        )}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-90 mix-blend-overlay [animation-delay:0.3s]"
+        aria-hidden
+      />
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 w-[40%] animate-processing-glance bg-gradient-to-r from-transparent to-transparent opacity-70 mix-blend-soft-light [animation-delay:1.1s]",
+          glanceAccent,
+        )}
+        aria-hidden
+      />
+      <div className="relative z-[1] space-y-2.5">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+            <Target className="h-3.5 w-3.5 text-indigo-500 shrink-0" aria-hidden />
+            Current medal
+          </span>
+          <span className="tabular-nums font-bold text-indigo-700">
+            {progress.tierProgressPercent}%
+          </span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-700",
+              RATING_PROGRESS_FILL[rating] ?? RATING_PROGRESS_FILL[DEFAULT_PERFORMANCE_RATING],
+            )}
+            style={{ width: `${progress.tierProgressPercent}%` }}
+          />
+        </div>
+        <p className="text-xs text-slate-600">
+          <span className="font-semibold text-slate-800">{rating}</span> requires{" "}
+          {info.scoreRange}
         </p>
-      ) : null}
-      {info.isTopTier ? (
-        <p className="text-xs font-medium text-emerald-700 flex items-center gap-1.5">
-          <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Highest performance tier achieved
-        </p>
-      ) : null}
+        {info.nextStep ? (
+          <p className="text-xs font-medium text-indigo-700 flex items-center gap-1.5">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {info.nextStep}
+          </p>
+        ) : null}
+        {info.isTopTier ? (
+          <p className={cn("text-xs font-medium flex items-center gap-1.5", ratingClass)}>
+            <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Elite top tier achieved
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -271,7 +341,10 @@ function OverallRatingHero({
   onSelectPeriod: (view: PeriodView) => void;
 }) {
   const info = getOverallRatingInfo(score);
-  const ratingClass = RATING_STYLES[rating] ?? RATING_STYLES.Poor;
+  const tileGradient =
+    RATING_TILE_GRADIENT[rating] ?? RATING_TILE_GRADIENT[DEFAULT_PERFORMANCE_RATING];
+  const glanceAccent =
+    RATING_GLANCE_ACCENT[rating] ?? RATING_GLANCE_ACCENT[DEFAULT_PERFORMANCE_RATING];
 
   return (
     <div className="flex h-full min-h-[380px] flex-col gap-4">
@@ -292,15 +365,38 @@ function OverallRatingHero({
 
       <div
         className={cn(
-          "relative flex flex-1 overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-white via-slate-50/30 to-indigo-50/20 shadow-md",
-          RATING_CARD_BORDER[rating] ?? "border-slate-200",
+          "relative flex flex-1 overflow-hidden rounded-2xl border-2 shadow-md",
+          RATING_CARD_BORDER[rating] ?? RATING_CARD_BORDER[DEFAULT_PERFORMANCE_RATING],
+          tileGradient.hero,
         )}
       >
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-500/8 via-transparent to-violet-500/5"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(99,102,241,0.14),_transparent_58%)]"
           aria-hidden
         />
-        <div className="relative flex h-full w-full flex-col items-center justify-center gap-4 p-5 text-center">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_rgba(139,92,246,0.1),_transparent_55%)]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 w-[52%] animate-processing-glance bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-90 mix-blend-overlay"
+          aria-hidden
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-[42%] animate-processing-glance bg-gradient-to-r from-transparent to-transparent opacity-70 mix-blend-soft-light [animation-delay:0.9s]",
+            glanceAccent,
+          )}
+          aria-hidden
+        />
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 z-[1] w-1.5 rounded-l-2xl",
+            tileGradient.accent,
+          )}
+          aria-hidden
+        />
+        <div className="relative z-[1] flex h-full w-full flex-col items-center justify-center gap-4 p-5 text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
             Overall rating · {periodLabel}
           </p>
@@ -309,7 +405,7 @@ function OverallRatingHero({
             <div
               className={cn(
                 "flex h-28 w-28 items-center justify-center rounded-full border-4 bg-white shadow-inner",
-                RATING_CARD_BORDER[rating] ?? "border-slate-200",
+                RATING_CARD_BORDER[rating] ?? RATING_CARD_BORDER[DEFAULT_PERFORMANCE_RATING],
               )}
             >
               <div>
@@ -328,32 +424,28 @@ function OverallRatingHero({
             ) : null}
           </div>
 
-          <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-b from-amber-50/90 to-white px-5 py-3 shadow-sm">
+          <div
+            className={cn(
+              "rounded-2xl border bg-gradient-to-b px-5 py-3 shadow-sm",
+              RATING_STYLES[rating] ?? RATING_STYLES[DEFAULT_PERFORMANCE_RATING],
+            )}
+          >
             <RecruiterPerformanceRatingStars
               rating={rating}
               size="lg"
               variant="dashboard"
               className="justify-center"
             />
-            <p className="mt-2 text-[10px] font-medium text-amber-800/80 tabular-nums">
-              {getRatingStarCount(rating)} of 5 stars
+            <p className="mt-2 text-[10px] font-medium tabular-nums opacity-80">
+              {getRatingTierSubtitle(rating)}
             </p>
           </div>
 
-          <div
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-4 py-2 shadow-sm",
-              ratingClass,
-            )}
-            aria-label={`Overall rating: ${rating}`}
-          >
-            {info.isTopTier ? (
-              <Trophy className="h-5 w-5 shrink-0" aria-hidden />
-            ) : (
-              <Award className="h-5 w-5 shrink-0" aria-hidden />
-            )}
-            <span className="text-xl font-bold tracking-tight sm:text-2xl">{rating}</span>
-          </div>
+          <PerformanceRatingMedalBadge
+            rating={rating}
+            size="lg"
+            showTopTierLabel={isEliteRating(rating)}
+          />
 
           <TierProgressCard score={score} rating={rating} />
         </div>
@@ -371,28 +463,49 @@ function StageContributionGrid({
 
   return (
     <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {rows.map((row, idx) => (
+      {rows.map((row, idx) => {
+        const stageStyle = STAGE_TILE_STYLES[idx % STAGE_TILE_STYLES.length];
+        return (
         <div
           key={row.key}
-          className="rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-white"
+          className={cn(
+            "relative overflow-hidden rounded-xl border px-3 py-2.5 transition-colors",
+            stageStyle.tile,
+          )}
         >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_ACCENT_CLASSES[idx])}
-              aria-hidden
-            />
-            <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-              {row.shortLabel}
-            </span>
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-85 mix-blend-overlay"
+            style={{ animationDelay: `${idx * 0.45}s` }}
+            aria-hidden
+          />
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-y-0 left-0 w-[40%] animate-processing-glance bg-gradient-to-r from-transparent to-transparent opacity-65 mix-blend-soft-light",
+              STAGE_GLANCE_ACCENT[idx % STAGE_GLANCE_ACCENT.length],
+            )}
+            style={{ animationDelay: `${idx * 0.45 + 0.75}s` }}
+            aria-hidden
+          />
+          <div className="relative z-[1]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className={cn("h-2 w-2 shrink-0 rounded-full", stageStyle.dot)}
+                aria-hidden
+              />
+              <span className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                {row.shortLabel}
+              </span>
+            </div>
+            <p className="mt-1.5 text-xl font-bold tabular-nums text-slate-900">
+              {row.contribution}
+            </p>
+            <p className="text-[10px] text-slate-500">
+              {row.count} × {row.weight} pts
+            </p>
           </div>
-          <p className="mt-1.5 text-xl font-bold tabular-nums text-slate-900">
-            {row.contribution}
-          </p>
-          <p className="text-[10px] text-slate-500">
-            {row.count} × {row.weight} pts
-          </p>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -470,18 +583,21 @@ function ContributionChart({
       </ResponsiveContainer>
       <StageContributionGrid stageCounts={stageCounts} />
       <div className="mt-3 flex flex-wrap gap-3 border-t border-slate-100 pt-3">
-        {STAGE_CONFIG.map(({ label }, idx) => (
+        {STAGE_CONFIG.map(({ label }, idx) => {
+          const stageStyle = STAGE_TILE_STYLES[idx % STAGE_TILE_STYLES.length];
+          return (
           <span
             key={label}
             className="inline-flex items-center gap-1.5 text-xs text-slate-500"
           >
             <span
-              className={cn("h-2 w-2 shrink-0 rounded-full", STAGE_ACCENT_CLASSES[idx])}
+              className={cn("h-2 w-2 shrink-0 rounded-full", stageStyle.dot)}
               aria-hidden
             />
             {label}
           </span>
-        ))}
+          );
+        })}
       </div>
     </>
   );
@@ -503,7 +619,7 @@ export default function RecruiterPerformanceRatingSection() {
   const activeBlock = periodView === "monthly" ? monthly : yearly;
   const stageCounts = activeBlock?.stageCounts ?? EMPTY_STAGE_COUNTS;
   const score = activeBlock?.score ?? 0;
-  const rating = activeBlock?.rating ?? "Poor";
+  const rating = activeBlock?.rating ?? DEFAULT_PERFORMANCE_RATING;
   const isEmpty = !hasAnyStageActivity(stageCounts);
 
   const periodLabel =
@@ -558,15 +674,11 @@ export default function RecruiterPerformanceRatingSection() {
                   <span className="text-xs font-bold tabular-nums text-indigo-700">
                     {score} pts
                   </span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] font-semibold",
-                      RATING_STYLES[rating],
-                    )}
-                  >
-                    {rating}
-                  </Badge>
+                  <PerformanceRatingMedalBadge
+                    rating={rating}
+                    size="sm"
+                    showTopTierLabel={isEliteRating(rating)}
+                  />
                   <Badge
                     variant="outline"
                     className="border-slate-200 bg-slate-50 text-[10px] font-medium text-slate-600"

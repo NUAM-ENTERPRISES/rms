@@ -43,6 +43,7 @@ import {
   isCandidatePositiveForAssignment,
   isProjectOpenForAssignment,
 } from "@/features/projects/utils/project-assignment";
+import { ProjectAssignmentClosedBanner } from "@/features/projects/components/ProjectAssignmentClosedBanner";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
 
@@ -79,10 +80,95 @@ const isRegisteredProcessingStatus = (statusRaw: string) => {
   );
 };
 
+export type PipelineStatusGlance = {
+  accentBar: string;
+  glanceAccent: string;
+  radialGlow: string;
+  whiteDelay: string;
+  accentDelay: string;
+};
+
 export type PipelineStatusCardAccent = {
   cardClass: string;
-  isProcessing: boolean;
+  glance: PipelineStatusGlance | null;
 };
+
+const PIPELINE_GLANCE_PRESETS = {
+  nominated: {
+    accentBar: "bg-purple-500",
+    glanceAccent: "via-purple-300/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(168,85,247,0.14),_transparent_58%)]",
+  },
+  documents: {
+    accentBar: "bg-red-500",
+    glanceAccent: "via-red-200/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(248,113,113,0.14),_transparent_58%)]",
+  },
+  interview: {
+    accentBar: "bg-violet-500",
+    glanceAccent: "via-violet-200/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(139,92,246,0.14),_transparent_58%)]",
+  },
+  processing: {
+    accentBar: "bg-orange-500",
+    glanceAccent: "via-orange-200/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(251,146,60,0.16),_transparent_58%)]",
+  },
+  training: {
+    accentBar: "bg-stone-500",
+    glanceAccent: "via-stone-300/50",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(120,113,108,0.12),_transparent_58%)]",
+  },
+  deployed: {
+    accentBar: "bg-green-500",
+    glanceAccent: "via-emerald-200/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(74,222,128,0.14),_transparent_58%)]",
+  },
+  eligible: {
+    accentBar: "bg-blue-500",
+    glanceAccent: "via-sky-200/50",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(56,189,248,0.14),_transparent_58%)]",
+  },
+  submittedToClient: {
+    accentBar: "bg-indigo-500",
+    glanceAccent: "via-indigo-200/55",
+    radialGlow:
+      "bg-[radial-gradient(ellipse_at_top_right,_rgba(99,102,241,0.14),_transparent_58%)]",
+  },
+} as const;
+
+function createPipelineGlance(
+  preset: keyof typeof PIPELINE_GLANCE_PRESETS,
+  staggerIndex = 0,
+): PipelineStatusGlance {
+  const config = PIPELINE_GLANCE_PRESETS[preset];
+  const stagger = staggerIndex * 0.38;
+  return {
+    accentBar: config.accentBar,
+    glanceAccent: config.glanceAccent,
+    radialGlow: config.radialGlow,
+    whiteDelay: `${stagger.toFixed(2)}s`,
+    accentDelay: `${(stagger + 0.85).toFixed(2)}s`,
+  };
+}
+
+function withPipelineAccent(
+  cardClass: string,
+  preset: keyof typeof PIPELINE_GLANCE_PRESETS,
+  staggerIndex = 0,
+): PipelineStatusCardAccent {
+  return {
+    cardClass,
+    glance: createPipelineGlance(preset, staggerIndex),
+  };
+}
 
 const isNominatedPipelineStatus = (statusRaw: string) => {
   const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
@@ -101,10 +187,11 @@ export const getPipelineStatusCardClass = (
     columnId?: CandidateColumnType;
     isAssigned?: boolean;
     isNominated?: boolean;
+    staggerIndex?: number;
   },
 ): PipelineStatusCardAccent => {
   const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
-  const { columnId, isAssigned, isNominated } = options ?? {};
+  const { columnId, isAssigned, isNominated, staggerIndex = 0 } = options ?? {};
 
   const base =
     "pipeline-status-accent border border-l-0 shadow-sm backdrop-blur-sm transition-colors duration-200";
@@ -114,26 +201,28 @@ export const getPipelineStatusCardClass = (
     columnId === "eligible" &&
     (!raw || !isAssigned)
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
       ),
-      isProcessing: false,
-    };
+      "eligible",
+      staggerIndex,
+    );
   }
 
   if (!raw) {
     if (columnId === "nominated" && isAssigned && isNominated) {
-      return {
-        cardClass: cn(
+      return withPipelineAccent(
+        cn(
           base,
-          "bg-purple-100 border-purple-300/80",
+          "bg-purple-50 bg-gradient-to-br from-purple-50 via-purple-100/90 to-purple-50 border-purple-300/80",
         ),
-        isProcessing: false,
-      };
+        "nominated",
+        staggerIndex,
+      );
     }
-    return { cardClass: "", isProcessing: false };
+    return { cardClass: "", glance: null };
   }
 
   // Deployed
@@ -143,24 +232,26 @@ export const getPipelineStatusCardClass = (
     compact === "deployed" ||
     raw.includes("deployed")
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-green-50 bg-gradient-to-br from-green-50 via-emerald-50 to-emerald-100 border-green-200/80",
       ),
-      isProcessing: false,
-    };
+      "deployed",
+      staggerIndex,
+    );
   }
 
   // Processing
   if (isRegisteredProcessingStatus(statusRaw)) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-orange-50 bg-gradient-to-br from-orange-50 via-amber-50 to-amber-100 border-orange-200/80",
       ),
-      isProcessing: true,
-    };
+      "processing",
+      staggerIndex,
+    );
   }
 
   // Trainer / training
@@ -170,13 +261,14 @@ export const getPipelineStatusCardClass = (
     raw.includes("training") ||
     raw.includes("trainer")
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-stone-100 bg-gradient-to-br from-stone-100 via-amber-50 to-stone-50 border-stone-300/80",
       ),
-      isProcessing: false,
-    };
+      "training",
+      staggerIndex,
+    );
   }
 
   // Interview & screening
@@ -186,13 +278,31 @@ export const getPipelineStatusCardClass = (
     raw.includes("interview") ||
     raw.includes("screening")
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-violet-50 bg-gradient-to-br from-violet-50 via-purple-50 to-purple-100 border-violet-200/80",
       ),
-      isProcessing: false,
-    };
+      "interview",
+      staggerIndex,
+    );
+  }
+
+  // Submitted to client (post-verification handoff)
+  if (
+    underscored === "submitted_to_client" ||
+    compact === "submittedtoclient" ||
+    raw.includes("submitted to client") ||
+    raw.includes("submitted_to_client")
+  ) {
+    return withPipelineAccent(
+      cn(
+        base,
+        "bg-indigo-50 bg-gradient-to-br from-indigo-50 via-sky-50 to-indigo-100 border-indigo-200/80",
+      ),
+      "submittedToClient",
+      staggerIndex,
+    );
   }
 
   // Documentation & verification
@@ -206,24 +316,26 @@ export const getPipelineStatusCardClass = (
     compact === "pendingdocuments" ||
     compact === "verificationinprogress"
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-red-50 bg-gradient-to-br from-red-50 via-rose-50 to-rose-100 border-red-200/80",
       ),
-      isProcessing: false,
-    };
+      "documents",
+      staggerIndex,
+    );
   }
 
   // Nominated / profile shortlisting
   if (isNominatedPipelineStatus(statusRaw) || isNominated) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
-        "bg-purple-100 border-purple-300/80",
+        "bg-purple-50 bg-gradient-to-br from-purple-50 via-purple-100/90 to-purple-50 border-purple-300/80",
       ),
-      isProcessing: false,
-    };
+      "nominated",
+      staggerIndex,
+    );
   }
 
   // Eligible / positive CRM statuses
@@ -234,16 +346,17 @@ export const getPipelineStatusCardClass = (
     underscored === "on_hold" ||
     raw.includes("eligible")
   ) {
-    return {
-      cardClass: cn(
+    return withPipelineAccent(
+      cn(
         base,
         "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
       ),
-      isProcessing: false,
-    };
+      "eligible",
+      staggerIndex,
+    );
   }
 
-  return { cardClass: "", isProcessing: false };
+  return { cardClass: "", glance: null };
 };
 
 const getCardStatusRaw = (
@@ -285,6 +398,7 @@ interface ProjectCandidatesBoardProps {
   onNominatedPageChange?: (page: number) => void;
   requiredScreening?: boolean;
   hideContactInfo?: boolean; // eslint-disable-line @typescript-eslint/no-unused-vars -- passed through to CandidateCard
+  hideClosureBanner?: boolean;
 }
 
 const COLUMN_MAX_HEIGHT = "max-h-[calc(100vh-18rem)]";
@@ -536,6 +650,7 @@ const ProjectCandidatesBoard = ({
   nominatedTotalPages,
   onNominatedPageChange,
   requiredScreening = false,
+  hideClosureBanner = false,
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
@@ -852,7 +967,7 @@ const ProjectCandidatesBoard = ({
       effectiveNominatedPage * PAGE_SIZE
     );
 
-    const items = nominatedSlice.map((candidate) => {
+    const items = nominatedSlice.map((candidate, staggerIndex) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
@@ -860,12 +975,12 @@ const ProjectCandidatesBoard = ({
         assignedToProjectIds
       );
 
-      return { candidate, assignmentInfo };
+      return { candidate, assignmentInfo, staggerIndex };
     });
 
     return (
       <div className="space-y-3">
-        {items.map(({ candidate, assignmentInfo }) => {
+        {items.map(({ candidate, assignmentInfo, staggerIndex }) => {
           const candidateId = candidate.candidateId || candidate.id;
           if (!candidateId) return null; 
 
@@ -921,12 +1036,13 @@ const ProjectCandidatesBoard = ({
             columnId: "nominated",
             isAssigned: assignmentInfo.isAssigned,
             isNominated: assignmentInfo.isNominated,
+            staggerIndex,
           });
 
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
-              showProcessingGlance={statusAccent.isProcessing}
+              pipelineGlance={statusAccent.glance}
               className={cn(
                 isSelected ? "ring-1 ring-purple-400/60" : "",
                 statusAccent.cardClass,
@@ -1011,19 +1127,19 @@ const ProjectCandidatesBoard = ({
     }
 
     const totalEligible = eligibleTotal;
-    const eligibleItems = eligiblePageItems.map((candidate) => {
+    const eligibleItems = eligiblePageItems.map((candidate, staggerIndex) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
         managerAssignments,
         assignedToProjectIds
       );
-      return { candidate, assignmentInfo };
+      return { candidate, assignmentInfo, staggerIndex };
     });
 
     return (
       <div className="space-y-3">
-        {eligibleItems.map(({ candidate, assignmentInfo }) => {
+        {eligibleItems.map(({ candidate, assignmentInfo, staggerIndex }) => {
           const sanitized = sanitizeCandidate(candidate, hideContactInfo);
           const candidateWithProject = {
             ...sanitized,
@@ -1060,13 +1176,14 @@ const ProjectCandidatesBoard = ({
             columnId: "eligible",
             isAssigned: assignmentInfo.isAssigned,
             isNominated: assignmentInfo.isNominated,
+            staggerIndex,
           });
 
           return (
               <CandidateCard
                 key={`eligible-${assignmentInfo.candidateId}`}
                 assignmentBlockReason={assignmentBlockReason}
-                showProcessingGlance={statusAccent.isProcessing}
+                pipelineGlance={statusAccent.glance}
                 className={cn(
                   isSelected ? "ring-1 ring-blue-400/60" : "",
                   statusAccent.cardClass,
@@ -1150,19 +1267,19 @@ const ProjectCandidatesBoard = ({
       return <EmptyColumnState message="No candidates available" icon={Users2} />;
     }
 
-    const allItems = allPageItems.map((candidate) => {
+    const allItems = allPageItems.map((candidate, staggerIndex) => {
       const assignmentInfo = buildAssignmentInfo(
         candidate,
         projectId,
         managerAssignments,
         assignedToProjectIds
       );
-      return { candidate, assignmentInfo };
+      return { candidate, assignmentInfo, staggerIndex };
     });
 
     return (
       <div className="space-y-3">
-        {allItems.map(({ candidate, assignmentInfo }) => {
+        {allItems.map(({ candidate, assignmentInfo, staggerIndex }) => {
           const sanitized = sanitizeCandidate(candidate, hideContactInfo);
           const candidateWithProject = {
             ...sanitized,
@@ -1198,13 +1315,14 @@ const ProjectCandidatesBoard = ({
             columnId: "all",
             isAssigned: assignmentInfo.isAssigned,
             isNominated: assignmentInfo.isNominated,
+            staggerIndex,
           });
 
           return (
             <CandidateCard
               key={`all-${assignmentInfo.candidateId}`}
               assignmentBlockReason={assignmentBlockReason}
-              showProcessingGlance={statusAccent.isProcessing}
+              pipelineGlance={statusAccent.glance}
               className={statusAccent.cardClass}
               candidate={candidateWithProject}
               projectId={projectId}
@@ -1377,13 +1495,8 @@ const ProjectCandidatesBoard = ({
 
   return (
     <div className="space-y-5">
-      {!assignmentOpen && assignmentClosureMessage ? (
-        <div
-          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-          role="status"
-        >
-          {assignmentClosureMessage}
-        </div>
+      {!hideClosureBanner && !assignmentOpen && assignmentClosureMessage ? (
+        <ProjectAssignmentClosedBanner project={project} />
       ) : null}
       {/* Search & Filter Bar */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">

@@ -301,8 +301,14 @@ interface CandidateCardProps {
   selected?: boolean;
   /** Called when the selection checkbox is toggled */
   onSelect?: (candidateId: string) => void;
-  /** Subtle glass shimmer — Registered column processing cards only */
-  showProcessingGlance?: boolean;
+  /** Status-matched dual-layer glancing shine for pipeline cards */
+  pipelineGlance?: {
+    accentBar: string;
+    glanceAccent: string;
+    radialGlow: string;
+    whiteDelay: string;
+    accentDelay: string;
+  } | null;
   /** Hover reason for "Cannot assign" badge (from project board status rules). */
   assignmentBlockReason?: string | null;
 }
@@ -337,7 +343,7 @@ const CandidateCard = memo(function CandidateCard({
   onDragStart,
   selected,
   onSelect,
-  showProcessingGlance = false,
+  pipelineGlance = null,
   assignmentBlockReason: assignmentBlockReasonProp,
 }: CandidateCardProps) {
   const navigate = useNavigate();
@@ -628,7 +634,7 @@ const CandidateCard = memo(function CandidateCard({
           ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
           : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300",
         isAlreadyInProject &&
-          !showProcessingGlance &&
+          !pipelineGlance &&
           !hasPipelineStatusAccent &&
           "border-l-[3px] border-l-emerald-400",
         isNotEligible &&
@@ -648,15 +654,31 @@ const CandidateCard = memo(function CandidateCard({
       tabIndex={0}
       aria-label={`View candidate ${fullName}`}
     >
-      {showProcessingGlance && (
+      {pipelineGlance ? (
         <div
           className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
           aria-hidden
         >
-          <div className="absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-90 mix-blend-overlay" />
-          <div className="absolute inset-y-0 left-0 w-[38%] animate-processing-glance bg-gradient-to-r from-transparent via-blue-300/45 to-transparent opacity-70 mix-blend-soft-light [animation-delay:1.4s]" />
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 w-1 rounded-l-[inherit]",
+              pipelineGlance.accentBar,
+            )}
+          />
+          <div className={cn("absolute inset-0", pipelineGlance.radialGlow)} />
+          <div
+            className="absolute inset-y-0 left-0 w-[52%] animate-processing-glance bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-90 mix-blend-overlay"
+            style={{ animationDelay: pipelineGlance.whiteDelay }}
+          />
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 w-[44%] animate-processing-glance bg-gradient-to-r from-transparent to-transparent opacity-75 mix-blend-soft-light",
+              pipelineGlance.glanceAccent,
+            )}
+            style={{ animationDelay: pipelineGlance.accentDelay }}
+          />
         </div>
-      )}
+      ) : null}
 
       {/* Detailed Info Tooltip - Hover on entire card */}
       <CandidateDetailTooltip candidate={candidate} />
@@ -664,7 +686,7 @@ const CandidateCard = memo(function CandidateCard({
       <CardContent
         className={cn(
           "px-3.5 py-3 space-y-2.5",
-          showProcessingGlance && "relative z-[1]",
+          pipelineGlance && "relative z-[1]",
         )}
       >
         {/* Header row */}

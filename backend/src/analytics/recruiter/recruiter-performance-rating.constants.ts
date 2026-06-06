@@ -36,12 +36,12 @@ export type PerformanceStageCounts = {
 };
 
 export type PerformanceRatingLabel =
-  | 'Poor'
-  | 'Average'
-  | 'Good'
-  | 'Excellent'
-  | 'Outstanding'
-  | 'Top Performer';
+  | 'Bronze'
+  | 'Silver'
+  | 'Gold'
+  | 'Diamond'
+  | 'Platinum'
+  | 'Elite';
 
 export function computePerformanceScore(
   counts: PerformanceStageCounts,
@@ -60,12 +60,12 @@ export function computePerformanceScore(
 export function resolvePerformanceRating(
   score: number,
 ): PerformanceRatingLabel {
-  if (score <= 25) return 'Poor';
-  if (score <= 50) return 'Average';
-  if (score <= 75) return 'Good';
-  if (score <= 100) return 'Excellent';
-  if (score <= 150) return 'Outstanding';
-  return 'Top Performer';
+  if (score <= 25) return 'Bronze';
+  if (score <= 50) return 'Silver';
+  if (score <= 75) return 'Gold';
+  if (score <= 100) return 'Diamond';
+  if (score <= 150) return 'Platinum';
+  return 'Elite';
 }
 
 export function getMonthPeriodBounds(
