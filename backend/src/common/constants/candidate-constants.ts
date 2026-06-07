@@ -74,6 +74,35 @@ export type OperationsFollowUpStage =
 
 export const OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE = 3;
 
+/** TEST ONLY: 2 minutes. Production should use 7 * 24 * 60 * 60 * 1000. */
+export const OPERATIONS_WEEK_ONE_WAIT_MS = 2 * 60 * 1000;
+
+/** TEST ONLY: 2 minutes. Production should use 7 * 24 * 60 * 60 * 1000. */
+export const OPERATIONS_WEEK_TWO_WAIT_MS = 2 * 60 * 1000;
+
+export function getOperationsStageWaitRemainingMs(
+  stageEnteredAt: Date | string | null | undefined,
+  requiredWaitMs: number,
+  nowMs = Date.now(),
+): number {
+  if (!stageEnteredAt) {
+    return requiredWaitMs;
+  }
+  const enteredMs = new Date(stageEnteredAt).getTime();
+  return Math.max(0, requiredWaitMs - (nowMs - enteredMs));
+}
+
+export function hasOperationsStageWaitElapsed(
+  stageEnteredAt: Date | string | null | undefined,
+  requiredWaitMs: number,
+  nowMs = Date.now(),
+): boolean {
+  if (!stageEnteredAt) {
+    return false;
+  }
+  return getOperationsStageWaitRemainingMs(stageEnteredAt, requiredWaitMs, nowMs) === 0;
+}
+
 /** Normalize legacy DB value `agents` to canonical `agent`. */
 export function normalizeCandidateSource(
   source: string | null | undefined,

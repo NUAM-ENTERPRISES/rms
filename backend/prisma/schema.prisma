@@ -103,6 +103,7 @@ model User {
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                     @relation("ScreeningCoordinator")
   agentCandidateRequests      AgentCandidateRequest[]         @relation("AgentCandidateRequestRequester")
+  operationsCallLogs          OperationsCallLog[]             @relation("OperationsCallLogger")
 
   addressCountryCode String?
   addressStateId     String?
@@ -490,6 +491,7 @@ model Candidate {
   rnrReminders         RNRReminder[]
   callbackReminders    CallbackReminder[]
   processingTasks      ProcessingCandidate[]
+  operationsCallLogs   OperationsCallLog[]
 
   // Meta leads received for this candidate (incoming lead forms)
   metaLeads        MetaLead[]
@@ -1664,6 +1666,7 @@ model CandidateRecruiterAssignment {
   operationsCallAttempts    Int       @default(0)
   operationsLastCallAt      DateTime?
   operationsStageEnteredAt  DateTime?
+  operationsCallLogs        OperationsCallLog[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1682,8 +1685,27 @@ model CandidateRecruiterAssignment {
   @@index([recruiterId, isActive])
   @@index([candidateId, isActive])
   @@index([operationsFollowUpStage])
-  @@index([recruiterId, isActive, operationsFollowUpStage])
+  @@index([recruiterId, isActive, operationsFollowUpStage], map: "candidate_recruiter_assignments_recruiterId_isActive_operat_idx")
   @@map("candidate_recruiter_assignments")
+}
+
+model OperationsCallLog {
+  id            String   @id @default(cuid())
+  candidateId   String
+  assignmentId  String
+  loggedById    String
+  attemptNumber Int
+  note          String   @db.Text
+  loggedAt      DateTime @default(now())
+
+  candidate  Candidate                    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assignment CandidateRecruiterAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  loggedBy   User                         @relation("OperationsCallLogger", fields: [loggedById], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, loggedAt])
+  @@index([assignmentId, loggedAt])
+  @@index([loggedById])
+  @@map("operations_call_logs")
 }
 
 model CandidateStatus {

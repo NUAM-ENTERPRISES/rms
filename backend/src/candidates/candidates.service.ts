@@ -27,6 +27,7 @@ import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
+import { LogOperationsCallDto } from './dto/log-operations-call.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
@@ -55,11 +56,15 @@ import {
   CRE_REASSIGN_RECRUITER_RETURN_REASON,
   OPERATIONS_FOLLOW_UP_STAGE,
   OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+  OPERATIONS_WEEK_ONE_WAIT_MS,
+  OPERATIONS_WEEK_TWO_WAIT_MS,
+  getOperationsStageWaitRemainingMs,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
   normalizeCandidateSource,
 } from '../common/constants';
+import { PERMISSIONS } from '../common/constants/permissions';
 import { ROLE_NAMES, isOperationsRole } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
@@ -1109,9 +1114,14 @@ export class CandidatesService {
           select: {
             id: true,
             isActive: true,
+            recruiterId: true,
             createdAt: true,
             assignmentType: true,
             creStatusNote: true,
+            operationsFollowUpStage: true,
+            operationsCallAttempts: true,
+            operationsLastCallAt: true,
+            operationsStageEnteredAt: true,
             creStatus: {
               select: { id: true, statusName: true },
             },
@@ -1895,9 +1905,34 @@ export class CandidatesService {
     return assignment;
   }
 
+  private assertOperationsStageWaitElapsed(
+    stageEnteredAt: Date | null,
+    requiredWaitMs: number,
+    stageLabel: string,
+  ): void {
+    if (!stageEnteredAt) {
+      throw new BadRequestException(
+        `${stageLabel} stage entry time is missing.`,
+      );
+    }
+
+    const remainingMs = getOperationsStageWaitRemainingMs(
+      stageEnteredAt,
+      requiredWaitMs,
+    );
+
+    if (remainingMs > 0) {
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      throw new BadRequestException(
+        `Must wait before advancing from ${stageLabel}. ${remainingSec} second(s) remaining.`,
+      );
+    }
+  }
+
   async logOperationsCall(
     candidateId: string,
     operationsUserId: string,
+    dto: LogOperationsCallDto,
   ) {
     const assignment = await this.getActiveOperationsAssignmentForUser(
       candidateId,
@@ -1910,20 +1945,144 @@ export class CandidatesService {
       );
     }
 
-    const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
-      where: { id: assignment.id },
-      data: {
-        operationsCallAttempts: assignment.operationsCallAttempts + 1,
-        operationsLastCallAt: new Date(),
+    if (
+      assignment.operationsCallAttempts >=
+      OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+    ) {
+      throw new BadRequestException(
+        `Maximum of ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} call attempts already logged. Move candidate to 1 Week follow-up.`,
+      );
+    }
+
+    const nextAttempt = assignment.operationsCallAttempts + 1;
+    const note = dto.note.trim();
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const callLog = await tx.operationsCallLog.create({
+        data: {
+          candidateId,
+          assignmentId: assignment.id,
+          loggedById: operationsUserId,
+          attemptNumber: nextAttempt,
+          note,
+        },
+        include: {
+          loggedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      const updatedAssignment = await tx.candidateRecruiterAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          operationsCallAttempts: nextAttempt,
+          operationsLastCallAt: new Date(),
+        },
+      });
+
+      await tx.candidate.update({
+        where: { id: candidateId },
+        data: { updatedAt: new Date() },
+      });
+
+      return { assignment: updatedAssignment, callLog };
+    });
+
+    return result;
+  }
+
+  async getOperationsCallHistory(
+    candidateId: string,
+    userId: string,
+    userPermissions: string[] = [],
+    userRoles: string[] = [],
+  ) {
+    const elevatedViewerRoles = [
+      'CEO',
+      'Director',
+      'Manager',
+      'Recruiter Manager',
+      'Team Head',
+      'Team Lead',
+      'System Admin',
+      ROLE_NAMES.OPERATIONS,
+      'CRE',
+    ];
+
+    const canViewAnyOperationsCallHistory =
+      userPermissions.includes('*') ||
+      userPermissions.includes('read:all') ||
+      userPermissions.includes('manage:all') ||
+      userPermissions.includes(PERMISSIONS.READ_OPERATIONS_CALL_HISTORY) ||
+      userRoles.some((role) => elevatedViewerRoles.includes(role));
+
+    const operationsAssignmentTypes = [
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+    ];
+
+    let assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        assignmentType: { in: operationsAssignmentTypes },
+        isActive: true,
+      },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    if (!assignment) {
+      assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+        where: {
+          candidateId,
+          assignmentType: { in: operationsAssignmentTypes },
+        },
+        orderBy: { assignedAt: 'desc' },
+      });
+    }
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'No Operations assignment found for this candidate.',
+      );
+    }
+
+    const isAssignedOperationsHandler = assignment.recruiterId === userId;
+
+    let canView =
+      canViewAnyOperationsCallHistory || isAssignedOperationsHandler;
+
+    if (!canView) {
+      const recruiterAssignment =
+        await this.prisma.candidateRecruiterAssignment.findFirst({
+          where: {
+            candidateId,
+            recruiterId: userId,
+            isActive: true,
+            assignmentType: { notIn: operationsAssignmentTypes },
+          },
+        });
+      canView = Boolean(recruiterAssignment);
+    }
+
+    if (!canView) {
+      throw new ForbiddenException(
+        'You do not have permission to view Operations call history for this candidate.',
+      );
+    }
+
+    return this.prisma.operationsCallLog.findMany({
+      where: {
+        candidateId,
+        assignmentId: assignment.id,
+      },
+      orderBy: { loggedAt: 'desc' },
+      include: {
+        loggedBy: {
+          select: { id: true, name: true },
+        },
       },
     });
-
-    await this.prisma.candidate.update({
-      where: { id: candidateId },
-      data: { updatedAt: new Date() },
-    });
-
-    return { assignment: updatedAssignment };
   }
 
   async moveOperationsToWeekOne(
@@ -1983,6 +2142,12 @@ export class CandidatesService {
       );
     }
 
+    this.assertOperationsStageWaitElapsed(
+      assignment.operationsStageEnteredAt,
+      OPERATIONS_WEEK_ONE_WAIT_MS,
+      '1 Week follow-up',
+    );
+
     const now = new Date();
     const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({
       where: { id: assignment.id },
@@ -2014,6 +2179,12 @@ export class CandidatesService {
         'Candidate must be in the 2 Week follow-up stage to mark as junk.',
       );
     }
+
+    this.assertOperationsStageWaitElapsed(
+      assignment.operationsStageEnteredAt,
+      OPERATIONS_WEEK_TWO_WAIT_MS,
+      '2 Week follow-up',
+    );
 
     const now = new Date();
     const updatedAssignment = await this.prisma.candidateRecruiterAssignment.update({

@@ -33,6 +33,7 @@ import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
+import { LogOperationsCallDto } from './dto/log-operations-call.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
@@ -763,13 +764,43 @@ export class CandidatesController {
     description:
       'Increment the no-answer call count for an Operations-assigned candidate in the initial follow-up stage',
   })
-  async logOperationsCall(@Param('id') id: string, @Request() req) {
-    const result = await this.candidatesService.logOperationsCall(id, req.user.id);
+  async logOperationsCall(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.logOperationsCall(
+      id,
+      req.user.id,
+      body,
+    );
 
     return {
       success: true,
       data: result,
       message: 'Operations call logged successfully',
+    };
+  }
+
+  @Get(':id/operations/call-history')
+  @Permissions('read:candidates', 'read:operations_call_history')
+  @ApiOperation({
+    summary: 'Get Operations call log history for a candidate',
+    description:
+      'Retrieve logged no-answer call attempts with notes. Operations users see their assigned candidates; users with read:operations_call_history can view any Operations-handled candidate.',
+  })
+  async getOperationsCallHistory(@Param('id') id: string, @Request() req) {
+    const history = await this.candidatesService.getOperationsCallHistory(
+      id,
+      req.user.id,
+      req.user.permissions ?? [],
+      req.user.roles ?? [],
+    );
+
+    return {
+      success: true,
+      data: history,
+      message: 'Operations call history retrieved successfully',
     };
   }
 

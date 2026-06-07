@@ -148,9 +148,6 @@ export const candidatesApi = baseApi.injectEndpoints({
       query: (params) => {
         const queryParams = new URLSearchParams();
         appendCandidateListQueryParams(queryParams, params);
-        if (params.currentStatus) {
-          queryParams.append("currentStatus", params.currentStatus);
-        }
 
         return `/candidates/my-assigned?${queryParams.toString()}`;
       },
@@ -286,14 +283,36 @@ export const candidatesApi = baseApi.injectEndpoints({
       ],
     }),
     logOperationsCall: builder.mutation<
-      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
-      string
+      { success: boolean; data: { assignment: Record<string, unknown>; callLog: Record<string, unknown> }; message: string },
+      { id: string; note: string }
     >({
-      query: (id) => ({
+      query: ({ id, note }) => ({
         url: `/candidates/${id}/operations/log-call`,
         method: "POST",
+        body: { note },
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
+      ],
+    }),
+    getOperationsCallHistory: builder.query<
+      {
+        success: boolean;
+        data: Array<{
+          id: string;
+          attemptNumber: number;
+          note: string;
+          loggedAt: string;
+          loggedBy: { id: string; name: string };
+        }>;
+      },
+      string
+    >({
+      query: (candidateId) => `/candidates/${candidateId}/operations/call-history`,
+      providesTags: (_, __, candidateId) => [
+        { type: "Candidate", id: `${candidateId}-operations-calls` },
+      ],
     }),
     moveOperationsToWeekOne: builder.mutation<
       { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
@@ -472,6 +491,7 @@ export const {
   useMarkCandidateConvertedMutation,
   useTransferCandidateToRecruiterMutation,
   useLogOperationsCallMutation,
+  useGetOperationsCallHistoryQuery,
   useMoveOperationsToWeekOneMutation,
   useMoveOperationsToWeekTwoMutation,
   useMarkOperationsJunkMutation,

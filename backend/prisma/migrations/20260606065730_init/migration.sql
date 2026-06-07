@@ -1,2 +1,0 @@
--- RenameIndex
-ALTER INDEX "candidate_recruiter_assignments_recruiterId_isActive_operati_id" RENAME TO "candidate_recruiter_assignments_recruiterId_isActive_operat_idx";

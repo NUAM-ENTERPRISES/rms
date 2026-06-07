@@ -35,17 +35,25 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdvancedFiltersSheet } from "@/features/candidates/components/AdvancedFiltersSheet";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import { LogOperationsCallModal } from "@/features/candidates/components/LogOperationsCallModal";
 import {
   canLogOperationsCall,
   canMarkOperationsJunk,
   canMoveToWeekOne,
   canMoveToWeekTwo,
   formatOperationsStageEnteredAt,
+  formatOperationsWaitRemaining,
   getActiveOperationsAssignment,
+  getDisplayedOperationsCallAttempts,
   getOperationsCallAttempts,
   getOperationsFollowUpStage,
+  getOperationsStageWaitRemainingMs,
+  isWaitingToMarkOperationsJunk,
+  isWaitingToMoveToWeekTwo,
   OPERATIONS_FOLLOW_UP_STAGE,
   OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+  OPERATIONS_WEEK_ONE_WAIT_MS,
+  OPERATIONS_WEEK_TWO_WAIT_MS,
 } from "@/features/candidates/utils/operations-follow-up.util";
 
 export default function OperationsDashboardPage() {
@@ -239,10 +247,43 @@ export default function OperationsDashboardPage() {
   const [moveOperationsToWeekTwo, { isLoading: isMovingToWeekTwo }] = useMoveOperationsToWeekTwoMutation();
   const [markOperationsJunk, { isLoading: isMarkingJunk }] = useMarkOperationsJunkMutation();
 
+  const [callModalState, setCallModalState] = useState<{
+    candidate: any;
+    mode: "log" | "history";
+  } | null>(null);
   const [followUpConfirm, setFollowUpConfirm] = useState<{
     type: "week_one" | "week_two" | "junk";
     candidate: any;
   } | null>(null);
+  const [followUpNow, setFollowUpNow] = useState(() => Date.now());
+
+  const callModalCandidate = callModalState?.candidate;
+  const logCallCandidateName = callModalCandidate
+    ? `${callModalCandidate.firstName || ""} ${callModalCandidate.lastName || ""}`.trim() ||
+      "Selected candidate"
+    : "";
+  const logCallAttempts = callModalCandidate
+    ? getOperationsCallAttempts(
+        getActiveOperationsAssignment(callModalCandidate.recruiterAssignments, user?.id),
+      )
+    : 0;
+  const logCallNextAttempt = logCallAttempts + 1;
+  const canSubmitCallLog =
+    callModalState?.mode === "log" &&
+    canLogOperationsCall(
+      getOperationsFollowUpStage(
+        getActiveOperationsAssignment(callModalCandidate?.recruiterAssignments, user?.id),
+      ),
+      logCallAttempts,
+    );
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setFollowUpNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [candidateToConvert, setCandidateToConvert] = useState<any>(null);
@@ -299,8 +340,8 @@ export default function OperationsDashboardPage() {
     if (statusFilter === 'rnr') return 'Candidates marked as RNR';
     if (statusFilter === 'reassigned') return 'Candidates transferred by Operations to recruiter with Operations status';
     if (statusFilter === 'junk') return 'Manually marked after 2-week follow-up with no response';
-    if (statusFilter === 'week_one') return 'Candidates moved after 3 logged no-answer calls';
-    if (statusFilter === 'week_two') return 'Candidates moved after 1-week follow-up with no response';
+    if (statusFilter === 'week_one') return 'Candidates moved after 3 logged no-answer calls (2 min wait before next step)';
+    if (statusFilter === 'week_two') return 'Candidates moved after 1-week stage (2 min wait before marking junk)';
     if (statusFilter === 'on_hold') return 'Candidates currently on hold';
     if (statusFilter === 'untouched') return 'New untouched candidates';
     if (statusFilter === 'interested') return 'Candidates converted from Operations call';
@@ -399,10 +440,13 @@ export default function OperationsDashboardPage() {
     }
   };
 
-  const handleLogOperationsCall = async (candidate: any) => {
+  const handleLogOperationsCall = async (note: string) => {
+    if (!callModalCandidate) return;
+
     try {
-      await logOperationsCall(candidate.id).unwrap();
+      await logOperationsCall({ id: callModalCandidate.id, note }).unwrap();
       toast.success("Call logged (no answer)");
+      setCallModalState(null);
       await Promise.all([refetch(), refetchSummary()]);
     } catch (error: unknown) {
       const message =
@@ -444,7 +488,7 @@ export default function OperationsDashboardPage() {
     {
       label: '1 Week Follow-up',
       value: weekOneCount,
-      subtitle: 'After 3 no-answer calls',
+      subtitle: 'After 3 calls — 2 min wait (test)',
       icon: CalendarClock,
       accent: 'violet',
       statusId: 'week_one',
@@ -452,7 +496,7 @@ export default function OperationsDashboardPage() {
     {
       label: '2 Week Follow-up',
       value: weekTwoCount,
-      subtitle: 'After 1-week follow-up',
+      subtitle: 'After 1-week stage — 2 min wait (test)',
       icon: CalendarClock,
       accent: 'amber',
       statusId: 'week_two',
@@ -648,8 +692,42 @@ export default function OperationsDashboardPage() {
                       );
                       const followUpStage = getOperationsFollowUpStage(operationsAssignment);
                       const callAttempts = getOperationsCallAttempts(operationsAssignment);
-                      const stageEnteredLabel = formatOperationsStageEnteredAt(
-                        operationsAssignment?.operationsStageEnteredAt,
+                      const displayedCallAttempts = getDisplayedOperationsCallAttempts(callAttempts);
+                      const stageEnteredAt = operationsAssignment?.operationsStageEnteredAt;
+                      const stageEnteredLabel = formatOperationsStageEnteredAt(stageEnteredAt);
+                      const canAdvanceToWeekTwo = canMoveToWeekTwo(
+                        followUpStage,
+                        stageEnteredAt,
+                        followUpNow,
+                      );
+                      const waitingForWeekTwo = isWaitingToMoveToWeekTwo(
+                        followUpStage,
+                        stageEnteredAt,
+                        followUpNow,
+                      );
+                      const canMarkJunk = canMarkOperationsJunk(
+                        followUpStage,
+                        stageEnteredAt,
+                        followUpNow,
+                      );
+                      const waitingForJunk = isWaitingToMarkOperationsJunk(
+                        followUpStage,
+                        stageEnteredAt,
+                        followUpNow,
+                      );
+                      const weekTwoWaitRemaining = formatOperationsWaitRemaining(
+                        getOperationsStageWaitRemainingMs(
+                          stageEnteredAt,
+                          OPERATIONS_WEEK_ONE_WAIT_MS,
+                          followUpNow,
+                        ),
+                      );
+                      const junkWaitRemaining = formatOperationsWaitRemaining(
+                        getOperationsStageWaitRemainingMs(
+                          stageEnteredAt,
+                          OPERATIONS_WEEK_TWO_WAIT_MS,
+                          followUpNow,
+                        ),
                       );
                       const nonCreAssignment = candidate.recruiterAssignments?.find(
                         (a: any) => a.recruiter?.id && a.recruiter?.id !== user?.id
@@ -769,13 +847,47 @@ export default function OperationsDashboardPage() {
                             )}
                             {(statusFilter === undefined || statusFilter === 'week_one' || statusFilter === 'week_two') &&
                               followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL && (
-                              <p className="text-[10px] text-slate-500 mt-1">
-                                Calls logged: {callAttempts}/{OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}
-                              </p>
+                              <div className="mt-1.5">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                                    displayedCallAttempts >= OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+                                      ? "border-violet-200 bg-violet-50 text-violet-700"
+                                      : displayedCallAttempts > 0
+                                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                                      : "border-blue-200 bg-blue-50 text-blue-700",
+                                  )}
+                                >
+                                  <Phone className="h-2.5 w-2.5 shrink-0 opacity-80" />
+                                  <span>{displayedCallAttempts}/{OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} calls</span>
+                                </span>
+                                {displayedCallAttempts > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCallModalState({ candidate, mode: "history" });
+                                    }}
+                                    className="mt-1 block text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                                  >
+                                    View history
+                                  </button>
+                                )}
+                              </div>
                             )}
                             {(statusFilter === 'week_one' || statusFilter === 'week_two') && stageEnteredLabel && (
                               <p className="text-[10px] text-slate-500 mt-1">
                                 In bucket since {stageEnteredLabel}
+                              </p>
+                            )}
+                            {waitingForWeekTwo && statusFilter === 'week_one' && (
+                              <p className="text-[10px] font-medium text-violet-600 mt-1">
+                                Move to 2nd Week in {weekTwoWaitRemaining}
+                              </p>
+                            )}
+                            {waitingForJunk && statusFilter === 'week_two' && (
+                              <p className="text-[10px] font-medium text-amber-600 mt-1">
+                                Mark as Junk in {junkWaitRemaining}
                               </p>
                             )}
                           </TableCell>
@@ -840,7 +952,7 @@ export default function OperationsDashboardPage() {
                                 <TooltipContent side="top"><p className="text-xs">View Profile</p></TooltipContent>
                               </Tooltip>
 
-                              {canLogOperationsCall(followUpStage) && statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
+                              {canLogOperationsCall(followUpStage, callAttempts) && statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -848,7 +960,7 @@ export default function OperationsDashboardPage() {
                                   disabled={isLoggingCall}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    void handleLogOperationsCall(candidate);
+                                    setCallModalState({ candidate, mode: "log" });
                                   }}
                                 >
                                   Log Call
@@ -868,7 +980,7 @@ export default function OperationsDashboardPage() {
                                 </Button>
                               )}
 
-                              {canMoveToWeekTwo(followUpStage) && statusFilter === 'week_one' && (
+                              {canAdvanceToWeekTwo && statusFilter === 'week_one' && (
                                 <Button
                                   size="sm"
                                   className="h-8 px-2 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-sm"
@@ -881,7 +993,13 @@ export default function OperationsDashboardPage() {
                                 </Button>
                               )}
 
-                              {canMarkOperationsJunk(followUpStage) && statusFilter === 'week_two' && (
+                              {waitingForWeekTwo && statusFilter === 'week_one' && (
+                                <span className="h-8 px-2 inline-flex items-center text-[11px] font-medium text-violet-600 bg-violet-50 border border-violet-100 rounded-lg">
+                                  Wait {weekTwoWaitRemaining}
+                                </span>
+                              )}
+
+                              {canMarkJunk && statusFilter === 'week_two' && (
                                 <Button
                                   size="sm"
                                   className="h-8 px-2 text-[11px] font-semibold bg-orange-600 hover:bg-orange-700 text-white rounded-lg shadow-sm"
@@ -894,7 +1012,13 @@ export default function OperationsDashboardPage() {
                                 </Button>
                               )}
 
-                              {statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
+                              {waitingForJunk && statusFilter === 'week_two' && (
+                                <span className="h-8 px-2 inline-flex items-center text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-100 rounded-lg">
+                                  Wait {junkWaitRemaining}
+                                </span>
+                              )}
+
+                              {statusFilter !== 'reassigned' && (
                                 <Button
                                   size="sm"
                                   className="h-8 px-3 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors"
@@ -994,6 +1118,18 @@ export default function OperationsDashboardPage() {
           currentStatus={candidateToTransfer?.currentStatus?.statusName || 'Unknown'}
           isSubmitting={isTransferring}
         />
+
+          <LogOperationsCallModal
+            isOpen={!!callModalState}
+            onClose={() => setCallModalState(null)}
+            candidateId={callModalCandidate?.id}
+            candidateName={logCallCandidateName}
+            callAttempts={logCallAttempts}
+            nextAttempt={logCallNextAttempt}
+            canLog={!!canSubmitCallLog}
+            isSubmitting={isLoggingCall}
+            onConfirm={handleLogOperationsCall}
+          />
 
           <ConfirmationDialog
             isOpen={followUpConfirm?.type === "week_one"}

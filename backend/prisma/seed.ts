@@ -115,6 +115,7 @@ const roles = [
       'manage:users',
       'read:system_config',
       'read:roles',
+      'read:operations_call_history',
     ],
   },
   {
@@ -124,6 +125,7 @@ const roles = [
       'read:assigned_teams',
       'write:assigned_teams',
       'manage:candidates',
+      'read:operations_call_history',
       'nominate:candidates',
       'approve:candidates',
       'reject:candidates',
@@ -153,6 +155,7 @@ const roles = [
       'write:candidates',
       'nominate:candidates',
       'shortlist:candidates',
+      'read:operations_call_history',
       'read:teams',
       'read:interviews',
       'schedule:interviews',
@@ -375,6 +378,7 @@ const allPermissions = [
   'manage:cre',
   'assign:cre',
   'handle:rnr_candidates',
+  'read:operations_call_history',
 
   // Role management
   'read:roles',

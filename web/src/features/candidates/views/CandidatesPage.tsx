@@ -65,6 +65,15 @@ import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { isOperationsRole } from "@/config/role-names";
+import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
+import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
+import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
+import {
+  canLogOperationsCall,
+  getOperationsCallAttempts,
+  getOperationsFollowUpStage,
+} from "../utils/operations-follow-up.util";
 
 
 
@@ -76,6 +85,8 @@ export default function CandidatesPage() {
 
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
+  const isOperationsUser = user?.roles?.some(isOperationsRole) ?? false;
+  const canReadOperationsCallHistory = useCan("read:operations_call_history");
   const isManager = user?.roles?.some((role) =>
     ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
@@ -290,6 +301,32 @@ export default function CandidatesPage() {
 
   const isLoading = isLoadingRecruiter || isLoadingAll;
   const error = errorRecruiter || errorAll;
+
+  const refetchCandidates = () => {
+    if (isRecruiter && !isManager) {
+      recruiterRefetch();
+    } else {
+      allCandidatesRefetch();
+    }
+  };
+
+  const {
+    openLogCall,
+    openCallHistory,
+    resolveAssignment,
+    isLoggingCall,
+    handleLogOperationsCall,
+    callModalCandidate,
+    logCallAttempts,
+    logCallNextAttempt,
+    canSubmitCallLog,
+    logCallCandidateName,
+    closeCallModal,
+    callModalState,
+  } = useOperationsCallModal({
+    operationsUserId: isOperationsUser ? user?.id : undefined,
+    onLogged: refetchCandidates,
+  });
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -1160,6 +1197,17 @@ export default function CandidatesPage() {
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
                       const operations = getCandidateOperationsState(candidate);
+                      const operationsAssignment = resolveAssignment(candidate);
+                      const showOperationsFollowUp =
+                        Boolean(operationsAssignment) &&
+                        (isOperationsUser ||
+                          operations.isHandledByOperations ||
+                          canReadOperationsCallHistory);
+                      const followUpStage = getOperationsFollowUpStage(operationsAssignment);
+                      const callAttempts = getOperationsCallAttempts(operationsAssignment);
+                      const canLogCall =
+                        isOperationsUser &&
+                        canLogOperationsCall(followUpStage, callAttempts);
 
                       return (
                         <TableRow
@@ -1309,24 +1357,25 @@ export default function CandidatesPage() {
 
                           {/* Status Column (single source of truth) */}
                           <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              {/* Colored icon in a tiny circle */}
-                              <div
-                                className={`p-1 rounded-full ${statusInfo.bgColor}`}
-                              >
-                                <StatusIcon
-                                  className={`h-3.5 w-3.5 ${statusInfo.textColor.replace(
-                                    "700",
-                                    "600"
-                                  )} `}
-                                />
-                              </div>
+                            <div className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-2">
+                                {/* Colored icon in a tiny circle */}
+                                <div
+                                  className={`p-1 rounded-full ${statusInfo.bgColor}`}
+                                >
+                                  <StatusIcon
+                                    className={`h-3.5 w-3.5 ${statusInfo.textColor.replace(
+                                      "700",
+                                      "600"
+                                    )} `}
+                                  />
+                                </div>
 
-                              {/* Colored Badge – looks premium */}
-                              <Badge
-                                variant="outline"
-                                title={candidate.currentStatus?.statusName || "Unknown"}
-                                className={`
+                                {/* Colored Badge – looks premium */}
+                                <Badge
+                                  variant="outline"
+                                  title={candidate.currentStatus?.statusName || "Unknown"}
+                                  className={`
                         ${statusInfo.textColor} 
                         ${statusInfo.bgColor} 
                         ${statusInfo.borderColor} 
@@ -1335,9 +1384,20 @@ export default function CandidatesPage() {
                         text-[10px] 
                         px-2 py-0.5
                       `}
-                              >
-                                {candidate.currentStatus?.statusName || "Unknown"}
-                              </Badge>
+                                >
+                                  {candidate.currentStatus?.statusName || "Unknown"}
+                                </Badge>
+                              </div>
+                              {showOperationsFollowUp && (
+                                <OperationsCallFollowUpIndicators
+                                  assignment={operationsAssignment}
+                                  canLogCall={canLogCall}
+                                  onLogCall={() => openLogCall(candidate)}
+                                  onViewHistory={() => openCallHistory(candidate)}
+                                  showLogCallButton={isOperationsUser}
+                                  isLoggingCall={isLoggingCall}
+                                />
+                              )}
                             </div>
                           </TableCell>
 
@@ -1373,6 +1433,19 @@ export default function CandidatesPage() {
                                 >
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
+                                {showOperationsFollowUp && canLogCall && (
+                                  <DropdownMenuItem
+                                    onClick={() => openLogCall(candidate)}
+                                    className="text-green-700"
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" /> Log Call
+                                  </DropdownMenuItem>
+                                )}
+                                {showOperationsFollowUp && (
+                                  <DropdownMenuItem onClick={() => openCallHistory(candidate)}>
+                                    <Clock className="mr-2 h-4 w-4" /> View Call History
+                                  </DropdownMenuItem>
+                                )}
                                 {canTransferCandidates && (
                                   <>
                                     <DropdownMenuSeparator />
@@ -1499,6 +1572,18 @@ export default function CandidatesPage() {
           isLoading={isTransferring}
         />
       )}
+
+      <LogOperationsCallModal
+        isOpen={!!callModalState}
+        onClose={closeCallModal}
+        candidateId={callModalCandidate?.id}
+        candidateName={logCallCandidateName}
+        callAttempts={logCallAttempts}
+        nextAttempt={logCallNextAttempt}
+        canLog={!!canSubmitCallLog}
+        isSubmitting={isLoggingCall}
+        onConfirm={handleLogOperationsCall}
+      />
     </div>
   );
 }

@@ -9,4 +9,4 @@ ADD COLUMN "operationsStageEnteredAt" TIMESTAMP(3);
 CREATE INDEX "candidate_recruiter_assignments_operationsFollowUpStage_idx" ON "candidate_recruiter_assignments"("operationsFollowUpStage");
 
 -- CreateIndex
-CREATE INDEX "candidate_recruiter_assignments_recruiterId_isActive_operati_idx" ON "candidate_recruiter_assignments"("recruiterId", "isActive", "operationsFollowUpStage");
+CREATE INDEX "candidate_recruiter_assignments_recruiterId_isActive_operat_idx" ON "candidate_recruiter_assignments"("recruiterId", "isActive", "operationsFollowUpStage");

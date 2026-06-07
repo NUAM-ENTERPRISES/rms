@@ -101,6 +101,7 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "manage:cre": { label: "Manage Operations" },
   "assign:cre": { label: "Assign Operations" },
   "handle:rnr_candidates": { label: "Handle RNR Candidates" },
+  "read:operations_call_history": { label: "View Operations Call History" },
   "read:roles": { label: "View Roles" },
   "write:roles": { label: "Edit Roles" },
   "manage:roles": { label: "Manage Roles" },
