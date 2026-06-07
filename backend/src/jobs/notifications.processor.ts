@@ -5,7 +5,7 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
-import { isOperationsRole } from '../common/constants/role-ids';
+import { isOperationsRole, ROLE_NAMES } from '../common/constants/role-ids';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface NotificationJobData {
@@ -91,6 +91,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleRoleNotification(job);
         case 'AgentCandidateRequestCreated':
           return await this.handleAgentCandidateRequestCreated(job);
+        case 'OfferLetterUploaded':
+          return await this.handleOfferLetterUploaded(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -2683,6 +2685,107 @@ export class NotificationsProcessor extends WorkerHost {
         error.stack,
       );
       throw error;
+    }
+  }
+
+  async handleOfferLetterUploaded(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing offer letter uploaded event: ${eventId}`);
+
+    try {
+      const {
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        documentId,
+        recruiterId,
+        candidateName,
+        projectTitle,
+        roleDesignation,
+        uploadedBy,
+        uploadedByName,
+      } = payload as {
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId: string;
+        documentId: string;
+        recruiterId?: string | null;
+        candidateName: string;
+        projectTitle: string;
+        roleDesignation: string;
+        uploadedBy: string;
+        uploadedByName?: string | null;
+      };
+
+      const targetRoles = [
+        'Admin',
+        ROLE_NAMES.SYSTEM_ADMIN,
+        'System Administrator',
+        'Recruiter Manager',
+        ROLE_NAMES.MANAGER,
+        ROLE_NAMES.INTERVIEW_COORDINATOR,
+        'Processing Manager',
+        ROLE_NAMES.PROCESSING_EXECUTIVE,
+      ];
+
+      const roleUsers = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: { in: targetRoles },
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      const recipientIds = new Set<string>();
+      if (recruiterId) {
+        recipientIds.add(recruiterId);
+      }
+      for (const user of roleUsers) {
+        recipientIds.add(user.id);
+      }
+      if (uploadedBy) {
+        recipientIds.delete(uploadedBy);
+      }
+
+      const uploaderSuffix = uploadedByName ? ` by ${uploadedByName}` : '';
+      const message = `Offer letter uploaded for ${candidateName} (${roleDesignation}) on project "${projectTitle}"${uploaderSuffix}.`;
+      const link = `/candidates/${candidateId}`;
+      const meta = {
+        type: 'offer_letter_uploaded',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        documentId,
+        syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+      };
+
+      for (const userId of recipientIds) {
+        const idemKey = `${eventId}:offer_letter_uploaded:${candidateProjectMapId}:${userId}`;
+        await this.notificationsService.createNotification({
+          userId,
+          type: 'offer_letter_uploaded',
+          title: 'Offer Letter Uploaded',
+          message,
+          link,
+          meta,
+          idemKey,
+        });
+      }
+
+      this.logger.log(
+        `Offer letter uploaded notifications created for ${recipientIds.size} users`,
+      );
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process OfferLetterUploaded event ${eventId}: ${err?.message || err}`,
+        err?.stack,
+      );
+      throw err;
     }
   }
 

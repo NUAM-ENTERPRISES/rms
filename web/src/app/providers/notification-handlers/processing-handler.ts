@@ -8,7 +8,7 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
     "processing_assignment",  // <--- EVENT from transfer-to-processing outbox
     "candidate_hired",
     "processing_step_updated",
-    "processing.reminder"
+    "processing.reminder",
   ];
 
   if (!processingNotificationTypes.includes(notification.type)) return false;

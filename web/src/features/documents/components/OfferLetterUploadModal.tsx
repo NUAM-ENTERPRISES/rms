@@ -90,7 +90,7 @@ export const OfferLetterUploadModal: React.FC<OfferLetterUploadModalProps> = ({
         toast.success("Offer letter uploaded successfully");
         // The offer letter upload returns both the stored document and its verification metadata
         // Pass the document portion to onSuccess to preserve existing behavior (fileUrl, fileName, etc.)
-        if (onSuccess) onSuccess(response.data?.document);
+        if (onSuccess) onSuccess(response.data);
         onClose();
       }
     } catch (error: any) {

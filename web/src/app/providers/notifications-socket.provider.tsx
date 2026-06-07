@@ -24,6 +24,10 @@ import {
   type AccountStatusChangedPayload,
 } from "./notification-handlers/account-status-handler";
 import { handleAgentCandidateRequestNotifications } from "./notification-handlers/agent-candidate-request-handler";
+import {
+  handleOfferLetterNotifications,
+  handleOfferLetterSync,
+} from "./notification-handlers/offer-letter-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -344,6 +348,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleProcessingNotifications(context);
       handleAccountStatusNotifications(context);
       handleAgentCandidateRequestNotifications(context);
+      handleOfferLetterNotifications(context);
     });
 
     socket.on("data:sync", (payload: any) => {
@@ -354,8 +359,9 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleScreeningSync(payload, context)) return;
       if (handleDocumentSync(payload, context)) return;
       if (handleOperationsSync(payload, context)) return;
+      if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
-      
+
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
       }

@@ -33,6 +33,7 @@ import {
   UpdateInterviewStatusDto,
   BulkUpdateInterviewStatusDto,
 } from './dto/update-interview-status.dto';
+import { BulkSendForProcessingDto } from './dto/send-for-processing.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -759,6 +760,56 @@ export class InterviewsController {
       success: true,
       data: results,
       message: 'Bulk interview status update completed',
+    };
+  }
+
+  @Patch('send-for-processing')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Bulk send passed interviews for processing',
+    description:
+      'Interview Coordinators manually mark passed interviews as ready for the processing queue.',
+  })
+  @ApiBody({ type: BulkSendForProcessingDto })
+  @ApiResponse({ status: 200, description: 'Bulk send completed' })
+  async bulkSendForProcessing(
+    @Body() body: BulkSendForProcessingDto,
+    @Request() req,
+  ): Promise<any> {
+    const results = await this.interviewsService.bulkSendForProcessing(
+      body.interviewIds,
+      req.user?.id,
+    );
+    return {
+      success: true,
+      data: results,
+      message: 'Bulk send for processing completed',
+    };
+  }
+
+  @Patch(':id/send-for-processing')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Send a passed interview for processing',
+    description:
+      'Interview Coordinators manually mark a passed interview as ready for the processing queue.',
+  })
+  @ApiParam({ name: 'id', description: 'Interview ID' })
+  @ApiResponse({ status: 200, description: 'Interview sent for processing' })
+  @ApiResponse({ status: 400, description: 'Interview not passed or already sent' })
+  @ApiResponse({ status: 403, description: 'Only Interview Coordinators allowed' })
+  async sendForProcessing(
+    @Param('id') id: string,
+    @Request() req,
+  ): Promise<any> {
+    const updated = await this.interviewsService.sendForProcessing(
+      id,
+      req.user?.id,
+    );
+    return {
+      success: true,
+      data: updated,
+      message: 'Interview sent for processing successfully',
     };
   }
 

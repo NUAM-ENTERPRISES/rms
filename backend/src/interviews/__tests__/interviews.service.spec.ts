@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ForbiddenException } from '@nestjs/common';
 import { InterviewsService } from '../interviews.service';
 import { PrismaService } from '../../database/prisma.service';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('InterviewsService - client decision flows', () => {
   let service: InterviewsService;
@@ -10,7 +12,9 @@ describe('InterviewsService - client decision flows', () => {
     user: { findUnique: jest.fn() },
     interview: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
     },
@@ -44,9 +48,30 @@ describe('InterviewsService - client decision flows', () => {
 
   const mockOutboxService = {
     publishRecruiterNotification: jest.fn(),
+    publishEvent: jest.fn(),
   } as any;
 
   beforeEach(async () => {
+    mockPrisma.interview = {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      findMany: jest.fn(),
+      count: jest.fn(),
+    };
+    mockPrisma.candidateProjects = {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+    };
+    mockPrisma.interviewStatusHistory = {
+      create: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InterviewsService,
@@ -270,7 +295,13 @@ describe('InterviewsService - client decision flows', () => {
     );
 
     expect(result).toEqual({
-      interviews: [{ id: 'i-1' }],
+      interviews: [
+        expect.objectContaining({
+          id: 'i-1',
+          offerLetterData: null,
+          isOfferLetterUploaded: false,
+        }),
+      ],
       pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
     });
   });
@@ -296,5 +327,118 @@ describe('InterviewsService - client decision flows', () => {
     expect(results[1]).toEqual(expect.objectContaining({ id: 'cpm-2', success: true, data: expect.objectContaining({ id: 'cpm-2' }) }));
 
     spy.mockRestore();
+  });
+
+  it('updateInterviewStatus does not publish CandidateReadyForProcessing when interview is passed', async () => {
+    const interview = {
+      id: 'int-1',
+      candidateProjectMapId: 'cpm-1',
+      notes: null,
+    };
+
+    const updatedInterview = {
+      ...interview,
+      outcome: 'passed',
+      candidateProjectMap: {
+        id: 'cpm-1',
+        recruiter: { id: 'rec-1', name: 'Recruiter' },
+        candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+        project: { id: 'proj-1', title: 'Project X' },
+      },
+      project: { id: 'proj-1', title: 'Project X' },
+    };
+
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.user.findUnique.mockResolvedValue({ name: 'Coordinator' });
+    mockPrisma.interview.update.mockResolvedValue(updatedInterview);
+    mockPrisma.candidateProjects.findUnique.mockResolvedValue({
+      id: 'cpm-1',
+      mainStatus: { id: 'main-1' },
+      subStatus: { id: 'sub-0', name: 'interview_completed' },
+    });
+    mockPrisma.candidateProjectSubStatus.findUnique.mockResolvedValue({
+      id: 'sub-passed',
+      name: 'interview_passed',
+      label: 'Interview Passed',
+    });
+    mockPrisma.interviewStatusHistory.create.mockResolvedValue({ id: 'hist-1' });
+    mockPrisma.candidateProjectStatusHistory.create.mockResolvedValue({ id: 'hist-2' });
+    mockOutboxService.publishRecruiterNotification.mockResolvedValue(undefined);
+
+    await service.updateInterviewStatus(
+      'int-1',
+      { interviewStatus: 'passed', subStatus: 'interview_passed' },
+      'user-1',
+    );
+
+    expect(mockOutboxService.publishRecruiterNotification).toHaveBeenCalled();
+    expect(mockOutboxService.publishEvent).not.toHaveBeenCalled();
+  });
+
+  it('sendForProcessing sets readyForProcessingAt and publishes CandidateReadyForProcessing', async () => {
+    const interview = {
+      id: 'int-1',
+      outcome: 'passed',
+      readyForProcessingAt: null,
+      candidateProjectMapId: 'cpm-1',
+      candidateProjectMap: {
+        candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+        project: { id: 'proj-1', title: 'Project X' },
+      },
+      project: { id: 'proj-1', title: 'Project X' },
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce({
+        userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
+      })
+      .mockResolvedValueOnce({ name: 'Coordinator' });
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.update.mockResolvedValue({
+      ...interview,
+      readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
+      candidateProjectMap: {
+        candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+        project: { id: 'proj-1', title: 'Project X' },
+        roleNeeded: { designation: 'Nurse', roleCatalog: { id: 'rc-1' } },
+        recruiter: { id: 'rec-1' },
+        mainStatus: null,
+        subStatus: null,
+        documentVerifications: [],
+      },
+      project: { id: 'proj-1', title: 'Project X' },
+    });
+
+    const result = await service.sendForProcessing('int-1', 'coord-1');
+
+    expect(mockPrisma.interview.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'int-1' },
+        data: expect.objectContaining({
+          readyForProcessingById: 'coord-1',
+          readyForProcessingAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(mockOutboxService.publishEvent).toHaveBeenCalledWith(
+      'CandidateReadyForProcessing',
+      expect.objectContaining({
+        candidateProjectMapId: 'cpm-1',
+        candidateName: 'Jane Doe',
+        projectName: 'Project X',
+      }),
+      expect.anything(),
+    );
+    expect(result).toEqual(expect.objectContaining({ id: 'int-1' }));
+  });
+
+  it('sendForProcessing rejects non Interview Coordinator users', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue({
+      userRoles: [{ role: { name: 'Recruiter' } }],
+    });
+
+    await expect(service.sendForProcessing('int-1', 'rec-1')).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });

@@ -4007,6 +4007,7 @@ export class ProcessingService {
 
     const where: any = {
       outcome: 'passed',
+      readyForProcessingAt: { not: null },
     };
 
     if (type) {
@@ -4166,11 +4167,13 @@ export class ProcessingService {
                       fileName: true,
                       fileUrl: true,
                       status: true,
+                      uploadedBy: true,
                       createdAt: true,
                     },
                   },
                 },
                 orderBy: { createdAt: 'desc' },
+                take: 3,
               },
             },
           },
@@ -4184,14 +4187,56 @@ export class ProcessingService {
       this.prisma.interview.count({ where }),
     ]);
 
-    const mappedInterviews = interviews.map((itv) => ({
-      ...itv,
-      isTransferredToProcessing: !!itv.candidateProjectMap?.processing,
-      offerLetterData: itv.candidateProjectMap?.documentVerifications?.[0] || null,
-      isOfferLetterUploaded: (itv.candidateProjectMap?.documentVerifications?.length || 0) > 0,
-      agentName: itv.candidateProjectMap?.candidate?.agent?.name || null,
-      agentType: itv.candidateProjectMap?.candidate?.agent?.agentType || null,
-    }));
+    const uploaderIds = new Set<string>();
+    for (const interview of interviews) {
+      const uploadedBy =
+        interview.candidateProjectMap?.documentVerifications?.[0]?.document
+          ?.uploadedBy;
+      if (uploadedBy) uploaderIds.add(uploadedBy);
+    }
+    const uploaders =
+      uploaderIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(uploaderIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+    const uploadersById = new Map(uploaders.map((user) => [user.id, user]));
+
+    const mappedInterviews = interviews.map((itv) => {
+      const roleCatalogId =
+        itv.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+        itv.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+      const matchingVerifications = (
+        itv.candidateProjectMap?.documentVerifications ?? []
+      ).filter(
+        (verification: { roleCatalogId?: string | null }) =>
+          !roleCatalogId ||
+          !verification.roleCatalogId ||
+          verification.roleCatalogId === roleCatalogId,
+      );
+      const offerLetterData = matchingVerifications[0] || null;
+      const document = offerLetterData?.document;
+      const enrichedOfferLetterData =
+        document?.uploadedBy
+          ? {
+              ...offerLetterData,
+              document: {
+                ...document,
+                uploadedByUser: uploadersById.get(document.uploadedBy) || null,
+              },
+            }
+          : offerLetterData;
+
+      return {
+        ...itv,
+        isTransferredToProcessing: !!itv.candidateProjectMap?.processing,
+        offerLetterData: enrichedOfferLetterData,
+        isOfferLetterUploaded: matchingVerifications.length > 0,
+        agentName: itv.candidateProjectMap?.candidate?.agent?.name || null,
+        agentType: itv.candidateProjectMap?.candidate?.agent?.agentType || null,
+      };
+    });
 
     return {
       interviews: mappedInterviews,

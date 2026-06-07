@@ -100,6 +100,7 @@ model User {
   processingRemindersAssigned ProcessingStepReminder[]
   projectStatusChanges        CandidateProjectStatusHistory[] @relation("UserToProjectStatusHistory")
   interviewStatusHistory      InterviewStatusHistory[]        @relation("UserToInterviewStatusHistory")
+  interviewsSentForProcessing Interview[]                     @relation("InterviewReadyForProcessingBy")
   documentVerificationActions DocumentVerificationHistory[]   @relation("DocumentVerificationPerformer")
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                     @relation("ScreeningCoordinator")
@@ -777,14 +778,18 @@ model Interview {
   interviewerEmail      String?
   meetingLink           String?
   mode                  String?            @default("video")
-  completedAt           DateTime?
-  candidateProjectMap   CandidateProjects? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
-  project               Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  completedAt             DateTime?
+  readyForProcessingAt    DateTime?
+  readyForProcessingById  String?
+  readyForProcessingBy    User?              @relation("InterviewReadyForProcessingBy", fields: [readyForProcessingById], references: [id])
+  candidateProjectMap     CandidateProjects? @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  project                 Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // history is stored in InterviewStatusHistory (polymorphic via interviewType/interviewId)
 
   @@index([candidateProjectMapId])
   @@index([projectId])
   @@index([scheduledTime])
+  @@index([readyForProcessingAt])
   @@map("interviews")
 }
 

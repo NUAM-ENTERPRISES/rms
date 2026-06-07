@@ -2208,6 +2208,32 @@ export class DocumentsService {
     // Update candidate project status
     await this.updateCandidateProjectStatus(candidateProjectMap.id);
 
+    const uploader = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    await this.outboxService.publishOfferLetterUploaded({
+      candidateId,
+      projectId,
+      candidateProjectMapId: candidateProjectMap.id,
+      documentId: result.document.id,
+      recruiterId: candidateProjectMap.recruiterId,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      projectTitle: project.title,
+      roleDesignation: roleNeeded.designation,
+      uploadedBy: userId,
+      uploadedByName: uploader?.name ?? null,
+    });
+
+    await this.outboxService.publishDataSync({
+      type: 'OfferLetterUploaded',
+      candidateId,
+      projectId,
+      candidateProjectMapId: candidateProjectMap.id,
+      message: `Offer letter uploaded for ${candidate.firstName} ${candidate.lastName}`,
+    });
+
     return result;
   }
 

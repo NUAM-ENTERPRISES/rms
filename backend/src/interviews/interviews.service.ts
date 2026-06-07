@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
@@ -13,6 +14,8 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CandidateProjectsService } from '../candidate-projects/candidate-projects.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { ROLE_NAMES } from '../common/constants/role-ids';
+import { DOCUMENT_TYPE } from '../common/constants/document-types';
 
 @Injectable()
 export class InterviewsService {
@@ -76,6 +79,86 @@ export class InterviewsService {
       candidate.totalExperience = computed;
     }
     return candidate;
+  }
+
+  private async assertInterviewCoordinator(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    const isCoordinator = user.userRoles.some(
+      (ur) => ur.role.name === ROLE_NAMES.INTERVIEW_COORDINATOR,
+    );
+
+    if (!isCoordinator) {
+      throw new ForbiddenException(
+        'Only Interview Coordinators can send candidates for processing',
+      );
+    }
+  }
+
+  private enrichInterviewRecord(interview: any) {
+    const formatted = this.formatInterviewCandidateDob(interview);
+    const roleCatalogId =
+      interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+      interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+    const allVerifications =
+      interview.candidateProjectMap?.documentVerifications ?? [];
+    const verifications = roleCatalogId
+      ? allVerifications.filter(
+          (verification: { roleCatalogId?: string | null }) =>
+            !verification.roleCatalogId ||
+            verification.roleCatalogId === roleCatalogId,
+        )
+      : allVerifications;
+    return {
+      ...formatted,
+      offerLetterData: verifications[0] || null,
+      isOfferLetterUploaded: verifications.length > 0,
+    };
+  }
+
+  private async enrichInterviewsWithOfferLetterUploaders(interviews: any[]) {
+    const uploaderIds = new Set<string>();
+    for (const interview of interviews) {
+      const uploadedBy =
+        interview.candidateProjectMap?.documentVerifications?.[0]?.document
+          ?.uploadedBy;
+      if (uploadedBy) uploaderIds.add(uploadedBy);
+    }
+
+    const users =
+      uploaderIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(uploaderIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    return interviews.map((interview) => {
+      const enriched = this.enrichInterviewRecord(interview);
+      const offerLetterData = enriched.offerLetterData;
+      const document = offerLetterData?.document;
+      if (!document?.uploadedBy) return enriched;
+
+      return {
+        ...enriched,
+        offerLetterData: {
+          ...offerLetterData,
+          document: {
+            ...document,
+            uploadedByUser: usersById.get(document.uploadedBy) || null,
+          },
+        },
+      };
+    });
   }
 
   private formatInterviewCandidateDob(interview: any) {
@@ -514,6 +597,7 @@ export class InterviewsService {
                 select: {
                   id: true,
                   designation: true,
+                  roleCatalogId: true,
                   roleCatalog: {
                     select: {
                       id: true,
@@ -530,6 +614,38 @@ export class InterviewsService {
                   name: true,
                   email: true,
                 },
+              },
+              documentVerifications: {
+                where: {
+                  isDeleted: false,
+                  document: {
+                    docType: DOCUMENT_TYPE.OFFER_LETTER,
+                    isDeleted: false,
+                  },
+                },
+                select: {
+                  id: true,
+                  candidateProjectMapId: true,
+                  documentId: true,
+                  roleCatalogId: true,
+                  status: true,
+                  offerLetterReceivedAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                  document: {
+                    select: {
+                      id: true,
+                      docType: true,
+                      fileName: true,
+                      fileUrl: true,
+                      status: true,
+                      uploadedBy: true,
+                      createdAt: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 3,
               },
             },
           },
@@ -561,7 +677,7 @@ export class InterviewsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      interviews: interviews.map((interview) => this.formatInterviewCandidateDob(interview)),
+      interviews: await this.enrichInterviewsWithOfferLetterUploaders(interviews),
       pagination: {
         page,
         limit,
@@ -1847,33 +1963,6 @@ export class InterviewsService {
           tx,
         );
 
-        // If candidate passed or subStatus is 'interview_passed', notify admins, system admins, managers, and team leads
-        if (dto.interviewStatus === 'passed' || dto.subStatus === 'interview_passed') {
-          // Use 'interview_passed' as the primary event type if that's the subStatus
-          const eventType = dto.subStatus === 'interview_passed' ? 'interview_passed' : 'CandidateReadyForProcessing';
-          
-          await this.outboxService.publishEvent(
-            eventType,
-            {
-              candidateProjectMapId: updatedInterview.candidateProjectMapId,
-              candidateName,
-              projectName,
-              projectId: updatedInterview.candidateProjectMap.project.id,
-              changedBy: changerName,
-            },
-            tx,
-          );
-
-          // Also trigger a DataSync event for the processing list
-          await this.outboxService.publishEvent(
-            'DataSync',
-            {
-              type: 'ProcessingSummary',
-              message: `Candidate ${candidateName} is now ready for processing`,
-            },
-            tx,
-          );
-        }
       }
 
       return updatedInterview;
@@ -2101,6 +2190,184 @@ export class InterviewsService {
     });
 
     return this.formatInterviewCandidateDob(updatedInterview);
+  }
+
+  /**
+   * Mark a passed interview as ready for processing (manual coordinator action).
+   */
+  async sendForProcessing(id: string, userId: string) {
+    await this.assertInterviewCoordinator(userId);
+
+    const interview = await this.prisma.interview.findUnique({
+      where: { id },
+      include: {
+        candidateProjectMap: {
+          include: {
+            candidate: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+            project: { select: { id: true, title: true } },
+          },
+        },
+        project: { select: { id: true, title: true } },
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    if (interview.outcome !== 'passed') {
+      throw new BadRequestException(
+        'Only interviews with outcome "passed" can be sent for processing',
+      );
+    }
+
+    if (interview.readyForProcessingAt) {
+      throw new BadRequestException(
+        'This interview has already been sent for processing',
+      );
+    }
+
+    if (!interview.candidateProjectMap) {
+      throw new BadRequestException(
+        'Interview is not linked to a candidate project nomination',
+      );
+    }
+
+    const changer = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    const changerName = changer?.name ?? null;
+
+    const candidateName = `${interview.candidateProjectMap.candidate.firstName} ${interview.candidateProjectMap.candidate.lastName}`;
+    const projectName =
+      interview.project?.title || interview.candidateProjectMap.project.title;
+    const projectId =
+      interview.project?.id || interview.candidateProjectMap.project.id;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedInterview = await tx.interview.update({
+        where: { id },
+        data: {
+          readyForProcessingAt: new Date(),
+          readyForProcessingById: userId,
+        },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  mobileNumber: true,
+                  profileImage: true,
+                  totalExperience: true,
+                  dateOfBirth: true,
+                  highestEducation: true,
+                  gender: true,
+                },
+              },
+              project: { select: { id: true, title: true } },
+              roleNeeded: {
+                select: {
+                  id: true,
+                  designation: true,
+                  roleCatalog: {
+                    select: { id: true, name: true, label: true, shortName: true },
+                  },
+                },
+              },
+              recruiter: { select: { id: true, name: true, email: true } },
+              mainStatus: true,
+              subStatus: true,
+              documentVerifications: {
+                where: {
+                  isDeleted: false,
+                  document: {
+                    docType: DOCUMENT_TYPE.OFFER_LETTER,
+                    isDeleted: false,
+                  },
+                },
+                select: {
+                  id: true,
+                  status: true,
+                  offerLetterReceivedAt: true,
+                  document: {
+                    select: {
+                      id: true,
+                      fileName: true,
+                      fileUrl: true,
+                      status: true,
+                      uploadedBy: true,
+                      createdAt: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+          project: { select: { id: true, title: true } },
+        },
+      });
+
+      await this.outboxService.publishEvent(
+        'CandidateReadyForProcessing',
+        {
+          candidateProjectMapId: interview.candidateProjectMapId,
+          candidateName,
+          projectName,
+          projectId,
+          changedBy: changerName,
+        },
+        tx,
+      );
+
+      await this.outboxService.publishEvent(
+        'DataSync',
+        {
+          type: 'ProcessingSummary',
+          message: `Candidate ${candidateName} is now ready for processing`,
+        },
+        tx,
+      );
+
+      return updatedInterview;
+    });
+
+    const [enriched] = await this.enrichInterviewsWithOfferLetterUploaders([
+      updated,
+    ]);
+    return enriched;
+  }
+
+  /**
+   * Bulk send passed interviews for processing.
+   */
+  async bulkSendForProcessing(interviewIds: string[], userId: string) {
+    await this.assertInterviewCoordinator(userId);
+
+    const results: Array<{ id: string; success: boolean; data?: any; error?: string }> = [];
+
+    for (const id of interviewIds) {
+      try {
+        const data = await this.sendForProcessing(id, userId);
+        results.push({ id, success: true, data });
+      } catch (err: any) {
+        results.push({
+          id,
+          success: false,
+          error: err?.message ?? String(err),
+        });
+      }
+    }
+
+    return results;
   }
 
   async remove(id: string) {

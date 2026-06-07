@@ -48,6 +48,14 @@ import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
 import { useAppDispatch } from "@/app/hooks";
 import { processingApi } from "@/features/processing/data/processing.endpoints";
+import { OfferLetterBadge } from "../components/OfferLetterBadge";
+import {
+  getOfferLetterOverrideKey,
+  getOfferLetterUploaderName,
+  getOfferLetterUrlFromUpload,
+  hasOfferLetter,
+  resolveOfferLetterFileUrl,
+} from "../utils/offerLetter";
 
 export default function PassedCandidatesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -163,22 +171,56 @@ export default function PassedCandidatesPage() {
     );
   };
 
-  // Derive active PDF URL with cache busting
+  useEffect(() => {
+    setOfferLetterOverrides((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const item of interviews) {
+        const serverUrl = item.offerLetterData?.document?.fileUrl;
+        if (!serverUrl) continue;
+
+        const key = getOfferLetterOverrideKey(item);
+        if (next[key] !== serverUrl) {
+          next[key] = serverUrl;
+          changed = true;
+        }
+
+        const legacyCandidateId =
+          item.candidateProjectMap?.candidate?.id || item.candidate?.id;
+        if (legacyCandidateId && next[legacyCandidateId] !== serverUrl) {
+          delete next[legacyCandidateId];
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [interviews]);
+
+  // Derive active PDF URL with cache busting (server URL wins over stale local overrides)
   const activePdfUrl = useMemo(() => {
     if (!pdfViewerState.isOpen || !pdfViewerState.candidateId) return "";
-    
-    // Check if we have an override for this candidate (just uploaded)
-    const overrideUrl = offerLetterOverrides[pdfViewerState.candidateId];
-    if (overrideUrl) {
-      return `${overrideUrl}${overrideUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
-    }
 
-    // Otherwise find in the current interview list
-    const interview = interviews.find(it => (it.candidateProjectMap?.candidate?.id || it.candidate?.id) === pdfViewerState.candidateId);
-    const originalUrl = interview?.offerLetterData?.document?.fileUrl || pdfViewerState.fileUrl;
-    
-    return originalUrl ? `${originalUrl}${originalUrl.includes('?') ? '&' : '?'}t=${Date.now()}` : "";
-  }, [pdfViewerState.isOpen, pdfViewerState.candidateId, pdfViewerState.fileUrl, offerLetterOverrides, interviews]);
+    const interview = interviews.find(
+      (it) =>
+        (it.candidateProjectMap?.candidate?.id || it.candidate?.id) ===
+        pdfViewerState.candidateId,
+    );
+    const originalUrl =
+      resolveOfferLetterFileUrl(interview || {}, offerLetterOverrides) ||
+      pdfViewerState.fileUrl;
+
+    return originalUrl
+      ? `${originalUrl}${originalUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
+      : "";
+  }, [
+    pdfViewerState.isOpen,
+    pdfViewerState.candidateId,
+    pdfViewerState.fileUrl,
+    offerLetterOverrides,
+    interviews,
+  ]);
 
   // Apply additional client-side filtering for the UI-specific statuses ('pending' | 'transferred')
   const filteredList = useMemo(() => {
@@ -452,7 +494,7 @@ export default function PassedCandidatesPage() {
               <div className="p-8 text-center text-muted-foreground">
                 <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-40 text-emerald-400" />
                 <p className="font-medium">No candidates ready</p>
-                <p className="text-xs mt-1">Candidates marked 'Passed' will appear here for processing</p>
+                <p className="text-xs mt-1">Candidates appear here after the Interview Coordinator sends them for processing</p>
               </div>
             ) : (
               <div className="p-3 space-y-2">
@@ -508,11 +550,14 @@ export default function PassedCandidatesPage() {
                                 <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
                                   VERIFIED
                                 </Badge>
-                              ) : ((it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id]) && (
-                                <Badge variant="secondary" className="px-1 py-0 h-4 text-[8px] bg-emerald-100 text-emerald-700 border-none shrink-0">
-                                  DOC
-                                </Badge>
-                              ))}
+                              ) : (
+                                hasOfferLetter(it, offerLetterOverrides) && (
+                                  <OfferLetterBadge
+                                    size="xs"
+                                    uploaderName={getOfferLetterUploaderName(it)}
+                                  />
+                                )
+                              )}
                             </div>
                             <p className="text-xs text-muted-foreground truncate">
                               {it.candidateProjectMap?.project?.title || it.project?.title || "Unknown Project"}
@@ -525,14 +570,14 @@ export default function PassedCandidatesPage() {
                           </div>
                           <div className="flex items-center shrink-0">
                             <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              {(it.isOfferLetterUploaded || offerLetterOverrides[candidate?.id] || offerVerified) && (
+                              {(hasOfferLetter(it, offerLetterOverrides) || offerVerified) && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const fileUrl = offerLetterOverrides[candidate?.id] || it.offerLetterData?.document?.fileUrl;
+                                    const fileUrl = resolveOfferLetterFileUrl(it, offerLetterOverrides);
                                     if (fileUrl) {
                                       setPdfViewerState({
                                         isOpen: true,
@@ -627,11 +672,15 @@ export default function PassedCandidatesPage() {
                       <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px] mb-2">
                         Offer Letter Verified
                       </Badge>
-                    ) : ((selected.isOfferLetterUploaded || offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]) && (
-                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200 uppercase tracking-wider text-[10px] mb-2">
-                        Offer Letter Ready
-                      </Badge>
-                    ))}
+                    ) : (
+                      hasOfferLetter(selected, offerLetterOverrides) && (
+                        <OfferLetterBadge
+                          className="mb-2"
+                          label="Offer Letter Ready"
+                          uploaderName={getOfferLetterUploaderName(selected)}
+                        />
+                      )
+                    )}
                     <p className="text-sm text-muted-foreground">Passed on {format(new Date(selected.updatedAt || selected.scheduledTime), "PPP")}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
@@ -663,7 +712,7 @@ export default function PassedCandidatesPage() {
                           className="h-7 gap-1 px-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                           onClick={() => {
                             const candidate = selected.candidateProjectMap?.candidate || selected.candidate;
-                            const fileUrl = offerLetterOverrides[candidate?.id] || selected.offerLetterData?.document?.fileUrl;
+                            const fileUrl = resolveOfferLetterFileUrl(selected, offerLetterOverrides);
                             if (fileUrl) {
                               setPdfViewerState({
                                 isOpen: true,
@@ -1043,7 +1092,7 @@ export default function PassedCandidatesPage() {
           roleDesignation={selectedRoleDesignation}
           isOfferVerified={selectedIsOfferVerified}
           isAlreadyUploaded={selected.isOfferLetterUploaded || !!offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id]}
-          existingFileUrl={offerLetterOverrides[(selected.candidateProjectMap?.candidate || selected.candidate)?.id] || selected.offerLetterData?.document?.fileUrl}
+          existingFileUrl={resolveOfferLetterFileUrl(selected, offerLetterOverrides)}
           onSuccess={() => {
             if (selectedId === selected.id) {
               setSelectedId(null);
@@ -1093,11 +1142,13 @@ export default function PassedCandidatesPage() {
           projectTitle={offerLetterInterview.candidateProjectMap?.project?.title || offerLetterInterview.project?.title || "Project"}
           roleCatalogId={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalogId || (offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.roleCatalog?.id || ""}
           roleDesignation={(offerLetterInterview.candidateProjectMap?.roleNeeded || offerLetterInterview.roleNeeded)?.designation || "Unknown Role"}
-          isAlreadyUploaded={!!(offerLetterInterview.isOfferLetterUploaded || offerLetterOverrides[offerLetterModal.candidateId!])}
-          existingFileUrl={offerLetterOverrides[offerLetterModal.candidateId!] || offerLetterInterview.offerLetterData?.document?.fileUrl}
+          isAlreadyUploaded={hasOfferLetter(offerLetterInterview, offerLetterOverrides)}
+          existingFileUrl={resolveOfferLetterFileUrl(offerLetterInterview, offerLetterOverrides)}
           onSuccess={(uploadData) => {
-            if (uploadData?.fileUrl) {
-              setOfferLetterOverrides(prev => ({ ...prev, [offerLetterModal.candidateId!]: uploadData.fileUrl }));
+            const fileUrl = getOfferLetterUrlFromUpload(uploadData);
+            if (fileUrl && offerLetterInterview) {
+              const overrideKey = getOfferLetterOverrideKey(offerLetterInterview);
+              setOfferLetterOverrides((prev) => ({ ...prev, [overrideKey]: fileUrl }));
               
               // Refresh the list to sync everything
               try {

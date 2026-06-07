@@ -56,6 +56,7 @@ import type {
 import { CandidateOverview } from "../components/tabs/CandidateOverview";
 import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
+import { CandidateOfferLetterCard } from "../components/CandidateOfferLetterCard";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
@@ -661,6 +662,10 @@ export default function CandidateDetailPage() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
+          <CandidateOfferLetterCard
+            candidateId={id!}
+            candidateName={`${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim()}
+          />
           <CandidateDocuments
             candidateId={id!}
             candidatePassportNumber={candidate?.passportNumber}

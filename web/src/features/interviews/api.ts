@@ -17,6 +17,22 @@ export interface Interview {
   interviewerEmail?: string;
   outcome?: string;
   notes?: string;
+  readyForProcessingAt?: string | null;
+  offerLetterData?: {
+    id?: string;
+    status?: string;
+    offerLetterReceivedAt?: string | null;
+    document?: {
+      id?: string;
+      fileName?: string;
+      fileUrl?: string;
+      status?: string;
+      uploadedBy?: string;
+      createdAt?: string;
+      uploadedByUser?: { id: string; name: string; email: string } | null;
+    };
+  } | null;
+  isOfferLetterUploaded?: boolean;
   // Top-level shortcuts: some endpoints include the candidate & role directly
   candidate?: {
     id: string;
@@ -400,6 +416,37 @@ export const interviewsApi = baseApi.injectEndpoints({
       invalidatesTags: ["Interview"],
     }),
 
+    sendForProcessing: builder.mutation<
+      { success: boolean; data: Interview; message?: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/interviews/${id}/send-for-processing`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: "Interview", id },
+        "Interview",
+        "ProcessingSummary",
+      ],
+    }),
+
+    sendBulkForProcessing: builder.mutation<
+      {
+        success: boolean;
+        data: Array<{ id: string; success: boolean; data?: Interview; error?: string }>;
+        message?: string;
+      },
+      { interviewIds: string[] }
+    >({
+      query: (body) => ({
+        url: "/interviews/send-for-processing",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Interview", "ProcessingSummary"],
+    }),
+
     /**
      * Get interview history: GET /interviews/:id/history
      * - accepts { id, page?, limit? }
@@ -484,6 +531,8 @@ export const {
   useCreateBulkInterviewsMutation,
   useUpdateInterviewMutation,
   useUpdateBulkInterviewStatusMutation,
+  useSendForProcessingMutation,
+  useSendBulkForProcessingMutation,
   useDeleteInterviewMutation,
   useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,

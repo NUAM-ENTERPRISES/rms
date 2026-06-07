@@ -596,6 +596,27 @@ export class OutboxService {
     );
   }
 
+  /**
+   * Publish offer letter uploaded event (notifies recruiter, admin, managers, interview coordinators, and processing roles)
+   */
+  async publishOfferLetterUploaded(
+    payload: {
+      candidateId: string;
+      projectId: string;
+      candidateProjectMapId: string;
+      documentId: string;
+      recruiterId?: string | null;
+      candidateName: string;
+      projectTitle: string;
+      roleDesignation: string;
+      uploadedBy: string;
+      uploadedByName?: string | null;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('OfferLetterUploaded', payload, tx);
+  }
+
   async publishAgentCandidateRequestCreated(
     payload: {
       requestId: string;

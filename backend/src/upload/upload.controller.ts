@@ -298,7 +298,7 @@ export class UploadController {
    */
   @Post('offer-letter/:candidateId')
   @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
-  @Permissions('write:documents')
+  @Permissions('write:documents', 'write:interviews')
   @ApiOperation({
     summary: 'Upload offer letter',
     description: 'Upload an offer letter (multipart) and link it to a specific project. This handles both file storage and document record creation.',

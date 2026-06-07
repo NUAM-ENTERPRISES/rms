@@ -34,6 +34,7 @@ export interface Document {
   notes?: string;
   status: string;
   uploadedBy: string;
+  uploadedByUser?: { id: string; name: string; email: string } | null;
   verifiedBy?: string;
   roleCatalogId?: string;
   roleCatalog?: {
@@ -396,6 +397,12 @@ export type CandidateProjectItem = {
     designation: string;
     minExperience?: number;
     maxExperience?: number;
+    roleCatalogId?: string;
+    roleCatalog?: {
+      id: string;
+      name?: string;
+      label?: string;
+    };
   } | null;
   recruiter?: {
     id: string;

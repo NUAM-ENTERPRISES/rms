@@ -159,4 +159,76 @@ describe('NotificationsProcessor', () => {
       }),
     );
   });
+
+  it('notifies recruiter, admin roles, and processing roles for offer letter upload and excludes uploader', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-1',
+        payload: {
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          documentId: 'doc-1',
+          recruiterId: 'recruiter-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          roleDesignation: 'Nurse',
+          uploadedBy: 'uploader-1',
+          uploadedByName: 'IC User',
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'admin-1' },
+      { id: 'rm-1' },
+      { id: 'mgr-1' },
+      { id: 'ic-1' },
+      { id: 'pm-1' },
+      { id: 'pe-1' },
+      { id: 'uploader-1' },
+    ]);
+
+    await processor.handleOfferLetterUploaded(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(7);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'offer_letter_uploaded',
+        link: '/candidates/cand-1',
+        meta: expect.objectContaining({
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+        }),
+      }),
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'uploader-1' }),
+    );
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  in: expect.arrayContaining([
+                    'Admin',
+                    'System Admin',
+                    'Recruiter Manager',
+                    'Manager',
+                    'Interview Coordinator',
+                    'Processing Manager',
+                    'Processing Executive',
+                  ]),
+                },
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
 });

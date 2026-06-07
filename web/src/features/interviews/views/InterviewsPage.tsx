@@ -23,11 +23,13 @@ import {
   Eye,
   Users,
   ExternalLink,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { motion } from "framer-motion";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
@@ -38,6 +40,14 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
 } from "lucide-react";
+import { OfferLetterBadge } from "../components/OfferLetterBadge";
+import {
+  getOfferLetterOverrideKey,
+  getOfferLetterUploaderName,
+  getOfferLetterUrlFromUpload,
+  hasOfferLetter,
+  resolveOfferLetterFileUrl,
+} from "../utils/offerLetter";
 import {
   useGetInterviewsQuery,
   useUpdateClientDecisionMutation,
@@ -50,7 +60,15 @@ import {
   useGetShortlistedQuery,
   useGetNotShortlistedQuery,
   useCreateBulkInterviewsMutation,
+  useSendForProcessingMutation,
+  useSendBulkForProcessingMutation,
 } from "../api";
+import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import {
+  SendForProcessingModal,
+  type SendForProcessingCandidate,
+} from "../components/SendForProcessingModal";
 import { useGetScreeningsQuery } from "@/features/screening-coordination/interviews/data";
 import { useGetProjectQuery } from "@/features/projects/api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
@@ -255,6 +273,7 @@ function formatPhoneForLink(candidate: {
 export default function InterviewsPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const isInterviewCoordinator = useHasRole("Interview Coordinator");
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
@@ -566,6 +585,35 @@ export default function InterviewsPage() {
     screeningOnHoldData,
   ]);
 
+  useEffect(() => {
+    if (activeFilter !== "interviewPassed") return;
+
+    setOfferLetterOverrides((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const item of candidates) {
+        const serverUrl = item.offerLetterData?.document?.fileUrl;
+        if (!serverUrl) continue;
+
+        const key = getOfferLetterOverrideKey(item);
+        if (next[key] !== serverUrl) {
+          next[key] = serverUrl;
+          changed = true;
+        }
+
+        const legacyCandidateId =
+          item.candidateProjectMap?.candidate?.id || item.candidate?.id;
+        if (legacyCandidateId && next[legacyCandidateId] !== serverUrl) {
+          delete next[legacyCandidateId];
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [activeFilter, candidates]);
+
   const meta = useMemo(() => {
     if (activeFilter === "shortlistPending") {
       return (shortlistPendingData as any)?.data?.pagination;
@@ -654,6 +702,32 @@ export default function InterviewsPage() {
   const { data: projectDetailData } = useGetProjectQuery(selectedProjectId as string, {
     skip: !selectedProjectId,
   });
+
+  const [offerLetterModal, setOfferLetterModal] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    projectId: string;
+    projectTitle: string;
+    roleCatalogId: string;
+    roleDesignation: string;
+    existingFileUrl?: string;
+    isAlreadyUploaded?: boolean;
+  } | null>(null);
+  const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
+
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({ isOpen: false, fileUrl: "", fileName: "" });
+
+  const [sendForProcessing, { isLoading: isSendingForProcessing }] = useSendForProcessingMutation();
+  const [sendBulkForProcessing, { isLoading: isBulkSendingForProcessing }] = useSendBulkForProcessingMutation();
+  const [sendForProcessingModal, setSendForProcessingModal] = useState<{
+    mode: "single" | "bulk";
+    candidates: SendForProcessingCandidate[];
+  } | null>(null);
 
   const handleClientDecision = async (decision: "shortlisted" | "not_shortlisted", reason: string) => {
     if (!selectedShortlisting) return;
@@ -767,6 +841,106 @@ export default function InterviewsPage() {
       refetchStats();
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status");
+    }
+  };
+
+  const openOfferLetterModal = (item: any) => {
+    const candidateProjectMap = item.candidateProjectMap || item;
+    const candidate = candidateProjectMap?.candidate || item.candidate;
+    const project = candidateProjectMap?.project || item.project;
+    const roleCatalogId =
+      candidateProjectMap?.roleNeeded?.roleCatalog?.id ||
+      candidateProjectMap?.roleNeeded?.roleCatalogId;
+    const candidateId = candidate?.id;
+    const projectId = project?.id || item.projectId;
+
+    if (!candidateId || !projectId || !roleCatalogId) {
+      toast.error("Missing project or role information for offer letter upload");
+      return;
+    }
+
+    const existingFileUrl = resolveOfferLetterFileUrl(item, offerLetterOverrides);
+
+    setOfferLetterModal({
+      isOpen: true,
+      candidateId,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      projectId,
+      projectTitle: project.title || "Project",
+      roleCatalogId,
+      roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
+      existingFileUrl,
+      isAlreadyUploaded: hasOfferLetter(item, offerLetterOverrides),
+    });
+  };
+
+  const toSendForProcessingCandidate = (item: any): SendForProcessingCandidate => {
+    const candidateProjectMap = item.candidateProjectMap || item;
+    const candidate = candidateProjectMap?.candidate || item.candidate;
+    return {
+      interviewId: item.id,
+      candidateName: candidate
+        ? `${candidate.firstName} ${candidate.lastName}`
+        : "Unknown Candidate",
+      projectTitle:
+        candidateProjectMap?.project?.title || item.project?.title || "Unknown Project",
+      roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
+      hasOfferLetter: hasOfferLetter(item, offerLetterOverrides),
+      offerLetterUploadedBy: getOfferLetterUploaderName(item),
+    };
+  };
+
+  const openSendForProcessingModal = (item: any) => {
+    setSendForProcessingModal({
+      mode: "single",
+      candidates: [toSendForProcessingCandidate(item)],
+    });
+  };
+
+  const openBulkSendForProcessingModal = () => {
+    const unsent = candidates.filter(
+      (item) => selectedBulkIds.includes(item.id) && !item.readyForProcessingAt
+    );
+
+    if (unsent.length === 0) {
+      toast.error("No unsent interviews selected");
+      return;
+    }
+
+    setSendForProcessingModal({
+      mode: "bulk",
+      candidates: unsent.map(toSendForProcessingCandidate),
+    });
+  };
+
+  const handleConfirmSendForProcessing = async () => {
+    if (!sendForProcessingModal) return;
+
+    const interviewIds = sendForProcessingModal.candidates.map((c) => c.interviewId);
+
+    try {
+      if (sendForProcessingModal.mode === "single") {
+        await sendForProcessing(interviewIds[0]).unwrap();
+        toast.success("Candidate sent for processing");
+      } else {
+        const res = await sendBulkForProcessing({ interviewIds }).unwrap();
+        const results = res?.data ?? [];
+        const succeeded = results.filter((r) => r.success).length;
+        const failed = results.filter((r) => !r.success).length;
+
+        if (failed > 0) {
+          toast.error(`Sent ${succeeded}, failed ${failed}`);
+        } else {
+          toast.success(`${succeeded} candidate(s) sent for processing`);
+        }
+        setSelectedBulkIds([]);
+      }
+
+      setSendForProcessingModal(null);
+      refetchCurrent();
+      refetchStats();
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to send for processing");
     }
   };
 
@@ -985,16 +1159,28 @@ export default function InterviewsPage() {
                   )}
 
                   {activeFilter === "interviewPassed" && (
-                    <Button
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white h-8"
-                      onClick={() => {
-                        setSelectedReviewInterview(candidates.filter((item) => selectedBulkIds.includes(item.id)));
-                        setIsReviewModalOpen(true);
-                      }}
-                    >
-                      Bulk Review
-                    </Button>
+                    <>
+                      {isInterviewCoordinator && (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
+                          disabled={isBulkSendingForProcessing}
+                          onClick={openBulkSendForProcessingModal}
+                        >
+                          Send for Processing
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white h-8"
+                        onClick={() => {
+                          setSelectedReviewInterview(candidates.filter((item) => selectedBulkIds.includes(item.id)));
+                          setIsReviewModalOpen(true);
+                        }}
+                      >
+                        Bulk Review
+                      </Button>
+                    </>
                   )}
 
                   <Button
@@ -1259,6 +1445,18 @@ export default function InterviewsPage() {
                                 >
                                   {stageLabel}
                                 </Badge>
+                                {activeFilter === "interviewPassed" && item.readyForProcessingAt && (
+                                  <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
+                                    Sent
+                                  </Badge>
+                                )}
+                                {activeFilter === "interviewPassed" &&
+                                  hasOfferLetter(item, offerLetterOverrides) && (
+                                  <OfferLetterBadge
+                                    className="mt-1"
+                                    uploaderName={getOfferLetterUploaderName(item)}
+                                  />
+                                )}
                                 {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected") && candidateProjectMap.screening && (
                                   <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
                                     Screened
@@ -1526,7 +1724,114 @@ export default function InterviewsPage() {
                                       <ClipboardCheck className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                ) : activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" ? (
+                                ) : activeFilter === "interviewPassed" ? (
+                                  (() => {
+                                    const showSendForProcessing =
+                                      isInterviewCoordinator && !item.readyForProcessingAt;
+                                    const offerLetterUploaded = hasOfferLetter(
+                                      item,
+                                      offerLetterOverrides,
+                                    );
+                                    const offerLetterUploader = getOfferLetterUploaderName(item);
+
+                                    const iconActions = (
+                                      <>
+                                        <Button
+                                          size="icon"
+                                          variant="outline"
+                                          className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                                          onClick={() => {
+                                            if (item.id) navigate(`/interviews/detail/${item.id}`);
+                                          }}
+                                          title="View Interview"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {offerLetterUploaded && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                                            onClick={() => {
+                                              const fileUrl = resolveOfferLetterFileUrl(
+                                                item,
+                                                offerLetterOverrides,
+                                              );
+                                              if (fileUrl) {
+                                                setPdfViewerState({
+                                                  isOpen: true,
+                                                  fileUrl,
+                                                  fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                                                });
+                                              }
+                                            }}
+                                            title={
+                                              offerLetterUploader
+                                                ? `View Offer Letter (uploaded by ${offerLetterUploader})`
+                                                : "View Offer Letter"
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        {isInterviewCoordinator && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => openOfferLetterModal(item)}
+                                            title={
+                                              offerLetterUploaded
+                                                ? "Re-upload Offer Letter"
+                                                : "Upload Offer Letter"
+                                            }
+                                          >
+                                            <Upload className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <Button
+                                          size="icon"
+                                          variant="outline"
+                                          className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+                                          onClick={() => {
+                                            setSelectedReviewInterview(item);
+                                            setIsReviewModalOpen(true);
+                                          }}
+                                          title="Review Interview"
+                                        >
+                                          <UserCheck className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+
+                                    if (showSendForProcessing) {
+                                      return (
+                                        <div className="flex flex-col items-end gap-2">
+                                          <div className="flex items-center justify-end gap-2">
+                                            {iconActions}
+                                          </div>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 w-full min-w-[10.5rem] px-3 text-[11px] font-bold text-emerald-700 border-emerald-200 hover:bg-emerald-50 whitespace-nowrap"
+                                            disabled={isSendingForProcessing}
+                                            onClick={() => openSendForProcessingModal(item)}
+                                            title="Send for Processing"
+                                          >
+                                            <Send className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                                            Send for Processing
+                                          </Button>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div className="flex items-center justify-end gap-2">
+                                        {iconActions}
+                                      </div>
+                                    );
+                                  })()
+                                ) : activeFilter === "interviewCompleted" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" ? (
                                   <div className="flex items-center justify-end gap-2">
                                     <Button
                                       size="icon"
@@ -1693,6 +1998,48 @@ export default function InterviewsPage() {
         isOpen={!!selectedProjectId}
         onClose={() => setSelectedProjectId(null)}
         project={projectDetailData?.data}
+      />
+
+      {offerLetterModal && (
+        <OfferLetterUploadModal
+          isOpen={offerLetterModal.isOpen}
+          onClose={() => setOfferLetterModal(null)}
+          candidateId={offerLetterModal.candidateId}
+          candidateName={offerLetterModal.candidateName}
+          projectId={offerLetterModal.projectId}
+          projectTitle={offerLetterModal.projectTitle}
+          roleCatalogId={offerLetterModal.roleCatalogId}
+          roleDesignation={offerLetterModal.roleDesignation}
+          isAlreadyUploaded={offerLetterModal.isAlreadyUploaded}
+          existingFileUrl={offerLetterModal.existingFileUrl}
+          onSuccess={(uploadData) => {
+            const fileUrl = getOfferLetterUrlFromUpload(uploadData);
+            if (fileUrl && offerLetterModal) {
+              const overrideKey = `${offerLetterModal.candidateId}:${offerLetterModal.projectId}:${offerLetterModal.roleCatalogId}`;
+              setOfferLetterOverrides((prev) => ({
+                ...prev,
+                [overrideKey]: fileUrl,
+              }));
+            }
+            refetchCurrent();
+          }}
+        />
+      )}
+
+      <PDFViewer
+        isOpen={pdfViewerState.isOpen}
+        onClose={() => setPdfViewerState({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={pdfViewerState.fileUrl}
+        fileName={pdfViewerState.fileName}
+      />
+
+      <SendForProcessingModal
+        isOpen={!!sendForProcessingModal}
+        onClose={() => setSendForProcessingModal(null)}
+        onConfirm={handleConfirmSendForProcessing}
+        isLoading={isSendingForProcessing || isBulkSendingForProcessing}
+        mode={sendForProcessingModal?.mode ?? "single"}
+        candidates={sendForProcessingModal?.candidates ?? []}
       />
     </div>
   );
