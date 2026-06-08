@@ -299,9 +299,7 @@ export interface CreateRoleNeededRequest {
   genderRequirement?: "female" | "male" | "all" | "other";
 }
 
-export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: ProjectStatusType;
-}
+export type UpdateProjectRequest = Partial<CreateProjectRequest>;
 
 export interface QueryProjectsRequest {
   search?: string;
@@ -556,11 +554,16 @@ export const projectsApi = baseApi.injectEndpoints({
       ApiResponse<Project>,
       { id: string; data: UpdateProjectRequest }
     >({
-      query: ({ id, data }) => ({
-        url: `/projects/${id}`,
-        method: "PATCH",
-        body: data,
-      }),
+      query: ({ id, data }) => {
+        const { status: _status, ...body } = data as UpdateProjectRequest & {
+          status?: ProjectStatusType;
+        };
+        return {
+          url: `/projects/${id}`,
+          method: "PATCH",
+          body,
+        };
+      },
       invalidatesTags: (result, _, { id }) => {
         const tags: Array<
           "ProjectStats" | { type: "Project"; id: string } | { type: "Client"; id: string }

@@ -463,6 +463,8 @@ export class CandidateProjectsService {
     });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
+    assertProjectOpenForAssignment(project);
+
     // -------------------------------
     // AUTO MATCH ROLE
     // -------------------------------
@@ -763,6 +765,8 @@ export class CandidateProjectsService {
     // -------------------------------
     const project = await this.prisma.project.findUnique({ where: { id: projectId }, include: { rolesNeeded: true } });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    assertProjectOpenForAssignment(project);
 
     // -------------------------------
     // AUTO MATCH ROLE
@@ -2509,6 +2513,8 @@ export class CandidateProjectsService {
 
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    assertProjectOpenForAssignment(project);
 
     // Resolve recruiter
     // 1. Prioritize candidate's assigned recruiter from assignments table

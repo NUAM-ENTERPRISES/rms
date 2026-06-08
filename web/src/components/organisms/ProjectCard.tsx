@@ -11,6 +11,7 @@ import {
 import { Project } from "@/features/projects";
 import {
   getProjectStatusBadge,
+  getProjectStatusBlinkClass,
   normalizeProjectStatusKey,
 } from "@/features/projects/constants/statusBadges";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,7 @@ export default function ProjectCard({
   const openPositions = totalPositions - filledPositions;
 
   const statusBadge = getProjectStatusBadge(project.status);
+  const statusBlinkClass = getProjectStatusBlinkClass(project.status);
   const StatusIcon = (() => {
     switch (normalizeProjectStatusKey(project.status)) {
       case "in_progress":
@@ -87,7 +89,10 @@ export default function ProjectCard({
   return (
     <Card
       className={cn(
-        "group hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-l-4 cursor-pointer",
+        "group border-l-4 cursor-pointer",
+        statusBlinkClass
+          ? "rounded-none border-0 bg-transparent py-0 shadow-none hover:scale-[1.01] transition-transform duration-200"
+          : "hover:shadow-lg hover:scale-[1.02] bg-card transition-[transform,box-shadow] duration-200",
         isOverdue && "border-l-red-500",
         isUrgent && "border-l-orange-500",
         isWarning && "border-l-yellow-500",

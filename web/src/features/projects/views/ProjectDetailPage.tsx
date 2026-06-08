@@ -49,7 +49,7 @@ import { ProjectStatus, type ProjectStatusType } from "@/entities/project/consta
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
   getProjectClosureMessage,
-  isProjectOpenForAssignment,
+  isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
@@ -192,10 +192,16 @@ export default function ProjectDetailPage() {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true,
   });
-  const assignmentOpen = isProjectOpenForAssignment(projectData?.data);
-  const assignmentClosureMessage = getProjectClosureMessage(projectData?.data);
-  const DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE =
-    "This project is closed. New candidate assignments are disabled.";
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
+
+  const ensurePipelineOpen = (): boolean => {
+    if (pipelineOpen) return true;
+    toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+    return false;
+  };
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -214,7 +220,7 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
-    skip: !projectId || !assignmentOpen,
+    skip: !projectId || !pipelineOpen,
     refetchOnFocus: false,
     refetchOnMountOrArgChange: false,
   });
@@ -501,6 +507,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     // Try to find nominated candidate to prefill nominatedRole if present
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -523,6 +530,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setInterviewConfirm({
       isOpen: true,
       candidateId,
@@ -679,12 +687,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
-    if (!assignmentOpen) {
-      toast.error(
-        assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
-      );
-      return;
-    }
+    if (!ensurePipelineOpen()) return;
     // Find the candidate to determine top matched role
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -723,6 +726,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setScreeningConfirm({
       isOpen: true,
       candidateId,
@@ -1323,17 +1327,13 @@ export default function ProjectDetailPage() {
                   showScreeningConfirmation(candidateId, candidateName)
                 }
                 onBulkAssign={(candidateIds) => {
-                  if (!assignmentOpen) {
-                    toast.error(
-                      assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
-                    );
-                    return;
-                  }
+                  if (!ensurePipelineOpen()) return;
                   setBulkAssignState({ isOpen: true, candidateIds });
                 }}
-                onBulkSendForScreening={(candidateIds) =>
-                  setBulkScreeningState({ isOpen: true, candidateIds })
-                }
+                onBulkSendForScreening={(candidateIds) => {
+                  if (!ensurePipelineOpen()) return;
+                  setBulkScreeningState({ isOpen: true, candidateIds });
+                }}
                 nominatedPage={nominatedPage}
                 nominatedTotal={projectCandidatesData?.data?.pagination?.total}
                 nominatedTotalPages={projectCandidatesData?.data?.pagination?.totalPages}

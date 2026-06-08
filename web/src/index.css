@@ -52,6 +52,48 @@
   }
 }
 
+@keyframes project-status-blink-hold {
+  0%,
+  100% {
+    background-color: rgb(255 247 237);
+    border-color: rgb(253 186 116);
+    box-shadow: 0 0 0 0 rgb(249 115 22 / 0%);
+  }
+  50% {
+    background-color: rgb(254 215 170);
+    border-color: rgb(249 115 22);
+    box-shadow: 0 0 16px 3px rgb(249 115 22 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-completed {
+  0%,
+  100% {
+    background-color: rgb(236 253 245);
+    border-color: rgb(134 239 172);
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
+  }
+  50% {
+    background-color: rgb(134 239 172);
+    border-color: rgb(34 197 94);
+    box-shadow: 0 0 16px 3px rgb(34 197 94 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-cancelled {
+  0%,
+  100% {
+    background-color: rgb(254 242 242);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  50% {
+    background-color: rgb(252 165 165);
+    border-color: rgb(239 68 68);
+    box-shadow: 0 0 16px 3px rgb(239 68 68 / 0.35);
+  }
+}
+
 @keyframes login-panel-border-spin {
   from {
     transform: rotate(0deg);
@@ -224,9 +266,27 @@
     will-change: background-color, border-color, box-shadow;
   }
 
+  .animate-project-status-blink-hold {
+    animation: project-status-blink-hold 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-status-blink-completed {
+    animation: project-status-blink-completed 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-status-blink-cancelled {
+    animation: project-status-blink-cancelled 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-project-deadline-blink-urgent,
-    .animate-project-deadline-blink {
+    .animate-project-deadline-blink,
+    .animate-project-status-blink-hold,
+    .animate-project-status-blink-completed,
+    .animate-project-status-blink-cancelled {
       animation: none;
     }
   }

@@ -3,6 +3,7 @@
  * Following FE_GUIDELINES.md entities pattern
  */
 
+import { ProjectStatus } from "./constants";
 import { Project, RoleNeeded } from "./model";
 
 export class ProjectService {
@@ -12,23 +13,25 @@ export class ProjectService {
   static isOverdue(project: Project): boolean {
     const deadline = new Date(project.deadline);
     const now = new Date();
-    return deadline < now && project.status === "active";
+    return deadline < now && project.status === ProjectStatus.IN_PROGRESS;
   }
 
   /**
    * Check if project is urgent (deadline within 7 days)
    */
   static isUrgent(project: Project): boolean {
+    if (project.status !== ProjectStatus.IN_PROGRESS) {
+      return false;
+    }
+    if (this.isOverdue(project)) {
+      return true;
+    }
     const deadline = new Date(project.deadline);
     const now = new Date();
     const daysUntilDeadline = Math.ceil(
       (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
-    return (
-      daysUntilDeadline <= 7 &&
-      daysUntilDeadline >= 0 &&
-      project.status === "active"
-    );
+    return daysUntilDeadline <= 7 && daysUntilDeadline >= 0;
   }
 
   /**
@@ -57,17 +60,17 @@ export class ProjectService {
    */
   static getStatusConfig(status: string) {
     const statusMap = {
-      active: {
+      [ProjectStatus.IN_PROGRESS]: {
         color: "bg-green-100 text-green-800 border-green-200",
-        label: "Active",
+        label: "In Progress",
         priority: 1,
       },
-      completed: {
+      [ProjectStatus.COMPLETED]: {
         color: "bg-blue-100 text-blue-800 border-blue-200",
         label: "Completed",
         priority: 3,
       },
-      cancelled: {
+      [ProjectStatus.CANCELLED]: {
         color: "bg-red-100 text-red-800 border-red-200",
         label: "Cancelled",
         priority: 4,
@@ -125,14 +128,17 @@ export class ProjectService {
   static canComplete(project: Project): boolean {
     const totalPositions = this.getTotalPositions(project);
     const filledPositions = this.getFilledPositions(project);
-    return project.status === "active" && filledPositions >= totalPositions;
+    return (
+      project.status === ProjectStatus.IN_PROGRESS &&
+      filledPositions >= totalPositions
+    );
   }
 
   /**
    * Check if project can be cancelled
    */
   static canCancel(project: Project): boolean {
-    return project.status === "active";
+    return project.status === ProjectStatus.IN_PROGRESS;
   }
 
   /**

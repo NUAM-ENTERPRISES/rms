@@ -175,7 +175,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get all projects with pagination and filtering',
     description:
-      'Retrieve a paginated list of projects with optional search, filtering, and sorting. Active projects whose deadline has passed are auto-marked completed before results are returned.',
+      'Retrieve a paginated list of projects with optional search, filtering, and sorting.',
   })
   @ApiQuery({
     name: 'search',
@@ -332,7 +332,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get project statistics',
     description:
-      'Retrieve comprehensive statistics about projects including counts, status breakdown, and upcoming deadlines. Active projects with a past deadline are auto-marked completed before counts are computed (also runs hourly via scheduled job).',
+      'Retrieve comprehensive statistics about projects including counts, status breakdown, and upcoming deadlines.',
   })
   @ApiResponse({
     status: 200,

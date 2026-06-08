@@ -25,9 +25,9 @@ import { normalizeProjectRoleVisaType, PROJECT_SECTOR } from './constants';
 import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
   assertProjectOpenForAssignment,
+  buildInProgressProjectsWhere,
   getStartOfToday,
 } from './utils/project-deadline.util';
-import { ProjectDeadlineAutoCompleteService } from './project-deadline-auto-complete.service';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -56,7 +56,6 @@ export class ProjectsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly projectDeadlineAutoComplete: ProjectDeadlineAutoCompleteService,
     private readonly countriesService: CountriesService,
     private readonly qualificationsService: QualificationsService,
     private readonly roleCatalogService: RoleCatalogService,
@@ -417,8 +416,6 @@ export class ProjectsService {
   async findAll(
     query: QueryProjectsDto,
   ): Promise<PaginatedProjects | PaginatedProjectSummaryList> {
-    await this.projectDeadlineAutoComplete.autoCompleteExpiredProjects();
-
     const {
       search,
       status,
@@ -451,15 +448,7 @@ export class ProjectsService {
 
     if (status) {
       if (status === 'IN_PROGRESS') {
-        where.status = 'IN_PROGRESS';
-        where.AND = [
-          {
-            OR: [
-              { deadline: null },
-              { deadline: { gte: startOfToday } },
-            ],
-          },
-        ];
+        Object.assign(where, buildInProgressProjectsWhere(now));
       } else if (status === 'COMPLETED') {
         where.OR = [
           { status: 'COMPLETED' },
@@ -780,12 +769,6 @@ export class ProjectsService {
     });
     if (!existingProject) {
       throw new NotFoundException(`Project with ID ${id} not found`);
-    }
-
-    if (updateProjectDto.status !== undefined) {
-      throw new BadRequestException(
-        'Project status cannot be updated via this endpoint. Use PATCH /projects/:id/status instead.',
-      );
     }
 
     // Validate client exists if updating
@@ -2170,8 +2153,6 @@ export class ProjectsService {
   }
 
   async getProjectStats(scopedUserId?: string): Promise<ProjectStats> {
-    await this.projectDeadlineAutoComplete.autoCompleteExpiredProjects();
-
     const scopeWhere = scopedUserId ? { createdBy: scopedUserId } : {};
 
     // Get total counts
@@ -2184,7 +2165,7 @@ export class ProjectsService {
     ] = await Promise.all([
       this.prisma.project.count({ where: scopeWhere }),
       this.prisma.project.count({
-        where: { ...scopeWhere, status: 'IN_PROGRESS' },
+        where: { ...scopeWhere, ...buildInProgressProjectsWhere() },
       }),
       this.prisma.project.count({
         where: { ...scopeWhere, status: 'COMPLETED' },
@@ -3122,6 +3103,14 @@ export class ProjectsService {
     candidateId: string,
     userId: string,
   ): Promise<any> {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+    assertProjectOpenForAssignment(project);
+
     const candidateProject = await this.prisma.candidateProjects.findFirst({
       where: {
         projectId,

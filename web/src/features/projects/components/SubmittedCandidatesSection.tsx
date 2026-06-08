@@ -22,6 +22,11 @@ import {
   useGetProjectQuery,
 } from "@/features/projects";
 import CandidateCard from "./CandidateCard";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 interface SubmittedCandidatesSectionProps {
   projectId: string;
@@ -52,6 +57,11 @@ export default function SubmittedCandidatesSection({
   }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
 
   const { data: projectData } = useGetProjectQuery(projectId);
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
 
   // Fetch project statuses from API
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
@@ -97,6 +107,10 @@ export default function SubmittedCandidatesSection({
     candidateId: string,
     candidateName: string
   ) => {
+    if (!pipelineOpen) {
+      toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+      return;
+    }
     setVerifyConfirm({
       isOpen: true,
       candidateId,
@@ -174,6 +188,23 @@ export default function SubmittedCandidatesSection({
           </p>
         </div>
 
+        {deadlineNoticeMessage ? (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4"
+            role="status"
+          >
+            {deadlineNoticeMessage}
+          </div>
+        ) : null}
+        {!pipelineOpen && pipelineClosureMessage ? (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4"
+            role="status"
+          >
+            {pipelineClosureMessage}
+          </div>
+        ) : null}
+
         {/* Search and Filter */}
         <div className="space-y-2 mb-4">
           <div className="relative">
@@ -224,7 +255,8 @@ export default function SubmittedCandidatesSection({
             if (!projectStatus) projectStatus = "nominated";
 
             // Only show verify button if status is 'nominated'
-            const canSendForVerification = projectStatus.toLowerCase() === "nominated";
+            const canSendForVerification =
+              pipelineOpen && projectStatus.toLowerCase() === "nominated";
 
             // Use candidateId if it exists, otherwise use id
             const actualCandidateId = candidate.candidateId || candidate.id;

@@ -40,8 +40,9 @@ import {
   getCandidateAssignmentBlockReason,
   getCandidateStatusLabel,
   getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
   isCandidatePositiveForAssignment,
-  isProjectOpenForAssignment,
+  isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
@@ -544,8 +545,9 @@ const ProjectCandidatesBoard = ({
   /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
   const canUseRecruiterPipelineActions = isRecruiter || isAgentCoordinator;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
-  const assignmentOpen = isProjectOpenForAssignment(project);
-  const assignmentClosureMessage = getProjectClosureMessage(project);
+  const pipelineOpen = isProjectOpenForPipelineActions(project);
+  const pipelineClosureMessage = getProjectClosureMessage(project);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(project);
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
   const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
@@ -576,7 +578,7 @@ const ProjectCandidatesBoard = ({
       columnId === "nominated" &&
       candidateId &&
       canUseRecruiterPipelineActions &&
-      assignmentOpen
+      pipelineOpen
     ) {
       // Find candidate in eligible or all candidates
       const candidate = [...eligibleCandidates, ...allCandidates].find(
@@ -602,7 +604,7 @@ const ProjectCandidatesBoard = ({
       page: eligiblePage,
       limit: PAGE_SIZE,
     }, {
-      skip: !assignmentOpen,
+      skip: !pipelineOpen,
       refetchOnFocus: false,
       refetchOnMountOrArgChange: false,
     });
@@ -900,19 +902,25 @@ const ProjectCandidatesBoard = ({
 
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
-          const showVerifyButton = subStatusName === "nominated_initial";
-          const showInterviewButton = subStatusName === "documents_verified";
+          const showVerifyButton =
+            pipelineOpen && subStatusName === "nominated_initial";
+          const showInterviewButton =
+            pipelineOpen && subStatusName === "documents_verified";
 
-          const actions = (requiredScreening && !isAlreadyInScreening && isInterviewCoordinator)
-            ? [
-                {
-                  label: "Send for Direct Screening",
-                  action: "send_for_screening",
-                  variant: "default" as const,
-                  icon: Send,
-                },
-              ]
-            : [];
+          const actions =
+            pipelineOpen &&
+            requiredScreening &&
+            !isAlreadyInScreening &&
+            isInterviewCoordinator
+              ? [
+                  {
+                    label: "Send for Direct Screening",
+                    action: "send_for_screening",
+                    variant: "default" as const,
+                    icon: Send,
+                  },
+                ]
+              : [];
 
           const isSelectable = selectableNominatedCandidates.some(c => (c.candidateId || c.id) === candidateId);
           const isSelected = selectedNominatedIds.has(candidateId);
@@ -964,7 +972,7 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
+              showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) =>
                 onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)
               }
@@ -1037,8 +1045,9 @@ const ProjectCandidatesBoard = ({
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
           const showInterviewButton =
-            candidate.projectSubStatus?.name === "documents_verified" ||
-            candidate.projectSubStatus?.statusName === "documents_verified";
+            pipelineOpen &&
+            (candidate.projectSubStatus?.name === "documents_verified" ||
+              candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
@@ -1052,7 +1061,7 @@ const ProjectCandidatesBoard = ({
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
           const canSelect =
-            assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible;
+            pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible;
 
           const isSelected = selectedEligibleIds.has(assignmentInfo.candidateId);
           const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
@@ -1096,10 +1105,10 @@ const ProjectCandidatesBoard = ({
                 onVerify={() =>
                   onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
                 }
-                showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
+                showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
                 onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
                 onDragStart={
-                  assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible
+                  pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
                     ? handleDragStart
                     : undefined
                 }
@@ -1181,8 +1190,9 @@ const ProjectCandidatesBoard = ({
             assignmentInfo.shouldSkipDocumentVerification === true
           );
           const showInterviewButton =
-            candidate.projectSubStatus?.name === "documents_verified" ||
-            candidate.projectSubStatus?.statusName === "documents_verified";
+            pipelineOpen &&
+            (candidate.projectSubStatus?.name === "documents_verified" ||
+              candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
@@ -1227,10 +1237,10 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={assignmentOpen && !assignmentInfo.isAssigned}
+              showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
               onDragStart={
-                assignmentOpen && !assignmentInfo.isAssigned && !isNotEligible
+                pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
                   ? handleDragStart
                   : undefined
               }
@@ -1297,7 +1307,7 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {selectedNominatedIds.size > 0 && requiredScreening && isInterviewCoordinator && (
+          {pipelineOpen && selectedNominatedIds.size > 0 && requiredScreening && isInterviewCoordinator && (
             <Button
               size="sm"
               className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-purple-600 text-white shadow-sm hover:bg-purple-700 transition-colors"
@@ -1337,7 +1347,7 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {assignmentOpen && selectedEligibleIds.size > 0 && (
+          {pipelineOpen && selectedEligibleIds.size > 0 && (
             <Button
               size="sm"
               className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-colors"
@@ -1377,12 +1387,20 @@ const ProjectCandidatesBoard = ({
 
   return (
     <div className="space-y-5">
-      {!assignmentOpen && assignmentClosureMessage ? (
+      {deadlineNoticeMessage ? (
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="status"
+        >
+          {deadlineNoticeMessage}
+        </div>
+      ) : null}
+      {!pipelineOpen && pipelineClosureMessage ? (
         <div
           className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
           role="status"
         >
-          {assignmentClosureMessage}
+          {pipelineClosureMessage}
         </div>
       ) : null}
       {/* Search & Filter Bar */}

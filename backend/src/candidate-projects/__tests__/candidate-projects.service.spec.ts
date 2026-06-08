@@ -48,7 +48,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', type: 'screening_assigned', notes: 'note' } as SendForInterviewDto;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS' });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Mock Interview Assigned' });
@@ -78,7 +78,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', type: 'interview_assigned', notes: 'note' } as SendForInterviewDto;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS' });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss2', label: 'Client Interview Assigned' });
@@ -108,7 +108,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
@@ -147,7 +147,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', coordinatorId: 'coord1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
@@ -187,7 +187,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       lastName: 'Doe',
       currentStatus: { statusName: 'interested' },
     });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', rolesNeeded: [], requiredScreening: true, status: 'active' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Nominated' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Nominated Initial' });
@@ -227,6 +227,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     (prisma.project.findUnique as any).mockResolvedValue({
       id: 'p1',
       title: 'Project P',
+      status: 'IN_PROGRESS',
       rolesNeeded: [],
       requiredScreening: false,
     });
@@ -244,6 +245,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     (prisma.project.findUnique as any).mockResolvedValue({
       id: 'p1',
       title: 'P',
+      status: 'IN_PROGRESS',
       rolesNeeded: [],
       introductionVideoRequired: true,
     });
@@ -270,7 +272,12 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });
@@ -281,11 +288,32 @@ describe('CandidateProjectsService - sendForInterview', () => {
     await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow('Candidate currently in screening/ng.training stage. Cannot send for verification.');
   });
 
+  it('sendForVerification blocks when project is not in progress', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'COMPLETED',
+      rolesNeeded: [],
+    });
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow(
+      'Cannot assign candidates to a project with status "COMPLETED".',
+    );
+  });
+
   it('sendForVerification publishes outbox event for document verification', async () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });

@@ -1,16 +1,13 @@
+import { getStartOfToday } from './project-deadline.util';
+
 /**
- * Urgent deadline window aligned with frontend ProjectService.isUrgent:
- * active projects whose deadline falls within the next 7 calendar days (inclusive).
+ * Upcoming urgent deadline window: start of today through end of the 7th calendar day.
  */
 export function getUrgentDeadlineRange(now = new Date()): {
   gte: Date;
   lte: Date;
 } {
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-  );
+  const startOfToday = getStartOfToday(now);
 
   const endOfSeventhDay = new Date(startOfToday);
   endOfSeventhDay.setDate(endOfSeventhDay.getDate() + 7);
@@ -19,15 +16,29 @@ export function getUrgentDeadlineRange(now = new Date()): {
   return { gte: startOfToday, lte: endOfSeventhDay };
 }
 
+/**
+ * In-progress projects that are overdue or due within the next 7 calendar days.
+ * Aligned with frontend ProjectService.isUrgent.
+ */
 export function buildUrgentProjectsWhere(now = new Date()) {
+  const startOfToday = getStartOfToday(now);
   const { gte, lte } = getUrgentDeadlineRange(now);
 
   return {
     status: 'IN_PROGRESS' as const,
-    deadline: {
-      not: null,
-      gte,
-      lte,
-    },
+    AND: [
+      { deadline: { not: null } },
+      {
+        OR: [
+          { deadline: { lt: startOfToday } },
+          {
+            deadline: {
+              gte,
+              lte,
+            },
+          },
+        ],
+      },
+    ],
   };
 }

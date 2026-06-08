@@ -12,6 +12,7 @@ import {
   ProjectPipelineQueryDto,
   ProjectRoleHiringStatusQueryDto,
 } from './dto/project-coordinator-dashboard-query.dto';
+import { buildInProgressProjectsWhere } from '../projects/utils/project-deadline.util';
 
 @Injectable()
 export class ProjectCoordinatorDashboardService {
@@ -34,7 +35,7 @@ export class ProjectCoordinatorDashboardService {
       await Promise.all([
         this.getMyClientIds(userId).then((ids) => ids.length),
         this.prisma.project.count({
-          where: { createdBy: userId, status: 'IN_PROGRESS' },
+          where: { createdBy: userId, ...buildInProgressProjectsWhere() },
         }),
         this.prisma.project.count({
           where: { createdBy: userId, status: 'COMPLETED' },
@@ -71,7 +72,7 @@ export class ProjectCoordinatorDashboardService {
   async getProjectsByStatus(userId: string) {
     const [inProgress, completed, onHold, cancelled] = await Promise.all([
       this.prisma.project.count({
-        where: { createdBy: userId, status: 'IN_PROGRESS' },
+        where: { createdBy: userId, ...buildInProgressProjectsWhere() },
       }),
       this.prisma.project.count({
         where: { createdBy: userId, status: 'COMPLETED' },

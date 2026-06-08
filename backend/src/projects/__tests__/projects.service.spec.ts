@@ -288,7 +288,7 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('should apply isUrgent filter with calendar-day deadline window', async () => {
+    it('should apply isUrgent filter for overdue and upcoming deadline window', async () => {
       prismaService.project.count.mockResolvedValue(2);
       prismaService.project.findMany.mockResolvedValue(mockProjects as any);
 
@@ -298,11 +298,20 @@ describe('ProjectsService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             status: 'IN_PROGRESS',
-            deadline: expect.objectContaining({
-              not: null,
-              gte: expect.any(Date),
-              lte: expect.any(Date),
-            }),
+            AND: [
+              { deadline: { not: null } },
+              {
+                OR: [
+                  { deadline: { lt: expect.any(Date) } },
+                  {
+                    deadline: {
+                      gte: expect.any(Date),
+                      lte: expect.any(Date),
+                    },
+                  },
+                ],
+              },
+            ],
           }),
         }),
       );
@@ -667,18 +676,29 @@ describe('ProjectsService', () => {
       });
     });
 
-    it('should reject status updates via general update endpoint', async () => {
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-      } as any);
+    it('should not persist status via general update endpoint', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          rolesNeeded: [],
+          candidateProjects: [],
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
 
-      await expect(
-        service.update(
-          'project123',
-          { status: 'COMPLETED' },
-          'user123',
-        ),
-      ).rejects.toThrow(BadRequestException);
+      await service.update(
+        'project123',
+        { title: 'Updated Project', status: 'COMPLETED' } as UpdateProjectDto,
+        'user123',
+      );
+
+      expect(prismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project123' },
+        data: {
+          title: 'Updated Project',
+        },
+        include: expect.any(Object),
+      });
     });
 
     it('should throw NotFoundException when project does not exist', async () => {
@@ -909,18 +929,6 @@ describe('ProjectsService', () => {
       ).rejects.toThrow(
         new NotFoundException('Project with ID project123 not found'),
       );
-    });
-
-    it('should throw BadRequestException when project deadline has passed', async () => {
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-        status: 'IN_PROGRESS',
-        deadline: new Date('2020-01-01'),
-      } as any);
-
-      await expect(
-        service.assignCandidate('project123', assignCandidateDto, 'user123'),
-      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when candidate does not exist', async () => {

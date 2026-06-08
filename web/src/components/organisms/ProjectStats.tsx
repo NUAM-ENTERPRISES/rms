@@ -72,7 +72,7 @@ export default function ProjectStats({
     {
       label: "Urgent Deadlines Projects",
       value: stats.urgentProjectsCount ?? 0,
-      subtitle: "Approaching deadline",
+      subtitle: "Overdue or due within 7 days",
       icon: AlertTriangle,
       accent: "orange",
       filter: { isUrgent: true },

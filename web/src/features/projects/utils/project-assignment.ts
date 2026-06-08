@@ -1,8 +1,9 @@
 import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
+import { normalizeProjectStatusKey } from "@/features/projects/constants/statusBadges";
 
 /** Minimal project fields for assignment eligibility checks. */
 export type ProjectAssignmentGate = {
-  status?: ProjectStatusType;
+  status?: ProjectStatusType | string | null;
   deadline?: string | null;
 };
 
@@ -24,15 +25,33 @@ export function isProjectDeadlineExpired(
   return parsed.getTime() < getStartOfToday(now).getTime();
 }
 
+/** Normalizes API enum (`IN_PROGRESS`), snake_case, and legacy active/inactive to ProjectStatusType. */
+export function resolveProjectGateStatus(
+  status?: string | null
+): ProjectStatusType | null {
+  const key = normalizeProjectStatusKey(status);
+  if (!key) return null;
+  if (key === "active") return ProjectStatus.IN_PROGRESS;
+  if (key === "inactive") return ProjectStatus.CANCELLED;
+  if (key === ProjectStatus.IN_PROGRESS) return ProjectStatus.IN_PROGRESS;
+  if (key === ProjectStatus.COMPLETED) return ProjectStatus.COMPLETED;
+  if (key === ProjectStatus.ON_HOLD) return ProjectStatus.ON_HOLD;
+  if (key === ProjectStatus.CANCELLED) return ProjectStatus.CANCELLED;
+  return null;
+}
+
 export function isProjectOpenForAssignment(
-  project: ProjectAssignmentGate | null | undefined,
-  now = new Date()
+  project: ProjectAssignmentGate | null | undefined
 ): boolean {
-  if (!project || project.status !== ProjectStatus.IN_PROGRESS) {
+  if (!project) {
     return false;
   }
-  return !isProjectDeadlineExpired(project.deadline, now);
+  const status = resolveProjectGateStatus(project.status);
+  return status === ProjectStatus.IN_PROGRESS;
 }
+
+/** Alias: same gate for assign, verification, interview, and screening actions. */
+export const isProjectOpenForPipelineActions = isProjectOpenForAssignment;
 
 /** Statuses that allow nominating a candidate to a project (aligned with backend). */
 export const POSITIVE_ASSIGNMENT_STATUSES = [
@@ -119,17 +138,36 @@ export function getProjectClosureMessage(
   if (!project) {
     return null;
   }
-  if (project.status === ProjectStatus.COMPLETED) {
-    return "This project is completed. New candidate assignments are disabled.";
+  const status = resolveProjectGateStatus(project.status);
+  if (status === ProjectStatus.COMPLETED) {
+    return "This project is completed. The pipeline to this project is closed.";
   }
-  if (project.status === ProjectStatus.CANCELLED) {
-    return "This project is cancelled. New candidate assignments are disabled.";
+  if (status === ProjectStatus.CANCELLED) {
+    return "This project is cancelled. The pipeline to this project is closed.";
   }
-  if (project.status !== ProjectStatus.IN_PROGRESS) {
-    return "This project is not open for new candidate assignments.";
+  if (status === ProjectStatus.ON_HOLD) {
+    return "This project is on hold. The pipeline to this project is closed.";
   }
-  if (isProjectDeadlineExpired(project.deadline)) {
-    return "Project deadline has passed. New candidate assignments are disabled.";
+  if (status !== ProjectStatus.IN_PROGRESS) {
+    return "The pipeline to this project is closed.";
   }
   return null;
+}
+
+/** Informational notice when deadline has passed; pipeline remains open. */
+export function getProjectDeadlineNoticeMessage(
+  project: ProjectAssignmentGate | null | undefined,
+  now = new Date()
+): string | null {
+  if (!project) {
+    return null;
+  }
+  const status = resolveProjectGateStatus(project.status);
+  if (status !== ProjectStatus.IN_PROGRESS) {
+    return null;
+  }
+  if (!isProjectDeadlineExpired(project.deadline, now)) {
+    return null;
+  }
+  return "Project deadline has passed.";
 }

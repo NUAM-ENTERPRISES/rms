@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   assertProjectOpenForAssignment,
+  buildInProgressProjectsWhere,
   buildExpiredActiveProjectsWhere,
   getStartOfToday,
   isProjectDeadlineExpired,
@@ -27,35 +28,51 @@ describe('project-deadline.util', () => {
     expect(isProjectDeadlineExpired(null, now)).toBe(false);
   });
 
-  it('buildExpiredActiveProjectsWhere targets active projects before start of today', () => {
+  it('buildExpiredActiveProjectsWhere targets in-progress projects before start of today', () => {
     const where = buildExpiredActiveProjectsWhere(now);
-    expect(where.status).toBe('active');
+    expect(where.status).toBe('IN_PROGRESS');
     expect(where.deadline.not).toBeNull();
     expect(where.deadline.lt).toEqual(new Date(2026, 5, 1, 0, 0, 0, 0));
   });
 
-  it('assertProjectOpenForAssignment rejects non-active status', () => {
+  it('buildInProgressProjectsWhere excludes expired deadlines', () => {
+    const where = buildInProgressProjectsWhere(now);
+    expect(where.status).toBe('IN_PROGRESS');
+    expect(where.AND).toEqual([
+      {
+        OR: [{ deadline: null }, { deadline: { gte: new Date(2026, 5, 1, 0, 0, 0, 0) } }],
+      },
+    ]);
+  });
+
+  it('assertProjectOpenForAssignment rejects non-in-progress status', () => {
     expect(() =>
       assertProjectOpenForAssignment(
-        { status: 'completed', deadline: new Date(2026, 11, 1) },
+        { status: 'COMPLETED', deadline: new Date(2026, 11, 1) },
+        now,
+      ),
+    ).toThrow(BadRequestException);
+    expect(() =>
+      assertProjectOpenForAssignment(
+        { status: 'ON_HOLD', deadline: new Date(2026, 11, 1) },
         now,
       ),
     ).toThrow(BadRequestException);
   });
 
-  it('assertProjectOpenForAssignment rejects expired active project', () => {
+  it('assertProjectOpenForAssignment allows in-progress project with expired deadline', () => {
     expect(() =>
       assertProjectOpenForAssignment(
-        { status: 'active', deadline: new Date(2026, 4, 30) },
+        { status: 'IN_PROGRESS', deadline: new Date(2026, 4, 30) },
         now,
       ),
-    ).toThrow(BadRequestException);
+    ).not.toThrow();
   });
 
-  it('assertProjectOpenForAssignment allows active project with future deadline', () => {
+  it('assertProjectOpenForAssignment allows in-progress project with future deadline', () => {
     expect(() =>
       assertProjectOpenForAssignment(
-        { status: 'active', deadline: new Date(2026, 5, 10) },
+        { status: 'IN_PROGRESS', deadline: new Date(2026, 5, 10) },
         now,
       ),
     ).not.toThrow();

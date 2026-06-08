@@ -74,6 +74,24 @@ export function getProjectStatusBadge(
   return PROJECT_STATUS_BADGES[key] ?? { ...DEFAULT_BADGE, label: status };
 }
 
+/** Card background blink on the projects list — not applied to in-progress projects. */
+export function getProjectStatusBlinkClass(
+  status?: string | null
+): string | undefined {
+  const key = normalizeProjectStatusKey(status);
+  switch (key) {
+    case "on_hold":
+      return "animate-project-status-blink-hold";
+    case "completed":
+      return "animate-project-status-blink-completed";
+    case "cancelled":
+    case "inactive":
+      return "animate-project-status-blink-cancelled";
+    default:
+      return undefined;
+  }
+}
+
 export function getConfigValueBadge(value?: string | null): StatusBadgeStyle {
   if (!value) return DEFAULT_BADGE;
   const key = value.toLowerCase().trim();
