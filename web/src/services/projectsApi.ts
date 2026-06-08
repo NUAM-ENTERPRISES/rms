@@ -1,3 +1,4 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 
 // Types
@@ -5,7 +6,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   createdAt: string;
@@ -143,12 +144,12 @@ export interface CreateRoleNeededRequest {
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
 }
 
 export interface QueryProjectsRequest {
   search?: string;
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   priority?: "low" | "medium" | "high" | "urgent";
   isUrgent?: boolean;
   clientId?: string;
@@ -171,19 +172,20 @@ export interface PaginatedProjectsResponse {
 
 export interface ProjectStats {
   totalProjects: number;
-  activeProjects: number;
+  inProgressProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
   cancelledProjects: number;
   projectsByStatus: {
-    active: number;
-    completed: number;
-    cancelled: number;
+    IN_PROGRESS?: number;
+    COMPLETED?: number;
+    ON_HOLD?: number;
+    CANCELLED?: number;
   };
   projectsByClient: {
     [clientId: string]: number;
   };
   urgentProjectsCount?: number;
-  upcomingDeadlines: Project[];
 }
 
 // API Response types

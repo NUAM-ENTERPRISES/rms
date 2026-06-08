@@ -16,6 +16,7 @@ import {
   CreateRoleNeededDto,
 } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { UpdateProjectLifecycleStatusDto } from './dto/update-project-lifecycle-status.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
@@ -47,6 +48,7 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { OutboxService } from '../notifications/outbox.service';
 import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { isProjectCoordinatorOnly } from '../common/scoping/project-coordinator-scope.util';
 
 @Injectable()
 export class ProjectsService {
@@ -196,7 +198,7 @@ export class ProjectsService {
           deadline: createProjectDto.deadline
             ? new Date(createProjectDto.deadline)
             : null,
-          status: createProjectDto.status || 'active',
+          status: createProjectDto.status ?? 'IN_PROGRESS',
           priority: createProjectDto.priority || 'medium',
           createdBy: userId,
           teamId: createProjectDto.teamId,
@@ -448,8 +450,8 @@ export class ProjectsService {
     const startOfToday = getStartOfToday(now);
 
     if (status) {
-      if (status === 'active') {
-        where.status = 'active';
+      if (status === 'IN_PROGRESS') {
+        where.status = 'IN_PROGRESS';
         where.AND = [
           {
             OR: [
@@ -458,11 +460,11 @@ export class ProjectsService {
             ],
           },
         ];
-      } else if (status === 'completed') {
+      } else if (status === 'COMPLETED') {
         where.OR = [
-          { status: 'completed' },
+          { status: 'COMPLETED' },
           {
-            status: 'active',
+            status: 'IN_PROGRESS',
             deadline: {
               not: null,
               lt: startOfToday,
@@ -639,7 +641,7 @@ export class ProjectsService {
   async findPickerList(query: QueryProjectPickerDto): Promise<PaginatedProjectPicker> {
     const {
       search,
-      status = 'active',
+      status = 'IN_PROGRESS',
       page: pageRaw,
       limit: limitRaw,
     } = query;
@@ -780,6 +782,12 @@ export class ProjectsService {
       throw new NotFoundException(`Project with ID ${id} not found`);
     }
 
+    if (updateProjectDto.status !== undefined) {
+      throw new BadRequestException(
+        'Project status cannot be updated via this endpoint. Use PATCH /projects/:id/status instead.',
+      );
+    }
+
     // Validate client exists if updating
     // Normalize and validate clientId when provided (allow clearing via empty string/null)
     if (updateProjectDto.clientId !== undefined) {
@@ -847,7 +855,6 @@ export class ProjectsService {
       updateData.description = updateProjectDto.description;
     if (updateProjectDto.deadline !== undefined)
       updateData.deadline = updateProjectDto.deadline ? new Date(updateProjectDto.deadline) : null;
-    if (updateProjectDto.status !== undefined) updateData.status = updateProjectDto.status;
     if (updateProjectDto.priority !== undefined)
       updateData.priority = updateProjectDto.priority;
     if (updateProjectDto.clientId !== undefined)
@@ -1318,6 +1325,72 @@ export class ProjectsService {
       }
     } catch (err) {
       this.logger.error(`Failed to emit real-time update for project ${id}`, err.stack);
+    }
+
+    return normalizedProject;
+  }
+
+  async updateStatus(
+    id: string,
+    dto: UpdateProjectLifecycleStatusDto,
+    userId: string,
+    userRoles: string[] = [],
+  ): Promise<ProjectWithRelations> {
+    const existingProject = await this.prisma.project.findUnique({
+      where: { id },
+      select: { id: true, status: true, createdBy: true, title: true },
+    });
+
+    if (!existingProject) {
+      throw new NotFoundException(`Project with ID ${id} not found`);
+    }
+
+    if (
+      isProjectCoordinatorOnly(userRoles) &&
+      existingProject.createdBy !== userId
+    ) {
+      throw new ForbiddenException(
+        'Project Coordinators can only update status for projects they created.',
+      );
+    }
+
+    if (existingProject.status === dto.status) {
+      return this.findOne(id);
+    }
+
+    await this.prisma.project.update({
+      where: { id },
+      data: { status: dto.status },
+    });
+
+    const normalizedProject = await this.findOne(id);
+
+    try {
+      const involvedUserIds = [normalizedProject.createdBy];
+      if (normalizedProject.teamId) {
+        const teamUsers = await this.prisma.userTeam.findMany({
+          where: { teamId: normalizedProject.teamId },
+          select: { userId: true },
+        });
+        teamUsers.forEach((u) => involvedUserIds.push(u.userId));
+      }
+
+      const notifyIds = [...new Set(involvedUserIds)].filter(
+        (uId) => uId !== userId,
+      );
+
+      if (notifyIds.length > 0) {
+        await this.notificationsGateway.emitToUsers(notifyIds, 'data:sync', {
+          type: 'Project',
+          id,
+          message: `Project "${normalizedProject.title}" status changed to ${dto.status}.`,
+        });
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to emit real-time update for project status ${id}`,
+        err.stack,
+      );
     }
 
     return normalizedProject;
@@ -2104,27 +2177,32 @@ export class ProjectsService {
     // Get total counts
     const [
       totalProjects,
-      activeProjects,
+      inProgressProjects,
       completedProjects,
+      onHoldProjects,
       cancelledProjects,
     ] = await Promise.all([
       this.prisma.project.count({ where: scopeWhere }),
       this.prisma.project.count({
-        where: { ...scopeWhere, status: 'active' },
+        where: { ...scopeWhere, status: 'IN_PROGRESS' },
       }),
       this.prisma.project.count({
-        where: { ...scopeWhere, status: 'completed' },
+        where: { ...scopeWhere, status: 'COMPLETED' },
       }),
       this.prisma.project.count({
-        where: { ...scopeWhere, status: 'cancelled' },
+        where: { ...scopeWhere, status: 'ON_HOLD' },
+      }),
+      this.prisma.project.count({
+        where: { ...scopeWhere, status: 'CANCELLED' },
       }),
     ]);
 
     // Get projects by status
     const projectsByStatus = {
-      active: activeProjects,
-      completed: completedProjects,
-      cancelled: cancelledProjects,
+      IN_PROGRESS: inProgressProjects,
+      COMPLETED: completedProjects,
+      ON_HOLD: onHoldProjects,
+      CANCELLED: cancelledProjects,
     };
 
     // Get projects by client with client names
@@ -2171,57 +2249,15 @@ export class ProjectsService {
       },
     });
 
-    // Get upcoming deadlines (next 30 days)
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-
-    const upcomingDeadlines = await this.prisma.project.findMany({
-      where: {
-        ...scopeWhere,
-        deadline: {
-          gte: new Date(),
-          lte: thirtyDaysFromNow,
-        },
-        status: 'active',
-      },
-      include: {
-        client: true,
-        creator: true,
-        team: true,
-        country: true,
-        rolesNeeded: true,
-        documentRequirements: {
-          where: { isDeleted: false },
-        },
-        candidateProjects: {
-          include: {
-            candidate: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                countryCode: true,
-                mobileNumber: true,
-                email: true,
-                currentStatus: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { deadline: 'asc' },
-      take: 10,
-    });
-
     return {
       totalProjects,
-      activeProjects,
+      inProgressProjects,
       completedProjects,
+      onHoldProjects,
       cancelledProjects,
       projectsByStatus,
       projectsByClient,
       urgentProjectsCount,
-      upcomingDeadlines,
     };
   }
 

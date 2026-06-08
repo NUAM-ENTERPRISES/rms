@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { describe, expect, it } from "vitest";
 import {
   getCandidateAssignmentBlockReason,
@@ -22,19 +23,19 @@ describe("project-assignment", () => {
   it("isProjectOpenForAssignment requires active status and non-expired deadline", () => {
     expect(
       isProjectOpenForAssignment(
-        { status: "active", deadline: "2026-12-01" },
+        { status: ProjectStatus.IN_PROGRESS, deadline: "2026-12-01" },
         now
       )
     ).toBe(true);
     expect(
       isProjectOpenForAssignment(
-        { status: "active", deadline: "2026-05-30" },
+        { status: ProjectStatus.IN_PROGRESS, deadline: "2026-05-30" },
         now
       )
     ).toBe(false);
     expect(
       isProjectOpenForAssignment(
-        { status: "completed", deadline: "2026-12-01" },
+        { status: ProjectStatus.COMPLETED, deadline: "2026-12-01" },
         now
       )
     ).toBe(false);
@@ -47,13 +48,13 @@ describe("project-assignment", () => {
 
   it("getProjectClosureMessage returns user-facing copy", () => {
     expect(
-      getProjectClosureMessage({ status: "active", deadline: "2026-05-30" })
+      getProjectClosureMessage({ status: ProjectStatus.IN_PROGRESS, deadline: "2026-05-30" })
     ).toContain("deadline has passed");
-    expect(getProjectClosureMessage({ status: "completed" })).toContain(
+    expect(getProjectClosureMessage({ status: ProjectStatus.COMPLETED })).toContain(
       "completed"
     );
     expect(
-      getProjectClosureMessage({ status: "active", deadline: "2030-01-01" })
+      getProjectClosureMessage({ status: ProjectStatus.IN_PROGRESS, deadline: "2030-01-01" })
     ).toBeNull();
   });
 });

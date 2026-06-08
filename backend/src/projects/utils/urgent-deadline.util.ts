@@ -23,7 +23,7 @@ export function buildUrgentProjectsWhere(now = new Date()) {
   const { gte, lte } = getUrgentDeadlineRange(now);
 
   return {
-    status: 'active' as const,
+    status: 'IN_PROGRESS' as const,
     deadline: {
       not: null,
       gte,

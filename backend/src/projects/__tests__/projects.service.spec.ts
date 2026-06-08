@@ -10,6 +10,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
 import { OutboxService } from '../../notifications/outbox.service';
@@ -123,7 +124,7 @@ describe('ProjectsService', () => {
       clientId: 'client123',
       title: 'Test Project',
       description: 'Test Description',
-      status: 'active',
+      status: 'IN_PROGRESS',
       teamId: 'team123',
       rolesNeeded: [
         {
@@ -173,7 +174,7 @@ describe('ProjectsService', () => {
             title: 'Test Project',
             description: 'Test Description',
             deadline: null,
-            status: 'active',
+            status: 'IN_PROGRESS',
             createdBy: 'user123',
             teamId: 'team123',
             countryCode: null,
@@ -296,7 +297,7 @@ describe('ProjectsService', () => {
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: 'active',
+            status: 'IN_PROGRESS',
             deadline: expect.objectContaining({
               not: null,
               gte: expect.any(Date),
@@ -315,7 +316,7 @@ describe('ProjectsService', () => {
           id: 'proj-1',
           title: 'Nursing',
           deadline,
-          status: 'active',
+          status: 'IN_PROGRESS',
           priority: 'high',
           createdAt: created,
           projectType: 'private',
@@ -337,7 +338,7 @@ describe('ProjectsService', () => {
         id: 'proj-1',
         title: 'Nursing',
         deadline: deadline.toISOString(),
-        status: 'active',
+        status: 'IN_PROGRESS',
         priority: 'high',
         createdAt: created.toISOString(),
         projectType: 'private',
@@ -364,12 +365,12 @@ describe('ProjectsService', () => {
       prismaService.project.count.mockResolvedValue(0);
       prismaService.project.findMany.mockResolvedValue([]);
 
-      await service.findAll({ status: 'active', page: 1, limit: 10 });
+      await service.findAll({ status: 'IN_PROGRESS', page: 1, limit: 10 });
 
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: 'active',
+            status: 'IN_PROGRESS',
             AND: [
               {
                 OR: [
@@ -387,15 +388,15 @@ describe('ProjectsService', () => {
       prismaService.project.count.mockResolvedValue(1);
       prismaService.project.findMany.mockResolvedValue(mockProjects as any);
 
-      await service.findAll({ status: 'completed', page: 1, limit: 10 });
+      await service.findAll({ status: 'COMPLETED', page: 1, limit: 10 });
 
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             OR: [
-              { status: 'completed' },
+              { status: 'COMPLETED' },
               {
-                status: 'active',
+                status: 'IN_PROGRESS',
                 deadline: { not: null, lt: expect.any(Date) },
               },
             ],
@@ -412,7 +413,7 @@ describe('ProjectsService', () => {
         {
           id: 'p1',
           title: 'Alpha',
-          status: 'active',
+          status: 'IN_PROGRESS',
           deadline,
           client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
         },
@@ -432,7 +433,7 @@ describe('ProjectsService', () => {
       expect(result.projects[0]).toEqual({
         id: 'p1',
         title: 'Alpha',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: deadline.toISOString(),
         client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
       });
@@ -458,7 +459,7 @@ describe('ProjectsService', () => {
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            status: 'active',
+            status: 'IN_PROGRESS',
             title: { contains: 'nursing', mode: 'insensitive' },
           },
         }),
@@ -470,7 +471,7 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
         id: 'proj-1',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
         licensingExam: null,
         eligibility: false,
@@ -541,7 +542,7 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates applies recruiterAssignments filter for Agent Coordinator', async () => {
       const project = {
         id: 'proj-1',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
         rolesNeeded: [
           {
@@ -627,13 +628,12 @@ describe('ProjectsService', () => {
   describe('update', () => {
     const updateProjectDto: UpdateProjectDto = {
       title: 'Updated Project',
-      status: 'completed',
     };
 
     const mockProject = {
       id: 'project123',
       title: 'Updated Project',
-      status: 'completed',
+      status: 'IN_PROGRESS',
       client: { id: 'client123', name: 'Test Client' },
       creator: { id: 'user123', name: 'Test User' },
       team: { id: 'team123', name: 'Test Team' },
@@ -662,10 +662,23 @@ describe('ProjectsService', () => {
         where: { id: 'project123' },
         data: {
           title: 'Updated Project',
-          status: 'completed',
         },
         include: expect.any(Object),
       });
+    });
+
+    it('should reject status updates via general update endpoint', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+      } as any);
+
+      await expect(
+        service.update(
+          'project123',
+          { status: 'COMPLETED' },
+          'user123',
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when project does not exist', async () => {
@@ -673,6 +686,120 @@ describe('ProjectsService', () => {
 
       await expect(
         service.update('project123', updateProjectDto, 'user123'),
+      ).rejects.toThrow(
+        new NotFoundException('Project with ID project123 not found'),
+      );
+    });
+  });
+
+  describe('updateStatus', () => {
+    const mockProject = {
+      id: 'project123',
+      title: 'Test Project',
+      status: 'ON_HOLD',
+      createdBy: 'user123',
+      client: { id: 'client123', name: 'Test Client' },
+      creator: { id: 'user123', name: 'Test User' },
+      team: null,
+      rolesNeeded: [],
+      documentRequirements: [],
+    };
+
+    it('should update project status successfully', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
+
+      const result = await service.updateStatus(
+        'project123',
+        { status: 'ON_HOLD' },
+        'user123',
+        ['Manager'],
+      );
+
+      expect(result.status).toBe('ON_HOLD');
+      expect(prismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project123' },
+        data: { status: 'ON_HOLD' },
+      });
+    });
+
+    it('should return project unchanged when status is the same', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+
+      const result = await service.updateStatus(
+        'project123',
+        { status: 'IN_PROGRESS' },
+        'user123',
+        ['Manager'],
+      );
+
+      expect(result).toEqual(mockProject);
+      expect(prismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('should forbid project coordinator updating another users project', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+        status: 'IN_PROGRESS',
+        createdBy: 'other-user',
+        title: 'Test Project',
+      } as any);
+
+      await expect(
+        service.updateStatus(
+          'project123',
+          { status: 'ON_HOLD' },
+          'user123',
+          ['Project Coordinator'],
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow project coordinator to update own project', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
+
+      await service.updateStatus(
+        'project123',
+        { status: 'ON_HOLD' },
+        'user123',
+        ['Project Coordinator'],
+      );
+
+      expect(prismaService.project.update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when project does not exist', async () => {
+      prismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateStatus(
+          'project123',
+          { status: 'ON_HOLD' },
+          'user123',
+          ['Manager'],
+        ),
       ).rejects.toThrow(
         new NotFoundException('Project with ID project123 not found'),
       );
@@ -728,7 +855,7 @@ describe('ProjectsService', () => {
     it('should assign candidate to project successfully', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
@@ -787,7 +914,7 @@ describe('ProjectsService', () => {
     it('should throw BadRequestException when project deadline has passed', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2020-01-01'),
       } as any);
 
@@ -799,7 +926,7 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when candidate does not exist', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue(null);
@@ -814,7 +941,7 @@ describe('ProjectsService', () => {
     it('should throw BadRequestException when agent-sourced candidate lacks AgentProject link', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
@@ -833,7 +960,7 @@ describe('ProjectsService', () => {
     it('should throw ConflictException when candidate is already assigned', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
@@ -907,8 +1034,9 @@ describe('ProjectsService', () => {
     it('should return project statistics', async () => {
       prismaService.project.count
         .mockResolvedValueOnce(100) // total
-        .mockResolvedValueOnce(60) // active
+        .mockResolvedValueOnce(60) // in progress
         .mockResolvedValueOnce(30) // completed
+        .mockResolvedValueOnce(5) // on hold
         .mockResolvedValueOnce(10) // cancelled
         .mockResolvedValueOnce(5); // urgent
 
@@ -928,19 +1056,20 @@ describe('ProjectsService', () => {
 
       expect(result).toEqual({
         totalProjects: 100,
-        activeProjects: 60,
+        inProgressProjects: 60,
         completedProjects: 30,
+        onHoldProjects: 5,
         cancelledProjects: 10,
         projectsByStatus: {
-          active: 60,
-          completed: 30,
-          cancelled: 10,
+          IN_PROGRESS: 60,
+          COMPLETED: 30,
+          ON_HOLD: 5,
+          CANCELLED: 10,
         },
         projectsByClient: {
           client123: { count: 50, name: 'Client client123' },
           client456: { count: 50, name: 'Client client456' },
         },
-        upcomingDeadlines: [],
         urgentProjectsCount: 5,
       });
     });

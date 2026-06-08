@@ -7,10 +7,12 @@ import { CountriesModule } from '../countries/countries.module';
 import { QualificationsModule } from '../qualifications/qualifications.module';
 import { RoleCatalogModule } from '../role-catalog/role-catalog.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     PrismaModule,
+    AuthModule,
     CountriesModule,
     QualificationsModule,
     RoleCatalogModule,

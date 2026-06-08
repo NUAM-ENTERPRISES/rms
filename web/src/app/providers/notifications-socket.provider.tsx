@@ -98,18 +98,25 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   }, []);
 
   useEffect(() => {
+    // Ensure previous socket is cleaned up properly before creating a new one.
+    // This prevents multiple sockets from being created in development mode
+    // when React Strict Mode unmounts and remounts components.
+    let newSocket: Socket | null = null;
+
     if (!accessToken || !user) {
       if (socketRef.current) {
-        console.log("[Socket] No token, disconnecting...");
+        console.log("[Socket] No token, disconnecting existing socket...");
         socketRef.current.disconnect();
         socketRef.current = null;
       }
       return;
     }
 
-    updateSocketAuthToken(accessToken);
-
-    if (socketRef.current?.connected) return;
+    // If a socket already exists and is connected, just update the token if necessary
+    if (socketRef.current && socketRef.current.connected) {
+      updateSocketAuthToken(accessToken);
+      return;
+    }
 
     // Determine the base WebSocket URL based on environment and current location
     const WS_BASE_URL =
@@ -121,23 +128,23 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     const baseUrl = WS_BASE_URL.replace(/\/$/, "");
     const socketUrl = `${baseUrl}/notifications`;
     
-    console.log("[Socket] Connecting to:", socketUrl);
+    console.log("[Socket] Attempting to connect to:", socketUrl);
 
-    const socket = io(socketUrl, {
+    newSocket = io(socketUrl, {
       auth: { token: accessToken },
       transports: ["websocket", "polling"], // Use websocket first, then poll for compatibility
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      forceNew: true,
+      forceNew: false, // Do not force a new connection if one already exists for the same URL
       autoConnect: true,
     });
 
-    socketRef.current = socket;
+    socketRef.current = newSocket;
 
-    socket.on("connect", () => {
-      console.log("[Socket] CONNECTED SUCCESS (Port 3000):", socket.id);
+    newSocket.on("connect", () => {
+      console.log("[Socket] CONNECTED SUCCESS (Port 3000):", newSocket?.id);
       
       // Force refresh on initial connection or reconnection to sync state from database
       window.dispatchEvent(new CustomEvent("notifications:refresh"));
@@ -154,7 +161,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       ]));
     });
 
-    socket.on("connect_error", async (error) => {
+    newSocket.on("connect_error", async (error) => {
       const errorMessage =
         typeof error === "string"
           ? error
@@ -162,10 +169,11 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
       console.error("[Socket] CONNECTION ERROR:", errorMessage);
 
+      // Attempt token refresh only if not already in progress and the error is due to JWT expiration
       if (errorMessage.includes("jwt expired") && !refreshInProgressRef.current) {
         refreshInProgressRef.current = true;
+        console.log("[Socket] Access token expired, attempting refresh...");
         try {
-          console.log("[Socket] Access token expired, refreshing before reconnect...");
           const refreshResponse = await dispatch(
             authApi.endpoints.refresh.initiate()
           ).unwrap();
@@ -174,7 +182,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           const newRefreshToken = refreshResponse.data.refreshToken;
           const newUser = refreshResponse.data.user;
 
-          if (newAccessToken && newUser) {
+          if (newAccessToken && newUser && newSocket) {
             dispatch(
               setCredentials({
                 user: newUser,
@@ -182,9 +190,10 @@ export default function NotificationsSocketProvider({ children }: { children: Re
                 refreshToken: newRefreshToken,
               })
             );
-
             updateSocketAuthToken(newAccessToken);
-            socket.connect();
+            // Disconnect old socket and reconnect with new token
+            newSocket.disconnect();
+            newSocket.connect(); 
             console.log("[Socket] Reconnected with refreshed token");
             return;
           }
@@ -197,30 +206,36 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           refreshInProgressRef.current = false;
         }
 
+        // If refresh fails or token is invalid, clear credentials and disconnect
         dispatch(clearCredentials());
-        socket.disconnect();
+        newSocket?.disconnect();
         socketRef.current = null;
       }
     });
 
-    socket.on("reconnect_attempt", (attempt) => {
+    newSocket.on("reconnect_attempt", (attempt) => {
       updateSocketAuthToken(accessToken);
       console.log(`[Socket] RECONNECT ATTEMPT ${attempt}`);
     });
 
-    socket.on("reconnect_error", (error) => {
+    newSocket.on("reconnect_error", (error) => {
       console.warn("[Socket] RECONNECT ERROR:", error?.message || error);
     });
 
-    socket.on("reconnect_failed", () => {
+    newSocket.on("reconnect_failed", () => {
       console.error("[Socket] RECONNECT FAILED, connection is down");
+      dispatch(clearCredentials());
+      socketRef.current?.disconnect();
+      socketRef.current = null;
     });
 
-    socket.on("disconnect", (reason) => {
+    newSocket.on("disconnect", (reason) => {
       console.warn("[Socket] DISCONNECTED:", reason);
+      // If the disconnect is not due to a deliberate action (e.g., login/logout),
+      // attempt to reconnect or ensure proper cleanup.
     });
 
-    socket.on("notification:new", (notification: any) => {
+    newSocket.on("notification:new", (notification: any) => {
       console.log("[Socket] Notif Received:", notification);
       
       const isProcessingReminder = 
@@ -346,7 +361,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleAgentCandidateRequestNotifications(context);
     });
 
-    socket.on("data:sync", (payload: any) => {
+    newSocket.on("data:sync", (payload: any) => {
       console.log("[Socket] Sync Received:", payload);
       
       const context = { dispatch, invalidateTags };
@@ -363,19 +378,19 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     });
 
     // Handle domain-specific direct socket events
-    registerDocumentSocketEvents(socket, { dispatch, invalidateTags });
-    registerIntroductionVideoSocketEvents(socket, { dispatch, invalidateTags });
+    registerDocumentSocketEvents(newSocket, { dispatch, invalidateTags });
+    registerIntroductionVideoSocketEvents(newSocket, { dispatch, invalidateTags });
 
-    socket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
+    newSocket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
       console.log("[Socket] Interview stats update received:", payload);
       dispatch(baseApi.util.invalidateTags([{ type: "Interview", id: "LIST" }]));
     });
 
-    socket.on("account:blocked", (payload: AccountBlockedPayload) => {
+    newSocket.on("account:blocked", (payload: AccountBlockedPayload) => {
       handleAccountBlocked(payload, dispatch);
     });
 
-    socket.on("account:status-changed", (payload: AccountStatusChangedPayload) => {
+    newSocket.on("account:status-changed", (payload: AccountStatusChangedPayload) => {
       handleAccountStatusChanged(payload, dispatch);
       if (payload.message) {
         const isInactive = payload.accountStatus === "INACTIVE";
@@ -388,7 +403,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     });
 
     // Session monitoring — debounced to prevent refetch storms on rapid events
-    socket.on("session:updated", (payload: SessionEventPayload) => {
+    newSocket.on("session:updated", (payload: SessionEventPayload) => {
       if (sessionInvalidateTimerRef.current) {
         clearTimeout(sessionInvalidateTimerRef.current);
       }
@@ -404,7 +419,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         clearTimeout(sessionInvalidateTimerRef.current);
         sessionInvalidateTimerRef.current = null;
       }
-      socket.disconnect();
+      newSocket?.disconnect(); // Disconnect the newly created socket on cleanup
       socketRef.current = null;
     };
   }, [accessToken, user, dispatch]);

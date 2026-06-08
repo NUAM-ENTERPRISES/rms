@@ -1,6 +1,8 @@
+import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
+
 /** Minimal project fields for assignment eligibility checks. */
 export type ProjectAssignmentGate = {
-  status?: string;
+  status?: ProjectStatusType;
   deadline?: string | null;
 };
 
@@ -26,7 +28,7 @@ export function isProjectOpenForAssignment(
   project: ProjectAssignmentGate | null | undefined,
   now = new Date()
 ): boolean {
-  if (!project || project.status !== "active") {
+  if (!project || project.status !== ProjectStatus.IN_PROGRESS) {
     return false;
   }
   return !isProjectDeadlineExpired(project.deadline, now);
@@ -117,13 +119,13 @@ export function getProjectClosureMessage(
   if (!project) {
     return null;
   }
-  if (project.status === "completed") {
+  if (project.status === ProjectStatus.COMPLETED) {
     return "This project is completed. New candidate assignments are disabled.";
   }
-  if (project.status === "cancelled") {
+  if (project.status === ProjectStatus.CANCELLED) {
     return "This project is cancelled. New candidate assignments are disabled.";
   }
-  if (project.status !== "active") {
+  if (project.status !== ProjectStatus.IN_PROGRESS) {
     return "This project is not open for new candidate assignments.";
   }
   if (isProjectDeadlineExpired(project.deadline)) {

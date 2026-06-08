@@ -1,3 +1,4 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 import { Candidate } from "@/features/candidates";
 
@@ -6,7 +7,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   createdAt: string;
@@ -299,12 +300,12 @@ export interface CreateRoleNeededRequest {
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
 }
 
 export interface QueryProjectsRequest {
   search?: string;
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   priority?: "low" | "medium" | "high" | "urgent";
   isUrgent?: boolean;
   clientId?: string;
@@ -376,7 +377,7 @@ export interface PaginatedProjectPickerResponse {
 }
 
 export interface QueryProjectPickerRequest {
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   search?: string;
   page?: number;
   limit?: number;
@@ -384,19 +385,20 @@ export interface QueryProjectPickerRequest {
 
 export interface ProjectStats {
   totalProjects: number;
-  activeProjects: number;
+  inProgressProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
   cancelledProjects: number;
   projectsByStatus: {
-    active: number;
-    completed: number;
-    cancelled: number;
+    IN_PROGRESS?: number;
+    COMPLETED?: number;
+    ON_HOLD?: number;
+    CANCELLED?: number;
   };
   projectsByClient: {
     [clientId: string]: number;
   };
   urgentProjectsCount?: number;
-  upcomingDeadlines: Project[];
 }
 
 // Eligible Candidate with match score
@@ -558,6 +560,31 @@ export const projectsApi = baseApi.injectEndpoints({
         url: `/projects/${id}`,
         method: "PATCH",
         body: data,
+      }),
+      invalidatesTags: (result, _, { id }) => {
+        const tags: Array<
+          "ProjectStats" | { type: "Project"; id: string } | { type: "Client"; id: string }
+        > = [
+          { type: "Project", id },
+          { type: "Project", id: "LIST" },
+          "ProjectStats",
+        ];
+        const cid = result?.data?.clientId;
+        if (cid) {
+          tags.push({ type: "Client", id: cid });
+        }
+        return tags;
+      },
+    }),
+
+    updateProjectStatus: builder.mutation<
+      ApiResponse<Project>,
+      { id: string; status: ProjectStatusType }
+    >({
+      query: ({ id, status }) => ({
+        url: `/projects/${id}/status`,
+        method: "PATCH",
+        body: { status },
       }),
       invalidatesTags: (result, _, { id }) => {
         const tags: Array<
@@ -1072,6 +1099,7 @@ export const {
   useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useUpdateProjectStatusMutation,
   useDeleteProjectMutation,
   useAssignCandidateMutation,
   useGetProjectCandidatesByRoleQuery,

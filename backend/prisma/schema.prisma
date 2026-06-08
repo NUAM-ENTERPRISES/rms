@@ -13,6 +13,13 @@ enum SessionAvailability {
   ON_CALL
 }
 
+enum ProjectStatus {
+  COMPLETED
+  ON_HOLD
+  IN_PROGRESS
+  CANCELLED
+}
+
 enum UserAccountStatus {
   ACTIVE
   INACTIVE
@@ -326,7 +333,7 @@ model Project {
   deadline                  DateTime?
   // Whether this project requires additional candidate screening steps
   requiredScreening         Boolean   @default(false)
-  status                    String    @default("active")
+  status                    ProjectStatus    @default(IN_PROGRESS)
   createdBy                 String
   teamId                    String?
   createdAt                 DateTime  @default(now())

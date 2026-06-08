@@ -344,7 +344,7 @@ export class ClientsService {
     const activeProjectCount = await this.prisma.project.count({
       where: {
         clientId: id,
-        status: { equals: 'active', mode: 'insensitive' },
+        status: 'IN_PROGRESS',
       },
     });
 
@@ -514,7 +514,7 @@ export class ClientsService {
     }
 
     const activeProjects = existingClient.projects.filter(
-      (project) => project.status === 'active',
+      (project) => project.status === 'IN_PROGRESS',
     );
 
     if (activeProjects.length > 0) {
@@ -545,7 +545,7 @@ export class ClientsService {
       where.id = { in: clientIds };
     }
 
-    const projectWhere: Prisma.ProjectWhereInput = { status: 'active' };
+    const projectWhere: Prisma.ProjectWhereInput = { status: 'IN_PROGRESS' };
     if (isProjectCoordinator(roles) && userId) {
       projectWhere.createdBy = userId;
     }

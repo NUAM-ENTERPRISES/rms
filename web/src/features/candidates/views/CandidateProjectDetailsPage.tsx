@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ProjectStatus } from "@/entities/project/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -870,7 +871,7 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
-                                        <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === 'active' ? 'default' : 'secondary'}>
+                                        <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === ProjectStatus.IN_PROGRESS ? 'default' : 'secondary'}>
                                             {pipelineResponse?.data?.project?.status}
                                         </Badge>
                                     </div>

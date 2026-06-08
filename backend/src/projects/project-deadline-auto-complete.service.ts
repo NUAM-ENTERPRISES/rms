@@ -13,7 +13,7 @@ export class ProjectDeadlineAutoCompleteService {
   async autoCompleteExpiredProjects(now = new Date()): Promise<number> {
     const result = await this.prisma.project.updateMany({
       where: buildExpiredActiveProjectsWhere(now),
-      data: { status: 'completed' },
+      data: { status: 'COMPLETED' },
     });
 
     if (result.count > 0) {

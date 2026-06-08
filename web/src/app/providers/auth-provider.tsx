@@ -26,7 +26,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Performance measurement
     performance.mark("auth:bootstrapping:start");
-    console.time("auth:bootstrapping:total");
 
     let mounted = true;
     (async () => {
@@ -52,9 +51,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
         // If user already has access token, they're authenticated
         if (accessToken) {
-          console.time("auth:existing-token");
           dispatch(setStatus("authenticated"));
-          console.timeEnd("auth:existing-token");
           if (mounted) setBootstrapped(true);
           return;
         }
@@ -62,7 +59,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         // Protected route without tokens: attempt silent refresh
 
         // User is on a protected route, attempt silent refresh
-        console.time("auth:refresh:call");
         performance.mark("auth:refresh:start");
         const res = await dispatch(
           authApi.endpoints.refresh.initiate()
@@ -73,13 +69,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
           "auth:refresh:start",
           "auth:refresh:end"
         );
-        console.timeEnd("auth:refresh:call");
 
         const at = res?.data?.accessToken;
         const user = res?.data?.user;
 
         if (at && user) {
-          console.time("auth:set-credentials");
           dispatch(
             setCredentials({
               user: user,
@@ -87,11 +81,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
               refreshToken: res.data.refreshToken,
             })
           );
-          console.timeEnd("auth:set-credentials");
 
           // Only call /me if user data is missing from refresh response
           if (!user.id || !user.roles || !user.permissions) {
-            console.time("auth:me:call");
             performance.mark("auth:me:start");
             const me = await dispatch(authApi.endpoints.me.initiate()).unwrap();
             performance.mark("auth:me:end");
@@ -100,7 +92,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
               "auth:me:start",
               "auth:me:end"
             );
-            console.timeEnd("auth:me:call");
 
             dispatch(
               setCredentials({

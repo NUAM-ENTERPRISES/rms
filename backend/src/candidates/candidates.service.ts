@@ -2972,7 +2972,7 @@ export class CandidatesService {
     // Get all active projects with roles needed
     const activeProjects = await this.prisma.project.findMany({
       where: {
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: {
           gte: new Date(), // Not expired
         },

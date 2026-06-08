@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -29,7 +30,11 @@ import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dt
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
 import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { Roles } from '../auth/rbac/roles.decorator';
+import { RolesGuard } from '../auth/rbac/roles.guard';
+import { PROJECT_STATUS_UPDATE_ROLES } from '../common/constants/role-ids';
 import { isProjectCoordinator } from '../common/scoping/project-coordinator-scope.util';
+import { UpdateProjectLifecycleStatusDto } from './dto/update-project-lifecycle-status.dto';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -340,25 +345,24 @@ export class ProjectsController {
           type: 'object',
           properties: {
             totalProjects: { type: 'number', example: 150 },
-            activeProjects: { type: 'number', example: 100 },
+            inProgressProjects: { type: 'number', example: 100 },
             completedProjects: { type: 'number', example: 40 },
+            onHoldProjects: { type: 'number', example: 5 },
             cancelledProjects: { type: 'number', example: 10 },
             projectsByStatus: {
               type: 'object',
               properties: {
-                active: { type: 'number' },
-                completed: { type: 'number' },
-                cancelled: { type: 'number' },
+                IN_PROGRESS: { type: 'number' },
+                COMPLETED: { type: 'number' },
+                ON_HOLD: { type: 'number' },
+                CANCELLED: { type: 'number' },
               },
             },
             projectsByClient: {
               type: 'object',
               additionalProperties: { type: 'number' },
             },
-            upcomingDeadlines: {
-              type: 'array',
-              items: { type: 'object' },
-            },
+            urgentProjectsCount: { type: 'number', example: 3 },
           },
         },
         message: {
@@ -622,6 +626,49 @@ export class ProjectsController {
       success: true,
       data: project,
       message: 'Project retrieved successfully',
+    };
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles(...PROJECT_STATUS_UPDATE_ROLES)
+  @ApiOperation({
+    summary: 'Update project lifecycle status',
+    description:
+      'Change the lifecycle status of a project. Restricted to admin, manager, and project coordinator roles.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Project status updated successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient role or project ownership',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectLifecycleStatusDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: ProjectWithRelations;
+    message: string;
+  }> {
+    const project = await this.projectsService.updateStatus(
+      id,
+      dto,
+      req.user.id,
+      req.user.roles ?? [],
+    );
+    return {
+      success: true,
+      data: project,
+      message: 'Project status updated successfully',
     };
   }
 

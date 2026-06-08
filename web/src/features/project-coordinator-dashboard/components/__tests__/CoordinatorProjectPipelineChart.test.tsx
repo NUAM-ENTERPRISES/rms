@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import CoordinatorProjectPipelineChart from "../CoordinatorProjectPipelineChart";
@@ -11,7 +12,7 @@ vi.mock("../../api/projectCoordinatorDashboardApi", () => ({
             projectId: "p1",
             projectName: "ICU Nurses",
             clientName: "City Hospital",
-            status: "active",
+            status: ProjectStatus.IN_PROGRESS,
           },
         ],
         pagination: { total: 1, totalPages: 1, page: 1, limit: 10 },
@@ -27,7 +28,7 @@ vi.mock("../../api/projectCoordinatorDashboardApi", () => ({
           projectId: "p1",
           projectName: "ICU Nurses",
           clientName: "City Hospital",
-          status: "active",
+          status: ProjectStatus.IN_PROGRESS,
         },
         pipeline: {
           total: 12,

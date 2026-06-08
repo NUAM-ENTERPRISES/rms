@@ -85,46 +85,77 @@ export default function CoordinatorStatsCards() {
   const stats = data?.data;
 
   const totalProjects =
-    (stats?.activeProjects ?? 0) + (stats?.completedProjects ?? 0);
+    (stats?.activeProjects ?? 0) +
+    (stats?.completedProjects ?? 0) +
+    (stats?.onHoldProjects ?? 0) +
+    (stats?.cancelledProjects ?? 0);
 
   const statCards = [
     {
       id: "my-clients",
-      label: "My Clients",
-      value: stats?.myClients ?? 0,
-      subtitle: "Clients in your portfolio",
-      icon: Building2,
-      accent: "emerald" as const,
-      linkLabel: "View clients",
-      linkTo: "/clients",
-    },
-    {
-      id: "active-projects",
-      label: "Active Projects",
-      value: stats?.activeProjects ?? 0,
-      subtitle: "Currently hiring",
+      label: "Total Projects",
+      value: stats?.totalProjects ?? 0,
+      subtitle: "All projects in the system",
       icon: Briefcase,
-      accent: "amber" as const,
-      progress:
-        totalProjects > 0
-          ? ((stats?.activeProjects ?? 0) / totalProjects) * 100
-          : 0,
-      linkLabel: "View projects",
+      accent: "emerald" as const,
+      linkLabel: "View all projects",
       linkTo: "/projects",
     },
     {
+      id: "active-projects",
+      label: "In Progress Projects",
+      value: stats?.activeProjects ?? 0,
+      subtitle: "Currently in progress",
+      icon: Briefcase,
+      accent: "amber" as const,
+      progress:
+        stats?.totalProjects > 0
+          ? ((stats?.activeProjects ?? 0) / stats?.totalProjects) * 100
+          : 0,
+      linkLabel: "View in-progress projects",
+      linkTo: "/projects?status=in_progress",
+    },
+    {
       id: "completed-projects",
-      label: "Completed",
+      label: "Completed Projects",
       value: stats?.completedProjects ?? 0,
       subtitle: "Successfully closed",
       icon: CheckCircle2,
       accent: "indigo" as const,
       progress:
-        totalProjects > 0
-          ? ((stats?.completedProjects ?? 0) / totalProjects) * 100
+        stats?.totalProjects > 0
+          ? ((stats?.completedProjects ?? 0) / stats?.totalProjects) * 100
           : 0,
-      linkLabel: "View projects",
-      linkTo: "/projects",
+      linkLabel: "View completed projects",
+      linkTo: "/projects?status=completed",
+    },
+    {
+      id: "on-hold-projects",
+      label: "On Hold Projects",
+      value: stats?.onHoldProjects ?? 0,
+      subtitle: "Temporarily paused",
+      icon: Briefcase,
+      accent: "emerald" as const,
+      progress:
+        stats?.totalProjects > 0
+          ? ((stats?.onHoldProjects ?? 0) / stats?.totalProjects) * 100
+          : 0,
+      linkLabel: "View on-hold projects",
+      linkTo: "/projects?status=on_hold",
+    },
+    {
+      id: "cancelled-projects",
+      label: "Cancelled Projects",
+      value: stats?.cancelledProjects ?? 0,
+      subtitle: "No longer active",
+      icon: Briefcase,
+      accent: "amber" as const,
+      progress:
+        stats?.totalProjects > 0
+          ? ((stats?.cancelledProjects ?? 0) / stats?.totalProjects) * 100
+          : 0,
+      linkLabel: "View cancelled projects",
+      linkTo: "/projects?status=cancelled",
     },
     {
       id: "candidates-filled",

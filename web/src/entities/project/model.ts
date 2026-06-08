@@ -1,3 +1,5 @@
+import { ProjectStatusType } from "./constants";
+
 /**
  * Project domain model - canonical types and interfaces
  * Following FE_GUIDELINES.md entities pattern
@@ -7,7 +9,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   createdAt: string;
@@ -116,12 +118,12 @@ export interface CreateRoleNeededRequest {
 }
 
 export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
 }
 
 export interface QueryProjectsRequest {
   search?: string;
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   clientId?: string;
   teamId?: string;
   page?: number;

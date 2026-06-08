@@ -18,14 +18,14 @@ export class AdminDashboardService {
         where: {
           projects: {
             some: {
-              status: 'active',
+              status: 'IN_PROGRESS',
             },
           },
         },
       }),
       this.prisma.project.count({
         where: {
-          status: 'active',
+          status: 'IN_PROGRESS',
         },
       }),
       this.prisma.candidate.count({

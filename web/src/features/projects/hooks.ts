@@ -6,6 +6,7 @@ export {
   useGetProjectStatsQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useUpdateProjectStatusMutation,
   useDeleteProjectMutation,
   useAssignCandidateMutation,
 } from "./api";

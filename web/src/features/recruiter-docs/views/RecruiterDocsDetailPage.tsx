@@ -49,6 +49,7 @@ import {
   Replace,
   Video,
 } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
 import {
   Tabs,
   TabsContent,
@@ -691,8 +692,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 Deadline: {new Date(project.deadline).toLocaleDateString()}
               </div>
               <Badge className={
-                project.status === "active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                project.status === "completed" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                project.status === ProjectStatus.IN_PROGRESS ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                project.status === ProjectStatus.COMPLETED ? "bg-blue-50 text-blue-700 border-blue-200" :
+                project.status === ProjectStatus.ON_HOLD ? "bg-amber-50 text-amber-700 border-amber-200" :
+                project.status === ProjectStatus.CANCELLED ? "bg-rose-50 text-rose-700 border-rose-200" :
                 "bg-slate-50 text-slate-700 border-slate-200"
               }>
                 {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : "N/A"}

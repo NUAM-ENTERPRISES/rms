@@ -43,7 +43,9 @@ import {
   RefreshCcw,
   UserRoundSearch,
   History,
+  Pencil,
 } from "lucide-react";
+import { ProjectStatus, type ProjectStatusType } from "@/entities/project/constants";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
   getProjectClosureMessage,
@@ -81,8 +83,11 @@ import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import {
   getConfigValueBadge,
   getProjectStatusBadge,
+  normalizeProjectStatusKey,
   statusBadgeClassNames,
 } from "@/features/projects/constants/statusBadges";
+import { ChangeProjectStatusDialog } from "@/features/projects/components/ChangeProjectStatusDialog";
+import { canUpdateProjectStatus } from "@/config/role-capabilities";
 import { cn } from "@/lib/utils";
 
 // Helper function to format date
@@ -116,6 +121,16 @@ const getMinimalScoreBadgeClass = (score?: number) => {
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
   return "bg-red-50 text-red-700";
+};
+
+const toProjectStatusType = (status?: string | null): ProjectStatusType => {
+  const key = normalizeProjectStatusKey(status);
+  if (key === ProjectStatus.ON_HOLD) return ProjectStatus.ON_HOLD;
+  if (key === ProjectStatus.COMPLETED) return ProjectStatus.COMPLETED;
+  if (key === ProjectStatus.CANCELLED || key === "inactive") {
+    return ProjectStatus.CANCELLED;
+  }
+  return ProjectStatus.IN_PROGRESS;
 };
 
 // Format a single work experience item for display. Some records use
@@ -162,6 +177,7 @@ export default function ProjectDetailPage() {
   // Permissions
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
+  const canChangeProjectStatus = canUpdateProjectStatus(user?.roles);
   const isAgentCoordinator = useIsAgentCoordinator();
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
@@ -188,6 +204,7 @@ export default function ProjectDetailPage() {
   const [nominatedPage, setNominatedPage] = useState(1);
 
   const [showDetails, setShowDetails] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
 
   // Get eligible candidates
   const { data: eligibleResponse, refetch: refetchEligible } = useGetEligibleCandidatesQuery({
@@ -1111,14 +1128,30 @@ export default function ProjectDetailPage() {
                           "mr-1 inline-block h-1 w-1 rounded-full",
                           project.status?.toLowerCase() === "active"
                             ? "bg-emerald-500"
-                            : project.status?.toLowerCase() === "cancelled"
+                            : project.status?.toLowerCase() === ProjectStatus.CANCELLED
                               ? "bg-red-500"
-                              : "bg-slate-400"
+                              : project.status?.toLowerCase() === ProjectStatus.ON_HOLD
+                                ? "bg-amber-500"
+                                : project.status?.toLowerCase() === ProjectStatus.COMPLETED
+                                  ? "bg-blue-500"
+                                  : "bg-slate-400"
                         )}
                         aria-hidden
                       />
                       {projectStatusBadge.label}
                     </Badge>
+                    {canChangeProjectStatus && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowStatusDialog(true)}
+                        className="h-7 w-7 shrink-0 rounded-md p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-700"
+                        aria-label="Update project status"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      </Button>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
@@ -1715,6 +1748,14 @@ export default function ProjectDetailPage() {
         onClose={() => setShowAgentRequestHistory(false)}
         projectId={project.id}
         projectTitle={project.title}
+      />
+
+      <ChangeProjectStatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        projectId={project.id}
+        projectTitle={project.title}
+        currentStatus={toProjectStatusType(project.status)}
       />
 
       {/* Delete Confirmation Dialog */}

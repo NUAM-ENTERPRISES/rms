@@ -106,13 +106,15 @@ export interface PaginatedProjectPicker {
 
 export interface ProjectStats {
   totalProjects: number;
-  activeProjects: number;
+  inProgressProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
   cancelledProjects: number;
   projectsByStatus: {
-    active: number;
-    completed: number;
-    cancelled: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    ON_HOLD: number;
+    CANCELLED: number;
   };
   projectsByClient: {
     [clientId: string]: {
@@ -121,5 +123,4 @@ export interface ProjectStats {
     };
   };
   urgentProjectsCount: number;
-  upcomingDeadlines: ProjectWithRelations[];
 }

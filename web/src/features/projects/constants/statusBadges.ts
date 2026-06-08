@@ -6,9 +6,17 @@ export type StatusBadgeStyle = {
 };
 
 const PROJECT_STATUS_BADGES: Record<string, StatusBadgeStyle> = {
-  active: {
-    label: "Active",
+  in_progress: {
+    label: "In Progress",
     badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  active: {
+    label: "In Progress",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  on_hold: {
+    label: "On Hold",
+    badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
   },
   completed: {
     label: "Completed",
@@ -18,7 +26,17 @@ const PROJECT_STATUS_BADGES: Record<string, StatusBadgeStyle> = {
     label: "Cancelled",
     badgeClass: "bg-red-50 text-red-700 border-red-200",
   },
+  inactive: {
+    label: "Cancelled",
+    badgeClass: "bg-red-50 text-red-700 border-red-200",
+  },
 };
+
+/** Normalizes API enum (`IN_PROGRESS`) or snake_case (`in_progress`) to a badge lookup key. */
+export function normalizeProjectStatusKey(status?: string | null): string {
+  if (!status) return "";
+  return status.toLowerCase().trim().replace(/-/g, "_");
+}
 
 const CONFIG_VALUE_BADGES: Record<string, StatusBadgeStyle> = {
   visible: {
@@ -52,7 +70,7 @@ export function getProjectStatusBadge(
   status?: string | null
 ): StatusBadgeStyle {
   if (!status) return DEFAULT_BADGE;
-  const key = status.toLowerCase().trim();
+  const key = normalizeProjectStatusKey(status);
   return PROJECT_STATUS_BADGES[key] ?? { ...DEFAULT_BADGE, label: status };
 }
 

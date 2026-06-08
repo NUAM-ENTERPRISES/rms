@@ -1,4 +1,5 @@
 import { Clock, CheckCircle2, AlertTriangle, Users, ArrowUpRight } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
 import { ProjectStats as ProjectStatsType } from "@/features/projects";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -17,6 +18,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
   emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
   purple:  { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600",   iconBg: "bg-purple-100",   value: "text-purple-700",   ring: "ring-purple-400/50",   dot: "bg-purple-500"   },
   orange:  { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600",   iconBg: "bg-orange-100",   value: "text-orange-700",   ring: "ring-orange-400/50",   dot: "bg-orange-500"   },
+  red:     { card: "from-red-50 via-white to-red-50/30 border-red-100",       icon: "text-red-600",      iconBg: "bg-red-100",      value: "text-red-700",      ring: "ring-red-400/50",      dot: "bg-red-500"      },
 };
 
 export default function ProjectStats({ 
@@ -36,25 +38,41 @@ export default function ProjectStats({
       filter: {},
     },
     {
-      label: "Active Projects",
-      value: stats.activeProjects,
-      subtitle: "In progress",
+      label: "In Progress Projects",
+      value: stats.inProgressProjects,
+      subtitle: "Currently running",
       icon: Clock,
       accent: "emerald",
-      filter: { status: "active" },
+      filter: { status: ProjectStatus.IN_PROGRESS },
     },
     {
-      label: "Completed",
+      label: "Completed Projects",
       value: stats.completedProjects,
       subtitle: "Delivered & deadline closed",
       icon: CheckCircle2,
       accent: "purple",
-      filter: { status: "completed" },
+      filter: { status: ProjectStatus.COMPLETED },
     },
     {
-      label: "Urgent Deadlines",
-      value: stats.urgentProjectsCount ?? stats.upcomingDeadlines.length,
-      subtitle: "This week",
+      label: "On Hold Projects",
+      value: stats.onHoldProjects,
+      subtitle: "Temporarily paused",
+      icon: Clock,
+      accent: "orange",
+      filter: { status: ProjectStatus.ON_HOLD },
+    },
+    {
+      label: "Cancelled Projects",
+      value: stats.cancelledProjects,
+      subtitle: "No longer active",
+      icon: AlertTriangle,
+      accent: "red",
+      filter: { status: ProjectStatus.CANCELLED },
+    },
+    {
+      label: "Urgent Deadlines Projects",
+      value: stats.urgentProjectsCount ?? 0,
+      subtitle: "Approaching deadline",
       icon: AlertTriangle,
       accent: "orange",
       filter: { isUrgent: true },

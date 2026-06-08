@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   StickyNote,
 } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -101,7 +102,7 @@ export function AgentLinkedProjectsSection({
   const { data: projectsResponse, isLoading: isProjectsLoading, isFetching: isProjectsFetching } =
     useGetProjectsPickerQuery(
       {
-        status: "active",
+        status: "in_progress",
         search: debouncedSearch || undefined,
         page,
         limit: PAGE_SIZE,
@@ -538,7 +539,7 @@ export function AgentLinkedProjectsSection({
                     <p className="text-sm text-slate-500 truncate">
                       {row.project.client?.name ?? "No client"}
                       {!row.isActive ? (
-                        <span className="ml-2 text-amber-600">(inactive)</span>
+                        <span className="ml-2 text-amber-600">({ProjectStatus.CANCELLED})</span>
                       ) : null}
                     </p>
                     {row.notes?.trim() ? (
