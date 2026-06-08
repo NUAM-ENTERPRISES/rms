@@ -39,6 +39,9 @@ describe('InterviewsService - client decision flows', () => {
     documentForwardHistory: {
       findFirst: jest.fn(),
     },
+    candidateProjectDocumentVerification: {
+      findFirst: jest.fn(),
+    },
     $transaction: jest.fn().mockImplementation(async (callback: any) => callback(mockPrisma)),
   } as any;
 
@@ -49,6 +52,10 @@ describe('InterviewsService - client decision flows', () => {
   const mockOutboxService = {
     publishRecruiterNotification: jest.fn(),
     publishEvent: jest.fn(),
+  } as any;
+
+  const mockDocumentsService = {
+    requestOfferLetterUploadAfterSendForProcessing: jest.fn(),
   } as any;
 
   beforeEach(async () => {
@@ -78,6 +85,7 @@ describe('InterviewsService - client decision flows', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: (require('../../candidate-projects/candidate-projects.service') as any).CandidateProjectsService, useValue: mockCandidateProjectsService },
         { provide: (require('../../notifications/outbox.service') as any).OutboxService, useValue: mockOutboxService },
+        { provide: (require('../../documents/documents.service') as any).DocumentsService, useValue: mockDocumentsService },
       ],
     }).compile();
 
@@ -384,6 +392,8 @@ describe('InterviewsService - client decision flows', () => {
       candidateProjectMap: {
         candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
         project: { id: 'proj-1', title: 'Project X' },
+        recruiter: { id: 'rec-1', name: 'Recruiter One' },
+        roleNeeded: { roleCatalogId: 'rc-1', roleCatalog: { id: 'rc-1' } },
       },
       project: { id: 'proj-1', title: 'Project X' },
     };
@@ -394,6 +404,7 @@ describe('InterviewsService - client decision flows', () => {
       })
       .mockResolvedValueOnce({ name: 'Coordinator' });
     mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
     mockPrisma.interview.update.mockResolvedValue({
       ...interview,
       readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
@@ -429,7 +440,57 @@ describe('InterviewsService - client decision flows', () => {
       }),
       expect.anything(),
     );
+    expect(
+      mockDocumentsService.requestOfferLetterUploadAfterSendForProcessing,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateProjectMapId: 'cpm-1',
+        candidateId: 'cand-1',
+        projectId: 'proj-1',
+        recruiterId: 'rec-1',
+        roleCatalogId: 'rc-1',
+      }),
+      expect.anything(),
+    );
     expect(result).toEqual(expect.objectContaining({ id: 'int-1' }));
+  });
+
+  it('sendForProcessing skips recruiter offer letter request when offer letter exists', async () => {
+    const interview = {
+      id: 'int-2',
+      outcome: 'passed',
+      readyForProcessingAt: null,
+      candidateProjectMapId: 'cpm-2',
+      candidateProjectMap: {
+        candidate: { id: 'cand-2', firstName: 'John', lastName: 'Smith' },
+        project: { id: 'proj-2', title: 'Project Y' },
+        recruiter: { id: 'rec-2' },
+        roleNeeded: { roleCatalogId: 'rc-2', roleCatalog: { id: 'rc-2' } },
+      },
+      project: { id: 'proj-2', title: 'Project Y' },
+    };
+
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce({
+        userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
+      })
+      .mockResolvedValueOnce({ name: 'Coordinator' });
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue({
+      id: 'ver-1',
+    });
+    mockPrisma.interview.update.mockResolvedValue({
+      ...interview,
+      readyForProcessingAt: new Date(),
+      candidateProjectMap: interview.candidateProjectMap,
+      project: interview.project,
+    });
+
+    await service.sendForProcessing('int-2', 'coord-1');
+
+    expect(
+      mockDocumentsService.requestOfferLetterUploadAfterSendForProcessing,
+    ).not.toHaveBeenCalled();
   });
 
   it('sendForProcessing rejects non Interview Coordinator users', async () => {

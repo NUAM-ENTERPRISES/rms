@@ -856,6 +856,33 @@ export class DocumentsController {
 
   // ==================== ENHANCED DOCUMENT VERIFICATION ====================
 
+  @Get('candidates/:candidateId/offer-letter-upload-requests')
+  @Permissions('read:documents', 'read:candidates', 'write:documents')
+  @ApiOperation({
+    summary: 'Get pending offer letter upload requests for a candidate',
+    description:
+      'Returns recruiter upload requests created when a candidate was sent for processing without an offer letter.',
+  })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter upload requests retrieved successfully',
+  })
+  async getOfferLetterUploadRequests(@Param('candidateId') candidateId: string) {
+    const data =
+      await this.documentsService.getOfferLetterUploadRequestsForCandidate(
+        candidateId,
+      );
+    return {
+      success: true,
+      data,
+      message: 'Offer letter upload requests retrieved successfully',
+    };
+  }
+
   @Get('candidates/:candidateId/projects')
   @Permissions('read:documents')
   @ApiOperation({

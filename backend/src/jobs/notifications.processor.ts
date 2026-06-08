@@ -93,6 +93,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleAgentCandidateRequestCreated(job);
         case 'OfferLetterUploaded':
           return await this.handleOfferLetterUploaded(job);
+        case 'OfferLetterUploadRequested':
+          return await this.handleOfferLetterUploadRequested(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -2688,6 +2690,74 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
+  async handleOfferLetterUploadRequested(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing offer letter upload requested event: ${eventId}`);
+
+    try {
+      const {
+        recruiterId,
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        roleCatalogId,
+        candidateName,
+        projectTitle,
+        requestedBy,
+        requestedByName,
+        reason,
+      } = payload as {
+        recruiterId: string;
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId: string;
+        roleCatalogId?: string | null;
+        candidateName: string;
+        projectTitle: string;
+        requestedBy: string;
+        requestedByName?: string | null;
+        reason: string;
+      };
+
+      const link = `/recruiter-docs/${projectId}/${candidateId}`;
+      const meta = {
+        type: 'offer_letter_upload_requested',
+        docType: 'offer_letter',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        roleCatalogId: roleCatalogId ?? null,
+        requestedBy,
+        requestedByName,
+        candidateName,
+        projectName: projectTitle,
+        reason,
+        syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+      };
+
+      const idemKey = `${eventId}:offer_letter_upload_requested:${candidateProjectMapId}:${recruiterId}`;
+      await this.notificationsService.createNotification({
+        userId: recruiterId,
+        type: 'offer_letter_upload_requested',
+        title: 'Offer Letter Upload Required',
+        message: reason,
+        link,
+        meta,
+        idemKey,
+      });
+
+      this.logger.log(
+        `Offer letter upload requested notification created for recruiter ${recruiterId}`,
+      );
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process OfferLetterUploadRequested event ${eventId}: ${err?.message || err}`,
+        err?.stack,
+      );
+      throw err;
+    }
+  }
+
   async handleOfferLetterUploaded(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
     this.logger.log(`Processing offer letter uploaded event: ${eventId}`);
@@ -2754,7 +2824,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       const uploaderSuffix = uploadedByName ? ` by ${uploadedByName}` : '';
       const message = `Offer letter uploaded for ${candidateName} (${roleDesignation}) on project "${projectTitle}"${uploaderSuffix}.`;
-      const link = `/candidates/${candidateId}`;
+      const link = `/recruiter-docs/${projectId}/${candidateId}`;
       const meta = {
         type: 'offer_letter_uploaded',
         candidateId,

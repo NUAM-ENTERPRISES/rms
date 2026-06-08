@@ -160,6 +160,45 @@ describe('NotificationsProcessor', () => {
     );
   });
 
+  it('notifies assigned recruiter when offer letter upload is required', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-req-1',
+        payload: {
+          recruiterId: 'recruiter-1',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          roleCatalogId: 'rc-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          requestedBy: 'coord-1',
+          requestedByName: 'Coordinator',
+          reason:
+            'Candidate was sent for processing without an offer letter. Please upload the signed offer letter received from the candidate.',
+        },
+      },
+    };
+
+    await processor.handleOfferLetterUploadRequested(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'offer_letter_upload_requested',
+        title: 'Offer Letter Upload Required',
+        link: '/recruiter-docs/proj-1/cand-1',
+        meta: expect.objectContaining({
+          type: 'offer_letter_upload_requested',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+        }),
+      }),
+    );
+  });
+
   it('notifies recruiter, admin roles, and processing roles for offer letter upload and excludes uploader', async () => {
     const job: any = {
       data: {
@@ -196,7 +235,7 @@ describe('NotificationsProcessor', () => {
       expect.objectContaining({
         userId: 'recruiter-1',
         type: 'offer_letter_uploaded',
-        link: '/candidates/cand-1',
+        link: '/recruiter-docs/proj-1/cand-1',
         meta: expect.objectContaining({
           candidateId: 'cand-1',
           projectId: 'proj-1',

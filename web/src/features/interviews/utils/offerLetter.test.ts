@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
+  canShowOfferLetterUploadButton,
+  canUserUploadOfferLetter,
   getOfferLetterOverrideKey,
   hasOfferLetter,
+  isOfferLetterUploadEligible,
   resolveOfferLetterFileUrl,
 } from "./offerLetter";
 
@@ -27,6 +30,62 @@ const baseItem = {
 describe("offerLetter utils", () => {
   it("builds a stable override key from candidate, project, and role", () => {
     expect(getOfferLetterOverrideKey(baseItem)).toBe("cand-1:proj-1:role-1");
+  });
+
+  it("allows offer letter upload only after interview passed or later stages", () => {
+    expect(isOfferLetterUploadEligible("interview_scheduled")).toBe(false);
+    expect(isOfferLetterUploadEligible("interview_passed")).toBe(true);
+    expect(isOfferLetterUploadEligible("transfered_to_processing")).toBe(true);
+  });
+
+  it("hides offer letter upload for recruiters when a letter already exists", () => {
+    expect(
+      canShowOfferLetterUploadButton({
+        isRecruiter: true,
+        hasOfferLetter: true,
+        canUpload: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      canShowOfferLetterUploadButton({
+        isRecruiter: true,
+        hasOfferLetter: false,
+        canUpload: true,
+      }),
+    ).toBe(true);
+
+    expect(
+      canShowOfferLetterUploadButton({
+        isRecruiter: false,
+        hasOfferLetter: true,
+        canUpload: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("lets recruiters upload only when nomination is interview-passed eligible", () => {
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: true,
+        isInterviewCoordinator: false,
+        canUploadDocuments: false,
+        canWriteCandidates: false,
+        canUploadInterviews: false,
+        subStatusName: "interview_passed",
+      }),
+    ).toBe(true);
+
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: true,
+        isInterviewCoordinator: false,
+        canUploadDocuments: false,
+        canWriteCandidates: false,
+        canUploadInterviews: false,
+        subStatusName: "interview_scheduled",
+      }),
+    ).toBe(false);
   });
 
   it("prefers the server file URL over stale local overrides after recruiter re-upload", () => {

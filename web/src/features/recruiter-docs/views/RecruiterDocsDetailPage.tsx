@@ -117,6 +117,7 @@ import { ImageViewer } from "@/components/molecules";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
 import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
+import { CandidateOfferLetterCard } from "@/features/candidates/components/CandidateOfferLetterCard";
 import {
   useUploadIntroductionVideoMutation,
   useReuseIntroductionVideoMutation,
@@ -1419,6 +1420,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {candidateId ? (
+        <CandidateOfferLetterCard
+          candidateId={candidateId}
+          candidateName={
+            `${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim() || "Candidate"
+          }
+        />
+      ) : null}
 
       {/* Summary Sidebar/Bottom Section */}
       <div className="grid gap-4 md:grid-cols-3">

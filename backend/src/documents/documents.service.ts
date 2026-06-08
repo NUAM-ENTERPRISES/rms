@@ -1331,6 +1331,166 @@ export class DocumentsService {
     return byDocType;
   }
 
+  /**
+   * Notify recruiter to upload offer letter when coordinator sends for processing without one.
+   */
+  async requestOfferLetterUploadAfterSendForProcessing(
+    params: {
+      candidateProjectMapId: string;
+      candidateId: string;
+      projectId: string;
+      recruiterId: string;
+      roleCatalogId?: string | null;
+      requesterId: string;
+      requesterName?: string | null;
+      candidateName: string;
+      projectName: string;
+      reason?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    const {
+      candidateProjectMapId,
+      candidateId,
+      projectId,
+      recruiterId,
+      roleCatalogId,
+      requesterId,
+      requesterName,
+      candidateName,
+      projectName,
+    } = params;
+
+    const existingOfferLetter =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId,
+          isDeleted: false,
+          document: {
+            docType: DOCUMENT_TYPE.OFFER_LETTER,
+            isDeleted: false,
+          },
+        },
+      });
+
+    if (existingOfferLetter) {
+      return;
+    }
+
+    const reason =
+      params.reason?.trim() ||
+      `Candidate was sent for processing without an offer letter. Please upload the signed offer letter received from the candidate.${
+        requesterName ? ` (Requested by ${requesterName})` : ''
+      }`;
+
+    const prisma = tx ?? this.prisma;
+
+    await prisma.documentVerificationHistory.create({
+      data: {
+        verificationId: null,
+        action: DocumentsService.UPLOAD_REQUESTED_ACTION,
+        performedBy: requesterId,
+        performedByName: requesterName || null,
+        reason,
+        notes: JSON.stringify({
+          docType: DOCUMENT_TYPE.OFFER_LETTER,
+          candidateProjectMapId,
+          roleCatalogId: roleCatalogId ?? null,
+        }),
+      },
+    });
+
+    await this.outboxService.publishOfferLetterUploadRequested(
+      {
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        recruiterId,
+        roleCatalogId: roleCatalogId ?? null,
+        candidateName,
+        projectTitle: projectName,
+        requestedBy: requesterId,
+        requestedByName: requesterName ?? null,
+        reason,
+      },
+      tx,
+    );
+
+    await this.outboxService.publishDataSync(
+      {
+        type: 'OfferLetterUploadRequested',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        message: reason,
+      },
+      tx,
+    );
+  }
+
+  async getOfferLetterUploadRequestsForCandidate(candidateId: string) {
+    const nominations = await this.prisma.candidateProjects.findMany({
+      where: { candidateId },
+      select: {
+        id: true,
+        projectId: true,
+        roleNeeded: {
+          select: {
+            roleCatalogId: true,
+            roleCatalog: { select: { id: true } },
+          },
+        },
+        documentVerifications: {
+          where: {
+            isDeleted: false,
+            document: {
+              docType: DOCUMENT_TYPE.OFFER_LETTER,
+              isDeleted: false,
+            },
+          },
+          take: 1,
+        },
+      },
+    });
+
+    const requests: Array<{
+      candidateProjectMapId: string;
+      projectId: string;
+      roleCatalogId: string | null;
+      reason: string;
+      requestedAt: string;
+      requestedBy: string;
+    }> = [];
+
+    for (const nomination of nominations) {
+      if (nomination.documentVerifications.length > 0) {
+        continue;
+      }
+
+      const latest = await this.getLatestUploadRequest(
+        nomination.id,
+        DOCUMENT_TYPE.OFFER_LETTER,
+      );
+      if (!latest) {
+        continue;
+      }
+
+      requests.push({
+        candidateProjectMapId: nomination.id,
+        projectId: nomination.projectId,
+        roleCatalogId:
+          nomination.roleNeeded?.roleCatalogId ||
+          nomination.roleNeeded?.roleCatalog?.id ||
+          null,
+        reason: latest.reason,
+        requestedAt: latest.requestedAt,
+        requestedBy: latest.requestedBy,
+      });
+    }
+
+    return requests;
+  }
+
   private async getLatestUploadRequest(
     candidateProjectMapId: string,
     docType: string,
@@ -2091,11 +2251,34 @@ export class DocumentsService {
           roleNeededId: roleNeeded.id,
         },
       },
+      include: {
+        subStatus: {
+          select: { name: true },
+        },
+      },
     });
 
     if (!candidateProjectMap) {
       throw new NotFoundException(
         `Candidate is not nominated for this role in the specified project`,
+      );
+    }
+
+    const offerLetterUploadEligibleSubStatuses = [
+      CANDIDATE_PROJECT_STATUS.INTERVIEW_PASSED,
+      'transfered_to_processing',
+      'processing_in_progress',
+      'processing_completed',
+      'processing_failed',
+      'ready_for_final',
+    ];
+    const nominationSubStatus = candidateProjectMap.subStatus?.name;
+    if (
+      !nominationSubStatus ||
+      !offerLetterUploadEligibleSubStatuses.includes(nominationSubStatus)
+    ) {
+      throw new BadRequestException(
+        'Offer letter can only be uploaded after the candidate has passed the interview',
       );
     }
 

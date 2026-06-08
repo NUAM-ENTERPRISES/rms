@@ -409,7 +409,15 @@ export type CandidateProjectItem = {
     name: string;
     email?: string;
   } | null;
-  currentProjectStatus?: any;
+  currentProjectStatus?: {
+    id?: number;
+    statusName?: string;
+  } | null;
+  subStatus?: {
+    id?: string;
+    name?: string;
+    label?: string;
+  } | null;
   assignedAt?: string;
 };
 
@@ -1527,6 +1535,29 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Document"],
     }),
+
+    getOfferLetterUploadRequests: builder.query<
+      {
+        success: boolean;
+        data: Array<{
+          candidateProjectMapId: string;
+          projectId: string;
+          roleCatalogId: string | null;
+          reason: string;
+          requestedAt: string;
+          requestedBy: string;
+        }>;
+      },
+      string
+    >({
+      query: (candidateId) => ({
+        url: `/documents/candidates/${candidateId}/offer-letter-upload-requests`,
+      }),
+      providesTags: (_result, _error, candidateId) => [
+        { type: "Document", id: `offer-letter-requests-${candidateId}` },
+        { type: "Candidate", id: candidateId },
+      ],
+    }),
     uploadDocument: builder.mutation<
       { success: boolean; data: Document; message?: string },
       UploadDocumentRequest
@@ -1814,6 +1845,7 @@ export const {
   useUpdateCandidateQualificationMutation,
   useDeleteCandidateQualificationMutation,
   useGetDocumentsQuery,
+  useGetOfferLetterUploadRequestsQuery,
   useUploadDocumentMutation,
   useUploadWorkExperienceDocumentsMutation,
   useUpdateCandidateStatusMutation,

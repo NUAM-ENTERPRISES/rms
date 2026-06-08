@@ -1,3 +1,70 @@
+/** Nomination stages where offer letter upload is allowed (interview passed or later). */
+export const OFFER_LETTER_UPLOAD_ELIGIBLE_SUB_STATUSES = [
+  "interview_passed",
+  "transfered_to_processing",
+  "processing_in_progress",
+  "processing_completed",
+  "processing_failed",
+  "ready_for_final",
+] as const;
+
+export type OfferLetterUploadEligibleSubStatus =
+  (typeof OFFER_LETTER_UPLOAD_ELIGIBLE_SUB_STATUSES)[number];
+
+export function isOfferLetterUploadEligible(
+  subStatusName?: string | null,
+): boolean {
+  if (!subStatusName) return false;
+  return OFFER_LETTER_UPLOAD_ELIGIBLE_SUB_STATUSES.includes(
+    subStatusName as OfferLetterUploadEligibleSubStatus,
+  );
+}
+
+export function canUserUploadOfferLetter(options: {
+  isRecruiter: boolean;
+  isInterviewCoordinator: boolean;
+  canUploadDocuments: boolean;
+  canWriteCandidates: boolean;
+  canUploadInterviews: boolean;
+  subStatusName?: string | null;
+  /** When true, skip nomination sub-status check (e.g. interview-passed list views). */
+  assumeInterviewPassed?: boolean;
+}): boolean {
+  const {
+    isRecruiter,
+    isInterviewCoordinator,
+    canUploadDocuments,
+    canWriteCandidates,
+    canUploadInterviews,
+    subStatusName,
+    assumeInterviewPassed = false,
+  } = options;
+
+  const hasPermission =
+    canUploadDocuments ||
+    canWriteCandidates ||
+    isRecruiter ||
+    (isInterviewCoordinator && canUploadInterviews);
+
+  if (!hasPermission) return false;
+
+  if (assumeInterviewPassed) return true;
+
+  return isOfferLetterUploadEligible(subStatusName);
+}
+
+/** Recruiters may upload only when no offer letter exists; other roles can re-upload. */
+export function canShowOfferLetterUploadButton(options: {
+  isRecruiter: boolean;
+  hasOfferLetter: boolean;
+  canUpload: boolean;
+}): boolean {
+  const { isRecruiter, hasOfferLetter, canUpload } = options;
+  if (!canUpload) return false;
+  if (isRecruiter && hasOfferLetter) return false;
+  return true;
+}
+
 export type OfferLetterInterviewItem = {
   id?: string;
   isOfferLetterUploaded?: boolean;

@@ -424,11 +424,20 @@ export const interviewsApi = baseApi.injectEndpoints({
         url: `/interviews/${id}/send-for-processing`,
         method: "PATCH",
       }),
-      invalidatesTags: (_result, _error, id) => [
-        { type: "Interview", id },
-        "Interview",
-        "ProcessingSummary",
-      ],
+      invalidatesTags: (result) => {
+        const candidateId =
+          result?.data?.candidateProjectMap?.candidate?.id ??
+          (result?.data as { candidate?: { id?: string } })?.candidate?.id;
+        const tags: Array<string | { type: string; id?: string }> = [
+          "Interview",
+          "ProcessingSummary",
+        ];
+        if (candidateId) {
+          tags.push({ type: "Document", id: `offer-letter-requests-${candidateId}` });
+          tags.push({ type: "Candidate", id: candidateId });
+        }
+        return tags;
+      },
     }),
 
     sendBulkForProcessing: builder.mutation<
@@ -444,7 +453,23 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Interview", "ProcessingSummary"],
+      invalidatesTags: (result) => {
+        const tags: Array<string | { type: string; id?: string }> = [
+          "Interview",
+          "ProcessingSummary",
+        ];
+        const results = result?.data ?? [];
+        for (const item of results) {
+          const candidateId =
+            item.data?.candidateProjectMap?.candidate?.id ??
+            (item.data as { candidate?: { id?: string } })?.candidate?.id;
+          if (candidateId) {
+            tags.push({ type: "Document", id: `offer-letter-requests-${candidateId}` });
+            tags.push({ type: "Candidate", id: candidateId });
+          }
+        }
+        return tags;
+      },
     }),
 
     /**

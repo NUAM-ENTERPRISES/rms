@@ -274,6 +274,9 @@ export default function InterviewsPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
+  const isRecruiter = useHasRole("Recruiter");
+  const canUploadOfferLetterOnPassedInterview =
+    isInterviewCoordinator || isRecruiter;
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
@@ -870,23 +873,38 @@ export default function InterviewsPage() {
       roleCatalogId,
       roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
       existingFileUrl,
-      isAlreadyUploaded: hasOfferLetter(item, offerLetterOverrides),
+      isAlreadyUploaded: isRecruiter
+        ? false
+        : hasOfferLetter(item, offerLetterOverrides),
     });
   };
 
   const toSendForProcessingCandidate = (item: any): SendForProcessingCandidate => {
     const candidateProjectMap = item.candidateProjectMap || item;
     const candidate = candidateProjectMap?.candidate || item.candidate;
+    const project = candidateProjectMap?.project || item.project;
+    const roleCatalogId =
+      candidateProjectMap?.roleNeeded?.roleCatalog?.id ||
+      candidateProjectMap?.roleNeeded?.roleCatalogId ||
+      "";
     return {
       interviewId: item.id,
+      candidateId: candidate?.id || "",
       candidateName: candidate
         ? `${candidate.firstName} ${candidate.lastName}`
         : "Unknown Candidate",
-      projectTitle:
-        candidateProjectMap?.project?.title || item.project?.title || "Unknown Project",
+      projectId: project?.id || item.projectId || "",
+      projectTitle: project?.title || "Unknown Project",
+      roleCatalogId,
       roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
+      recruiterName:
+        item.recruiter?.name ||
+        candidateProjectMap?.recruiter?.name ||
+        item.candidateProjectMap?.recruiter?.name ||
+        null,
       hasOfferLetter: hasOfferLetter(item, offerLetterOverrides),
       offerLetterUploadedBy: getOfferLetterUploaderName(item),
+      existingFileUrl: resolveOfferLetterFileUrl(item, offerLetterOverrides),
     };
   };
 
@@ -1774,17 +1792,14 @@ export default function InterviewsPage() {
                                             <FileText className="h-4 w-4" />
                                           </Button>
                                         )}
-                                        {isInterviewCoordinator && (
+                                        {canUploadOfferLetterOnPassedInterview &&
+                                          (!isRecruiter || !offerLetterUploaded) && (
                                           <Button
                                             size="icon"
                                             variant="outline"
                                             className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
                                             onClick={() => openOfferLetterModal(item)}
-                                            title={
-                                              offerLetterUploaded
-                                                ? "Re-upload Offer Letter"
-                                                : "Upload Offer Letter"
-                                            }
+                                            title="Upload Offer Letter"
                                           >
                                             <Upload className="h-4 w-4" />
                                           </Button>
@@ -2040,6 +2055,15 @@ export default function InterviewsPage() {
         isLoading={isSendingForProcessing || isBulkSendingForProcessing}
         mode={sendForProcessingModal?.mode ?? "single"}
         candidates={sendForProcessingModal?.candidates ?? []}
+        onOfferLetterUploaded={(interviewId, fileUrl) => {
+          const item = candidates.find((c) => c.id === interviewId);
+          if (!item) return;
+          const overrideKey = getOfferLetterOverrideKey(item);
+          setOfferLetterOverrides((prev) => ({
+            ...prev,
+            [overrideKey]: fileUrl,
+          }));
+        }}
       />
     </div>
   );

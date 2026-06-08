@@ -28,21 +28,43 @@ const OFFER_LETTER_SYNC_TAGS = (
   return tags;
 };
 
+const resolveOfferLetterNotificationType = (notification: {
+  type?: string;
+  meta?: { type?: string };
+}) => {
+  if (notification.type === "recruiter_notification" && notification.meta?.type) {
+    return notification.meta.type;
+  }
+  return notification.type;
+};
+
 export const handleOfferLetterNotifications = ({
   notification,
   dispatch,
   invalidateTags,
 }: NotificationHandlerProps) => {
-  if (notification.type !== "offer_letter_uploaded") return false;
+  const notificationType = resolveOfferLetterNotificationType(notification);
 
-  console.log("[Socket] Handling offer letter uploaded notification");
+  if (
+    notificationType !== "offer_letter_uploaded" &&
+    notificationType !== "offer_letter_upload_requested"
+  ) {
+    return false;
+  }
+
+  console.log(`[Socket] Handling offer letter notification: ${notificationType}`);
 
   const candidateId =
     notification.meta?.candidateId ?? notification.data?.candidateId;
   const projectId =
     notification.meta?.projectId ?? notification.data?.projectId;
 
-  dispatch(invalidateTags(OFFER_LETTER_SYNC_TAGS(candidateId, projectId)));
+  const tags = OFFER_LETTER_SYNC_TAGS(candidateId, projectId);
+  if (candidateId) {
+    tags.push({ type: "Document", id: `offer-letter-requests-${candidateId}` });
+  }
+
+  dispatch(invalidateTags(tags));
   return true;
 };
 
@@ -50,14 +72,23 @@ export const handleOfferLetterSync = (
   payload: { type?: string; candidateId?: string; projectId?: string },
   { dispatch, invalidateTags }: { dispatch: any; invalidateTags: any },
 ) => {
-  if (payload.type !== "OfferLetterUploaded") return false;
+  if (
+    payload.type !== "OfferLetterUploaded" &&
+    payload.type !== "OfferLetterUploadRequested"
+  ) {
+    return false;
+  }
 
   console.log("[Socket] Offer letter data sync", payload);
 
-  dispatch(
-    invalidateTags(
-      OFFER_LETTER_SYNC_TAGS(payload.candidateId, payload.projectId),
-    ),
-  );
+  const tags = OFFER_LETTER_SYNC_TAGS(payload.candidateId, payload.projectId);
+  if (payload.candidateId) {
+    tags.push({
+      type: "Document",
+      id: `offer-letter-requests-${payload.candidateId}`,
+    });
+  }
+
+  dispatch(invalidateTags(tags));
   return true;
 };

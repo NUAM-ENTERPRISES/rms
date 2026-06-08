@@ -167,7 +167,14 @@ export const uploadApi = baseApi.injectEndpoints({
           formData: true,
         };
       },
-      invalidatesTags: ["Candidate", "Document", "Interview", "ProcessingSummary"],
+      invalidatesTags: (_result, _error, { candidateId }) => [
+        "Candidate",
+        "Document",
+        "Interview",
+        "ProcessingSummary",
+        { type: "Document", id: `offer-letter-requests-${candidateId}` },
+        { type: "Candidate", id: candidateId },
+      ],
     }),
 
     updateOfferLetterReceivedDate: builder.mutation<

@@ -1639,6 +1639,13 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          subStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',

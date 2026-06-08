@@ -31,6 +31,51 @@ describe("offer-letter-handler", () => {
     );
   });
 
+  it("invalidates tags on offer_letter_upload_requested notification", () => {
+    const dispatch = vi.fn();
+    const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));
+
+    const handled = handleOfferLetterNotifications({
+      notification: {
+        type: "offer_letter_upload_requested",
+        meta: {
+          candidateId: "cand-3",
+          projectId: "proj-3",
+        },
+      },
+      dispatch,
+      invalidateTags,
+    });
+
+    expect(handled).toBe(true);
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.arrayContaining([
+          { type: "Document", id: "offer-letter-requests-cand-3" },
+        ]),
+      }),
+    );
+  });
+
+  it("invalidates tags on OfferLetterUploadRequested data sync", () => {
+    const dispatch = vi.fn();
+    const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));
+
+    const handled = handleOfferLetterSync(
+      { type: "OfferLetterUploadRequested", candidateId: "cand-4", projectId: "proj-4" },
+      { dispatch, invalidateTags },
+    );
+
+    expect(handled).toBe(true);
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.arrayContaining([
+          { type: "Document", id: "offer-letter-requests-cand-4" },
+        ]),
+      }),
+    );
+  });
+
   it("invalidates tags on OfferLetterUploaded data sync", () => {
     const dispatch = vi.fn();
     const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));

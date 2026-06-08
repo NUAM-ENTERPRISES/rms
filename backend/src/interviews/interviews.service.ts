@@ -14,6 +14,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CandidateProjectsService } from '../candidate-projects/candidate-projects.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { DocumentsService } from '../documents/documents.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { DOCUMENT_TYPE } from '../common/constants/document-types';
 
@@ -23,6 +24,7 @@ export class InterviewsService {
     private readonly prisma: PrismaService,
     private readonly candidateProjectsService: CandidateProjectsService,
     private readonly outboxService: OutboxService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   private formatCandidateDob(candidate: any) {
@@ -2207,6 +2209,13 @@ export class InterviewsService {
               select: { id: true, firstName: true, lastName: true },
             },
             project: { select: { id: true, title: true } },
+            recruiter: { select: { id: true, name: true, email: true } },
+            roleNeeded: {
+              select: {
+                roleCatalogId: true,
+                roleCatalog: { select: { id: true } },
+              },
+            },
           },
         },
         project: { select: { id: true, title: true } },
@@ -2216,6 +2225,18 @@ export class InterviewsService {
     if (!interview) {
       throw new NotFoundException('Interview not found');
     }
+
+    const existingOfferLetter =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId: interview.candidateProjectMapId ?? undefined,
+          isDeleted: false,
+          document: {
+            docType: DOCUMENT_TYPE.OFFER_LETTER,
+            isDeleted: false,
+          },
+        },
+      });
 
     if (interview.outcome !== 'passed') {
       throw new BadRequestException(
@@ -2336,6 +2357,34 @@ export class InterviewsService {
         },
         tx,
       );
+
+      const recruiterId = interview.candidateProjectMap?.recruiter?.id;
+      const roleCatalogId =
+        interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+        interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+
+      const candidateProjectMap = interview.candidateProjectMap;
+      if (
+        !existingOfferLetter &&
+        recruiterId &&
+        interview.candidateProjectMapId &&
+        candidateProjectMap
+      ) {
+        await this.documentsService.requestOfferLetterUploadAfterSendForProcessing(
+          {
+            candidateProjectMapId: interview.candidateProjectMapId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId,
+            recruiterId,
+            roleCatalogId,
+            requesterId: userId,
+            requesterName: changerName,
+            candidateName,
+            projectName,
+          },
+          tx,
+        );
+      }
 
       return updatedInterview;
     });

@@ -617,6 +617,27 @@ export class OutboxService {
     await this.publishEvent('OfferLetterUploaded', payload, tx);
   }
 
+  /**
+   * Publish offer letter upload required event (notifies assigned recruiter)
+   */
+  async publishOfferLetterUploadRequested(
+    payload: {
+      candidateId: string;
+      projectId: string;
+      candidateProjectMapId: string;
+      recruiterId: string;
+      roleCatalogId?: string | null;
+      candidateName: string;
+      projectTitle: string;
+      requestedBy: string;
+      requestedByName?: string | null;
+      reason: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('OfferLetterUploadRequested', payload, tx);
+  }
+
   async publishAgentCandidateRequestCreated(
     payload: {
       requestId: string;
