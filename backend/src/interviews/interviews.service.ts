@@ -1826,6 +1826,16 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
+    if (dto.interviewStatus === 'passed' && !dto.subStatus) {
+      dto.subStatus = 'interview_passed';
+    } else if (dto.interviewStatus === 'failed' && !dto.subStatus) {
+      dto.subStatus = 'interview_failed';
+    } else if (dto.interviewStatus === 'backout' && !dto.subStatus) {
+      dto.subStatus = 'interview_backout';
+    } else if (dto.interviewStatus === 'completed' && !dto.subStatus) {
+      dto.subStatus = 'interview_completed';
+    }
+
     // Resolve changer's name if provided
     let changerName: string | null = null;
     if (changedById) {

@@ -18,9 +18,14 @@ import { OfferLetterUploadModal } from "@/features/documents/components/OfferLet
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { OfferLetterBadge } from "@/features/interviews/components/OfferLetterBadge";
+import { useGetInterviewsQuery } from "@/features/interviews/api";
 import {
+  buildOfferLetterNominationKey,
+  buildPassedInterviewNominationLookup,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
+  hasPassedInterviewForNomination,
+  type OfferLetterInterviewItem,
 } from "@/features/interviews/utils/offerLetter";
 import { format } from "date-fns";
 
@@ -77,9 +82,22 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   const { data: uploadRequestsData, refetch: refetchUploadRequests } =
     useGetOfferLetterUploadRequestsQuery(candidateId, { skip: !candidateId });
 
+  const { data: passedInterviewsData } = useGetInterviewsQuery(
+    { candidateId, status: "passed", page: 1, limit: 50 },
+    { skip: !candidateId },
+  );
+
   const projects = projectsData?.data ?? [];
   const offerLetters = documentsData?.data?.documents ?? [];
   const uploadRequests = uploadRequestsData?.data ?? [];
+  const passedInterviewLookup = useMemo(
+    () =>
+      buildPassedInterviewNominationLookup(
+        (passedInterviewsData?.data?.interviews ??
+          []) as OfferLetterInterviewItem[],
+      ),
+    [passedInterviewsData],
+  );
 
   const rows = useMemo(() => {
     return projects
@@ -89,7 +107,13 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           nomination.roleNeeded?.roleCatalogId ||
           (nomination.roleNeeded as { roleCatalog?: { id?: string } })?.roleCatalog?.id;
         const projectId = nomination.project!.id;
-        const key = `${projectId}-${roleCatalogId ?? "unknown"}`;
+        const key = buildOfferLetterNominationKey(projectId, roleCatalogId);
+        const hasPassedInterview = hasPassedInterviewForNomination({
+          nominationMapId: nomination.id,
+          projectId,
+          roleCatalogId,
+          passedInterviewLookup,
+        });
         const doc = roleCatalogId
           ? offerLetters.find(
               (d) =>
@@ -120,6 +144,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           uploadedByLabel: getUploaderLabel(doc?.uploadedByUser, doc?.uploadedBy),
           uploadedAt: doc?.createdAt,
           canUploadForRole: !!roleCatalogId,
+          hasPassedInterview,
           subStatusName:
             nomination.subStatus?.name ||
             nomination.currentProjectStatus?.statusName ||
@@ -127,9 +152,12 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           uploadRequest,
         };
       });
-  }, [projects, offerLetters, localOverrides, uploadRequests]);
+  }, [projects, offerLetters, localOverrides, uploadRequests, passedInterviewLookup]);
 
-  const canUploadForRow = (subStatusName?: string | null) =>
+  const canUploadForRow = (
+    subStatusName?: string | null,
+    hasPassedInterview?: boolean,
+  ) =>
     canUserUploadOfferLetter({
       isRecruiter,
       isInterviewCoordinator,
@@ -137,6 +165,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
       canWriteCandidates,
       canUploadInterviews,
       subStatusName,
+      hasPassedInterview,
     });
 
   const isLoading = projectsLoading || docsLoading;
@@ -220,7 +249,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                           </Badge>
                         )}
                         {!row.hasDocument &&
-                          !canUploadForRow(row.subStatusName) &&
+                          !canUploadForRow(row.subStatusName, row.hasPassedInterview) &&
                           (isRecruiter || isInterviewCoordinator) && (
                             <Badge
                               variant="secondary"
@@ -253,7 +282,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         isRecruiter,
                         hasOfferLetter: row.hasDocument,
                         canUpload:
-                          canUploadForRow(row.subStatusName) &&
+                          canUploadForRow(row.subStatusName, row.hasPassedInterview) &&
                           !row.isVerified &&
                           row.canUploadForRole,
                       }) && (

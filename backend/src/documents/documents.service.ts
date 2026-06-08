@@ -2273,10 +2273,20 @@ export class DocumentsService {
       'ready_for_final',
     ];
     const nominationSubStatus = candidateProjectMap.subStatus?.name;
-    if (
-      !nominationSubStatus ||
-      !offerLetterUploadEligibleSubStatuses.includes(nominationSubStatus)
-    ) {
+    const hasEligibleSubStatus =
+      !!nominationSubStatus &&
+      offerLetterUploadEligibleSubStatuses.includes(nominationSubStatus);
+    const hasPassedInterview = hasEligibleSubStatus
+      ? false
+      : !!(await this.prisma.interview.findFirst({
+          where: {
+            candidateProjectMapId: candidateProjectMap.id,
+            outcome: 'passed',
+          },
+          select: { id: true },
+        }));
+
+    if (!hasEligibleSubStatus && !hasPassedInterview) {
       throw new BadRequestException(
         'Offer letter can only be uploaded after the candidate has passed the interview',
       );

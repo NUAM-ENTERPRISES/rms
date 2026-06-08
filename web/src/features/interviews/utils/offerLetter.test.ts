@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildOfferLetterNominationKey,
+  buildPassedInterviewNominationLookup,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
   getOfferLetterOverrideKey,
   hasOfferLetter,
+  hasPassedInterviewForNomination,
   isOfferLetterUploadEligible,
   resolveOfferLetterFileUrl,
 } from "./offerLetter";
@@ -60,6 +63,44 @@ describe("offerLetter utils", () => {
         isRecruiter: false,
         hasOfferLetter: true,
         canUpload: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("builds passed interview lookup from project nominations", () => {
+    const lookup = buildPassedInterviewNominationLookup([
+      {
+        candidateProjectMap: {
+          id: "map-1",
+          project: { id: "proj-1" },
+          roleNeeded: { roleCatalogId: "role-1" },
+        },
+      },
+    ]);
+
+    expect(
+      hasPassedInterviewForNomination({
+        nominationMapId: "map-1",
+        projectId: "proj-1",
+        roleCatalogId: "role-1",
+        passedInterviewLookup: lookup,
+      }),
+    ).toBe(true);
+    expect(
+      buildOfferLetterNominationKey("proj-1", "role-1"),
+    ).toBe("proj-1-role-1");
+  });
+
+  it("lets recruiters upload when a passed interview exists even if sub-status lags", () => {
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: true,
+        isInterviewCoordinator: false,
+        canUploadDocuments: false,
+        canWriteCandidates: false,
+        canUploadInterviews: false,
+        subStatusName: "interview_completed",
+        hasPassedInterview: true,
       }),
     ).toBe(true);
   });

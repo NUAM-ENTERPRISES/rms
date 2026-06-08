@@ -20,6 +20,62 @@ export function isOfferLetterUploadEligible(
   );
 }
 
+export function buildOfferLetterNominationKey(
+  projectId: string,
+  roleCatalogId?: string | null,
+): string {
+  return `${projectId}-${roleCatalogId ?? "unknown"}`;
+}
+
+export type PassedInterviewNominationLookup = {
+  mapIds: Set<string>;
+  keys: Set<string>;
+};
+
+export function buildPassedInterviewNominationLookup(
+  interviews: OfferLetterInterviewItem[] = [],
+): PassedInterviewNominationLookup {
+  const mapIds = new Set<string>();
+  const keys = new Set<string>();
+
+  for (const interview of interviews) {
+    const mapId = interview.candidateProjectMap?.id;
+    if (mapId) {
+      mapIds.add(mapId);
+    }
+
+    const projectId =
+      interview.candidateProjectMap?.project?.id || interview.project?.id;
+    if (!projectId) continue;
+
+    const roleCatalogId =
+      interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+      interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+    keys.add(buildOfferLetterNominationKey(projectId, roleCatalogId));
+  }
+
+  return { mapIds, keys };
+}
+
+export function hasPassedInterviewForNomination(options: {
+  nominationMapId?: string;
+  projectId: string;
+  roleCatalogId?: string | null;
+  passedInterviewLookup?: PassedInterviewNominationLookup;
+}): boolean {
+  const { nominationMapId, projectId, roleCatalogId, passedInterviewLookup } =
+    options;
+
+  if (!passedInterviewLookup) return false;
+  if (nominationMapId && passedInterviewLookup.mapIds.has(nominationMapId)) {
+    return true;
+  }
+
+  return passedInterviewLookup.keys.has(
+    buildOfferLetterNominationKey(projectId, roleCatalogId),
+  );
+}
+
 export function canUserUploadOfferLetter(options: {
   isRecruiter: boolean;
   isInterviewCoordinator: boolean;
@@ -29,6 +85,8 @@ export function canUserUploadOfferLetter(options: {
   subStatusName?: string | null;
   /** When true, skip nomination sub-status check (e.g. interview-passed list views). */
   assumeInterviewPassed?: boolean;
+  /** When true, a passed interview exists for this project nomination. */
+  hasPassedInterview?: boolean;
 }): boolean {
   const {
     isRecruiter,
@@ -38,6 +96,7 @@ export function canUserUploadOfferLetter(options: {
     canUploadInterviews,
     subStatusName,
     assumeInterviewPassed = false,
+    hasPassedInterview = false,
   } = options;
 
   const hasPermission =
@@ -48,7 +107,7 @@ export function canUserUploadOfferLetter(options: {
 
   if (!hasPermission) return false;
 
-  if (assumeInterviewPassed) return true;
+  if (assumeInterviewPassed || hasPassedInterview) return true;
 
   return isOfferLetterUploadEligible(subStatusName);
 }
@@ -67,6 +126,7 @@ export function canShowOfferLetterUploadButton(options: {
 
 export type OfferLetterInterviewItem = {
   id?: string;
+  outcome?: string;
   isOfferLetterUploaded?: boolean;
   offerLetterData?: {
     document?: {
@@ -75,12 +135,13 @@ export type OfferLetterInterviewItem = {
     };
   } | null;
   candidateProjectMap?: {
+    id?: string;
     candidate?: { id?: string };
     project?: { id?: string };
     roleNeeded?: {
-      roleCatalogId?: string;
-      roleCatalog?: { id?: string };
-    };
+      roleCatalogId?: string | null;
+      roleCatalog?: { id?: string } | null;
+    } | null;
   };
   candidate?: { id?: string };
   project?: { id?: string };
