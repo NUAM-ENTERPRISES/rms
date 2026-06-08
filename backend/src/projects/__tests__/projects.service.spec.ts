@@ -393,7 +393,7 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('should include expired active projects when status is completed', async () => {
+    it('should only return explicitly completed projects when status is completed', async () => {
       prismaService.project.count.mockResolvedValue(1);
       prismaService.project.findMany.mockResolvedValue(mockProjects as any);
 
@@ -402,13 +402,7 @@ describe('ProjectsService', () => {
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: [
-              { status: 'COMPLETED' },
-              {
-                status: 'IN_PROGRESS',
-                deadline: { not: null, lt: expect.any(Date) },
-              },
-            ],
+            status: 'COMPLETED',
           }),
         }),
       );

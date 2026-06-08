@@ -26,7 +26,6 @@ import { buildUrgentProjectsWhere } from './utils/urgent-deadline.util';
 import {
   assertProjectOpenForAssignment,
   buildInProgressProjectsWhere,
-  getStartOfToday,
 } from './utils/project-deadline.util';
 import {
   ProjectWithRelations,
@@ -444,22 +443,10 @@ export class ProjectsService {
     }
 
     const now = new Date();
-    const startOfToday = getStartOfToday(now);
 
     if (status) {
       if (status === 'IN_PROGRESS') {
         Object.assign(where, buildInProgressProjectsWhere(now));
-      } else if (status === 'COMPLETED') {
-        where.OR = [
-          { status: 'COMPLETED' },
-          {
-            status: 'IN_PROGRESS',
-            deadline: {
-              not: null,
-              lt: startOfToday,
-            },
-          },
-        ];
       } else {
         where.status = status;
       }
