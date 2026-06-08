@@ -319,6 +319,7 @@ export default function CandidatesPage() {
     callModalCandidate,
     logCallAttempts,
     logCallNextAttempt,
+    logCallFollowUpStage,
     canSubmitCallLog,
     logCallCandidateName,
     closeCallModal,
@@ -1580,6 +1581,7 @@ export default function CandidatesPage() {
         candidateName={logCallCandidateName}
         callAttempts={logCallAttempts}
         nextAttempt={logCallNextAttempt}
+        followUpStage={logCallFollowUpStage}
         canLog={!!canSubmitCallLog}
         isSubmitting={isLoggingCall}
         onConfirm={handleLogOperationsCall}

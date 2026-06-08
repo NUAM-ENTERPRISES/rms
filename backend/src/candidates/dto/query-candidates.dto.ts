@@ -377,6 +377,20 @@ export class QueryCandidatesDto {
   dateTo?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Filter Operations assignments by CRE call count (0/3, 1/3, 2/3, 3/3) via operationsCallAttempts',
+    example: 1,
+    minimum: 0,
+    maximum: 3,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(3)
+  operationsCallAttempts?: number;
+
+  @ApiPropertyOptional({
     description: 'Page number (1-based)',
     example: 1,
     minimum: 1,

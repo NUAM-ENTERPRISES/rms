@@ -4,6 +4,7 @@ import {
   canMarkOperationsJunk,
   canMoveToWeekOne,
   canMoveToWeekTwo,
+  formatOperationsCallCountLabel,
   formatOperationsWaitRemaining,
   getDisplayedOperationsCallAttempts,
   getOperationsCallAttempts,
@@ -30,41 +31,53 @@ describe("operations-follow-up.util", () => {
     );
   });
 
-  it("allows logging calls only before required attempts", () => {
+  it("allows logging in initial (before 3), week_one, and week_two", () => {
     expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 0)).toBe(true);
     expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 2)).toBe(true);
     expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 3)).toBe(false);
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE, 0)).toBe(false);
+    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE, 0)).toBe(true);
+    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO, 5)).toBe(true);
+    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.JUNK, 0)).toBe(false);
   });
 
-  it("caps displayed call attempts at the required maximum", () => {
-    expect(getDisplayedOperationsCallAttempts(4)).toBe(3);
-    expect(getDisplayedOperationsCallAttempts(2)).toBe(2);
+  it("caps displayed call attempts only in initial stage", () => {
+    expect(getDisplayedOperationsCallAttempts(4, OPERATIONS_FOLLOW_UP_STAGE.INITIAL)).toBe(3);
+    expect(getDisplayedOperationsCallAttempts(4, OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE)).toBe(4);
   });
 
-  it("allows move to week one only after required attempts", () => {
+  it("formats call count labels by stage", () => {
     expect(
-      canMoveToWeekOne(
-        OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
-        OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE - 1,
-      ),
-    ).toBe(false);
+      formatOperationsCallCountLabel(2, OPERATIONS_FOLLOW_UP_STAGE.INITIAL),
+    ).toBe("2/3 calls");
+    expect(
+      formatOperationsCallCountLabel(4, OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE),
+    ).toBe("4 calls");
+  });
+
+  it("disables manual move buttons in automated flow", () => {
     expect(
       canMoveToWeekOne(
         OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
         OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
       ),
-    ).toBe(true);
-  });
-
-  it("requires 2-minute wait before move to week two", () => {
+    ).toBe(false);
     expect(
       canMoveToWeekTwo(
         OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
-        thirtySecondsAgo,
+        twoMinutesAgo,
         nowMs,
       ),
     ).toBe(false);
+    expect(
+      canMarkOperationsJunk(
+        OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+        twoMinutesAgo,
+        nowMs,
+      ),
+    ).toBe(false);
+  });
+
+  it("tracks automatic wait windows for week stages", () => {
     expect(
       isWaitingToMoveToWeekTwo(
         OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
@@ -73,36 +86,9 @@ describe("operations-follow-up.util", () => {
       ),
     ).toBe(true);
     expect(
-      canMoveToWeekTwo(
-        OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
-        twoMinutesAgo,
-        nowMs,
-      ),
-    ).toBe(true);
-    expect(canMoveToWeekTwo(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, twoMinutesAgo, nowMs)).toBe(
-      false,
-    );
-  });
-
-  it("requires 2-minute wait before mark junk", () => {
-    expect(
-      canMarkOperationsJunk(
-        OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
-        thirtySecondsAgo,
-        nowMs,
-      ),
-    ).toBe(false);
-    expect(
       isWaitingToMarkOperationsJunk(
         OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
         thirtySecondsAgo,
-        nowMs,
-      ),
-    ).toBe(true);
-    expect(
-      canMarkOperationsJunk(
-        OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
-        twoMinutesAgo,
         nowMs,
       ),
     ).toBe(true);

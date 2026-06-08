@@ -25,6 +25,19 @@ const baseCandidate = {
   ],
 };
 
+const weekOneCandidate = {
+  ...baseCandidate,
+  id: "candidate-2",
+  recruiterAssignments: [
+    {
+      ...baseCandidate.recruiterAssignments[0],
+      operationsFollowUpStage: "week_one",
+      operationsCallAttempts: 2,
+      operationsStageEnteredAt: "2026-06-01T00:00:00.000Z",
+    },
+  ],
+};
+
 vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: "/operations-dashboard" }),
@@ -43,11 +56,13 @@ vi.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: string) => value,
 }));
 
+let assignedCandidates = [baseCandidate];
+
 vi.mock("@/services/candidatesApi", () => ({
   useGetMyAssignedCandidatesQuery: () => ({
     data: {
-      data: [baseCandidate],
-      total: 1,
+      data: assignedCandidates,
+      total: assignedCandidates.length,
       totalPages: 1,
     },
     isLoading: false,
@@ -80,12 +95,17 @@ vi.mock("@/services/candidatesApi", () => ({
   useMarkCandidateConvertedMutation: () => [vi.fn(), { isLoading: false }],
   useTransferCandidateToRecruiterMutation: () => [vi.fn(), { isLoading: false }],
   useLogOperationsCallMutation: () => [vi.fn(), { isLoading: false }],
-  useMoveOperationsToWeekOneMutation: () => [vi.fn(), { isLoading: false }],
-  useMoveOperationsToWeekTwoMutation: () => [vi.fn(), { isLoading: false }],
-  useMarkOperationsJunkMutation: () => [vi.fn(), { isLoading: false }],
+  useGetOperationsCallHistoryQuery: () => ({
+    data: { data: [] },
+    isLoading: false,
+  }),
 }));
 
 describe("OperationsDashboardPage follow-up workflow", () => {
+  beforeEach(() => {
+    assignedCandidates = [baseCandidate];
+  });
+
   it("renders 1 Week and 2 Week tiles with counts", () => {
     render(<OperationsDashboardPage />);
 
@@ -98,7 +118,7 @@ describe("OperationsDashboardPage follow-up workflow", () => {
     render(<OperationsDashboardPage />);
 
     expect(screen.getByRole("button", { name: "Log Call" })).toBeInTheDocument();
-    expect(screen.getByText("Calls logged: 0/3")).toBeInTheDocument();
+    expect(screen.getByText("0/3 calls")).toBeInTheDocument();
   });
 
   it("switches to week_one filter when 1 Week tile is clicked", () => {
@@ -106,5 +126,15 @@ describe("OperationsDashboardPage follow-up workflow", () => {
 
     fireEvent.click(screen.getByText("1 Week Follow-up"));
     expect(screen.getByText("1 Week Follow-up Candidates")).toBeInTheDocument();
+  });
+
+  it("shows Log Call for week_one candidates", () => {
+    assignedCandidates = [weekOneCandidate];
+    render(<OperationsDashboardPage />);
+
+    fireEvent.click(screen.getByText("1 Week Follow-up"));
+    expect(screen.getByRole("button", { name: "Log Call" })).toBeInTheDocument();
+    expect(screen.getByText("2 calls")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Move to 1 Week" })).not.toBeInTheDocument();
   });
 });

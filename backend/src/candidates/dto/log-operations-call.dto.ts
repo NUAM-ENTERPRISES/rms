@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class LogOperationsCallDto {
   @ApiProperty({
@@ -13,4 +19,18 @@ export class LogOperationsCallDto {
   @MinLength(3)
   @MaxLength(500)
   note: string;
+
+  @ApiProperty({
+    description: 'CRE contacted the candidate via phone call',
+    example: true,
+  })
+  @IsBoolean()
+  usedPhone: boolean;
+
+  @ApiProperty({
+    description: 'CRE contacted the candidate via WhatsApp',
+    example: false,
+  })
+  @IsBoolean()
+  usedWhatsapp: boolean;
 }

@@ -74,11 +74,32 @@ export type OperationsFollowUpStage =
 
 export const OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE = 3;
 
-/** TEST ONLY: 2 minutes. Production should use 7 * 24 * 60 * 60 * 1000. */
-export const OPERATIONS_WEEK_ONE_WAIT_MS = 2 * 60 * 1000;
+const OPERATIONS_SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const OPERATIONS_TEST_TWO_MIN_MS = 2 * 60 * 1000;
 
-/** TEST ONLY: 2 minutes. Production should use 7 * 24 * 60 * 60 * 1000. */
-export const OPERATIONS_WEEK_TWO_WAIT_MS = 2 * 60 * 1000;
+const useOperationsFollowUpTestTimers =
+  process.env.OPERATIONS_FOLLOW_UP_TEST_TIMERS === 'true';
+
+/** 7 days in production; 2 minutes when OPERATIONS_FOLLOW_UP_TEST_TIMERS=true */
+export const OPERATIONS_WEEK_ONE_WAIT_MS = useOperationsFollowUpTestTimers
+  ? OPERATIONS_TEST_TWO_MIN_MS
+  : OPERATIONS_SEVEN_DAYS_MS;
+
+/** 7 days in production; 2 minutes when OPERATIONS_FOLLOW_UP_TEST_TIMERS=true */
+export const OPERATIONS_WEEK_TWO_WAIT_MS = useOperationsFollowUpTestTimers
+  ? OPERATIONS_TEST_TWO_MIN_MS
+  : OPERATIONS_SEVEN_DAYS_MS;
+
+export const OPERATIONS_JUNK_TRANSITION_SOURCE = {
+  AUTO_AFTER_3_CALLS: 'auto_after_3_calls',
+  CRON_WEEK_ONE: 'cron_week_one',
+  CRON_WEEK_TWO: 'cron_week_two',
+  CALL_LOG_WEEK_TWO: 'call_log_week_two',
+  MANUAL: 'manual',
+} as const;
+
+export type OperationsJunkTransitionSource =
+  (typeof OPERATIONS_JUNK_TRANSITION_SOURCE)[keyof typeof OPERATIONS_JUNK_TRANSITION_SOURCE];
 
 export function getOperationsStageWaitRemainingMs(
   stageEnteredAt: Date | string | null | undefined,

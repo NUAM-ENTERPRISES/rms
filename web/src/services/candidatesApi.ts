@@ -283,13 +283,22 @@ export const candidatesApi = baseApi.injectEndpoints({
       ],
     }),
     logOperationsCall: builder.mutation<
-      { success: boolean; data: { assignment: Record<string, unknown>; callLog: Record<string, unknown> }; message: string },
-      { id: string; note: string }
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          autoAdvancedToWeekOne?: boolean;
+          markedJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
     >({
-      query: ({ id, note }) => ({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
         url: `/candidates/${id}/operations/log-call`,
         method: "POST",
-        body: { note },
+        body: { note, usedPhone, usedWhatsapp },
       }),
       invalidatesTags: (_, __, { id }) => [
         "Candidate",
@@ -303,6 +312,9 @@ export const candidatesApi = baseApi.injectEndpoints({
           id: string;
           attemptNumber: number;
           note: string;
+          usedPhone: boolean;
+          usedWhatsapp: boolean;
+          followUpStage?: string;
           loggedAt: string;
           loggedBy: { id: string; name: string };
         }>;

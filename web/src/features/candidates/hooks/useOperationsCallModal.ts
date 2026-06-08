@@ -7,6 +7,7 @@ import {
   getOperationsFollowUpStage,
   getOperationsHandlerAssignment,
   type OperationsFollowUpAssignment,
+  type OperationsFollowUpStage,
 } from "@/features/candidates/utils/operations-follow-up.util";
 
 type OperationsCallCandidate = {
@@ -52,14 +53,28 @@ export function useOperationsCallModal(options: {
   }, []);
 
   const handleLogOperationsCall = useCallback(
-    async (note: string) => {
+    async (payload: {
+      note: string;
+      usedPhone: boolean;
+      usedWhatsapp: boolean;
+    }) => {
       if (!callModalState?.candidate.id) {
         return;
       }
 
       try {
-        await logOperationsCall({ id: callModalState.candidate.id, note }).unwrap();
-        toast.success("Call logged successfully");
+        const result = await logOperationsCall({
+          id: callModalState.candidate.id,
+          ...payload,
+        }).unwrap();
+
+        if (result.data?.markedJunk) {
+          toast.success("Call logged — candidate marked as junk");
+        } else if (result.data?.autoAdvancedToWeekOne) {
+          toast.success("Call logged — moved to 1 Week follow-up automatically");
+        } else {
+          toast.success("Call logged successfully");
+        }
         closeCallModal();
         onLogged?.();
       } catch (error: unknown) {
@@ -84,7 +99,9 @@ export function useOperationsCallModal(options: {
     ? resolveAssignment(callModalCandidate)
     : undefined;
   const logCallAttempts = getOperationsCallAttempts(assignment);
-  const followUpStage = getOperationsFollowUpStage(assignment);
+  const logCallFollowUpStage: OperationsFollowUpStage =
+    getOperationsFollowUpStage(assignment);
+  const followUpStage = logCallFollowUpStage;
   const canSubmitCallLog =
     callModalState?.mode === "log" &&
     canLogOperationsCall(followUpStage, logCallAttempts);
@@ -104,6 +121,7 @@ export function useOperationsCallModal(options: {
     callModalCandidate,
     logCallAttempts,
     logCallNextAttempt: logCallAttempts + 1,
+    logCallFollowUpStage,
     canSubmitCallLog,
     logCallCandidateName,
   };

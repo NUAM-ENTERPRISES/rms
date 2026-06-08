@@ -476,6 +476,8 @@ model Candidate {
   licensingExam String?
   dataFlow      Boolean? @default(false)
   eligibility   Boolean? @default(false)
+  /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
+  isJunk        Boolean  @default(false) @map("is_junk")
 
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
@@ -519,6 +521,7 @@ model Candidate {
   @@index([gender])
   @@index([candidateCode])
   @@index([passportNumber])
+  @@index([isJunk])
   @@map("candidates")
 }
 
@@ -1696,6 +1699,10 @@ model OperationsCallLog {
   loggedById    String
   attemptNumber Int
   note          String   @db.Text
+  usedPhone     Boolean  @default(false)
+  usedWhatsapp  Boolean  @default(false)
+  /// initial | week_one | week_two — stage when the call was logged
+  followUpStage String   @default("initial")
   loggedAt      DateTime @default(now())
 
   candidate  Candidate                    @relation(fields: [candidateId], references: [id], onDelete: Cascade)

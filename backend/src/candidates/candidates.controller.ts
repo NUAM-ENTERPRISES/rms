@@ -605,6 +605,13 @@ export class CandidatesController {
     required: false,
     description: 'Filter by candidate status (e.g., RNR)',
   })
+  @ApiQuery({
+    name: 'operationsCallAttempts',
+    required: false,
+    description:
+      'Filter by CRE call count on assignment (0 = 0/3, 1 = 1/3, 2 = 2/3, 3 = 3/3)',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: 'Operations assigned candidates retrieved successfully',

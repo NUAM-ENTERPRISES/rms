@@ -39,6 +39,7 @@ describe('CandidatesService — Operations follow-up', () => {
     },
     candidateRecruiterAssignment: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
       update: jest.fn(),
     },
     candidate: {
@@ -48,7 +49,11 @@ describe('CandidatesService — Operations follow-up', () => {
     },
   };
 
-  const logCallDto = { note: 'Called twice, no answer.' };
+  const logCallDto = {
+    note: 'Called twice, no answer.',
+    usedPhone: true,
+    usedWhatsapp: false,
+  };
 
   const baseAssignment = {
     id: 'assignment-1',
@@ -123,6 +128,8 @@ describe('CandidatesService — Operations follow-up', () => {
           data: expect.objectContaining({
             note: logCallDto.note,
             attemptNumber: 1,
+            usedPhone: true,
+            usedWhatsapp: false,
           }),
         }),
       );
@@ -130,10 +137,131 @@ describe('CandidatesService — Operations follow-up', () => {
       expect(result.callLog.note).toBe(logCallDto.note);
     });
 
-    it('rejects when not in initial stage', async () => {
+    it('rejects when no contact method is selected', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue(
+        baseAssignment,
+      );
+
+      await expect(
+        service.logOperationsCall(candidateId, operationsUserId, {
+          ...logCallDto,
+          usedPhone: false,
+          usedWhatsapp: false,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('auto-advances to week_one on the 3rd initial call', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
+        ...baseAssignment,
+        operationsCallAttempts: 2,
+      });
+      mockPrismaService.operationsCallLog.create.mockResolvedValue({
+        id: 'log-3',
+        attemptNumber: 3,
+        note: logCallDto.note,
+      });
+      mockPrismaService.candidateRecruiterAssignment.update
+        .mockResolvedValueOnce({
+          ...baseAssignment,
+          operationsCallAttempts: 3,
+        })
+        .mockResolvedValueOnce({
+          ...baseAssignment,
+          operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+          operationsCallAttempts: 0,
+        });
+      mockPrismaService.candidate.update.mockResolvedValue({});
+
+      const result = await service.logOperationsCall(
+        candidateId,
+        operationsUserId,
+        logCallDto,
+      );
+
+      expect((result as { autoAdvancedToWeekOne?: boolean }).autoAdvancedToWeekOne).toBe(
+        true,
+      );
+      expect(result.assignment.operationsFollowUpStage).toBe(
+        OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+      );
+    });
+
+    it('allows unlimited logging in week_one stage', async () => {
       mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
         ...baseAssignment,
         operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        operationsCallAttempts: 4,
+      });
+      mockPrismaService.operationsCallLog.create.mockResolvedValue({
+        id: 'log-week-one',
+        attemptNumber: 5,
+      });
+      mockPrismaService.candidateRecruiterAssignment.update.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        operationsCallAttempts: 5,
+      });
+      mockPrismaService.candidate.update.mockResolvedValue({});
+
+      const result = await service.logOperationsCall(
+        candidateId,
+        operationsUserId,
+        logCallDto,
+      );
+
+      expect(result.assignment.operationsCallAttempts).toBe(5);
+      expect(mockPrismaService.operationsCallLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            followUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+          }),
+        }),
+      );
+    });
+
+    it('marks junk when logging in week_two stage', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+        operationsCallAttempts: 1,
+      });
+      mockPrismaService.operationsCallLog.create.mockResolvedValue({
+        id: 'log-week-two',
+        attemptNumber: 2,
+      });
+      mockPrismaService.candidateRecruiterAssignment.update
+        .mockResolvedValueOnce({
+          ...baseAssignment,
+          operationsCallAttempts: 2,
+        })
+        .mockResolvedValueOnce({
+          ...baseAssignment,
+          operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+        });
+      mockPrismaService.candidate.update.mockResolvedValue({ isJunk: true });
+
+      const result = await service.logOperationsCall(
+        candidateId,
+        operationsUserId,
+        logCallDto,
+      );
+
+      expect((result as { markedJunk?: boolean }).markedJunk).toBe(true);
+      expect(result.assignment.operationsFollowUpStage).toBe(
+        OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      );
+      expect(mockPrismaService.candidate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isJunk: true }),
+        }),
+      );
+    });
+
+    it('rejects logging in junk stage', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
       });
 
       await expect(
@@ -336,6 +464,37 @@ describe('CandidatesService — Operations follow-up', () => {
       expect(result.assignment.operationsFollowUpStage).toBe(
         OPERATIONS_FOLLOW_UP_STAGE.JUNK,
       );
+      expect(mockPrismaService.candidate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isJunk: true }),
+        }),
+      );
+    });
+  });
+
+  describe('sweepOperationsFollowUp', () => {
+    it('advances overdue week_one assignments and marks overdue week_two as junk', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findMany
+        .mockResolvedValueOnce([
+          { id: 'assignment-week-one', candidateId: 'candidate-week-one' },
+        ])
+        .mockResolvedValueOnce([
+          { id: 'assignment-week-two', candidateId: 'candidate-week-two' },
+        ]);
+      mockPrismaService.candidateRecruiterAssignment.update.mockResolvedValue({});
+      mockPrismaService.candidate.update.mockResolvedValue({});
+
+      const result = await service.sweepOperationsFollowUp();
+
+      expect(result.weekOneAdvanced).toBe(1);
+      expect(result.weekTwoJunked).toBe(1);
+      expect(mockPrismaService.candidateRecruiterAssignment.update).toHaveBeenCalled();
+      expect(mockPrismaService.candidate.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'candidate-week-two' },
+          data: expect.objectContaining({ isJunk: true }),
+        }),
+      );
     });
   });
 
@@ -343,6 +502,7 @@ describe('CandidatesService — Operations follow-up', () => {
     it('counts follow-up stages in summary buckets', async () => {
       mockPrismaService.candidate.findMany.mockResolvedValue([
         {
+          isJunk: false,
           currentStatus: { statusName: 'untouched' },
           recruiterAssignments: [
             {
@@ -352,6 +512,7 @@ describe('CandidatesService — Operations follow-up', () => {
           ],
         },
         {
+          isJunk: false,
           currentStatus: { statusName: 'rnr' },
           recruiterAssignments: [
             {
@@ -361,6 +522,7 @@ describe('CandidatesService — Operations follow-up', () => {
           ],
         },
         {
+          isJunk: false,
           currentStatus: { statusName: 'rnr' },
           recruiterAssignments: [
             {
@@ -370,6 +532,7 @@ describe('CandidatesService — Operations follow-up', () => {
           ],
         },
         {
+          isJunk: true,
           currentStatus: { statusName: 'rnr' },
           recruiterAssignments: [
             {
