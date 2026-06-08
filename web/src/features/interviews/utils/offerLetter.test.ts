@@ -4,6 +4,7 @@ import {
   buildPassedInterviewNominationLookup,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
+  findOfferLetterForNomination,
   getOfferLetterOverrideKey,
   hasOfferLetter,
   hasPassedInterviewForNomination,
@@ -127,6 +128,40 @@ describe("offerLetter utils", () => {
         subStatusName: "interview_scheduled",
       }),
     ).toBe(false);
+  });
+
+  it("matches offer letters per project nomination, not by role alone", () => {
+    const offerLetters = [
+      {
+        fileUrl: "https://cdn.example.com/test-offer.pdf",
+        roleCatalogId: "role-1",
+        verifications: [
+          {
+            candidateProjectMapId: "map-test",
+            candidateProjectMap: {
+              id: "map-test",
+              project: { id: "proj-test" },
+            },
+          },
+        ],
+      },
+    ];
+
+    expect(
+      findOfferLetterForNomination(offerLetters, {
+        nominationMapId: "map-test",
+        projectId: "proj-test",
+        roleCatalogId: "role-1",
+      }),
+    ).toBe(offerLetters[0]);
+
+    expect(
+      findOfferLetterForNomination(offerLetters, {
+        nominationMapId: "map-astr",
+        projectId: "proj-astr",
+        roleCatalogId: "role-1",
+      }),
+    ).toBeUndefined();
   });
 
   it("prefers the server file URL over stale local overrides after recruiter re-upload", () => {

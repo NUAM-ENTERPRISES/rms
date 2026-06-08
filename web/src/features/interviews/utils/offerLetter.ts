@@ -57,6 +57,65 @@ export function buildPassedInterviewNominationLookup(
   return { mapIds, keys };
 }
 
+export type OfferLetterDocumentItem = {
+  fileUrl?: string;
+  fileName?: string;
+  status?: string;
+  createdAt?: string;
+  uploadedBy?: string;
+  uploadedByUser?: { name?: string; email?: string } | null;
+  roleCatalogId?: string | null;
+  roleCatalog?: { id?: string } | null;
+  verifications?: Array<{
+    candidateProjectMapId?: string;
+    candidateProjectMap?: {
+      id?: string;
+      project?: { id?: string };
+    };
+  }>;
+};
+
+function offerLetterMatchesNomination(
+  doc: OfferLetterDocumentItem,
+  options: {
+    nominationMapId?: string;
+    projectId: string;
+    roleCatalogId?: string | null;
+  },
+): boolean {
+  const { nominationMapId, projectId, roleCatalogId } = options;
+
+  if (roleCatalogId) {
+    const docRoleId = doc.roleCatalogId || doc.roleCatalog?.id;
+    if (docRoleId && docRoleId !== roleCatalogId) return false;
+  }
+
+  const verifications = doc.verifications ?? [];
+  if (verifications.length === 0) return false;
+
+  return verifications.some((verification) => {
+    const mapId =
+      verification.candidateProjectMapId ||
+      verification.candidateProjectMap?.id;
+    if (nominationMapId && mapId === nominationMapId) return true;
+    return verification.candidateProjectMap?.project?.id === projectId;
+  });
+}
+
+/** Match offer letters per project nomination, not by role alone. */
+export function findOfferLetterForNomination<T extends OfferLetterDocumentItem>(
+  offerLetters: T[],
+  options: {
+    nominationMapId?: string;
+    projectId: string;
+    roleCatalogId?: string | null;
+  },
+): T | undefined {
+  return offerLetters.find((doc) =>
+    offerLetterMatchesNomination(doc, options),
+  );
+}
+
 export function hasPassedInterviewForNomination(options: {
   nominationMapId?: string;
   projectId: string;

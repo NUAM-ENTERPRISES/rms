@@ -24,7 +24,9 @@ import {
   buildPassedInterviewNominationLookup,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
+  findOfferLetterForNomination,
   hasPassedInterviewForNomination,
+  type OfferLetterDocumentItem,
   type OfferLetterInterviewItem,
 } from "@/features/interviews/utils/offerLetter";
 import { format } from "date-fns";
@@ -114,13 +116,14 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           roleCatalogId,
           passedInterviewLookup,
         });
-        const doc = roleCatalogId
-          ? offerLetters.find(
-              (d) =>
-                d.roleCatalogId === roleCatalogId ||
-                d.roleCatalog?.id === roleCatalogId,
-            )
-          : undefined;
+        const doc = findOfferLetterForNomination(
+          offerLetters as OfferLetterDocumentItem[],
+          {
+            nominationMapId: nomination.id,
+            projectId,
+            roleCatalogId,
+          },
+        );
         const overrideUrl = localOverrides[key];
         const fileUrl = overrideUrl || doc?.fileUrl;
         const uploadRequest = uploadRequests.find(
@@ -176,7 +179,10 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   }) => {
     const fileUrl = uploadData?.document?.fileUrl || uploadData?.fileUrl;
     if (uploadTarget && fileUrl) {
-      const key = `${uploadTarget.projectId}-${uploadTarget.roleCatalogId}`;
+      const key = buildOfferLetterNominationKey(
+        uploadTarget.projectId,
+        uploadTarget.roleCatalogId,
+      );
       setLocalOverrides((prev) => ({
         ...prev,
         [key]: fileUrl,
