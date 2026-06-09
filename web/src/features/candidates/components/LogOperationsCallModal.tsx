@@ -33,6 +33,8 @@ import {
 import {
   OPERATIONS_CALL_OUTCOME,
   OPERATIONS_CALL_OUTCOME_OPTIONS,
+  getOperationsCallOutcomeBadgeClass,
+  getOperationsCallOutcomeLabel,
   type OperationsCallOutcome,
 } from "@/features/candidates/constants/operations-call-outcome";
 import { OperationsCallReassignPanel } from "./OperationsCallReassignPanel";
@@ -409,10 +411,23 @@ export function LogOperationsCallModal({
                       className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold text-slate-700">
-                          Call {entry.attemptNumber}
-                        </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-semibold text-slate-700">
+                            Call {entry.attemptNumber}
+                          </span>
+                          {entry.callOutcome && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] font-semibold uppercase border",
+                                getOperationsCallOutcomeBadgeClass(entry.callOutcome),
+                              )}
+                            >
+                              {getOperationsCallOutcomeLabel(entry.callOutcome)}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 shrink-0">
                           <Clock className="h-3 w-3" />
                           {formatLoggedAt(entry.loggedAt)}
                         </span>

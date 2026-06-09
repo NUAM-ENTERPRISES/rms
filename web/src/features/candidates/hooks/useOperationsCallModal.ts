@@ -119,14 +119,12 @@ export function useOperationsCallModal(options: {
       }
 
       try {
-        const reason = callPayload.note.trim()
-          ? `${transferPayload.reason.trim()}\n\nContact note: ${callPayload.note.trim()}`
-          : transferPayload.reason.trim();
-
         await transferCandidateToRecruiter({
           id: callModalState.candidate.id,
           ...transferPayload,
-          reason,
+          operationsCallNote: callPayload.note.trim(),
+          usedPhone: callPayload.usedPhone,
+          usedWhatsapp: callPayload.usedWhatsapp,
         }).unwrap();
 
         toast.success("Candidate reassigned to recruiter");

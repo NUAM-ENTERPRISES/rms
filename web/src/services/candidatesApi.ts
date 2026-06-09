@@ -270,6 +270,9 @@ export const candidatesApi = baseApi.injectEndpoints({
         reason: string;
         onHoldUntil?: string;
         futureDate?: string;
+        operationsCallNote?: string;
+        usedPhone?: boolean;
+        usedWhatsapp?: boolean;
       }
     >({
       query: ({ id, ...body }) => ({
@@ -279,6 +282,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },
+        { type: "Candidate", id: `${id}-operations-calls` },
         "Candidate",
       ],
     }),
@@ -315,6 +319,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           usedPhone: boolean;
           usedWhatsapp: boolean;
           followUpStage?: string;
+          callOutcome?: string | null;
           loggedAt: string;
           loggedBy: { id: string; name: string };
         }>;

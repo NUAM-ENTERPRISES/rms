@@ -74,6 +74,16 @@ export type OperationsFollowUpStage =
 
 export const OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE = 3;
 
+/** Stored on operations_call_logs.callOutcome */
+export const OPERATIONS_CALL_OUTCOME = {
+  INTERESTED: 'interested',
+  NOT_INTERESTED: 'not_interested',
+  NO_RESPONDED: 'no_responded',
+} as const;
+
+export type OperationsCallOutcome =
+  (typeof OPERATIONS_CALL_OUTCOME)[keyof typeof OPERATIONS_CALL_OUTCOME];
+
 const OPERATIONS_SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const OPERATIONS_TEST_TWO_MIN_MS = 2 * 60 * 1000;
 

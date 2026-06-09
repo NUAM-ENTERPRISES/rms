@@ -1703,6 +1703,8 @@ model OperationsCallLog {
   usedWhatsapp  Boolean  @default(false)
   /// initial | week_one | week_two — stage when the call was logged
   followUpStage String   @default("initial")
+  /// interested | not_interested | no_responded
+  callOutcome   String?
   loggedAt      DateTime @default(now())
 
   candidate  Candidate                    @relation(fields: [candidateId], references: [id], onDelete: Cascade)

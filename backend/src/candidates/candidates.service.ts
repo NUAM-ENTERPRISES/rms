@@ -54,6 +54,7 @@ import {
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
   CRE_REASSIGN_RECRUITER_RETURN_REASON,
+  OPERATIONS_CALL_OUTCOME,
   OPERATIONS_FOLLOW_UP_STAGE,
   OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
   OPERATIONS_WEEK_ONE_WAIT_MS,
@@ -2092,6 +2093,7 @@ export class CandidatesService {
             usedPhone: dto.usedPhone,
             usedWhatsapp: dto.usedWhatsapp,
             followUpStage: OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
           },
           include: {
             loggedBy: {
@@ -2143,6 +2145,7 @@ export class CandidatesService {
             usedPhone: dto.usedPhone,
             usedWhatsapp: dto.usedWhatsapp,
             followUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
           },
           include: {
             loggedBy: {
@@ -2182,6 +2185,7 @@ export class CandidatesService {
             usedPhone: dto.usedPhone,
             usedWhatsapp: dto.usedWhatsapp,
             followUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
           },
           include: {
             loggedBy: {
@@ -2485,6 +2489,7 @@ export class CandidatesService {
           usedPhone: dto.usedPhone,
           usedWhatsapp: dto.usedWhatsapp,
           followUpStage: stage,
+          callOutcome: OPERATIONS_CALL_OUTCOME.NOT_INTERESTED,
         },
         include: {
           loggedBy: {
@@ -2513,6 +2518,58 @@ export class CandidatesService {
         callLog,
         markedJunk: true,
       };
+    });
+  }
+
+  private async recordInterestedOperationsCall(
+    assignment: {
+      id: string;
+      operationsCallAttempts: number;
+      operationsFollowUpStage: string | null;
+    },
+    candidateId: string,
+    creUserId: string,
+    dto: Pick<
+      TransferToRecruiterDto,
+      'operationsCallNote' | 'usedPhone' | 'usedWhatsapp'
+    >,
+  ) {
+    const note = dto.operationsCallNote?.trim();
+    if (!note) {
+      return;
+    }
+
+    if (!dto.usedPhone && !dto.usedWhatsapp) {
+      throw new BadRequestException(
+        'Select at least one contact method: Phone or WhatsApp.',
+      );
+    }
+
+    const now = new Date();
+    const stage =
+      assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+    const nextAttempt = assignment.operationsCallAttempts + 1;
+
+    await this.prisma.operationsCallLog.create({
+      data: {
+        candidateId,
+        assignmentId: assignment.id,
+        loggedById: creUserId,
+        attemptNumber: nextAttempt,
+        note,
+        usedPhone: dto.usedPhone ?? false,
+        usedWhatsapp: dto.usedWhatsapp ?? false,
+        followUpStage: stage,
+        callOutcome: OPERATIONS_CALL_OUTCOME.INTERESTED,
+      },
+    });
+
+    await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsCallAttempts: nextAttempt,
+        operationsLastCallAt: now,
+      },
     });
   }
 
@@ -2651,6 +2708,13 @@ export class CandidatesService {
         'Operations can only transfer candidates assigned to them',
       );
     }
+
+    await this.recordInterestedOperationsCall(
+      activeCREAssignment,
+      candidateId,
+      creUserId,
+      dto,
+    );
 
     // Find the PRIMARY recruiter (regular recruiter)
     const primaryAssignment = candidate.recruiterAssignments?.find(

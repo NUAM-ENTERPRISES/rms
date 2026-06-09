@@ -18,6 +18,7 @@ import { CandidateCodeService } from '../services/candidate-code.service';
 import { CandidateListFilterService } from '../services/candidate-list-filter.service';
 import {
   CANDIDATE_ASSIGNMENT_TYPE,
+  OPERATIONS_CALL_OUTCOME,
   OPERATIONS_FOLLOW_UP_STAGE,
   OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
   OPERATIONS_WEEK_ONE_WAIT_MS,
@@ -127,6 +128,7 @@ describe('CandidatesService — Operations follow-up', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             note: logCallDto.note,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
             attemptNumber: 1,
             usedPhone: true,
             usedWhatsapp: false,
@@ -450,7 +452,13 @@ describe('CandidatesService — Operations follow-up', () => {
       expect(result.assignment.operationsFollowUpStage).toBe(
         OPERATIONS_FOLLOW_UP_STAGE.JUNK,
       );
-      expect(mockPrismaService.operationsCallLog.create).toHaveBeenCalled();
+      expect(mockPrismaService.operationsCallLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            callOutcome: OPERATIONS_CALL_OUTCOME.NOT_INTERESTED,
+          }),
+        }),
+      );
     });
   });
 

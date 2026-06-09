@@ -477,14 +477,12 @@ export default function OperationsDashboardPage() {
     if (!callModalCandidate) return;
 
     try {
-      const reason = callPayload.note.trim()
-        ? `${transferPayload.reason.trim()}\n\nContact note: ${callPayload.note.trim()}`
-        : transferPayload.reason.trim();
-
       await transferCandidateToRecruiter({
         id: callModalCandidate.id,
         ...transferPayload,
-        reason,
+        operationsCallNote: callPayload.note.trim(),
+        usedPhone: callPayload.usedPhone,
+        usedWhatsapp: callPayload.usedWhatsapp,
       }).unwrap();
 
       toast.success("Candidate reassigned to recruiter");
