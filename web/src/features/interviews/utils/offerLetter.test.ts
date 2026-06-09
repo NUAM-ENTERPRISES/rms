@@ -90,6 +90,7 @@ describe("offerLetter utils", () => {
     expect(
       buildOfferLetterNominationKey("proj-1", "role-1"),
     ).toBe("proj-1-role-1");
+    expect(lookup.roleCatalogByMapId.get("map-1")).toBe("role-1");
   });
 
   it("lets recruiters upload when a passed interview exists even if sub-status lags", () => {
@@ -128,6 +129,20 @@ describe("offerLetter utils", () => {
         subStatusName: "interview_scheduled",
       }),
     ).toBe(false);
+  });
+
+  it("lets interview coordinators upload without write:interviews when interview passed", () => {
+    expect(
+      canUserUploadOfferLetter({
+        isRecruiter: false,
+        isInterviewCoordinator: true,
+        canUploadDocuments: false,
+        canWriteCandidates: false,
+        canUploadInterviews: false,
+        subStatusName: "interview_completed",
+        hasPassedInterview: true,
+      }),
+    ).toBe(true);
   });
 
   it("matches offer letters per project nomination, not by role alone", () => {

@@ -18,6 +18,8 @@ export interface Interview {
   outcome?: string;
   notes?: string;
   readyForProcessingAt?: string | null;
+  /** Set when this candidate was sent on any other passed interview project. */
+  candidateSentForProcessingAt?: string | null;
   offerLetterData?: {
     id?: string;
     status?: string;
@@ -397,7 +399,17 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Interview", id }, "Interview"],
+      invalidatesTags: (result, _error, { id }) => {
+        const candidateId =
+          result?.data?.candidateProjectMap?.candidate?.id ??
+          result?.data?.candidate?.id;
+        return [
+          { type: "Interview" as const, id },
+          { type: "Interview" as const },
+          { type: "Candidate" as const },
+          ...(candidateId ? [{ type: "Candidate" as const, id: candidateId }] : []),
+        ];
+      },
     }),
 
     /**
@@ -405,7 +417,11 @@ export const interviewsApi = baseApi.injectEndpoints({
      * PATCH /interviews/status
      */
     updateBulkInterviewStatus: builder.mutation<
-      { success: boolean; data: Interview[]; message?: string },
+      {
+        success: boolean;
+        data: Array<{ success: boolean; data?: Interview; error?: string; id?: string }>;
+        message?: string;
+      },
       { updates: { id: string; interviewStatus?: string; subStatus?: string; reason?: string }[] }
     >({
       query: (body) => ({
@@ -413,7 +429,20 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Interview"],
+      invalidatesTags: (result) => {
+        const candidateTags = (result?.data ?? []).flatMap((item) => {
+          if (!item?.success || !item.data) return [];
+          const candidateId =
+            item.data.candidateProjectMap?.candidate?.id ??
+            item.data.candidate?.id;
+          return candidateId ? [{ type: "Candidate" as const, id: candidateId }] : [];
+        });
+        return [
+          { type: "Interview" as const },
+          { type: "Candidate" as const },
+          ...candidateTags,
+        ];
+      },
     }),
 
     sendForProcessing: builder.mutation<

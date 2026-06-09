@@ -107,7 +107,8 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
       .map((nomination) => {
         const roleCatalogId =
           nomination.roleNeeded?.roleCatalogId ||
-          (nomination.roleNeeded as { roleCatalog?: { id?: string } })?.roleCatalog?.id;
+          (nomination.roleNeeded as { roleCatalog?: { id?: string } })?.roleCatalog?.id ||
+          passedInterviewLookup.roleCatalogByMapId.get(nomination.id);
         const projectId = nomination.project!.id;
         const key = buildOfferLetterNominationKey(projectId, roleCatalogId);
         const hasPassedInterview = hasPassedInterviewForNomination({

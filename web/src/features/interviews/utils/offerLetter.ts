@@ -30,6 +30,7 @@ export function buildOfferLetterNominationKey(
 export type PassedInterviewNominationLookup = {
   mapIds: Set<string>;
   keys: Set<string>;
+  roleCatalogByMapId: Map<string, string>;
 };
 
 export function buildPassedInterviewNominationLookup(
@@ -37,24 +38,29 @@ export function buildPassedInterviewNominationLookup(
 ): PassedInterviewNominationLookup {
   const mapIds = new Set<string>();
   const keys = new Set<string>();
+  const roleCatalogByMapId = new Map<string, string>();
 
   for (const interview of interviews) {
     const mapId = interview.candidateProjectMap?.id;
+    const roleCatalogId =
+      interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+      interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+
     if (mapId) {
       mapIds.add(mapId);
+      if (roleCatalogId) {
+        roleCatalogByMapId.set(mapId, roleCatalogId);
+      }
     }
 
     const projectId =
       interview.candidateProjectMap?.project?.id || interview.project?.id;
     if (!projectId) continue;
 
-    const roleCatalogId =
-      interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
-      interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
     keys.add(buildOfferLetterNominationKey(projectId, roleCatalogId));
   }
 
-  return { mapIds, keys };
+  return { mapIds, keys, roleCatalogByMapId };
 }
 
 export type OfferLetterDocumentItem = {
@@ -162,7 +168,8 @@ export function canUserUploadOfferLetter(options: {
     canUploadDocuments ||
     canWriteCandidates ||
     isRecruiter ||
-    (isInterviewCoordinator && canUploadInterviews);
+    isInterviewCoordinator ||
+    canUploadInterviews;
 
   if (!hasPermission) return false;
 

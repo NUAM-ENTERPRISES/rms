@@ -2131,6 +2131,10 @@ export class CandidateProjectsService {
               designation: true,
               minExperience: true,
               maxExperience: true,
+              roleCatalogId: true,
+              roleCatalog: {
+                select: { id: true, name: true, label: true },
+              },
             },
           },
           recruiter: {
@@ -2141,6 +2145,13 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          subStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',

@@ -125,6 +125,105 @@ export class InterviewsService {
     };
   }
 
+  private async enrichInterviewsWithCandidateProcessingStatus(interviews: any[]) {
+    if (!interviews.length) {
+      return interviews;
+    }
+
+    const candidateIds = [
+      ...new Set(
+        interviews
+          .map(
+            (interview) =>
+              interview.candidateProjectMap?.candidateId ||
+              interview.candidateProjectMap?.candidate?.id,
+          )
+          .filter(Boolean),
+      ),
+    ];
+
+    if (!candidateIds.length) {
+      return interviews.map((interview) => ({
+        ...interview,
+        candidateSentForProcessingAt: null,
+      }));
+    }
+
+    const sentInterviews = await this.prisma.interview.findMany({
+      where: {
+        readyForProcessingAt: { not: null },
+        candidateProjectMap: {
+          candidateId: { in: candidateIds },
+        },
+      },
+      select: {
+        readyForProcessingAt: true,
+        candidateProjectMap: {
+          select: { candidateId: true },
+        },
+      },
+    });
+
+    const sentAtByCandidateId = new Map<string, Date>();
+    for (const row of sentInterviews) {
+      const candidateId = row.candidateProjectMap?.candidateId;
+      if (!candidateId || !row.readyForProcessingAt) continue;
+
+      const existing = sentAtByCandidateId.get(candidateId);
+      if (!existing || row.readyForProcessingAt > existing) {
+        sentAtByCandidateId.set(candidateId, row.readyForProcessingAt);
+      }
+    }
+
+    return interviews.map((interview) => {
+      const candidateId =
+        interview.candidateProjectMap?.candidateId ||
+        interview.candidateProjectMap?.candidate?.id;
+      const candidateSentForProcessingAt = candidateId
+        ? sentAtByCandidateId.get(candidateId) ?? null
+        : null;
+
+      return {
+        ...interview,
+        candidateSentForProcessingAt,
+      };
+    });
+  }
+
+  private async assertCandidateNotAlreadySentForProcessing(
+    candidateId: string,
+    excludeInterviewId: string,
+  ) {
+    const existingSent = await this.prisma.interview.findFirst({
+      where: {
+        id: { not: excludeInterviewId },
+        readyForProcessingAt: { not: null },
+        candidateProjectMap: { candidateId },
+      },
+      include: {
+        project: { select: { title: true } },
+        candidateProjectMap: {
+          include: {
+            project: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    if (!existingSent) {
+      return;
+    }
+
+    const projectTitle =
+      existingSent.project?.title ||
+      existingSent.candidateProjectMap?.project?.title ||
+      'another project';
+
+    throw new BadRequestException(
+      `This candidate has already been sent for processing on ${projectTitle}. Only one project per candidate can be sent for processing.`,
+    );
+  }
+
   private async enrichInterviewsWithOfferLetterUploaders(interviews: any[]) {
     const uploaderIds = new Set<string>();
     for (const interview of interviews) {
@@ -678,8 +777,12 @@ export class InterviewsService {
 
     const totalPages = Math.ceil(total / limit);
 
+    const withOfferLetters =
+      await this.enrichInterviewsWithOfferLetterUploaders(interviews);
+
     return {
-      interviews: await this.enrichInterviewsWithOfferLetterUploaders(interviews),
+      interviews:
+        await this.enrichInterviewsWithCandidateProcessingStatus(withOfferLetters),
       pagination: {
         page,
         limit,
@@ -2265,6 +2368,11 @@ export class InterviewsService {
         'Interview is not linked to a candidate project nomination',
       );
     }
+
+    await this.assertCandidateNotAlreadySentForProcessing(
+      interview.candidateProjectMap.candidate.id,
+      id,
+    );
 
     const changer = await this.prisma.user.findUnique({
       where: { id: userId },

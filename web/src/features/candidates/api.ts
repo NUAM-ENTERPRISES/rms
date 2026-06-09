@@ -1782,7 +1782,15 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: "/candidate-projects",
         params,
       }),
-      providesTags: ["Candidate"],
+      providesTags: (_result, _error, params) => {
+        if (params.candidateId) {
+          return [
+            { type: "Candidate" as const },
+            { type: "Candidate" as const, id: params.candidateId },
+          ];
+        }
+        return [{ type: "Candidate" as const }];
+      },
     }),
 
     getCandidateProjectsWorkflowDetails: builder.query<any, { candidateId: string; subStatus?: string; search?: string; page?: number; limit?: number }>({

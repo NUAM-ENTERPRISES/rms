@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InterviewsService } from '../interviews.service';
 import { PrismaService } from '../../database/prisma.service';
 import { ROLE_NAMES } from '../../common/constants/role-ids';
@@ -404,6 +404,7 @@ describe('InterviewsService - client decision flows', () => {
       })
       .mockResolvedValueOnce({ name: 'Coordinator' });
     mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.findFirst.mockResolvedValue(null);
     mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
     mockPrisma.interview.update.mockResolvedValue({
       ...interview,
@@ -476,6 +477,7 @@ describe('InterviewsService - client decision flows', () => {
       })
       .mockResolvedValueOnce({ name: 'Coordinator' });
     mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.findFirst.mockResolvedValue(null);
     mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue({
       id: 'ver-1',
     });
@@ -491,6 +493,39 @@ describe('InterviewsService - client decision flows', () => {
     expect(
       mockDocumentsService.requestOfferLetterUploadAfterSendForProcessing,
     ).not.toHaveBeenCalled();
+  });
+
+  it('sendForProcessing rejects when candidate already sent on another project', async () => {
+    const interview = {
+      id: 'int-b',
+      outcome: 'passed',
+      readyForProcessingAt: null,
+      candidateProjectMapId: 'cpm-b',
+      candidateProjectMap: {
+        candidate: { id: 'cand-1', firstName: 'Hari', lastName: 'KL' },
+        project: { id: 'proj-b', title: 'Project B' },
+        recruiter: { id: 'rec-1' },
+        roleNeeded: { roleCatalogId: 'rc-b', roleCatalog: { id: 'rc-b' } },
+      },
+      project: { id: 'proj-b', title: 'Project B' },
+    };
+
+    mockPrisma.user.findUnique.mockResolvedValue({
+      userRoles: [{ role: { name: ROLE_NAMES.INTERVIEW_COORDINATOR } }],
+    });
+    mockPrisma.interview.findUnique.mockResolvedValue(interview);
+    mockPrisma.interview.findFirst.mockResolvedValue({
+      id: 'int-a',
+      readyForProcessingAt: new Date('2026-06-07T00:00:00.000Z'),
+      project: { title: 'Project A' },
+      candidateProjectMap: { project: { title: 'Project A' } },
+    });
+    mockPrisma.candidateProjectDocumentVerification.findFirst.mockResolvedValue(null);
+
+    await expect(service.sendForProcessing('int-b', 'coord-1')).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(mockPrisma.interview.update).not.toHaveBeenCalled();
   });
 
   it('sendForProcessing rejects non Interview Coordinator users', async () => {

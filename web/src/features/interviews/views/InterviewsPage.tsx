@@ -49,6 +49,12 @@ import {
   resolveOfferLetterFileUrl,
 } from "../utils/offerLetter";
 import {
+  buildCandidateSentForProcessingLookup,
+  canSendInterviewForProcessing,
+  getInterviewCandidateId,
+  isCandidateSentViaAnotherProject,
+} from "../utils/sendForProcessing";
+import {
   useGetInterviewsQuery,
   useUpdateClientDecisionMutation,
   useUpdateBulkClientDecisionMutation,
@@ -67,6 +73,7 @@ import { OfferLetterUploadModal } from "@/features/documents/components/OfferLet
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import {
   SendForProcessingModal,
+  mapInterviewToSendForProcessingCandidate,
   type SendForProcessingCandidate,
 } from "../components/SendForProcessingModal";
 import { useGetScreeningsQuery } from "@/features/screening-coordination/interviews/data";
@@ -588,6 +595,11 @@ export default function InterviewsPage() {
     screeningOnHoldData,
   ]);
 
+  const candidateSentForProcessingLookup = useMemo(
+    () => buildCandidateSentForProcessingLookup(candidates),
+    [candidates],
+  );
+
   useEffect(() => {
     if (activeFilter !== "interviewPassed") return;
 
@@ -730,6 +742,7 @@ export default function InterviewsPage() {
   const [sendForProcessingModal, setSendForProcessingModal] = useState<{
     mode: "single" | "bulk";
     candidates: SendForProcessingCandidate[];
+    primaryInterviewId?: string;
   } | null>(null);
 
   const handleClientDecision = async (decision: "shortlisted" | "not_shortlisted", reason: string) => {
@@ -879,45 +892,37 @@ export default function InterviewsPage() {
     });
   };
 
-  const toSendForProcessingCandidate = (item: any): SendForProcessingCandidate => {
-    const candidateProjectMap = item.candidateProjectMap || item;
-    const candidate = candidateProjectMap?.candidate || item.candidate;
-    const project = candidateProjectMap?.project || item.project;
-    const roleCatalogId =
-      candidateProjectMap?.roleNeeded?.roleCatalog?.id ||
-      candidateProjectMap?.roleNeeded?.roleCatalogId ||
-      "";
-    return {
-      interviewId: item.id,
-      candidateId: candidate?.id || "",
-      candidateName: candidate
-        ? `${candidate.firstName} ${candidate.lastName}`
-        : "Unknown Candidate",
-      projectId: project?.id || item.projectId || "",
-      projectTitle: project?.title || "Unknown Project",
-      roleCatalogId,
-      roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
-      recruiterName:
-        item.recruiter?.name ||
-        candidateProjectMap?.recruiter?.name ||
-        item.candidateProjectMap?.recruiter?.name ||
-        null,
-      hasOfferLetter: hasOfferLetter(item, offerLetterOverrides),
-      offerLetterUploadedBy: getOfferLetterUploaderName(item),
-      existingFileUrl: resolveOfferLetterFileUrl(item, offerLetterOverrides),
-    };
-  };
+  const toSendForProcessingCandidate = (item: any): SendForProcessingCandidate =>
+    mapInterviewToSendForProcessingCandidate(item, offerLetterOverrides);
 
   const openSendForProcessingModal = (item: any) => {
+    if (!canSendInterviewForProcessing(item, candidateSentForProcessingLookup)) {
+      return;
+    }
+
+    const candidateId = getInterviewCandidateId(item);
+    const relatedOnPage = candidates.filter(
+      (candidate) =>
+        getInterviewCandidateId(candidate) === candidateId &&
+        canSendInterviewForProcessing(candidate, candidateSentForProcessingLookup),
+    );
+    const orderedItems = [
+      item,
+      ...relatedOnPage.filter((candidate) => candidate.id !== item.id),
+    ];
+
     setSendForProcessingModal({
       mode: "single",
-      candidates: [toSendForProcessingCandidate(item)],
+      primaryInterviewId: item.id,
+      candidates: orderedItems.map(toSendForProcessingCandidate),
     });
   };
 
   const openBulkSendForProcessingModal = () => {
     const unsent = candidates.filter(
-      (item) => selectedBulkIds.includes(item.id) && !item.readyForProcessingAt
+      (item) =>
+        selectedBulkIds.includes(item.id) &&
+        canSendInterviewForProcessing(item, candidateSentForProcessingLookup),
     );
 
     if (unsent.length === 0) {
@@ -931,17 +936,15 @@ export default function InterviewsPage() {
     });
   };
 
-  const handleConfirmSendForProcessing = async () => {
-    if (!sendForProcessingModal) return;
-
-    const interviewIds = sendForProcessingModal.candidates.map((c) => c.interviewId);
+  const handleConfirmSendForProcessing = async (selectedInterviewIds: string[]) => {
+    if (!sendForProcessingModal || selectedInterviewIds.length === 0) return;
 
     try {
-      if (sendForProcessingModal.mode === "single") {
-        await sendForProcessing(interviewIds[0]).unwrap();
+      if (selectedInterviewIds.length === 1) {
+        await sendForProcessing(selectedInterviewIds[0]).unwrap();
         toast.success("Candidate sent for processing");
       } else {
-        const res = await sendBulkForProcessing({ interviewIds }).unwrap();
+        const res = await sendBulkForProcessing({ interviewIds: selectedInterviewIds }).unwrap();
         const results = res?.data ?? [];
         const succeeded = results.filter((r) => r.success).length;
         const failed = results.filter((r) => !r.success).length;
@@ -949,7 +952,7 @@ export default function InterviewsPage() {
         if (failed > 0) {
           toast.error(`Sent ${succeeded}, failed ${failed}`);
         } else {
-          toast.success(`${succeeded} candidate(s) sent for processing`);
+          toast.success(`${succeeded} nomination(s) sent for processing`);
         }
         setSelectedBulkIds([]);
       }
@@ -1469,6 +1472,15 @@ export default function InterviewsPage() {
                                   </Badge>
                                 )}
                                 {activeFilter === "interviewPassed" &&
+                                  isCandidateSentViaAnotherProject(
+                                    item,
+                                    candidateSentForProcessingLookup,
+                                  ) && (
+                                  <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
+                                    Sent via another project
+                                  </Badge>
+                                )}
+                                {activeFilter === "interviewPassed" &&
                                   hasOfferLetter(item, offerLetterOverrides) && (
                                   <OfferLetterBadge
                                     className="mt-1"
@@ -1745,7 +1757,11 @@ export default function InterviewsPage() {
                                 ) : activeFilter === "interviewPassed" ? (
                                   (() => {
                                     const showSendForProcessing =
-                                      isInterviewCoordinator && !item.readyForProcessingAt;
+                                      isInterviewCoordinator &&
+                                      canSendInterviewForProcessing(
+                                        item,
+                                        candidateSentForProcessingLookup,
+                                      );
                                     const offerLetterUploaded = hasOfferLetter(
                                       item,
                                       offerLetterOverrides,
@@ -2055,6 +2071,7 @@ export default function InterviewsPage() {
         isLoading={isSendingForProcessing || isBulkSendingForProcessing}
         mode={sendForProcessingModal?.mode ?? "single"}
         candidates={sendForProcessingModal?.candidates ?? []}
+        primaryInterviewId={sendForProcessingModal?.primaryInterviewId}
         onOfferLetterUploaded={(interviewId, fileUrl) => {
           const item = candidates.find((c) => c.id === interviewId);
           if (!item) return;

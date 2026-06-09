@@ -37,6 +37,7 @@ const passedInterviewSent = {
     ...passedInterview.candidateProjectMap,
     candidate: {
       ...passedInterview.candidateProjectMap.candidate,
+      id: "cand-sent",
       firstName: "John",
       lastName: "Sent",
     },
@@ -53,12 +54,15 @@ vi.mock("@/app/hooks", () => ({
   }),
 }));
 
-let isCoordinator = true;
+const interviewPassedMocks = vi.hoisted(() => ({
+  isCoordinator: true,
+  passedInterviews: [] as any[],
+}));
 
 vi.mock("@/hooks/useCan", () => ({
   useCan: () => true,
   useHasRole: (role: string) =>
-    role === "Interview Coordinator" ? isCoordinator : false,
+    role === "Interview Coordinator" ? interviewPassedMocks.isCoordinator : false,
 }));
 
 vi.mock("@/components/molecules/DashboardWelcomeHeader", () => ({
@@ -108,17 +112,41 @@ vi.mock("../components/SendForProcessingModal", () => ({
     candidates,
   }: {
     isOpen: boolean;
-    onConfirm: () => void;
-    candidates: Array<{ candidateName: string }>;
+    onConfirm: (selectedInterviewIds: string[]) => void;
+    candidates: Array<{ candidateName: string; interviewId: string }>;
   }) =>
     isOpen ? (
       <div data-testid="send-for-processing-modal">
         <p>Confirm send for {candidates[0]?.candidateName}</p>
-        <button type="button" onClick={onConfirm}>
+        <button
+          type="button"
+          onClick={() => onConfirm(candidates.map((candidate) => candidate.interviewId))}
+        >
           Confirm Send for Processing
         </button>
       </div>
     ) : null,
+  mapInterviewToSendForProcessingCandidate: (item: {
+    id: string;
+    candidateProjectMap?: {
+      candidate?: { id?: string; firstName?: string; lastName?: string };
+      project?: { id?: string; title?: string };
+      roleNeeded?: { designation?: string; roleCatalog?: { id?: string } };
+      recruiter?: { name?: string };
+    };
+  }) => ({
+    interviewId: item.id,
+    candidateId: item.candidateProjectMap?.candidate?.id || "",
+    candidateName: item.candidateProjectMap?.candidate
+      ? `${item.candidateProjectMap.candidate.firstName} ${item.candidateProjectMap.candidate.lastName}`
+      : "Unknown",
+    projectId: item.candidateProjectMap?.project?.id || "",
+    projectTitle: item.candidateProjectMap?.project?.title || "Project",
+    roleCatalogId: item.candidateProjectMap?.roleNeeded?.roleCatalog?.id || "",
+    roleDesignation: item.candidateProjectMap?.roleNeeded?.designation || "Role",
+    recruiterName: item.candidateProjectMap?.recruiter?.name || null,
+    hasOfferLetter: false,
+  }),
 }));
 vi.mock("@/features/screening-coordination/interviews/data", () => ({
   useGetScreeningsQuery: () => ({ data: { data: { items: [] } }, isLoading: false, isFetching: false, isError: false, refetch: vi.fn() }),
@@ -131,8 +159,13 @@ vi.mock("../api", () => ({
   useGetInterviewsQuery: () => ({
     data: {
       data: {
-        interviews: [passedInterview, passedInterviewSent],
-        pagination: { page: 1, limit: 10, total: 2, totalPages: 1 },
+        interviews: interviewPassedMocks.passedInterviews,
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: interviewPassedMocks.passedInterviews.length,
+          totalPages: 1,
+        },
       },
     },
     isLoading: false,
@@ -186,9 +219,18 @@ async function openInterviewPassedTable(user: ReturnType<typeof userEvent.setup>
   await screen.findByText("Jane Doe");
 }
 
+const setPassedInterviews = (...interviews: any[]) => {
+  interviewPassedMocks.passedInterviews.splice(
+    0,
+    interviewPassedMocks.passedInterviews.length,
+    ...interviews,
+  );
+};
+
 describe("InterviewsPage — interview passed actions", () => {
   beforeEach(() => {
-    isCoordinator = true;
+    interviewPassedMocks.isCoordinator = true;
+    setPassedInterviews(passedInterview, passedInterviewSent);
   });
 
   it("shows Send for Processing for Interview Coordinator on unsent rows", async () => {
@@ -221,10 +263,11 @@ describe("InterviewsPage — interview passed actions", () => {
   });
 
   it("hides Send for Processing for non-coordinator users", async () => {
-    isCoordinator = false;
+    interviewPassedMocks.isCoordinator = false;
     const user = userEvent.setup();
     await openInterviewPassedTable(user);
 
     expect(screen.queryByRole("button", { name: /Send for Processing/i })).not.toBeInTheDocument();
   });
+
 });
