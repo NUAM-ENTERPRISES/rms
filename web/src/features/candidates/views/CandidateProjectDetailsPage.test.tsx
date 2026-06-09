@@ -4,6 +4,9 @@ import CandidateProjectDetailsPage from './CandidateProjectDetailsPage';
 
 vi.mock('@/features/candidates/api', () => ({
   useGetCandidateProjectPipelineQuery: vi.fn(),
+  useCreateCandidateProjectStatusChangeRequestMutation: () => [vi.fn(), { isLoading: false }],
+  useApproveCandidateProjectStatusChangeRequestMutation: () => [vi.fn(), { isLoading: false }],
+  useRejectCandidateProjectStatusChangeRequestMutation: () => [vi.fn(), { isLoading: false }],
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -12,8 +15,22 @@ vi.mock('react-router-dom', async () => {
     ...actual,
     useParams: () => ({ candidateId: 'c1', projectId: 'p1' }),
     useNavigate: () => vi.fn(),
+    useSearchParams: () => [new URLSearchParams()],
   };
 });
+
+vi.mock('@/shared/hooks/usePermissions', () => ({
+  usePermissions: () => ({
+    hasRole: (roles: string | string[]) => {
+      const list = Array.isArray(roles) ? roles : [roles];
+      return list.includes('Manager');
+    },
+  }),
+}));
+
+vi.mock('@/hooks/useCan', () => ({
+  useCan: (permission: string) => permission === 'manage:candidates',
+}));
 
 // mock lottie players used in the component to avoid DOM API (IntersectionObserver) issues in test env
 vi.mock('@lottiefiles/dotlottie-react', () => ({
@@ -55,5 +72,131 @@ describe('CandidateProjectDetailsPage integration', () => {
     // Next Step header and the next step label should be present
     expect(await screen.findByText('Next Step')).toBeInTheDocument();
     expect(await screen.findByText('Interview Scheduled')).toBeInTheDocument();
+  });
+
+  it('shows pipeline blocked banner and hides next step when blocked', async () => {
+    const pipelineResponse = {
+      success: true,
+      data: {
+        candidateProjectMapId: 'map1',
+        isPipelineBlocked: true,
+        pipelineBlockedReason: "This candidate's project is currently On Hold. Pipeline actions are disabled.",
+        currentStatus: { mainStatus: { name: 'on_hold', label: 'On Hold' } },
+        history: [
+          { id: '1', subStatus: { name: 'on_hold', label: 'On Hold' }, statusChangedAt: new Date().toISOString() },
+        ],
+        candidate: { firstName: 'Max', lastName: 'Tester' },
+        project: { title: 'Test Project' },
+      },
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    expect(await screen.findByText(/Pipeline actions disabled/i)).toBeInTheDocument();
+    expect(screen.queryByText('Next Step')).not.toBeInTheDocument();
+  });
+
+  it('shows Project Updates button when user can manage candidates', async () => {
+    const pipelineResponse = {
+      success: true,
+      data: {
+        candidateProjectMapId: 'map1',
+        history: [],
+        candidate: { firstName: 'Max', lastName: 'Tester' },
+        project: { title: 'Test Project' },
+      },
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    expect(await screen.findByRole('button', { name: /project updates/i })).toBeInTheDocument();
+  });
+
+  it('shows pending approval banner with review button for managers', async () => {
+    const pipelineResponse = {
+      success: true,
+      data: {
+        candidateProjectMapId: 'map1',
+        pendingStatusChangeRequest: {
+          id: 'req1',
+          requestedStatus: 'withdrawn',
+          reason: 'Candidate no longer interested',
+          createdAt: new Date().toISOString(),
+          requester: { id: 'other-user', name: 'Recruiter One' },
+        },
+        history: [],
+        candidate: { firstName: 'Max', lastName: 'Tester' },
+        project: { title: 'Test Project' },
+      },
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    expect(await screen.findByText(/Pending Withdrawn request from Recruiter One/i)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /review request/i })).toBeInTheDocument();
+  });
+
+  it('shows reviewed rejected banner and request history button after rejection', async () => {
+    const pipelineResponse = {
+      success: true,
+      data: {
+        candidateProjectMapId: 'map1',
+        latestReviewedStatusChangeRequest: {
+          id: 'req1',
+          requestedStatus: 'withdrawn',
+          reason: 'Candidate no longer interested',
+          status: 'rejected',
+          createdAt: new Date().toISOString(),
+          reviewedAt: new Date().toISOString(),
+          reviewNotes: 'Please retry later',
+          requester: { id: 'test-user-id', name: 'Test User' },
+          reviewer: { id: 'mgr-1', name: 'Manager One' },
+        },
+        history: [],
+        candidate: { firstName: 'Max', lastName: 'Tester' },
+        project: { title: 'Test Project' },
+      },
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    expect(await screen.findByText(/Withdrawn Request Rejected/i)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /request history/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /project updates/i })).toBeInTheDocument();
+  });
+
+  it('shows requester banner when current user is the requester', async () => {
+    const pipelineResponse = {
+      success: true,
+      data: {
+        candidateProjectMapId: 'map1',
+        pendingStatusChangeRequest: {
+          id: 'req1',
+          requestedStatus: 'withdrawn',
+          reason: 'Candidate no longer interested',
+          createdAt: new Date().toISOString(),
+          requester: { id: 'test-user-id', name: 'Test User' },
+        },
+        history: [],
+        candidate: { firstName: 'Max', lastName: 'Tester' },
+        project: { title: 'Test Project' },
+      },
+    };
+
+    (useGetCandidateProjectPipelineQuery as any).mockReturnValue({ data: pipelineResponse, isLoading: false, error: undefined });
+
+    render(<CandidateProjectDetailsPage />);
+
+    expect(await screen.findByText(/Withdrawn Request Submitted/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Awaiting Approval/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /review request/i })).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import {
+  CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
+  isCandidateProjectPipelineBlocked,
+} from '../common/constants/statuses';
 
 @Injectable()
 export class CandidateProjectStatusHistoryService {
@@ -165,9 +170,48 @@ export class CandidateProjectStatusHistoryService {
     const lastEntry = history[history.length - 1];
     const timeInCurrentStatus = lastEntry ? this.calculateDuration(new Date(lastEntry.statusChangedAt)) : '0 days';
 
+    const pendingStatusChangeRequest =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId: mapping.id,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    const latestReviewedStatusChangeRequest =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId: mapping.id,
+          status: {
+            in: [
+              CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+              CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.REJECTED,
+            ],
+          },
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { reviewedAt: 'desc' },
+      });
+
+    const isPipelineBlocked = isCandidateProjectPipelineBlocked(currentMainName);
+    const pipelineBlockedReason = isPipelineBlocked
+      ? currentMainName === CANDIDATE_PROJECT_STATUS.WITHDRAWN
+        ? 'This candidate\'s project is currently Withdrawn. Pipeline actions are disabled.'
+        : 'This candidate\'s project is currently On Hold. Pipeline actions are disabled.'
+      : undefined;
+
     // Next Step Logic
     let nextStep: { name: string; label: string; type: string } | null = null;
-    const isTerminal = ['rejected', 'withdrawn'].includes(currentMainName);
+    const isTerminal =
+      ['rejected', 'withdrawn', 'on_hold'].includes(currentMainName) ||
+      isPipelineBlocked;
     
     if (!isTerminal) {
       const currentSubStatus = mapping.subStatus;
@@ -211,6 +255,7 @@ export class CandidateProjectStatusHistoryService {
     return {
       success: true,
       data: {
+        candidateProjectMapId: mapping.id,
         candidate: mapping.candidate,
         project: mapping.project,
         nominatedRole: mapping.roleNeeded,
@@ -219,6 +264,30 @@ export class CandidateProjectStatusHistoryService {
           subStatus: mapping.subStatus,
           timeInStatus: timeInCurrentStatus,
         },
+        isPipelineBlocked,
+        pipelineBlockedReason,
+        pendingStatusChangeRequest: pendingStatusChangeRequest
+          ? {
+              id: pendingStatusChangeRequest.id,
+              requestedStatus: pendingStatusChangeRequest.requestedStatus,
+              reason: pendingStatusChangeRequest.reason,
+              createdAt: pendingStatusChangeRequest.createdAt,
+              requester: pendingStatusChangeRequest.requester,
+            }
+          : null,
+        latestReviewedStatusChangeRequest: latestReviewedStatusChangeRequest
+          ? {
+              id: latestReviewedStatusChangeRequest.id,
+              requestedStatus: latestReviewedStatusChangeRequest.requestedStatus,
+              reason: latestReviewedStatusChangeRequest.reason,
+              status: latestReviewedStatusChangeRequest.status,
+              createdAt: latestReviewedStatusChangeRequest.createdAt,
+              reviewedAt: latestReviewedStatusChangeRequest.reviewedAt,
+              reviewNotes: latestReviewedStatusChangeRequest.reviewNotes,
+              requester: latestReviewedStatusChangeRequest.requester,
+              reviewer: latestReviewedStatusChangeRequest.reviewer,
+            }
+          : null,
         pipeline: {
           progressOrder,
           applicationProgress,

@@ -24,6 +24,7 @@ import {
   type AccountStatusChangedPayload,
 } from "./notification-handlers/account-status-handler";
 import { handleAgentCandidateRequestNotifications } from "./notification-handlers/agent-candidate-request-handler";
+import { handleCandidateProjectStatusChangeNotifications } from "./notification-handlers/candidate-project-status-change-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -359,6 +360,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleProcessingNotifications(context);
       handleAccountStatusNotifications(context);
       handleAgentCandidateRequestNotifications(context);
+      handleCandidateProjectStatusChangeNotifications(context);
     });
 
     newSocket.on("data:sync", (payload: any) => {

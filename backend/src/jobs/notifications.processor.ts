@@ -91,6 +91,10 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleRoleNotification(job);
         case 'AgentCandidateRequestCreated':
           return await this.handleAgentCandidateRequestCreated(job);
+        case 'CandidateProjectStatusChangeRequested':
+          return await this.handleCandidateProjectStatusChangeRequested(job);
+        case 'CandidateProjectStatusChangeReviewed':
+          return await this.handleCandidateProjectStatusChangeReviewed(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -2772,6 +2776,166 @@ export class NotificationsProcessor extends WorkerHost {
   /**
    * Handle generic DataSync events for real-time UI updates
    */
+  async handleCandidateProjectStatusChangeRequested(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate project status change request event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        candidateProjectMapId,
+        candidateId,
+        projectId,
+        candidateName,
+        projectTitle,
+        requestedStatus,
+        requesterName,
+        reason,
+      } = payload as {
+        requestId: string;
+        candidateProjectMapId: string;
+        candidateId: string;
+        projectId: string;
+        candidateName: string;
+        projectTitle: string;
+        requestedStatus: string;
+        requesterName: string;
+        reason: string;
+      };
+
+      const statusLabel =
+        requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
+
+      const targetRoles = [
+        'Manager',
+        'Recruiter Manager',
+        'System Admin',
+        'Admin',
+        'CEO',
+        'Director',
+      ];
+
+      const targetUsers = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: { in: targetRoles },
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      const link = `/candidate-project/${candidateId}/projects/${projectId}?statusRequest=${requestId}`;
+
+      for (const user of targetUsers) {
+        const idemKey = `${eventId}:status_change_request:${requestId}:${user.id}`;
+        await this.notificationsService.createNotification({
+          userId: user.id,
+          type: 'candidate_project_status_change_request',
+          title: `Candidate Project ${statusLabel} Request`,
+          message: `${requesterName} requested to mark ${candidateName} as ${statusLabel} for project "${projectTitle}". Remarks: ${reason}`,
+          link,
+          meta: {
+            requestId,
+            candidateProjectMapId,
+            candidateId,
+            projectId,
+            requestedStatus,
+          },
+          idemKey,
+        });
+      }
+
+      this.logger.log(
+        `Status change request notifications created for ${targetUsers.length} approvers`,
+      );
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.error(
+        `Failed to process status change request: ${err.message}`,
+        err.stack,
+      );
+      throw err;
+    }
+  }
+
+  async handleCandidateProjectStatusChangeReviewed(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate project status change reviewed event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        candidateProjectMapId,
+        candidateId,
+        projectId,
+        candidateName,
+        projectTitle,
+        requestedStatus,
+        requestedBy,
+        outcome,
+      } = payload as {
+        requestId: string;
+        candidateProjectMapId: string;
+        candidateId: string;
+        projectId: string;
+        candidateName: string;
+        projectTitle: string;
+        requestedStatus: string;
+        requestedBy: string;
+        outcome: 'approved' | 'rejected';
+      };
+
+      const statusLabel =
+        requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
+      const link = `/candidate-project/${candidateId}/projects/${projectId}`;
+
+      const idemKey = `${eventId}:status_change_reviewed:${requestId}:${requestedBy}`;
+      await this.notificationsService.createNotification({
+        userId: requestedBy,
+        type: 'candidate_project_status_change_reviewed',
+        title:
+          outcome === 'approved'
+            ? `${statusLabel} Request Approved`
+            : `${statusLabel} Request Rejected`,
+        message:
+          outcome === 'approved'
+            ? `Your request to mark ${candidateName} as ${statusLabel} for project "${projectTitle}" was approved.`
+            : `Your request to mark ${candidateName} as ${statusLabel} for project "${projectTitle}" was rejected.`,
+        link,
+        meta: {
+          requestId,
+          candidateProjectMapId,
+          candidateId,
+          projectId,
+          requestedStatus,
+          outcome,
+        },
+        idemKey,
+      });
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.error(
+        `Failed to process status change reviewed: ${err.message}`,
+        err.stack,
+      );
+      throw err;
+    }
+  }
+
   async handleDataSyncJob(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
     this.logger.log(`Processing DataSync event: ${eventId}`);

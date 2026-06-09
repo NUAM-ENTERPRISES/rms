@@ -86,6 +86,8 @@ model User {
   transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
   transferRequestsRequested        TeamTransferRequest[]          @relation("TransferRequester")
   transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
+  statusChangeRequestsRequested    CandidateProjectStatusChangeRequest[] @relation("StatusChangeRequester")
+  statusChangeRequestsReviewed     CandidateProjectStatusChangeRequest[] @relation("StatusChangeReviewer")
   userRoles                        UserRole[]
   userTeams                        UserTeam[]
   candidateProjectMaps             CandidateProjects[]
@@ -706,6 +708,7 @@ model CandidateProjects {
   roleNeeded            RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
   interviews            Interview[]
   projectStatusHistory  CandidateProjectStatusHistory[]
+  statusChangeRequests CandidateProjectStatusChangeRequest[]
 
   // Screening & Training Relations
   screenings          Screening[]
@@ -1149,6 +1152,28 @@ model TeamTransferRequest {
   @@index([toTeamId])
   @@index([status])
   @@map("team_transfer_requests")
+}
+
+model CandidateProjectStatusChangeRequest {
+  id                    String   @id @default(cuid())
+  candidateProjectMapId String
+  candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  requestedStatus       String
+  reason                String   @db.Text
+  status                String   @default("pending")
+  requestedBy           String
+  requester             User     @relation("StatusChangeRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewedBy            String?
+  reviewer              User?    @relation("StatusChangeReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt            DateTime?
+  reviewNotes           String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([candidateProjectMapId, status])
+  @@index([requestedBy])
+  @@index([status])
+  @@map("candidate_project_status_change_requests")
 }
 
 model Certification {

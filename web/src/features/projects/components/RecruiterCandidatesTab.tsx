@@ -60,6 +60,7 @@ import {
   useAssignToProjectMutation,
 } from "@/features/candidates";
 import CandidateCard from "./CandidateCard";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import {
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
@@ -683,12 +684,19 @@ export default function RecruiterCandidatesTab({
                   ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase().includes("verification"))
                 );
 
+                const mainStatusName =
+                  currentProjectInCandidate?.mainStatus?.name ||
+                  projectAssignment?.mainStatus?.name;
+                const isPipelineBlocked =
+                  isCandidateProjectPipelineBlocked(mainStatusName);
+
                 // Show verify button if: in project and nominated AND not already in verification
                 const showVerifyBtn =
                   pipelineOpen &&
                   isAssignedToProject &&
                   isNominated &&
-                  !isVerificationInProgress;
+                  !isVerificationInProgress &&
+                  !isPipelineBlocked;
 
                 const actions: {
                   label: string;

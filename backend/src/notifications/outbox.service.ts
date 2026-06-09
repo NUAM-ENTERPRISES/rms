@@ -615,5 +615,48 @@ export class OutboxService {
     await this.publishEvent('AgentCandidateRequestCreated', payload, tx);
   }
 
+  async publishCandidateProjectStatusChangeRequested(
+    payload: {
+      requestId: string;
+      candidateProjectMapId: string;
+      candidateId: string;
+      projectId: string;
+      candidateName: string;
+      projectTitle: string;
+      requestedStatus: string;
+      requestedBy: string;
+      requesterName: string;
+      reason: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateProjectStatusChangeRequested',
+      payload,
+      tx,
+    );
+  }
+
+  async publishCandidateProjectStatusChangeReviewed(
+    payload: {
+      requestId: string;
+      candidateProjectMapId: string;
+      candidateId: string;
+      projectId: string;
+      candidateName: string;
+      projectTitle: string;
+      requestedStatus: string;
+      requestedBy: string;
+      outcome: 'approved' | 'rejected';
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateProjectStatusChangeReviewed',
+      payload,
+      tx,
+    );
+  }
+
 }
 

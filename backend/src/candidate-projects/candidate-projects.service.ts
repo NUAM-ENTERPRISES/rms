@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
@@ -20,16 +21,24 @@ import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
   CANDIDATE_STATUS,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
   TRAINING_STATUS,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
+  isCandidateProjectPipelineBlocked,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES,
+  CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES,
+  ROLE_NAMES,
+} from '../common/constants/role-ids';
+import { CreateStatusChangeRequestDto } from './dto/create-status-change-request.dto';
+import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
@@ -544,8 +553,15 @@ export class CandidateProjectsService {
       },
       include: {
         subStatus: true,
+        mainStatus: true,
       },
     });
+
+    if (existingAssignment) {
+      this.assertCandidateProjectPipelineNotBlocked(
+        existingAssignment.mainStatus?.name,
+      );
+    }
 
     const screeningTrainingStatuses = [
       'screening_assigned',
@@ -1819,6 +1835,491 @@ export class CandidateProjectsService {
     return updated;
   }
 
+  private assertCandidateProjectPipelineNotBlocked(
+    mainStatusName: string | null | undefined,
+  ): void {
+    if (!isCandidateProjectPipelineBlocked(mainStatusName)) return;
+    const label =
+      mainStatusName === CANDIDATE_PROJECT_STATUS.WITHDRAWN
+        ? 'Withdrawn'
+        : 'On Hold';
+    throw new BadRequestException(
+      `This candidate's project is currently ${label}. Pipeline actions are disabled.`,
+    );
+  }
+
+  private async getUserRoleNames(userId: string): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user.userRoles.map((ur) => ur.role.name);
+  }
+
+  private async assertUserCanApproveStatusChange(userId: string): Promise<void> {
+    const roleNames = await this.getUserRoleNames(userId);
+    const canApprove = roleNames.some((name) =>
+      (CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES as readonly string[]).includes(
+        name,
+      ),
+    );
+    if (!canApprove) {
+      throw new ForbiddenException(
+        'You do not have permission to approve or reject status change requests',
+      );
+    }
+  }
+
+  private async userCanDirectApplyStatusChange(userId: string): Promise<boolean> {
+    const roleNames = await this.getUserRoleNames(userId);
+    return roleNames.some((name) =>
+      (CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
+        name,
+      ),
+    );
+  }
+
+  async createStatusChangeRequest(
+    candidateProjectMapId: string,
+    dto: CreateStatusChangeRequestDto,
+    userId: string,
+  ) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        mainStatus: true,
+        candidate: { select: { id: true, firstName: true, lastName: true } },
+        project: { select: { id: true, title: true } },
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    if (
+      isCandidateProjectPipelineBlocked(candidateProject.mainStatus?.name)
+    ) {
+      throw new BadRequestException(
+        'Candidate project is already Withdrawn or On Hold',
+      );
+    }
+
+    const existingPending =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        },
+      });
+
+    if (existingPending) {
+      throw new BadRequestException(
+        'A pending status change request already exists for this candidate project',
+      );
+    }
+
+    const canDirectApply = await this.userCanDirectApplyStatusChange(userId);
+    if (canDirectApply) {
+      return this.directApplyStatusChange(
+        candidateProjectMapId,
+        dto,
+        userId,
+        candidateProject,
+      );
+    }
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const request = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestedStatus: dto.requestedStatus,
+          reason: dto.reason,
+          requestedBy: userId,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.outboxService.publishCandidateProjectStatusChangeRequested(
+        {
+          requestId: created.id,
+          candidateProjectMapId,
+          candidateId: candidateProject.candidateId,
+          projectId: candidateProject.projectId,
+          candidateName: `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`,
+          projectTitle: candidateProject.project.title,
+          requestedStatus: dto.requestedStatus,
+          requestedBy: userId,
+          requesterName: requester?.name ?? 'Recruiter',
+          reason: dto.reason,
+        },
+        tx,
+      );
+
+      return created;
+    });
+
+    return request;
+  }
+
+  private async directApplyStatusChange(
+    candidateProjectMapId: string,
+    dto: CreateStatusChangeRequestDto,
+    userId: string,
+    candidateProject: {
+      candidateId: string;
+      projectId: string;
+      candidate: { firstName: string; lastName: string };
+      project: { title: string };
+    },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestedStatus: dto.requestedStatus,
+          reason: dto.reason,
+          requestedBy: userId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.applyStatusUpdateInTransaction(
+        tx,
+        candidateProjectMapId,
+        {
+          subStatusName: dto.requestedStatus,
+          reason: dto.reason,
+        },
+        userId,
+      );
+
+      return created;
+    });
+  }
+
+  async getPendingStatusChangeRequest(candidateProjectMapId: string) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    const pending =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    return pending;
+  }
+
+  async getStatusChangeRequestHistory(
+    candidateProjectMapId: string,
+    page = 1,
+    limit = 10,
+  ) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      this.prisma.candidateProjectStatusChangeRequest.findMany({
+        where: { candidateProjectMapId },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.candidateProjectStatusChangeRequest.count({
+        where: { candidateProjectMapId },
+      }),
+    ]);
+
+    return {
+      data: requests,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  async approveStatusChangeRequest(
+    requestId: string,
+    dto: ReviewStatusChangeRequestDto,
+    userId: string,
+  ) {
+    await this.assertUserCanApproveStatusChange(userId);
+
+    const request =
+      await this.prisma.candidateProjectStatusChangeRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: { select: { id: true, firstName: true, lastName: true } },
+              project: { select: { id: true, title: true } },
+            },
+          },
+          requester: { select: { id: true, name: true } },
+        },
+      });
+
+    if (!request) {
+      throw new NotFoundException('Status change request not found');
+    }
+
+    if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
+      throw new BadRequestException('Status change request has already been processed');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedRequest = await tx.candidateProjectStatusChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.applyStatusUpdateInTransaction(
+        tx,
+        request.candidateProjectMapId,
+        {
+          subStatusName: request.requestedStatus,
+          reason: request.reason,
+          notes: dto.reviewNotes,
+        },
+        userId,
+      );
+
+      await this.outboxService.publishCandidateProjectStatusChangeReviewed(
+        {
+          requestId,
+          candidateProjectMapId: request.candidateProjectMapId,
+          candidateId: request.candidateProjectMap.candidateId,
+          projectId: request.candidateProjectMap.projectId,
+          candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
+          projectTitle: request.candidateProjectMap.project.title,
+          requestedStatus: request.requestedStatus,
+          requestedBy: request.requestedBy,
+          outcome: 'approved',
+        },
+        tx,
+      );
+
+      return updatedRequest;
+    });
+
+    return result;
+  }
+
+  async rejectStatusChangeRequest(
+    requestId: string,
+    dto: ReviewStatusChangeRequestDto,
+    userId: string,
+  ) {
+    await this.assertUserCanApproveStatusChange(userId);
+
+    const request =
+      await this.prisma.candidateProjectStatusChangeRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: { select: { id: true, firstName: true, lastName: true } },
+              project: { select: { id: true, title: true } },
+            },
+          },
+        },
+      });
+
+    if (!request) {
+      throw new NotFoundException('Status change request not found');
+    }
+
+    if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
+      throw new BadRequestException('Status change request has already been processed');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const rejected = await tx.candidateProjectStatusChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.REJECTED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.outboxService.publishCandidateProjectStatusChangeReviewed(
+        {
+          requestId,
+          candidateProjectMapId: request.candidateProjectMapId,
+          candidateId: request.candidateProjectMap.candidateId,
+          projectId: request.candidateProjectMap.projectId,
+          candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
+          projectTitle: request.candidateProjectMap.project.title,
+          requestedStatus: request.requestedStatus,
+          requestedBy: request.requestedBy,
+          outcome: 'rejected',
+        },
+        tx,
+      );
+
+      return rejected;
+    });
+
+    return updated;
+  }
+
+  private async applyStatusUpdateInTransaction(
+    tx: Prisma.TransactionClient,
+    id: string,
+    updateStatusDto: Pick<
+      UpdateProjectStatusDto,
+      'mainStatusId' | 'subStatusId' | 'subStatusName' | 'reason' | 'notes'
+    >,
+    userId: string,
+  ) {
+    const { mainStatusId, subStatusId, subStatusName, reason, notes } =
+      updateStatusDto;
+
+    const candidateProject = await tx.candidateProjects.findUnique({
+      where: { id },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${id} not found`,
+      );
+    }
+
+    let subStatus;
+    if (subStatusId) {
+      subStatus = await tx.candidateProjectSubStatus.findUnique({
+        where: { id: subStatusId },
+        include: { stage: true },
+      });
+    } else if (subStatusName) {
+      subStatus = await tx.candidateProjectSubStatus.findUnique({
+        where: { name: subStatusName },
+        include: { stage: true },
+      });
+    }
+
+    if (!subStatus) {
+      throw new NotFoundException(
+        `Sub-status ${subStatusId || subStatusName} not found`,
+      );
+    }
+
+    const mainStatus = mainStatusId
+      ? await tx.candidateProjectMainStatus.findUnique({
+          where: { id: mainStatusId },
+        })
+      : subStatus.stage;
+
+    if (!mainStatus) {
+      throw new NotFoundException('Main status not found');
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(
+      candidateProject.candidateId,
+    );
+
+    const updated = await tx.candidateProjects.update({
+      where: { id },
+      data: {
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+        ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
+      },
+      include: {
+        candidate: true,
+        project: true,
+        roleNeeded: true,
+        recruiter: true,
+        mainStatus: true,
+        subStatus: true,
+      },
+    });
+
+    await tx.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId: id,
+        changedById: userId,
+        changedByName: user?.name || null,
+        mainStatusId: mainStatus.id,
+        subStatusId: subStatus.id,
+        mainStatusSnapshot: mainStatus.label,
+        subStatusSnapshot: subStatus.label,
+        reason: reason || null,
+        notes: notes || null,
+      },
+    });
+
+    return updated;
+  }
+
   async updateStatus(
     id: string,
     updateStatusDto: UpdateProjectStatusDto,
@@ -1831,6 +2332,7 @@ export class CandidateProjectsService {
     // -------------------------------------
     const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id },
+      include: { mainStatus: true },
     });
 
     if (!candidateProject) {
@@ -1839,96 +2341,18 @@ export class CandidateProjectsService {
       );
     }
 
-    // -------------------------------------
-    // GET sub-status (required)
-    // -------------------------------------
-    let subStatus;
-    if (subStatusId) {
-      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
-        where: { id: subStatusId },
-        include: { stage: true },
-      });
-    } else if (subStatusName) {
-      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
-        where: { name: subStatusName },
-        include: { stage: true },
-      });
-    }
+    this.assertCandidateProjectPipelineNotBlocked(
+      candidateProject.mainStatus?.name,
+    );
 
-    if (!subStatus) {
-      throw new NotFoundException(
-        `Sub-status ${subStatusId || subStatusName} not found`,
-      );
-    }
-
-    // -------------------------------------
-    // IF mainStatusId not given → use subStatus.stage
-    // -------------------------------------
-    const mainStatus = mainStatusId
-      ? await this.prisma.candidateProjectMainStatus.findUnique({
-          where: { id: mainStatusId },
-        })
-      : subStatus.stage; // auto detected
-
-    if (!mainStatus) {
-      throw new NotFoundException(`Main status not found`);
-    }
-
-    // -------------------------------------
-    // GET USER NAME FOR HISTORY & RESOLVE RECRUITER
-    // -------------------------------------
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true },
-    });
-
-    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateProject.candidateId);
-
-    // -------------------------------------
-    // UPDATE & ADD HISTORY IN TRANSACTION
-    // -------------------------------------
-    const result = await this.prisma.$transaction(async (tx) => {
-      // UPDATE current status (NEW SYSTEM)
-      const updated = await tx.candidateProjects.update({
-        where: { id },
-        data: {
-          mainStatusId: mainStatus.id,
-          subStatusId: subStatus.id,
-          // Sync recruiter if one is active in assignments table
-          ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
-        },
-        include: {
-          candidate: true,
-          project: true,
-          roleNeeded: true,
-          recruiter: true,
-          mainStatus: true,
-          subStatus: true,
-        },
-      });
-
-      // Create history entry (NEW SYSTEM)
-      await tx.candidateProjectStatusHistory.create({
-        data: {
-          candidateProjectMapId: id,
-          changedById: userId,
-          changedByName: user?.name || null,
-
-          mainStatusId: mainStatus.id,
-          subStatusId: subStatus.id,
-
-          mainStatusSnapshot: mainStatus.label,
-          subStatusSnapshot: subStatus.label,
-
-          reason: reason || null,
-          notes: notes || null,
-        },
-      });
-
-      return updated;
-    });
-
-    return result;
+    return this.prisma.$transaction((tx) =>
+      this.applyStatusUpdateInTransaction(
+        tx,
+        id,
+        { mainStatusId, subStatusId, subStatusName, reason, notes },
+        userId,
+      ),
+    );
   }
 
   async remove(id: string) {
@@ -2308,6 +2732,7 @@ export class CandidateProjectsService {
           select: { designation: true },
         },
         subStatus: true,
+        mainStatus: true,
       },
     });
 
@@ -2316,6 +2741,10 @@ export class CandidateProjectsService {
         `Candidate-Project with ID "${candidateProjectMapId}" not found`,
       );
     }
+
+    this.assertCandidateProjectPipelineNotBlocked(
+      candidateProject.mainStatus?.name,
+    );
 
     // Verify coordinator exists and has correct role
     const coordinator = await this.prisma.user.findUnique({
@@ -2546,10 +2975,17 @@ export class CandidateProjectsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
     // Check existing assignment for candidate & project
-    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({
+      where: { candidateId, projectId },
+      include: { mainStatus: true },
+    });
 
     if (!existingAssignment) {
       this.ensureCandidatePositiveForProjectAssignment(candidate);
+    } else {
+      this.assertCandidateProjectPipelineNotBlocked(
+        existingAssignment.mainStatus?.name,
+      );
     }
 
     const candidateProject = await this.prisma.$transaction(async (tx) => {

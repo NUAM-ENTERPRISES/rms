@@ -98,6 +98,7 @@ import {
   useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
@@ -166,6 +167,10 @@ interface DocumentVerification {
 interface CandidateProjectMap {
   id: string;
   status: string;
+  mainStatus?: {
+    name: string;
+    label?: string;
+  };
   subStatus?: {
     name: string;
   };
@@ -338,7 +343,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
     candidateProject?.subStatus?.name === "verification_in_progress_document" ||
     candidateProject?.status === "verification_in_progress_document";
 
-  const shouldDisableItemVerification = isVerificationSent || isInScreeningOrTraining;
+  const isPipelineBlocked = isCandidateProjectPipelineBlocked(
+    candidateProject?.mainStatus?.name,
+  );
+
+  const shouldDisableItemVerification =
+    isVerificationSent || isInScreeningOrTraining || isPipelineBlocked;
 
   const canReuploadCandidateRowDoc = React.useCallback(
     (doc: DocsApiDocument) => {
@@ -749,7 +759,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" className="max-w-xs bg-red-50 border border-red-200 text-red-700 transform -translate-x-6">
                     <p className="font-semibold text-sm">Verification disabled</p>
-                    <p className="text-xs mt-1">The candidate is currently in screening/training status and cannot be sent for document verification yet.</p>
+                    <p className="text-xs mt-1">
+                      {isPipelineBlocked
+                        ? "This candidate's project is currently Withdrawn or On Hold. Pipeline actions are disabled."
+                        : "The candidate is currently in screening/training status and cannot be sent for document verification yet."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

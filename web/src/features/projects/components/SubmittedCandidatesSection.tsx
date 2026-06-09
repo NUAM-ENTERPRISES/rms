@@ -22,6 +22,7 @@ import {
   useGetProjectQuery,
 } from "@/features/projects";
 import CandidateCard from "./CandidateCard";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import {
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
@@ -255,8 +256,16 @@ export default function SubmittedCandidatesSection({
             if (!projectStatus) projectStatus = "nominated";
 
             // Only show verify button if status is 'nominated'
+            const mainStatusName =
+              candidate.mainStatus?.name ||
+              candidate.projectMainStatus?.name ||
+              undefined;
+            const isPipelineBlocked = isCandidateProjectPipelineBlocked(mainStatusName);
+
             const canSendForVerification =
-              pipelineOpen && projectStatus.toLowerCase() === "nominated";
+              pipelineOpen &&
+              projectStatus.toLowerCase() === "nominated" &&
+              !isPipelineBlocked;
 
             // Use candidateId if it exists, otherwise use id
             const actualCandidateId = candidate.candidateId || candidate.id;

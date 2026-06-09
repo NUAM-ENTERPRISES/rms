@@ -32,6 +32,8 @@ import { BulkCheckEligibilityDto } from './dto/bulk-check-eligibility.dto';
 import { BulkAssignCandidateProjectDto } from './dto/bulk-assign-candidate-project.dto';
 import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto } from './dto/project-overview-query.dto';
+import { CreateStatusChangeRequestDto } from './dto/create-status-change-request.dto';
+import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 
 @ApiTags('Candidate Projects')
@@ -181,6 +183,143 @@ export class CandidateProjectsController {
     return {
       success: true,
       data: result,
+    };
+  }
+
+  @Post('status-change-requests')
+  @HttpCode(HttpStatus.CREATED)
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Request candidate project status change',
+    description:
+      'Submit a Withdrawn or On Hold status change request for manager approval. Manager and Recruiter Manager roles apply the change immediately.',
+  })
+  @ApiResponse({ status: 201, description: 'Request created successfully' })
+  async createStatusChangeRequest(
+    @Body() dto: CreateStatusChangeRequestDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.createStatusChangeRequest(
+      dto.candidateProjectMapId,
+      dto,
+      req.user.sub,
+    );
+    const appliedDirectly =
+      result.status === 'approved' && result.reviewedBy === req.user.sub;
+    return {
+      success: true,
+      data: result,
+      message: appliedDirectly
+        ? 'Candidate project status updated successfully'
+        : 'Status change request submitted for approval',
+    };
+  }
+
+  @Get('status-change-requests/pending')
+  @Permissions('manage:projects', 'manage:candidates', 'read:candidates')
+  @ApiOperation({
+    summary: 'Get pending status change request',
+    description:
+      'Returns the active pending Withdrawn/On Hold request for a candidate project',
+  })
+  @ApiQuery({
+    name: 'candidateProjectMapId',
+    description: 'Candidate-Project Map ID',
+    required: true,
+  })
+  async getPendingStatusChangeRequest(
+    @Query('candidateProjectMapId') candidateProjectMapId: string,
+  ) {
+    const result =
+      await this.candidateProjectsService.getPendingStatusChangeRequest(
+        candidateProjectMapId,
+      );
+    return {
+      success: true,
+      data: result,
+      message: result
+        ? 'Pending status change request found'
+        : 'No pending status change request',
+    };
+  }
+
+  @Get('status-change-requests/history')
+  @Permissions('manage:projects', 'manage:candidates', 'read:candidates')
+  @ApiOperation({
+    summary: 'Get status change request history',
+    description:
+      'Returns paginated Withdrawn/On Hold request history for a candidate project',
+  })
+  @ApiQuery({
+    name: 'candidateProjectMapId',
+    description: 'Candidate-Project Map ID',
+    required: true,
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async getStatusChangeRequestHistory(
+    @Query('candidateProjectMapId') candidateProjectMapId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const result =
+      await this.candidateProjectsService.getStatusChangeRequestHistory(
+        candidateProjectMapId,
+        page ? parseInt(page, 10) : 1,
+        limit ? parseInt(limit, 10) : 10,
+      );
+    return {
+      success: true,
+      ...result,
+      message: 'Status change request history retrieved',
+    };
+  }
+
+  @Patch('status-change-requests/:requestId/approve')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Approve status change request',
+    description: 'Approve a pending Withdrawn/On Hold request and apply status',
+  })
+  @ApiParam({ name: 'requestId', description: 'Status change request ID' })
+  async approveStatusChangeRequest(
+    @Param('requestId') requestId: string,
+    @Body() dto: ReviewStatusChangeRequestDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.approveStatusChangeRequest(
+      requestId,
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Status change request approved',
+    };
+  }
+
+  @Patch('status-change-requests/:requestId/reject')
+  @Permissions('manage:projects', 'manage:candidates')
+  @ApiOperation({
+    summary: 'Reject status change request',
+    description: 'Reject a pending Withdrawn/On Hold request',
+  })
+  @ApiParam({ name: 'requestId', description: 'Status change request ID' })
+  async rejectStatusChangeRequest(
+    @Param('requestId') requestId: string,
+    @Body() dto: ReviewStatusChangeRequestDto,
+    @Request() req: any,
+  ) {
+    const result = await this.candidateProjectsService.rejectStatusChangeRequest(
+      requestId,
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Status change request rejected',
     };
   }
 
