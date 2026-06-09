@@ -37,10 +37,25 @@ export type OperationsFollowUpAssignment = {
   operationsCallAttempts?: number | null;
   operationsLastCallAt?: string | null;
   operationsStageEnteredAt?: string | null;
-  recruiter?: { id?: string };
+  recruiter?: { id?: string; name?: string };
   recruiterId?: string;
   isActive?: boolean;
 };
+
+export function getPrimaryRecruiterName(
+  assignments?: OperationsFollowUpAssignment[],
+): string {
+  const primary = assignments?.find(
+    (assignment) =>
+      assignment.isActive !== false &&
+      assignment.assignmentType != null &&
+      !OPERATIONS_HANDLER_ASSIGNMENT_TYPES.includes(
+        assignment.assignmentType as (typeof OPERATIONS_HANDLER_ASSIGNMENT_TYPES)[number],
+      ),
+  );
+
+  return primary?.recruiter?.name || "Unassigned";
+}
 
 export function getOperationsHandlerAssignment(
   assignments: OperationsFollowUpAssignment[] | undefined,

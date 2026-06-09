@@ -9,7 +9,7 @@ import {
   TransferCandidateModal,
   type TransferToRecruiterPayload,
 } from "@/components/molecules/TransferCandidateModal";
-import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation, useLogOperationsCallMutation } from "@/services/candidatesApi";
+import { useGetMyAssignedCandidatesQuery, useGetOperationsAssignedSummaryQuery, useGetOperationsReassignedCandidatesQuery, useGetUserCandidatesQuery, useMarkCandidateConvertedMutation, useTransferCandidateToRecruiterMutation, useLogOperationsCallMutation, useMarkOperationsNotInterestedMutation } from "@/services/candidatesApi";
 import { useAppSelector } from "@/app/hooks";
 
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ import {
   getDisplayedOperationsCallAttempts,
   getOperationsCallAttempts,
   getOperationsFollowUpStage,
+  getPrimaryRecruiterName,
   getOperationsStageWaitRemainingMs,
   isWaitingToMarkOperationsJunk,
   isWaitingToMoveToWeekTwo,
@@ -273,6 +274,8 @@ export default function OperationsDashboardPage() {
   const [markCandidateConverted, { isLoading: isConverting }] = useMarkCandidateConvertedMutation();
   const [transferCandidateToRecruiter, { isLoading: isTransferring }] = useTransferCandidateToRecruiterMutation();
   const [logOperationsCall, { isLoading: isLoggingCall }] = useLogOperationsCallMutation();
+  const [markOperationsNotInterested, { isLoading: isMarkingNotInterested }] =
+    useMarkOperationsNotInterestedMutation();
 
   const [callModalState, setCallModalState] = useState<{
     candidate: any;
@@ -458,6 +461,70 @@ export default function OperationsDashboardPage() {
       const message =
         (error as { data?: { message?: string } })?.data?.message ||
         "Failed to log call";
+      toast.error(message);
+    }
+  };
+
+  const handleInterestedReassign = async (
+    callPayload: { note: string; usedPhone: boolean; usedWhatsapp: boolean },
+    transferPayload: {
+      currentStatusId: number;
+      reason: string;
+      onHoldUntil?: string;
+      futureDate?: string;
+    },
+  ) => {
+    if (!callModalCandidate) return;
+
+    try {
+      const reason = callPayload.note.trim()
+        ? `${transferPayload.reason.trim()}\n\nContact note: ${callPayload.note.trim()}`
+        : transferPayload.reason.trim();
+
+      await transferCandidateToRecruiter({
+        id: callModalCandidate.id,
+        ...transferPayload,
+        reason,
+      }).unwrap();
+
+      toast.success("Candidate reassigned to recruiter");
+      setCallModalState(null);
+      setFilters((f) => ({ ...f, page: 1 }));
+      await Promise.all([
+        assignedCandidatesQuery.refetch(),
+        reassignedCandidatesQuery.refetch(),
+        createdCandidatesQuery.refetch(),
+        refetchSummary(),
+      ]);
+    } catch (error: unknown) {
+      const message =
+        (error as { data?: { message?: string } })?.data?.message ||
+        "Failed to reassign candidate";
+      toast.error(message);
+    }
+  };
+
+  const handleNotInterestedJunk = async (payload: {
+    note: string;
+    usedPhone: boolean;
+    usedWhatsapp: boolean;
+  }) => {
+    if (!callModalCandidate) return;
+
+    try {
+      await markOperationsNotInterested({
+        id: callModalCandidate.id,
+        ...payload,
+      }).unwrap();
+
+      toast.success("Candidate marked as not interested (junk)");
+      setCallModalState(null);
+      setFilters((f) => ({ ...f, page: 1 }));
+      await Promise.all([refetch(), refetchSummary()]);
+    } catch (error: unknown) {
+      const message =
+        (error as { data?: { message?: string } })?.data?.message ||
+        "Failed to mark candidate as junk";
       toast.error(message);
     }
   };
@@ -996,18 +1063,31 @@ export default function OperationsDashboardPage() {
                               </Tooltip>
 
                               {canLogOperationsCall(followUpStage, callAttempts) && statusFilter !== 'reassigned' && statusFilter !== 'junk' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 px-2 text-[11px] font-semibold border-slate-200"
-                                  disabled={isLoggingCall}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCallModalState({ candidate, mode: "log" });
-                                  }}
-                                >
-                                  Log Call
-                                </Button>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      className={cn(
+                                        "h-8 gap-1.5 px-2.5 text-[11px] font-semibold rounded-lg shadow-sm transition-all",
+                                        "bg-gradient-to-r from-emerald-600 to-green-600 text-white",
+                                        "border border-emerald-500/30",
+                                        "hover:from-emerald-700 hover:to-green-700 hover:shadow-md",
+                                        "disabled:opacity-60 disabled:pointer-events-none",
+                                      )}
+                                      disabled={isLoggingCall}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCallModalState({ candidate, mode: "log" });
+                                      }}
+                                    >
+                                      <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                      Call Update Status
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top">
+                                    <p className="text-xs">Log call outcome &amp; update status</p>
+                                  </TooltipContent>
+                                </Tooltip>
                               )}
 
                               {waitingForWeekTwo && statusFilter === "week_one" && (
@@ -1133,7 +1213,15 @@ export default function OperationsDashboardPage() {
             followUpStage={logCallFollowUpStage}
             canLog={!!canSubmitCallLog}
             isSubmitting={isLoggingCall}
+            isSubmittingReassign={isTransferring}
+            isSubmittingJunk={isMarkingNotInterested}
+            currentRecruiterName={getPrimaryRecruiterName(
+              callModalCandidate?.recruiterAssignments,
+            )}
+            currentStatus={callModalCandidate?.currentStatus?.statusName || "Unknown"}
             onConfirm={handleLogOperationsCall}
+            onReassign={handleInterestedReassign}
+            onMarkNotInterested={handleNotInterestedJunk}
           />
 
           <AdvancedFiltersSheet

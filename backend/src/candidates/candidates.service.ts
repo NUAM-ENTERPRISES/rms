@@ -2447,6 +2447,75 @@ export class CandidatesService {
     return { assignment: updatedAssignment };
   }
 
+  async markOperationsNotInterested(
+    candidateId: string,
+    operationsUserId: string,
+    dto: LogOperationsCallDto,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    const stage =
+      assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.JUNK) {
+      throw new BadRequestException('Candidate is already marked as junk.');
+    }
+
+    if (!dto.usedPhone && !dto.usedWhatsapp) {
+      throw new BadRequestException(
+        'Select at least one contact method: Phone or WhatsApp.',
+      );
+    }
+
+    const note = dto.note.trim();
+    const now = new Date();
+    const nextAttempt = assignment.operationsCallAttempts + 1;
+
+    return this.prisma.$transaction(async (tx) => {
+      const callLog = await tx.operationsCallLog.create({
+        data: {
+          candidateId,
+          assignmentId: assignment.id,
+          loggedById: operationsUserId,
+          attemptNumber: nextAttempt,
+          note,
+          usedPhone: dto.usedPhone,
+          usedWhatsapp: dto.usedWhatsapp,
+          followUpStage: stage,
+        },
+        include: {
+          loggedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      await tx.candidateRecruiterAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          operationsCallAttempts: nextAttempt,
+          operationsLastCallAt: now,
+        },
+      });
+
+      const updatedAssignment = await this.markAsJunkTx(
+        tx,
+        assignment.id,
+        candidateId,
+        now,
+      );
+
+      return {
+        assignment: updatedAssignment,
+        callLog,
+        markedJunk: true,
+      };
+    });
+  }
+
   async markOperationsJunk(
     candidateId: string,
     operationsUserId: string,

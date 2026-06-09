@@ -423,6 +423,37 @@ describe('CandidatesService — Operations follow-up', () => {
     });
   });
 
+  describe('markOperationsNotInterested', () => {
+    it('logs call and marks junk from initial stage', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+        operationsCallAttempts: 1,
+      });
+      mockPrismaService.operationsCallLog.create.mockResolvedValue({
+        id: 'log-1',
+        attemptNumber: 2,
+      });
+      mockPrismaService.candidateRecruiterAssignment.update.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      });
+      mockPrismaService.candidate.update.mockResolvedValue({});
+
+      const result = await service.markOperationsNotInterested(
+        candidateId,
+        operationsUserId,
+        logCallDto,
+      );
+
+      expect(result.markedJunk).toBe(true);
+      expect(result.assignment.operationsFollowUpStage).toBe(
+        OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      );
+      expect(mockPrismaService.operationsCallLog.create).toHaveBeenCalled();
+    });
+  });
+
   describe('markOperationsJunk', () => {
     it('marks candidate junk from week_two only', async () => {
       mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({

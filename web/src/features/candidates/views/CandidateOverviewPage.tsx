@@ -244,12 +244,18 @@ export default function CandidateOverviewPage() {
     resolveAssignment,
     isLoggingCall,
     handleLogOperationsCall,
+    handleInterestedReassign,
+    handleNotInterestedJunk,
     callModalCandidate,
     logCallAttempts,
     logCallNextAttempt,
     logCallFollowUpStage,
     canSubmitCallLog,
     logCallCandidateName,
+    logCallRecruiterName,
+    logCallCurrentStatus,
+    isTransferring: isOperationsTransferring,
+    isMarkingNotInterested,
     closeCallModal,
     callModalState,
   } = useOperationsCallModal({
@@ -1204,7 +1210,13 @@ export default function CandidateOverviewPage() {
         followUpStage={logCallFollowUpStage}
         canLog={!!canSubmitCallLog}
         isSubmitting={isLoggingCall}
+        isSubmittingReassign={isOperationsTransferring}
+        isSubmittingJunk={isMarkingNotInterested}
+        currentRecruiterName={logCallRecruiterName}
+        currentStatus={logCallCurrentStatus}
         onConfirm={handleLogOperationsCall}
+        onReassign={handleInterestedReassign}
+        onMarkNotInterested={handleNotInterestedJunk}
       />
     </div>
   );

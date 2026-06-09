@@ -851,6 +851,31 @@ export class CandidatesController {
     };
   }
 
+  @Post(':id/operations/mark-not-interested')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as not interested (junk)',
+    description:
+      'Log the contact attempt and immediately mark the candidate as junk when they are not interested',
+  })
+  async markOperationsNotInterested(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.markOperationsNotInterested(
+      id,
+      req.user.id,
+      body,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as not interested (junk) successfully',
+    };
+  }
+
   @Post(':id/operations/mark-junk')
   @Permissions('write:candidates')
   @ApiOperation({

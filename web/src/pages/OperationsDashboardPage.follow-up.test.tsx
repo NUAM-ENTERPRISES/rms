@@ -95,6 +95,7 @@ vi.mock("@/services/candidatesApi", () => ({
   useMarkCandidateConvertedMutation: () => [vi.fn(), { isLoading: false }],
   useTransferCandidateToRecruiterMutation: () => [vi.fn(), { isLoading: false }],
   useLogOperationsCallMutation: () => [vi.fn(), { isLoading: false }],
+  useMarkOperationsNotInterestedMutation: () => [vi.fn(), { isLoading: false }],
   useGetOperationsCallHistoryQuery: () => ({
     data: { data: [] },
     isLoading: false,

@@ -356,6 +356,28 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Candidate"],
     }),
+    markOperationsNotInterested: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          markedJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
+    >({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
+        url: `/candidates/${id}/operations/mark-not-interested`,
+        method: "POST",
+        body: { note, usedPhone, usedWhatsapp },
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
+      ],
+    }),
     assignToProject: builder.mutation<
       { success: boolean; data: any; message: string },
       { candidateId: string; projectId: string; roleNeededId?: string; recruiterId?: string; notes?: string }
@@ -507,6 +529,7 @@ export const {
   useMoveOperationsToWeekOneMutation,
   useMoveOperationsToWeekTwoMutation,
   useMarkOperationsJunkMutation,
+  useMarkOperationsNotInterestedMutation,
   useAssignToProjectMutation,
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,

@@ -1,11 +1,17 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useLogOperationsCallMutation } from "@/services/candidatesApi";
+import type { TransferToRecruiterPayload } from "@/components/molecules/TransferCandidateModal";
+import {
+  useLogOperationsCallMutation,
+  useMarkOperationsNotInterestedMutation,
+  useTransferCandidateToRecruiterMutation,
+} from "@/services/candidatesApi";
 import {
   canLogOperationsCall,
   getOperationsCallAttempts,
   getOperationsFollowUpStage,
   getOperationsHandlerAssignment,
+  getPrimaryRecruiterName,
   type OperationsFollowUpAssignment,
   type OperationsFollowUpStage,
 } from "@/features/candidates/utils/operations-follow-up.util";
@@ -14,6 +20,7 @@ type OperationsCallCandidate = {
   id: string;
   firstName?: string | null;
   lastName?: string | null;
+  currentStatus?: { statusName?: string };
   recruiterAssignments?: OperationsFollowUpAssignment[];
 };
 
@@ -30,6 +37,10 @@ export function useOperationsCallModal(options: {
   const [callModalState, setCallModalState] = useState<CallModalState>(null);
   const [logOperationsCall, { isLoading: isLoggingCall }] =
     useLogOperationsCallMutation();
+  const [transferCandidateToRecruiter, { isLoading: isTransferring }] =
+    useTransferCandidateToRecruiterMutation();
+  const [markOperationsNotInterested, { isLoading: isMarkingNotInterested }] =
+    useMarkOperationsNotInterestedMutation();
 
   const resolveAssignment = useCallback(
     (candidate: OperationsCallCandidate) =>
@@ -94,6 +105,91 @@ export function useOperationsCallModal(options: {
     [callModalState, closeCallModal, logOperationsCall, onLogged],
   );
 
+  const handleInterestedReassign = useCallback(
+    async (
+      callPayload: {
+        note: string;
+        usedPhone: boolean;
+        usedWhatsapp: boolean;
+      },
+      transferPayload: TransferToRecruiterPayload,
+    ) => {
+      if (!callModalState?.candidate.id) {
+        return;
+      }
+
+      try {
+        const reason = callPayload.note.trim()
+          ? `${transferPayload.reason.trim()}\n\nContact note: ${callPayload.note.trim()}`
+          : transferPayload.reason.trim();
+
+        await transferCandidateToRecruiter({
+          id: callModalState.candidate.id,
+          ...transferPayload,
+          reason,
+        }).unwrap();
+
+        toast.success("Candidate reassigned to recruiter");
+        closeCallModal();
+        onLogged?.();
+      } catch (error: unknown) {
+        const message =
+          error &&
+          typeof error === "object" &&
+          "data" in error &&
+          error.data &&
+          typeof error.data === "object" &&
+          "message" in error.data &&
+          typeof error.data.message === "string"
+            ? error.data.message
+            : "Failed to reassign candidate";
+        toast.error(message);
+      }
+    },
+    [
+      callModalState,
+      closeCallModal,
+      onLogged,
+      transferCandidateToRecruiter,
+    ],
+  );
+
+  const handleNotInterestedJunk = useCallback(
+    async (payload: {
+      note: string;
+      usedPhone: boolean;
+      usedWhatsapp: boolean;
+    }) => {
+      if (!callModalState?.candidate.id) {
+        return;
+      }
+
+      try {
+        await markOperationsNotInterested({
+          id: callModalState.candidate.id,
+          ...payload,
+        }).unwrap();
+
+        toast.success("Candidate marked as not interested (junk)");
+        closeCallModal();
+        onLogged?.();
+      } catch (error: unknown) {
+        const message =
+          error &&
+          typeof error === "object" &&
+          "data" in error &&
+          error.data &&
+          typeof error.data === "object" &&
+          "message" in error.data &&
+          typeof error.data.message === "string"
+            ? error.data.message
+            : "Failed to mark candidate as junk";
+        toast.error(message);
+      }
+    },
+    [callModalState, closeCallModal, markOperationsNotInterested, onLogged],
+  );
+
   const callModalCandidate = callModalState?.candidate;
   const assignment = callModalCandidate
     ? resolveAssignment(callModalCandidate)
@@ -109,6 +205,11 @@ export function useOperationsCallModal(options: {
     ? `${callModalCandidate.firstName || ""} ${callModalCandidate.lastName || ""}`.trim() ||
       "Selected candidate"
     : "";
+  const logCallRecruiterName = callModalCandidate
+    ? getPrimaryRecruiterName(callModalCandidate.recruiterAssignments)
+    : "Unassigned";
+  const logCallCurrentStatus =
+    callModalCandidate?.currentStatus?.statusName || "Unknown";
 
   return {
     callModalState,
@@ -117,12 +218,18 @@ export function useOperationsCallModal(options: {
     closeCallModal,
     resolveAssignment,
     isLoggingCall,
+    isTransferring,
+    isMarkingNotInterested,
     handleLogOperationsCall,
+    handleInterestedReassign,
+    handleNotInterestedJunk,
     callModalCandidate,
     logCallAttempts,
     logCallNextAttempt: logCallAttempts + 1,
     logCallFollowUpStage,
     canSubmitCallLog,
     logCallCandidateName,
+    logCallRecruiterName,
+    logCallCurrentStatus,
   };
 }
