@@ -51,6 +51,11 @@ export interface UserWithRoles {
     sectorScopes: string[];
     country?: { code: string; name: string } | null;
   }>;
+  userProfessionScopes?: Array<{
+    id: string;
+    professionTypeId: string;
+    professionType: { id: string; name: string; label: string };
+  }>;
 }
 
 export interface PaginatedUsersData {
@@ -73,6 +78,7 @@ export interface CreateUserRequest {
   addressCountryCode?: string;
   addressStateId?: string;
   address?: string;
+  professionTypeIds: string[];
 }
 
 export interface UpdateUserRequest {
@@ -86,6 +92,7 @@ export interface UpdateUserRequest {
   addressCountryCode?: string | null;
   addressStateId?: string | null;
   address?: string | null;
+  professionTypeIds?: string[];
 }
 
 export type LanguageProficiencyApi = "PRIMARY" | "SECONDARY" | "TERTIARY";

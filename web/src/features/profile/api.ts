@@ -38,6 +38,23 @@ export interface UserProfile {
     projectsCreated: number;
     documentsVerified: number;
   };
+  userProfessionScopes?: Array<{
+    id: string;
+    professionTypeId: string;
+    professionType: { id: string; name: string; label: string };
+  }>;
+  userLanguages?: Array<{
+    id: string;
+    languageCode: string;
+    proficiency: string;
+    language?: { code: string; name: string } | null;
+  }>;
+  userCountryCoverages?: Array<{
+    id: string;
+    countryCode: string;
+    sectorScopes: string[];
+    country?: { code: string; name: string } | null;
+  }>;
 }
 
 export interface LoginSession {

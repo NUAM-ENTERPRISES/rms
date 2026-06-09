@@ -35,7 +35,12 @@ import {
   Flag,
   MapPinned,
   MapPin,
+  Briefcase,
+  Languages,
+  Globe2,
 } from "lucide-react";
+import { ProfessionCoverageBadges } from "@/components/molecules";
+import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
 import { format } from "date-fns";
 import {
   useGetProfileQuery,
@@ -190,6 +195,19 @@ export default function ProfilePage() {
       return "Invalid date";
     }
   };
+
+  const showRecruiterCapabilities = Boolean(
+    userData?.roles?.some((role) => roleNameHasRecruiterCapabilities(role)),
+  );
+
+  const formatSectorScopeLabel = (scope: string) => {
+    if (scope === "HEALTHCARE") return "Healthcare";
+    if (scope === "NON_HEALTH_CARE") return "Non-healthcare";
+    return scope.replace(/_/g, " ");
+  };
+
+  const formatProficiencyLabel = (p: string) =>
+    p.charAt(0) + p.slice(1).toLowerCase();
 
   const formatDateTime = (dateString: string) => {
     try {
@@ -754,6 +772,134 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                      <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                        <Briefcase size={16} color="#4f46e5" />
+                      </div>
+                      <div>
+                        <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
+                          Profession Coverage
+                        </h3>
+                        <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>
+                          Candidate profession types you handle
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-divider" style={{ marginBottom: "1rem" }} />
+                    <ProfessionCoverageBadges
+                      scopes={userData.userProfessionScopes}
+                      emptyMessage="No profession coverage assigned."
+                    />
+                  </div>
+
+                  {showRecruiterCapabilities && (
+                    <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: "1.25rem" }}>
+                        <div className="p-section-icon" style={{ background: "#eef2ff" }}>
+                          <Languages size={16} color="#4f46e5" />
+                        </div>
+                        <div>
+                          <h3 style={{ color: "#111827", fontWeight: 700, fontSize: "0.95rem", margin: 0 }}>
+                            Languages &amp; Country Coverage
+                          </h3>
+                          <p style={{ color: "#9ca3af", fontSize: "0.76rem", margin: 0 }}>
+                            Shown for Recruiter and Manager roles
+                          </p>
+                        </div>
+                      </div>
+                      <div className="p-divider" style={{ marginBottom: "1rem" }} />
+
+                      <p className="p-field-label">Languages</p>
+                      {(userData.userLanguages?.length ?? 0) > 0 ? (
+                        <ul style={{ margin: "0 0 1rem", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                          {userData.userLanguages!.map((row) => (
+                            <li
+                              key={row.id}
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                alignItems: "center",
+                                gap: 8,
+                                borderRadius: 10,
+                                border: "1px solid #f3f4f6",
+                                background: "#f9fafb",
+                                padding: "10px 12px",
+                                fontSize: "0.84rem",
+                              }}
+                            >
+                              <span style={{ fontWeight: 600, color: "#111827" }}>
+                                {row.language?.name ?? row.languageCode}
+                              </span>
+                              <span
+                                style={{
+                                  background: "#eef2ff",
+                                  color: "#4f46e5",
+                                  borderRadius: 6,
+                                  padding: "2px 8px",
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {formatProficiencyLabel(row.proficiency)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p style={{ color: "#9ca3af", fontSize: "0.84rem", margin: "0 0 1rem" }}>
+                          No languages on file.
+                        </p>
+                      )}
+
+                      <p className="p-field-label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Globe2 size={13} color="#9ca3af" />
+                        Country Coverage
+                      </p>
+                      {(userData.userCountryCoverages?.length ?? 0) > 0 ? (
+                        <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                          {userData.userCountryCoverages!.map((row) => (
+                            <li
+                              key={row.id}
+                              style={{
+                                borderRadius: 10,
+                                border: "1px solid #f3f4f6",
+                                background: "#f9fafb",
+                                padding: "10px 12px",
+                                fontSize: "0.84rem",
+                              }}
+                            >
+                              <span style={{ fontWeight: 600, color: "#111827" }}>
+                                {row.country?.name ?? row.countryCode}
+                              </span>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                                {row.sectorScopes?.map((scope) => (
+                                  <span
+                                    key={scope}
+                                    style={{
+                                      background: "#f3f4f6",
+                                      color: "#374151",
+                                      borderRadius: 6,
+                                      padding: "2px 8px",
+                                      fontSize: "0.72rem",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {formatSectorScopeLabel(scope)}
+                                  </span>
+                                ))}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p style={{ color: "#9ca3af", fontSize: "0.84rem", margin: 0 }}>
+                          No country coverage on file.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Login Sessions (shown on Personal tab too) */}
                   <div className="p-card" style={{ marginTop: "1.25rem", padding: "1.5rem" }}>

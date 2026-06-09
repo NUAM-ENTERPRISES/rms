@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DeleteConfirmationDialog } from "@/components/ui";
+import { ProfessionCoverageBadges } from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -298,6 +299,9 @@ export default function UsersPage() {
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider">
                       Roles
                     </TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden lg:table-cell">
+                      Profession Coverage
+                    </TableHead>
                     <TableHead className="font-semibold text-slate-600 text-xs uppercase tracking-wider hidden xl:table-cell">
                       Rating
                     </TableHead>
@@ -408,6 +412,20 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="py-3 hidden xl:table-cell">
                         <UserRatingCell userId={user.id} userRoles={user.userRoles} />
+                      </TableCell>
+                      <TableCell className="py-3 hidden lg:table-cell">
+                        <div className="flex gap-1 flex-wrap">
+                          {user.userProfessionScopes && user.userProfessionScopes.length > 0 ? (
+                            <ProfessionCoverageBadges
+                              scopes={user.userProfessionScopes}
+                              emptyMessage="-"
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              None
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3 hidden lg:table-cell">
                         <span className="text-sm text-slate-500">

@@ -138,6 +138,10 @@ const createUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+
+  professionTypeIds: z
+    .array(z.string())
+    .min(1, "Select at least one profession type"),
 };
 
 /** When `isRecruiterRole` is true, recruiter language & country rows are validated (mirrors backend rules). */
@@ -217,6 +221,10 @@ const updateUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+
+  professionTypeIds: z
+    .array(z.string())
+    .min(1, "Select at least one profession type"),
 };
 
 /** When true, validates recruiter language / country rows (Recruiter & Manager forms). */
@@ -265,6 +273,7 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  professionTypeIds: [],
 };
 
 // Default values for update user form
@@ -281,4 +290,5 @@ export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  professionTypeIds: [],
 };

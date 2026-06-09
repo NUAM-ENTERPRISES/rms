@@ -19,6 +19,7 @@ import {
   RoleSelect,
   ProfileImageUpload,
   PhysicalAddressFields,
+  ProfessionTypeMultiSelect,
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
 import {
@@ -82,6 +83,7 @@ export default function EditUserPage() {
     defaultValues: {
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
+      professionTypeIds: [],
     },
   });
 
@@ -164,6 +166,9 @@ export default function EditUserPage() {
           countryCode: uc.countryCode,
           sectorScopes: [...(uc.sectorScopes as RecruiterSectorScopeValue[])],
         })),
+        professionTypeIds: (user.userProfessionScopes ?? []).map(
+          (scope) => scope.professionTypeId,
+        ),
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -260,6 +265,7 @@ export default function EditUserPage() {
           ? data.addressStateId.trim()
           : null,
         address: data.address?.trim() ? data.address.trim() : null,
+        professionTypeIds: data.professionTypeIds,
       };
 
       console.log("Edit User - Form Data:", formData);
@@ -697,6 +703,22 @@ export default function EditUserPage() {
                       />
                     );
                   }}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Controller
+                  name="professionTypeIds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <ProfessionTypeMultiSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      required
+                      disabled={isUpdating}
+                      error={form.formState.errors.professionTypeIds?.message}
+                    />
+                  )}
                 />
               </div>
             </CardContent>

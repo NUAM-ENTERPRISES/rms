@@ -18,6 +18,15 @@ export interface UserWithRoles {
       description?: string;
     };
   }>;
+  userProfessionScopes?: Array<{
+    id: string;
+    professionTypeId: string;
+    professionType: {
+      id: string;
+      name: string;
+      label: string;
+    };
+  }>;
 }
 
 export interface PaginatedUsers {

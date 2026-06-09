@@ -38,7 +38,11 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteConfirmationDialog } from "@/components/ui";
-import { UpdatePasswordDialog, ImageViewer } from "@/components/molecules";
+import {
+  UpdatePasswordDialog,
+  ImageViewer,
+  ProfessionCoverageBadges,
+} from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -500,6 +504,17 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   )}
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                      Profession Coverage
+                    </p>
+                    <ProfessionCoverageBadges
+                      scopes={user.userProfessionScopes}
+                      emptyMessage="No profession coverage assigned."
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-slate-200">
