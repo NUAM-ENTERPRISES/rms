@@ -5,9 +5,9 @@ import {
   formatOperationsCallCountLabel,
   getDisplayedOperationsCallAttempts,
   getOperationsCallAttempts,
+  getOperationsCallPillClassName,
   getOperationsFollowUpStage,
   OPERATIONS_FOLLOW_UP_STAGE,
-  OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
   type OperationsFollowUpAssignment,
 } from "@/features/candidates/utils/operations-follow-up.util";
 
@@ -54,16 +54,7 @@ export function OperationsCallFollowUpIndicators({
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
-            followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL &&
-              displayedCallAttempts >= OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
-              ? "border-violet-200 bg-violet-50 text-violet-700"
-              : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO
-              ? "border-amber-200 bg-amber-50 text-amber-700"
-              : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE
-              ? "border-violet-200 bg-violet-50 text-violet-700"
-              : displayedCallAttempts > 0
-              ? "border-amber-200 bg-amber-50 text-amber-700"
-              : "border-blue-200 bg-blue-50 text-blue-700",
+            getOperationsCallPillClassName(followUpStage, displayedCallAttempts),
           )}
         >
           <Phone className="h-2.5 w-2.5 shrink-0 opacity-80" aria-hidden />

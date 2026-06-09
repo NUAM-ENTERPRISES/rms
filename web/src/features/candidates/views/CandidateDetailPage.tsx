@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Calendar,
 } from "lucide-react";
+import { useAppSelector } from "@/app/hooks";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
@@ -47,6 +48,10 @@ import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { OperationsReassignedHandoffBadge } from "@/components/molecules/OperationsReassignedHandoffBadge";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
+import {
+  canRecruiterManageCandidatePipeline,
+  getRecruiterLockedRnrBlockReason,
+} from "../utils/recruiter-candidate-pipeline.util";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -131,6 +136,24 @@ export default function CandidateDetailPage() {
   const hasLegacyCreRole = useHasRole("CRE");
   const isOperations = hasOperationsRole || hasLegacyCreRole;
   const canWriteCandidates = useCan("write:candidates") && !isOperations;
+  const { user } = useAppSelector((state) => state.auth);
+  const isRecruiterPipelineUser =
+    user?.roles?.includes("Recruiter") ||
+    user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR);
+  const isLeadership =
+    user?.roles?.some((role) =>
+      [
+        "CEO",
+        "Director",
+        "Manager",
+        "Recruiter Manager",
+        "Team Head",
+        "Team Lead",
+        "Admin",
+        "SuperAdmin",
+        "System Admin",
+      ].includes(role),
+    ) ?? false;
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -305,6 +328,23 @@ export default function CandidateDetailPage() {
   }
 
   const operations = getCandidateOperationsState(candidate);
+  const isRecruiterRnrStatusLocked =
+    Boolean(
+      candidate &&
+        isRecruiterPipelineUser &&
+        !isLeadership &&
+        !isOperations &&
+        canWriteCandidates &&
+        !canRecruiterManageCandidatePipeline(candidate),
+    );
+
+  const handleStatusClick = () => {
+    if (isRecruiterRnrStatusLocked) {
+      toast.error(getRecruiterLockedRnrBlockReason());
+      return;
+    }
+    setIsStatusModalOpen(true);
+  };
 
   // isOnHold: check candidate status directly (instant, no waiting on pipeline)
   const isOnHold =
@@ -401,9 +441,16 @@ export default function CandidateDetailPage() {
 
   {/* Status (RIGHT - Clickable) */}
   <div
-    onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer group ml-4 mb-6"
-    title="Click to update status"
+    onClick={handleStatusClick}
+    className={cn(
+      "group ml-4 mb-6",
+      isRecruiterRnrStatusLocked ? "cursor-not-allowed" : "cursor-pointer",
+    )}
+    title={
+      isRecruiterRnrStatusLocked
+        ? getRecruiterLockedRnrBlockReason()
+        : "Click to update status"
+    }
   >
     {isOnHold ? (
       <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">

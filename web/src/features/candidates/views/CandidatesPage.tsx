@@ -70,8 +70,7 @@ import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
 import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
 import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
 import {
-  canLogOperationsCall,
-  getOperationsCallAttempts,
+  canOpenOperationsCallModal,
   getOperationsFollowUpStage,
 } from "../utils/operations-follow-up.util";
 
@@ -322,7 +321,8 @@ export default function CandidatesPage() {
     logCallAttempts,
     logCallNextAttempt,
     logCallFollowUpStage,
-    canSubmitCallLog,
+    canOpenCallModal,
+    canLogNoAnswerCall,
     logCallCandidateName,
     logCallRecruiterName,
     logCallCurrentStatus,
@@ -1211,10 +1211,9 @@ export default function CandidatesPage() {
                           operations.isHandledByOperations ||
                           canReadOperationsCallHistory);
                       const followUpStage = getOperationsFollowUpStage(operationsAssignment);
-                      const callAttempts = getOperationsCallAttempts(operationsAssignment);
                       const canLogCall =
                         isOperationsUser &&
-                        canLogOperationsCall(followUpStage, callAttempts);
+                        canOpenOperationsCallModal(followUpStage);
 
                       return (
                         <TableRow
@@ -1588,7 +1587,8 @@ export default function CandidatesPage() {
         callAttempts={logCallAttempts}
         nextAttempt={logCallNextAttempt}
         followUpStage={logCallFollowUpStage}
-        canLog={!!canSubmitCallLog}
+        canLog={!!canOpenCallModal}
+        canLogNoAnswer={!!canLogNoAnswerCall}
         isSubmitting={isLoggingCall}
         isSubmittingReassign={isOperationsTransferring}
         isSubmittingJunk={isMarkingNotInterested}

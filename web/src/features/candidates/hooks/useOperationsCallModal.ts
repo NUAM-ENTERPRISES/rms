@@ -7,7 +7,8 @@ import {
   useTransferCandidateToRecruiterMutation,
 } from "@/services/candidatesApi";
 import {
-  canLogOperationsCall,
+  canLogNoAnswerOperationsCall,
+  canOpenOperationsCallModal,
   getOperationsCallAttempts,
   getOperationsFollowUpStage,
   getOperationsHandlerAssignment,
@@ -81,8 +82,10 @@ export function useOperationsCallModal(options: {
 
         if (result.data?.markedJunk) {
           toast.success("Call logged — candidate marked as junk");
-        } else if (result.data?.autoAdvancedToWeekOne) {
-          toast.success("Call logged — moved to 1 Week follow-up automatically");
+        } else if (result.data?.startedWeekOneWait) {
+          toast.success(
+            "Call logged — 1 Week follow-up starts after the waiting period",
+          );
         } else {
           toast.success("Call logged successfully");
         }
@@ -168,7 +171,11 @@ export function useOperationsCallModal(options: {
           ...payload,
         }).unwrap();
 
-        toast.success("Candidate marked as not interested (junk)");
+        if (result.data?.alreadyJunk) {
+          toast.success("Call logged — candidate remains junk");
+        } else {
+          toast.success("Candidate marked as not interested (junk)");
+        }
         closeCallModal();
         onLogged?.();
       } catch (error: unknown) {
@@ -196,9 +203,12 @@ export function useOperationsCallModal(options: {
   const logCallFollowUpStage: OperationsFollowUpStage =
     getOperationsFollowUpStage(assignment);
   const followUpStage = logCallFollowUpStage;
-  const canSubmitCallLog =
+  const canOpenCallModal =
     callModalState?.mode === "log" &&
-    canLogOperationsCall(followUpStage, logCallAttempts);
+    canOpenOperationsCallModal(followUpStage);
+  const canLogNoAnswerCall =
+    callModalState?.mode === "log" &&
+    canLogNoAnswerOperationsCall(followUpStage, logCallAttempts);
   const logCallCandidateName = callModalCandidate
     ? `${callModalCandidate.firstName || ""} ${callModalCandidate.lastName || ""}`.trim() ||
       "Selected candidate"
@@ -225,7 +235,9 @@ export function useOperationsCallModal(options: {
     logCallAttempts,
     logCallNextAttempt: logCallAttempts + 1,
     logCallFollowUpStage,
-    canSubmitCallLog,
+    canOpenCallModal,
+    canLogNoAnswerCall,
+    canSubmitCallLog: canOpenCallModal,
     logCallCandidateName,
     logCallRecruiterName,
     logCallCurrentStatus,

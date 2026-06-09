@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  canLogNoAnswerOperationsCall,
   canLogOperationsCall,
   canMarkOperationsJunk,
   canMoveToWeekOne,
   canMoveToWeekTwo,
+  canOpenOperationsCallModal,
   formatOperationsCallCountLabel,
+  formatOperationsWeekOneFollowUpAt,
   formatOperationsWaitRemaining,
   getDisplayedOperationsCallAttempts,
   getOperationsCallAttempts,
@@ -12,6 +15,10 @@ import {
   getOperationsHandlerAssignment,
   getOperationsStageWaitRemainingMs,
   hasOperationsStageWaitElapsed,
+  isEligibleForWeekOneDashboardBucket,
+  isPrematureWeekOneAssignment,
+  isWaitingBeforeWeekOneBucket,
+  isWaitingToAdvanceToWeekOne,
   isWaitingToMarkOperationsJunk,
   isWaitingToMoveToWeekTwo,
   OPERATIONS_FOLLOW_UP_STAGE,
@@ -31,13 +38,76 @@ describe("operations-follow-up.util", () => {
     );
   });
 
-  it("allows logging in initial (before 3), week_one, and week_two", () => {
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 0)).toBe(true);
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 2)).toBe(true);
+  it("allows opening call modal except junk", () => {
+    expect(canOpenOperationsCallModal(OPERATIONS_FOLLOW_UP_STAGE.INITIAL)).toBe(true);
+    expect(canOpenOperationsCallModal(OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE)).toBe(true);
+    expect(canOpenOperationsCallModal(OPERATIONS_FOLLOW_UP_STAGE.JUNK)).toBe(true);
+  });
+
+  it("allows no-answer logging in initial (before 3), week_one, and week_two", () => {
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 0)).toBe(true);
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 2)).toBe(true);
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 3)).toBe(false);
     expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.INITIAL, 3)).toBe(false);
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE, 0)).toBe(true);
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO, 5)).toBe(true);
-    expect(canLogOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.JUNK, 0)).toBe(false);
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE, 0)).toBe(true);
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO, 5)).toBe(true);
+    expect(canLogNoAnswerOperationsCall(OPERATIONS_FOLLOW_UP_STAGE.JUNK, 0)).toBe(false);
+  });
+
+  it("detects premature week_one assignments still in untouched bucket", () => {
+    expect(
+      isPrematureWeekOneAssignment({
+        operationsFollowUpStage: "week_one",
+        operationsCallAttempts: 0,
+        operationsLastCallAt: thirtySecondsAgo,
+        operationsStageEnteredAt: thirtySecondsAgo,
+      }),
+    ).toBe(true);
+    expect(
+      isEligibleForWeekOneDashboardBucket({
+        operationsFollowUpStage: "week_one",
+        operationsCallAttempts: 0,
+        operationsLastCallAt: thirtySecondsAgo,
+        operationsStageEnteredAt: thirtySecondsAgo,
+      }),
+    ).toBe(false);
+    expect(
+      isEligibleForWeekOneDashboardBucket({
+        operationsFollowUpStage: "week_one",
+        operationsCallAttempts: 1,
+        operationsLastCallAt: thirtySecondsAgo,
+        operationsStageEnteredAt: twoMinutesAgo,
+      }),
+    ).toBe(true);
+  });
+
+  it("tracks initial 3/3 wait before week_one bucket", () => {
+    expect(
+      isWaitingToAdvanceToWeekOne(
+        OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+        OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+        thirtySecondsAgo,
+        nowMs,
+      ),
+    ).toBe(true);
+    expect(
+      isWaitingToAdvanceToWeekOne(
+        OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+        thirtySecondsAgo,
+        nowMs,
+      ),
+    ).toBe(false);
+    expect(
+      isWaitingBeforeWeekOneBucket(
+        {
+          operationsFollowUpStage: "initial",
+          operationsCallAttempts: 3,
+          operationsStageEnteredAt: thirtySecondsAgo,
+        },
+        nowMs,
+      ),
+    ).toBe(true);
   });
 
   it("caps displayed call attempts only in initial stage", () => {
@@ -92,6 +162,12 @@ describe("operations-follow-up.util", () => {
         nowMs,
       ),
     ).toBe(true);
+  });
+
+  it("formats 1-week follow-up target date", () => {
+    expect(
+      formatOperationsWeekOneFollowUpAt("2026-06-01T00:00:00.000Z"),
+    ).toMatch(/Jun 2026/);
   });
 
   it("formats remaining wait time", () => {

@@ -153,7 +153,7 @@ describe('CandidatesService — Operations follow-up', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('auto-advances to week_one on the 3rd initial call', async () => {
+    it('starts the 1-week wait on the 3rd initial call without advancing stage', async () => {
       mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
         ...baseAssignment,
         operationsCallAttempts: 2,
@@ -170,8 +170,8 @@ describe('CandidatesService — Operations follow-up', () => {
         })
         .mockResolvedValueOnce({
           ...baseAssignment,
-          operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
-          operationsCallAttempts: 0,
+          operationsCallAttempts: 3,
+          operationsStageEnteredAt: new Date('2026-06-01T00:00:00.000Z'),
         });
       mockPrismaService.candidate.update.mockResolvedValue({});
 
@@ -181,12 +181,13 @@ describe('CandidatesService — Operations follow-up', () => {
         logCallDto,
       );
 
-      expect((result as { autoAdvancedToWeekOne?: boolean }).autoAdvancedToWeekOne).toBe(
+      expect((result as { startedWeekOneWait?: boolean }).startedWeekOneWait).toBe(
         true,
       );
       expect(result.assignment.operationsFollowUpStage).toBe(
-        OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
       );
+      expect(result.assignment.operationsCallAttempts).toBe(3);
     });
 
     it('allows unlimited logging in week_one stage', async () => {
@@ -448,7 +449,7 @@ describe('CandidatesService — Operations follow-up', () => {
         logCallDto,
       );
 
-      expect(result.markedJunk).toBe(true);
+      expect((result as { markedJunk?: boolean }).markedJunk).toBe(true);
       expect(result.assignment.operationsFollowUpStage).toBe(
         OPERATIONS_FOLLOW_UP_STAGE.JUNK,
       );
@@ -459,6 +460,36 @@ describe('CandidatesService — Operations follow-up', () => {
           }),
         }),
       );
+    });
+
+    it('logs callback for junk candidates without re-marking junk', async () => {
+      mockPrismaService.candidateRecruiterAssignment.findFirst.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+        operationsCallAttempts: 2,
+      });
+      mockPrismaService.operationsCallLog.create.mockResolvedValue({
+        id: 'log-junk-callback',
+        attemptNumber: 3,
+      });
+      mockPrismaService.candidateRecruiterAssignment.update.mockResolvedValue({
+        ...baseAssignment,
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+        operationsCallAttempts: 3,
+      });
+      mockPrismaService.candidate.update.mockResolvedValue({});
+
+      const result = await service.markOperationsNotInterested(
+        candidateId,
+        operationsUserId,
+        logCallDto,
+      );
+
+      expect((result as { alreadyJunk?: boolean }).alreadyJunk).toBe(true);
+      expect(result.assignment.operationsFollowUpStage).toBe(
+        OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      );
+      expect(result.assignment.operationsCallAttempts).toBe(3);
     });
   });
 
@@ -512,8 +543,11 @@ describe('CandidatesService — Operations follow-up', () => {
   });
 
   describe('sweepOperationsFollowUp', () => {
-    it('advances overdue week_one assignments and marks overdue week_two as junk', async () => {
+    it('advances overdue initial 3/3 to week_one, week_one to week_two, and marks overdue week_two as junk', async () => {
       mockPrismaService.candidateRecruiterAssignment.findMany
+        .mockResolvedValueOnce([
+          { id: 'assignment-initial', candidateId: 'candidate-initial' },
+        ])
         .mockResolvedValueOnce([
           { id: 'assignment-week-one', candidateId: 'candidate-week-one' },
         ])
@@ -525,6 +559,7 @@ describe('CandidatesService — Operations follow-up', () => {
 
       const result = await service.sweepOperationsFollowUp();
 
+      expect(result.initialAdvancedToWeekOne).toBe(1);
       expect(result.weekOneAdvanced).toBe(1);
       expect(result.weekTwoJunked).toBe(1);
       expect(mockPrismaService.candidateRecruiterAssignment.update).toHaveBeenCalled();
@@ -557,6 +592,22 @@ describe('CandidatesService — Operations follow-up', () => {
             {
               assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
               operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+              operationsCallAttempts: 1,
+              operationsLastCallAt: new Date('2026-06-01T00:00:00.000Z'),
+              operationsStageEnteredAt: new Date('2026-06-01T00:00:00.000Z'),
+            },
+          ],
+        },
+        {
+          isJunk: false,
+          currentStatus: { statusName: 'untouched' },
+          recruiterAssignments: [
+            {
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+              operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+              operationsCallAttempts: 0,
+              operationsLastCallAt: new Date('2026-06-08T00:00:00.000Z'),
+              operationsStageEnteredAt: new Date('2026-06-08T00:00:00.000Z'),
             },
           ],
         },
@@ -585,7 +636,8 @@ describe('CandidatesService — Operations follow-up', () => {
 
       const summary = await service.getCREAssignedSummary(operationsUserId);
 
-      expect(summary.total).toBe(1);
+      expect(summary.total).toBe(2);
+      expect(summary.roleCounters.untouched).toBe(2);
       expect(summary.roleCounters.weekOne).toBe(1);
       expect(summary.roleCounters.weekTwo).toBe(1);
       expect(summary.roleCounters.junk).toBe(1);

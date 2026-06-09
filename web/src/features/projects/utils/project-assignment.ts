@@ -79,20 +79,33 @@ export function isCandidatePositiveForAssignment(statusLabel: string): boolean {
   return (POSITIVE_ASSIGNMENT_STATUSES as readonly string[]).includes(key);
 }
 
+export type CandidateAssignmentBlockOptions = {
+  isCREReassigned?: boolean;
+};
+
 /** User-facing reason when assignment is blocked by candidate status. */
-export function getCandidateAssignmentBlockReason(statusLabel: string): string | null {
+export function getCandidateAssignmentBlockReason(
+  statusLabel: string,
+  options?: CandidateAssignmentBlockOptions,
+): string | null {
   const label = String(statusLabel || "").trim();
   if (!label || isCandidatePositiveForAssignment(label)) {
     return null;
   }
 
   const key = normalizeCandidateStatusKey(label);
+  if (key === "rnr" && !options?.isCREReassigned) {
+    return "This candidate is in RNR and is with Operations. You can assign them only after Operations reassigns them back to you.";
+  }
+  if (key === "rnr" && options?.isCREReassigned) {
+    return "Candidate is still in RNR status. Update status to Interested, Future, or On Hold before assigning to a project.";
+  }
+
   const byStatus: Record<string, string> = {
     call_back:
       "Candidate is scheduled for a callback. Update status to Interested, Future, or On Hold before assigning to a project.",
     callback:
       "Candidate is scheduled for a callback. Update status to Interested, Future, or On Hold before assigning to a project.",
-    rnr: "Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.",
     untouched:
       "Candidate has not been contacted yet. Update status before assigning to a project.",
     not_interested:

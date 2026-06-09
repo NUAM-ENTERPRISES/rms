@@ -134,6 +134,60 @@ export function hasOperationsStageWaitElapsed(
   return getOperationsStageWaitRemainingMs(stageEnteredAt, requiredWaitMs, nowMs) === 0;
 }
 
+export type OperationsFollowUpAssignmentFields = {
+  operationsFollowUpStage?: string | null;
+  operationsCallAttempts?: number | null;
+  operationsLastCallAt?: Date | string | null;
+  operationsStageEnteredAt?: Date | string | null;
+};
+
+/** Legacy/immediate week_one advance: entered before 7 days elapsed since last call. */
+export function isPrematureWeekOneAssignment(
+  assignment: OperationsFollowUpAssignmentFields,
+): boolean {
+  if (
+    (assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL) !==
+    OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE
+  ) {
+    return false;
+  }
+  if ((assignment.operationsCallAttempts ?? 0) > 0) {
+    return false;
+  }
+  const lastCallAt = assignment.operationsLastCallAt;
+  const enteredAt = assignment.operationsStageEnteredAt;
+  if (!lastCallAt || !enteredAt) {
+    return false;
+  }
+  const gapMs =
+    new Date(enteredAt).getTime() - new Date(lastCallAt).getTime();
+  return gapMs < OPERATIONS_WEEK_ONE_WAIT_MS;
+}
+
+export function isEligibleForWeekOneDashboardBucket(
+  assignment: OperationsFollowUpAssignmentFields,
+): boolean {
+  if (
+    (assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL) !==
+    OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE
+  ) {
+    return false;
+  }
+  return !isPrematureWeekOneAssignment(assignment);
+}
+
+/** Untouched / assigned tile: initial stage or still waiting before 1-week bucket. */
+export function isAssignedUntouchedDashboardBucket(
+  assignment: OperationsFollowUpAssignmentFields,
+): boolean {
+  const stage =
+    assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+  if (stage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+    return true;
+  }
+  return isPrematureWeekOneAssignment(assignment);
+}
+
 /** Normalize legacy DB value `agents` to canonical `agent`. */
 export function normalizeCandidateSource(
   source: string | null | undefined,

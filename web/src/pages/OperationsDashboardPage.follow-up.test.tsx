@@ -25,6 +25,19 @@ const baseCandidate = {
   ],
 };
 
+const junkCandidate = {
+  ...baseCandidate,
+  id: "candidate-junk",
+  isJunk: true,
+  recruiterAssignments: [
+    {
+      ...baseCandidate.recruiterAssignments[0],
+      operationsFollowUpStage: "junk",
+      operationsCallAttempts: 1,
+    },
+  ],
+};
+
 const weekOneCandidate = {
   ...baseCandidate,
   id: "candidate-2",
@@ -115,11 +128,37 @@ describe("OperationsDashboardPage follow-up workflow", () => {
     expect(screen.getAllByText("1").length).toBeGreaterThan(0);
   });
 
-  it("shows Log Call button for initial-stage candidates", () => {
+  it("shows Call Update Status for initial-stage candidates", () => {
     render(<OperationsDashboardPage />);
 
-    expect(screen.getByRole("button", { name: "Log Call" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Call Update Status" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("0/3 calls")).toBeInTheDocument();
+  });
+
+  it("shows Call Update Status during the 1-week wait after 3/3 calls", () => {
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    assignedCandidates = [
+      {
+        ...baseCandidate,
+        recruiterAssignments: [
+          {
+            ...baseCandidate.recruiterAssignments[0],
+            operationsCallAttempts: 3,
+            operationsStageEnteredAt: twoDaysAgo,
+          },
+        ],
+      },
+    ];
+
+    render(<OperationsDashboardPage />);
+
+    expect(screen.getByText("3/3 calls")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Call Update Status" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1 Week follow-up on/i)).toBeInTheDocument();
   });
 
   it("switches to week_one filter when 1 Week tile is clicked", () => {
@@ -129,12 +168,24 @@ describe("OperationsDashboardPage follow-up workflow", () => {
     expect(screen.getByText("1 Week Follow-up Candidates")).toBeInTheDocument();
   });
 
-  it("shows Log Call for week_one candidates", () => {
+  it("shows Call Update Status for junk candidates", () => {
+    assignedCandidates = [junkCandidate];
+    render(<OperationsDashboardPage />);
+
+    fireEvent.click(screen.getByText("Junk Candidates"));
+    expect(
+      screen.getByRole("button", { name: "Call Update Status" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows Call Update Status for week_one candidates", () => {
     assignedCandidates = [weekOneCandidate];
     render(<OperationsDashboardPage />);
 
     fireEvent.click(screen.getByText("1 Week Follow-up"));
-    expect(screen.getByRole("button", { name: "Log Call" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Call Update Status" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("2 calls")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Move to 1 Week" })).not.toBeInTheDocument();
   });

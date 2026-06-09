@@ -45,6 +45,13 @@ describe("project-assignment", () => {
     expect(getCandidateAssignmentBlockReason("call_back")).toContain("callback");
   });
 
+  it("getCandidateAssignmentBlockReason explains locked RNR vs reassigned RNR", () => {
+    expect(getCandidateAssignmentBlockReason("RNR")).toContain("Operations");
+    expect(getCandidateAssignmentBlockReason("RNR", { isCREReassigned: true })).toContain(
+      "Update status",
+    );
+  });
+
   it("getProjectClosureMessage returns user-facing copy", () => {
     expect(
       getProjectClosureMessage({ status: "active", deadline: "2026-05-30" })

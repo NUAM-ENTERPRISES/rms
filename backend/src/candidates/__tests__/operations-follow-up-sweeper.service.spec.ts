@@ -8,7 +8,11 @@ describe('OperationsFollowUpSweeperService', () => {
 
   const mockCandidatesService: {
     sweepOperationsFollowUp: jest.Mock<
-      () => Promise<{ weekOneAdvanced: number; weekTwoJunked: number }>
+      () => Promise<{
+        initialAdvancedToWeekOne: number;
+        weekOneAdvanced: number;
+        weekTwoJunked: number;
+      }>
     >;
   } = {
     sweepOperationsFollowUp: jest.fn(),
@@ -29,6 +33,7 @@ describe('OperationsFollowUpSweeperService', () => {
 
   it('delegates to CandidatesService.sweepOperationsFollowUp', async () => {
     mockCandidatesService.sweepOperationsFollowUp.mockResolvedValue({
+      initialAdvancedToWeekOne: 1,
       weekOneAdvanced: 2,
       weekTwoJunked: 1,
     });

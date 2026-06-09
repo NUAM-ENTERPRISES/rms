@@ -153,7 +153,14 @@ export function getOperationsCallAttempts(
   return assignment?.operationsCallAttempts ?? 0;
 }
 
-export function canLogOperationsCall(
+export function canOpenOperationsCallModal(
+  _stage: OperationsFollowUpStage,
+): boolean {
+  return true;
+}
+
+/** Whether a no-answer call can be logged (excludes initial 3/3 waiting period). */
+export function canLogNoAnswerOperationsCall(
   stage: OperationsFollowUpStage,
   attempts: number,
 ): boolean {
@@ -170,6 +177,123 @@ export function canLogOperationsCall(
     stage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL &&
     attempts < OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
   );
+}
+
+export function canLogOperationsCall(
+  stage: OperationsFollowUpStage,
+  attempts: number,
+): boolean {
+  return canLogNoAnswerOperationsCall(stage, attempts);
+}
+
+export function isPrematureWeekOneAssignment(
+  assignment?: OperationsFollowUpAssignment,
+): boolean {
+  const stage = getOperationsFollowUpStage(assignment);
+  if (stage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+    return false;
+  }
+  const attempts = assignment?.operationsCallAttempts ?? 0;
+  if (attempts > 0) {
+    return false;
+  }
+  const lastCallAt = assignment?.operationsLastCallAt;
+  const enteredAt = assignment?.operationsStageEnteredAt;
+  if (!lastCallAt || !enteredAt) {
+    return false;
+  }
+  const gapMs =
+    new Date(enteredAt).getTime() - new Date(lastCallAt).getTime();
+  return gapMs < OPERATIONS_WEEK_ONE_WAIT_MS;
+}
+
+export function isEligibleForWeekOneDashboardBucket(
+  assignment?: OperationsFollowUpAssignment,
+): boolean {
+  const stage = getOperationsFollowUpStage(assignment);
+  if (stage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+    return false;
+  }
+  return !isPrematureWeekOneAssignment(assignment);
+}
+
+export function isAssignedUntouchedDashboardBucket(
+  assignment?: OperationsFollowUpAssignment,
+): boolean {
+  const stage = getOperationsFollowUpStage(assignment);
+  if (stage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+    return true;
+  }
+  return isPrematureWeekOneAssignment(assignment);
+}
+
+export function getDashboardOperationsFollowUpStage(
+  assignment?: OperationsFollowUpAssignment,
+): OperationsFollowUpStage {
+  if (isPrematureWeekOneAssignment(assignment)) {
+    return OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+  }
+  return getOperationsFollowUpStage(assignment);
+}
+
+export function getDashboardOperationsCallAttempts(
+  assignment?: OperationsFollowUpAssignment,
+): number {
+  if (isPrematureWeekOneAssignment(assignment)) {
+    return OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE;
+  }
+  return getOperationsCallAttempts(assignment);
+}
+
+export function isWaitingToAdvanceToWeekOne(
+  stage: OperationsFollowUpStage,
+  attempts: number,
+  stageEnteredAt?: string | null,
+  nowMs = Date.now(),
+): boolean {
+  return (
+    stage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL &&
+    attempts >= OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE &&
+    Boolean(stageEnteredAt) &&
+    !hasOperationsStageWaitElapsed(
+      stageEnteredAt,
+      OPERATIONS_WEEK_ONE_WAIT_MS,
+      nowMs,
+    )
+  );
+}
+
+export function isWaitingBeforeWeekOneBucket(
+  assignment?: OperationsFollowUpAssignment,
+  nowMs = Date.now(),
+): boolean {
+  if (isPrematureWeekOneAssignment(assignment)) {
+    return true;
+  }
+  const stage = getOperationsFollowUpStage(assignment);
+  const attempts = getOperationsCallAttempts(assignment);
+  return isWaitingToAdvanceToWeekOne(
+    stage,
+    attempts,
+    assignment?.operationsStageEnteredAt,
+    nowMs,
+  );
+}
+
+export function getOperationsCallPillClassName(
+  stage: OperationsFollowUpStage,
+  displayedCallAttempts: number,
+): string {
+  if (stage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  if (stage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+    return "border-violet-200 bg-violet-50 text-violet-700";
+  }
+  if (displayedCallAttempts > 0) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  return "border-blue-200 bg-blue-50 text-blue-700";
 }
 
 export function getDisplayedOperationsCallAttempts(
@@ -252,6 +376,31 @@ export function formatOperationsStageEnteredAt(
 ): string | null {
   if (!enteredAt) return null;
   return new Date(enteredAt).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function getOperationsWeekOneFollowUpAt(
+  stageEnteredAt?: string | null,
+): Date | null {
+  if (!stageEnteredAt) {
+    return null;
+  }
+  return new Date(
+    new Date(stageEnteredAt).getTime() + OPERATIONS_WEEK_ONE_WAIT_MS,
+  );
+}
+
+export function formatOperationsWeekOneFollowUpAt(
+  stageEnteredAt?: string | null,
+): string | null {
+  const followUpAt = getOperationsWeekOneFollowUpAt(stageEnteredAt);
+  if (!followUpAt) {
+    return null;
+  }
+  return followUpAt.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",

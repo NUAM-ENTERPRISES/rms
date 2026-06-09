@@ -43,6 +43,7 @@ import {
   assertAgentCandidateLinkedToAgentProject,
 } from '../common/agent-project-candidate-scope';
 import { ROLE_NAMES } from '../common/constants/role-ids';
+import { CANDIDATE_ASSIGNMENT_TYPE } from '../common/constants/candidate-constants';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { OutboxService } from '../notifications/outbox.service';
 import { calculateCareerGaps } from '../candidates/utils/employment-timeline.util';
@@ -2353,7 +2354,6 @@ export class ProjectsService {
               },
             },
           },
-          take: 1,
           orderBy: { assignedAt: 'desc' },
         },
         // include work experiences so we can match roleCatalog-specific experience
@@ -2422,12 +2422,24 @@ export class ProjectsService {
         null as any,
       );
 
+      const isHandledByCRE = candidate.recruiterAssignments.some(
+        (assignment) =>
+          assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO ||
+          assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+      );
+      const isCREReassigned = candidate.recruiterAssignments.some(
+        (assignment) =>
+          assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
+
       return {
         ...candidate,
         careerGapAnalysis: calculateCareerGaps(
           candidate.workExperiences ?? [],
           candidate.qualifications ?? [],
         ),
+        isHandledByCRE,
+        isCREReassigned,
         matchScore: top
           ? {
               roleId: top.roleId,

@@ -292,7 +292,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         data: {
           assignment: Record<string, unknown>;
           callLog: Record<string, unknown>;
-          autoAdvancedToWeekOne?: boolean;
+          startedWeekOneWait?: boolean;
           markedJunk?: boolean;
         };
         message: string;
@@ -368,6 +368,7 @@ export const candidatesApi = baseApi.injectEndpoints({
           assignment: Record<string, unknown>;
           callLog: Record<string, unknown>;
           markedJunk?: boolean;
+          alreadyJunk?: boolean;
         };
         message: string;
       },

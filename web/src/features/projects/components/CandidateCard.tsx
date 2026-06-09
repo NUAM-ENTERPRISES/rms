@@ -125,6 +125,8 @@ export interface CandidateRecord {
    * but document verification was intentionally skipped (direct screening).
    */
   isSendedForDocumentVerification?: boolean;
+  isCREReassigned?: boolean;
+  isHandledByCRE?: boolean;
   matchScore?:
     | number
     | {
@@ -361,7 +363,9 @@ const CandidateCard = memo(function CandidateCard({
   const isNonPositiveStatus = !!currentStatusLabel && !isPositiveStatus;
   const assignmentBlockReason =
     assignmentBlockReasonProp ??
-    getCandidateAssignmentBlockReason(currentStatusLabel);
+    getCandidateAssignmentBlockReason(currentStatusLabel, {
+      isCREReassigned: candidate.isCREReassigned,
+    });
   const isNotEligible = isNonPositiveStatus || propEligibilityData?.isEligible === false || !anyRoleEligible;
   const eligibilityData = propEligibilityData;
 

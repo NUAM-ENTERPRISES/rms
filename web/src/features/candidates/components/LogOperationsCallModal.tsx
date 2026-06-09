@@ -57,6 +57,8 @@ export type LogOperationsCallModalProps = {
   nextAttempt: number;
   followUpStage?: OperationsFollowUpStage;
   canLog: boolean;
+  /** When false, only interested / not-interested outcomes are available (e.g. initial 3/3 wait). */
+  canLogNoAnswer?: boolean;
   isSubmitting?: boolean;
   isSubmittingReassign?: boolean;
   isSubmittingJunk?: boolean;
@@ -153,6 +155,7 @@ export function LogOperationsCallModal({
   nextAttempt,
   followUpStage = OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
   canLog,
+  canLogNoAnswer = true,
   isSubmitting = false,
   isSubmittingReassign = false,
   isSubmittingJunk = false,
@@ -184,8 +187,13 @@ export function LogOperationsCallModal({
       setNote("");
       setUsedPhone(false);
       setUsedWhatsapp(false);
+      return;
     }
-  }, [isOpen, candidateId]);
+
+    if (!canLogNoAnswer) {
+      setOutcome(OPERATIONS_CALL_OUTCOME.INTERESTED);
+    }
+  }, [isOpen, candidateId, canLogNoAnswer]);
 
   const buildCallPayload = (): LogOperationsCallPayload => ({
     note: note.trim(),
@@ -202,6 +210,9 @@ export function LogOperationsCallModal({
   const supportsNotInterested = !!onMarkNotInterested;
 
   const availableOutcomes = OPERATIONS_CALL_OUTCOME_OPTIONS.filter((option) => {
+    if (option.value === OPERATIONS_CALL_OUTCOME.NO_RESPONDED) {
+      return canLogNoAnswer;
+    }
     if (option.value === OPERATIONS_CALL_OUTCOME.INTERESTED) {
       return supportsInterested;
     }
@@ -226,7 +237,9 @@ export function LogOperationsCallModal({
       : step === "junk"
         ? `Confirm junk for ${candidateName} after not interested response.`
         : canLog
-          ? followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
+          ? followUpStage === OPERATIONS_FOLLOW_UP_STAGE.JUNK
+            ? `Junk candidate ${candidateName} called back. Select outcome and contact method.`
+            : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
             ? `Log call ${nextAttempt} of ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} for ${candidateName} (${stageLabel}). Select call outcome and contact method.`
             : followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO &&
                 outcome === OPERATIONS_CALL_OUTCOME.NO_RESPONDED
@@ -244,6 +257,13 @@ export function LogOperationsCallModal({
       return;
     }
     if (outcome === OPERATIONS_CALL_OUTCOME.NOT_INTERESTED) {
+      if (
+        followUpStage === OPERATIONS_FOLLOW_UP_STAGE.JUNK &&
+        onMarkNotInterested
+      ) {
+        void onMarkNotInterested(buildCallPayload());
+        return;
+      }
       setStep("junk");
     }
   };
@@ -262,19 +282,21 @@ export function LogOperationsCallModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100">
+      <DialogContent className="sm:max-w-2xl gap-3 p-5">
+        <DialogHeader className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-100">
               {canLog && step === "call" ? (
-                <Phone className="h-5 w-5 text-green-600" />
+                <Phone className="h-4 w-4 text-green-600" />
               ) : (
-                <History className="h-5 w-5 text-green-600" />
+                <History className="h-4 w-4 text-green-600" />
               )}
             </div>
-            <div>
-              <DialogTitle>{title}</DialogTitle>
-              <DialogDescription className="mt-1">{description}</DialogDescription>
+            <div className="min-w-0">
+              <DialogTitle className="text-base leading-tight">{title}</DialogTitle>
+              <DialogDescription className="mt-0.5 text-xs leading-snug">
+                {description}
+              </DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -296,31 +318,20 @@ export function LogOperationsCallModal({
             onConfirm={handleJunkConfirm}
           />
         ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Calls logged
-                </p>
-                <p className="text-sm font-bold tabular-nums text-slate-800">
-                  {followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
-                    ? `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`
-                    : callAttempts}
-                </p>
-              </div>
-            </div>
-
+          <div className="space-y-3">
             {canLog && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="operations-call-outcome">Call outcome</Label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_auto] sm:items-end">
+                <div className="space-y-1.5">
+                  <Label htmlFor="operations-call-outcome" className="text-xs">
+                    Call outcome
+                  </Label>
                   <Select
                     value={outcome}
                     onValueChange={(value) =>
                       setOutcome(value as OperationsCallOutcome)
                     }
                   >
-                    <SelectTrigger id="operations-call-outcome">
+                    <SelectTrigger id="operations-call-outcome" className="h-9">
                       <SelectValue placeholder="Select outcome" />
                     </SelectTrigger>
                     <SelectContent>
@@ -331,7 +342,7 @@ export function LogOperationsCallModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500">
+                  <p className="line-clamp-1 text-[11px] text-slate-500">
                     {
                       availableOutcomes.find((option) => option.value === outcome)
                         ?.description
@@ -339,15 +350,12 @@ export function LogOperationsCallModal({
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Contact method used</Label>
-                  <p className="text-xs text-slate-500">
-                    Select one or both — how you tried to reach the candidate.
-                  </p>
-                  <div className="flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-white p-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Contact method</Label>
+                  <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
                     <label
                       htmlFor="operations-call-used-phone"
-                      className="flex cursor-pointer items-center gap-2"
+                      className="flex cursor-pointer items-center gap-1.5"
                     >
                       <Checkbox
                         id="operations-call-used-phone"
@@ -359,7 +367,7 @@ export function LogOperationsCallModal({
                     </label>
                     <label
                       htmlFor="operations-call-used-whatsapp"
-                      className="flex cursor-pointer items-center gap-2"
+                      className="flex cursor-pointer items-center gap-1.5"
                     >
                       <Checkbox
                         id="operations-call-used-whatsapp"
@@ -371,35 +379,65 @@ export function LogOperationsCallModal({
                     </label>
                   </div>
                   {noContactMethod && (
-                    <p className="text-xs text-amber-600">
-                      Select at least Phone or WhatsApp.
+                    <p className="text-[11px] text-amber-600">
+                      Select Phone or WhatsApp.
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="operations-call-note">Call note</Label>
-                  <Textarea
-                    id="operations-call-note"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="e.g. Candidate answered and is interested in the role."
-                    rows={4}
-                    maxLength={500}
-                    className="resize-none"
-                  />
-                  <p className="text-xs text-slate-500">
-                    Minimum 3 characters. {note.trim().length}/500
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:min-w-[5.5rem] sm:text-center">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    Calls logged
+                  </p>
+                  <p className="text-base font-bold tabular-nums leading-tight text-slate-800">
+                    {followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
+                      ? `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`
+                      : callAttempts}
                   </p>
                 </div>
-              </>
+              </div>
             )}
 
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {!canLog && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                    Calls logged
+                  </p>
+                  <p className="text-sm font-bold tabular-nums text-slate-800">
+                    {followUpStage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL
+                      ? `${Math.min(callAttempts, OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE)}/${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE}`
+                      : callAttempts}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {canLog && (
+              <div className="space-y-1.5">
+                <Label htmlFor="operations-call-note" className="text-xs">
+                  Call note
+                </Label>
+                <Textarea
+                  id="operations-call-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="e.g. Candidate answered and is interested in the role."
+                  rows={2}
+                  maxLength={500}
+                  className="min-h-[4.5rem] resize-none"
+                />
+                <p className="text-[11px] text-slate-500">
+                  Min. 3 characters · {note.trim().length}/500
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                 Call history
               </p>
-              <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2">
+              <div className="max-h-32 space-y-1.5 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5">
                 {isHistoryLoading ? (
                   <p className="px-2 py-3 text-sm text-slate-500">Loading history…</p>
                 ) : history.length === 0 ? (
@@ -408,43 +446,42 @@ export function LogOperationsCallModal({
                   history.map((entry) => (
                     <div
                       key={entry.id}
-                      className="rounded-md border border-slate-100 bg-slate-50 px-3 py-2"
+                      className="rounded-md border border-slate-100 bg-slate-50 px-2.5 py-1.5"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-xs font-semibold text-slate-700">
-                            Call {entry.attemptNumber}
-                          </span>
-                          {entry.callOutcome && (
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-[10px] font-semibold uppercase border",
-                                getOperationsCallOutcomeBadgeClass(entry.callOutcome),
-                              )}
-                            >
-                              {getOperationsCallOutcomeLabel(entry.callOutcome)}
-                            </Badge>
-                          )}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-[11px] font-semibold text-slate-700">
+                              Call {entry.attemptNumber}
+                            </span>
+                            {entry.callOutcome && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[9px] font-semibold uppercase border",
+                                  getOperationsCallOutcomeBadgeClass(entry.callOutcome),
+                                )}
+                              >
+                                {getOperationsCallOutcomeLabel(entry.callOutcome)}
+                              </Badge>
+                            )}
+                            <ContactMethodBadges
+                              usedPhone={entry.usedPhone ?? false}
+                              usedWhatsapp={entry.usedWhatsapp ?? false}
+                            />
+                          </div>
+                          <p className="mt-0.5 line-clamp-2 text-xs text-slate-700">
+                            {entry.note}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-slate-400">
+                            By {entry.loggedBy.name}
+                          </p>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 shrink-0">
+                        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] text-slate-500">
                           <Clock className="h-3 w-3" />
                           {formatLoggedAt(entry.loggedAt)}
                         </span>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <span className="text-[10px] font-medium text-slate-500">Via</span>
-                        <ContactMethodBadges
-                          usedPhone={entry.usedPhone ?? false}
-                          usedWhatsapp={entry.usedWhatsapp ?? false}
-                        />
-                      </div>
-                      <p className="mt-1 text-sm text-slate-700 whitespace-pre-wrap">
-                        {entry.note}
-                      </p>
-                      <p className="mt-1 text-[10px] text-slate-400">
-                        By {entry.loggedBy.name}
-                      </p>
                     </div>
                   ))
                 )}
@@ -454,7 +491,7 @@ export function LogOperationsCallModal({
         )}
 
         {step === "call" && (
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 pt-1 sm:gap-0">
             <Button type="button" variant="outline" onClick={onClose} disabled={isBusy}>
               {canLog ? "Cancel" : "Close"}
             </Button>
