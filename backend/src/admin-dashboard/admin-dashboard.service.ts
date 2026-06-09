@@ -163,7 +163,7 @@ export class AdminDashboardService {
     const { projectId, search, page = 1, limit = 10 } = queryDto || {};
     const skip = (page - 1) * limit;
 
-    const projectWhere: any = { status: 'active' };
+    const projectWhere: any = { status: 'IN_PROGRESS' };
     if (projectId) {
       projectWhere.id = projectId;
     }
