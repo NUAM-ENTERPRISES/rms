@@ -11,6 +11,8 @@ interface PendingStatusChangeRequestBannerProps {
   candidateId: string;
   projectId: string;
   candidateProjectMapId?: string;
+  currentStatus?: string;
+  previousStatus?: { name: string; label: string };
   defaultExpanded?: boolean;
   onReviewed?: () => void;
 }
@@ -20,6 +22,8 @@ export function PendingStatusChangeRequestBanner({
   candidateId,
   projectId,
   candidateProjectMapId,
+  currentStatus,
+  previousStatus,
   defaultExpanded = false,
   onReviewed,
 }: PendingStatusChangeRequestBannerProps) {
@@ -73,6 +77,8 @@ export function PendingStatusChangeRequestBanner({
         candidateId={candidateId}
         projectId={projectId}
         candidateProjectMapId={candidateProjectMapId}
+        currentStatus={currentStatus}
+        previousStatus={previousStatus}
         onReviewed={onReviewed}
       />
     </>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, CheckCircle2, XCircle, PauseCircle, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/ui";
 import { toast } from "sonner";
 import {
@@ -26,6 +27,8 @@ interface ReviewStatusChangeRequestModalProps {
   candidateId: string;
   projectId: string;
   candidateProjectMapId?: string;
+  currentStatus?: string;
+  previousStatus?: { name: string; label: string };
   onReviewed?: () => void;
 }
 
@@ -36,6 +39,8 @@ export function ReviewStatusChangeRequestModal({
   candidateId,
   projectId,
   candidateProjectMapId,
+  currentStatus,
+  previousStatus,
   onReviewed,
 }: ReviewStatusChangeRequestModalProps) {
   const [reviewNotes, setReviewNotes] = useState("");
@@ -44,8 +49,31 @@ export function ReviewStatusChangeRequestModal({
   const [rejectRequest, { isLoading: isRejecting }] =
     useRejectCandidateProjectStatusChangeRequestMutation();
 
-  const statusLabel = getStatusChangeTargetLabel(request.requestedStatus);
+  const statusLabel = request.requestedStatus 
+    ? getStatusChangeTargetLabel(request.requestedStatus)
+    : previousStatus?.label || "Previous Status";
   const isBusy = isApproving || isRejecting;
+
+  const getRequestDescription = () => {
+    if (request.requestType === "reactivate") {
+      return `wants to reactivate this candidate back to ${previousStatus?.label || "their previous status"}`;
+    }
+    // Block type
+    if (currentStatus && ["withdrawn", "on_hold"].includes(currentStatus.toLowerCase())) {
+      return `wants to change status from ${currentStatus} to ${request.requestedStatus}`;
+    }
+    return `wants to set status to ${request.requestedStatus}`;
+  };
+
+  const getRequestIcon = () => {
+    if (request.requestType === "reactivate") {
+      return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+    }
+    if (request.requestedStatus === "withdrawn") {
+      return <XCircle className="h-5 w-5 text-red-600" />;
+    }
+    return <PauseCircle className="h-5 w-5 text-orange-600" />;
+  };
 
   const formattedDate = new Date(request.createdAt).toLocaleString("en-US", {
     year: "numeric",
@@ -64,7 +92,11 @@ export function ReviewStatusChangeRequestModal({
         candidateProjectMapId,
         reviewNotes: reviewNotes.trim() || undefined,
       }).unwrap();
-      toast.success(`${statusLabel} request approved.`);
+      
+      const successMessage = request.requestType === "reactivate"
+        ? "Reactivation request approved."
+        : `${statusLabel} request approved.`;
+      toast.success(successMessage);
       onReviewed?.();
       onClose();
       setReviewNotes("");
@@ -82,7 +114,11 @@ export function ReviewStatusChangeRequestModal({
         candidateProjectMapId,
         reviewNotes: reviewNotes.trim() || undefined,
       }).unwrap();
-      toast.success(`${statusLabel} request rejected.`);
+      
+      const successMessage = request.requestType === "reactivate"
+        ? "Reactivation request rejected."
+        : `${statusLabel} request rejected.`;
+      toast.success(successMessage);
       onReviewed?.();
       onClose();
       setReviewNotes("");
@@ -103,7 +139,12 @@ export function ReviewStatusChangeRequestModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>Review {statusLabel} Request</span>
+            <span className="flex items-center gap-2">
+              {getRequestIcon()}
+              {request.requestType === "reactivate" 
+                ? "Reactivation Request" 
+                : `Review ${statusLabel} Request`}
+            </span>
             <Button
               variant="ghost"
               size="sm"
@@ -115,19 +156,40 @@ export function ReviewStatusChangeRequestModal({
             </Button>
           </DialogTitle>
           <DialogDescription>
-            Review and approve or reject this status change request from{" "}
-            {request.requester?.name ?? "recruiter"}.
+            <strong>{request.requester?.name ?? "Recruiter"}</strong>{" "}
+            {getRequestDescription()}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {request.requestType === "reactivate" && previousStatus && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This will restore the candidate to: <strong>{previousStatus.label}</strong>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {request.requestType === "block" && request.requestedStatus && (
+            <Alert
+              variant={request.requestedStatus === "withdrawn" ? "destructive" : "default"}
+              className={request.requestedStatus === "withdrawn" ? "" : "border-orange-300 bg-orange-50"}
+            >
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This will change the status to <strong>{statusLabel}</strong> and block pipeline progression.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-slate-700">
-                Requested Status:
+                Request Type:
               </span>
-              <span className="rounded-md bg-amber-100 px-2.5 py-1 font-semibold text-amber-900">
-                {statusLabel}
+              <span className="rounded-md bg-slate-100 px-2.5 py-1 font-semibold text-slate-900">
+                {request.requestType === "reactivate" ? "Reactivation" : "Status Change"}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
@@ -149,7 +211,7 @@ export function ReviewStatusChangeRequestModal({
 
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-slate-900">
-              Recruiter Remarks
+              Reason
             </Label>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="whitespace-pre-wrap text-sm text-slate-700">

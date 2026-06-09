@@ -11,7 +11,24 @@ interface RequesterPendingStatusBannerProps {
 export function RequesterPendingStatusBanner({
   request,
 }: RequesterPendingStatusBannerProps) {
-  const statusLabel = getStatusChangeTargetLabel(request.requestedStatus);
+  const getRequestTypeLabel = (requestType: string) => {
+    switch (requestType) {
+      case "reactivate":
+        return "Reactivation";
+      case "block":
+        return "Status Change";
+      default:
+        return "Status Change";
+    }
+  };
+
+  const statusLabel =
+    request.requestType === "reactivate"
+      ? "Reactivation"
+      : request.requestedStatus
+      ? getStatusChangeTargetLabel(request.requestedStatus)
+      : "Status Change";
+
   const formattedDate = new Date(request.createdAt).toLocaleString("en-US", {
     year: "numeric",
     month: "short",
@@ -32,7 +49,11 @@ export function RequesterPendingStatusBanner({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-blue-300 bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
-              <Clock className="h-6 w-6 text-white" aria-hidden />
+              {request.requestType === "reactivate" ? (
+                <CheckCircle2 className="h-6 w-6 text-white" aria-hidden />
+              ) : (
+                <Clock className="h-6 w-6 text-white" aria-hidden />
+              )}
             </div>
             <div>
               <h3 className="text-base font-bold text-blue-900">

@@ -11,7 +11,13 @@ interface ReviewedStatusChangeRequestBannerProps {
 export function ReviewedStatusChangeRequestBanner({
   request,
 }: ReviewedStatusChangeRequestBannerProps) {
-  const statusLabel = getStatusChangeTargetLabel(request.requestedStatus);
+  const statusLabel =
+    request.requestType === "reactivate"
+      ? "Reactivation"
+      : request.requestedStatus
+      ? getStatusChangeTargetLabel(request.requestedStatus)
+      : "Status Change";
+
   const isApproved = request.status === "approved";
   const reviewedDate = request.reviewedAt
     ? new Date(request.reviewedAt).toLocaleString("en-US", {

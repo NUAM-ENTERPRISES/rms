@@ -2792,6 +2792,7 @@ export class NotificationsProcessor extends WorkerHost {
         projectId,
         candidateName,
         projectTitle,
+        requestType,
         requestedStatus,
         requesterName,
         reason,
@@ -2802,7 +2803,8 @@ export class NotificationsProcessor extends WorkerHost {
         projectId: string;
         candidateName: string;
         projectTitle: string;
-        requestedStatus: string;
+        requestType: string;
+        requestedStatus?: string;
         requesterName: string;
         reason: string;
       };
@@ -2883,6 +2885,7 @@ export class NotificationsProcessor extends WorkerHost {
         projectId,
         candidateName,
         projectTitle,
+        requestType,
         requestedStatus,
         requestedBy,
         outcome,
@@ -2893,7 +2896,8 @@ export class NotificationsProcessor extends WorkerHost {
         projectId: string;
         candidateName: string;
         projectTitle: string;
-        requestedStatus: string;
+        requestType?: string;
+        requestedStatus?: string;
         requestedBy: string;
         outcome: 'approved' | 'rejected';
       };

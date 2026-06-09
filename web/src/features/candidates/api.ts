@@ -824,7 +824,8 @@ export interface ConsolidatedCandidatesResponse {
 
 export type PendingStatusChangeRequest = {
   id: string;
-  requestedStatus: "withdrawn" | "on_hold";
+  requestType: "block" | "reactivate";
+  requestedStatus?: "withdrawn" | "on_hold";
   reason: string;
   createdAt: string;
   requester?: {
@@ -857,6 +858,9 @@ export interface GetCandidateProjectPipelineResponse {
       pipelineBlockedReason?: string | null;
       pendingStatusChangeRequest?: PendingStatusChangeRequest | null;
       latestReviewedStatusChangeRequest?: ReviewedStatusChangeRequest | null;
+      previousMainStatus?: { id: string; name: string; label: string };
+      previousSubStatus?: { id: string; name: string; label: string };
+      statusBlockedAt?: string;
       currentStatus?: {
         mainStatus?: { id: string; name: string; label: string; color?: string };
         subStatus?: { id: string; name: string; label: string; color?: string };
@@ -1292,7 +1296,8 @@ export const candidatesApi = baseApi.injectEndpoints({
         candidateProjectMapId: string;
         candidateId: string;
         projectId: string;
-        requestedStatus: "withdrawn" | "on_hold";
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
         reason: string;
       }
     >({

@@ -54,16 +54,34 @@ interface ExtendedPipelineResponse {
     candidateProjectMapId?: string;
     isPipelineBlocked?: boolean;
     pipelineBlockedReason?: string | null;
+    previousMainStatus?: {
+        id: string;
+        name: string;
+        label: string;
+    } | null;
+    previousSubStatus?: {
+        id: string;
+        name: string;
+        label: string;
+    } | null;
+    statusBlockedAt?: string | null;
+    currentStatus?: {
+        mainStatus?: { id: string; name: string; label: string; color?: string };
+        subStatus?: { id: string; name: string; label: string; color?: string };
+        timeInStatus?: string;
+    };
     pendingStatusChangeRequest?: {
         id: string;
-        requestedStatus: "withdrawn" | "on_hold";
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
         reason: string;
         createdAt: string;
         requester?: { id: string; name: string; email?: string };
     } | null;
     latestReviewedStatusChangeRequest?: {
         id: string;
-        requestedStatus: "withdrawn" | "on_hold";
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
         reason: string;
         status: "approved" | "rejected";
         createdAt: string;
@@ -332,6 +350,7 @@ export default function CandidateProjectDetailsPage() {
     const history = pipelineResponse?.data?.history || [];
     // Cast to extended type to access additional API fields
     const extendedData = pipelineResponse?.data as ExtendedPipelineResponse | undefined;
+    const pipelineData = extendedData; // Alias for convenience
     const isPipelineBlocked = extendedData?.isPipelineBlocked ?? false;
     const pendingStatusChangeRequest = extendedData?.pendingStatusChangeRequest ?? null;
     const latestReviewedStatusChangeRequest =
@@ -345,9 +364,11 @@ export default function CandidateProjectDetailsPage() {
     const isRequester =
         pendingStatusChangeRequest?.requester?.id === user?.id ||
         latestReviewedStatusChangeRequest?.requester?.id === user?.id;
+    // Allow status change requests for both active and blocked candidates
+    // - Active: can request to block (Withdrawn/On Hold)
+    // - Blocked: can request to reactivate or change blocked status
     const canRequestStatusChange =
         canManageCandidateProjects &&
-        !isPipelineBlocked &&
         !pendingStatusChangeRequest;
     const canViewStatusChangeHistory =
         Boolean(candidateProjectMapId) &&
@@ -471,6 +492,8 @@ export default function CandidateProjectDetailsPage() {
                             candidateId={candidateId}
                             projectId={projectId}
                             candidateProjectMapId={candidateProjectMapId}
+                            currentStatus={pipelineData?.currentStatus?.mainStatus?.name}
+                            previousStatus={pipelineData?.previousMainStatus}
                             defaultExpanded={shouldExpandPendingBanner}
                         />
                     )}
@@ -498,6 +521,8 @@ export default function CandidateProjectDetailsPage() {
                             candidateName={candidateFullName}
                             projectName={projectTitle}
                             canDirectApply={canDirectApplyStatusChange}
+                            currentMainStatus={pipelineData?.currentStatus?.mainStatus?.name}
+                            previousStatus={pipelineData?.previousMainStatus}
                         />
                         <StatusChangeRequestHistoryModal
                             isOpen={isHistoryModalOpen}

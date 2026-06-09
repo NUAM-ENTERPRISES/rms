@@ -696,6 +696,17 @@ model CandidateProjects {
   subStatusId String?
   subStatus   CandidateProjectSubStatus? @relation(fields: [subStatusId], references: [id])
 
+  // Store LAST ACTIVE status (before any blocking) for reactivation
+  // Preserved through multiple On Hold/Withdrawn changes
+  previousMainStatusId String?
+  previousMainStatus   CandidateProjectMainStatus? @relation("PreviousMainStatus", fields: [previousMainStatusId], references: [id])
+
+  previousSubStatusId String?
+  previousSubStatus   CandidateProjectSubStatus? @relation("PreviousSubStatus", fields: [previousSubStatusId], references: [id])
+
+  // Timestamp when status was FIRST blocked (not updated on subsequent blocks)
+  statusBlockedAt DateTime?
+
   // Recruiter assignment
   assignedAt  DateTime?
   recruiterId String?
@@ -1158,6 +1169,10 @@ model CandidateProjectStatusChangeRequest {
   id                    String   @id @default(cuid())
   candidateProjectMapId String
   candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  
+  // Request type: 'block' (to Withdrawn/On Hold) or 'reactivate' (return to last active)
+  requestType           String   @default("block")
+  
   requestedStatus       String
   reason                String   @db.Text
   status                String   @default("pending")
@@ -1173,6 +1188,7 @@ model CandidateProjectStatusChangeRequest {
   @@index([candidateProjectMapId, status])
   @@index([requestedBy])
   @@index([status])
+  @@index([requestType])
   @@map("candidate_project_status_change_requests")
 }
 
@@ -1935,9 +1951,10 @@ model CandidateProjectMainStatus {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subStatuses       CandidateProjectSubStatus[]
-  candidateProjects CandidateProjects[]
-  statusHistory     CandidateProjectStatusHistory[]
+  subStatuses                    CandidateProjectSubStatus[]
+  candidateProjects              CandidateProjects[]
+  previousCandidateProjects      CandidateProjects[]           @relation("PreviousMainStatus")
+  statusHistory                  CandidateProjectStatusHistory[]
 
   @@map("candidate_project_main_statuses")
 }
@@ -1957,8 +1974,9 @@ model CandidateProjectSubStatus {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  candidateProjects CandidateProjects[]
-  statusHistory     CandidateProjectStatusHistory[]
+  candidateProjects         CandidateProjects[]
+  previousCandidateProjects CandidateProjects[]           @relation("PreviousSubStatus")
+  statusHistory             CandidateProjectStatusHistory[]
 
   @@map("candidate_project_sub_statuses")
 }

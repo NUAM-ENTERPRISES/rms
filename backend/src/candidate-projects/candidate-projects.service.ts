@@ -1891,6 +1891,8 @@ export class CandidateProjectsService {
       where: { id: candidateProjectMapId },
       include: {
         mainStatus: true,
+        previousMainStatus: true,
+        previousSubStatus: true,
         candidate: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, title: true } },
       },
@@ -1902,12 +1904,38 @@ export class CandidateProjectsService {
       );
     }
 
-    if (
-      isCandidateProjectPipelineBlocked(candidateProject.mainStatus?.name)
-    ) {
-      throw new BadRequestException(
-        'Candidate project is already Withdrawn or On Hold',
-      );
+    const isCurrentlyBlocked = isCandidateProjectPipelineBlocked(
+      candidateProject.mainStatus?.name,
+    );
+
+    // Validate based on request type
+    if (dto.requestType === 'block') {
+      // requestedStatus required for block
+      if (!dto.requestedStatus) {
+        throw new BadRequestException(
+          'requestedStatus is required for block type',
+        );
+      }
+      // Prevent blocking to same status (e.g., On Hold → On Hold)
+      if (candidateProject.mainStatus?.name === dto.requestedStatus) {
+        throw new BadRequestException(
+          `Candidate is already in ${dto.requestedStatus} status`,
+        );
+      }
+      // Note: DO NOT throw error if already blocked - allow Withdrawn ↔ On Hold
+    } else if (dto.requestType === 'reactivate') {
+      // Must BE blocked
+      if (!isCurrentlyBlocked) {
+        throw new BadRequestException(
+          'Can only reactivate from withdrawn or on_hold status',
+        );
+      }
+      // Must have previous status stored
+      if (!candidateProject.previousMainStatusId) {
+        throw new BadRequestException(
+          'No previous status to restore. Please contact administrator.',
+        );
+      }
     }
 
     const existingPending =
@@ -1943,7 +1971,8 @@ export class CandidateProjectsService {
       const created = await tx.candidateProjectStatusChangeRequest.create({
         data: {
           candidateProjectMapId,
-          requestedStatus: dto.requestedStatus,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
           reason: dto.reason,
           requestedBy: userId,
         },
@@ -1960,6 +1989,7 @@ export class CandidateProjectsService {
           projectId: candidateProject.projectId,
           candidateName: `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`,
           projectTitle: candidateProject.project.title,
+          requestType: dto.requestType,
           requestedStatus: dto.requestedStatus,
           requestedBy: userId,
           requesterName: requester?.name ?? 'Recruiter',
@@ -1989,7 +2019,8 @@ export class CandidateProjectsService {
       const created = await tx.candidateProjectStatusChangeRequest.create({
         data: {
           candidateProjectMapId,
-          requestedStatus: dto.requestedStatus,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
           reason: dto.reason,
           requestedBy: userId,
           status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
@@ -2006,14 +2037,57 @@ export class CandidateProjectsService {
         tx,
         candidateProjectMapId,
         {
-          subStatusName: dto.requestedStatus,
+          subStatusName: dto.requestType === 'reactivate' ? undefined : dto.requestedStatus,
           reason: dto.reason,
         },
         userId,
+        dto.requestType,
       );
 
       return created;
     });
+  }
+
+  /**
+   * Store current status as previous ONLY if this is the first block
+   * (i.e., candidate is not already blocked)
+   */
+  private async storePreviousStatusIfNeeded(
+    tx: Prisma.TransactionClient,
+    candidateProjectMapId: string,
+  ) {
+    const current = await tx.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      select: {
+        mainStatusId: true,
+        subStatusId: true,
+        mainStatus: { select: { name: true } },
+        previousMainStatusId: true,
+        statusBlockedAt: true,
+      },
+    });
+
+    if (!current) {
+      throw new NotFoundException('Candidate project not found');
+    }
+
+    // Only store if NOT already blocked (first time blocking)
+    const isCurrentlyBlocked = isCandidateProjectPipelineBlocked(
+      current.mainStatus?.name,
+    );
+
+    if (!isCurrentlyBlocked && !current.previousMainStatusId) {
+      // First block - store current as previous
+      await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          previousMainStatusId: current.mainStatusId,
+          previousSubStatusId: current.subStatusId,
+          statusBlockedAt: new Date(),
+        },
+      });
+    }
+    // If already blocked, don't overwrite previousStatus
   }
 
   async getPendingStatusChangeRequest(candidateProjectMapId: string) {
@@ -2134,11 +2208,12 @@ export class CandidateProjectsService {
         tx,
         request.candidateProjectMapId,
         {
-          subStatusName: request.requestedStatus,
+          subStatusName: request.requestType === 'reactivate' ? undefined : request.requestedStatus,
           reason: request.reason,
           notes: dto.reviewNotes,
         },
         userId,
+        request.requestType as 'block' | 'reactivate',
       );
 
       await this.outboxService.publishCandidateProjectStatusChangeReviewed(
@@ -2149,6 +2224,7 @@ export class CandidateProjectsService {
           projectId: request.candidateProjectMap.projectId,
           candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
           projectTitle: request.candidateProjectMap.project.title,
+          requestType: request.requestType,
           requestedStatus: request.requestedStatus,
           requestedBy: request.requestedBy,
           outcome: 'approved',
@@ -2213,6 +2289,7 @@ export class CandidateProjectsService {
           projectId: request.candidateProjectMap.projectId,
           candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
           projectTitle: request.candidateProjectMap.project.title,
+          requestType: request.requestType,
           requestedStatus: request.requestedStatus,
           requestedBy: request.requestedBy,
           outcome: 'rejected',
@@ -2234,12 +2311,18 @@ export class CandidateProjectsService {
       'mainStatusId' | 'subStatusId' | 'subStatusName' | 'reason' | 'notes'
     >,
     userId: string,
+    requestType?: 'block' | 'reactivate',
   ) {
     const { mainStatusId, subStatusId, subStatusName, reason, notes } =
       updateStatusDto;
 
     const candidateProject = await tx.candidateProjects.findUnique({
       where: { id },
+      include: {
+        mainStatus: true,
+        previousMainStatus: true,
+        previousSubStatus: true,
+      },
     });
 
     if (!candidateProject) {
@@ -2248,33 +2331,87 @@ export class CandidateProjectsService {
       );
     }
 
-    let subStatus;
-    if (subStatusId) {
-      subStatus = await tx.candidateProjectSubStatus.findUnique({
-        where: { id: subStatusId },
-        include: { stage: true },
+    let targetMainStatusId: string;
+    let targetSubStatusId: string;
+    let targetMainStatus;
+    let targetSubStatus;
+
+    if (requestType === 'reactivate') {
+      // Restore last active status
+      if (
+        !candidateProject.previousMainStatusId ||
+        !candidateProject.previousSubStatusId
+      ) {
+        throw new BadRequestException('No previous status to restore');
+      }
+      targetMainStatusId = candidateProject.previousMainStatusId;
+      targetSubStatusId = candidateProject.previousSubStatusId;
+
+      targetMainStatus = candidateProject.previousMainStatus;
+      targetSubStatus = candidateProject.previousSubStatus;
+
+      // Clear previous status and blockedAt after restoring
+      await tx.candidateProjects.update({
+        where: { id },
+        data: {
+          previousMainStatusId: null,
+          previousSubStatusId: null,
+          statusBlockedAt: null,
+        },
       });
-    } else if (subStatusName) {
-      subStatus = await tx.candidateProjectSubStatus.findUnique({
+    } else if (requestType === 'block') {
+      // Store current status as previous ONLY if first block
+      await this.storePreviousStatusIfNeeded(tx, id);
+
+      // Resolve target status from subStatusName
+      if (!subStatusName) {
+        throw new BadRequestException('subStatusName required for block');
+      }
+
+      targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
         where: { name: subStatusName },
         include: { stage: true },
       });
-    }
 
-    if (!subStatus) {
-      throw new NotFoundException(
-        `Sub-status ${subStatusId || subStatusName} not found`,
-      );
-    }
+      if (!targetSubStatus) {
+        throw new NotFoundException(`Sub-status ${subStatusName} not found`);
+      }
 
-    const mainStatus = mainStatusId
-      ? await tx.candidateProjectMainStatus.findUnique({
-          where: { id: mainStatusId },
-        })
-      : subStatus.stage;
+      targetMainStatus = targetSubStatus.stage;
+      targetMainStatusId = targetSubStatus.stageId;
+      targetSubStatusId = targetSubStatus.id;
+    } else {
+      // Regular update (existing logic for other status changes)
+      if (subStatusId) {
+        targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
+          where: { id: subStatusId },
+          include: { stage: true },
+        });
+      } else if (subStatusName) {
+        targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
+          where: { name: subStatusName },
+          include: { stage: true },
+        });
+      }
 
-    if (!mainStatus) {
-      throw new NotFoundException('Main status not found');
+      if (!targetSubStatus) {
+        throw new NotFoundException(
+          `Sub-status ${subStatusId || subStatusName} not found`,
+        );
+      }
+
+      targetMainStatus = mainStatusId
+        ? await tx.candidateProjectMainStatus.findUnique({
+            where: { id: mainStatusId },
+          })
+        : targetSubStatus.stage;
+
+      if (!targetMainStatus) {
+        throw new NotFoundException('Main status not found');
+      }
+
+      targetMainStatusId = targetMainStatus.id;
+      targetSubStatusId = targetSubStatus.id;
     }
 
     const user = await tx.user.findUnique({
@@ -2289,8 +2426,8 @@ export class CandidateProjectsService {
     const updated = await tx.candidateProjects.update({
       where: { id },
       data: {
-        mainStatusId: mainStatus.id,
-        subStatusId: subStatus.id,
+        mainStatusId: targetMainStatusId,
+        subStatusId: targetSubStatusId,
         ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
       },
       include: {
@@ -2308,10 +2445,10 @@ export class CandidateProjectsService {
         candidateProjectMapId: id,
         changedById: userId,
         changedByName: user?.name || null,
-        mainStatusId: mainStatus.id,
-        subStatusId: subStatus.id,
-        mainStatusSnapshot: mainStatus.label,
-        subStatusSnapshot: subStatus.label,
+        mainStatusId: targetMainStatusId,
+        subStatusId: targetSubStatusId,
+        mainStatusSnapshot: targetMainStatus.label,
+        subStatusSnapshot: targetSubStatus.label,
         reason: reason || null,
         notes: notes || null,
       },

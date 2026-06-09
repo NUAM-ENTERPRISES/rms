@@ -17,6 +17,8 @@ export class CandidateProjectStatusHistoryService {
       include: {
         mainStatus: true,
         subStatus: true,
+        previousMainStatus: true,
+        previousSubStatus: true,
         roleNeeded: {
           include: {
             roleCatalog: true,
@@ -266,9 +268,25 @@ export class CandidateProjectStatusHistoryService {
         },
         isPipelineBlocked,
         pipelineBlockedReason,
+        previousMainStatus: mapping.previousMainStatus
+          ? {
+              id: mapping.previousMainStatus.id,
+              name: mapping.previousMainStatus.name,
+              label: mapping.previousMainStatus.label,
+            }
+          : null,
+        previousSubStatus: mapping.previousSubStatus
+          ? {
+              id: mapping.previousSubStatus.id,
+              name: mapping.previousSubStatus.name,
+              label: mapping.previousSubStatus.label,
+            }
+          : null,
+        statusBlockedAt: mapping.statusBlockedAt,
         pendingStatusChangeRequest: pendingStatusChangeRequest
           ? {
               id: pendingStatusChangeRequest.id,
+              requestType: pendingStatusChangeRequest.requestType,
               requestedStatus: pendingStatusChangeRequest.requestedStatus,
               reason: pendingStatusChangeRequest.reason,
               createdAt: pendingStatusChangeRequest.createdAt,
@@ -278,6 +296,7 @@ export class CandidateProjectStatusHistoryService {
         latestReviewedStatusChangeRequest: latestReviewedStatusChangeRequest
           ? {
               id: latestReviewedStatusChangeRequest.id,
+              requestType: latestReviewedStatusChangeRequest.requestType,
               requestedStatus: latestReviewedStatusChangeRequest.requestedStatus,
               reason: latestReviewedStatusChangeRequest.reason,
               status: latestReviewedStatusChangeRequest.status,
