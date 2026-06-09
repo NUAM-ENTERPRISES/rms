@@ -47,6 +47,7 @@ import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { OperationsReassignedHandoffBadge } from "@/components/molecules/OperationsReassignedHandoffBadge";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { buildPreferredRoleLabels } from "../utils/role-preference";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -798,6 +799,8 @@ export default function CandidateDetailPage() {
           visaType: candidate.visaType,
           preferredCountries: candidate.preferredCountries?.map(pc => pc.country.code),
           facilityPreferences: candidate.facilityPreferences?.map(fp => fp.facilityType),
+          preferredRoles: candidate.rolePreferences?.map(rp => rp.roleCatalogId),
+          preferredRoleLabels: buildPreferredRoleLabels(candidate.rolePreferences),
         }}
       />
 

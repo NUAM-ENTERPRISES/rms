@@ -85,6 +85,19 @@ export interface Candidate {
     id: string;
     facilityType: string;
   }>;
+  rolePreferences?: Array<{
+    roleCatalogId: string;
+    roleCatalog: {
+      id: string;
+      label: string;
+      name: string;
+      roleDepartment?: {
+        id: string;
+        label: string;
+        name: string;
+      } | null;
+    };
+  }>;
   sectorType?: string;
   visaType?: string;
 
@@ -499,6 +512,7 @@ export interface CreateCandidateRequest {
   visaType?: string;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   highestEducation?: string;
   university?: string;
   graduationYear?: number;
@@ -556,6 +570,7 @@ export interface UpdateCandidateRequest {
   visaType?: string;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   highestEducation?: string;
   university?: string;
   graduationYear?: number;

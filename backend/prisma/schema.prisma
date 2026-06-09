@@ -493,6 +493,7 @@ model Candidate {
   qualifications       CandidateQualification[]
   preferredCountries   CandidatePreferredCountry[]
   facilityPreferences  CandidateFacilityPreference[]
+  rolePreferences      CandidateRolePreference[]
   team                 Team?                          @relation(fields: [teamId], references: [id])
   certifications       Certification[]
   documents            Document[]
@@ -622,6 +623,20 @@ model CandidateFacilityPreference {
 
   @@index([candidateId])
   @@map("candidate_facility_preferences")
+}
+
+model CandidateRolePreference {
+  id            String @id @default(cuid())
+  candidateId   String
+  roleCatalogId String
+
+  candidate   Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog RoleCatalog @relation(fields: [roleCatalogId], references: [id])
+
+  @@unique([candidateId, roleCatalogId])
+  @@index([candidateId])
+  @@index([roleCatalogId])
+  @@map("candidate_role_preferences")
 }
 
 model WorkExperience {
@@ -1353,6 +1368,7 @@ model RoleCatalog {
   workExperiences           WorkExperience[]
   mergedDocuments           MergedDocument[]
   documentForwards          DocumentForwardHistory[]
+  candidateRolePreferences  CandidateRolePreference[]
 
   @@index([roleDepartmentId])
   @@index([isActive])

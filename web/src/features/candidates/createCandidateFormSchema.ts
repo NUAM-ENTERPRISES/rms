@@ -56,6 +56,7 @@ export function buildCreateCandidateSchema(
 
       preferredCountries: z.array(z.string()).optional(),
       facilityPreferences: z.array(z.string()).optional(),
+      preferredRoles: z.array(z.string()).optional(),
       sectorType: z.string().optional(),
       visaType: z.string().optional(),
       height: z.preprocess(

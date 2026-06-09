@@ -126,6 +126,7 @@ export default function CreateCandidatePage() {
   
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [preferredRoleLabels, setPreferredRoleLabels] = useState<Record<string, string>>({});
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [newWorkExperience, setNewWorkExperience] = useState<Omit<WorkExperience, "id">>({
     companyName: "",
@@ -207,6 +208,7 @@ export default function CreateCandidatePage() {
       visaType: VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: [],
       facilityPreferences: [],
+      preferredRoles: [],
     },
   });
 
@@ -286,6 +288,7 @@ export default function CreateCandidatePage() {
       "expectedSalary",
       "preferredCountries",
       "facilityPreferences",
+      "preferredRoles",
       "sectorType",
       "visaType"
     ];
@@ -424,6 +427,9 @@ export default function CreateCandidatePage() {
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
       }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
+      }
 
       // Educational qualifications (legacy fields)
       if (data.highestEducation && data.highestEducation.trim()) {
@@ -447,6 +453,9 @@ export default function CreateCandidatePage() {
       }
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
       }
 
       // Multiple qualifications
@@ -657,6 +666,7 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            onPreferredRoleLabelsChange={setPreferredRoleLabels}
           />
         );
       case 3:
@@ -825,6 +835,8 @@ export default function CreateCandidatePage() {
         expectedSalary: form.getValues("expectedSalary") ?? undefined,
         preferredCountries: form.getValues("preferredCountries"),
         facilityPreferences: form.getValues("facilityPreferences"),
+        preferredRoles: form.getValues("preferredRoles"),
+        preferredRoleLabels,
         sectorType: form.getValues("sectorType"),
         visaType: form.getValues("visaType"),
         skinTone: form.getValues("skinTone"),

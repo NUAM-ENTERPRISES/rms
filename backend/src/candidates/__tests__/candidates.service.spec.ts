@@ -1341,6 +1341,35 @@ describe('CandidatesService', () => {
     });
   });
 
+  describe('preferredRoles', () => {
+    it('should reject invalid preferred role catalog ids on update', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        countryCode: '+1',
+        mobileNumber: '234567890',
+      } as any);
+      prismaService.user.findUnique.mockResolvedValue({
+        id: 'user123',
+        userRoles: [{ role: { name: 'recruiter' } }],
+      } as any);
+      prismaService.roleCatalog.findMany.mockResolvedValue([
+        { id: 'valid-role-id' },
+      ]);
+
+      await expect(
+        service.update(
+          'candidate123',
+          { preferredRoles: ['valid-role-id', 'invalid-role-id'] } as UpdateCandidateDto,
+          'user123',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'One or more preferred roles are invalid or inactive',
+        ),
+      );
+    });
+  });
+
   describe('findOne', () => {
     const mockCandidate = {
       id: 'candidate123',

@@ -427,6 +427,15 @@ export class CreateCandidateDto {
   @IsString({ each: true })
   facilityPreferences?: string[];
 
+  @ApiPropertyOptional({
+    description: 'List of preferred role catalog IDs (department derived from role)',
+    example: ['clxyz_icu_staff_nurse', 'clxyz_emergency_staff_nurse'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredRoles?: string[];
+
   // Educational Qualifications
   @ApiPropertyOptional({
     description: 'Highest education level',

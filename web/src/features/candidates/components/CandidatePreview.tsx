@@ -45,6 +45,8 @@ interface CandidatePreviewProps {
     expectedSalary?: number;
     preferredCountries?: string[];
     facilityPreferences?: string[];
+    preferredRoles?: string[];
+    preferredRoleLabels?: Record<string, string>;
     sectorType?: string;
     visaType?: string;
     skinTone?: string;
@@ -361,6 +363,26 @@ export default function CandidatePreview({
                     <span className="text-sm text-slate-400">None selected</span>
                   )}
                 </div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
+                Department Preferences
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {candidateData.preferredRoles && candidateData.preferredRoles.length > 0 ? (
+                  candidateData.preferredRoles.map((roleId) => (
+                    <Badge
+                      key={roleId}
+                      variant="secondary"
+                      className="bg-teal-50 text-teal-700 border-teal-100"
+                    >
+                      {candidateData.preferredRoleLabels?.[roleId] || roleId}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-400">None selected</span>
+                )}
               </div>
             </div>
           </CardContent>

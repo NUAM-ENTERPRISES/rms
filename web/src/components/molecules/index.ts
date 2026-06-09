@@ -38,6 +38,7 @@ export { SelectAgent } from "./SelectAgent";
 export type { SelectAgentProps } from "./SelectAgent";
 export { JobTitleSelect } from "./JobTitleSelect";
 export { DepartmentSelect } from "./DepartmentSelect";
+export { PreferredRoleMultiSelect } from "./PreferredRoleMultiSelect";
 export { QualificationSelect } from "./QualificationSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";

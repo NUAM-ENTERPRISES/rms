@@ -23,7 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck } from "lucide-react";
-import { CountryCodeSelect, MultiCountrySelect, MultiSelect } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  MultiCountrySelect,
+  MultiSelect,
+  PreferredRoleMultiSelect,
+} from "@/components/molecules";
+import { buildPreferredRoleLabels } from "@/features/candidates/utils/role-preference";
 import {
   useGetCandidateByIdQuery,
   useUpdateCandidateMutation,
@@ -66,6 +72,7 @@ const updateCandidateSchema = z.object({
   ),
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
+  preferredRoles: z.array(z.string()).optional(),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
   height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
@@ -139,6 +146,7 @@ export default function EditCandidatePage() {
       expectedMaxSalary: undefined,
       preferredCountries: [],
       facilityPreferences: [],
+      preferredRoles: [],
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
@@ -198,6 +206,7 @@ export default function EditCandidatePage() {
         expectedMaxSalary: candidate.expectedMaxSalary ?? undefined,
         preferredCountries: candidate.preferredCountries?.map((pc) => pc.country.code) || [],
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
+        preferredRoles: candidate.rolePreferences?.map((rp) => rp.roleCatalogId) || [],
         sectorType: candidate.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         height: candidate.height ?? undefined,
@@ -322,6 +331,9 @@ export default function EditCandidatePage() {
       }
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.preferredRoles) {
+        payload.preferredRoles = data.preferredRoles;
       }
       if (data.sectorType) {
         payload.sectorType = data.sectorType;
@@ -594,6 +606,20 @@ export default function EditCandidatePage() {
                           ]}
                           value={field.value}
                           onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Controller
+                      name="preferredRoles"
+                      control={form.control}
+                      render={({ field }) => (
+                        <PreferredRoleMultiSelect
+                          value={field.value ?? []}
+                          onValueChange={field.onChange}
+                          optionLabels={buildPreferredRoleLabels(candidate.rolePreferences)}
+                          disabled={isUpdating}
                         />
                       )}
                     />

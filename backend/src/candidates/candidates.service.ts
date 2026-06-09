@@ -260,6 +260,22 @@ const PROCESSING_SUB_STATUS_TILES = [
 export class CandidatesService {
   private readonly logger = new Logger(CandidatesService.name);
 
+  private async assertValidPreferredRoles(
+    roleCatalogIds: string[],
+  ): Promise<void> {
+    if (!roleCatalogIds.length) return;
+    const uniqueIds = [...new Set(roleCatalogIds)];
+    const activeRoles = await this.prisma.roleCatalog.findMany({
+      where: { id: { in: uniqueIds }, isActive: true },
+      select: { id: true },
+    });
+    if (activeRoles.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'One or more preferred roles are invalid or inactive',
+      );
+    }
+  }
+
   private async resolveCrmStatusIds(
     statusNames: readonly string[],
   ): Promise<number[]> {
@@ -662,6 +678,10 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.preferredRoles?.length) {
+      await this.assertValidPreferredRoles(createCandidateDto.preferredRoles);
+    }
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
       ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
@@ -838,6 +858,13 @@ export class CandidatesService {
                     facilityType,
                   }),
                 ),
+              }
+            : undefined,
+          rolePreferences: createCandidateDto.preferredRoles
+            ? {
+                create: createCandidateDto.preferredRoles.map((roleCatalogId) => ({
+                  roleCatalog: { connect: { id: roleCatalogId } },
+                })),
               }
             : undefined,
           qualifications: createCandidateDto.qualifications
@@ -1445,6 +1472,15 @@ export class CandidatesService {
           },
           preferredCountries: true,
           facilityPreferences: true,
+          rolePreferences: {
+            include: {
+              roleCatalog: {
+                include: {
+                  roleDepartment: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -2360,6 +2396,15 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        rolePreferences: {
+          include: {
+            roleCatalog: {
+              include: {
+                roleDepartment: true,
+              },
+            },
+          },
+        },
         addressCountry: {
           select: { code: true, name: true },
         },
@@ -2698,6 +2743,15 @@ export class CandidatesService {
         })),
       };
     }
+    if (updateCandidateDto.preferredRoles !== undefined) {
+      await this.assertValidPreferredRoles(updateCandidateDto.preferredRoles);
+      updateData.rolePreferences = {
+        deleteMany: {},
+        create: updateCandidateDto.preferredRoles.map((roleCatalogId) => ({
+          roleCatalog: { connect: { id: roleCatalogId } },
+        })),
+      };
+    }
 
     const declaredIdsPayload = updateCandidateDto.declaredProjectIds;
 
@@ -2731,6 +2785,19 @@ export class CandidatesService {
       team: true,
       workExperiences: candidateWorkExperiencesInclude,
       qualifications: candidateQualificationsInclude,
+      preferredCountries: {
+        include: { country: true },
+      },
+      facilityPreferences: true,
+      rolePreferences: {
+        include: {
+          roleCatalog: {
+            include: {
+              roleDepartment: true,
+            },
+          },
+        },
+      },
       projects: {
         include: {
           project: {

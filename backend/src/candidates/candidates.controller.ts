@@ -151,6 +151,7 @@ export class CandidatesController {
             },
             preferredCountries: { type: 'array', items: { type: 'string' } },
             facilityPreferences: { type: 'array', items: { type: 'string' } },
+            preferredRoles: { type: 'array', items: { type: 'string' } },
             projects: { type: 'array' },
           },
         },

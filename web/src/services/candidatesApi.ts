@@ -19,6 +19,7 @@ interface Candidate {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -78,6 +79,7 @@ interface CreateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string;
@@ -100,6 +102,7 @@ interface UpdateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string | null;

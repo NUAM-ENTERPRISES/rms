@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { formatRolePreferenceLabel } from "@/features/candidates/utils/role-preference";
 import {
   Card,
   CardHeader,
@@ -649,6 +650,25 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         </span>
                       )}
                     </div>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    Department Preferences
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {candidate.rolePreferences && candidate.rolePreferences.length > 0 ? (
+                      candidate.rolePreferences.map((rp) => (
+                        <Badge
+                          key={rp.roleCatalogId}
+                          className="bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100"
+                        >
+                          {formatRolePreferenceLabel(rp.roleCatalog)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">N/A</span>
+                    )}
                   </div>
                 </div>
               </div>
