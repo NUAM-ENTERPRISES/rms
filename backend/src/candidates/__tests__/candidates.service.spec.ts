@@ -61,6 +61,9 @@ describe('CandidatesService', () => {
     roleCatalog: {
       findMany: jest.fn(),
     },
+    professionType: {
+      findFirst: jest.fn(),
+    },
     agent: {
       findUnique: jest.fn(),
     },
@@ -128,6 +131,8 @@ describe('CandidatesService', () => {
     }),
   };
 
+  const validProfessionTypeId = 'pt_nurse_seed001';
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -187,6 +192,9 @@ describe('CandidatesService', () => {
           .map((n) => ({ id: map[n] }));
       },
     );
+    prismaService.professionType.findFirst.mockResolvedValue({
+      id: validProfessionTypeId,
+    });
   });
 
   afterEach(() => {
@@ -353,6 +361,7 @@ describe('CandidatesService', () => {
       source: 'agent',
       agentId: 'agent-1',
       gender: 'MALE',
+      professionTypeId: validProfessionTypeId,
     } as unknown as CreateCandidateDto;
 
     let txCandidateCreate: ReturnType<typeof jest.fn>;
@@ -471,6 +480,7 @@ describe('CandidatesService', () => {
             firstName: 'John',
             lastName: 'Doe',
             source: 'manual',
+            professionTypeId: validProfessionTypeId,
           } as CreateCandidateDto,
           'user-1',
         ),
@@ -488,6 +498,7 @@ describe('CandidatesService', () => {
         source: 'manual',
         currentStatusId: 1,
         dateOfBirth: '1990-01-01T00:00:00.000Z',
+        professionTypeId: validProfessionTypeId,
       } as unknown as CreateCandidateDto;
 
       prismaService.candidate.findUnique.mockResolvedValue(null);
@@ -1338,6 +1349,56 @@ describe('CandidatesService', () => {
           }),
         );
       });
+    });
+  });
+
+  describe('professionTypeId', () => {
+    it('should reject invalid profession type on create', async () => {
+      prismaService.user.findUnique.mockResolvedValue({
+        name: 'Recruiter',
+        email: 'r@test.com',
+        userRoles: [{ role: { name: 'Recruiter' } }],
+      });
+      prismaService.professionType.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.create(
+          {
+            firstName: 'John',
+            lastName: 'Doe',
+            countryCode: '+91',
+            mobileNumber: '9999999999',
+            source: 'manual',
+            professionTypeId: 'invalid-profession-type',
+          } as CreateCandidateDto,
+          'user-1',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException('Invalid profession type'),
+      );
+    });
+
+    it('should reject invalid profession type on update', async () => {
+      prismaService.candidate.findUnique.mockResolvedValue({
+        id: 'candidate123',
+        countryCode: '+1',
+        mobileNumber: '234567890',
+      } as any);
+      prismaService.user.findUnique.mockResolvedValue({
+        id: 'user123',
+        userRoles: [{ role: { name: 'recruiter' } }],
+      } as any);
+      prismaService.professionType.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.update(
+          'candidate123',
+          { professionTypeId: 'invalid-profession-type' } as UpdateCandidateDto,
+          'user123',
+        ),
+      ).rejects.toThrow(
+        new BadRequestException('Invalid profession type'),
+      );
     });
   });
 

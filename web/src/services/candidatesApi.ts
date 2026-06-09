@@ -20,6 +20,7 @@ interface Candidate {
   preferredCountries?: string[];
   facilityPreferences?: string[];
   preferredRoles?: string[];
+  professionTypeId?: string;
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -69,6 +70,7 @@ interface CandidateProjectMap {
 interface CreateCandidateRequest {
   name: string;
   contact: string;
+  professionTypeId?: string;
   email?: string;
   source?: string;
   dateOfBirth?: string;
@@ -93,6 +95,7 @@ interface UpdateCandidateRequest {
   id: string;
   name?: string;
   contact?: string;
+  professionTypeId?: string;
   email?: string;
   currentStatus?: string;
   experience?: number;

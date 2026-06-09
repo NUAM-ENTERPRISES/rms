@@ -30,6 +30,7 @@ interface JobPreferenceStepProps {
   control: Control<CreateCandidateFormData>;
   errors: FieldErrors<CreateCandidateFormData>;
   isLoading: boolean;
+  professionTypeName?: string;
   onPreferredRoleLabelsChange?: (labels: Record<string, string>) => void;
 }
 
@@ -37,6 +38,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
   control,
   errors,
   isLoading,
+  professionTypeName,
   onPreferredRoleLabelsChange,
 }) => {
   return (
@@ -190,6 +192,7 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   value={field.value ?? []}
                   onValueChange={field.onChange}
                   onOptionLabelsChange={onPreferredRoleLabelsChange}
+                  professionTypeName={professionTypeName}
                   disabled={isLoading}
                   error={errors.preferredRoles?.message as string}
                 />

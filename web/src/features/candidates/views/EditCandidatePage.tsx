@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,10 +28,12 @@ import {
   MultiCountrySelect,
   MultiSelect,
   PreferredRoleMultiSelect,
+  ProfessionTypeSelect,
 } from "@/components/molecules";
 import { buildPreferredRoleLabels } from "@/features/candidates/utils/role-preference";
 import {
   useGetCandidateByIdQuery,
+  useGetProfessionTypesQuery,
   useUpdateCandidateMutation,
 } from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
@@ -73,6 +75,7 @@ const updateCandidateSchema = z.object({
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
   preferredRoles: z.array(z.string()).optional(),
+  professionTypeId: z.string().min(1, "Profession type is required"),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
   height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
@@ -147,6 +150,7 @@ export default function EditCandidatePage() {
       preferredCountries: [],
       facilityPreferences: [],
       preferredRoles: [],
+      professionTypeId: "",
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
@@ -157,6 +161,15 @@ export default function EditCandidatePage() {
       referralDescription: "",
     },
   });
+
+  const professionTypeId = form.watch("professionTypeId");
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionTypeName = useMemo(
+    () =>
+      professionTypesData?.professionTypes.find((type) => type.id === professionTypeId)
+        ?.name,
+    [professionTypeId, professionTypesData?.professionTypes],
+  );
 
   // Helper function to parse contact into countryCode and mobileNumber (for backward compatibility)
   const parseContact = (contact: string) => {
@@ -207,6 +220,7 @@ export default function EditCandidatePage() {
         preferredCountries: candidate.preferredCountries?.map((pc) => pc.country.code) || [],
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
         preferredRoles: candidate.rolePreferences?.map((rp) => rp.roleCatalogId) || [],
+        professionTypeId: candidate.professionTypeId || candidate.professionType?.id || "",
         sectorType: candidate.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         height: candidate.height ?? undefined,
@@ -334,6 +348,9 @@ export default function EditCandidatePage() {
       }
       if (data.preferredRoles) {
         payload.preferredRoles = data.preferredRoles;
+      }
+      if (data.professionTypeId) {
+        payload.professionTypeId = data.professionTypeId;
       }
       if (data.sectorType) {
         payload.sectorType = data.sectorType;
@@ -541,6 +558,23 @@ export default function EditCandidatePage() {
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Controller
+                      name="professionTypeId"
+                      control={form.control}
+                      render={({ field }) => (
+                        <ProfessionTypeSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isUpdating}
+                          required
+                          error={form.formState.errors.professionTypeId?.message}
+                        />
+                      )}
+                    />
+                  </div>
+
                   {/* Salary Range */}
                   <div className="space-y-2">
                     <FormLabel htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
@@ -619,6 +653,7 @@ export default function EditCandidatePage() {
                           value={field.value ?? []}
                           onValueChange={field.onChange}
                           optionLabels={buildPreferredRoleLabels(candidate.rolePreferences)}
+                          professionTypeName={selectedProfessionTypeName}
                           disabled={isUpdating}
                         />
                       )}

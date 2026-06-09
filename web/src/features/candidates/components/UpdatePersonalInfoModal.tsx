@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { User, Save, X, Mail, Phone, Calendar } from "lucide-react";
-import { CountryCodeSelect, ProfileImageUpload, PhysicalAddressFields } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  PhysicalAddressFields,
+  ProfessionTypeSelect,
+  ProfileImageUpload,
+} from "@/components/molecules";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
@@ -48,6 +53,7 @@ const personalInfoSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(CANDIDATE_SOURCE_IDS),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
+  professionTypeId: z.string().min(1, "Profession type is required"),
   dateOfBirth: z.string().optional().or(z.literal("")),
   addressCountryCode: z.string().max(8).optional().or(z.literal("")),
   addressStateId: z.string().optional().or(z.literal("")),
@@ -77,6 +83,7 @@ interface UpdatePersonalInfoModalProps {
     email?: string;
     source: string;
     gender?: string;
+    professionTypeId?: string | null;
     dateOfBirth?: string | null;
     addressCountryCode?: string | null;
     addressStateId?: string | null;
@@ -112,6 +119,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       email: initialData.email || "",
       source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
+      professionTypeId: initialData.professionTypeId || "",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
       addressCountryCode: initialData.addressCountryCode ?? "",
       addressStateId: initialData.addressStateId ?? "",
@@ -138,6 +146,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         email: initialData.email || "",
         source: normalizeLegacySource(initialData.source || "manual"),
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
+        professionTypeId: initialData.professionTypeId || "",
         dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
         addressCountryCode: initialData.addressCountryCode ?? "",
         addressStateId: initialData.addressStateId ?? "",
@@ -155,6 +164,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         mobileNumber: data.mobileNumber,
         source: data.source,
         gender: data.gender,
+        professionTypeId: data.professionTypeId,
         dateOfBirth: data.dateOfBirth && data.dateOfBirth.trim() ? data.dateOfBirth : null,
       };
 
@@ -393,6 +403,22 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
               {errors.gender && (
                 <p className="text-sm text-red-600">{errors.gender.message}</p>
               )}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Controller
+                name="professionTypeId"
+                control={control}
+                render={({ field }) => (
+                  <ProfessionTypeSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                    required
+                    error={errors.professionTypeId?.message}
+                  />
+                )}
+              />
             </div>
 
             {/* Source */}

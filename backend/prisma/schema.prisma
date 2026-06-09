@@ -489,6 +489,9 @@ model Candidate {
   dataFlow      Boolean? @default(false)
   eligibility   Boolean? @default(false)
 
+  professionTypeId String
+  professionType   ProfessionType @relation(fields: [professionTypeId], references: [id])
+
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
   preferredCountries   CandidatePreferredCountry[]
@@ -531,7 +534,24 @@ model Candidate {
   @@index([gender])
   @@index([candidateCode])
   @@index([passportNumber])
+  @@index([professionTypeId])
   @@map("candidates")
+}
+
+model ProfessionType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidates Candidate[]
+
+  @@index([isActive])
+  @@map("profession_types")
 }
 
 model CandidateCodeSequence {

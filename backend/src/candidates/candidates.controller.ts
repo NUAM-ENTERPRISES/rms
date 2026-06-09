@@ -152,6 +152,7 @@ export class CandidatesController {
             preferredCountries: { type: 'array', items: { type: 'string' } },
             facilityPreferences: { type: 'array', items: { type: 'string' } },
             preferredRoles: { type: 'array', items: { type: 'string' } },
+            professionTypeId: { type: 'string', example: 'pt_nurse_seed001' },
             projects: { type: 'array' },
           },
         },

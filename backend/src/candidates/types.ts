@@ -62,6 +62,11 @@ export interface CandidateWithRelations extends Candidate {
   })[];
   preferredCountries?: { countryCode: string }[];
   facilityPreferences?: { facilityType: string }[];
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   rolePreferences?: {
     roleCatalogId: string;
     roleCatalog?: RoleCatalog & { roleDepartment?: RoleDepartment | null };

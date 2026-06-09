@@ -54,6 +54,7 @@ export function buildCreateCandidateSchema(
         z.number().min(0).optional().nullable()
       ),
 
+      professionTypeId: z.string().min(1, "Profession type is required"),
       preferredCountries: z.array(z.string()).optional(),
       facilityPreferences: z.array(z.string()).optional(),
       preferredRoles: z.array(z.string()).optional(),

@@ -794,6 +794,7 @@ export default function CandidateDetailPage() {
         onClose={() => setIsJobPreferenceModalOpen(false)}
         candidateId={id!}
         initialData={{
+          professionTypeName: candidate.professionType?.name,
           expectedMinSalary: candidate.expectedMinSalary,
           sectorType: candidate.sectorType,
           visaType: candidate.visaType,
@@ -819,6 +820,7 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
+          professionTypeId: candidate.professionTypeId ?? candidate.professionType?.id,
           addressCountryCode: candidate.addressCountryCode,
           addressStateId: candidate.addressStateId,
           address: candidate.address,

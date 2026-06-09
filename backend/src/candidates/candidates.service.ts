@@ -276,6 +276,18 @@ export class CandidatesService {
     }
   }
 
+  private async assertValidProfessionType(
+    professionTypeId: string,
+  ): Promise<void> {
+    const professionType = await this.prisma.professionType.findFirst({
+      where: { id: professionTypeId, isActive: true },
+      select: { id: true },
+    });
+    if (!professionType) {
+      throw new BadRequestException('Invalid profession type');
+    }
+  }
+
   private async resolveCrmStatusIds(
     statusNames: readonly string[],
   ): Promise<number[]> {
@@ -682,6 +694,8 @@ export class CandidatesService {
       await this.assertValidPreferredRoles(createCandidateDto.preferredRoles);
     }
 
+    await this.assertValidProfessionType(createCandidateDto.professionTypeId);
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
       ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
@@ -760,6 +774,13 @@ export class CandidatesService {
       team: true,
       workExperiences: candidateWorkExperiencesInclude,
       qualifications: candidateQualificationsInclude,
+      professionType: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+        },
+      },
       projects: {
         include: {
           project: {
@@ -823,6 +844,7 @@ export class CandidatesService {
           expectedMaxSalary: createCandidateDto.expectedMaxSalary,
           sectorType: createCandidateDto.sectorType,
           visaType: createCandidateDto.visaType,
+          professionTypeId: createCandidateDto.professionTypeId,
           height: createCandidateDto.height,
           weight: createCandidateDto.weight,
           skinTone: createCandidateDto.skinTone,
@@ -1472,6 +1494,13 @@ export class CandidatesService {
           },
           preferredCountries: true,
           facilityPreferences: true,
+          professionType: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
           rolePreferences: {
             include: {
               roleCatalog: {
@@ -2396,6 +2425,13 @@ export class CandidatesService {
           },
         },
         facilityPreferences: true,
+        professionType: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+          },
+        },
         rolePreferences: {
           include: {
             roleCatalog: {
@@ -2694,6 +2730,10 @@ export class CandidatesService {
       updateData.sectorType = updateCandidateDto.sectorType;
     if (updateCandidateDto.visaType !== undefined)
       updateData.visaType = updateCandidateDto.visaType;
+    if (updateCandidateDto.professionTypeId !== undefined) {
+      await this.assertValidProfessionType(updateCandidateDto.professionTypeId);
+      updateData.professionTypeId = updateCandidateDto.professionTypeId;
+    }
     if (updateCandidateDto.height !== undefined)
       updateData.height = updateCandidateDto.height;
     if (updateCandidateDto.weight !== undefined)
@@ -2789,6 +2829,13 @@ export class CandidatesService {
         include: { country: true },
       },
       facilityPreferences: true,
+      professionType: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
+        },
+      },
       rolePreferences: {
         include: {
           roleCatalog: {

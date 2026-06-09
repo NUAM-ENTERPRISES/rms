@@ -98,6 +98,12 @@ export interface Candidate {
       } | null;
     };
   }>;
+  professionTypeId?: string;
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   sectorType?: string;
   visaType?: string;
 
@@ -492,6 +498,15 @@ export interface PassportLookupResult {
   candidate?: PassportLookupCandidateSummary;
 }
 
+export interface ProfessionType {
+  id: string;
+  name: string;
+  label: string;
+  description?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 export interface CreateCandidateRequest {
   firstName: string;
   lastName: string;
@@ -508,6 +523,7 @@ export interface CreateCandidateRequest {
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
   expectedSalary?: number; // Legacy
+  professionTypeId: string;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
@@ -566,6 +582,7 @@ export interface UpdateCandidateRequest {
   currentRole?: string;
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
+  professionTypeId?: string;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
@@ -1172,6 +1189,16 @@ function appendCandidateOverviewQueryParams(
 
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getProfessionTypes: builder.query<{ professionTypes: ProfessionType[] }, void>({
+      query: () => "/profession-types",
+      transformResponse: (response: {
+        success?: boolean;
+        data?: { professionTypes?: ProfessionType[] };
+      }) => ({
+        professionTypes: response.data?.professionTypes ?? [],
+      }),
+      providesTags: [{ type: "ProfessionType" as const, id: "LIST" }],
+    }),
     getCandidateOverviewStats: builder.query<
       { stats: CandidateOverviewStats },
       CandidateOverviewQueryParams
@@ -1979,4 +2006,5 @@ export const {
   useGetCandidateInterviewWorkflowQuery,
   useGetCandidateScreeningWorkflowQuery,
   useGetCandidateProcessingWorkflowQuery,
+  useGetProfessionTypesQuery,
 } = candidatesApi;

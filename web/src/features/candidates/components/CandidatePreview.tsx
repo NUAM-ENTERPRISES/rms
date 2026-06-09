@@ -47,6 +47,8 @@ interface CandidatePreviewProps {
     facilityPreferences?: string[];
     preferredRoles?: string[];
     preferredRoleLabels?: Record<string, string>;
+    professionTypeId?: string;
+    professionTypeLabel?: string;
     sectorType?: string;
     visaType?: string;
     skinTone?: string;
@@ -168,6 +170,14 @@ export default function CandidatePreview({
                 <Badge variant="outline" className="mt-1 text-xs text-indigo-600 border-indigo-600 lowercase capitalize">
                   {candidateData.gender}
                 </Badge>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Profession
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.professionTypeLabel || "Not specified"}
+                </p>
               </div>
               {candidateData.height != null && (
                 <div>

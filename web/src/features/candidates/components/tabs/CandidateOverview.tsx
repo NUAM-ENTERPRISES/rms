@@ -294,6 +294,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     {candidate.gender || "N/A"}
                   </p>
                 </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Profession
+                  </label>
+                  <p className="text-sm mt-1">
+                    {candidate.professionType?.label || "N/A"}
+                  </p>
+                </div>
                 {onOpenPassportDocuments && (
                   <div>
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">

@@ -21,6 +21,7 @@ export interface PreferredRoleMultiSelectProps {
   pageSize?: number;
   optionLabels?: Record<string, string>;
   onOptionLabelsChange?: (labels: Record<string, string>) => void;
+  professionTypeName?: string;
 }
 
 type RoleOption = {
@@ -49,13 +50,19 @@ export function PreferredRoleMultiSelect({
   pageSize = 20,
   optionLabels,
   onOptionLabelsChange,
+  professionTypeName,
 }: PreferredRoleMultiSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [labelById, setLabelById] = useState<Record<string, string>>({});
   const [accumulatedDepartments, setAccumulatedDepartments] = useState<
-    Array<{ id: string; label?: string; name?: string; roles?: Array<{ id: string; label?: string; name?: string }> }>
+    Array<{
+      id: string;
+      label?: string;
+      name?: string;
+      roles?: Array<{ id: string; label?: string; name?: string; type?: string }>;
+    }>
   >([]);
   const debouncedSearch = useDebounce(search, 300);
 
@@ -101,6 +108,7 @@ export function PreferredRoleMultiSelect({
     for (const department of accumulatedDepartments) {
       for (const role of department.roles || []) {
         if (!role.id || seen.has(role.id)) continue;
+        if (professionTypeName && role.type !== professionTypeName) continue;
         seen.add(role.id);
         flattened.push({
           value: role.id,
@@ -110,7 +118,7 @@ export function PreferredRoleMultiSelect({
     }
 
     return flattened.sort((a, b) => a.label.localeCompare(b.label));
-  }, [accumulatedDepartments]);
+  }, [accumulatedDepartments, professionTypeName]);
 
   useEffect(() => {
     if (!optionLabels) return;

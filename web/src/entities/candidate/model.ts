@@ -20,6 +20,12 @@ export interface Candidate {
   preferredCountries?: string[];
   facilityPreferences?: string[];
   preferredRoles?: string[];
+  professionTypeId?: string;
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -81,6 +87,12 @@ export interface CreateCandidateRequest {
   preferredCountries?: string[];
   facilityPreferences?: string[];
   preferredRoles?: string[];
+  professionTypeId?: string;
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   assignedTo?: string;
 
   // Optional referral data
@@ -105,6 +117,12 @@ export interface UpdateCandidateRequest {
   preferredCountries?: string[];
   facilityPreferences?: string[];
   preferredRoles?: string[];
+  professionTypeId?: string;
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   assignedTo?: string;
 
   // Optional referral updates

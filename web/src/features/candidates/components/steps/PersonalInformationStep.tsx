@@ -23,7 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CountryCodeSelect, SelectAgent, PhysicalAddressFields } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  PhysicalAddressFields,
+  ProfessionTypeSelect,
+  SelectAgent,
+} from "@/components/molecules";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -669,6 +674,22 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                   {errors.gender.message as string}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Controller
+                name="professionTypeId"
+                control={control}
+                render={({ field }) => (
+                  <ProfessionTypeSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                    required
+                    error={errors.professionTypeId?.message as string}
+                  />
+                )}
+              />
             </div>
 
             {setValue ? (

@@ -13,6 +13,7 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsNotEmpty,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -48,6 +49,14 @@ export class CreateCandidateDto {
   })
   @IsString()
   lastName!: string;
+
+  @ApiProperty({
+    description: 'Profession type ID (Nurse, Doctor, Technician, etc.)',
+    example: 'pt_nurse_seed001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  professionTypeId!: string;
 
   @ApiPropertyOptional({
     description:
