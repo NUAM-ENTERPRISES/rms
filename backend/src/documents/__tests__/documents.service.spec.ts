@@ -651,6 +651,9 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
     jest
       .spyOn(outbox, 'publishDocumentationNotification')
       .mockResolvedValue(undefined as never);
+    jest
+      .spyOn(outbox, 'publishRecruiterNotification')
+      .mockResolvedValue(undefined as never);
   });
 
   it('notifies documentation requester when recruiter links a previously requested missing document', async () => {
@@ -716,8 +719,6 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
   });
 
   it('notifies recruiter when documentation team uploads a missing document', async () => {
-    jest.spyOn(outbox, 'publishRecruiterNotification').mockResolvedValue(undefined as never);
-
     jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
       id: 'doc-1',
       candidateId: 'cand-1',
