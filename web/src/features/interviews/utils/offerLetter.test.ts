@@ -6,6 +6,7 @@ import {
   canUserUploadOfferLetter,
   findOfferLetterForNomination,
   getOfferLetterOverrideKey,
+  getOfferLetterUploadRequestRequesterLabel,
   hasOfferLetter,
   hasPassedInterviewForNomination,
   isOfferLetterUploadEligible,
@@ -189,5 +190,13 @@ describe("offerLetter utils", () => {
       "https://cdn.example.com/new-offer.pdf",
     );
     expect(hasOfferLetter(baseItem, overrides)).toBe(true);
+  });
+
+  it("extracts requester label from upload request reason", () => {
+    expect(
+      getOfferLetterUploadRequestRequesterLabel(
+        "Please call the candidate. (Requested by Rachel Interview Coordinator)",
+      ),
+    ).toBe("Rachel Interview Coordinator");
   });
 });

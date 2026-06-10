@@ -1178,6 +1178,14 @@ export class DocumentsService {
 
   private static readonly UPLOAD_REQUESTED_ACTION = 'upload_requested';
 
+  static buildDefaultOfferLetterUploadRequestReason(
+    requesterName?: string | null,
+  ): string {
+    return `This candidate was sent for processing without an offer letter. The interview coordinator did not receive the signed offer letter from the candidate at the time of sending. Please call the candidate to obtain the signed offer letter and upload it once received.${
+      requesterName ? ` (Requested by ${requesterName})` : ''
+    }`;
+  }
+
   /**
    * Request recruiter to upload a missing required document for a project.
    */
@@ -1379,9 +1387,7 @@ export class DocumentsService {
 
     const reason =
       params.reason?.trim() ||
-      `Candidate was sent for processing without an offer letter. Please upload the signed offer letter received from the candidate.${
-        requesterName ? ` (Requested by ${requesterName})` : ''
-      }`;
+      DocumentsService.buildDefaultOfferLetterUploadRequestReason(requesterName);
 
     const prisma = tx ?? this.prisma;
 

@@ -1,4 +1,5 @@
 import { NotificationsProcessor } from '../notifications.processor';
+import { DocumentsService } from '../../documents/documents.service';
 
 describe('NotificationsProcessor', () => {
   let processor: NotificationsProcessor;
@@ -175,7 +176,9 @@ describe('NotificationsProcessor', () => {
           requestedBy: 'coord-1',
           requestedByName: 'Coordinator',
           reason:
-            'Candidate was sent for processing without an offer letter. Please upload the signed offer letter received from the candidate.',
+            DocumentsService.buildDefaultOfferLetterUploadRequestReason(
+              'Rachel Interview Coordinator',
+            ),
         },
       },
     };

@@ -267,3 +267,17 @@ export function getOfferLetterUrlFromUpload(
 ): string | undefined {
   return data?.document?.fileUrl || data?.fileUrl;
 }
+
+export const OFFER_LETTER_UPLOAD_REQUEST_TITLE =
+  "Call candidate and upload offer letter";
+
+export const OFFER_LETTER_UPLOAD_REQUEST_MESSAGE =
+  "This nomination was sent for processing without an offer letter. The interview coordinator did not receive the signed offer letter from the candidate. Please call the candidate, collect the signed offer letter, and upload it here.";
+
+export function getOfferLetterUploadRequestRequesterLabel(
+  reason?: string | null,
+): string | null {
+  if (!reason) return null;
+  const match = reason.match(/\(Requested by ([^)]+)\)/i);
+  return match?.[1]?.trim() ?? null;
+}

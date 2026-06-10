@@ -25,7 +25,10 @@ import {
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
   findOfferLetterForNomination,
+  getOfferLetterUploadRequestRequesterLabel,
   hasPassedInterviewForNomination,
+  OFFER_LETTER_UPLOAD_REQUEST_MESSAGE,
+  OFFER_LETTER_UPLOAD_REQUEST_TITLE,
   type OfferLetterDocumentItem,
   type OfferLetterInterviewItem,
 } from "@/features/interviews/utils/offerLetter";
@@ -205,7 +208,7 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
             Offer Letters
           </CardTitle>
           <CardDescription className="ml-1 font-medium text-slate-500">
-            Upload offer letters per project nomination after the candidate has passed the interview. Recruiters and interview coordinators can upload when received from the candidate.
+            After the candidate passes the interview, call them to collect the signed offer letter and upload it per project nomination. If sent for processing before upload, follow the request below to call the candidate and upload the letter.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-4">
@@ -321,11 +324,21 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                         <AlertCircle className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
                         <div className="min-w-0 space-y-1">
                           <p className="text-sm font-semibold text-amber-900">
-                            Upload requested — sent for processing without offer letter
+                            {OFFER_LETTER_UPLOAD_REQUEST_TITLE}
                           </p>
                           <p className="text-sm text-amber-800 leading-relaxed">
-                            {row.uploadRequest.reason}
+                            {OFFER_LETTER_UPLOAD_REQUEST_MESSAGE}
                           </p>
+                          {(() => {
+                            const requesterLabel = getOfferLetterUploadRequestRequesterLabel(
+                              row.uploadRequest.reason,
+                            );
+                            return requesterLabel ? (
+                              <p className="text-xs text-amber-700">
+                                Requested by {requesterLabel}
+                              </p>
+                            ) : null;
+                          })()}
                           {row.uploadRequest.requestedAt && (
                             <p className="text-xs text-amber-700">
                               Requested{" "}
