@@ -340,6 +340,15 @@ export default function CandidateDocumentVerificationPage() {
     setShowUploadDialog(true);
   }, []);
 
+  const openMissingDocUpload = useCallback((requirement: any) => {
+    setSelectedRequirement(requirement);
+    setUploadDocType(requirement.docType);
+    setIsReuploadMode(false);
+    setReuploadDocId(null);
+    setReuploadMeta(null);
+    setShowUploadDialog(true);
+  }, []);
+
   // Documents that are verified and have a file URL
   const verifiedDocuments = (verifications || [])
     .filter((v: any) => v.status === "verified" && v.document?.fileUrl)
@@ -1436,6 +1445,8 @@ export default function CandidateDocumentVerificationPage() {
                                     selectedProject?.roleNeeded?.roleCatalog?.id
                                   }
                                   canRequest={canRequestResubmission}
+                                  canUpload={canVerifyDocuments}
+                                  onUpload={() => openMissingDocUpload(requirement)}
                                   onRequested={refetchRequirements}
                                 />
                               ) : undefined
