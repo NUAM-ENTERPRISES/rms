@@ -240,7 +240,10 @@ export default function CandidateDocumentVerificationPage() {
     project: projectResponse.data,
     subStatus: apiCandidateProject?.subStatus || (candidateProjectMapping as any)?.subStatus,
     // Add compatibility for roleNeeded if missing
-    roleNeeded: (candidateProjectMapping as any)?.roleNeeded || projectResponse.data.rolesNeeded?.[0], 
+    roleNeeded:
+      apiCandidateProject?.roleNeeded ||
+      (candidateProjectMapping as any)?.roleNeeded ||
+      undefined, 
     // Add compatibility for firstName/lastName if only name is present
     candidate: candidateProjectMapping?.candidate ? {
       ...candidateProjectMapping.candidate,
@@ -1923,6 +1926,7 @@ export default function CandidateDocumentVerificationPage() {
           candidateId={candidateId!}
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          candidateProjectMapId={candidateProjectMapId}
           onViewDocument={handleOpenPDF}
           onMergeStart={() => setIsGeneratingPDF(true)}
           onMergeEnd={() => setIsGeneratingPDF(false)}
@@ -1935,6 +1939,7 @@ export default function CandidateDocumentVerificationPage() {
           candidateId={candidateId!}
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          candidateProjectMapId={candidateProjectMapId}
           documents={verifiedDocuments}
           clientData={projectResponse?.data?.client}
           candidateName={`${candidate?.firstName} ${candidate?.lastName}`}

@@ -3412,8 +3412,14 @@ export class DocumentsService {
       );
     }
 
+    const candidateProjectInclude = {
+      project: true,
+      candidate: true,
+      roleNeeded: { include: { roleCatalog: true } },
+    } as const;
+
     // Find the candidate-project mapping for this roleNeeded
-    const candidateProject = await this.prisma.candidateProjects.findUnique({
+    let candidateProject = await this.prisma.candidateProjects.findUnique({
       where: {
         candidateId_projectId_roleNeededId: {
           candidateId,
@@ -3421,12 +3427,21 @@ export class DocumentsService {
           roleNeededId: roleNeeded.id,
         },
       },
-      include: {
-        project: true,
-        candidate: true,
-        roleNeeded: { include: { roleCatalog: true } },
-      },
+      include: candidateProjectInclude,
     });
+
+    if (!candidateProject) {
+      candidateProject = await this.prisma.candidateProjects.findFirst({
+        where: { candidateId, projectId },
+        include: candidateProjectInclude,
+      });
+
+      if (candidateProject) {
+        this.logger.warn(
+          `Verifications lookup: role-specific nomination not found for candidate=${candidateId} project=${projectId} roleCatalog=${roleCatalogId}; using project-level nomination ${candidateProject.id}`,
+        );
+      }
+    }
 
     if (!candidateProject) {
       throw new NotFoundException(

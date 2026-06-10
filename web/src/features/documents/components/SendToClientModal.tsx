@@ -61,6 +61,7 @@ interface SendToClientModalProps {
   candidateId: string;
   projectId: string;
   roleCatalogId?: string;
+  candidateProjectMapId?: string;
   clientData?: any;
   documents: any[];
   candidateName: string;
@@ -73,6 +74,7 @@ export function SendToClientModal({
   candidateId,
   projectId,
   roleCatalogId,
+  candidateProjectMapId,
   clientData,
   documents,
   candidateName,
@@ -853,7 +855,8 @@ export function SendToClientModal({
         onOpenChange={setIsMergeModalOpen}
         candidateId={candidateId}
         projectId={projectId}
-        roleCatalogId={roleCatalogId || ""}
+        roleCatalogId={roleCatalogId}
+        candidateProjectMapId={candidateProjectMapId}
         onViewDocument={(url: string, name: string) => {
           setPdfViewerUrl(url);
           setPdfViewerName(name);
