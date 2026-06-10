@@ -44,6 +44,7 @@ import {
   isCandidatePositiveForAssignment,
   isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
+import { isRecruiterLockedRnrCandidate } from "@/features/candidates/utils/recruiter-candidate-pipeline.util";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
 
@@ -1053,11 +1054,16 @@ const ProjectCandidatesBoard = ({
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
           const isNotEligible =
             !isPositiveForAssignment ||
             eligibilityData?.isEligible === false ||
-            !anyRoleEligible;
-          const assignmentBlockReason = getCandidateAssignmentBlockReason(statusLabel);
+            !anyRoleEligible ||
+            isRecruiterRnrLocked;
+          const assignmentBlockReason = getCandidateAssignmentBlockReason(
+            statusLabel,
+            { isCREReassigned: candidate.isCREReassigned },
+          );
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
           const canSelect =
@@ -1198,11 +1204,16 @@ const ProjectCandidatesBoard = ({
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
           const isNotEligible =
             !isPositiveForAssignment ||
             eligibilityData?.isEligible === false ||
-            !anyRoleEligible;
-          const assignmentBlockReason = getCandidateAssignmentBlockReason(statusLabel);
+            !anyRoleEligible ||
+            isRecruiterRnrLocked;
+          const assignmentBlockReason = getCandidateAssignmentBlockReason(
+            statusLabel,
+            { isCREReassigned: candidate.isCREReassigned },
+          );
           const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
           const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
             columnId: "all",

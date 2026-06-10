@@ -689,6 +689,7 @@ export interface CandidateListQueryParams {
   eligibility?: boolean;
   workExperienceCompany?: string;
   workExperienceTitle?: string;
+  operationsCallAttempts?: number;
 }
 
 export interface GetCandidatesParams extends CandidateListQueryParams {}
@@ -780,6 +781,12 @@ export function appendCandidateListQueryParams(
   }
   if (params.workExperienceTitle) {
     queryParams.append("workExperienceTitle", params.workExperienceTitle);
+  }
+  if (params.operationsCallAttempts !== undefined) {
+    queryParams.append(
+      "operationsCallAttempts",
+      params.operationsCallAttempts.toString(),
+    );
   }
 }
 

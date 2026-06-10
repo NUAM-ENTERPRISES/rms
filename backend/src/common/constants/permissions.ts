@@ -76,6 +76,7 @@ export const PERMISSIONS = {
   MANAGE_CRE: 'manage:cre',
   ASSIGN_CRE: 'assign:cre',
   HANDLE_RNR_CANDIDATES: 'handle:rnr_candidates',
+  READ_OPERATIONS_CALL_HISTORY: 'read:operations_call_history',
 
   // Role management
   READ_ROLES: 'read:roles',
@@ -208,6 +209,7 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.MANAGE_CRE,
     PERMISSIONS.ASSIGN_CRE,
     PERMISSIONS.HANDLE_RNR_CANDIDATES,
+    PERMISSIONS.READ_OPERATIONS_CALL_HISTORY,
   ],
   AGENT: [
     PERMISSIONS.READ_AGENTS,

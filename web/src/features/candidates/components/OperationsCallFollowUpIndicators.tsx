@@ -1,0 +1,95 @@
+import { Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  formatOperationsCallCountLabel,
+  getDisplayedOperationsCallAttempts,
+  getOperationsCallAttempts,
+  getOperationsCallPillClassName,
+  getOperationsFollowUpStage,
+  OPERATIONS_FOLLOW_UP_STAGE,
+  type OperationsFollowUpAssignment,
+} from "@/features/candidates/utils/operations-follow-up.util";
+
+export type OperationsCallFollowUpIndicatorsProps = {
+  assignment?: OperationsFollowUpAssignment;
+  canLogCall?: boolean;
+  onLogCall?: () => void;
+  onViewHistory?: () => void;
+  showLogCallButton?: boolean;
+  isLoggingCall?: boolean;
+};
+
+export function OperationsCallFollowUpIndicators({
+  assignment,
+  canLogCall = false,
+  onLogCall,
+  onViewHistory,
+  showLogCallButton = false,
+  isLoggingCall = false,
+}: OperationsCallFollowUpIndicatorsProps) {
+  if (!assignment) {
+    return null;
+  }
+
+  const followUpStage = getOperationsFollowUpStage(assignment);
+  const callAttempts = getOperationsCallAttempts(assignment);
+  const displayedCallAttempts = getDisplayedOperationsCallAttempts(
+    callAttempts,
+    followUpStage,
+  );
+  const callCountLabel = formatOperationsCallCountLabel(callAttempts, followUpStage);
+  const showCallPill = followUpStage !== OPERATIONS_FOLLOW_UP_STAGE.JUNK;
+  const showViewHistory =
+    Boolean(onViewHistory) &&
+    (callAttempts > 0 || followUpStage !== OPERATIONS_FOLLOW_UP_STAGE.INITIAL);
+
+  if (!showCallPill && !showViewHistory && !(showLogCallButton && canLogCall)) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1.5 space-y-1">
+      {showCallPill && (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+            getOperationsCallPillClassName(followUpStage, displayedCallAttempts),
+          )}
+        >
+          <Phone className="h-2.5 w-2.5 shrink-0 opacity-80" aria-hidden />
+          <span>{callCountLabel}</span>
+        </span>
+      )}
+
+      {showViewHistory && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onViewHistory?.();
+          }}
+          className="block text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline"
+        >
+          View history
+        </button>
+      )}
+
+      {showLogCallButton && canLogCall && onLogCall && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-[10px] font-semibold border-slate-200"
+          disabled={isLoggingCall}
+          onClick={(event) => {
+            event.stopPropagation();
+            onLogCall();
+          }}
+        >
+          Log Call
+        </Button>
+      )}
+    </div>
+  );
+}

@@ -27,6 +27,7 @@ export async function seedCRERole() {
     { key: 'transfer_back:candidates', description: 'Can transfer candidate back to previous recruiter' },
     { key: 'read:documents', description: 'Read candidate documents' },
     { key: 'read:notifications', description: 'View notifications' },
+    { key: 'read:operations_call_history', description: 'View Operations call log history for any Operations-handled candidate' },
   ];
 
   for (const perm of operationsPermissions) {

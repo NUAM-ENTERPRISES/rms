@@ -33,6 +33,7 @@ import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
 import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
+import { LogOperationsCallDto } from './dto/log-operations-call.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
@@ -606,6 +607,13 @@ export class CandidatesController {
     required: false,
     description: 'Filter by candidate status (e.g., RNR)',
   })
+  @ApiQuery({
+    name: 'operationsCallAttempts',
+    required: false,
+    description:
+      'Filter by CRE call count on assignment (0 = 0/3, 1 = 1/3, 2 = 2/3, 3 = 3/3)',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
     description: 'Operations assigned candidates retrieved successfully',
@@ -755,6 +763,135 @@ export class CandidatesController {
       success: true,
       data: candidate,
       message: 'Candidate transferred to recruiter successfully',
+    };
+  }
+
+  @Post(':id/operations/log-call')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Log Operations call attempt (no answer)',
+    description:
+      'Increment the no-answer call count for an Operations-assigned candidate in the initial follow-up stage',
+  })
+  async logOperationsCall(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.logOperationsCall(
+      id,
+      req.user.id,
+      body,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Operations call logged successfully',
+    };
+  }
+
+  @Get(':id/operations/call-history')
+  @Permissions('read:candidates', 'read:operations_call_history')
+  @ApiOperation({
+    summary: 'Get Operations call log history for a candidate',
+    description:
+      'Retrieve logged no-answer call attempts with notes. Operations users see their assigned candidates; users with read:operations_call_history can view any Operations-handled candidate.',
+  })
+  async getOperationsCallHistory(@Param('id') id: string, @Request() req) {
+    const history = await this.candidatesService.getOperationsCallHistory(
+      id,
+      req.user.id,
+      req.user.permissions ?? [],
+      req.user.roles ?? [],
+    );
+
+    return {
+      success: true,
+      data: history,
+      message: 'Operations call history retrieved successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-one')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 1 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate to the 1 Week follow-up stage after 3 logged no-answer calls',
+  })
+  async moveOperationsToWeekOne(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekOne(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 1 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-two')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 2 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate from 1 Week to 2 Week follow-up stage',
+  })
+  async moveOperationsToWeekTwo(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekTwo(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 2 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/mark-not-interested')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as not interested (junk)',
+    description:
+      'Log the contact attempt and immediately mark the candidate as junk when they are not interested',
+  })
+  async markOperationsNotInterested(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.markOperationsNotInterested(
+      id,
+      req.user.id,
+      body,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as not interested (junk) successfully',
+    };
+  }
+
+  @Post(':id/operations/mark-junk')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as junk',
+    description:
+      'Mark an Operations-assigned candidate as junk after 2 Week follow-up with no response',
+  })
+  async markOperationsJunk(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.markOperationsJunk(id, req.user.id);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as junk successfully',
     };
   }
 

@@ -113,6 +113,7 @@ model User {
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                     @relation("ScreeningCoordinator")
   agentCandidateRequests      AgentCandidateRequest[]         @relation("AgentCandidateRequestRequester")
+  operationsCallLogs          OperationsCallLog[]             @relation("OperationsCallLogger")
 
   addressCountryCode String?
   addressStateId     String?
@@ -489,6 +490,8 @@ model Candidate {
   licensingExam String?
   dataFlow      Boolean? @default(false)
   eligibility   Boolean? @default(false)
+  /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
+  isJunk        Boolean  @default(false) @map("is_junk")
 
   professionTypeId String
   professionType   ProfessionType @relation(fields: [professionTypeId], references: [id])
@@ -508,6 +511,7 @@ model Candidate {
   rnrReminders         RNRReminder[]
   callbackReminders    CallbackReminder[]
   processingTasks      ProcessingCandidate[]
+  operationsCallLogs   OperationsCallLog[]
 
   // Meta leads received for this candidate (incoming lead forms)
   metaLeads        MetaLead[]
@@ -536,6 +540,7 @@ model Candidate {
   @@index([candidateCode])
   @@index([passportNumber])
   @@index([professionTypeId])
+  @@index([isJunk])
   @@map("candidates")
 }
 
@@ -1765,6 +1770,12 @@ model CandidateRecruiterAssignment {
   creStatusId    Int?
   /// CRE status note for the recruiter
   creStatusNote  String?
+  /// Operations follow-up stage: initial | week_one | week_two | junk
+  operationsFollowUpStage   String    @default("initial")
+  operationsCallAttempts    Int       @default(0)
+  operationsLastCallAt      DateTime?
+  operationsStageEnteredAt  DateTime?
+  operationsCallLogs        OperationsCallLog[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1782,7 +1793,34 @@ model CandidateRecruiterAssignment {
   @@index([assignmentType])
   @@index([recruiterId, isActive])
   @@index([candidateId, isActive])
+  @@index([operationsFollowUpStage])
+  @@index([recruiterId, isActive, operationsFollowUpStage], map: "candidate_recruiter_assignments_recruiterId_isActive_operat_idx")
   @@map("candidate_recruiter_assignments")
+}
+
+model OperationsCallLog {
+  id            String   @id @default(cuid())
+  candidateId   String
+  assignmentId  String
+  loggedById    String
+  attemptNumber Int
+  note          String   @db.Text
+  usedPhone     Boolean  @default(false)
+  usedWhatsapp  Boolean  @default(false)
+  /// initial | week_one | week_two — stage when the call was logged
+  followUpStage String   @default("initial")
+  /// interested | not_interested | no_responded
+  callOutcome   String?
+  loggedAt      DateTime @default(now())
+
+  candidate  Candidate                    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assignment CandidateRecruiterAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  loggedBy   User                         @relation("OperationsCallLogger", fields: [loggedById], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, loggedAt])
+  @@index([assignmentId, loggedAt])
+  @@index([loggedById])
+  @@map("operations_call_logs")
 }
 
 model CandidateStatus {

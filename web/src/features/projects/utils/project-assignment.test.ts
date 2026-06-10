@@ -71,6 +71,14 @@ describe("project-assignment", () => {
   });
 
   it("getProjectClosureMessage returns pipeline-closed copy by status", () => {
+  it("getCandidateAssignmentBlockReason explains locked RNR vs reassigned RNR", () => {
+    expect(getCandidateAssignmentBlockReason("RNR")).toContain("Operations");
+    expect(getCandidateAssignmentBlockReason("RNR", { isCREReassigned: true })).toContain(
+      "Update status",
+    );
+  });
+
+  it("getProjectClosureMessage returns user-facing copy", () => {
     expect(
       getProjectClosureMessage({ status: ProjectStatus.IN_PROGRESS, deadline: "2026-05-30" })
     ).toBeNull();
