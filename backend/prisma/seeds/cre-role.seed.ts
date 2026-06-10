@@ -1,9 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { ROLE_NAMES } from '../../src/common/constants/role-ids';
 
-const prisma = new PrismaClient();
-
-export async function seedCRERole() {
+export async function seedCRERole(prisma: PrismaClient) {
   console.log('🌱 Seeding Operations Role and Permissions...');
 
   const operationsRole = await prisma.role.upsert({
@@ -149,7 +147,8 @@ export async function seedCRERole() {
 }
 
 if (require.main === module) {
-  seedCRERole()
+  const prisma = new PrismaClient();
+  seedCRERole(prisma)
     .then(() => {
       console.log('✅ Seeding completed');
       process.exit(0);

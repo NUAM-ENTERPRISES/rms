@@ -3,6 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { seedProfessionTypes } from './seeds/profession-types.seed';
 import { seedUserProfessionScopes } from './seeds/user-profession-scopes.seed';
+import { seedRoleCatalog } from './seeds/role-catalog.seed';
+import { seedPermissionsAndRoles } from './seeds/permissions-roles.seed';
+import { seedUsers, logSeedUserCredentials } from './seeds/users.seed';
+import { seedClients } from './seeds/clients.seed';
+import { seedCRERole } from './seeds/cre-role.seed';
 
 const prisma = new PrismaClient();
 
@@ -296,6 +301,32 @@ const roles = [
       'write:agents',
       'edit:agents',
       'delete:agents',
+    ],
+  },
+  {
+    name: 'Project Coordinator',
+    description:
+      'Project Coordinator - Manages clients, projects, and candidate pipeline overview',
+    permissions: [
+      'read:projects',
+      'write:projects',
+      'manage:projects',
+      'read:assigned_projects',
+      'write:assigned_projects',
+      'read:candidates',
+      'write:candidates',
+      'manage:candidates',
+      'read:assigned_candidates',
+      'write:assigned_candidates',
+      'nominate:candidates',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'transfer:candidates',
+      'transfer_back:candidates',
+      'read:clients',
+      'write:clients',
+      'manage:clients',
     ],
   },
   {
@@ -1087,13 +1118,34 @@ async function seedScreeningTemplates() {
 // (seedScreeningTemplates is implemented above)
 
 async function main() {
+  console.log('🌱 Starting database seeding...');
+
+  await seedCountries();
+  await seedRoleCatalog();
+  await seedQualifications();
+  await seedQualificationAliases();
+  await seedRoleRecommendedQualifications();
+
+  await seedPermissionsAndRoles(prisma, roles, allPermissions);
+
   await seedProfessionTypes(prisma);
+  const { adminPassword } = await seedUsers(prisma);
+  await seedCRERole(prisma);
   await seedUserProfessionScopes(prisma);
+
+  await seedClients(prisma);
+  await seedReligions();
+  await seedStates();
+  await seedCandidateProjectStatuses();
+  await seedCandidateStatus();
+  await seedScreeningTemplates();
+
+  logSeedUserCredentials(adminPassword);
 }
 
 main()
   .catch((error) => {
-    console.error(error);
+    console.error('❌ Error during seeding:', error);
     process.exit(1);
   })
   .finally(async () => {
