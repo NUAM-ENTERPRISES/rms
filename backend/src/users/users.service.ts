@@ -905,6 +905,7 @@ export class UsersService {
     return user;
   }
 
+  // Get user profile with profession scopes, languages, and country coverage
   async getUserProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -920,6 +921,21 @@ export class UsersService {
                 },
               },
             },
+          },
+        },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
+        userLanguages: {
+          include: {
+            language: { select: { code: true, name: true } },
+          },
+        },
+        userCountryCoverages: {
+          include: {
+            country: { select: { code: true, name: true } },
           },
         },
       },
@@ -971,6 +987,9 @@ export class UsersService {
       stats,
       accountStatus: user.accountStatus,
       accountStatusUpdatedAt: user.accountStatusUpdatedAt,
+      userProfessionScopes: (user as any).userProfessionScopes ?? [],
+      userLanguages: (user as any).userLanguages ?? [],
+      userCountryCoverages: (user as any).userCountryCoverages ?? [],
     };
 
     return profile;
