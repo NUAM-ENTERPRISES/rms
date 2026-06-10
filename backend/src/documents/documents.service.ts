@@ -1651,7 +1651,15 @@ export class DocumentsService {
     fileName: string;
     documentId: string;
     uploadedByUserId: string;
+    recruiterId?: string | null;
   }): Promise<void> {
+    if (
+      params.recruiterId &&
+      params.uploadedByUserId !== params.recruiterId
+    ) {
+      return;
+    }
+
     const latestRequest = await this.getLatestUploadRequest(
       params.candidateProjectMapId,
       params.docType,
@@ -1673,6 +1681,46 @@ export class DocumentsService {
       `/candidates/${params.candidateId}/documents/${params.projectId}`,
       {
         type: 'document_missing_uploaded',
+        docType: params.docType,
+        documentId: params.documentId,
+        candidateId: params.candidateId,
+        projectId: params.projectId,
+        candidateProjectMapId: params.candidateProjectMapId,
+        uploadedBy: params.uploadedByUserId,
+      },
+    );
+  }
+
+  private async notifyRecruiterOfDocumentationMissingDocumentUpload(params: {
+    candidateProjectMapId: string;
+    candidateId: string;
+    projectId: string;
+    projectTitle: string;
+    candidateFirstName: string;
+    candidateLastName: string;
+    docType: string;
+    fileName: string;
+    documentId: string;
+    uploadedByUserId: string;
+    recruiterId: string;
+  }): Promise<void> {
+    if (params.uploadedByUserId === params.recruiterId) {
+      return;
+    }
+
+    const docLabel =
+      DOCUMENT_TYPE_META[params.docType as DocumentType]?.displayName ??
+      this.formatDocTypeKey(params.docType);
+    const candidateName =
+      `${params.candidateFirstName} ${params.candidateLastName}`.trim();
+
+    await this.outboxService.publishRecruiterNotification(
+      params.recruiterId,
+      `Documentation team uploaded missing document "${docLabel}" (${params.fileName}) for ${candidateName} on project ${params.projectTitle}.`,
+      'Missing Document Uploaded by Documentation Team',
+      `/recruiter-docs/${params.projectId}/${params.candidateId}`,
+      {
+        type: 'document_uploaded_by_documentation',
         docType: params.docType,
         documentId: params.documentId,
         candidateId: params.candidateId,
@@ -3698,7 +3746,24 @@ export class DocumentsService {
       fileName: document.fileName,
       documentId: document.id,
       uploadedByUserId: userId,
+      recruiterId: candidateProject.recruiterId,
     });
+
+    if (candidateProject.recruiterId) {
+      await this.notifyRecruiterOfDocumentationMissingDocumentUpload({
+        candidateProjectMapId: candidateProject.id,
+        candidateId: document.candidateId,
+        projectId,
+        projectTitle: project.title,
+        candidateFirstName: candidate?.firstName ?? '',
+        candidateLastName: candidate?.lastName ?? '',
+        docType: document.docType,
+        fileName: document.fileName,
+        documentId: document.id,
+        uploadedByUserId: userId,
+        recruiterId: candidateProject.recruiterId,
+      });
+    }
 
     return verification;
   }

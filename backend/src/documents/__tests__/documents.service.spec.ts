@@ -719,6 +719,9 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
     jest
       .spyOn(outbox, 'publishDocumentationNotification')
       .mockResolvedValue(undefined as never);
+    jest
+      .spyOn(outbox, 'publishRecruiterNotification')
+      .mockResolvedValue(undefined as never);
   });
 
   it('notifies documentation requester when recruiter links a previously requested missing document', async () => {
@@ -734,6 +737,7 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
     });
     jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
       id: 'cpm-1',
+      recruiterId: 'rec-user',
     });
     jest
       .spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any)
@@ -779,6 +783,50 @@ describe('DocumentsService - reuseDocument missing upload notification', () => {
         projectId: 'proj-1',
       }),
     );
+    expect(outbox.publishRecruiterNotification).not.toHaveBeenCalled();
+  });
+
+  it('notifies recruiter when documentation team uploads a missing document', async () => {
+    jest.spyOn(prisma.document, 'findUnique' as any).mockResolvedValue({
+      id: 'doc-1',
+      candidateId: 'cand-1',
+      docType: 'resume',
+      fileName: 'resume.pdf',
+    });
+    jest.spyOn(prisma.project, 'findUnique' as any).mockResolvedValue({
+      id: 'proj-1',
+      title: 'UAE Nurses',
+    });
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue({
+      id: 'cpm-1',
+      recruiterId: 'rec-user',
+    });
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any)
+      .mockResolvedValue(null);
+    jest
+      .spyOn(prisma.candidateProjectDocumentVerification, 'create' as any)
+      .mockResolvedValue({ id: 'ver-1' });
+    jest.spyOn(prisma.candidate, 'findUnique' as any).mockResolvedValue({
+      firstName: 'Jane',
+      lastName: 'Doe',
+    });
+
+    await service.reuseDocument('doc-1', 'proj-1', 'role-1', 'user-doc');
+
+    expect(outbox.publishRecruiterNotification).toHaveBeenCalledWith(
+      'rec-user',
+      expect.stringContaining('resume'),
+      'Missing Document Uploaded by Documentation Team',
+      '/recruiter-docs/proj-1/cand-1',
+      expect.objectContaining({
+        type: 'document_uploaded_by_documentation',
+        docType: 'resume',
+        candidateId: 'cand-1',
+        projectId: 'proj-1',
+      }),
+    );
+    expect(outbox.publishDocumentationNotification).not.toHaveBeenCalled();
   });
 });
 

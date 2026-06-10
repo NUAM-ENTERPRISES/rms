@@ -8,6 +8,7 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "document_resubmission_requested",
     "document_upload_requested",
     "document_missing_uploaded",
+    "document_uploaded_by_documentation",
     "document_resubmitted",
     "documentation_notification",
     "recruiter_notification",

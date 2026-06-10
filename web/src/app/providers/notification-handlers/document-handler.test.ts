@@ -61,6 +61,31 @@ describe("document-handler sync", () => {
 });
 
 describe("document-handler notifications", () => {
+  it("invalidates verification tags when documentation uploads a missing document", () => {
+    const invalidateTags = vi.fn();
+
+    const handled = handleDocumentNotifications({
+      notification: {
+        type: "recruiter_notification",
+        meta: {
+          type: "document_uploaded_by_documentation",
+          candidateId: "cand-1",
+          projectId: "proj-1",
+        },
+      },
+      dispatch: vi.fn(),
+      invalidateTags,
+    });
+
+    expect(handled).toBe(true);
+    expect(invalidateTags).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        { type: "DocumentVerification", id: "cand-1" },
+        { type: "RecruiterDocuments" },
+      ]),
+    );
+  });
+
   it("invalidates verification tags for missing document uploaded bell notification", () => {
     const invalidateTags = vi.fn();
 
