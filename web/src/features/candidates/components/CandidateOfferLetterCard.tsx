@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { FileText, Upload, Eye, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { FileText, Upload, Eye, Loader2, CheckCircle2, AlertCircle, Send } from "lucide-react";
+import { RequestOfferLetterUploadModal } from "@/features/documents/components/RequestOfferLetterUploadModal";
 import {
   Card,
   CardContent,
@@ -22,12 +23,14 @@ import { useGetInterviewsQuery } from "@/features/interviews/api";
 import {
   buildOfferLetterNominationKey,
   buildPassedInterviewNominationLookup,
+  canShowOfferLetterRequestButton,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
   findOfferLetterForNomination,
+  findOfferLetterUploadRequestForNomination,
+  getOfferLetterUploadRequestDisplayMessage,
   getOfferLetterUploadRequestRequesterLabel,
   hasPassedInterviewForNomination,
-  OFFER_LETTER_UPLOAD_REQUEST_MESSAGE,
   OFFER_LETTER_UPLOAD_REQUEST_TITLE,
   type OfferLetterDocumentItem,
   type OfferLetterInterviewItem,
@@ -68,6 +71,11 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
   const isInterviewCoordinator = useHasRole("Interview Coordinator");
   const isRecruiter = useHasRole("Recruiter");
   const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null);
+  const [requestTarget, setRequestTarget] = useState<{
+    candidateProjectMapId: string;
+    projectTitle: string;
+    roleCatalogId?: string;
+  } | null>(null);
   const [pdfViewer, setPdfViewer] = useState<{
     isOpen: boolean;
     fileUrl: string;
@@ -130,15 +138,15 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
         );
         const overrideUrl = localOverrides[key];
         const fileUrl = overrideUrl || doc?.fileUrl;
-        const uploadRequest = uploadRequests.find(
-          (request) =>
-            request.projectId === projectId &&
-            (request.roleCatalogId === roleCatalogId ||
-              (!request.roleCatalogId && !roleCatalogId)),
-        );
+        const uploadRequest = findOfferLetterUploadRequestForNomination(uploadRequests, {
+          candidateProjectMapId: nomination.id,
+          projectId,
+          roleCatalogId,
+        });
 
         return {
           key,
+          candidateProjectMapId: nomination.id,
           projectId,
           projectTitle: nomination.project?.title || "Project",
           roleCatalogId,
@@ -174,6 +182,8 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
       subStatusName,
       hasPassedInterview,
     });
+
+  const canRequestOfferLetter = isInterviewCoordinator || canUploadInterviews;
 
   const isLoading = projectsLoading || docsLoading;
 
@@ -288,6 +298,28 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                           View
                         </Button>
                       )}
+                      {canShowOfferLetterRequestButton({
+                        isRecruiter,
+                        hasOfferLetter: row.hasDocument,
+                        hasPendingRequest: Boolean(row.uploadRequest),
+                        canRequest: canRequestOfferLetter && row.hasPassedInterview,
+                      }) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-amber-700 border-amber-200 hover:bg-amber-50"
+                          onClick={() =>
+                            setRequestTarget({
+                              candidateProjectMapId: row.candidateProjectMapId,
+                              projectTitle: row.projectTitle,
+                              roleCatalogId: row.roleCatalogId,
+                            })
+                          }
+                        >
+                          <Send className="h-4 w-4" />
+                          Request
+                        </Button>
+                      )}
                       {canShowOfferLetterUploadButton({
                         isRecruiter,
                         hasOfferLetter: row.hasDocument,
@@ -327,7 +359,9 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
                             {OFFER_LETTER_UPLOAD_REQUEST_TITLE}
                           </p>
                           <p className="text-sm text-amber-800 leading-relaxed">
-                            {OFFER_LETTER_UPLOAD_REQUEST_MESSAGE}
+                            {getOfferLetterUploadRequestDisplayMessage(
+                              row.uploadRequest.reason,
+                            )}
                           </p>
                           {(() => {
                             const requesterLabel = getOfferLetterUploadRequestRequesterLabel(
@@ -355,6 +389,19 @@ export const CandidateOfferLetterCard: React.FC<CandidateOfferLetterCardProps> =
           )}
         </CardContent>
       </Card>
+
+      {requestTarget && (
+        <RequestOfferLetterUploadModal
+          isOpen={!!requestTarget}
+          onOpenChange={(open) => !open && setRequestTarget(null)}
+          candidateId={candidateId}
+          candidateProjectMapId={requestTarget.candidateProjectMapId}
+          candidateName={candidateName}
+          projectTitle={requestTarget.projectTitle}
+          roleCatalogId={requestTarget.roleCatalogId}
+          onSuccess={() => void refetchUploadRequests()}
+        />
+      )}
 
       {uploadTarget && (
         <OfferLetterUploadModal

@@ -76,6 +76,27 @@ describe("offer-letter-handler", () => {
     );
   });
 
+  it("handles role_notification when meta.type is offer_letter_uploaded", () => {
+    const dispatch = vi.fn();
+    const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));
+
+    const handled = handleOfferLetterNotifications({
+      notification: {
+        type: "role_notification",
+        meta: {
+          type: "offer_letter_uploaded",
+          candidateId: "cand-5",
+          projectId: "proj-5",
+        },
+      },
+      dispatch,
+      invalidateTags,
+    });
+
+    expect(handled).toBe(true);
+    expect(dispatch).toHaveBeenCalled();
+  });
+
   it("invalidates tags on OfferLetterUploaded data sync", () => {
     const dispatch = vi.fn();
     const invalidateTags = vi.fn((tags) => ({ type: "invalidate", payload: tags }));

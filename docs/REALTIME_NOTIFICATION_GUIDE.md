@@ -85,6 +85,73 @@ socket.on("notification:new", (notification: any) => {
 
 ---
 
+## Offer letter uploaded (recruiter or interview coordinator)
+
+When a recruiter or interview coordinator uploads an offer letter, the backend calls `OutboxService.publishOfferLetterUploaded`, which emits:
+
+| Event | Recipients |
+|-------|------------|
+| `OfferLetterUploaded` | System Admin, Admin, Manager, Recruiter Manager, CEO, Director, Processing Manager, Interview Coordinator, Processing Executive, and the assigned recruiter (uploader excluded) |
+| `DataSync` (`OfferLetterUploaded`) | All connected clients (global broadcast) |
+
+**Bell notification**
+
+- Type: `offer_letter_uploaded`
+- Title: `Offer Letter Uploaded`
+- Link: `/recruiter-docs/{projectId}/{candidateId}`
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `Interview` | Interview passed / send-for-processing lists |
+| `ProcessingSummary` | Ready-for-processing lists |
+| `Processing` | Processing workspace |
+| `Candidate` | Candidate detail |
+| `Document` | Offer letter cards and document lists |
+| `RecruiterDocuments` | Recruiter docs nomination view |
+| `DocumentVerification` | Verification views |
+| `{ type: "Document", id: "offer-letter-requests-{candidateId}" }` | Pending upload request banners |
+
+**Handlers**
+
+- `notification-handlers/offer-letter-handler.ts` — handles `notification:new` with type `offer_letter_uploaded` and `data:sync` with type `OfferLetterUploaded`
+- Also resolves `role_notification` / `recruiter_notification` when `meta.type` is `offer_letter_uploaded`
+
+---
+
+## Send for processing (interview coordinator)
+
+When an interview coordinator marks a passed interview as **ready for processing**, the backend calls `OutboxService.publishCandidateReadyForProcessing`, which emits:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateReadyForProcessing` | Manager, System Admin, Director, CEO, Admin, Team Lead |
+| `RecruiterNotification` | Assigned recruiter for that nomination |
+| `DataSync` (`ProcessingSummary`) | Connected clients (list refresh) |
+
+**Recruiter notification**
+
+- Title: `Candidate Ready for Processing`
+- `meta.type`: `candidate_ready_for_processing`
+- Link: `/recruiter-docs/{projectId}/{candidateId}`
+
+If no offer letter exists, the recruiter may also receive a separate `offer_letter_upload_requested` notification.
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `ProcessingSummary` | Ready-for-processing / processing lists |
+| `Processing` | Processing workspace |
+| `Interview` | Interview passed lists |
+| `Candidate` | Candidate detail |
+| `RecruiterDocuments` | Recruiter docs for the nomination |
+
+**Handler:** `notification-handlers/processing-handler.ts` (resolves `recruiter_notification` when `meta.type` is `candidate_ready_for_processing`).
+
+---
+
 ## Agent candidate requests (example)
 
 When a manager submits **Request Agent Candidates**, the backend emits `agent_candidate_request_created` to Agent Coordinators.

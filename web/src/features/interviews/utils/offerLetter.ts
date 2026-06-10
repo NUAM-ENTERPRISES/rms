@@ -190,6 +190,20 @@ export function canShowOfferLetterUploadButton(options: {
   return true;
 }
 
+/** Interview coordinators may request recruiter upload when no letter exists yet. */
+export function canShowOfferLetterRequestButton(options: {
+  isRecruiter: boolean;
+  hasOfferLetter: boolean;
+  hasPendingRequest: boolean;
+  canRequest: boolean;
+}): boolean {
+  const { isRecruiter, hasOfferLetter, hasPendingRequest, canRequest } = options;
+  if (!canRequest || isRecruiter || hasOfferLetter || hasPendingRequest) {
+    return false;
+  }
+  return true;
+}
+
 export type OfferLetterInterviewItem = {
   id?: string;
   outcome?: string;
@@ -280,4 +294,55 @@ export function getOfferLetterUploadRequestRequesterLabel(
   if (!reason) return null;
   const match = reason.match(/\(Requested by ([^)]+)\)/i);
   return match?.[1]?.trim() ?? null;
+}
+
+/** Coordinator note shown to recruiters; strips the trailing requester attribution. */
+export function getOfferLetterUploadRequestDisplayMessage(
+  reason?: string | null,
+): string {
+  if (!reason?.trim()) {
+    return OFFER_LETTER_UPLOAD_REQUEST_MESSAGE;
+  }
+
+  const withoutRequester = reason
+    .replace(/\s*\(Requested by [^)]+\)\s*$/i, "")
+    .trim();
+
+  return withoutRequester || OFFER_LETTER_UPLOAD_REQUEST_MESSAGE;
+}
+
+export type OfferLetterUploadRequestItem = {
+  projectId: string;
+  roleCatalogId?: string | null;
+  candidateProjectMapId?: string;
+  reason?: string;
+  requestedAt?: string;
+};
+
+export function findOfferLetterUploadRequestForNomination<
+  T extends OfferLetterUploadRequestItem,
+>(
+  requests: T[],
+  options: {
+    candidateProjectMapId?: string;
+    projectId: string;
+    roleCatalogId?: string | null;
+  },
+): T | undefined {
+  const { candidateProjectMapId, projectId, roleCatalogId } = options;
+
+  return requests.find((request) => {
+    if (
+      candidateProjectMapId &&
+      request.candidateProjectMapId === candidateProjectMapId
+    ) {
+      return true;
+    }
+
+    return (
+      request.projectId === projectId &&
+      (request.roleCatalogId === roleCatalogId ||
+        (!request.roleCatalogId && !roleCatalogId))
+    );
+  });
 }

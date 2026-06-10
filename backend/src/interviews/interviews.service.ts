@@ -2552,14 +2552,15 @@ export class InterviewsService {
       );
     }
 
-    if (!interview.candidateProjectMap) {
+    const candidateProjectMap = interview.candidateProjectMap;
+    if (!candidateProjectMap) {
       throw new BadRequestException(
         'Interview is not linked to a candidate project nomination',
       );
     }
 
     await this.assertCandidateNotAlreadySentForProcessing(
-      interview.candidateProjectMap.candidate.id,
+      candidateProjectMap.candidate.id,
       id,
     );
 
@@ -2569,11 +2570,11 @@ export class InterviewsService {
     });
     const changerName = changer?.name ?? null;
 
-    const candidateName = `${interview.candidateProjectMap.candidate.firstName} ${interview.candidateProjectMap.candidate.lastName}`;
+    const candidateName = `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName}`;
     const projectName =
-      interview.project?.title || interview.candidateProjectMap.project.title;
+      interview.project?.title || candidateProjectMap.project.title;
     const projectId =
-      interview.project?.id || interview.candidateProjectMap.project.id;
+      interview.project?.id || candidateProjectMap.project.id;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const sentAt = new Date();
@@ -2663,38 +2664,29 @@ export class InterviewsService {
         },
       });
 
-      await this.outboxService.publishEvent(
-        'CandidateReadyForProcessing',
+      const recruiterId = candidateProjectMap.recruiter?.id;
+
+      await this.outboxService.publishCandidateReadyForProcessing(
         {
-          candidateProjectMapId: interview.candidateProjectMapId,
+          candidateProjectMapId: interview.candidateProjectMapId!,
+          candidateId: candidateProjectMap.candidate.id,
           candidateName,
           projectName,
           projectId,
+          recruiterId,
           changedBy: changerName,
+          changedById: userId,
         },
         tx,
       );
-
-      await this.outboxService.publishEvent(
-        'DataSync',
-        {
-          type: 'ProcessingSummary',
-          message: `Candidate ${candidateName} is now ready for processing`,
-        },
-        tx,
-      );
-
-      const recruiterId = interview.candidateProjectMap?.recruiter?.id;
       const roleCatalogId =
-        interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
-        interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+        candidateProjectMap.roleNeeded?.roleCatalogId ||
+        candidateProjectMap.roleNeeded?.roleCatalog?.id;
 
-      const candidateProjectMap = interview.candidateProjectMap;
       if (
         !existingOfferLetter &&
         recruiterId &&
-        interview.candidateProjectMapId &&
-        candidateProjectMap
+        interview.candidateProjectMapId
       ) {
         await this.documentsService.requestOfferLetterUploadAfterSendForProcessing(
           {

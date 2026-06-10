@@ -2,10 +2,12 @@ import { describe, it, expect } from "vitest";
 import {
   buildOfferLetterNominationKey,
   buildPassedInterviewNominationLookup,
+  canShowOfferLetterRequestButton,
   canShowOfferLetterUploadButton,
   canUserUploadOfferLetter,
   findOfferLetterForNomination,
   getOfferLetterOverrideKey,
+  getOfferLetterUploadRequestDisplayMessage,
   getOfferLetterUploadRequestRequesterLabel,
   hasOfferLetter,
   hasPassedInterviewForNomination,
@@ -41,6 +43,35 @@ describe("offerLetter utils", () => {
     expect(isOfferLetterUploadEligible("interview_scheduled")).toBe(false);
     expect(isOfferLetterUploadEligible("interview_passed")).toBe(true);
     expect(isOfferLetterUploadEligible("transfered_to_processing")).toBe(true);
+  });
+
+  it("shows offer letter request only for coordinators without a pending request", () => {
+    expect(
+      canShowOfferLetterRequestButton({
+        isRecruiter: false,
+        hasOfferLetter: false,
+        hasPendingRequest: false,
+        canRequest: true,
+      }),
+    ).toBe(true);
+
+    expect(
+      canShowOfferLetterRequestButton({
+        isRecruiter: true,
+        hasOfferLetter: false,
+        hasPendingRequest: false,
+        canRequest: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      canShowOfferLetterRequestButton({
+        isRecruiter: false,
+        hasOfferLetter: false,
+        hasPendingRequest: true,
+        canRequest: true,
+      }),
+    ).toBe(false);
   });
 
   it("hides offer letter upload for recruiters when a letter already exists", () => {
@@ -198,5 +229,13 @@ describe("offerLetter utils", () => {
         "Please call the candidate. (Requested by Rachel Interview Coordinator)",
       ),
     ).toBe("Rachel Interview Coordinator");
+  });
+
+  it("shows coordinator note without requester attribution for recruiters", () => {
+    expect(
+      getOfferLetterUploadRequestDisplayMessage(
+        "Candidate confirmed they will sign today. Please follow up and upload. (Requested by Rachel Interview Coordinator)",
+      ),
+    ).toBe("Candidate confirmed they will sign today. Please follow up and upload.");
   });
 });

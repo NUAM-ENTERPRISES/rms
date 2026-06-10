@@ -51,6 +51,7 @@ describe('InterviewsService - client decision flows', () => {
 
   const mockOutboxService = {
     publishRecruiterNotification: jest.fn(),
+    publishCandidateReadyForProcessing: jest.fn(),
     publishEvent: jest.fn(),
   } as any;
 
@@ -564,12 +565,16 @@ describe('InterviewsService - client decision flows', () => {
         }),
       }),
     );
-    expect(mockOutboxService.publishEvent).toHaveBeenCalledWith(
-      'CandidateReadyForProcessing',
+    expect(mockOutboxService.publishCandidateReadyForProcessing).toHaveBeenCalledWith(
       expect.objectContaining({
         candidateProjectMapId: 'cpm-1',
+        candidateId: 'cand-1',
         candidateName: 'Jane Doe',
         projectName: 'Project X',
+        projectId: 'proj-1',
+        recruiterId: 'rec-1',
+        changedBy: 'Coordinator',
+        changedById: 'coord-1',
       }),
       expect.anything(),
     );

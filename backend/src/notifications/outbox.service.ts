@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-
 @Injectable()
 export class OutboxService {
   private readonly logger = new Logger(OutboxService.name);
@@ -448,6 +447,86 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate sent for ready-for-processing by interview coordinator.
+   * Notifies leadership roles and the assigned recruiter.
+   */
+  async publishCandidateReadyForProcessing(
+    payload: {
+      candidateProjectMapId: string;
+      candidateId: string;
+      candidateName: string;
+      projectName: string;
+      projectId: string;
+      recruiterId?: string | null;
+      changedBy?: string | null;
+      changedById?: string | null;
+    },
+    tx?: any,
+  ): Promise<void> {
+    const {
+      candidateProjectMapId,
+      candidateId,
+      candidateName,
+      projectName,
+      projectId,
+      recruiterId,
+      changedBy,
+      changedById,
+    } = payload;
+
+    await this.publishEvent(
+      'CandidateReadyForProcessing',
+      {
+        candidateProjectMapId,
+        candidateId,
+        candidateName,
+        projectName,
+        projectId,
+        recruiterId: recruiterId ?? null,
+        changedBy: changedBy ?? null,
+        changedById: changedById ?? null,
+      },
+      tx,
+    );
+
+    if (recruiterId) {
+      const changedBySuffix = changedBy ? ` by ${changedBy}` : '';
+      await this.publishRecruiterNotification(
+        recruiterId,
+        `${candidateName} has been sent for processing for project "${projectName}"${changedBySuffix}.`,
+        'Candidate Ready for Processing',
+        `/recruiter-docs/${projectId}/${candidateId}`,
+        {
+          type: 'candidate_ready_for_processing',
+          candidateId,
+          projectId,
+          candidateProjectMapId,
+          changedById: changedById ?? null,
+          syncTags: [
+            'Interview',
+            'ProcessingSummary',
+            'Candidate',
+            'Processing',
+            'RecruiterDocuments',
+          ],
+        },
+        tx,
+      );
+    }
+
+    await this.publishDataSync(
+      {
+        type: 'ProcessingSummary',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        message: `Candidate ${candidateName} is now ready for processing`,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate transferred to processing event
    */
   async publishCandidateTransferredToProcessing(
@@ -615,6 +694,17 @@ export class OutboxService {
     tx?: any,
   ): Promise<void> {
     await this.publishEvent('OfferLetterUploaded', payload, tx);
+
+    await this.publishDataSync(
+      {
+        type: 'OfferLetterUploaded',
+        candidateId: payload.candidateId,
+        projectId: payload.projectId,
+        candidateProjectMapId: payload.candidateProjectMapId,
+        message: `Offer letter uploaded for ${payload.candidateName}`,
+      },
+      tx,
+    );
   }
 
   /**

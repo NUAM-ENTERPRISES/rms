@@ -1,5 +1,18 @@
 import { NotificationHandlerProps } from "./types";
 
+const resolveProcessingNotificationType = (notification: {
+  type?: string;
+  meta?: { type?: string };
+}) => {
+  if (
+    notification.type === "recruiter_notification" &&
+    notification.meta?.type
+  ) {
+    return notification.meta.type;
+  }
+  return notification.type;
+};
+
 export const handleProcessingNotifications = ({ notification, dispatch, invalidateTags }: NotificationHandlerProps) => {
   const processingNotificationTypes = [
     "interview_passed",
@@ -11,9 +24,13 @@ export const handleProcessingNotifications = ({ notification, dispatch, invalida
     "processing.reminder",
   ];
 
-  if (!processingNotificationTypes.includes(notification.type)) return false;
+  const notificationType = resolveProcessingNotificationType(notification);
 
-  console.log(`[Socket] Handling processing notification: ${notification.type}`);
+  if (!notificationType || !processingNotificationTypes.includes(notificationType)) {
+    return false;
+  }
+
+  console.log(`[Socket] Handling processing notification: ${notificationType}`);
 
   dispatch(invalidateTags([
     "Candidate",

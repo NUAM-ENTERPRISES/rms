@@ -703,6 +703,30 @@ export const documentsApi = baseApi.injectEndpoints({
       ],
     }),
 
+    requestOfferLetterUpload: builder.mutation<
+      { success: boolean; data: { success: boolean }; message: string },
+      {
+        candidateProjectMapId: string;
+        candidateId: string;
+        reason: string;
+        roleCatalogId?: string;
+      }
+    >({
+      query: ({ candidateId: _candidateId, ...body }) => ({
+        url: `/documents/request-offer-letter-upload`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { candidateId }) => [
+        "Document",
+        "DocumentSummary",
+        "Interview",
+        "Candidate",
+        { type: "Document", id: `offer-letter-requests-${candidateId}` },
+        { type: "Candidate", id: candidateId },
+      ],
+    }),
+
     reuploadDocument: builder.mutation<
       { success: boolean; data: Document; message: string },
       { documentId: string } & ReuploadDocumentRequest
@@ -1086,4 +1110,5 @@ export const {
   useBulkForwardToClientMutation,
   useRequestClientReuploadMutation,
   useRequestMissingDocumentUploadMutation,
+  useRequestOfferLetterUploadMutation,
 } = documentsApi;

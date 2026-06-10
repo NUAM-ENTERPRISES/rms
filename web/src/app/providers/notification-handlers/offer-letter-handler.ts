@@ -32,7 +32,11 @@ const resolveOfferLetterNotificationType = (notification: {
   type?: string;
   meta?: { type?: string };
 }) => {
-  if (notification.type === "recruiter_notification" && notification.meta?.type) {
+  if (
+    (notification.type === "recruiter_notification" ||
+      notification.type === "role_notification") &&
+    notification.meta?.type
+  ) {
     return notification.meta.type;
   }
   return notification.type;
@@ -65,6 +69,7 @@ export const handleOfferLetterNotifications = ({
   }
 
   dispatch(invalidateTags(tags));
+  window.dispatchEvent(new CustomEvent("notifications:refresh"));
   return true;
 };
 
@@ -90,5 +95,6 @@ export const handleOfferLetterSync = (
   }
 
   dispatch(invalidateTags(tags));
+  window.dispatchEvent(new CustomEvent("notifications:refresh"));
   return true;
 };
