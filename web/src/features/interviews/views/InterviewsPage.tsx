@@ -1185,14 +1185,22 @@ export default function InterviewsPage() {
                   {activeFilter === "interviewPassed" && (
                     <>
                       {isInterviewCoordinator && (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white h-8"
-                          disabled={isBulkSendingForProcessing}
-                          onClick={openBulkSendForProcessingModal}
-                        >
-                          Send for Processing
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 w-8"
+                                disabled={isBulkSendingForProcessing}
+                                onClick={openBulkSendForProcessingModal}
+                                aria-label="Send for Processing"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Send for Processing</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                       <Button
                         size="sm"
@@ -1854,29 +1862,27 @@ export default function InterviewsPage() {
                                             <UserCheck className="h-4 w-4" />
                                           </Button>
                                         )}
+                                        {showSendForProcessing && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="icon"
+                                                  variant="outline"
+                                                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                                  disabled={isSendingForProcessing}
+                                                  onClick={() => openSendForProcessingModal(item)}
+                                                  aria-label="Send for Processing"
+                                                >
+                                                  <Send className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Send for Processing</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
                                       </>
                                     );
-
-                                    if (showSendForProcessing) {
-                                      return (
-                                        <div className="flex flex-col items-end gap-2">
-                                          <div className="flex items-center justify-end gap-2">
-                                            {iconActions}
-                                          </div>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-8 w-full min-w-[10.5rem] px-3 text-[11px] font-bold text-emerald-700 border-emerald-200 hover:bg-emerald-50 whitespace-nowrap"
-                                            disabled={isSendingForProcessing}
-                                            onClick={() => openSendForProcessingModal(item)}
-                                            title="Send for Processing"
-                                          >
-                                            <Send className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                                            Send for Processing
-                                          </Button>
-                                        </div>
-                                      );
-                                    }
 
                                     return (
                                       <div className="flex items-center justify-end gap-2">
