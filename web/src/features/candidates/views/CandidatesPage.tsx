@@ -89,9 +89,6 @@ export default function CandidatesPage() {
   const isManager = hasAllCandidatesView(user?.roles);
   const isOperationsUser = user?.roles?.some(isOperationsRole) ?? false;
   const canReadOperationsCallHistory = useCan("read:operations_call_history");
-  const isManager = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
-  );
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
