@@ -45,6 +45,7 @@ import {
   Video,
 } from "lucide-react";
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
+import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
 import {
   useGetCandidateProjectRequirementsQuery,
   useGetMatchmakingProcessQuery,
@@ -1140,8 +1141,10 @@ export default function CandidateDocumentVerificationPage() {
               <div className="flex items-center gap-2">
                 <Badge className={cn(
                   "text-xs font-semibold",
-                  projectResponse.data.status === "active" ? "bg-green-100 text-green-700" :
-                  projectResponse.data.status === "completed" ? "bg-blue-100 text-blue-700" :
+                  projectResponse.data.status === ProjectStatus.IN_PROGRESS ? "bg-green-100 text-green-700" :
+                  projectResponse.data.status === ProjectStatus.COMPLETED ? "bg-blue-100 text-blue-700" :
+                  projectResponse.data.status === ProjectStatus.CANCELLED ? "bg-rose-100 text-rose-700" :
+                  projectResponse.data.status === ProjectStatus.ON_HOLD ? "bg-amber-100 text-amber-700" :
                   "bg-slate-100 text-slate-700"
                 )}>
                   {projectResponse.data.status}

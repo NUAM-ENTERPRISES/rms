@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { Building2, Calendar, Users, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,14 +21,16 @@ export default function TeamProjectsList({ projects }: TeamProjectsListProps) {
   };
 
   // Get status badge variant
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: ProjectStatusType) => {
     switch (status) {
-      case "active":
+      case ProjectStatus.IN_PROGRESS:
         return "default";
-      case "completed":
+      case ProjectStatus.COMPLETED:
         return "secondary";
-      case "cancelled":
+      case ProjectStatus.CANCELLED:
         return "destructive";
+      case ProjectStatus.ON_HOLD:
+        return "warning"; // Assuming a new 'warning' variant for on_hold
       default:
         return "outline";
     }

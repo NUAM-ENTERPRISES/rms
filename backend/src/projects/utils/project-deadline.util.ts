@@ -21,11 +21,25 @@ export function buildExpiredActiveProjectsWhere(now = new Date()) {
   const startOfToday = getStartOfToday(now);
 
   return {
-    status: 'active' as const,
+    status: 'IN_PROGRESS' as const,
     deadline: {
       not: null,
       lt: startOfToday,
     },
+  };
+}
+
+/** In-progress projects that are not past their deadline (null deadline counts as active). */
+export function buildInProgressProjectsWhere(now = new Date()) {
+  const startOfToday = getStartOfToday(now);
+
+  return {
+    status: 'IN_PROGRESS' as const,
+    AND: [
+      {
+        OR: [{ deadline: null }, { deadline: { gte: startOfToday } }],
+      },
+    ],
   };
 }
 
@@ -38,15 +52,9 @@ export function assertProjectOpenForAssignment(
   project: ProjectAssignmentGate,
   now = new Date(),
 ): void {
-  if (project.status !== 'active') {
+  if (project.status !== 'IN_PROGRESS') {
     throw new BadRequestException(
       `Cannot assign candidates to a project with status "${project.status}".`,
-    );
-  }
-
-  if (isProjectDeadlineExpired(project.deadline ?? null, now)) {
-    throw new BadRequestException(
-      'Cannot assign candidates: project deadline has passed and the project is closed.',
     );
   }
 }

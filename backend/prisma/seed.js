@@ -926,6 +926,48 @@ async function main() {
       });
     }
   }
+
+  console.log('Seeding user profession scopes...');
+  const professionTypes = await prisma.professionType.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: 'asc' },
+  });
+  if (professionTypes.length > 0) {
+    const nurseType = professionTypes.find((type) => type.name === 'nurse');
+    if (!nurseType) {
+      throw new Error('Nurse profession type is required for user profession scope seed');
+    }
+    const allTypeIds = professionTypes.map((type) => type.id);
+    const usersForScopes = await prisma.user.findMany({
+      select: {
+        id: true,
+        userRoles: {
+          select: {
+            role: { select: { name: true } },
+          },
+        },
+      },
+    });
+    for (const scopeUser of usersForScopes) {
+      const isRecruiter = scopeUser.userRoles.some(
+        (userRole) => userRole.role.name === 'Recruiter',
+      );
+      const targetIds = isRecruiter ? [nurseType.id] : allTypeIds;
+      await prisma.userProfessionScope.deleteMany({ where: { userId: scopeUser.id } });
+      if (targetIds.length > 0) {
+        await prisma.userProfessionScope.createMany({
+          data: targetIds.map((professionTypeId) => ({
+            userId: scopeUser.id,
+            professionTypeId,
+          })),
+        });
+      }
+    }
+    console.log(`User profession scopes seeded for ${usersForScopes.length} users`);
+  } else {
+    console.warn('No profession types found; skipping user profession scope seed');
+  }
+
   console.log('🏥 Creating sample clients...');
   const healthcareClient = await prisma.client.upsert({
     where: { id: 'healthcare-client-id' },

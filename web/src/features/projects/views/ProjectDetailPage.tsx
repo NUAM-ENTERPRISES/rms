@@ -43,11 +43,13 @@ import {
   RefreshCcw,
   UserRoundSearch,
   History,
+  Pencil,
 } from "lucide-react";
+import { ProjectStatus, type ProjectStatusType } from "@/entities/project/constants";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import {
   getProjectClosureMessage,
-  isProjectOpenForAssignment,
+  isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
@@ -81,8 +83,11 @@ import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
 import {
   getConfigValueBadge,
   getProjectStatusBadge,
+  normalizeProjectStatusKey,
   statusBadgeClassNames,
 } from "@/features/projects/constants/statusBadges";
+import { ChangeProjectStatusDialog } from "@/features/projects/components/ChangeProjectStatusDialog";
+import { canUpdateProjectStatus } from "@/config/role-capabilities";
 import { cn } from "@/lib/utils";
 
 // Helper function to format date
@@ -116,6 +121,16 @@ const getMinimalScoreBadgeClass = (score?: number) => {
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
   return "bg-red-50 text-red-700";
+};
+
+const toProjectStatusType = (status?: string | null): ProjectStatusType => {
+  const key = normalizeProjectStatusKey(status);
+  if (key === ProjectStatus.ON_HOLD) return ProjectStatus.ON_HOLD;
+  if (key === ProjectStatus.COMPLETED) return ProjectStatus.COMPLETED;
+  if (key === ProjectStatus.CANCELLED || key === "inactive") {
+    return ProjectStatus.CANCELLED;
+  }
+  return ProjectStatus.IN_PROGRESS;
 };
 
 // Format a single work experience item for display. Some records use
@@ -162,6 +177,7 @@ export default function ProjectDetailPage() {
   // Permissions
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
+  const canChangeProjectStatus = canUpdateProjectStatus(user?.roles);
   const isAgentCoordinator = useIsAgentCoordinator();
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
@@ -176,10 +192,16 @@ export default function ProjectDetailPage() {
     refetchOnFocus: true,
     refetchOnMountOrArgChange: true,
   });
-  const assignmentOpen = isProjectOpenForAssignment(projectData?.data);
-  const assignmentClosureMessage = getProjectClosureMessage(projectData?.data);
-  const DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE =
-    "This project is closed. New candidate assignments are disabled.";
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
+
+  const ensurePipelineOpen = (): boolean => {
+    if (pipelineOpen) return true;
+    toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+    return false;
+  };
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -188,6 +210,7 @@ export default function ProjectDetailPage() {
   const [nominatedPage, setNominatedPage] = useState(1);
 
   const [showDetails, setShowDetails] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
 
   // Get eligible candidates
   const { data: eligibleResponse, refetch: refetchEligible } = useGetEligibleCandidatesQuery({
@@ -197,7 +220,7 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
-    skip: !projectId || !assignmentOpen,
+    skip: !projectId || !pipelineOpen,
     refetchOnFocus: false,
     refetchOnMountOrArgChange: false,
   });
@@ -484,6 +507,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     // Try to find nominated candidate to prefill nominatedRole if present
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -506,6 +530,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setInterviewConfirm({
       isOpen: true,
       candidateId,
@@ -662,12 +687,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
-    if (!assignmentOpen) {
-      toast.error(
-        assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
-      );
-      return;
-    }
+    if (!ensurePipelineOpen()) return;
     // Find the candidate to determine top matched role
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -706,6 +726,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setScreeningConfirm({
       isOpen: true,
       candidateId,
@@ -1111,14 +1132,30 @@ export default function ProjectDetailPage() {
                           "mr-1 inline-block h-1 w-1 rounded-full",
                           project.status?.toLowerCase() === "active"
                             ? "bg-emerald-500"
-                            : project.status?.toLowerCase() === "cancelled"
+                            : project.status?.toLowerCase() === ProjectStatus.CANCELLED
                               ? "bg-red-500"
-                              : "bg-slate-400"
+                              : project.status?.toLowerCase() === ProjectStatus.ON_HOLD
+                                ? "bg-amber-500"
+                                : project.status?.toLowerCase() === ProjectStatus.COMPLETED
+                                  ? "bg-blue-500"
+                                  : "bg-slate-400"
                         )}
                         aria-hidden
                       />
                       {projectStatusBadge.label}
                     </Badge>
+                    {canChangeProjectStatus && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowStatusDialog(true)}
+                        className="h-7 w-7 shrink-0 rounded-md p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-700"
+                        aria-label="Update project status"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      </Button>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
@@ -1290,17 +1327,13 @@ export default function ProjectDetailPage() {
                   showScreeningConfirmation(candidateId, candidateName)
                 }
                 onBulkAssign={(candidateIds) => {
-                  if (!assignmentOpen) {
-                    toast.error(
-                      assignmentClosureMessage ?? DEFAULT_ASSIGNMENT_CLOSURE_MESSAGE
-                    );
-                    return;
-                  }
+                  if (!ensurePipelineOpen()) return;
                   setBulkAssignState({ isOpen: true, candidateIds });
                 }}
-                onBulkSendForScreening={(candidateIds) =>
-                  setBulkScreeningState({ isOpen: true, candidateIds })
-                }
+                onBulkSendForScreening={(candidateIds) => {
+                  if (!ensurePipelineOpen()) return;
+                  setBulkScreeningState({ isOpen: true, candidateIds });
+                }}
                 nominatedPage={nominatedPage}
                 nominatedTotal={projectCandidatesData?.data?.pagination?.total}
                 nominatedTotalPages={projectCandidatesData?.data?.pagination?.totalPages}
@@ -1715,6 +1748,14 @@ export default function ProjectDetailPage() {
         onClose={() => setShowAgentRequestHistory(false)}
         projectId={project.id}
         projectTitle={project.title}
+      />
+
+      <ChangeProjectStatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        projectId={project.id}
+        projectTitle={project.title}
+        currentStatus={toProjectStatusType(project.status)}
       />
 
       {/* Delete Confirmation Dialog */}

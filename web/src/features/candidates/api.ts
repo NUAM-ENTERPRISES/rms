@@ -86,6 +86,25 @@ export interface Candidate {
     id: string;
     facilityType: string;
   }>;
+  rolePreferences?: Array<{
+    roleCatalogId: string;
+    roleCatalog: {
+      id: string;
+      label: string;
+      name: string;
+      roleDepartment?: {
+        id: string;
+        label: string;
+        name: string;
+      } | null;
+    };
+  }>;
+  professionTypeId?: string;
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
   sectorType?: string;
   visaType?: string;
 
@@ -494,6 +513,15 @@ export interface PassportLookupResult {
   candidate?: PassportLookupCandidateSummary;
 }
 
+export interface ProfessionType {
+  id: string;
+  name: string;
+  label: string;
+  description?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
 export interface CreateCandidateRequest {
   firstName: string;
   lastName: string;
@@ -510,10 +538,12 @@ export interface CreateCandidateRequest {
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
   expectedSalary?: number; // Legacy
+  professionTypeId: string;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   highestEducation?: string;
   university?: string;
   graduationYear?: number;
@@ -567,10 +597,12 @@ export interface UpdateCandidateRequest {
   currentRole?: string;
   expectedMinSalary?: number;
   expectedMaxSalary?: number;
+  professionTypeId?: string;
   sectorType?: string;
   visaType?: string;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   highestEducation?: string;
   university?: string;
   graduationYear?: number;
@@ -672,6 +704,7 @@ export interface CandidateListQueryParams {
   eligibility?: boolean;
   workExperienceCompany?: string;
   workExperienceTitle?: string;
+  operationsCallAttempts?: number;
 }
 
 export interface GetCandidatesParams extends CandidateListQueryParams {}
@@ -764,6 +797,12 @@ export function appendCandidateListQueryParams(
   if (params.workExperienceTitle) {
     queryParams.append("workExperienceTitle", params.workExperienceTitle);
   }
+  if (params.operationsCallAttempts !== undefined) {
+    queryParams.append(
+      "operationsCallAttempts",
+      params.operationsCallAttempts.toString(),
+    );
+  }
 }
 
 export interface RecruiterMyCandidatesResponse {
@@ -837,9 +876,50 @@ export interface ConsolidatedCandidatesResponse {
   message: string;
 }
 
+export type PendingStatusChangeRequest = {
+  id: string;
+  requestType: "block" | "reactivate";
+  requestedStatus?: "withdrawn" | "on_hold";
+  reason: string;
+  createdAt: string;
+  requester?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+};
+
+export type ReviewedStatusChangeRequest = PendingStatusChangeRequest & {
+  status: "approved" | "rejected";
+  reviewedAt?: string | null;
+  reviewNotes?: string | null;
+  reviewer?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+};
+
+export type StatusChangeRequestHistoryItem = ReviewedStatusChangeRequest & {
+  status: "pending" | "approved" | "rejected";
+};
+
 export interface GetCandidateProjectPipelineResponse {
     success: boolean;
     data: {
+      candidateProjectMapId?: string;
+      isPipelineBlocked?: boolean;
+      pipelineBlockedReason?: string | null;
+      pendingStatusChangeRequest?: PendingStatusChangeRequest | null;
+      latestReviewedStatusChangeRequest?: ReviewedStatusChangeRequest | null;
+      previousMainStatus?: { id: string; name: string; label: string };
+      previousSubStatus?: { id: string; name: string; label: string };
+      statusBlockedAt?: string;
+      currentStatus?: {
+        mainStatus?: { id: string; name: string; label: string; color?: string };
+        subStatus?: { id: string; name: string; label: string; color?: string };
+        timeInStatus?: string;
+      };
       candidate: Candidate & {
         mobileNumber?: string;
         countryCode?: string;
@@ -1131,6 +1211,16 @@ function appendCandidateOverviewQueryParams(
 
 export const candidatesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    getProfessionTypes: builder.query<{ professionTypes: ProfessionType[] }, void>({
+      query: () => "/profession-types",
+      transformResponse: (response: {
+        success?: boolean;
+        data?: { professionTypes?: ProfessionType[] };
+      }) => ({
+        professionTypes: response.data?.professionTypes ?? [],
+      }),
+      providesTags: [{ type: "ProfessionType" as const, id: "LIST" }],
+    }),
     getCandidateOverviewStats: builder.query<
       { stats: CandidateOverviewStats },
       CandidateOverviewQueryParams
@@ -1258,7 +1348,99 @@ export const candidatesApi = baseApi.injectEndpoints({
       transformResponse: (response: GetCandidateProjectPipelineResponse) => {
         return response;
       },
-      providesTags: (_, __, { candidateId }) => [{ type: "Candidate", id: candidateId }],
+      providesTags: (_, __, { candidateId, projectId }) => [
+        { type: "Candidate", id: candidateId },
+        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+      ],
+    }),
+
+    createCandidateProjectStatusChangeRequest: builder.mutation<
+      { success: boolean; data: unknown; message: string },
+      {
+        candidateProjectMapId: string;
+        candidateId: string;
+        projectId: string;
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
+        reason: string;
+      }
+    >({
+      query: ({ candidateProjectMapId, candidateId: _candidateId, projectId: _projectId, ...body }) => ({
+        url: `/candidate-projects/status-change-requests`,
+        method: "POST",
+        body: { candidateProjectMapId, ...body },
+      }),
+      invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
+        { type: "Candidate", id: candidateId },
+        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+        { type: "Candidate", id: `status-change-history-${candidateProjectMapId}` },
+      ],
+    }),
+
+    getCandidateProjectStatusChangeRequestHistory: builder.query<
+      {
+        success: boolean;
+        data: StatusChangeRequestHistoryItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+        message: string;
+      },
+      { candidateProjectMapId: string; page?: number; limit?: number }
+    >({
+      query: ({ candidateProjectMapId, page = 1, limit = 10 }) => ({
+        url: `/candidate-projects/status-change-requests/history`,
+        params: { candidateProjectMapId, page, limit },
+      }),
+      providesTags: (_, __, { candidateProjectMapId }) => [
+        { type: "Candidate", id: `status-change-history-${candidateProjectMapId}` },
+      ],
+    }),
+
+    approveCandidateProjectStatusChangeRequest: builder.mutation<
+      { success: boolean; data: unknown; message: string },
+      {
+        requestId: string;
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId?: string;
+        reviewNotes?: string;
+      }
+    >({
+      query: ({ requestId, candidateId: _candidateId, projectId: _projectId, reviewNotes }) => ({
+        url: `/candidate-projects/status-change-requests/${requestId}/approve`,
+        method: "PATCH",
+        body: { reviewNotes },
+      }),
+      invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
+        { type: "Candidate", id: candidateId },
+        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+        ...(candidateProjectMapId
+          ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
+          : []),
+      ],
+    }),
+
+    rejectCandidateProjectStatusChangeRequest: builder.mutation<
+      { success: boolean; data: unknown; message: string },
+      {
+        requestId: string;
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId?: string;
+        reviewNotes?: string;
+      }
+    >({
+      query: ({ requestId, candidateId: _candidateId, projectId: _projectId, reviewNotes }) => ({
+        url: `/candidate-projects/status-change-requests/${requestId}/reject`,
+        method: "PATCH",
+        body: { reviewNotes },
+      }),
+      invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
+        { type: "Candidate", id: candidateId },
+        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+        ...(candidateProjectMapId
+          ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
+          : []),
+      ],
     }),
 
 
@@ -1864,6 +2046,10 @@ export const {
   useGetConsolidatedCandidatesQuery,
   useGetStatusConfigQuery,
   useGetCandidateProjectPipelineQuery,
+  useCreateCandidateProjectStatusChangeRequestMutation,
+  useGetCandidateProjectStatusChangeRequestHistoryQuery,
+  useApproveCandidateProjectStatusChangeRequestMutation,
+  useRejectCandidateProjectStatusChangeRequestMutation,
   useTransferCandidateMutation,
   useBulkTransferCandidatesMutation,
   useTransferBackCandidateMutation,
@@ -1874,4 +2060,5 @@ export const {
   useGetCandidateInterviewWorkflowQuery,
   useGetCandidateScreeningWorkflowQuery,
   useGetCandidateProcessingWorkflowQuery,
+  useGetProfessionTypesQuery,
 } = candidatesApi;

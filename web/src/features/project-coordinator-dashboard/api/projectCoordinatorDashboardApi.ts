@@ -1,9 +1,13 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 
 export interface CoordinatorDashboardStats {
   myClients: number;
   activeProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
+  cancelledProjects: number;
+  totalProjects: number;
   candidatesFilled: number;
 }
 
@@ -14,9 +18,7 @@ export interface CoordinatorDashboardStatsResponse {
 }
 
 export interface CoordinatorProjectsByStatus {
-  active: number;
-  completed: number;
-  cancelled: number;
+  [key in ProjectStatusType]?: number;
 }
 
 export interface CoordinatorProjectsByStatusResponse {
@@ -43,7 +45,7 @@ export interface CoordinatorMyProjectItem {
   projectId: string;
   projectName: string;
   clientName: string;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
 }
 
 export interface CoordinatorMyProjectsResponse {

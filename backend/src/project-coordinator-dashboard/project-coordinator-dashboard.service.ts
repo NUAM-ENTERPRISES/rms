@@ -12,6 +12,7 @@ import {
   ProjectPipelineQueryDto,
   ProjectRoleHiringStatusQueryDto,
 } from './dto/project-coordinator-dashboard-query.dto';
+import { buildInProgressProjectsWhere } from '../projects/utils/project-deadline.util';
 
 @Injectable()
 export class ProjectCoordinatorDashboardService {
@@ -30,14 +31,20 @@ export class ProjectCoordinatorDashboardService {
   }
 
   async getStats(userId: string) {
-    const [myClients, activeProjects, completedProjects, projectIds] =
+    const [myClients, inProgressProjects, completedProjects, onHoldProjects, cancelledProjects, projectIds] =
       await Promise.all([
         this.getMyClientIds(userId).then((ids) => ids.length),
         this.prisma.project.count({
-          where: { createdBy: userId, status: 'active' },
+          where: { createdBy: userId, ...buildInProgressProjectsWhere() },
         }),
         this.prisma.project.count({
-          where: { createdBy: userId, status: 'completed' },
+          where: { createdBy: userId, status: 'COMPLETED' },
+        }),
+        this.prisma.project.count({
+          where: { createdBy: userId, status: 'ON_HOLD' },
+        }),
+        this.prisma.project.count({
+          where: { createdBy: userId, status: 'CANCELLED' },
         }),
         this.getMyProjectIds(userId),
       ]);
@@ -51,8 +58,11 @@ export class ProjectCoordinatorDashboardService {
       success: true,
       data: {
         myClients,
-        activeProjects,
+        activeProjects: inProgressProjects,
         completedProjects,
+        onHoldProjects,
+        cancelledProjects,
+        totalProjects: inProgressProjects + completedProjects + onHoldProjects + cancelledProjects,
         candidatesFilled,
       },
       message: 'Project coordinator dashboard stats retrieved successfully',
@@ -60,21 +70,24 @@ export class ProjectCoordinatorDashboardService {
   }
 
   async getProjectsByStatus(userId: string) {
-    const [active, completed, cancelled] = await Promise.all([
+    const [inProgress, completed, onHold, cancelled] = await Promise.all([
       this.prisma.project.count({
-        where: { createdBy: userId, status: 'active' },
+        where: { createdBy: userId, ...buildInProgressProjectsWhere() },
       }),
       this.prisma.project.count({
-        where: { createdBy: userId, status: 'completed' },
+        where: { createdBy: userId, status: 'COMPLETED' },
       }),
       this.prisma.project.count({
-        where: { createdBy: userId, status: 'cancelled' },
+        where: { createdBy: userId, status: 'ON_HOLD' },
+      }),
+      this.prisma.project.count({
+        where: { createdBy: userId, status: 'CANCELLED' },
       }),
     ]);
 
     return {
       success: true,
-      data: { active, completed, cancelled },
+      data: { inProgress, completed, onHold, cancelled },
       message: 'Project status breakdown retrieved successfully',
     };
   }
@@ -105,10 +118,10 @@ export class ProjectCoordinatorDashboardService {
     const data = clients
       .map((client) => {
         const activeProjects = client.projects.filter(
-          (project) => project.status === 'active',
+          (project) => project.status === 'IN_PROGRESS',
         ).length;
         const completedProjects = client.projects.filter(
-          (project) => project.status === 'completed',
+          (project) => project.status === 'COMPLETED',
         ).length;
 
         return {
@@ -239,7 +252,7 @@ export class ProjectCoordinatorDashboardService {
 
     const projectWhere: Prisma.ProjectWhereInput = {
       createdBy: userId,
-      status: 'active',
+      status: 'IN_PROGRESS',
     };
 
     if (projectId) {

@@ -21,7 +21,11 @@ import {
   ArrowRight,
   Save,
 } from "lucide-react";
-import { useCreateCandidateMutation, useUploadDocumentMutation } from "@/features/candidates";
+import {
+  useCreateCandidateMutation,
+  useGetProfessionTypesQuery,
+  useUploadDocumentMutation,
+} from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
@@ -126,6 +130,7 @@ export default function CreateCandidatePage() {
   
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [preferredRoleLabels, setPreferredRoleLabels] = useState<Record<string, string>>({});
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [newWorkExperience, setNewWorkExperience] = useState<Omit<WorkExperience, "id">>({
     companyName: "",
@@ -203,12 +208,23 @@ export default function CreateCandidatePage() {
       graduationYear: undefined,
       gpa: undefined,
       qualifications: [],
+      professionTypeId: "",
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: [],
       facilityPreferences: [],
+      preferredRoles: [],
     },
   });
+
+  const professionTypeId = form.watch("professionTypeId");
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionTypeName = useMemo(
+    () =>
+      professionTypesData?.professionTypes.find((type) => type.id === professionTypeId)
+        ?.name,
+    [professionTypeId, professionTypesData?.professionTypes],
+  );
 
   // Preselect agent when coming from Agent screens
   useEffect(() => {
@@ -257,6 +273,7 @@ export default function CreateCandidatePage() {
       "source",
       "agentId",
       "gender",
+      "professionTypeId",
       "height",
       "weight",
       "skinTone",
@@ -286,8 +303,9 @@ export default function CreateCandidatePage() {
       "expectedSalary",
       "preferredCountries",
       "facilityPreferences",
+      "preferredRoles",
       "sectorType",
-      "visaType"
+      "visaType",
     ];
     const isValid = await form.trigger(step2Fields as any);
     
@@ -414,6 +432,8 @@ export default function CreateCandidatePage() {
         payload.address = data.address.trim();
       }
 
+      payload.professionTypeId = data.professionTypeId;
+
       // Preference fields
       if (data.expectedSalary !== undefined) payload.expectedMinSalary = data.expectedSalary;
       if (data.sectorType) payload.sectorType = data.sectorType;
@@ -423,6 +443,9 @@ export default function CreateCandidatePage() {
       }
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
       }
 
       // Educational qualifications (legacy fields)
@@ -447,6 +470,9 @@ export default function CreateCandidatePage() {
       }
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
       }
 
       // Multiple qualifications
@@ -657,6 +683,8 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            professionTypeName={selectedProfessionTypeName}
+            onPreferredRoleLabelsChange={setPreferredRoleLabels}
           />
         );
       case 3:
@@ -822,9 +850,16 @@ export default function CreateCandidatePage() {
         gpa: form.getValues("gpa"),
         qualifications,
         workExperiences,
+        professionTypeId: form.getValues("professionTypeId"),
+        professionTypeLabel:
+          professionTypesData?.professionTypes.find(
+            (type) => type.id === form.getValues("professionTypeId"),
+          )?.label,
         expectedSalary: form.getValues("expectedSalary") ?? undefined,
         preferredCountries: form.getValues("preferredCountries"),
         facilityPreferences: form.getValues("facilityPreferences"),
+        preferredRoles: form.getValues("preferredRoles"),
+        preferredRoleLabels,
         sectorType: form.getValues("sectorType"),
         visaType: form.getValues("visaType"),
         skinTone: form.getValues("skinTone"),

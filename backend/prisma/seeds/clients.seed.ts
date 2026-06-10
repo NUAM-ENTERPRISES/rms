@@ -1,0 +1,135 @@
+import {
+  AcquisitionMethod,
+  AgencyType,
+  ClientType,
+  ExternalSourceType,
+  FacilitySize,
+  FacilityType,
+  IndividualRelationship,
+  PrismaClient,
+  RelationshipType,
+} from '@prisma/client';
+
+export async function seedClients(prisma: PrismaClient) {
+  console.log('🏥 Creating sample clients...');
+
+  await prisma.client.upsert({
+    where: { id: 'healthcare-client-id' },
+    update: {
+      name: 'City General Hospital',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'Dr. John Smith',
+      email: 'contact@citygeneral.com',
+      phone: '+1234567890',
+      address: '123 Medical Center Dr, Healthcare City, HC 12345',
+      facilityType: FacilityType.HOSPITAL,
+      facilitySize: FacilitySize.LARGE,
+      locations: ['Healthcare City', 'Medical District'],
+      relationshipType: RelationshipType.DIRECT_CLIENT,
+      commissionRate: 0,
+      paymentTerms: 'Net 30',
+    },
+    create: {
+      id: 'healthcare-client-id',
+      name: 'City General Hospital',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'Dr. John Smith',
+      email: 'contact@citygeneral.com',
+      phone: '+1234567890',
+      address: '123 Medical Center Dr, Healthcare City, HC 12345',
+      facilityType: FacilityType.HOSPITAL,
+      facilitySize: FacilitySize.LARGE,
+      locations: ['Healthcare City', 'Medical District'],
+      relationshipType: RelationshipType.DIRECT_CLIENT,
+      commissionRate: 0,
+      paymentTerms: 'Net 30',
+    },
+  });
+
+  await prisma.client.upsert({
+    where: { id: 'individual-client-id' },
+    update: {
+      name: 'Sarah Johnson',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'Sarah Johnson',
+      email: 'sarah.johnson@email.com',
+      phone: '+1987654321',
+      profession: 'Registered Nurse',
+      organization: 'Metro Medical Center',
+      relationship: IndividualRelationship.CURRENT_EMPLOYEE,
+      relationshipType: RelationshipType.REFERRAL,
+      commissionRate: 10.0,
+    },
+    create: {
+      id: 'individual-client-id',
+      name: 'Sarah Johnson',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'Sarah Johnson',
+      email: 'sarah.johnson@email.com',
+      phone: '+1987654321',
+      profession: 'Registered Nurse',
+      organization: 'Metro Medical Center',
+      relationship: IndividualRelationship.CURRENT_EMPLOYEE,
+      relationshipType: RelationshipType.REFERRAL,
+      commissionRate: 10.0,
+    },
+  });
+
+  await prisma.client.upsert({
+    where: { id: 'agency-client-id' },
+    update: {
+      name: 'Regional Staffing Solutions',
+      type: ClientType.SUB_AGENT,
+      pointOfContact: 'Mike Wilson',
+      email: 'mike@regionalstaffing.com',
+      phone: '+1555123456',
+      address: '456 Business Ave, Corporate City, CC 67890',
+      agencyType: AgencyType.REGIONAL,
+      specialties: ['Healthcare', 'Nursing', 'Administrative'],
+      relationshipType: RelationshipType.PARTNERSHIP,
+      commissionRate: 25.0,
+      paymentTerms: 'Net 45',
+    },
+    create: {
+      id: 'agency-client-id',
+      name: 'Regional Staffing Solutions',
+      type: ClientType.SUB_AGENT,
+      pointOfContact: 'Mike Wilson',
+      email: 'mike@regionalstaffing.com',
+      phone: '+1555123456',
+      address: '456 Business Ave, Corporate City, CC 67890',
+      agencyType: AgencyType.REGIONAL,
+      specialties: ['Healthcare', 'Nursing', 'Administrative'],
+      relationshipType: RelationshipType.PARTNERSHIP,
+      commissionRate: 25.0,
+      paymentTerms: 'Net 45',
+    },
+  });
+
+  await prisma.client.upsert({
+    where: { id: 'external-client-id' },
+    update: {
+      name: 'LinkedIn Healthcare Jobs',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'LinkedIn Team',
+      email: 'healthcare@linkedin.com',
+      sourceType: ExternalSourceType.SOCIAL_MEDIA,
+      sourceName: 'LinkedIn',
+      acquisitionMethod: AcquisitionMethod.ORGANIC,
+      sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
+      relationshipType: RelationshipType.EXTERNAL_SOURCE,
+    },
+    create: {
+      id: 'external-client-id',
+      name: 'LinkedIn Healthcare Jobs',
+      type: ClientType.DIRECT_CLIENT,
+      pointOfContact: 'LinkedIn Team',
+      email: 'healthcare@linkedin.com',
+      sourceType: ExternalSourceType.SOCIAL_MEDIA,
+      sourceName: 'LinkedIn',
+      acquisitionMethod: AcquisitionMethod.ORGANIC,
+      sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
+      relationshipType: RelationshipType.EXTERNAL_SOURCE,
+    },
+  });
+}

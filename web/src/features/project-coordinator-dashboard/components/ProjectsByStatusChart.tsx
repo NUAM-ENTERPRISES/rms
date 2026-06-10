@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { useMemo } from "react";
 import {
   PieChart,
@@ -19,22 +20,28 @@ import { useGetCoordinatorProjectsByStatusQuery } from "../api/projectCoordinato
 
 const STATUS_CONFIG = [
   {
-    key: "active",
-    label: "Active",
+    key: ProjectStatus.IN_PROGRESS,
+    label: "In Progress",
     fill: "#6366f1",
     dotColor: "bg-indigo-500",
   },
   {
-    key: "completed",
+    key: ProjectStatus.COMPLETED,
     label: "Completed",
     fill: "#10b981",
     dotColor: "bg-emerald-500",
   },
   {
-    key: "cancelled",
+    key: ProjectStatus.CANCELLED,
     label: "Cancelled",
     fill: "#f59e0b",
     dotColor: "bg-amber-500",
+  },
+  {
+    key: ProjectStatus.ON_HOLD,
+    label: "On Hold",
+    fill: "#ef4444", // Example color, adjust as needed
+    dotColor: "bg-red-500",
   },
 ] as const;
 

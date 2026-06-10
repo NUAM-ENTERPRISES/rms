@@ -15,6 +15,7 @@ import {
   Upload,
   GraduationCap,
   Video,
+  XCircle,
 } from "lucide-react";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { FaWhatsapp } from "react-icons/fa";
@@ -125,6 +126,8 @@ export interface CandidateRecord {
    * but document verification was intentionally skipped (direct screening).
    */
   isSendedForDocumentVerification?: boolean;
+  isCREReassigned?: boolean;
+  isHandledByCRE?: boolean;
   matchScore?:
     | number
     | {
@@ -361,7 +364,9 @@ const CandidateCard = memo(function CandidateCard({
   const isNonPositiveStatus = !!currentStatusLabel && !isPositiveStatus;
   const assignmentBlockReason =
     assignmentBlockReasonProp ??
-    getCandidateAssignmentBlockReason(currentStatusLabel);
+    getCandidateAssignmentBlockReason(currentStatusLabel, {
+      isCREReassigned: candidate.isCREReassigned,
+    });
   const isNotEligible = isNonPositiveStatus || propEligibilityData?.isEligible === false || !anyRoleEligible;
   const eligibilityData = propEligibilityData;
 
@@ -618,6 +623,19 @@ const CandidateCard = memo(function CandidateCard({
   const hasPipelineStatusAccent =
     typeof className === "string" && className.includes("pipeline-status-accent");
 
+  // Check if candidate is withdrawn or on hold
+  const projectMainStatus = 
+    projectLink?.mainStatus?.name || 
+    candidate.projectMainStatus?.name ||
+    candidate.projectDetails?.mainStatus;
+  const isWithdrawn = 
+    projectMainStatus?.toLowerCase() === "withdrawn" ||
+    primaryStatusRaw.toLowerCase() === "withdrawn";
+  const isOnHold = 
+    projectMainStatus?.toLowerCase() === "on_hold" ||
+    primaryStatusRaw.toLowerCase() === "on_hold" ||
+    primaryStatusRaw.toLowerCase() === "on hold";
+
   return (
     <Card
       draggable={!!onDragStart}
@@ -627,11 +645,15 @@ const CandidateCard = memo(function CandidateCard({
         hasPipelineStatusAccent
           ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
           : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300",
-        isAlreadyInProject &&
+        isWithdrawn &&
+          "border-2 border-red-300 bg-red-50/50",
+        !isWithdrawn && isOnHold &&
+          "border-2 border-orange-300 bg-orange-50/50",
+        !isWithdrawn && !isOnHold && isAlreadyInProject &&
           !showProcessingGlance &&
           !hasPipelineStatusAccent &&
           "border-l-[3px] border-l-emerald-400",
-        isNotEligible &&
+        !isWithdrawn && !isOnHold && isNotEligible &&
           !isAlreadyInProject &&
           !hasPipelineStatusAccent &&
           "border-l-[3px] border-l-red-300 opacity-75",
@@ -667,6 +689,26 @@ const CandidateCard = memo(function CandidateCard({
           showProcessingGlance && "relative z-[1]",
         )}
       >
+        {/* Withdrawn Notice */}
+        {isWithdrawn && (
+          <div className="mb-2 flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-3 py-2">
+            <XCircle className="h-4 w-4 shrink-0 text-red-600" />
+            <p className="text-xs font-semibold text-red-800">
+              Candidate withdrawn from this project
+            </p>
+          </div>
+        )}
+        
+        {/* On Hold Notice */}
+        {isOnHold && (
+          <div className="mb-2 flex items-center gap-2 rounded-md border border-orange-300 bg-orange-100 px-3 py-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-orange-600" />
+            <p className="text-xs font-semibold text-orange-800">
+              This candidate is on hold
+            </p>
+          </div>
+        )}
+
         {/* Header row */}
         <div className="flex items-center gap-3">
           {/* Bulk-selection checkbox */}

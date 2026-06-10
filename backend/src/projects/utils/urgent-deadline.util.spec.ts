@@ -12,13 +12,24 @@ describe('urgent-deadline.util', () => {
     expect(lte).toEqual(new Date(2026, 5, 6, 23, 59, 59, 999));
   });
 
-  it('builds active-only where clause with non-null deadline', () => {
+  it('builds in-progress where clause for overdue and upcoming deadlines', () => {
     const now = new Date('2026-05-30T15:30:00.000Z');
     const where = buildUrgentProjectsWhere(now);
 
-    expect(where.status).toBe('active');
-    expect(where.deadline.not).toBeNull();
-    expect(where.deadline.gte).toEqual(new Date(2026, 4, 30, 0, 0, 0, 0));
-    expect(where.deadline.lte).toEqual(new Date(2026, 5, 6, 23, 59, 59, 999));
+    expect(where.status).toBe('IN_PROGRESS');
+    expect(where.AND).toEqual([
+      { deadline: { not: null } },
+      {
+        OR: [
+          { deadline: { lt: new Date(2026, 4, 30, 0, 0, 0, 0) } },
+          {
+            deadline: {
+              gte: new Date(2026, 4, 30, 0, 0, 0, 0),
+              lte: new Date(2026, 5, 6, 23, 59, 59, 999),
+            },
+          },
+        ],
+      },
+    ]);
   });
 });

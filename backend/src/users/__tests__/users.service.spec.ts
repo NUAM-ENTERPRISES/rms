@@ -59,6 +59,13 @@ describe('UsersService', () => {
       count: jest.fn(),
       findMany: jest.fn(),
     },
+    professionType: {
+      findMany: jest.fn(),
+    },
+    userProfessionScope: {
+      createMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
 
@@ -132,6 +139,7 @@ describe('UsersService', () => {
       dateOfBirth: '1990-01-01',
       countryCode: '+1',
       mobileNumber: '1234567890',
+      professionTypeIds: ['pt_nurse_seed001'],
     };
 
     it('should create a user successfully', async () => {
@@ -150,10 +158,19 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null) // email check
         .mockResolvedValueOnce(mockUser); // fetch new user after create
       mockPrismaService.user.create.mockResolvedValue(mockUser);
+      mockPrismaService.professionType.findMany.mockResolvedValue([
+        { id: 'pt_nurse_seed001' },
+      ]);
+      mockPrismaService.userProfessionScope.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       const result = await service.create(createUserDto, 'admin123');
 
       expect(result).toEqual(mockUser);
+      expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
+        data: [{ userId: 'user123', professionTypeId: 'pt_nurse_seed001' }],
+      });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { email: createUserDto.email },
       });
@@ -186,6 +203,85 @@ describe('UsersService', () => {
       await expect(service.create(dtoWithEmployeeCode, 'admin123')).rejects.toThrow(
         ConflictException,
       );
+    });
+
+    it('should reject invalid professionTypeIds', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.professionType.findMany.mockResolvedValue([]);
+
+      await expect(service.create(createUserDto, 'admin123')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should reject duplicate professionTypeIds', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.create(
+          {
+            ...createUserDto,
+            professionTypeIds: ['pt_nurse_seed001', 'pt_nurse_seed001'],
+          },
+          'admin123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('update profession coverage', () => {
+    it('should replace profession scopes when professionTypeIds provided', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+      };
+      const updatedUser = {
+        ...existingUser,
+        userRoles: [],
+        userProfessionScopes: [
+          {
+            id: 'scope-1',
+            professionTypeId: 'pt_doctor_seed01',
+            professionType: {
+              id: 'pt_doctor_seed01',
+              name: 'doctor',
+              label: 'Doctor',
+            },
+          },
+        ],
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockPrismaService.professionType.findMany.mockResolvedValue([
+        { id: 'pt_doctor_seed01' },
+      ]);
+      mockPrismaService.userProfessionScope.deleteMany.mockResolvedValue({
+        count: 1,
+      });
+      mockPrismaService.userProfessionScope.createMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const dto: UpdateUserDto = {
+        professionTypeIds: ['pt_doctor_seed01'],
+      };
+
+      await service.update('user123', dto, 'admin123');
+
+      expect(mockPrismaService.userProfessionScope.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user123' },
+      });
+      expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
+        data: [{ userId: 'user123', professionTypeId: 'pt_doctor_seed01' }],
+      });
     });
   });
 

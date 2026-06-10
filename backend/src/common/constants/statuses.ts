@@ -271,6 +271,51 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   [CANDIDATE_PROJECT_STATUS.WITHDRAWN]: [],
 };
 
+/** Main statuses that block forward pipeline actions (verification, screening, interview, etc.). */
+export const CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES = [
+  CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  CANDIDATE_PROJECT_STATUS.ON_HOLD,
+] as const;
+
+export type CandidateProjectPipelineBlockedMainStatus =
+  (typeof CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES)[number];
+
+export const CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export const CANDIDATE_PROJECT_STATUS_CHANGE_TARGET_STATUSES = [
+  CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  CANDIDATE_PROJECT_STATUS.ON_HOLD,
+] as const;
+
+export type CandidateProjectStatusChangeTargetStatus =
+  (typeof CANDIDATE_PROJECT_STATUS_CHANGE_TARGET_STATUSES)[number];
+
+/**
+ * Request types for status change workflow
+ * - block: Any Withdrawn/On Hold request (from active OR already blocked)
+ * - reactivate: Return to last active status
+ */
+export const STATUS_CHANGE_REQUEST_TYPES = {
+  BLOCK: 'block',
+  REACTIVATE: 'reactivate',
+} as const;
+
+export type StatusChangeRequestType =
+  (typeof STATUS_CHANGE_REQUEST_TYPES)[keyof typeof STATUS_CHANGE_REQUEST_TYPES];
+
+export function isCandidateProjectPipelineBlocked(
+  mainStatusName: string | null | undefined,
+): boolean {
+  if (!mainStatusName) return false;
+  return (CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES as readonly string[]).includes(
+    mainStatusName,
+  );
+}
+
 /**
  * Helper to validate if a status transition is allowed
  */

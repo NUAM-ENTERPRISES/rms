@@ -1,6 +1,9 @@
+import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
+import { normalizeProjectStatusKey } from "@/features/projects/constants/statusBadges";
+
 /** Minimal project fields for assignment eligibility checks. */
 export type ProjectAssignmentGate = {
-  status?: string;
+  status?: ProjectStatusType | string | null;
   deadline?: string | null;
 };
 
@@ -22,15 +25,33 @@ export function isProjectDeadlineExpired(
   return parsed.getTime() < getStartOfToday(now).getTime();
 }
 
+/** Normalizes API enum (`IN_PROGRESS`), snake_case, and legacy active/inactive to ProjectStatusType. */
+export function resolveProjectGateStatus(
+  status?: string | null
+): ProjectStatusType | null {
+  const key = normalizeProjectStatusKey(status);
+  if (!key) return null;
+  if (key === "active") return ProjectStatus.IN_PROGRESS;
+  if (key === "inactive") return ProjectStatus.CANCELLED;
+  if (key === ProjectStatus.IN_PROGRESS) return ProjectStatus.IN_PROGRESS;
+  if (key === ProjectStatus.COMPLETED) return ProjectStatus.COMPLETED;
+  if (key === ProjectStatus.ON_HOLD) return ProjectStatus.ON_HOLD;
+  if (key === ProjectStatus.CANCELLED) return ProjectStatus.CANCELLED;
+  return null;
+}
+
 export function isProjectOpenForAssignment(
-  project: ProjectAssignmentGate | null | undefined,
-  now = new Date()
+  project: ProjectAssignmentGate | null | undefined
 ): boolean {
-  if (!project || project.status !== "active") {
+  if (!project) {
     return false;
   }
-  return !isProjectDeadlineExpired(project.deadline, now);
+  const status = resolveProjectGateStatus(project.status);
+  return status === ProjectStatus.IN_PROGRESS;
 }
+
+/** Alias: same gate for assign, verification, interview, and screening actions. */
+export const isProjectOpenForPipelineActions = isProjectOpenForAssignment;
 
 /** Statuses that allow nominating a candidate to a project (aligned with backend). */
 export const POSITIVE_ASSIGNMENT_STATUSES = [
@@ -79,20 +100,33 @@ export function isCandidatePositiveForAssignment(statusLabel: string): boolean {
   return (POSITIVE_ASSIGNMENT_STATUSES as readonly string[]).includes(key);
 }
 
+export type CandidateAssignmentBlockOptions = {
+  isCREReassigned?: boolean;
+};
+
 /** User-facing reason when assignment is blocked by candidate status. */
-export function getCandidateAssignmentBlockReason(statusLabel: string): string | null {
+export function getCandidateAssignmentBlockReason(
+  statusLabel: string,
+  options?: CandidateAssignmentBlockOptions,
+): string | null {
   const label = String(statusLabel || "").trim();
   if (!label || isCandidatePositiveForAssignment(label)) {
     return null;
   }
 
   const key = normalizeCandidateStatusKey(label);
+  if (key === "rnr" && !options?.isCREReassigned) {
+    return "This candidate is in RNR and is with Operations. You can assign them only after Operations reassigns them back to you.";
+  }
+  if (key === "rnr" && options?.isCREReassigned) {
+    return "Candidate is still in RNR status. Update status to Interested, Future, or On Hold before assigning to a project.";
+  }
+
   const byStatus: Record<string, string> = {
     call_back:
       "Candidate is scheduled for a callback. Update status to Interested, Future, or On Hold before assigning to a project.",
     callback:
       "Candidate is scheduled for a callback. Update status to Interested, Future, or On Hold before assigning to a project.",
-    rnr: "Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.",
     untouched:
       "Candidate has not been contacted yet. Update status before assigning to a project.",
     not_interested:
@@ -117,17 +151,36 @@ export function getProjectClosureMessage(
   if (!project) {
     return null;
   }
-  if (project.status === "completed") {
-    return "This project is completed. New candidate assignments are disabled.";
+  const status = resolveProjectGateStatus(project.status);
+  if (status === ProjectStatus.COMPLETED) {
+    return "This project is completed. The pipeline to this project is closed.";
   }
-  if (project.status === "cancelled") {
-    return "This project is cancelled. New candidate assignments are disabled.";
+  if (status === ProjectStatus.CANCELLED) {
+    return "This project is cancelled. The pipeline to this project is closed.";
   }
-  if (project.status !== "active") {
-    return "This project is not open for new candidate assignments.";
+  if (status === ProjectStatus.ON_HOLD) {
+    return "This project is on hold. The pipeline to this project is closed.";
   }
-  if (isProjectDeadlineExpired(project.deadline)) {
-    return "Project deadline has passed. New candidate assignments are disabled.";
+  if (status !== ProjectStatus.IN_PROGRESS) {
+    return "The pipeline to this project is closed.";
   }
   return null;
+}
+
+/** Informational notice when deadline has passed; pipeline remains open. */
+export function getProjectDeadlineNoticeMessage(
+  project: ProjectAssignmentGate | null | undefined,
+  now = new Date()
+): string | null {
+  if (!project) {
+    return null;
+  }
+  const status = resolveProjectGateStatus(project.status);
+  if (status !== ProjectStatus.IN_PROGRESS) {
+    return null;
+  }
+  if (!isProjectDeadlineExpired(project.deadline, now)) {
+    return null;
+  }
+  return "Project deadline has passed.";
 }

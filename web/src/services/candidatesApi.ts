@@ -19,6 +19,8 @@ interface Candidate {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
+  professionTypeId?: string;
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +70,7 @@ interface CandidateProjectMap {
 interface CreateCandidateRequest {
   name: string;
   contact: string;
+  professionTypeId?: string;
   email?: string;
   source?: string;
   dateOfBirth?: string;
@@ -78,6 +81,7 @@ interface CreateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string;
@@ -91,6 +95,7 @@ interface UpdateCandidateRequest {
   id: string;
   name?: string;
   contact?: string;
+  professionTypeId?: string;
   email?: string;
   currentStatus?: string;
   experience?: number;
@@ -100,6 +105,7 @@ interface UpdateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string | null;
@@ -148,9 +154,6 @@ export const candidatesApi = baseApi.injectEndpoints({
       query: (params) => {
         const queryParams = new URLSearchParams();
         appendCandidateListQueryParams(queryParams, params);
-        if (params.currentStatus) {
-          queryParams.append("currentStatus", params.currentStatus);
-        }
 
         return `/candidates/my-assigned?${queryParams.toString()}`;
       },
@@ -174,6 +177,8 @@ export const candidatesApi = baseApi.injectEndpoints({
           onHold: number;
           untouched: number;
           junk: number;
+          weekOne: number;
+          weekTwo: number;
           other: number;
           created: number;
         };
@@ -271,6 +276,9 @@ export const candidatesApi = baseApi.injectEndpoints({
         reason: string;
         onHoldUntil?: string;
         futureDate?: string;
+        operationsCallNote?: string;
+        usedPhone?: boolean;
+        usedWhatsapp?: boolean;
       }
     >({
       query: ({ id, ...body }) => ({
@@ -280,7 +288,106 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },
+        { type: "Candidate", id: `${id}-operations-calls` },
         "Candidate",
+      ],
+    }),
+    logOperationsCall: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          startedWeekOneWait?: boolean;
+          markedJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
+    >({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
+        url: `/candidates/${id}/operations/log-call`,
+        method: "POST",
+        body: { note, usedPhone, usedWhatsapp },
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
+      ],
+    }),
+    getOperationsCallHistory: builder.query<
+      {
+        success: boolean;
+        data: Array<{
+          id: string;
+          attemptNumber: number;
+          note: string;
+          usedPhone: boolean;
+          usedWhatsapp: boolean;
+          followUpStage?: string;
+          callOutcome?: string | null;
+          loggedAt: string;
+          loggedBy: { id: string; name: string };
+        }>;
+      },
+      string
+    >({
+      query: (candidateId) => `/candidates/${candidateId}/operations/call-history`,
+      providesTags: (_, __, candidateId) => [
+        { type: "Candidate", id: `${candidateId}-operations-calls` },
+      ],
+    }),
+    moveOperationsToWeekOne: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-one`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    moveOperationsToWeekTwo: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-two`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    markOperationsJunk: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/mark-junk`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    markOperationsNotInterested: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          markedJunk?: boolean;
+          alreadyJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
+    >({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
+        url: `/candidates/${id}/operations/mark-not-interested`,
+        method: "POST",
+        body: { note, usedPhone, usedWhatsapp },
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
       ],
     }),
     assignToProject: builder.mutation<
@@ -429,6 +536,12 @@ export const {
   useDeleteCandidateMutation,
   useMarkCandidateConvertedMutation,
   useTransferCandidateToRecruiterMutation,
+  useLogOperationsCallMutation,
+  useGetOperationsCallHistoryQuery,
+  useMoveOperationsToWeekOneMutation,
+  useMoveOperationsToWeekTwoMutation,
+  useMarkOperationsJunkMutation,
+  useMarkOperationsNotInterestedMutation,
   useAssignToProjectMutation,
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,

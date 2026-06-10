@@ -80,6 +80,7 @@ export class RecruiterAssignmentService {
             role: true,
           },
         },
+        userProfessionScopes: true,
       },
     });
 
@@ -109,18 +110,32 @@ export class RecruiterAssignmentService {
     );
 
     if (isRecruiter) {
+      const candidateProfessionTypeId =
+        await this.getCandidateProfessionTypeId(candidateId);
+      const hasProfessionCoverage =
+        candidateProfessionTypeId &&
+        creator.userProfessionScopes.some(
+          (scope) => scope.professionTypeId === candidateProfessionTypeId,
+        );
+
+      if (hasProfessionCoverage) {
+        this.logger.log(
+          `✅ Creator ${creator.name} is a Recruiter with matching profession coverage - assigning candidate directly (skipping round-robin)`,
+        );
+        return {
+          id: creator.id,
+          name: creator.name,
+          email: creator.email,
+          mobileNumber: creator.mobileNumber,
+          countryCode: creator.countryCode,
+          isRoundRobin: false,
+          directAssignmentKind: 'recruiter',
+        };
+      }
+
       this.logger.log(
-        `✅ Creator ${creator.name} is a Recruiter - strictly assigning candidate directly to them (skipping round-robin)`,
+        `Creator ${creator.name} is a Recruiter but lacks profession coverage for this candidate — using round-robin`,
       );
-      return {
-        id: creator.id,
-        name: creator.name,
-        email: creator.email,
-        mobileNumber: creator.mobileNumber,
-        countryCode: creator.countryCode,
-        isRoundRobin: false,
-        directAssignmentKind: 'recruiter',
-      };
     }
 
     const candidateRow = await this.prisma.candidate.findUnique({
@@ -153,6 +168,29 @@ export class RecruiterAssignmentService {
     return {
       ...bestRecruiter,
       isRoundRobin: true,
+    };
+  }
+
+  private async getCandidateProfessionTypeId(
+    candidateId: string,
+  ): Promise<string | null> {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { professionTypeId: true },
+    });
+    return candidate?.professionTypeId ?? null;
+  }
+
+  private professionScopeWhere(
+    professionTypeId: string | null,
+  ): Prisma.UserWhereInput {
+    if (!professionTypeId) {
+      return {};
+    }
+    return {
+      userProfessionScopes: {
+        some: { professionTypeId },
+      },
     };
   }
 
@@ -215,9 +253,11 @@ export class RecruiterAssignmentService {
   async getRecruiterWithLanguageAwareRoundRobin(
     candidateId: string,
   ): Promise<RecruiterInfo> {
+    const professionTypeId =
+      await this.getCandidateProfessionTypeId(candidateId);
     const targets = await this.getTargetLanguageCodesForCandidate(candidateId);
     if (targets.length === 0) {
-      return this.getRecruiterWithLeastWorkload();
+      return this.getRecruiterWithLeastWorkload(professionTypeId);
     }
 
     const recruiterRoleId = await this.rolesService.findIdByName(
@@ -226,6 +266,7 @@ export class RecruiterAssignmentService {
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
+        ...this.professionScopeWhere(professionTypeId),
         userRoles: {
           some: {
             roleId: recruiterRoleId,
@@ -246,7 +287,11 @@ export class RecruiterAssignmentService {
     });
 
     if (recruiters.length === 0) {
-      throw new Error('No active recruiters found in the system');
+      throw new Error(
+        professionTypeId
+          ? 'No recruiters available for this profession type'
+          : 'No active recruiters found in the system',
+      );
     }
 
     for (const lang of targets) {
@@ -294,13 +339,15 @@ export class RecruiterAssignmentService {
         ',',
       )}] for candidate=${candidateId} — fallback workload`,
     );
-    return this.getRecruiterWithLeastWorkload();
+    return this.getRecruiterWithLeastWorkload(professionTypeId);
   }
 
   /**
    * Get recruiter with the least number of active candidates
    */
-  async getRecruiterWithLeastWorkload(): Promise<RecruiterInfo> {
+  async getRecruiterWithLeastWorkload(
+    professionTypeId?: string | null,
+  ): Promise<RecruiterInfo> {
     const recruiterRoleId = await this.rolesService.findIdByName(
       ROLE_NAMES.RECRUITER,
     );
@@ -309,6 +356,7 @@ export class RecruiterAssignmentService {
     const recruiters = await this.prisma.user.findMany({
       where: {
         ...ACTIVE_USER_ACCOUNT_WHERE,
+        ...this.professionScopeWhere(professionTypeId ?? null),
         userRoles: {
           some: {
             roleId: recruiterRoleId,
@@ -328,7 +376,11 @@ export class RecruiterAssignmentService {
     });
 
     if (recruiters.length === 0) {
-      throw new Error('No active recruiters found in the system');
+      throw new Error(
+        professionTypeId
+          ? 'No recruiters available for this profession type'
+          : 'No active recruiters found in the system',
+      );
     }
 
     // Calculate workload for each recruiter

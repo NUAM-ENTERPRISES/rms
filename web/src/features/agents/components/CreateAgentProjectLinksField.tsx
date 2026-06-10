@@ -46,7 +46,7 @@ export function CreateAgentProjectLinksField({
 
   const { data, isLoading, isFetching } = useGetProjectsPickerQuery(
     {
-      status: "active",
+      status: "in_progress",
       search: debouncedSearch || undefined,
       page,
       limit: PAGE_SIZE,

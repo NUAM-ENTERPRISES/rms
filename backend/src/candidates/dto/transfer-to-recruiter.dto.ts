@@ -1,10 +1,13 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -49,4 +52,31 @@ export class TransferToRecruiterDto {
   @IsOptional()
   @IsDateString()
   futureDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Contact note from the interested call (stored on operations_call_logs)',
+    example: 'Candidate answered and is interested in the UAE role.',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(500)
+  operationsCallNote?: string;
+
+  @ApiPropertyOptional({
+    description: 'Phone used during the interested call log',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  usedPhone?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'WhatsApp used during the interested call log',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  usedWhatsapp?: boolean;
 }

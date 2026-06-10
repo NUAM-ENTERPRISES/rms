@@ -71,8 +71,16 @@ import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportT
 import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
+import { useCan } from "@/hooks/useCan";
+import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
+import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
+import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
+import {
+  canOpenOperationsCallModal,
+  getOperationsFollowUpStage,
+} from "../utils/operations-follow-up.util";
 import {
   WorkflowSubStatusMiniTiles,
   type WorkflowSubStatusTileStyle,
@@ -90,6 +98,9 @@ export default function CandidateOverviewPage() {
     );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
+
+  const isOperationsUser = currentUser?.roles?.some(isOperationsRole) ?? false;
+  const canReadOperationsCallHistory = useCan("read:operations_call_history");
 
   const canTransferCandidates = currentUser?.roles?.some((role) =>
     [
@@ -241,6 +252,32 @@ export default function CandidateOverviewPage() {
 
   const { data: statsResponse } = useGetCandidateOverviewStatsQuery(statsRequestPayload);
   const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
+
+  const {
+    openLogCall,
+    openCallHistory,
+    resolveAssignment,
+    isLoggingCall,
+    handleLogOperationsCall,
+    handleInterestedReassign,
+    handleNotInterestedJunk,
+    callModalCandidate,
+    logCallAttempts,
+    logCallNextAttempt,
+    logCallFollowUpStage,
+    canOpenCallModal,
+    canLogNoAnswerCall,
+    logCallCandidateName,
+    logCallRecruiterName,
+    logCallCurrentStatus,
+    isTransferring: isOperationsTransferring,
+    isMarkingNotInterested,
+    closeCallModal,
+    callModalState,
+  } = useOperationsCallModal({
+    operationsUserId: isOperationsUser ? currentUser?.id : undefined,
+    onLogged: () => refetch(),
+  });
 
   const candidates = data?.data || [];
   const statsData = statsResponse?.stats || {
@@ -825,6 +862,16 @@ export default function CandidateOverviewPage() {
                         activeAssignment?.assignedByUser ||
                         null;
                       const operations = getCandidateOperationsState(candidate);
+                      const operationsAssignment = resolveAssignment(candidate);
+                      const showOperationsFollowUp =
+                        Boolean(operationsAssignment) &&
+                        (isOperationsUser ||
+                          operations.isHandledByOperations ||
+                          canReadOperationsCallHistory);
+                      const followUpStage = getOperationsFollowUpStage(operationsAssignment);
+                      const canLogCall =
+                        isOperationsUser &&
+                        canOpenOperationsCallModal(followUpStage);
 
                       return (
                         <TableRow
@@ -1020,16 +1067,28 @@ export default function CandidateOverviewPage() {
                                 </Button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
-                                  <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-2">
+                                  <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
+                                    <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
+                                  >
+                                    {statusName || "Unknown"}
+                                  </Badge>
                                 </div>
-                                <Badge
-                                  variant="outline"
-                                  className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
-                                >
-                                  {statusName || "Unknown"}
-                                </Badge>
+                                {showOperationsFollowUp && (
+                                  <OperationsCallFollowUpIndicators
+                                    assignment={operationsAssignment}
+                                    canLogCall={canLogCall}
+                                    onLogCall={() => openLogCall(candidate)}
+                                    onViewHistory={() => openCallHistory(candidate)}
+                                    showLogCallButton={isOperationsUser}
+                                    isLoggingCall={isLoggingCall}
+                                  />
+                                )}
                               </div>
                             )}
                           </TableCell>
@@ -1063,6 +1122,19 @@ export default function CandidateOverviewPage() {
                                 <DropdownMenuItem onClick={() => navigate(`/candidates/${candidate.id}`)}>
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
+                                {showOperationsFollowUp && canLogCall && (
+                                  <DropdownMenuItem
+                                    onClick={() => openLogCall(candidate)}
+                                    className="text-green-700"
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" /> Log Call
+                                  </DropdownMenuItem>
+                                )}
+                                {showOperationsFollowUp && (
+                                  <DropdownMenuItem onClick={() => openCallHistory(candidate)}>
+                                    <Clock className="mr-2 h-4 w-4" /> View Call History
+                                  </DropdownMenuItem>
+                                )}
                                 {canTransferCandidates && (
                                   <>
                                     <DropdownMenuSeparator />
@@ -1170,6 +1242,26 @@ export default function CandidateOverviewPage() {
         }
         onConfirm={handleBulkTransfer}
         isLoading={isBulkTransferring}
+      />
+
+      <LogOperationsCallModal
+        isOpen={!!callModalState}
+        onClose={closeCallModal}
+        candidateId={callModalCandidate?.id}
+        candidateName={logCallCandidateName}
+        callAttempts={logCallAttempts}
+        nextAttempt={logCallNextAttempt}
+        followUpStage={logCallFollowUpStage}
+        canLog={!!canOpenCallModal}
+        canLogNoAnswer={!!canLogNoAnswerCall}
+        isSubmitting={isLoggingCall}
+        isSubmittingReassign={isOperationsTransferring}
+        isSubmittingJunk={isMarkingNotInterested}
+        currentRecruiterName={logCallRecruiterName}
+        currentStatus={logCallCurrentStatus}
+        onConfirm={handleLogOperationsCall}
+        onReassign={handleInterestedReassign}
+        onMarkNotInterested={handleNotInterestedJunk}
       />
     </div>
   );

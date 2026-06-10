@@ -19,6 +19,7 @@ import {
   RoleSelect,
   ProfileImageUpload,
   PhysicalAddressFields,
+  ProfessionTypeMultiSelect,
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
 import {
@@ -68,6 +69,7 @@ export default function CreateUserPage() {
       address: "",
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
+      professionTypeIds: [],
     },
   });
 
@@ -113,6 +115,7 @@ export default function CreateUserPage() {
         addressCountryCode: data.addressCountryCode?.trim() || undefined,
         addressStateId: data.addressStateId?.trim() || undefined,
         address: data.address?.trim() || undefined,
+        professionTypeIds: data.professionTypeIds,
       };
 
       console.log("Create User - Form Data:", formData);
@@ -557,6 +560,22 @@ export default function CreateUserPage() {
                       required={false}
                       disabled={isLoading}
                       error={form.formState.errors.roleId?.message}
+                    />
+                  )}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Controller
+                  name="professionTypeIds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <ProfessionTypeMultiSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      required
+                      disabled={isLoading}
+                      error={form.formState.errors.professionTypeIds?.message}
                     />
                   )}
                 />

@@ -194,7 +194,7 @@ describe('AdminDashboardService', () => {
     expect(result.data.projectRoles[0].roles[0]).toEqual({ role: 'ICU Nurse', required: 5, filled: 2 });
     expect(prismaService.project.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { status: 'active', id: 'proj-1' },
+        where: { status: 'IN_PROGRESS', id: 'proj-1' },
         select: {
           id: true,
           title: true,

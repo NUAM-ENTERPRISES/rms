@@ -49,7 +49,8 @@ import { format } from "date-fns";
 // import { toast } from "sonner";
 import {
   getProjectClosureMessage,
-  isProjectOpenForAssignment,
+  getProjectDeadlineNoticeMessage,
+  isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
 import { toast } from "sonner";
 import { getCandidateOperationsState } from "@/features/candidates/utils/operations-candidate";
@@ -167,8 +168,9 @@ export default function ProjectEligibleCandidatesPage() {
   }
 
   const project = projectData?.data ?? projectData;
-  const assignmentOpen = isProjectOpenForAssignment(project);
-  const assignmentClosureMessage = getProjectClosureMessage(project);
+  const pipelineOpen = isProjectOpenForPipelineActions(project);
+  const pipelineClosureMessage = getProjectClosureMessage(project);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(project);
   const eligibleCandidates = eligibleCandidatesData || mockEligibleCandidates;
 
   // Filter and sort candidates
@@ -214,9 +216,9 @@ export default function ProjectEligibleCandidatesPage() {
     });
 
   const handleNominateCandidate = (candidateId: string) => {
-    if (!assignmentOpen) {
+    if (!pipelineOpen) {
       toast.error(
-        assignmentClosureMessage ??
+        pipelineClosureMessage ??
           "This project is closed. New candidate nominations are disabled."
       );
       return;
@@ -331,11 +333,11 @@ export default function ProjectEligibleCandidatesPage() {
           </div>
           <Can anyOf={["nominate:candidates"]}>
             <Button
-              disabled={!assignmentOpen}
+              disabled={!pipelineOpen}
               onClick={() => {
-                if (!assignmentOpen) {
+                if (!pipelineOpen) {
                   toast.error(
-                    assignmentClosureMessage ??
+                    pipelineClosureMessage ??
                       "This project is closed. New candidate nominations are disabled."
                   );
                   return;
@@ -349,12 +351,20 @@ export default function ProjectEligibleCandidatesPage() {
           </Can>
         </div>
 
-        {!assignmentOpen && assignmentClosureMessage ? (
+        {deadlineNoticeMessage ? (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            role="status"
+          >
+            {deadlineNoticeMessage}
+          </div>
+        ) : null}
+        {!pipelineOpen && pipelineClosureMessage ? (
           <div
             className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
             role="status"
           >
-            {assignmentClosureMessage}
+            {pipelineClosureMessage}
           </div>
         ) : null}
 
@@ -589,10 +599,10 @@ export default function ProjectEligibleCandidatesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={handledByOperations || !assignmentOpen}
+                              disabled={handledByOperations || !pipelineOpen}
                               title={
-                                !assignmentOpen
-                                  ? assignmentClosureMessage ?? "Project closed"
+                                !pipelineOpen
+                                  ? pipelineClosureMessage ?? "Project closed"
                                   : handledByOperations
                                     ? "Candidate is currently being handled by Operations"
                                     : "Nominate Candidate"

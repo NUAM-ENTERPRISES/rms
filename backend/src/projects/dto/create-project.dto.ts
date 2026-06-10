@@ -21,6 +21,7 @@ import {
   PROJECT_ROLE_VISA_TYPES,
   PROJECT_SECTOR,
 } from '../constants';
+import { parseProjectStatusInput } from '../utils/project-status.util';
 
 export class CreateRoleNeededDto {
   @ApiPropertyOptional({
@@ -429,13 +430,15 @@ export class CreateProjectDto {
   deadline?: string;
 
   @ApiPropertyOptional({
-    description: 'Project status',
-    enum: ['active', 'completed', 'cancelled'],
-    default: 'active',
+    description:
+      'Project status (accepts enum or snake_case, e.g. IN_PROGRESS or in_progress)',
+    enum: ['COMPLETED', 'ON_HOLD', 'IN_PROGRESS', 'CANCELLED'],
+    default: 'IN_PROGRESS',
   })
   @IsOptional()
-  @IsEnum(['active', 'completed', 'cancelled'])
-  status?: string = 'active';
+  @Transform(({ value }) => parseProjectStatusInput(value))
+  @IsEnum(['COMPLETED', 'ON_HOLD', 'IN_PROGRESS', 'CANCELLED'])
+  status?: 'COMPLETED' | 'ON_HOLD' | 'IN_PROGRESS' | 'CANCELLED' = 'IN_PROGRESS';
 
   @ApiPropertyOptional({
     description: 'Project priority level',

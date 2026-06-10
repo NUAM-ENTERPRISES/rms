@@ -13,6 +13,7 @@ import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { Project } from "@/features/projects";
 import { Plus } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
@@ -100,9 +101,10 @@ export default function ProjectsPage() {
 
   const getActiveFilterLabel = () => {
     if (filters.isUrgent) return "Urgent Deadlines";
-    if (filters.status === "active") return "Active Projects";
-    if (filters.status === "completed") return "Completed Projects";
-    if (filters.status === "cancelled") return "Cancelled Projects";
+    if (filters.status === ProjectStatus.IN_PROGRESS) return "In Progress Projects";
+    if (filters.status === ProjectStatus.COMPLETED) return "Completed Projects";
+    if (filters.status === ProjectStatus.ON_HOLD) return "On Hold Projects";
+    if (filters.status === ProjectStatus.CANCELLED) return "Cancelled Projects";
     if (filters.clientId) return "Filtered by Client";
     if (filters.teamId) return "Filtered by Team";
     if (filters.priority) return `${filters.priority} Priority Projects`;

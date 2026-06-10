@@ -48,7 +48,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', type: 'screening_assigned', notes: 'note' } as SendForInterviewDto;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS' });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Mock Interview Assigned' });
@@ -78,7 +78,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', type: 'interview_assigned', notes: 'note' } as SendForInterviewDto;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS' });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss2', label: 'Client Interview Assigned' });
@@ -108,7 +108,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
@@ -147,7 +147,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', coordinatorId: 'coord1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [], requiredScreening: true });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1', userRoles: [{ role: { name: 'Interview Coordinator' } }] });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Interview' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Screening Assigned' });
@@ -187,7 +187,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
       lastName: 'Doe',
       currentStatus: { statusName: 'interested' },
     });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', rolesNeeded: [], requiredScreening: true, status: 'active' });
+    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'Project P', status: 'IN_PROGRESS', rolesNeeded: [], requiredScreening: true });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Nominated' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Nominated Initial' });
@@ -227,6 +227,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     (prisma.project.findUnique as any).mockResolvedValue({
       id: 'p1',
       title: 'Project P',
+      status: 'IN_PROGRESS',
       rolesNeeded: [],
       requiredScreening: false,
     });
@@ -244,6 +245,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     (prisma.project.findUnique as any).mockResolvedValue({
       id: 'p1',
       title: 'P',
+      status: 'IN_PROGRESS',
       rolesNeeded: [],
       introductionVideoRequired: true,
     });
@@ -270,7 +272,12 @@ describe('CandidateProjectsService - sendForInterview', () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });
@@ -281,11 +288,32 @@ describe('CandidateProjectsService - sendForInterview', () => {
     await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow('Candidate currently in screening/ng.training stage. Cannot send for verification.');
   });
 
+  it('sendForVerification blocks when project is not in progress', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'COMPLETED',
+      rolesNeeded: [],
+    });
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow(
+      'Cannot assign candidates to a project with status "COMPLETED".',
+    );
+  });
+
   it('sendForVerification publishes outbox event for document verification', async () => {
     const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
 
     (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
-    (prisma.project.findUnique as any).mockResolvedValue({ id: 'p1', title: 'P', rolesNeeded: [] });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
     (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
     (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Documents' });
     (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Verification In Progress' });
@@ -406,6 +434,205 @@ describe('CandidateProjectsService - sendForInterview', () => {
     expect(result[0].roleEligibility[0].isEligible).toBe(false);
     expect(result[0].roleEligibility[0].reasons).toContain(
       'Candidate must be in a positive status (interested, future, or on_hold) to be assigned to a project.',
+    );
+  });
+});
+
+describe('CandidateProjectsService - status change requests', () => {
+  let service: CandidateProjectsService;
+  let prisma: any;
+  let outboxService: any;
+
+  const mockPrisma = {
+    candidateProjects: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
+    candidateProjectStatusChangeRequest: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+    candidateProjectMainStatus: { findUnique: jest.fn() },
+    candidateProjectSubStatus: { findUnique: jest.fn() },
+    candidateProjectStatusHistory: { create: jest.fn() },
+    user: { findUnique: jest.fn() },
+    candidateRecruiterAssignment: { findFirst: jest.fn() },
+    candidate: { findUnique: jest.fn() },
+    project: { findUnique: jest.fn() },
+    $transaction: jest.fn(),
+  } as any;
+
+  beforeEach(async () => {
+    outboxService = {
+      publishCandidateProjectStatusChangeRequested: jest.fn(),
+      publishCandidateProjectStatusChangeReviewed: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CandidateProjectsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: NotificationsService, useValue: { createNotification: jest.fn() } },
+        { provide: OutboxService, useValue: outboxService },
+        { provide: NotificationsGateway, useValue: { emitToUser: jest.fn() } },
+      ],
+    }).compile();
+
+    service = module.get(CandidateProjectsService);
+    prisma = module.get(PrismaService);
+    (prisma.candidateRecruiterAssignment.findFirst as any).mockResolvedValue(null);
+  });
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('creates a pending status change request', async () => {
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      id: 'map1',
+      candidateId: 'c1',
+      projectId: 'p1',
+      mainStatus: { name: 'documents' },
+      candidate: { id: 'c1', firstName: 'Jane', lastName: 'Doe' },
+      project: { id: 'p1', title: 'Project A' },
+    });
+    prisma.candidateProjectStatusChangeRequest.findFirst.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      name: 'Recruiter One',
+      userRoles: [{ role: { name: 'Recruiter' } }],
+    });
+
+    const tx = {
+      candidateProjectStatusChangeRequest: {
+        create: jest.fn().mockResolvedValue({
+          id: 'req1',
+          requestedStatus: 'withdrawn',
+          reason: 'Candidate declined offer',
+          status: 'pending',
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const result = await service.createStatusChangeRequest(
+      'map1',
+      {
+        candidateProjectMapId: 'map1',
+        requestedStatus: 'withdrawn',
+        reason: 'Candidate declined offer',
+      },
+      'u1',
+    );
+
+    expect(result.id).toBe('req1');
+    expect(outboxService.publishCandidateProjectStatusChangeRequested).toHaveBeenCalled();
+  });
+
+  it('applies status directly for manager without approval workflow', async () => {
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      id: 'map1',
+      candidateId: 'c1',
+      projectId: 'p1',
+      mainStatus: { name: 'documents' },
+      candidate: { id: 'c1', firstName: 'Jane', lastName: 'Doe' },
+      project: { id: 'p1', title: 'Project A' },
+    });
+    prisma.candidateProjectStatusChangeRequest.findFirst.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'mgr1',
+      name: 'Manager One',
+      userRoles: [{ role: { name: 'Manager' } }],
+    });
+    const tx = {
+      candidateProjectStatusChangeRequest: {
+        create: jest.fn().mockResolvedValue({
+          id: 'req-direct',
+          requestedStatus: 'withdrawn',
+          reason: 'Candidate declined offer',
+          status: 'approved',
+          reviewedBy: 'mgr1',
+        }),
+      },
+      candidateProjects: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'map1', candidateId: 'c1' }),
+        update: jest.fn().mockResolvedValue({
+          id: 'map1',
+          candidate: { id: 'c1' },
+          project: { id: 'p1' },
+          roleNeeded: null,
+          recruiter: null,
+          mainStatus: { id: 'ms1', label: 'Withdrawn' },
+          subStatus: { id: 'ss1', label: 'Withdrawn' },
+        }),
+      },
+      candidateProjectSubStatus: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'ss-withdrawn',
+          name: 'withdrawn',
+          label: 'Withdrawn',
+          stage: { id: 'ms1', label: 'Withdrawn' },
+        }),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ name: 'Manager One' }),
+      },
+      candidateProjectStatusHistory: {
+        create: jest.fn().mockResolvedValue({ id: 'h1' }),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    const result = await service.createStatusChangeRequest(
+      'map1',
+      {
+        candidateProjectMapId: 'map1',
+        requestedStatus: 'withdrawn',
+        reason: 'Candidate declined offer',
+      },
+      'mgr1',
+    );
+
+    expect(result.status).toBe('approved');
+    expect(outboxService.publishCandidateProjectStatusChangeRequested).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate pending requests', async () => {
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      id: 'map1',
+      mainStatus: { name: 'documents' },
+      candidate: { firstName: 'Jane', lastName: 'Doe' },
+      project: { title: 'Project A' },
+    });
+    prisma.candidateProjectStatusChangeRequest.findFirst.mockResolvedValue({ id: 'existing' });
+
+    await expect(
+      service.createStatusChangeRequest(
+        'map1',
+        {
+          candidateProjectMapId: 'map1',
+          requestedStatus: 'on_hold',
+          reason: 'Waiting for documents from candidate',
+        },
+        'u1',
+      ),
+    ).rejects.toThrow('pending status change request already exists');
+  });
+
+  it('sendForVerification blocks when candidate project is on hold', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    prisma.candidate.findUnique.mockResolvedValue({ id: 'c1', firstName: 'A' });
+    prisma.project.findUnique.mockResolvedValue({
+      id: 'p1',
+      title: 'P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', name: 'User 1' });
+    prisma.candidateProjectMainStatus.findUnique.mockResolvedValue({ id: 'ms1', label: 'Documents' });
+    prisma.candidateProjectSubStatus.findUnique.mockResolvedValue({ id: 'ss1', label: 'On Hold' });
+
+    prisma.candidateProjects.findFirst.mockResolvedValue({
+      id: 'map1',
+      mainStatus: { name: 'on_hold' },
+      subStatus: { name: 'on_hold' },
+    });
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow(
+      "currently On Hold",
     );
   });
 });

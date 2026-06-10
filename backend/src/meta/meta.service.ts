@@ -26,6 +26,19 @@ export class MetaService {
     private readonly candidateCodeService: CandidateCodeService,
   ) {}
 
+  private async resolveDefaultProfessionTypeId(
+    tx: Pick<PrismaService, 'professionType'>,
+  ): Promise<string> {
+    const professionType = await tx.professionType.findFirst({
+      where: { name: 'nurse', isActive: true },
+      select: { id: true },
+    });
+    if (!professionType) {
+      throw new Error('Default profession type (nurse) is not configured');
+    }
+    return professionType.id;
+  }
+
   /**
    * Entry point for all Meta webhooks (FB Page, Instagram, WhatsApp)
    */
@@ -491,6 +504,7 @@ export class MetaService {
               countryCode: details.countryCode,
               mobileNumber: details.mobileNumber,
               source: 'meta',
+              professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
             },
           });
 
@@ -700,6 +714,7 @@ export class MetaService {
             countryCode: countryCode || 'IN',
             mobileNumber: phone.replace(/^\+/, ''),
             source: 'meta',
+            professionTypeId: await this.resolveDefaultProfessionTypeId(tx),
             candidateContacts: [
               { email: email || '', phone: phone.replace(/^\+/, ''), source: 'meta', verified: false, addedAt: new Date().toISOString() },
             ],

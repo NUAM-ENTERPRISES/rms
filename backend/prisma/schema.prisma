@@ -13,6 +13,13 @@ enum SessionAvailability {
   ON_CALL
 }
 
+enum ProjectStatus {
+  COMPLETED
+  ON_HOLD
+  IN_PROGRESS
+  CANCELLED
+}
+
 enum UserAccountStatus {
   ACTIVE
   INACTIVE
@@ -79,6 +86,8 @@ model User {
   transferRequestsApproved         TeamTransferRequest[]          @relation("TransferApprover")
   transferRequestsRequested        TeamTransferRequest[]          @relation("TransferRequester")
   transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
+  statusChangeRequestsRequested    CandidateProjectStatusChangeRequest[] @relation("StatusChangeRequester")
+  statusChangeRequestsReviewed     CandidateProjectStatusChangeRequest[] @relation("StatusChangeReviewer")
   userRoles                        UserRole[]
   userTeams                        UserTeam[]
   candidateProjectMaps             CandidateProjects[]
@@ -105,6 +114,7 @@ model User {
   documentForwards            DocumentForwardHistory[]
   screenings                  Screening[]                     @relation("ScreeningCoordinator")
   agentCandidateRequests      AgentCandidateRequest[]         @relation("AgentCandidateRequestRequester")
+  operationsCallLogs          OperationsCallLog[]             @relation("OperationsCallLogger")
 
   addressCountryCode String?
   addressStateId     String?
@@ -112,8 +122,9 @@ model User {
   addressCountry     Country? @relation("PhysicalAddressCountryUser", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState       State?   @relation("PhysicalAddressStateUser", fields: [addressStateId], references: [id], onDelete: SetNull)
 
-  userLanguages        UserLanguage[]
-  userCountryCoverages UserCountryCoverage[]
+  userLanguages         UserLanguage[]
+  userCountryCoverages  UserCountryCoverage[]
+  userProfessionScopes  UserProfessionScope[]
 
   accountStatus          UserAccountStatus          @default(ACTIVE) @map("account_status")
   accountStatusUpdatedAt DateTime?                  @map("account_status_updated_at")
@@ -327,7 +338,7 @@ model Project {
   deadline                  DateTime?
   // Whether this project requires additional candidate screening steps
   requiredScreening         Boolean   @default(false)
-  status                    String    @default("active")
+  status                    ProjectStatus    @default(IN_PROGRESS)
   createdBy                 String
   teamId                    String?
   createdAt                 DateTime  @default(now())
@@ -480,11 +491,17 @@ model Candidate {
   licensingExam String?
   dataFlow      Boolean? @default(false)
   eligibility   Boolean? @default(false)
+  /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
+  isJunk        Boolean  @default(false) @map("is_junk")
+
+  professionTypeId String
+  professionType   ProfessionType @relation(fields: [professionTypeId], references: [id])
 
   projects             CandidateProjects[]
   qualifications       CandidateQualification[]
   preferredCountries   CandidatePreferredCountry[]
   facilityPreferences  CandidateFacilityPreference[]
+  rolePreferences      CandidateRolePreference[]
   team                 Team?                          @relation(fields: [teamId], references: [id])
   certifications       Certification[]
   documents            Document[]
@@ -495,6 +512,7 @@ model Candidate {
   rnrReminders         RNRReminder[]
   callbackReminders    CallbackReminder[]
   processingTasks      ProcessingCandidate[]
+  operationsCallLogs   OperationsCallLog[]
 
   // Meta leads received for this candidate (incoming lead forms)
   metaLeads        MetaLead[]
@@ -522,7 +540,42 @@ model Candidate {
   @@index([gender])
   @@index([candidateCode])
   @@index([passportNumber])
+  @@index([professionTypeId])
+  @@index([isJunk])
   @@map("candidates")
+}
+
+model ProfessionType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  label       String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  candidates           Candidate[]
+  userProfessionScopes UserProfessionScope[]
+
+  @@index([isActive])
+  @@map("profession_types")
+}
+
+model UserProfessionScope {
+  id               String   @id @default(cuid())
+  userId           String
+  professionTypeId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  professionType ProfessionType @relation(fields: [professionTypeId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, professionTypeId])
+  @@index([userId])
+  @@index([professionTypeId])
+  @@map("user_profession_scopes")
 }
 
 model CandidateCodeSequence {
@@ -616,6 +669,20 @@ model CandidateFacilityPreference {
   @@map("candidate_facility_preferences")
 }
 
+model CandidateRolePreference {
+  id            String @id @default(cuid())
+  candidateId   String
+  roleCatalogId String
+
+  candidate   Candidate   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  roleCatalog RoleCatalog @relation(fields: [roleCatalogId], references: [id])
+
+  @@unique([candidateId, roleCatalogId])
+  @@index([candidateId])
+  @@index([roleCatalogId])
+  @@map("candidate_role_preferences")
+}
+
 model WorkExperience {
   id            String       @id @default(cuid())
   candidateId   String
@@ -688,6 +755,17 @@ model CandidateProjects {
   subStatusId String?
   subStatus   CandidateProjectSubStatus? @relation(fields: [subStatusId], references: [id])
 
+  // Store LAST ACTIVE status (before any blocking) for reactivation
+  // Preserved through multiple On Hold/Withdrawn changes
+  previousMainStatusId String?
+  previousMainStatus   CandidateProjectMainStatus? @relation("PreviousMainStatus", fields: [previousMainStatusId], references: [id])
+
+  previousSubStatusId String?
+  previousSubStatus   CandidateProjectSubStatus? @relation("PreviousSubStatus", fields: [previousSubStatusId], references: [id])
+
+  // Timestamp when status was FIRST blocked (not updated on subsequent blocks)
+  statusBlockedAt DateTime?
+
   // Recruiter assignment
   assignedAt  DateTime?
   recruiterId String?
@@ -700,6 +778,7 @@ model CandidateProjects {
   roleNeeded            RoleNeeded?                            @relation(fields: [roleNeededId], references: [id])
   interviews            Interview[]
   projectStatusHistory  CandidateProjectStatusHistory[]
+  statusChangeRequests CandidateProjectStatusChangeRequest[]
 
   // Screening & Training Relations
   screenings          Screening[]
@@ -1149,6 +1228,33 @@ model TeamTransferRequest {
   @@map("team_transfer_requests")
 }
 
+model CandidateProjectStatusChangeRequest {
+  id                    String   @id @default(cuid())
+  candidateProjectMapId String
+  candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
+  
+  // Request type: 'block' (to Withdrawn/On Hold) or 'reactivate' (return to last active)
+  requestType           String   @default("block")
+  
+  requestedStatus       String
+  reason                String   @db.Text
+  status                String   @default("pending")
+  requestedBy           String
+  requester             User     @relation("StatusChangeRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  reviewedBy            String?
+  reviewer              User?    @relation("StatusChangeReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt            DateTime?
+  reviewNotes           String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([candidateProjectMapId, status])
+  @@index([requestedBy])
+  @@index([status])
+  @@index([requestType])
+  @@map("candidate_project_status_change_requests")
+}
+
 model Certification {
   id                 String    @id @default(cuid())
   candidateId        String
@@ -1310,6 +1416,7 @@ model RoleCatalog {
   workExperiences           WorkExperience[]
   mergedDocuments           MergedDocument[]
   documentForwards          DocumentForwardHistory[]
+  candidateRolePreferences  CandidateRolePreference[]
 
   @@index([roleDepartmentId])
   @@index([isActive])
@@ -1668,6 +1775,12 @@ model CandidateRecruiterAssignment {
   creStatusId    Int?
   /// CRE status note for the recruiter
   creStatusNote  String?
+  /// Operations follow-up stage: initial | week_one | week_two | junk
+  operationsFollowUpStage   String    @default("initial")
+  operationsCallAttempts    Int       @default(0)
+  operationsLastCallAt      DateTime?
+  operationsStageEnteredAt  DateTime?
+  operationsCallLogs        OperationsCallLog[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1685,7 +1798,34 @@ model CandidateRecruiterAssignment {
   @@index([assignmentType])
   @@index([recruiterId, isActive])
   @@index([candidateId, isActive])
+  @@index([operationsFollowUpStage])
+  @@index([recruiterId, isActive, operationsFollowUpStage], map: "candidate_recruiter_assignments_recruiterId_isActive_operat_idx")
   @@map("candidate_recruiter_assignments")
+}
+
+model OperationsCallLog {
+  id            String   @id @default(cuid())
+  candidateId   String
+  assignmentId  String
+  loggedById    String
+  attemptNumber Int
+  note          String   @db.Text
+  usedPhone     Boolean  @default(false)
+  usedWhatsapp  Boolean  @default(false)
+  /// initial | week_one | week_two — stage when the call was logged
+  followUpStage String   @default("initial")
+  /// interested | not_interested | no_responded
+  callOutcome   String?
+  loggedAt      DateTime @default(now())
+
+  candidate  Candidate                    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  assignment CandidateRecruiterAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  loggedBy   User                         @relation("OperationsCallLogger", fields: [loggedById], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, loggedAt])
+  @@index([assignmentId, loggedAt])
+  @@index([loggedById])
+  @@map("operations_call_logs")
 }
 
 model CandidateStatus {
@@ -1908,9 +2048,10 @@ model CandidateProjectMainStatus {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  subStatuses       CandidateProjectSubStatus[]
-  candidateProjects CandidateProjects[]
-  statusHistory     CandidateProjectStatusHistory[]
+  subStatuses                    CandidateProjectSubStatus[]
+  candidateProjects              CandidateProjects[]
+  previousCandidateProjects      CandidateProjects[]           @relation("PreviousMainStatus")
+  statusHistory                  CandidateProjectStatusHistory[]
 
   @@map("candidate_project_main_statuses")
 }
@@ -1930,8 +2071,9 @@ model CandidateProjectSubStatus {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  candidateProjects CandidateProjects[]
-  statusHistory     CandidateProjectStatusHistory[]
+  candidateProjects         CandidateProjects[]
+  previousCandidateProjects CandidateProjects[]           @relation("PreviousSubStatus")
+  statusHistory             CandidateProjectStatusHistory[]
 
   @@map("candidate_project_sub_statuses")
 }

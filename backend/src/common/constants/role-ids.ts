@@ -25,6 +25,43 @@ export const ROLE_NAMES = {
 
 export type RoleName = (typeof ROLE_NAMES)[keyof typeof ROLE_NAMES];
 
+/** Roles allowed to change project lifecycle status via PATCH /projects/:id/status */
+export const PROJECT_STATUS_UPDATE_ROLES = [
+  ROLE_NAMES.CEO,
+  ROLE_NAMES.DIRECTOR,
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+  ROLE_NAMES.PROJECT_COORDINATOR,
+] as const;
+
+/** Roles allowed to approve/reject candidate project withdrawn/on-hold requests */
+export const CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES = [
+  ROLE_NAMES.CEO,
+  ROLE_NAMES.DIRECTOR,
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+] as const;
+
+/** Roles that may apply Withdrawn/On Hold directly without approval workflow */
+export const CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+] as const;
+
+/** Elevated roles that bypass Project Coordinator ownership scoping on status updates */
+export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
+  ROLE_NAMES.CEO,
+  ROLE_NAMES.DIRECTOR,
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+] as const;
+
 /** Legacy CRE role name retained for one release of backward compatibility. */
 export const LEGACY_CRE_ROLE_NAME = 'CRE';
 

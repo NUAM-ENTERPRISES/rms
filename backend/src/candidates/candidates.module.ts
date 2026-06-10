@@ -9,6 +9,7 @@ import { CandidateCodeService } from './services/candidate-code.service';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
+import { OperationsFollowUpSweeperService } from './services/operations-follow-up-sweeper.service';
 import { PipelineService } from './pipeline.service';
 import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
@@ -41,6 +42,7 @@ import { RolesModule } from '../roles/roles.module';
     CandidateListFilterService,
     RecruiterAssignmentService,
     RnrCreAssignmentService,
+    OperationsFollowUpSweeperService,
     PipelineService,
     OutboxService,
     UnifiedEligibilityService,

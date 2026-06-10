@@ -1,5 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ProjectStatus } from "@/entities/project/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,17 +26,70 @@ import {
     XCircle,
     PauseCircle,
     Hash,
+    Settings2,
+    History,
 } from "lucide-react";
-import { JSX, useRef, useEffect } from "react";
+import { JSX, useRef, useEffect, useState } from "react";
 import { Player } from '@lottiefiles/react-lottie-player';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 
 import { useGetCandidateProjectPipelineQuery } from "@/features/candidates/api";
 import { calculateProgress as calculateProgressUtil, getMostRecentEntry as getMostRecentEntryUtil, normalizeStatusName as normalizeStatusNameUtil, getNextProgressStatus, mapToProgressKey } from "@/features/candidates/utils/progress";
+import { ProjectStatusUpdateModal } from "@/features/candidates/components/ProjectStatusUpdateModal";
+import { PendingStatusChangeRequestBanner } from "@/features/candidates/components/PendingStatusChangeRequestBanner";
+import { RequesterPendingStatusBanner } from "@/features/candidates/components/RequesterPendingStatusBanner";
+import { ReviewedStatusChangeRequestBanner } from "@/features/candidates/components/ReviewedStatusChangeRequestBanner";
+import { StatusChangeRequestHistoryModal } from "@/features/candidates/components/StatusChangeRequestHistoryModal";
+import { PipelineBlockedBanner } from "@/features/candidates/components/PipelineBlockedBanner";
+import {
+    STATUS_CHANGE_APPROVER_ROLES,
+    STATUS_CHANGE_DIRECT_ROLES,
+} from "@/features/candidates/utils/candidateProjectPipelineBlocked";
+import { useCan } from "@/hooks/useCan";
+import { usePermissions } from "@/shared/hooks/usePermissions";
 
 // Extended type for API response with additional fields
 interface ExtendedPipelineResponse {
+    candidateProjectMapId?: string;
+    isPipelineBlocked?: boolean;
+    pipelineBlockedReason?: string | null;
+    previousMainStatus?: {
+        id: string;
+        name: string;
+        label: string;
+    } | null;
+    previousSubStatus?: {
+        id: string;
+        name: string;
+        label: string;
+    } | null;
+    statusBlockedAt?: string | null;
+    currentStatus?: {
+        mainStatus?: { id: string; name: string; label: string; color?: string };
+        subStatus?: { id: string; name: string; label: string; color?: string };
+        timeInStatus?: string;
+    };
+    pendingStatusChangeRequest?: {
+        id: string;
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
+        reason: string;
+        createdAt: string;
+        requester?: { id: string; name: string; email?: string };
+    } | null;
+    latestReviewedStatusChangeRequest?: {
+        id: string;
+        requestType: "block" | "reactivate";
+        requestedStatus?: "withdrawn" | "on_hold";
+        reason: string;
+        status: "approved" | "rejected";
+        createdAt: string;
+        reviewedAt?: string | null;
+        reviewNotes?: string | null;
+        requester?: { id: string; name: string; email?: string };
+        reviewer?: { id: string; name: string; email?: string };
+    } | null;
     candidate: any;
     project: any;
     nominatedRole?: any;
@@ -64,7 +118,12 @@ export default function CandidateProjectDetailsPage() {
 
     const { candidateId, projectId } = useParams() as { candidateId: string; projectId: string };
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const lottieRef = useRef<Player>(null);
+    const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const { hasRole, user } = usePermissions();
+    const canManageCandidateProjects = useCan("manage:candidates");
 
     // Add null checks before using the hook
     const { data: pipelineResponse, error, isLoading } = useGetCandidateProjectPipelineQuery(
@@ -291,6 +350,41 @@ export default function CandidateProjectDetailsPage() {
     const history = pipelineResponse?.data?.history || [];
     // Cast to extended type to access additional API fields
     const extendedData = pipelineResponse?.data as ExtendedPipelineResponse | undefined;
+    const pipelineData = extendedData; // Alias for convenience
+    const isPipelineBlocked = extendedData?.isPipelineBlocked ?? false;
+    const pendingStatusChangeRequest = extendedData?.pendingStatusChangeRequest ?? null;
+    const latestReviewedStatusChangeRequest =
+        extendedData?.latestReviewedStatusChangeRequest ?? null;
+    const candidateProjectMapId =
+        extendedData?.candidateProjectMapId ??
+        history.find((entry) => entry?.candidateProjectMapId)?.candidateProjectMapId ??
+        "";
+    const canApproveStatusChange = hasRole([...STATUS_CHANGE_APPROVER_ROLES]);
+    const canDirectApplyStatusChange = hasRole([...STATUS_CHANGE_DIRECT_ROLES]);
+    const isRequester =
+        pendingStatusChangeRequest?.requester?.id === user?.id ||
+        latestReviewedStatusChangeRequest?.requester?.id === user?.id;
+    // Allow status change requests for both active and blocked candidates
+    // - Active: can request to block (Withdrawn/On Hold)
+    // - Blocked: can request to reactivate or change blocked status
+    const canRequestStatusChange =
+        canManageCandidateProjects &&
+        !pendingStatusChangeRequest;
+    const canViewStatusChangeHistory =
+        Boolean(candidateProjectMapId) &&
+        (canManageCandidateProjects || canApproveStatusChange);
+    const showReviewedStatusBanner =
+        !pendingStatusChangeRequest &&
+        latestReviewedStatusChangeRequest &&
+        (isRequester ||
+            canManageCandidateProjects ||
+            canApproveStatusChange);
+    const statusRequestParam = searchParams.get("statusRequest");
+    const shouldExpandPendingBanner =
+        Boolean(statusRequestParam) &&
+        pendingStatusChangeRequest?.id === statusRequestParam;
+    const candidateFullName = `${pipelineResponse?.data?.candidate?.firstName ?? ""} ${pipelineResponse?.data?.candidate?.lastName ?? ""}`.trim();
+    const projectTitle = pipelineResponse?.data?.project?.title ?? "Project";
     // most-recent raw entry (used for display label) — keep canonical progress separate
     const latestEntry = getMostRecentEntryUtil(history);
     const projectDeadline = pipelineResponse?.data?.project?.deadline;
@@ -361,7 +455,84 @@ export default function CandidateProjectDetailsPage() {
                             <p className="text-gray-600 text-sm">Tracking candidate progress through project stages</p>
                         </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {canRequestStatusChange && candidateProjectMapId && (
+                            <Button
+                                type="button"
+                                onClick={() => setIsStatusModalOpen(true)}
+                                className="gap-2"
+                            >
+                                <Settings2 className="h-4 w-4" />
+                                Project Updates
+                            </Button>
+                        )}
+                        {canViewStatusChangeHistory && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsHistoryModalOpen(true)}
+                                className="gap-2"
+                            >
+                                <History className="h-4 w-4" />
+                                Request History
+                            </Button>
+                        )}
+                    </div>
                 </div>
+
+                <div className="mb-6 space-y-4">
+                    {pendingStatusChangeRequest && isRequester && (
+                        <RequesterPendingStatusBanner
+                            request={pendingStatusChangeRequest}
+                        />
+                    )}
+                    {canApproveStatusChange && pendingStatusChangeRequest && !isRequester && candidateId && projectId && (
+                        <PendingStatusChangeRequestBanner
+                            request={pendingStatusChangeRequest}
+                            candidateId={candidateId}
+                            projectId={projectId}
+                            candidateProjectMapId={candidateProjectMapId}
+                            currentStatus={pipelineData?.currentStatus?.mainStatus?.name}
+                            previousStatus={pipelineData?.previousMainStatus}
+                            defaultExpanded={shouldExpandPendingBanner}
+                        />
+                    )}
+                    {showReviewedStatusBanner && latestReviewedStatusChangeRequest && (
+                        <ReviewedStatusChangeRequestBanner
+                            request={latestReviewedStatusChangeRequest}
+                        />
+                    )}
+                    {isPipelineBlocked && (
+                        <PipelineBlockedBanner
+                            mainStatusName={extendedData?.currentStatus?.mainStatus?.name}
+                            pipelineBlockedReason={extendedData?.pipelineBlockedReason}
+                        />
+                    )}
+                </div>
+
+                {candidateProjectMapId && candidateId && projectId && (
+                    <>
+                        <ProjectStatusUpdateModal
+                            open={isStatusModalOpen}
+                            onOpenChange={setIsStatusModalOpen}
+                            candidateProjectMapId={candidateProjectMapId}
+                            candidateId={candidateId}
+                            projectId={projectId}
+                            candidateName={candidateFullName}
+                            projectName={projectTitle}
+                            canDirectApply={canDirectApplyStatusChange}
+                            currentMainStatus={pipelineData?.currentStatus?.mainStatus?.name}
+                            previousStatus={pipelineData?.previousMainStatus}
+                        />
+                        <StatusChangeRequestHistoryModal
+                            isOpen={isHistoryModalOpen}
+                            onClose={() => setIsHistoryModalOpen(false)}
+                            candidateProjectMapId={candidateProjectMapId}
+                            candidateName={candidateFullName}
+                            projectTitle={projectTitle}
+                        />
+                    </>
+                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Pipeline Section */}
@@ -569,7 +740,7 @@ export default function CandidateProjectDetailsPage() {
                                 </div>
 
                                 {/* Next Step Indicator */}
-                                {progress < 100 && latestProjectStatusName && (
+                                {progress < 100 && latestProjectStatusName && !isPipelineBlocked && (
                                     <div className="mt-6 pt-6 border-t border-gray-200">
                                         <div className="flex items-center gap-3 bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
                                             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -870,7 +1041,7 @@ export default function CandidateProjectDetailsPage() {
                                     </div>
                                     <div>
                                         <label className="text-xs text-gray-500 uppercase tracking-wide">Status</label>
-                                        <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === 'active' ? 'default' : 'secondary'}>
+                                        <Badge className="mt-0.5 capitalize" variant={pipelineResponse?.data?.project?.status === ProjectStatus.IN_PROGRESS ? 'default' : 'secondary'}>
                                             {pipelineResponse?.data?.project?.status}
                                         </Badge>
                                     </div>

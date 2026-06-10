@@ -23,19 +23,23 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Briefcase } from "lucide-react";
-import { MultiCountrySelect, MultiSelect } from "@/components/molecules";
+import { MultiCountrySelect, MultiSelect, PreferredRoleMultiSelect } from "@/components/molecules";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 
 interface JobPreferenceStepProps {
   control: Control<CreateCandidateFormData>;
   errors: FieldErrors<CreateCandidateFormData>;
   isLoading: boolean;
+  professionTypeName?: string;
+  onPreferredRoleLabelsChange?: (labels: Record<string, string>) => void;
 }
 
 export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
   control,
   errors,
   isLoading,
+  professionTypeName,
+  onPreferredRoleLabelsChange,
 }) => {
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -173,6 +177,24 @@ export const JobPreferenceStep: React.FC<JobPreferenceStepProps> = ({
                   onValueChange={field.onChange}
                   disabled={isLoading}
                   error={errors.facilityPreferences?.message as string}
+                />
+              )}
+            />
+          </div>
+
+          {/* Department Preferences */}
+          <div className="md:col-span-2 space-y-2">
+            <Controller
+              name="preferredRoles"
+              control={control}
+              render={({ field }) => (
+                <PreferredRoleMultiSelect
+                  value={field.value ?? []}
+                  onValueChange={field.onChange}
+                  onOptionLabelsChange={onPreferredRoleLabelsChange}
+                  professionTypeName={professionTypeName}
+                  disabled={isLoading}
+                  error={errors.preferredRoles?.message as string}
                 />
               )}
             />

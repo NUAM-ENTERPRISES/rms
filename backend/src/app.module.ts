@@ -20,6 +20,7 @@ import { CountriesModule } from './countries/countries.module';
 import { RoleCatalogModule } from './role-catalog/role-catalog.module';
 import { RoleDepartmentsModule } from './role-departments/role-departments.module';
 import { QualificationsModule } from './qualifications/qualifications.module';
+import { ProfessionTypesModule } from './profession-types/profession-types.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { SystemModule } from './system/system.module';
@@ -83,6 +84,7 @@ import { IntroductionVideosModule } from './introduction-videos/introduction-vid
     RoleCatalogModule,
     RoleDepartmentsModule,
     QualificationsModule,
+    ProfessionTypesModule,
     AuditModule,
     SystemModule,
     UploadModule,

@@ -40,6 +40,11 @@ import {
 } from "@/features/projects";
 import { useAssignToProjectMutation } from "@/features/candidates";
 import CandidateCard from "./CandidateCard";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 interface EligibleCandidatesTabProps {
   projectId: string;
@@ -89,6 +94,17 @@ export default function EligibleCandidatesTab({
 
   // Get project details for comparison
   const { data: projectData } = useGetProjectQuery(projectId);
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
+
+  const ensurePipelineOpen = (): boolean => {
+    if (pipelineOpen) return true;
+    toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+    return false;
+  };
 
   // Eligibility query for the assign modal
   const assignCandidateIds = assignConfirm.candidateId ? [assignConfirm.candidateId] : [];
@@ -148,6 +164,7 @@ export default function EligibleCandidatesTab({
   };
 
   const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
+    if (!ensurePipelineOpen()) return;
     setVerifyConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
   };
 
@@ -170,6 +187,7 @@ export default function EligibleCandidatesTab({
   };
 
   const showAssignConfirmation = (candidateId: string, candidateName: string) => {
+    if (!ensurePipelineOpen()) return;
     // Find candidate to determine top matched role
     const candidate = getCandidateById(candidateId);
     let bestRoleNeededId = projectData?.data?.rolesNeeded?.[0]?.id;
@@ -280,6 +298,22 @@ export default function EligibleCandidatesTab({
 
   return (
     <div className="space-y-6">
+      {deadlineNoticeMessage ? (
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="status"
+        >
+          {deadlineNoticeMessage}
+        </div>
+      ) : null}
+      {!pipelineOpen && pipelineClosureMessage ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {pipelineClosureMessage}
+        </div>
+      ) : null}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -358,7 +392,11 @@ export default function EligibleCandidatesTab({
               );
 
               // Show verify button if: In project and nominated AND not already in verification
-              const showVerifyBtn = isAssignedToProject && isNominated && !isVerificationInProgress;
+              const showVerifyBtn =
+                pipelineOpen &&
+                isAssignedToProject &&
+                isNominated &&
+                !isVerificationInProgress;
 
               const actions: {
                 label: string;
@@ -392,7 +430,7 @@ export default function EligibleCandidatesTab({
                       `${candidate.firstName} ${candidate.lastName}`
                     )
                   }
-                  showAssignButton={!isAssignedToProject}
+                  showAssignButton={pipelineOpen && !isAssignedToProject}
                   onAssignToProject={(candidateId) =>
                     showAssignConfirmation(
                       candidateId,

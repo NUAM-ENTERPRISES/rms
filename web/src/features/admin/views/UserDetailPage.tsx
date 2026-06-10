@@ -38,7 +38,11 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteConfirmationDialog } from "@/components/ui";
-import { UpdatePasswordDialog, ImageViewer } from "@/components/molecules";
+import {
+  UpdatePasswordDialog,
+  ImageViewer,
+  ProfessionCoverageBadges,
+} from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -101,6 +105,7 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "manage:cre": { label: "Manage Operations" },
   "assign:cre": { label: "Assign Operations" },
   "handle:rnr_candidates": { label: "Handle RNR Candidates" },
+  "read:operations_call_history": { label: "View Operations Call History" },
   "read:roles": { label: "View Roles" },
   "write:roles": { label: "Edit Roles" },
   "manage:roles": { label: "Manage Roles" },
@@ -500,6 +505,17 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   )}
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                      Profession Coverage
+                    </p>
+                    <ProfessionCoverageBadges
+                      scopes={user.userProfessionScopes}
+                      emptyMessage="No profession coverage assigned."
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-slate-200">

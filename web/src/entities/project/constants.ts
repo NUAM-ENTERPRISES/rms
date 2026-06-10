@@ -3,11 +3,21 @@
  * Following FE_GUIDELINES.md entities pattern
  */
 
-export const PROJECT_STATUS = {
-  ACTIVE: "active",
+export const ProjectStatus = {
   COMPLETED: "completed",
+  ON_HOLD: "on_hold",
+  IN_PROGRESS: "in_progress",
   CANCELLED: "cancelled",
 } as const;
+
+export type ProjectStatusType = typeof ProjectStatus[keyof typeof ProjectStatus];
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatusType, string> = {
+  [ProjectStatus.COMPLETED]: "Completed",
+  [ProjectStatus.ON_HOLD]: "On Hold",
+  [ProjectStatus.IN_PROGRESS]: "In Progress",
+  [ProjectStatus.CANCELLED]: "Cancelled",
+};
 
 export const PROJECT_PRIORITY = {
   LOW: "low",
@@ -50,10 +60,7 @@ export const PROJECT_SORT_OPTIONS = [
   { value: "priority", label: "Priority" },
 ] as const;
 
-export type ProjectStatus =
-  (typeof PROJECT_STATUS)[keyof typeof PROJECT_STATUS];
-export type ProjectPriority =
-  (typeof PROJECT_PRIORITY)[keyof typeof PROJECT_PRIORITY];
-export type RolePriority = (typeof ROLE_PRIORITY)[keyof typeof ROLE_PRIORITY];
 export type ShiftType = (typeof SHIFT_TYPES)[keyof typeof SHIFT_TYPES];
+export type ProjectPriorityType = (typeof PROJECT_PRIORITY)[keyof typeof PROJECT_PRIORITY];
+export type RolePriority = (typeof ROLE_PRIORITY)[keyof typeof ROLE_PRIORITY];
 export type FacilitySize = (typeof FACILITY_SIZES)[keyof typeof FACILITY_SIZES];

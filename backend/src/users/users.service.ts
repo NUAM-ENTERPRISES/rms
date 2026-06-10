@@ -163,6 +163,8 @@ export class UsersService {
       addressStateId: createUserDto.addressStateId ?? null,
     });
 
+    await this.assertValidProfessionTypeIds(createUserDto.professionTypeIds);
+
     const hashedPassword = await argon2.hash(createUserDto.password);
 
     // Create user with role assignments in a transaction
@@ -211,22 +213,17 @@ export class UsersService {
         }
       }
 
+      await tx.userProfessionScope.createMany({
+        data: createUserDto.professionTypeIds.map((professionTypeId) => ({
+          userId: newUser.id,
+          professionTypeId,
+        })),
+      });
+
       // Return user with roles
       return await tx.user.findUnique({
         where: { id: newUser.id },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-          },
-        },
+        include: this.userDetailIncludes(),
       });
     });
 
@@ -327,6 +324,11 @@ export class UsersService {
             country: { select: { code: true, name: true } },
           },
         },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
       },
     });
 
@@ -372,6 +374,11 @@ export class UsersService {
         userCountryCoverages: {
           include: {
             country: { select: { code: true, name: true } },
+          },
+        },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
           },
         },
       },
@@ -628,8 +635,12 @@ export class UsersService {
       updateData.employeeCode = updateUserDto.employeeCode || null;
     }
 
+    if (updateUserDto.professionTypeIds !== undefined) {
+      await this.assertValidProfessionTypeIds(updateUserDto.professionTypeIds);
+    }
+
     // Handle role assignment if provided
-    const { roleIds, ...userUpdateData } = updateData;
+    const { roleIds, professionTypeIds, ...userUpdateData } = updateData;
 
     // Update user with role assignments in a transaction
     const user = await this.prisma.$transaction(async (tx) => {
@@ -667,22 +678,22 @@ export class UsersService {
         }
       }
 
+      if (professionTypeIds !== undefined) {
+        await tx.userProfessionScope.deleteMany({ where: { userId: id } });
+        if (professionTypeIds.length > 0) {
+          await tx.userProfessionScope.createMany({
+            data: professionTypeIds.map((professionTypeId: string) => ({
+              userId: id,
+              professionTypeId,
+            })),
+          });
+        }
+      }
+
       // Return user with roles
       return await (tx as any).user.findUnique({
         where: { id },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-          },
-        },
+        include: this.userDetailIncludes(),
       });
     });
 
@@ -694,7 +705,7 @@ export class UsersService {
         'update',
         updatedByUserId,
         user.id,
-        { ...userUpdateData, roleIds },
+        { ...userUpdateData, roleIds, professionTypeIds },
         { action: 'user_updated' },
       );
     }
@@ -841,6 +852,49 @@ export class UsersService {
     return this.uploadService.getFileUrl(relativePath);
   }
 
+  private userDetailIncludes() {
+    return {
+      userRoles: {
+        include: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+      },
+      userProfessionScopes: {
+        include: {
+          professionType: { select: { id: true, name: true, label: true } },
+        },
+      },
+    };
+  }
+
+  private async assertValidProfessionTypeIds(
+    professionTypeIds: string[],
+  ): Promise<void> {
+    const uniqueIds = [...new Set(professionTypeIds)];
+    if (uniqueIds.length !== professionTypeIds.length) {
+      throw new BadRequestException(
+        'Duplicate profession type IDs are not allowed',
+      );
+    }
+
+    const types = await this.prisma.professionType.findMany({
+      where: { id: { in: uniqueIds }, isActive: true },
+      select: { id: true },
+    });
+
+    if (types.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'One or more profession type IDs are invalid or inactive',
+      );
+    }
+  }
+
   /**
    * Transform user data to include full profile image URL
    */
@@ -851,6 +905,7 @@ export class UsersService {
     return user;
   }
 
+  // Get user profile with profession scopes, languages, and country coverage
   async getUserProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -866,6 +921,21 @@ export class UsersService {
                 },
               },
             },
+          },
+        },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
+        userLanguages: {
+          include: {
+            language: { select: { code: true, name: true } },
+          },
+        },
+        userCountryCoverages: {
+          include: {
+            country: { select: { code: true, name: true } },
           },
         },
       },
@@ -917,6 +987,9 @@ export class UsersService {
       stats,
       accountStatus: user.accountStatus,
       accountStatusUpdatedAt: user.accountStatusUpdatedAt,
+      userProfessionScopes: (user as any).userProfessionScopes ?? [],
+      userLanguages: (user as any).userLanguages ?? [],
+      userCountryCoverages: (user as any).userCountryCoverages ?? [],
     };
 
     return profile;
