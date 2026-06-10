@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import { isOperationsRole, ROLE_NAMES } from '../common/constants/role-ids';
+import { OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES } from '../common/constants/offer-letter-notifications';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface NotificationJobData {
@@ -2667,13 +2668,28 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
+      const excludeUserId =
+        meta && typeof meta === 'object' && 'excludeUserId' in meta
+          ? (meta as { excludeUserId?: string }).excludeUserId
+          : undefined;
+
       // Create notifications for each user
       for (const user of users) {
+        if (excludeUserId && user.id === excludeUserId) {
+          continue;
+        }
+
         const idemKey = `${eventId}:${user.id}:role_notification`;
 
         await this.notificationsService.createNotification({
           userId: user.id,
-          type: 'role_notification',
+          type:
+            meta &&
+            typeof meta === 'object' &&
+            'type' in meta &&
+            typeof (meta as { type?: string }).type === 'string'
+              ? (meta as { type: string }).type
+              : 'role_notification',
           title: (title as string) || 'Notification',
           message: message as string,
           link: typeof link === 'string' ? link : undefined,
@@ -2792,13 +2808,8 @@ export class NotificationsProcessor extends WorkerHost {
       };
 
       const targetRoles = [
-        'Admin',
-        ROLE_NAMES.SYSTEM_ADMIN,
-        'System Administrator',
-        'Recruiter Manager',
-        ROLE_NAMES.MANAGER,
+        ...OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES,
         ROLE_NAMES.INTERVIEW_COORDINATOR,
-        'Processing Manager',
         ROLE_NAMES.PROCESSING_EXECUTIVE,
       ];
 
@@ -2807,7 +2818,7 @@ export class NotificationsProcessor extends WorkerHost {
           userRoles: {
             some: {
               role: {
-                name: { in: targetRoles },
+                name: { in: [...targetRoles] },
               },
             },
           },
@@ -2816,14 +2827,13 @@ export class NotificationsProcessor extends WorkerHost {
       });
 
       const recipientIds = new Set<string>();
-      if (recruiterId) {
-        recipientIds.add(recruiterId);
-      }
       for (const user of roleUsers) {
-        recipientIds.add(user.id);
+        if (user.id !== uploadedBy) {
+          recipientIds.add(user.id);
+        }
       }
-      if (uploadedBy) {
-        recipientIds.delete(uploadedBy);
+      if (recruiterId && recruiterId !== uploadedBy) {
+        recipientIds.add(recruiterId);
       }
 
       const uploaderSuffix = uploadedByName ? ` by ${uploadedByName}` : '';

@@ -13,22 +13,29 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Briefcase, Eye, Loader2, Send, Upload, User, Users } from "lucide-react";
 import { OfferLetterBadge } from "./OfferLetterBadge";
 import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
+import { RequestOfferLetterUploadModal } from "@/features/documents/components/RequestOfferLetterUploadModal";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
 import {
   buildOfferLetterNominationKey,
+  canShowOfferLetterRequestButton,
   canShowOfferLetterUploadButton,
+  findOfferLetterUploadRequestForNomination,
   getOfferLetterUploaderName,
   getOfferLetterUrlFromUpload,
   hasOfferLetter,
   resolveOfferLetterFileUrl,
+  type OfferLetterUploadRequestItem,
 } from "../utils/offerLetter";
 import { useGetInterviewsQuery, type Interview } from "../api";
+import { candidatesApi, useGetOfferLetterUploadRequestsQuery } from "@/features/candidates/api";
+import { useAppDispatch } from "@/app/hooks";
 
 export type SendForProcessingCandidate = {
   interviewId: string;
   candidateId: string;
+  candidateProjectMapId: string;
   candidateName: string;
   projectId: string;
   projectTitle: string;
@@ -75,6 +82,7 @@ export function mapInterviewToSendForProcessingCandidate(
   return {
     interviewId: item.id,
     candidateId: candidate?.id || "",
+    candidateProjectMapId: candidateProjectMap?.id || "",
     candidateName: candidate
       ? `${candidate.firstName} ${candidate.lastName}`
       : "Unknown Candidate",
@@ -156,9 +164,15 @@ export function SendForProcessingModal({
     isRecruiter ||
     isInterviewCoordinator ||
     canUploadInterviews;
+  const canRequestOfferLetter = isInterviewCoordinator || canUploadInterviews;
+  const dispatch = useAppDispatch();
 
   const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
   const [uploadTarget, setUploadTarget] = useState<OfferLetterModalTarget | null>(null);
+  const [requestTarget, setRequestTarget] = useState<OfferLetterModalTarget | null>(null);
+  const [uploadRequestsByCandidate, setUploadRequestsByCandidate] = useState<
+    Record<string, OfferLetterUploadRequestItem[]>
+  >({});
   const [selectedByCandidate, setSelectedByCandidate] = useState<Record<string, string>>({});
   const [acknowledged, setAcknowledged] = useState(false);
   const [pdfViewer, setPdfViewer] = useState<{
@@ -175,6 +189,11 @@ export function SendForProcessingModal({
     mode === "single" && uniqueCandidateIds.length === 1
       ? uniqueCandidateIds[0]
       : undefined;
+
+  const { data: singleCandidateUploadRequests, refetch: refetchSingleUploadRequests } =
+    useGetOfferLetterUploadRequestsQuery(singleCandidateId ?? "", {
+      skip: !isOpen || !singleCandidateId,
+    });
 
   const { data: passedInterviewsData, isFetching: isFetchingPassedInterviews } =
     useGetInterviewsQuery(
@@ -236,10 +255,61 @@ export function SendForProcessingModal({
       lastSelectionInitKeyRef.current = null;
       setOfferLetterOverrides({});
       setUploadTarget(null);
+      setRequestTarget(null);
+      setUploadRequestsByCandidate({});
       setSelectedByCandidate({});
       setAcknowledged(false);
+      return;
     }
-  }, [isOpen]);
+
+    if (uniqueCandidateIds.length <= 1) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const entries = await Promise.all(
+        uniqueCandidateIds.map(async (candidateId) => {
+          try {
+            const result = await dispatch(
+              candidatesApi.endpoints.getOfferLetterUploadRequests.initiate(candidateId, {
+                forceRefetch: true,
+              }),
+            ).unwrap();
+            return [candidateId, result.data ?? []] as const;
+          } catch {
+            return [candidateId, []] as const;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setUploadRequestsByCandidate(Object.fromEntries(entries));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, uniqueCandidateIds, dispatch]);
+
+  const getUploadRequestsForCandidate = (candidateId: string) => {
+    if (singleCandidateId && candidateId === singleCandidateId) {
+      return singleCandidateUploadRequests?.data ?? [];
+    }
+    return uploadRequestsByCandidate[candidateId] ?? [];
+  };
+
+  const getPendingUploadRequest = (candidate: SendForProcessingCandidate) =>
+    findOfferLetterUploadRequestForNomination(
+      getUploadRequestsForCandidate(candidate.candidateId),
+      {
+        candidateProjectMapId: candidate.candidateProjectMapId,
+        projectId: candidate.projectId,
+        roleCatalogId: candidate.roleCatalogId,
+      },
+    );
 
   useEffect(() => {
     if (!isOpen || !displayCandidateIds) {
@@ -313,17 +383,50 @@ export function SendForProcessingModal({
     return `${candidateGroups.length} candidates will be sent — one project nomination per candidate.`;
   }, [candidateGroups]);
 
+  const handleOfferLetterRequestSuccess = async (candidateId: string) => {
+    if (singleCandidateId && candidateId === singleCandidateId) {
+      await refetchSingleUploadRequests();
+      return;
+    }
+
+    try {
+      const result = await dispatch(
+        candidatesApi.endpoints.getOfferLetterUploadRequests.initiate(candidateId, {
+          forceRefetch: true,
+        }),
+      ).unwrap();
+      setUploadRequestsByCandidate((prev) => ({
+        ...prev,
+        [candidateId]: result.data ?? [],
+      }));
+    } catch {
+      // Refetch failure is non-blocking; request was still sent.
+    }
+  };
+
   const renderOfferLetterActions = (candidate: SendForProcessingCandidate, compact = false) => {
     const { fileUrl, hasOfferLetter: hasOfferLetterDoc } = getCandidateOfferState(candidate);
+    const pendingUploadRequest = getPendingUploadRequest(candidate);
+    const hasPendingRequest = Boolean(pendingUploadRequest);
 
     return (
-      <div className={cn("flex items-center gap-2", compact ? "shrink-0" : "flex-wrap")}>
+      <div className={cn("flex flex-wrap items-center gap-2", compact && "shrink-0")}>
         {hasOfferLetterDoc ? (
           <OfferLetterBadge
             size={compact ? "xs" : "sm"}
             align={compact ? "end" : "start"}
             uploaderName={candidate.offerLetterUploadedBy}
           />
+        ) : hasPendingRequest ? (
+          <Badge
+            variant="secondary"
+            className={cn(
+              "uppercase font-bold border-none bg-blue-100 text-blue-700",
+              compact ? "text-[9px]" : "text-[10px]",
+            )}
+          >
+            Requested
+          </Badge>
         ) : (
           <Badge
             variant="secondary"
@@ -354,6 +457,30 @@ export function SendForProcessingModal({
             {!compact && "View"}
           </Button>
         )}
+        {canShowOfferLetterRequestButton({
+          isRecruiter,
+          hasOfferLetter: hasOfferLetterDoc,
+          hasPendingRequest,
+          canRequest: canRequestOfferLetter && Boolean(candidate.candidateProjectMapId),
+        }) && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              compact ? "h-7 gap-1 px-2 text-xs" : "h-8 gap-1.5",
+              "text-amber-700 border-amber-200 hover:bg-amber-50",
+            )}
+            onClick={(event) => {
+              event.stopPropagation();
+              setRequestTarget(candidate);
+            }}
+            title="Request offer letter from recruiter"
+          >
+            <Send className={compact ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} />
+            Request
+          </Button>
+        )}
         {canShowOfferLetterUploadButton({
           isRecruiter,
           hasOfferLetter: hasOfferLetterDoc,
@@ -367,7 +494,10 @@ export function SendForProcessingModal({
               compact ? "h-7 w-7 p-0" : "h-8 gap-1.5",
               "text-indigo-700 border-indigo-200 hover:bg-indigo-50",
             )}
-            onClick={() => setUploadTarget(candidate)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setUploadTarget(candidate);
+            }}
             title="Upload offer letter"
           >
             <Upload className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
@@ -458,7 +588,7 @@ export function SendForProcessingModal({
               </div>
               <div>
                 <DialogTitle className="text-lg font-semibold text-slate-900">
-                  Send for Processing
+                  Send for Ready For Processing
                 </DialogTitle>
                 <DialogDescription className="text-slate-500 mt-1">
                   {descriptionText}
@@ -592,6 +722,19 @@ export function SendForProcessingModal({
           }
           existingFileUrl={getCandidateOfferState(uploadTarget).fileUrl}
           onSuccess={handleUploadSuccess}
+        />
+      )}
+
+      {requestTarget && requestTarget.candidateProjectMapId && (
+        <RequestOfferLetterUploadModal
+          isOpen={!!requestTarget}
+          onOpenChange={(open) => !open && setRequestTarget(null)}
+          candidateId={requestTarget.candidateId}
+          candidateProjectMapId={requestTarget.candidateProjectMapId}
+          candidateName={requestTarget.candidateName}
+          projectTitle={requestTarget.projectTitle}
+          roleCatalogId={requestTarget.roleCatalogId}
+          onSuccess={() => void handleOfferLetterRequestSuccess(requestTarget.candidateId)}
         />
       )}
 

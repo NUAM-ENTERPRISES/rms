@@ -624,6 +624,74 @@ describe('DocumentsService - requestMissingDocumentUpload', () => {
   });
 });
 
+describe('DocumentsService - requestOfferLetterUpload', () => {
+  let service: DocumentsService;
+  let prisma: any;
+  let outbox: OutboxService;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: 'ProcessingService', useValue: {} },
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+    outbox = moduleRef.get(OutboxService);
+
+    jest.spyOn(outbox, 'publishOfferLetterUploadRequested').mockResolvedValue(undefined as never);
+    jest.spyOn(outbox, 'publishDataSync').mockResolvedValue(undefined as never);
+  });
+
+  it('notifies recruiter with the provided note', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findUnique' as any).mockResolvedValue({
+      id: 'cpm-1',
+      recruiterId: 'rec-1',
+      candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe' },
+      project: { id: 'proj-1', title: 'UAE Nurses' },
+      recruiter: { id: 'rec-1', name: 'Recruiter' },
+    });
+    jest.spyOn(prisma.candidateProjectDocumentVerification, 'findFirst' as any).mockResolvedValue(null);
+    jest.spyOn(service as any, 'getLatestUploadRequest').mockResolvedValue(null);
+    jest.spyOn(prisma.user, 'findUnique' as any).mockResolvedValue({ name: 'IC Lead' });
+    jest.spyOn(prisma.documentVerificationHistory, 'create' as any).mockResolvedValue({ id: 'hist-1' });
+
+    const result = await service.requestOfferLetterUpload(
+      {
+        candidateProjectMapId: 'cpm-1',
+        reason: 'Please call the candidate and upload the signed offer letter.',
+        roleCatalogId: 'role-1',
+      },
+      'user-ic',
+    );
+
+    expect(result.success).toBe(true);
+    expect(outbox.publishOfferLetterUploadRequested).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateId: 'cand-1',
+        projectId: 'proj-1',
+        recruiterId: 'rec-1',
+        reason: expect.stringContaining('Please call the candidate'),
+      }),
+      undefined,
+    );
+    expect(outbox.publishOfferLetterUploadRequested).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: expect.stringContaining('(Requested by IC Lead)'),
+      }),
+      undefined,
+    );
+  });
+});
+
 describe('DocumentsService - reuseDocument missing upload notification', () => {
   let service: DocumentsService;
   let prisma: any;

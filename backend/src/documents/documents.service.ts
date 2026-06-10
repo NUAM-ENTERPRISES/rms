@@ -19,6 +19,7 @@ import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
 import { RequestMissingDocumentDto } from './dto/request-missing-document.dto';
+import { RequestOfferLetterUploadDto } from './dto/request-offer-letter-upload.dto';
 import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
@@ -1184,6 +1185,106 @@ export class DocumentsService {
     return `This candidate was sent for processing without an offer letter. The interview coordinator did not receive the signed offer letter from the candidate at the time of sending. Please call the candidate to obtain the signed offer letter and upload it once received.${
       requesterName ? ` (Requested by ${requesterName})` : ''
     }`;
+  }
+
+  static formatOfferLetterUploadRequestReason(
+    note: string,
+    requesterName?: string | null,
+  ): string {
+    const trimmed = note.trim();
+    if (requesterName && !/\(Requested by /i.test(trimmed)) {
+      return `${trimmed} (Requested by ${requesterName})`;
+    }
+    return trimmed;
+  }
+
+  /**
+   * Manually request the assigned recruiter to upload a missing offer letter.
+   */
+  async requestOfferLetterUpload(
+    dto: RequestOfferLetterUploadDto,
+    requesterId: string,
+  ): Promise<{ success: boolean }> {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: dto.candidateProjectMapId },
+      include: {
+        candidate: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        project: {
+          select: { id: true, title: true },
+        },
+        recruiter: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project mapping with ID ${dto.candidateProjectMapId} not found`,
+      );
+    }
+
+    if (!candidateProject.recruiterId) {
+      throw new BadRequestException(
+        'No recruiter is assigned to this candidate project nomination',
+      );
+    }
+
+    const existingOfferLetter =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId: dto.candidateProjectMapId,
+          isDeleted: false,
+          document: {
+            docType: DOCUMENT_TYPE.OFFER_LETTER,
+            isDeleted: false,
+          },
+        },
+      });
+
+    if (existingOfferLetter) {
+      throw new BadRequestException(
+        'An offer letter is already uploaded for this project nomination',
+      );
+    }
+
+    const existingRequest = await this.getLatestUploadRequest(
+      dto.candidateProjectMapId,
+      DOCUMENT_TYPE.OFFER_LETTER,
+    );
+
+    if (existingRequest) {
+      throw new BadRequestException(
+        'An offer letter upload request is already pending for this project nomination',
+      );
+    }
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { name: true },
+    });
+
+    const requesterName = requester?.name || null;
+    const reason = DocumentsService.formatOfferLetterUploadRequestReason(
+      dto.reason,
+      requesterName,
+    );
+    const candidateName = `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`;
+
+    await this.requestOfferLetterUploadAfterSendForProcessing({
+      candidateProjectMapId: dto.candidateProjectMapId,
+      candidateId: candidateProject.candidate.id,
+      projectId: candidateProject.project.id,
+      recruiterId: candidateProject.recruiterId,
+      roleCatalogId: dto.roleCatalogId ?? null,
+      requesterId,
+      requesterName,
+      candidateName,
+      projectName: candidateProject.project.title,
+      reason,
+    });
+
+    return { success: true };
   }
 
   /**
@@ -2423,14 +2524,6 @@ export class DocumentsService {
       roleDesignation: roleNeeded.designation,
       uploadedBy: userId,
       uploadedByName: uploader?.name ?? null,
-    });
-
-    await this.outboxService.publishDataSync({
-      type: 'OfferLetterUploaded',
-      candidateId,
-      projectId,
-      candidateProjectMapId: candidateProjectMap.id,
-      message: `Offer letter uploaded for ${candidate.firstName} ${candidate.lastName}`,
     });
 
     return result;

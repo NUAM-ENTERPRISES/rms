@@ -12,6 +12,9 @@ describe('NotificationsProcessor', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+    userRole: {
+      findMany: jest.fn(),
+    },
   };
 
   const notificationsService: any = {
@@ -202,7 +205,7 @@ describe('NotificationsProcessor', () => {
     );
   });
 
-  it('notifies recruiter, admin roles, and processing roles for offer letter upload and excludes uploader', async () => {
+  it('notifies recruiter, admin, manager, and operational roles for offer letter upload and excludes uploader', async () => {
     const job: any = {
       data: {
         eventId: 'event-offer-1',
@@ -223,17 +226,15 @@ describe('NotificationsProcessor', () => {
 
     prisma.user.findMany.mockResolvedValue([
       { id: 'admin-1' },
-      { id: 'rm-1' },
       { id: 'mgr-1' },
       { id: 'ic-1' },
-      { id: 'pm-1' },
       { id: 'pe-1' },
       { id: 'uploader-1' },
     ]);
 
     await processor.handleOfferLetterUploaded(job);
 
-    expect(notificationsService.createNotification).toHaveBeenCalledTimes(7);
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(5);
     expect(notificationsService.createNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'recruiter-1',
@@ -246,6 +247,9 @@ describe('NotificationsProcessor', () => {
         }),
       }),
     );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'mgr-1', type: 'offer_letter_uploaded' }),
+    );
     expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'uploader-1' }),
     );
@@ -257,12 +261,11 @@ describe('NotificationsProcessor', () => {
               role: {
                 name: {
                   in: expect.arrayContaining([
-                    'Admin',
                     'System Admin',
-                    'Recruiter Manager',
+                    'Admin',
                     'Manager',
+                    'Recruiter Manager',
                     'Interview Coordinator',
-                    'Processing Manager',
                     'Processing Executive',
                   ]),
                 },
@@ -270,6 +273,70 @@ describe('NotificationsProcessor', () => {
             },
           },
         }),
+      }),
+    );
+  });
+
+  it('deduplicates recruiter when already included in leadership role query', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-2',
+        payload: {
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          documentId: 'doc-1',
+          recruiterId: 'mgr-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          roleDesignation: 'Nurse',
+          uploadedBy: 'uploader-1',
+          uploadedByName: 'IC User',
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([{ id: 'mgr-1' }, { id: 'pe-1' }]);
+
+    await processor.handleOfferLetterUploaded(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'mgr-1' }),
+    );
+  });
+
+  it('notifies admin and manager roles for offer letter upload role notifications', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-role-1',
+        payload: {
+          roleName: 'Manager',
+          message:
+            'Offer letter uploaded for John Doe (Nurse) on project "Project X" by IC User.',
+          title: 'Offer Letter Uploaded',
+          link: '/recruiter-docs/proj-1/cand-1',
+          meta: {
+            type: 'offer_letter_uploaded',
+            excludeUserId: 'uploader-1',
+          },
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'mgr-1' },
+      { id: 'uploader-1' },
+    ]);
+
+    await processor.handleRoleNotification(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'mgr-1',
+        type: 'offer_letter_uploaded',
+        title: 'Offer Letter Uploaded',
       }),
     );
   });

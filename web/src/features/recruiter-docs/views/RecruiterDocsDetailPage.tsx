@@ -50,6 +50,45 @@ import {
   Video,
 } from "lucide-react";
 import { ProjectStatus } from "@/entities/project/constants";
+
+const normalizeProjectStatus = (status?: string) =>
+  status?.toLowerCase().replace(/-/g, "_") ?? "";
+
+const getProjectStatusBadgeConfig = (status?: string) => {
+  switch (normalizeProjectStatus(status)) {
+    case ProjectStatus.IN_PROGRESS:
+      return {
+        className:
+          "border-orange-300 bg-orange-100 text-orange-800 font-semibold uppercase tracking-wide",
+        label: "IN_PROGRESS",
+        showPulse: true,
+      };
+    case ProjectStatus.COMPLETED:
+      return {
+        className: "border-blue-200 bg-blue-50 text-blue-700",
+        label: "COMPLETED",
+        showPulse: false,
+      };
+    case ProjectStatus.ON_HOLD:
+      return {
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+        label: "ON_HOLD",
+        showPulse: false,
+      };
+    case ProjectStatus.CANCELLED:
+      return {
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+        label: "CANCELLED",
+        showPulse: false,
+      };
+    default:
+      return {
+        className: "border-slate-200 bg-slate-50 text-slate-700",
+        label: status ? status.toUpperCase().replace(/-/g, "_") : "N/A",
+        showPulse: false,
+      };
+  }
+};
 import {
   Tabs,
   TabsContent,
@@ -702,15 +741,31 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <Calendar className="h-4 w-4" />
                 Deadline: {new Date(project.deadline).toLocaleDateString()}
               </div>
-              <Badge className={
-                project.status === ProjectStatus.IN_PROGRESS ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                project.status === ProjectStatus.COMPLETED ? "bg-blue-50 text-blue-700 border-blue-200" :
-                project.status === ProjectStatus.ON_HOLD ? "bg-amber-50 text-amber-700 border-amber-200" :
-                project.status === ProjectStatus.CANCELLED ? "bg-rose-50 text-rose-700 border-rose-200" :
-                "bg-slate-50 text-slate-700 border-slate-200"
-              }>
-                {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : "N/A"}
-              </Badge>
+              {(() => {
+                const statusBadge = getProjectStatusBadgeConfig(project.status);
+                return (
+                  <Badge
+                    className={cn(
+                      "gap-1.5 border px-2.5 py-0.5 shadow-none",
+                      statusBadge.className,
+                    )}
+                  >
+                    {statusBadge.showPulse ? (
+                      <>
+                        <span
+                          className="relative flex h-2 w-2 shrink-0"
+                          aria-hidden
+                        >
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-600" />
+                        </span>
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
+                      </>
+                    ) : null}
+                    {statusBadge.label}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
           <div className="flex items-center gap-2">

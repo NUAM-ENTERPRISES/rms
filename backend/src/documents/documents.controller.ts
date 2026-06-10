@@ -31,6 +31,7 @@ import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
 import { RequestMissingDocumentDto } from './dto/request-missing-document.dto';
+import { RequestOfferLetterUploadDto } from './dto/request-offer-letter-upload.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload-offer-letter.dto';
@@ -855,6 +856,32 @@ export class DocumentsController {
   }
 
   // ==================== ENHANCED DOCUMENT VERIFICATION ====================
+
+  @Post('request-offer-letter-upload')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Request recruiter to upload a missing offer letter',
+    description:
+      'Notifies the assigned recruiter to call the candidate and upload the signed offer letter for a project nomination.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter upload request sent to recruiter',
+  })
+  async requestOfferLetterUpload(
+    @Body() dto: RequestOfferLetterUploadDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.requestOfferLetterUpload(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter upload request sent successfully',
+    };
+  }
 
   @Get('candidates/:candidateId/offer-letter-upload-requests')
   @Permissions('read:documents', 'read:candidates', 'write:documents')
