@@ -45,8 +45,9 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
   async function seedGlobalRequirements(templateKey: string, docs: Array<{ docType: string; label: string; mandatory: boolean }>) {
     const template = await prisma.processingStepTemplate.findUnique({ where: { key: templateKey } });
     if (!template) {
-      console.warn(`ProcessingStepTemplate with key='${templateKey}' not found — skipping ${templateKey.toUpperCase()} global seed`);
-      return;
+      throw new Error(
+        `ProcessingStepTemplate with key='${templateKey}' not found — run seedProcessingStepTemplates first`,
+      );
     }
 
     await prisma.country.upsert({

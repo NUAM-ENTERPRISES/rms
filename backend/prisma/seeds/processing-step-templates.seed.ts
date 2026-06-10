@@ -1,8 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-
-export async function seedProcessingStepTemplates() {
+export async function seedProcessingStepTemplates(prisma: PrismaClient) {
   console.log('🧭 Seeding processing step templates...');
 
   const templates: Array<{ key: string; label: string; order: number; hasDocuments?: boolean; parentKey?: string }> = [
@@ -15,10 +13,12 @@ export async function seedProcessingStepTemplates() {
     { key: 'council_registration', label: 'Council Registration', order: 7, hasDocuments: false },
     { key: 'document_attestation', label: 'Document Attestation', order: 8, hasDocuments: true },
     { key: 'medical', label: 'Medical', order: 9, hasDocuments: true },
-    { key: 'biometrics', label: 'Biometrics', order: 10, hasDocuments: true },
-    { key: 'visa', label: 'Visa', order: 11, hasDocuments: true },
-    { key: 'emigration', label: 'Emigration', order: 12, hasDocuments: false },
-    { key: 'ticket', label: 'Ticket', order: 13, hasDocuments: true },
+    { key: 'mofa_number', label: 'MOFA Number', order: 10, hasDocuments: false, parentKey: 'medical' },
+    { key: 'medical_fitness', label: 'Medical Fitness', order: 11, hasDocuments: true, parentKey: 'medical' },
+    { key: 'biometrics', label: 'Biometrics', order: 12, hasDocuments: true },
+    { key: 'visa', label: 'Visa', order: 13, hasDocuments: true },
+    { key: 'emigration', label: 'Emigration', order: 14, hasDocuments: false },
+    { key: 'ticket', label: 'Ticket', order: 15, hasDocuments: true },
   ];
 
   // First create or upsert parents without parentId

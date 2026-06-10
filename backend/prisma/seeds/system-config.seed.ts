@@ -4,9 +4,7 @@ declare const process: any;
 declare const require: any;
 declare const module: any;
 
-const prisma = new PrismaClient();
-
-export async function seedSystemConfig() {
+export async function seedSystemConfig(prisma: PrismaClient) {
   console.log('🌱 Seeding System Configuration...');
 
   // RNR Settings
@@ -277,7 +275,8 @@ export async function seedSystemConfig() {
 
 // Run if executed directly
 if (require.main === module) {
-  seedSystemConfig()
+  const prisma = new PrismaClient();
+  seedSystemConfig(prisma)
     .then(() => {
       console.log('✅ Seeding completed');
       process.exit(0);

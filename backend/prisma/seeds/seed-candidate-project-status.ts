@@ -1,8 +1,6 @@
-// prisma/seeds/candidate-project-workflow.seed.ts
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import { PrismaClient } from '@prisma/client';
 
-export async function seedCandidateProjectWorkflow() {
+export async function seedCandidateProjectWorkflow(prisma: PrismaClient) {
   console.log("🌱 Seeding Candidate Project Main & Sub Statuses...");
 
   // -----------------------------

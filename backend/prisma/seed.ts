@@ -8,6 +8,12 @@ import { seedPermissionsAndRoles } from './seeds/permissions-roles.seed';
 import { seedUsers, logSeedUserCredentials } from './seeds/users.seed';
 import { seedClients } from './seeds/clients.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
+import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
+import { seedSystemConfig } from './seeds/system-config.seed';
+import { seedProcessingStepTemplates } from './seeds/processing-step-templates.seed';
+import { seedProcessingCountrySteps } from './seeds/processing-country-steps.seed';
+import { seedCountryDocuments } from './seeds/country-documents.seed';
+import { seedLanguages } from './seeds/languages.seed';
 
 const prisma = new PrismaClient();
 
@@ -930,18 +936,20 @@ async function seedCandidateStatus() {
 async function seedScreeningTemplates() {
   console.log('📋 Seeding screening checklist templates...');
   try {
-    // Get sample roles to create templates for
-    // role catalog no longer exposes `slug` in the schema; match by `name`
+    // Get sample roles to create templates for (match catalog by type)
     const registeredNurse = await prisma.roleCatalog.findFirst({
-      where: { name: { contains: 'Registered Nurse' } },
+      where: { type: 'nurse', isActive: true },
+      orderBy: { name: 'asc' },
     });
     const doctor = await prisma.roleCatalog.findFirst({
-      where: { name: { contains: 'Doctor' } },
+      where: { type: 'doctor', isActive: true },
+      orderBy: { name: 'asc' },
     });
 
     if (!registeredNurse && !doctor) {
-      console.log('⚠️  No roles found, skipping template seeding');
-      return;
+      throw new Error(
+        'No nurse or doctor roles found in role catalog — run seedRoleCatalog first',
+      );
     }
 
     const templates: Array<{
@@ -1137,8 +1145,14 @@ async function main() {
   await seedReligions();
   await seedStates();
   await seedCandidateProjectStatuses();
+  await seedCandidateProjectWorkflow(prisma);
   await seedCandidateStatus();
   await seedScreeningTemplates();
+  await seedSystemConfig(prisma);
+  await seedProcessingStepTemplates(prisma);
+  await seedProcessingCountrySteps(prisma);
+  await seedCountryDocuments(prisma);
+  await seedLanguages(prisma);
 
   logSeedUserCredentials(adminPassword);
 }
