@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import * as path from 'path';
+import * as fs from 'fs';
 import { seedProfessionTypes } from './seeds/profession-types.seed';
 import { seedUserProfessionScopes } from './seeds/user-profession-scopes.seed';
 
