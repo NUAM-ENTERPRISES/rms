@@ -39,6 +39,7 @@ export const DOCUMENT_TYPE = {
   USMLE: 'usmle',
   NCLEX_RN: 'nclex_rn',
   ELIGIBILITY_LETTER: 'eligibility_letter',
+  DATAFLOW_REPORT: 'dataflow_report',
 
   // Educational Documents
   /** Backend canonical: `degree_certificate` (legacy rows may still be `degree`). */
@@ -380,6 +381,17 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "FileSignature",
     commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.DATAFLOW_REPORT]: {
+    displayName: "Dataflow Report",
+    description: "Dataflow verification report",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: true,
   },
   [DOCUMENT_TYPE.DEGREE]: {
     displayName: "Degree Certificate",

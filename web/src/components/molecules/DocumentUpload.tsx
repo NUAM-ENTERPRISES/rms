@@ -251,10 +251,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   </button>
                 </p>
                 <p className="text-xs text-slate-500">
-                  {allowedTypes
-                    .map((t) => t.split("/")[1].toUpperCase())
-                    .join(", ")}{" "}
-                  (max {maxSizeMB}MB)
+                  {docType
+                    ? formatHint
+                    : `${allowedTypes
+                        .map((t) => t.split("/")[1].toUpperCase())
+                        .join(", ")} (max ${maxSizeMB}MB)`}
                 </p>
               </div>
             </div>

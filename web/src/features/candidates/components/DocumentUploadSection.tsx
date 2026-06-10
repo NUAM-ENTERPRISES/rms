@@ -148,6 +148,16 @@ const DOCUMENT_TYPES = [
     category: "verification",
   },
   {
+    value: DOCUMENT_TYPE.DATAFLOW_REPORT,
+    label: "Dataflow Report",
+    category: "verification",
+  },
+  {
+    value: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+    label: "Eligibility Letter",
+    category: "verification",
+  },
+  {
     value: "medical_certificate",
     label: "Medical Certificate",
     category: "medical",
