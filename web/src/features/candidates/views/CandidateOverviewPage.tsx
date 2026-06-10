@@ -71,9 +71,8 @@ import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportT
 import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
 import { getCandidateOperationsState } from "../utils/operations-candidate";
 import { getCandidateExperienceLabel } from "../utils/experience-display";
-import { ROLE_NAMES } from "@/config/role-names";
+import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
 import { hasAllCandidatesView } from "@/config/role-capabilities";
-import { ROLE_NAMES, isOperationsRole } from "@/config/role-names";
 import { useCan } from "@/hooks/useCan";
 import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
 import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
