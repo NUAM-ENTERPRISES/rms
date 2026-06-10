@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { mergeSentForProcessingHistoryItem } from "../utils/interviewHistory";
+import { shouldHidePassedInterviewReviewOutcome } from "../utils/sendForProcessing";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +25,7 @@ import {
   Activity,
   Target,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import { useGetInterviewQuery, useGetInterviewHistoryQuery, useUpdateBulkInterviewStatusMutation } from "../api";
 import { toast } from "sonner";
@@ -94,6 +97,27 @@ export default function InterviewDetailPage() {
     { id: interview?.id ?? "", page: historyPage, limit: historyLimit },
     { skip: !interview?.id }
   );
+
+  const historyItems = useMemo(() => {
+    const rawItems = Array.isArray(historyResp?.data)
+      ? historyResp.data
+      : historyResp?.data?.items ?? [];
+    return mergeSentForProcessingHistoryItem(rawItems, interview);
+  }, [historyResp, interview]);
+
+  const historyPagination = useMemo(() => {
+    const pagination = historyResp?.data?.pagination;
+    if (!pagination) return null;
+
+    const rawCount = Array.isArray(historyResp?.data)
+      ? historyResp.data.length
+      : historyResp?.data?.items?.length ?? 0;
+    const addedSynthetic = historyItems.length > rawCount;
+
+    return addedSynthetic
+      ? { ...pagination, total: pagination.total + 1 }
+      : pagination;
+  }, [historyResp, historyItems.length]);
 
   useEffect(() => {
     if (error) toast.error("Failed to load interview details");
@@ -191,6 +215,8 @@ export default function InterviewDetailPage() {
 
   const outcomeConfig = getOutcomeConfig(selected.outcome);
   const OutcomeIcon = outcomeConfig.icon;
+  const hideReviewOutcomeAfterSendForProcessing =
+    shouldHidePassedInterviewReviewOutcome(selected);
 
   const handleReviewSubmit = async (updates: { id: string; interviewStatus: any; subStatus?: string; reason?: string }[]) => {
     try {
@@ -260,6 +286,11 @@ export default function InterviewDetailPage() {
                   >
                     {outcomeConfig.label}
                   </Badge>
+                  {selected.readyForProcessingAt ? (
+                    <Badge className="rounded-full px-2 py-0 h-5 text-[9px] uppercase font-bold tracking-wider bg-indigo-100 text-indigo-700 border border-indigo-200">
+                      Sent for Processing
+                    </Badge>
+                  ) : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -301,10 +332,11 @@ export default function InterviewDetailPage() {
                 </div>
               </div>
 
-              {selected.outcome === "completed" ||
-              selected.outcome === "passed" ||
-              selected.outcome === "failed" ||
-              selected.outcome === "backout" ? (
+              {(selected.outcome === "completed" ||
+                selected.outcome === "passed" ||
+                selected.outcome === "failed" ||
+                selected.outcome === "backout") &&
+              !hideReviewOutcomeAfterSendForProcessing ? (
                 <Button
                   size="sm"
                   onClick={() => setIsReviewOpen(true)}
@@ -313,7 +345,7 @@ export default function InterviewDetailPage() {
                   <Target className="h-3.5 w-3.5 mr-2" />
                   Review Outcome
                 </Button>
-              ) : (
+              ) : !hideReviewOutcomeAfterSendForProcessing ? (
                 <Button
                   size="sm"
                   onClick={() => setIsCompleteOpen(true)}
@@ -322,7 +354,7 @@ export default function InterviewDetailPage() {
                   <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
                   Complete Interview
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -469,12 +501,45 @@ export default function InterviewDetailPage() {
                       </div>
                     )}
 
-                    {selected.outcome && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Outcome:</span>
-                        <Badge className={cn("text-[9px] px-2 py-0 h-4 uppercase font-bold", outcomeConfig.bgClass)}>
-                          {selected.outcome}
-                        </Badge>
+                    {(selected.outcome || selected.readyForProcessingAt) && (
+                      <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-emerald-50 shadow-sm">
+                        {selected.outcome && (
+                          <div className="flex items-center justify-between gap-3 px-3.5 py-3">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                              Outcome:
+                            </span>
+                            <Badge
+                              className={cn(
+                                "text-[10px] px-2.5 py-0.5 h-5 uppercase font-bold shadow-sm",
+                                outcomeConfig.bgClass,
+                              )}
+                            >
+                              {selected.outcome}
+                            </Badge>
+                          </div>
+                        )}
+                        {selected.outcome && selected.readyForProcessingAt && (
+                          <div className="border-t border-indigo-200/80" />
+                        )}
+                        {selected.readyForProcessingAt && (
+                          <div className="flex items-start gap-2.5 bg-indigo-100/70 px-3.5 py-3">
+                            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-indigo-600 shadow-sm">
+                              <Send className="h-3 w-3 text-white" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+                                Sent for Processing
+                              </p>
+                              <p className="mt-0.5 text-[11px] font-bold leading-snug text-indigo-900">
+                                Sent for processing on{" "}
+                                {format(
+                                  new Date(selected.readyForProcessingAt),
+                                  "EEE, dd MMM yyyy • hh:mm a",
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -612,9 +677,9 @@ export default function InterviewDetailPage() {
           </div>
           <div className="p-6">
             <InterviewHistory
-              items={Array.isArray(historyResp?.data) ? historyResp?.data : historyResp?.data?.items ?? []}
+              items={historyItems}
               isLoading={isHistoryLoading}
-              pagination={historyResp?.data?.pagination ?? null}
+              pagination={historyPagination}
               onPageChange={(p) => setHistoryPage(p)}
               onLimitChange={(l) => {
                 setHistoryLimit(l);

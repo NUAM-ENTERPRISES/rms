@@ -18,8 +18,11 @@ export interface Interview {
   outcome?: string;
   notes?: string;
   readyForProcessingAt?: string | null;
+  readyForProcessingBy?: { id: string; name: string; email?: string } | null;
   /** Set when this candidate was sent on any other passed interview project. */
   candidateSentForProcessingAt?: string | null;
+  /** Project title where the candidate was already sent for processing. */
+  candidateSentForProcessingProjectTitle?: string | null;
   offerLetterData?: {
     id?: string;
     status?: string;
@@ -453,19 +456,21 @@ export const interviewsApi = baseApi.injectEndpoints({
         url: `/interviews/${id}/send-for-processing`,
         method: "PATCH",
       }),
-      invalidatesTags: (result) => {
+      invalidatesTags: (result, _error, id) => {
         const candidateId =
           result?.data?.candidateProjectMap?.candidate?.id ??
           (result?.data as { candidate?: { id?: string } })?.candidate?.id;
-        const tags: Array<string | { type: string; id?: string }> = [
-          "Interview",
-          "ProcessingSummary",
+        return [
+          { type: "Interview" as const, id },
+          "Interview" as const,
+          "ProcessingSummary" as const,
+          ...(candidateId
+            ? [
+                { type: "Document" as const, id: `offer-letter-requests-${candidateId}` },
+                { type: "Candidate" as const, id: candidateId },
+              ]
+            : []),
         ];
-        if (candidateId) {
-          tags.push({ type: "Document", id: `offer-letter-requests-${candidateId}` });
-          tags.push({ type: "Candidate", id: candidateId });
-        }
-        return tags;
       },
     }),
 
@@ -482,22 +487,25 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: (result) => {
-        const tags: Array<string | { type: string; id?: string }> = [
-          "Interview",
-          "ProcessingSummary",
-        ];
+      invalidatesTags: (result, _error, arg) => {
         const results = result?.data ?? [];
-        for (const item of results) {
+        const candidateTags = results.flatMap((item) => {
           const candidateId =
             item.data?.candidateProjectMap?.candidate?.id ??
             (item.data as { candidate?: { id?: string } })?.candidate?.id;
-          if (candidateId) {
-            tags.push({ type: "Document", id: `offer-letter-requests-${candidateId}` });
-            tags.push({ type: "Candidate", id: candidateId });
-          }
-        }
-        return tags;
+          return candidateId
+            ? [
+                { type: "Document" as const, id: `offer-letter-requests-${candidateId}` },
+                { type: "Candidate" as const, id: candidateId },
+              ]
+            : [];
+        });
+        return [
+          ...arg.interviewIds.map((interviewId) => ({ type: "Interview" as const, id: interviewId })),
+          "Interview" as const,
+          "ProcessingSummary" as const,
+          ...candidateTags,
+        ];
       },
     }),
 

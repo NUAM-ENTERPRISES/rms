@@ -2,7 +2,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { History, Clock, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
+import { History, Clock, ChevronLeft, ChevronRight, ArrowRight, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type InterviewHistoryItem = {
@@ -24,7 +24,12 @@ const statusColor = (s?: string) => {
   if (s === "updated") return "bg-blue-50 text-blue-700 border-blue-200";
   if (s === "notified") return "bg-purple-50 text-purple-700 border-purple-200";
   if (s === "created") return "bg-cyan-50 text-cyan-700 border-cyan-200";
-  if (s === "basic_training_assigned" || s === "screening_assigned" || s === "interview_assigned")
+  if (
+    s === "basic_training_assigned" ||
+    s === "screening_assigned" ||
+    s === "interview_assigned" ||
+    s === "sent_for_processing"
+  )
     return "bg-indigo-50 text-indigo-700 border-indigo-200";
   if (s === "in_progress") return "bg-blue-50 text-blue-700 border-blue-200";
   if (s === "cancelled") return "bg-red-50 text-red-700 border-red-200";
@@ -44,7 +49,8 @@ const statusDotColor = (s?: string) => {
     s === "basic_training_assigned" ||
     s === "screening_assigned" ||
     s === "interview_assigned" ||
-    s === "assigned"
+    s === "assigned" ||
+    s === "sent_for_processing"
   )
     return "bg-indigo-500";
   return "bg-slate-400";
@@ -57,12 +63,37 @@ const mapHistoryStatusLabel = (status?: string) => {
     case "screening_assigned": return "Screening Assigned";
     case "interview_assigned": return "Interview Assigned";
     case "ready_for_reassessment": return "Ready for Reassessment";
+    case "sent_for_processing": return "Sent for Processing";
+    case "passed": return "Passed";
+    case "failed": return "Failed";
     case "assigned": return "Assigned";
     case "in_progress": return "In Progress";
     case "completed": return "Completed";
     case "cancelled": return "Cancelled";
     default: return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
+};
+
+const mapHistoryAction = (srv: ServerHistoryItem) => {
+  const statusRaw = srv.status;
+  if (statusRaw === "sent_for_processing") {
+    return srv.statusSnapshot || "Sent for Processing";
+  }
+  return srv.statusSnapshot || mapHistoryStatusLabel(statusRaw) || "Status Updated";
+};
+
+const mapHistoryNote = (srv: ServerHistoryItem) => {
+  if (!srv.reason) return undefined;
+  if (srv.status === "sent_for_processing") {
+    return srv.reason;
+  }
+  if (srv.statusSnapshot && srv.reason !== srv.statusSnapshot) {
+    return srv.reason;
+  }
+  if (!srv.statusSnapshot) {
+    return srv.reason;
+  }
+  return undefined;
 };
 
 type ServerHistoryItem = {
@@ -97,17 +128,17 @@ export default function InterviewHistory({
   const totalCount = pagination?.total ?? list.length;
 
   const normalized = list.map((raw) => {
-    if ((raw as ServerHistoryItem).statusAt) {
+    if ((raw as ServerHistoryItem).statusAt || (raw as ServerHistoryItem).status) {
       const srv = raw as ServerHistoryItem;
       const statusRaw = srv.status;
       return {
         id: srv.id,
         date: srv.statusAt || srv.createdAt,
-        action: srv.statusSnapshot || srv.reason || mapHistoryStatusLabel(statusRaw) || "Status Updated",
+        action: mapHistoryAction(srv),
         actor: srv.changedByName || srv.changedBy?.name || "System",
         statusRaw,
-        status: srv.statusSnapshot || mapHistoryStatusLabel(statusRaw),
-        note: srv.reason,
+        status: mapHistoryStatusLabel(statusRaw),
+        note: mapHistoryNote(srv),
         previousStatus: srv.previousStatus,
       };
     }
@@ -186,75 +217,149 @@ export default function InterviewHistory({
                     idx === normalized.length - 1 && "pb-0"
                   )}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
-                    {/* Left: action + note */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <p className="text-[13px] font-semibold text-slate-800 leading-tight">{it.action}</p>
-                        {it.status && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-[9px] font-bold uppercase tracking-wider px-2 py-0 h-4 border rounded-full",
-                              statusColor(it.statusRaw)
+                  {it.statusRaw === "sent_for_processing" ? (
+                    <div className="overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-emerald-50 shadow-sm">
+                      <div className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-600 shadow-sm">
+                            <Send className="h-3.5 w-3.5 text-white" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <p className="text-[13px] font-bold text-indigo-900 leading-tight">
+                                Sent for Processing
+                              </p>
+                              <Badge
+                                variant="outline"
+                                className="h-4 rounded-full border-indigo-200 bg-indigo-100 px-2 py-0 text-[9px] font-bold uppercase tracking-wider text-indigo-700"
+                              >
+                                Sent for Processing
+                              </Badge>
+                            </div>
+                            {it.previousStatus && it.previousStatus !== it.statusRaw && (
+                              <div className="mb-2 flex items-center gap-1.5">
+                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-400">
+                                  {mapHistoryStatusLabel(it.previousStatus)}
+                                </span>
+                                <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
+                                <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">
+                                  Sent for Processing
+                                </span>
+                              </div>
                             )}
-                          >
-                            {it.status}
-                          </Badge>
-                        )}
+                            {it.date && (
+                              <p className="text-[11px] font-bold leading-snug text-indigo-900">
+                                Sent for processing on{" "}
+                                {format(new Date(it.date), "EEE, dd MMM yyyy • hh:mm a")}
+                              </p>
+                            )}
+                            {it.note && (
+                              <p className="mt-1 text-[11px] font-medium text-indigo-600/80">
+                                {it.note}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0 sm:text-right">
+                          {it.date && (
+                            <>
+                              <p className="text-[11px] font-bold text-slate-700">
+                                {format(new Date(it.date), "dd MMM yyyy")}
+                              </p>
+                              <p className="flex items-center gap-1 text-[10px] text-slate-400 sm:justify-end">
+                                <Clock className="h-2.5 w-2.5" />
+                                {format(new Date(it.date), "hh:mm a")}
+                              </p>
+                            </>
+                          )}
+                          {it.actor && (
+                            <p className="mt-1 hidden text-[10px] font-bold text-indigo-500 sm:block">
+                              {it.actor}
+                            </p>
+                          )}
+                        </div>
                       </div>
-
-                      {/* Previous → current status transition */}
-                      {it.previousStatus && it.statusRaw && it.previousStatus !== it.statusRaw && (
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
-                            {mapHistoryStatusLabel(it.previousStatus)}
-                          </span>
-                          <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
-                          <span className={cn(
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded border",
-                            statusColor(it.statusRaw)
-                          )}>
-                            {mapHistoryStatusLabel(it.statusRaw)}
+                      {it.actor && (
+                        <div className="border-t border-indigo-100 px-3.5 py-2 sm:hidden">
+                          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-600">
+                            {it.actor}
                           </span>
                         </div>
                       )}
-
-                      {it.note && (
-                        <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5 line-clamp-2 pr-4 italic">
-                          "{it.note}"
-                        </p>
-                      )}
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
+                        {/* Left: action + note */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <p className="text-[13px] font-semibold text-slate-800 leading-tight">{it.action}</p>
+                            {it.status && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[9px] font-bold uppercase tracking-wider px-2 py-0 h-4 border rounded-full",
+                                  statusColor(it.statusRaw)
+                                )}
+                              >
+                                {it.status}
+                              </Badge>
+                            )}
+                          </div>
 
-                    {/* Right: date + actor */}
-                    <div className="shrink-0 text-right sm:pl-4 flex sm:flex-col items-center sm:items-end gap-3 sm:gap-0.5">
-                      {it.date && (
-                        <>
-                          <p className="text-[11px] font-bold text-slate-700">
-                            {format(new Date(it.date), "dd MMM yyyy")}
-                          </p>
-                          <p className="text-[10px] text-slate-400 flex items-center gap-1 sm:justify-end">
-                            <Clock className="h-2.5 w-2.5" />
-                            {format(new Date(it.date), "hh:mm a")}
-                          </p>
-                        </>
-                      )}
+                          {/* Previous → current status transition */}
+                          {it.previousStatus && it.statusRaw && it.previousStatus !== it.statusRaw && (
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-1.5 py-0.5 rounded">
+                                {mapHistoryStatusLabel(it.previousStatus)}
+                              </span>
+                              <ArrowRight className="h-2.5 w-2.5 text-slate-300" />
+                              <span className={cn(
+                                "text-[10px] font-bold px-1.5 py-0.5 rounded border",
+                                statusColor(it.statusRaw)
+                              )}>
+                                {mapHistoryStatusLabel(it.statusRaw)}
+                              </span>
+                            </div>
+                          )}
+
+                          {it.note && (
+                            <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5 line-clamp-2 pr-4 italic">
+                              "{it.note}"
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Right: date + actor */}
+                        <div className="shrink-0 text-right sm:pl-4 flex sm:flex-col items-center sm:items-end gap-3 sm:gap-0.5">
+                          {it.date && (
+                            <>
+                              <p className="text-[11px] font-bold text-slate-700">
+                                {format(new Date(it.date), "dd MMM yyyy")}
+                              </p>
+                              <p className="text-[10px] text-slate-400 flex items-center gap-1 sm:justify-end">
+                                <Clock className="h-2.5 w-2.5" />
+                                {format(new Date(it.date), "hh:mm a")}
+                              </p>
+                            </>
+                          )}
+                          {it.actor && (
+                            <p className="text-[10px] text-indigo-500 font-bold mt-1 hidden sm:block">
+                              {it.actor}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actor badge (mobile) */}
                       {it.actor && (
-                        <p className="text-[10px] text-indigo-500 font-bold mt-1 hidden sm:block">
-                          {it.actor}
-                        </p>
+                        <div className="mt-1 sm:hidden">
+                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full">
+                            {it.actor}
+                          </span>
+                        </div>
                       )}
-                    </div>
-                  </div>
-
-                  {/* Actor badge (mobile) */}
-                  {it.actor && (
-                    <div className="mt-1 sm:hidden">
-                      <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full">
-                        {it.actor}
-                      </span>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>

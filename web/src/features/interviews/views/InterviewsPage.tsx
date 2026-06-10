@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
@@ -51,8 +52,10 @@ import {
 import {
   buildCandidateSentForProcessingLookup,
   canSendInterviewForProcessing,
+  getCandidateSentViaAnotherProjectTitle,
   getInterviewCandidateId,
   isCandidateSentViaAnotherProject,
+  shouldHidePassedInterviewReviewOutcome,
 } from "../utils/sendForProcessing";
 import {
   useGetInterviewsQuery,
@@ -1476,9 +1479,23 @@ export default function InterviewsPage() {
                                     item,
                                     candidateSentForProcessingLookup,
                                   ) && (
-                                  <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
-                                    Sent via another project
-                                  </Badge>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help">
+                                          Sent via another project
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        Candidate was submitted through{" "}
+                                        {getCandidateSentViaAnotherProjectTitle(
+                                          item,
+                                          candidateSentForProcessingLookup,
+                                        )}{" "}
+                                        project and cannot be sent for processing again.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 )}
                                 {activeFilter === "interviewPassed" &&
                                   hasOfferLetter(item, offerLetterOverrides) && (
@@ -1820,18 +1837,23 @@ export default function InterviewsPage() {
                                             <Upload className="h-4 w-4" />
                                           </Button>
                                         )}
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
-                                          onClick={() => {
-                                            setSelectedReviewInterview(item);
-                                            setIsReviewModalOpen(true);
-                                          }}
-                                          title="Review Interview"
-                                        >
-                                          <UserCheck className="h-4 w-4" />
-                                        </Button>
+                                        {!shouldHidePassedInterviewReviewOutcome(
+                                          item,
+                                          candidateSentForProcessingLookup,
+                                        ) && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => {
+                                              setSelectedReviewInterview(item);
+                                              setIsReviewModalOpen(true);
+                                            }}
+                                            title="Review Interview"
+                                          >
+                                            <UserCheck className="h-4 w-4" />
+                                          </Button>
+                                        )}
                                       </>
                                     );
 

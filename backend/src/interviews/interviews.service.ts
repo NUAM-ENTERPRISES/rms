@@ -146,6 +146,7 @@ export class InterviewsService {
       return interviews.map((interview) => ({
         ...interview,
         candidateSentForProcessingAt: null,
+        candidateSentForProcessingProjectTitle: null,
       }));
     }
 
@@ -158,20 +159,35 @@ export class InterviewsService {
       },
       select: {
         readyForProcessingAt: true,
+        project: { select: { title: true } },
         candidateProjectMap: {
-          select: { candidateId: true },
+          select: {
+            candidateId: true,
+            project: { select: { title: true } },
+          },
         },
       },
     });
 
-    const sentAtByCandidateId = new Map<string, Date>();
+    const sentInfoByCandidateId = new Map<
+      string,
+      { sentAt: Date; projectTitle: string }
+    >();
     for (const row of sentInterviews) {
       const candidateId = row.candidateProjectMap?.candidateId;
       if (!candidateId || !row.readyForProcessingAt) continue;
 
-      const existing = sentAtByCandidateId.get(candidateId);
-      if (!existing || row.readyForProcessingAt > existing) {
-        sentAtByCandidateId.set(candidateId, row.readyForProcessingAt);
+      const projectTitle =
+        row.project?.title ||
+        row.candidateProjectMap?.project?.title ||
+        'another project';
+
+      const existing = sentInfoByCandidateId.get(candidateId);
+      if (!existing || row.readyForProcessingAt > existing.sentAt) {
+        sentInfoByCandidateId.set(candidateId, {
+          sentAt: row.readyForProcessingAt,
+          projectTitle,
+        });
       }
     }
 
@@ -179,13 +195,14 @@ export class InterviewsService {
       const candidateId =
         interview.candidateProjectMap?.candidateId ||
         interview.candidateProjectMap?.candidate?.id;
-      const candidateSentForProcessingAt = candidateId
-        ? sentAtByCandidateId.get(candidateId) ?? null
+      const sentInfo = candidateId
+        ? sentInfoByCandidateId.get(candidateId) ?? null
         : null;
 
       return {
         ...interview,
-        candidateSentForProcessingAt,
+        candidateSentForProcessingAt: sentInfo?.sentAt ?? null,
+        candidateSentForProcessingProjectTitle: sentInfo?.projectTitle ?? null,
       };
     });
   }
@@ -1858,14 +1875,169 @@ export class InterviewsService {
    * - Supports optional pagination: pass { page, limit } to return paginated result
    * - Backwards-compatible: when `query` is omitted the full array is returned
    */
+  private resolveSentForProcessingActorFromHistory(
+    histories: any[],
+    interview: {
+      readyForProcessingAt?: Date | null;
+      readyForProcessingBy?: { id: string; name: string | null; email: string | null } | null;
+    },
+  ) {
+    if (interview.readyForProcessingBy?.name) {
+      return interview.readyForProcessingBy;
+    }
+
+    const sentAt = interview.readyForProcessingAt?.getTime() ?? null;
+    const actorCandidates = histories.filter(
+      (entry) =>
+        entry.status !== 'sent_for_processing' &&
+        (entry.status === 'passed' || entry.status === 'completed') &&
+        (entry.changedByName || entry.changedBy?.name),
+    );
+
+    if (sentAt && actorCandidates.length) {
+      const closest = actorCandidates
+        .map((entry) => ({
+          entry,
+          delta: Math.abs(
+            new Date(entry.statusAt ?? entry.createdAt).getTime() - sentAt,
+          ),
+        }))
+        .sort((a, b) => a.delta - b.delta)[0];
+
+      if (closest?.entry && closest.delta <= 30 * 60 * 1000) {
+        return (
+          closest.entry.changedBy ?? {
+            id: closest.entry.changedById,
+            name: closest.entry.changedByName,
+            email: closest.entry.changedBy?.email ?? null,
+          }
+        );
+      }
+    }
+
+    const passed = actorCandidates.find((entry) => entry.status === 'passed');
+    if (passed?.changedByName || passed?.changedBy?.name) {
+      return (
+        passed.changedBy ?? {
+          id: passed.changedById,
+          name: passed.changedByName,
+          email: null,
+        }
+      );
+    }
+
+    return interview.readyForProcessingBy ?? null;
+  }
+
+  private enrichSentForProcessingHistoryActor(
+    histories: any[],
+    actor?: { id: string; name: string | null; email: string | null } | null,
+  ) {
+    if (!actor?.name) {
+      return histories;
+    }
+
+    return histories.map((entry) => {
+      if (entry.status !== 'sent_for_processing') {
+        return entry;
+      }
+      if (entry.changedByName || entry.changedBy?.name) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        changedById: actor.id,
+        changedByName: actor.name,
+        changedBy: entry.changedBy ?? actor,
+      };
+    });
+  }
+
+  private appendSentForProcessingHistoryIfMissing(
+    interview: {
+      id: string;
+      candidateProjectMapId?: string | null;
+      outcome?: string | null;
+      readyForProcessingAt?: Date | null;
+      readyForProcessingBy?: { id: string; name: string | null; email: string | null } | null;
+      project?: { title: string | null } | null;
+      candidateProjectMap?: { project?: { title: string | null } | null } | null;
+    },
+    histories: any[],
+  ) {
+    if (!interview.readyForProcessingAt) {
+      return histories;
+    }
+
+    const hasSentForProcessingHistory = histories.some(
+      (entry) =>
+        entry.status === 'sent_for_processing' &&
+        entry.interviewId === interview.id,
+    );
+    if (hasSentForProcessingHistory) {
+      return histories;
+    }
+
+    const projectName =
+      interview.project?.title ||
+      interview.candidateProjectMap?.project?.title ||
+      'project';
+
+    const syntheticEntry = {
+      id: `sent-for-processing-${interview.id}`,
+      interviewType: 'client',
+      interviewId: interview.id,
+      candidateProjectMapId: interview.candidateProjectMapId ?? null,
+      previousStatus: interview.outcome ?? 'passed',
+      status: 'sent_for_processing',
+      statusSnapshot: 'Sent for Processing',
+      statusAt: interview.readyForProcessingAt,
+      changedById: interview.readyForProcessingBy?.id ?? null,
+      changedByName: interview.readyForProcessingBy?.name ?? null,
+      changedBy: interview.readyForProcessingBy ?? null,
+      reason: `Sent for processing on ${projectName} project`,
+      createdAt: interview.readyForProcessingAt,
+    };
+
+    return [...histories, syntheticEntry].sort(
+      (a, b) =>
+        new Date(b.statusAt ?? b.createdAt).getTime() -
+        new Date(a.statusAt ?? a.createdAt).getTime(),
+    );
+  }
+
   async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
     // Ensure interview exists and get the associated candidate project map if any
     const interview = await this.prisma.interview.findUnique({
       where: { id: interviewId },
-      select: { id: true, candidateProjectMapId: true },
+      select: {
+        id: true,
+        candidateProjectMapId: true,
+        outcome: true,
+        readyForProcessingAt: true,
+        readyForProcessingById: true,
+        readyForProcessingBy: {
+          select: { id: true, name: true, email: true },
+        },
+        project: { select: { title: true } },
+        candidateProjectMap: {
+          select: {
+            project: { select: { title: true } },
+          },
+        },
+      },
     });
     if (!interview) {
       throw new NotFoundException('Interview not found');
+    }
+
+    let sentForProcessingActor = interview.readyForProcessingBy;
+    if (!sentForProcessingActor?.name && interview.readyForProcessingById) {
+      sentForProcessingActor = await this.prisma.user.findUnique({
+        where: { id: interview.readyForProcessingById },
+        select: { id: true, name: true, email: true },
+      });
     }
 
     const historyWhere: any = {
@@ -1876,37 +2048,48 @@ export class InterviewsService {
       historyWhere.OR.push({ candidateProjectMapId: interview.candidateProjectMapId });
     }
 
+    const histories = await this.prisma.interviewStatusHistory.findMany({
+      where: historyWhere,
+      orderBy: { statusAt: 'desc' },
+      include: {
+        changedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    const resolvedSentForProcessingActor =
+      sentForProcessingActor?.name
+        ? sentForProcessingActor
+        : this.resolveSentForProcessingActorFromHistory(histories, {
+            readyForProcessingAt: interview.readyForProcessingAt,
+            readyForProcessingBy: sentForProcessingActor,
+          });
+
+    const historiesWithActor = this.enrichSentForProcessingHistoryActor(
+      histories,
+      resolvedSentForProcessingActor,
+    );
+
+    const mergedHistories = this.appendSentForProcessingHistoryIfMissing(
+      {
+        ...interview,
+        readyForProcessingBy: resolvedSentForProcessingActor,
+      },
+      historiesWithActor,
+    );
+
     // If caller did not request pagination, return full history array (preserve existing behavior)
     const wantsPagination = !!(query && (query.page !== undefined || query.limit !== undefined));
     if (!wantsPagination) {
-      const histories = await this.prisma.interviewStatusHistory.findMany({
-        where: historyWhere,
-        orderBy: { statusAt: 'desc' },
-        include: {
-          changedBy: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
-      return histories;
+      return mergedHistories;
     }
 
     const page = Math.max(1, Number(query?.page) || 1);
     const limit = Math.max(1, Number(query?.limit) || 10);
     const skip = (page - 1) * limit;
-
-    const [total, items] = await Promise.all([
-      this.prisma.interviewStatusHistory.count({ where: historyWhere }),
-      this.prisma.interviewStatusHistory.findMany({
-        where: historyWhere,
-        orderBy: { statusAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          changedBy: { select: { id: true, name: true, email: true } },
-        },
-      }),
-    ]);
+    const total = mergedHistories.length;
+    const items = mergedHistories.slice(skip, skip + limit);
 
     return {
       items,
@@ -2206,6 +2389,9 @@ export class InterviewsService {
             },
           },
         },
+        readyForProcessingBy: {
+          select: { id: true, name: true, email: true },
+        },
       },
     });
 
@@ -2213,7 +2399,10 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
-    return this.formatInterviewCandidateDob(interview);
+    const [enriched] = await this.enrichInterviewsWithCandidateProcessingStatus([
+      this.formatInterviewCandidateDob(interview),
+    ]);
+    return enriched;
   }
 
   async update(id: string, updateInterviewDto: UpdateInterviewDto) {
@@ -2387,10 +2576,11 @@ export class InterviewsService {
       interview.project?.id || interview.candidateProjectMap.project.id;
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const sentAt = new Date();
       const updatedInterview = await tx.interview.update({
         where: { id },
         data: {
-          readyForProcessingAt: new Date(),
+          readyForProcessingAt: sentAt,
           readyForProcessingById: userId,
         },
         include: {
@@ -2452,6 +2642,24 @@ export class InterviewsService {
             },
           },
           project: { select: { id: true, title: true } },
+          readyForProcessingBy: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
+
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewId: id,
+          interviewType: 'client',
+          candidateProjectMapId: interview.candidateProjectMapId ?? null,
+          previousStatus: interview.outcome ?? 'passed',
+          status: 'sent_for_processing',
+          statusSnapshot: 'Sent for Processing',
+          statusAt: sentAt,
+          changedById: userId,
+          changedByName: changerName,
+          reason: `Sent for processing on ${projectName} project`,
         },
       });
 
