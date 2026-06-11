@@ -1,7 +1,10 @@
 import {
   calculateCareerGaps,
+  calculateExperienceMonthsByCountries,
+  calculateExperienceYearsByCountries,
   calculateTotalExperienceMonths,
   calculateTotalExperienceYears,
+  GCC_COUNTRY_CODES,
   mergeEmploymentRanges,
 } from '../employment-timeline.util';
 
@@ -132,6 +135,31 @@ describe('employment-timeline.util', () => {
       expect(analysis.totalExperienceMonths).toBe(0);
       expect(analysis.totalGapMonths).toBe(0);
       expect(analysis.gaps).toHaveLength(0);
+    });
+  });
+
+  describe('calculateExperienceMonthsByCountries', () => {
+    it('counts only work experiences in the requested countries', () => {
+      const months = calculateExperienceMonthsByCountries(
+        [
+          { startDate: '2020-01-01', endDate: '2022-01-01', countryCode: 'SA' },
+          { startDate: '2021-01-01', endDate: '2023-01-01', countryCode: 'IN' },
+        ],
+        GCC_COUNTRY_CODES,
+      );
+
+      expect(months).toBe(24);
+    });
+  });
+
+  describe('calculateExperienceYearsByCountries', () => {
+    it('returns rounded years for India-only experience', () => {
+      const years = calculateExperienceYearsByCountries(
+        [{ startDate: '2020-01-01', endDate: '2022-07-01', countryCode: 'IN' }],
+        ['IN'],
+      );
+
+      expect(years).toBe(2.5);
     });
   });
 });

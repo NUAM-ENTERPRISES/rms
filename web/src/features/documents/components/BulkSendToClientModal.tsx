@@ -50,9 +50,12 @@ import {
 } from "@/lib/document-upload";
 import { BulkViewDocumentsModal, SelectedDoc } from "./BulkViewDocumentsModal";
 import { ClientForwardHistoryModal } from "./ClientForwardHistoryModal";
+import { GenerateBulkCsvModal } from "./GenerateBulkCsvModal";
+import { CsvEditorModal } from "./CsvEditorModal";
 import { useBulkForwardToClientMutation, BulkForwardToClientRequest } from "../api";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { MultiEmailInput } from "./MultiEmailInput";
+import { CsvGridState, parseCsvFile } from "../utils/buildBulkSendCsv";
 
 interface BulkSendToClientModalProps {
   isOpen: boolean;
@@ -112,6 +115,11 @@ export function BulkSendToClientModal({
   const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<"email_individual" | "email_combined" | "google_drive">("email_individual");
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvGridState, setCsvGridState] = useState<CsvGridState | null>(null);
+  const [generateCsvModalOpen, setGenerateCsvModalOpen] = useState(false);
+  const [csvEditorOpen, setCsvEditorOpen] = useState(false);
+  const [csvEditorGrid, setCsvEditorGrid] = useState<CsvGridState | null>(null);
+  const [isParsingCsvForEdit, setIsParsingCsvForEdit] = useState(false);
 
   // History modal state (opens forwarding history for a single candidate)
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -181,6 +189,10 @@ export function BulkSendToClientModal({
       setCurrentPage(1);
       setVisibleCandidateKeys(new Set());
       setCsvFile(null);
+      setCsvGridState(null);
+      setGenerateCsvModalOpen(false);
+      setCsvEditorOpen(false);
+      setCsvEditorGrid(null);
     }
   }, [isOpen, candidates]);
 
@@ -229,6 +241,62 @@ export function BulkSendToClientModal({
     const mb = totalBytes / (1024 * 1024);
     return { bytes: totalBytes, mb };
   }, [selectedDocsByCandidate, csvFile]);
+
+  const projectTitle =
+    visibleCandidates[0]?.project.title || candidates[0]?.project.title || "project";
+
+  const openCsvEditor = async (grid?: CsvGridState | null) => {
+    if (grid) {
+      setCsvEditorGrid(grid);
+      setCsvEditorOpen(true);
+      return;
+    }
+
+    if (csvGridState) {
+      setCsvEditorGrid(csvGridState);
+      setCsvEditorOpen(true);
+      return;
+    }
+
+    if (!csvFile) return;
+
+    setIsParsingCsvForEdit(true);
+    try {
+      const parsed = await parseCsvFile(csvFile);
+      const nextGrid: CsvGridState = {
+        headers: parsed.headers,
+        rows: parsed.rows,
+        fileName: csvFile.name,
+      };
+      setCsvEditorGrid(nextGrid);
+      setCsvEditorOpen(true);
+    } catch {
+      toast.error("Could not open CSV for editing");
+    } finally {
+      setIsParsingCsvForEdit(false);
+    }
+  };
+
+  const handleCsvGenerated = (grid: CsvGridState) => {
+    setCsvEditorGrid(grid);
+    setCsvEditorOpen(true);
+  };
+
+  const handleCsvEditorSave = (grid: CsvGridState, file: File) => {
+    if (
+      deliveryMethod === "email_combined" &&
+      totalSelectedSizeInfo.bytes + file.size > EMAIL_COMBINED_ATTACHMENT_MAX_MB * 1024 * 1024
+    ) {
+      toast.error(
+        `CSV size would exceed the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB combined email limit.`,
+      );
+      return;
+    }
+
+    setCsvGridState(grid);
+    setCsvFile(file);
+    toast.success("CSV attached — review or send");
+  };
 
   const handleSendToClient = async () => {
     if (!recipientEmail) {
@@ -524,8 +592,8 @@ export function BulkSendToClientModal({
               </div>
 
               {/* CSV Upload Section */}
-              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
-                <div className="flex items-center justify-between mb-1.5">
+              <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileSpreadsheet className="h-3 w-3 text-blue-600" />
                     <h3 className="font-bold text-[11px] text-slate-800 dark:text-slate-200">CSV Attachment</h3>
@@ -539,27 +607,54 @@ export function BulkSendToClientModal({
                   )}
                 </div>
 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={visibleCandidates.length === 0}
+                  onClick={() => setGenerateCsvModalOpen(true)}
+                  className="h-7 text-[10px] gap-1.5 justify-start"
+                >
+                  <FileSpreadsheet className="h-3 w-3" />
+                  Generate CSV ({projectTitle})
+                </Button>
+
                 {csvFile ? (
                   <div className="flex items-center justify-between p-1.5 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2 min-w-0">
                       <FileSpreadsheet className="h-3 w-3 text-blue-600 shrink-0" />
                       <p className="text-[10px] font-semibold text-slate-900 dark:text-slate-100 truncate">{csvFile.name}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setCsvFile(null)}
-                      className="h-5 w-5 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
-                    >
-                      <Trash2 className="h-2.5 w-2.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openCsvEditor()}
+                        disabled={isParsingCsvForEdit}
+                        className="h-6 px-2 text-[10px] text-blue-600 hover:text-blue-700"
+                      >
+                        <Edit2 className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCsvFile(null);
+                          setCsvGridState(null);
+                        }}
+                        className="h-5 w-5 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full"
+                      >
+                        <Trash2 className="h-2.5 w-2.5" />
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="relative group flex-1 min-h-[48px]">
                     <input
                       type="file"
                       accept=".csv"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         e.target.value = "";
                         if (!file) return;
@@ -584,6 +679,21 @@ export function BulkSendToClientModal({
                           }
                         }
                         setCsvFile(file);
+                        setCsvGridState(null);
+                        try {
+                          const parsed = await parseCsvFile(file);
+                          setCsvGridState({
+                            headers: parsed.headers,
+                            rows: parsed.rows,
+                            fileName: file.name,
+                          });
+                        } catch {
+                          setCsvGridState({
+                            headers: [],
+                            rows: [],
+                            fileName: file.name,
+                          });
+                        }
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                     />
@@ -946,6 +1056,21 @@ export function BulkSendToClientModal({
         candidateName={`${historyCandidate.candidate?.firstName || ""} ${historyCandidate.candidate?.lastName || ""}`}
       />
     )}
+
+    <GenerateBulkCsvModal
+      isOpen={generateCsvModalOpen}
+      onClose={() => setGenerateCsvModalOpen(false)}
+      candidates={visibleCandidates}
+      projectTitle={projectTitle}
+      onGenerated={handleCsvGenerated}
+    />
+
+    <CsvEditorModal
+      isOpen={csvEditorOpen}
+      onClose={() => setCsvEditorOpen(false)}
+      initialGrid={csvEditorGrid}
+      onSave={handleCsvEditorSave}
+    />
   </>
   );
 }

@@ -1,5 +1,6 @@
 import { baseApi } from "@/app/api/baseApi";
 import { DocumentStatus, DocumentType } from "@/constants";
+import type { BulkSendCsvProfile } from "./utils/buildBulkSendCsv";
 
 // ==================== INTERFACES ====================
 
@@ -449,6 +450,8 @@ export interface ForwardToClientRequest {
   csvUrl?: string;
   csvName?: string;
 }
+
+export type { BulkSendCsvProfile } from './utils/buildBulkSendCsv';
 
 export interface BulkForwardToClientRequest {
   recipientEmail: string;
@@ -1074,6 +1077,17 @@ export const documentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ForwardingHistory", "VerificationCandidates"],
     }),
+
+    getBulkSendCsvProfiles: builder.mutation<
+      { success: boolean; data: BulkSendCsvProfile[] },
+      { candidateProjectMapIds: string[] }
+    >({
+      query: (body) => ({
+        url: "/documents/bulk-send-csv-profiles",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -1108,6 +1122,7 @@ export const {
   useGetForwardingHistoryQuery,
   useForwardToClientMutation,
   useBulkForwardToClientMutation,
+  useGetBulkSendCsvProfilesMutation,
   useRequestClientReuploadMutation,
   useRequestMissingDocumentUploadMutation,
   useRequestOfferLetterUploadMutation,

@@ -38,6 +38,7 @@ import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
+import { BulkSendCsvProfilesDto } from './dto/bulk-send-csv-profiles.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { UploadService } from '../upload/upload.service';
@@ -467,6 +468,20 @@ export class DocumentsController {
     @Request() req,
   ) {
     return this.documentsService.bulkForwardToClient(bulkForwardDto, req.user.sub);
+  }
+
+  @Post('bulk-send-csv-profiles')
+  @Permissions(PERMISSIONS.READ_DOCUMENTS)
+  @ApiOperation({
+    summary: 'Get candidate profile rows for bulk-send CSV generation',
+    description:
+      'Returns normalized profile fields for the given candidate-project map IDs, used to auto-generate bulk-send CSV attachments.',
+  })
+  @ApiResponse({ status: 200, description: 'Profile rows returned successfully' })
+  @ApiResponse({ status: 404, description: 'One or more candidate-project maps not found' })
+  async getBulkSendCsvProfiles(@Body() dto: BulkSendCsvProfilesDto) {
+    const data = await this.documentsService.getBulkSendCsvProfiles(dto);
+    return { success: true, data };
   }
 
   @Get('forward-latest')

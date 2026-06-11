@@ -1297,3 +1297,74 @@ describe('isPdfMergeableDocument', () => {
     ).toBe(true);
   });
 });
+
+describe('DocumentsService - getBulkSendCsvProfiles', () => {
+  let service: DocumentsService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        DocumentsService,
+        PrismaService,
+        OutboxService,
+        { provide: ProcessingService, useValue: {} },
+        { provide: UploadService, useValue: {} },
+        { provide: GoogleDriveService, useValue: {} },
+        { provide: getQueueToken('document-forward'), useValue: { add: jest.fn() } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(DocumentsService);
+    prisma = moduleRef.get(PrismaService);
+  });
+
+  it('returns mapped profiles in request order', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([
+      {
+        id: 'cpm-2',
+        projectId: 'proj-1',
+        recruiter: { name: 'Rec Two' },
+        roleNeeded: { roleCatalog: { roleDepartment: { label: 'ICU' } } },
+        candidate: {
+          firstName: 'Second',
+          lastName: 'Candidate',
+          qualifications: [],
+          workExperiences: [],
+          documents: [],
+          processingTasks: [],
+        },
+      },
+      {
+        id: 'cpm-1',
+        projectId: 'proj-1',
+        recruiter: { name: 'Rec One' },
+        roleNeeded: { roleCatalog: { roleDepartment: { label: 'ER' } } },
+        candidate: {
+          firstName: 'First',
+          lastName: 'Candidate',
+          qualifications: [],
+          workExperiences: [],
+          documents: [],
+          processingTasks: [],
+        },
+      },
+    ]);
+
+    const result = await service.getBulkSendCsvProfiles({
+      candidateProjectMapIds: ['cpm-1', 'cpm-2'],
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[0].fullName).toBe('First Candidate');
+    expect(result[1].fullName).toBe('Second Candidate');
+  });
+
+  it('throws when a candidate-project map is missing', async () => {
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+
+    await expect(
+      service.getBulkSendCsvProfiles({ candidateProjectMapIds: ['missing-id'] }),
+    ).rejects.toThrow('Candidate project map(s) not found');
+  });
+});

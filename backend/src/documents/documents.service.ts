@@ -24,6 +24,8 @@ import { UploadOfferLetterDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto, SendType } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto, DeliveryMethod } from './dto/bulk-forward-to-client.dto';
+import { BulkSendCsvProfilesDto } from './dto/bulk-send-csv-profiles.dto';
+import { mapCandidateProjectToBulkSendCsvProfile } from './utils/bulk-send-csv-profile.util';
 import {
   DocumentWithRelations,
   DocumentListRow,
@@ -6260,5 +6262,115 @@ export class DocumentsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Fetch rich candidate profile rows for bulk-send CSV generation.
+   */
+  async getBulkSendCsvProfiles(dto: BulkSendCsvProfilesDto) {
+    const uniqueIds = [...new Set(dto.candidateProjectMapIds)];
+    const candidateProjects = await this.prisma.candidateProjects.findMany({
+      where: { id: { in: uniqueIds } },
+      include: {
+        recruiter: { select: { id: true, name: true } },
+        roleNeeded: {
+          select: {
+            roleCatalog: {
+              select: {
+                roleDepartment: { select: { label: true, name: true } },
+              },
+            },
+          },
+        },
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            passportNumber: true,
+            gender: true,
+            dateOfBirth: true,
+            height: true,
+            weight: true,
+            dataFlow: true,
+            licensingExam: true,
+            totalExperience: true,
+            experience: true,
+            graduationYear: true,
+            email: true,
+            mobileNumber: true,
+            countryCode: true,
+            address: true,
+            addressState: { select: { name: true } },
+            addressCountry: { select: { name: true } },
+            qualifications: {
+              include: {
+                qualification: { select: { name: true, shortName: true } },
+              },
+            },
+            workExperiences: {
+              select: {
+                startDate: true,
+                endDate: true,
+                isCurrent: true,
+                countryCode: true,
+              },
+            },
+            documents: {
+              where: { isDeleted: false },
+              select: {
+                docType: true,
+                documentNumber: true,
+                expiryDate: true,
+                verifiedAt: true,
+                createdAt: true,
+                status: true,
+                isDeleted: true,
+              },
+            },
+            processingTasks: {
+              select: {
+                projectId: true,
+                processingSteps: {
+                  select: {
+                    status: true,
+                    eligibilityNumber: true,
+                    eligibilityValidAt: true,
+                    prometricPassedAt: true,
+                    prometricValidAt: true,
+                    councilIssuedAt: true,
+                    councilValidAt: true,
+                    template: { select: { key: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (candidateProjects.length !== uniqueIds.length) {
+      const foundIds = new Set(candidateProjects.map((cp) => cp.id));
+      const missing = uniqueIds.filter((id) => !foundIds.has(id));
+      throw new NotFoundException(
+        `Candidate project map(s) not found: ${missing.join(', ')}`,
+      );
+    }
+
+    const orderMap = new Map(uniqueIds.map((id, index) => [id, index]));
+    const sorted = [...candidateProjects].sort(
+      (a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0),
+    );
+
+    return sorted.map((cp) =>
+      mapCandidateProjectToBulkSendCsvProfile({
+        id: cp.id,
+        projectId: cp.projectId,
+        candidate: cp.candidate as any,
+        recruiter: cp.recruiter,
+        roleNeeded: cp.roleNeeded,
+      }),
+    );
   }
 }

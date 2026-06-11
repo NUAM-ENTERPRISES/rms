@@ -20,7 +20,11 @@ export interface WorkExperienceInput {
   isCurrent?: boolean;
   companyName?: string | null;
   jobTitle?: string | null;
+  countryCode?: string | null;
 }
+
+export const GCC_COUNTRY_CODES = ['SA', 'AE', 'QA', 'OM', 'BH', 'KW'] as const;
+export const INDIA_COUNTRY_CODE = 'IN';
 
 export interface QualificationInput {
   graduationYear?: number | null;
@@ -127,6 +131,40 @@ export function calculateTotalExperienceYears(
 ): number {
   const totalMonths = calculateTotalExperienceMonths(workExperiences);
   return Math.round((totalMonths / 12) * 10) / 10;
+}
+
+export function filterWorkExperiencesByCountries(
+  workExperiences: WorkExperienceInput[],
+  countryCodes: readonly string[],
+): WorkExperienceInput[] {
+  const normalized = new Set(
+    countryCodes.map((code) => code.trim().toUpperCase()).filter(Boolean),
+  );
+  return workExperiences.filter(
+    (exp) =>
+      exp.countryCode &&
+      normalized.has(String(exp.countryCode).trim().toUpperCase()),
+  );
+}
+
+export function calculateExperienceMonthsByCountries(
+  workExperiences: WorkExperienceInput[],
+  countryCodes: readonly string[],
+): number {
+  return calculateTotalExperienceMonths(
+    filterWorkExperiencesByCountries(workExperiences, countryCodes),
+  );
+}
+
+export function calculateExperienceYearsByCountries(
+  workExperiences: WorkExperienceInput[],
+  countryCodes: readonly string[],
+): number {
+  const months = calculateExperienceMonthsByCountries(
+    workExperiences,
+    countryCodes,
+  );
+  return Math.round((months / 12) * 10) / 10;
 }
 
 function buildBetweenJobLabel(
