@@ -4,6 +4,7 @@ import {
   canSendInterviewForProcessing,
   getCandidateSentViaAnotherProjectTitle,
   isCandidateSentViaAnotherProject,
+  isPassedInterviewSentForProcessing,
   shouldHidePassedInterviewReviewOutcome,
 } from "./sendForProcessing";
 
@@ -27,6 +28,23 @@ describe("sendForProcessing utils", () => {
         },
         lookup,
       ),
+    ).toBe(false);
+  });
+
+  it("flags passed interviews already sent for processing", () => {
+    expect(
+      isPassedInterviewSentForProcessing({
+        readyForProcessingAt: "2026-06-02T10:00:00.000Z",
+        candidateProjectMap: { candidate: { id: "cand-1" } },
+      }),
+    ).toBe(true);
+
+    expect(
+      isPassedInterviewSentForProcessing({
+        readyForProcessingAt: null,
+        candidateSentForProcessingAt: null,
+        candidateProjectMap: { candidate: { id: "cand-2" } },
+      }),
     ).toBe(false);
   });
 

@@ -58,6 +58,16 @@ export class QueryInterviewsDto {
   status?: string;
 
   @ApiProperty({
+    description:
+      "Filter passed interviews by ready-for-processing state. Use 'sent' to return only candidates already sent for processing (this project or another).",
+    enum: ['sent'],
+    required: false,
+  })
+  @IsEnum(['sent'])
+  @IsOptional()
+  readyForProcessingStatus?: 'sent';
+
+  @ApiProperty({
     description: 'Filter by project ID',
     required: false,
   })

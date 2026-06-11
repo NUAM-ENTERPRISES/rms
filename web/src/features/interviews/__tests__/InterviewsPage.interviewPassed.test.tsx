@@ -155,24 +155,42 @@ vi.mock("@/features/projects/api", () => ({
   useGetProjectQuery: () => ({ data: null }),
 }));
 
+const filterPassedInterviews = (
+  interviews: any[],
+  params?: { readyForProcessingStatus?: string },
+) => {
+  if (params?.readyForProcessingStatus !== "sent") {
+    return interviews;
+  }
+
+  return interviews.filter((interview) => interview.readyForProcessingAt);
+};
+
 vi.mock("../api", () => ({
-  useGetInterviewsQuery: () => ({
-    data: {
+  useGetInterviewsQuery: (params?: { readyForProcessingStatus?: string }) => {
+    const interviews = filterPassedInterviews(
+      interviewPassedMocks.passedInterviews,
+      params,
+    );
+
+    return {
       data: {
-        interviews: interviewPassedMocks.passedInterviews,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: interviewPassedMocks.passedInterviews.length,
-          totalPages: 1,
+        data: {
+          interviews,
+          pagination: {
+            page: 1,
+            limit: 10,
+            total: interviews.length,
+            totalPages: 1,
+          },
         },
       },
-    },
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+  },
   useGetSummaryStatsQuery: () => ({
     data: {
       data: {
@@ -252,6 +270,25 @@ describe("InterviewsPage — interview passed actions", () => {
     expect(screen.getByText("Confirm send for Jane Doe")).toBeInTheDocument();
   });
 
+  it("shows all interview passed candidates by default", async () => {
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    expect(screen.getByText("Jane Doe")).toBeInTheDocument();
+    expect(screen.getByText("John Sent")).toBeInTheDocument();
+  });
+
+  it("filters to sent candidates when sent-for-ready-for-processing filter is enabled", async () => {
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    await user.click(screen.getByLabelText(/Sent for Ready For Processing/i));
+
+    expect(screen.queryByText("Jane Doe")).not.toBeInTheDocument();
+    expect(screen.getByText("John Sent")).toBeInTheDocument();
+    expect(screen.getByText("(sent for ready for processing)")).toBeInTheDocument();
+  });
+
   it("hides Send for Processing when candidate already sent", async () => {
     const user = userEvent.setup();
     await openInterviewPassedTable(user);
@@ -260,6 +297,24 @@ describe("InterviewsPage — interview passed actions", () => {
     expect(johnRow).toBeTruthy();
     expect(within(johnRow!).queryByRole("button", { name: /Send for Processing/i })).not.toBeInTheDocument();
     expect(within(johnRow!).getByText("Sent")).toBeInTheDocument();
+  });
+
+  it("disables row checkbox for already-sent candidates", async () => {
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    const johnRow = screen.getByText("John Sent").closest("tr");
+    expect(johnRow).toBeTruthy();
+    expect(within(johnRow!).getByRole("checkbox")).toBeDisabled();
+  });
+
+  it("select-all only selects unsent candidates for send for processing", async () => {
+    const user = userEvent.setup();
+    await openInterviewPassedTable(user);
+
+    await user.click(screen.getByLabelText(/Select all candidates/i));
+
+    expect(screen.getByText(/1 selected/i)).toBeInTheDocument();
   });
 
   it("hides Send for Processing for non-coordinator users", async () => {

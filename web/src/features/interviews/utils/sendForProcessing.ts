@@ -31,6 +31,14 @@ export function canSendInterviewForProcessing(
   return true;
 }
 
+/** Whether a passed interview row has already been sent for processing. */
+export function isPassedInterviewSentForProcessing(
+  item: Parameters<typeof canSendInterviewForProcessing>[0],
+  pageLookup?: CandidateSentForProcessingLookup,
+): boolean {
+  return !canSendInterviewForProcessing(item, pageLookup);
+}
+
 export type CandidateSentForProcessingLookup = Map<string, string>;
 
 function getInterviewProjectTitle(interview: {

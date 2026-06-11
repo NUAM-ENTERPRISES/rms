@@ -207,6 +207,32 @@ export class InterviewsService {
     });
   }
 
+  private buildSentForReadyForProcessingWhere() {
+    return {
+      OR: [
+        { readyForProcessingAt: { not: null } },
+        {
+          readyForProcessingAt: null,
+          candidateProjectMap: {
+            is: {
+              candidate: {
+                projects: {
+                  some: {
+                    interviews: {
+                      some: {
+                        readyForProcessingAt: { not: null },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }
+
   private async assertCandidateNotAlreadySentForProcessing(
     candidateId: string,
     excludeInterviewId: string,
@@ -564,6 +590,7 @@ export class InterviewsService {
       search,
       mode,
       status,
+      readyForProcessingStatus,
       projectId,
       roleNeededId,
       roleCatalogId,
@@ -616,6 +643,13 @@ export class InterviewsService {
       } else if (roleNeededId) {
         where.candidateProjectMap.roleNeededId = roleNeededId;
       }
+    }
+
+    if (readyForProcessingStatus === 'sent') {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        this.buildSentForReadyForProcessingWhere(),
+      ];
     }
 
     // Search functionality

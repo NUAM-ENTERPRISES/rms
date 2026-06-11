@@ -162,6 +162,13 @@ export class InterviewsController {
     enum: ['pending', 'scheduled', 'completed', 'complete', 'cancelled', 'rescheduled', 'passed', 'failed', 'interview_failed', 'no-show', 'interview_completed', 'interview_backout'],
   })
   @ApiQuery({
+    name: 'readyForProcessingStatus',
+    required: false,
+    description:
+      "When listing passed interviews, use 'sent' to return only candidates already sent for ready-for-processing.",
+    enum: ['sent'],
+  })
+  @ApiQuery({
     name: 'projectId',
     required: false,
     description: 'Filter by project ID',

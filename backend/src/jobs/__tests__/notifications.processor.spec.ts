@@ -340,4 +340,50 @@ describe('NotificationsProcessor', () => {
       }),
     );
   });
+
+  it('notifies manager and processing manager roles when candidate is sent for processing', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-sent-processing-1',
+        payload: {
+          roleName: 'Processing Manager',
+          message:
+            'Jane Doe has been sent for ready for processing on project "ICU Project" by IC User.',
+          title: 'Sent for Processing',
+          link: '/recruiter-docs/proj-1/cand-1',
+          meta: {
+            type: 'candidate_ready_for_processing',
+            candidateId: 'cand-1',
+            projectId: 'proj-1',
+            candidateProjectMapId: 'cpm-1',
+            excludeUserId: 'coord-1',
+            syncTags: [
+              'Interview',
+              'ProcessingSummary',
+              'Candidate',
+              'Processing',
+              'RecruiterDocuments',
+            ],
+          },
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'pm-1' },
+      { id: 'coord-1' },
+    ]);
+
+    await processor.handleRoleNotification(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'pm-1',
+        type: 'candidate_ready_for_processing',
+        title: 'Sent for Processing',
+        link: '/recruiter-docs/proj-1/cand-1',
+      }),
+    );
+  });
 });

@@ -405,6 +405,36 @@ describe('InterviewsService - client decision flows', () => {
     expect(stats.passRate).toBeCloseTo((7 / (7 + 4)) * 100, 2);
   });
 
+  it('findAll with readyForProcessingStatus=sent filters sent-for-processing interviews', async () => {
+    mockPrisma.interview.findMany.mockResolvedValue([{ id: 'i-sent' }]);
+    mockPrisma.interview.count.mockResolvedValue(1);
+
+    await service.findAll({
+      status: 'passed',
+      readyForProcessingStatus: 'sent',
+      page: 1,
+      limit: 10,
+    } as any);
+
+    expect(mockPrisma.interview.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          outcome: 'passed',
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              OR: expect.arrayContaining([
+                { readyForProcessingAt: { not: null } },
+                expect.objectContaining({
+                  readyForProcessingAt: null,
+                }),
+              ]),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
+
   it('findAll with status=failed filters by interview.outcome failed', async () => {
     mockPrisma.interview.findMany.mockResolvedValue([{ id: 'i-1' }]);
     mockPrisma.interview.count.mockResolvedValue(1);
