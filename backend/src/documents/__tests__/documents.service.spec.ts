@@ -852,9 +852,10 @@ describe('DocumentsService - getVerifiedRejectedDocuments', () => {
     prisma = moduleRef.get(PrismaService);
   });
 
-  it('excludes client_revision_requested candidates from verified/rejected results', async () => {
+  it('excludes client_revision_requested and pending sub-statuses from verified results', async () => {
     const findManySpy = jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
     jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(0);
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([]);
     jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockResolvedValue([]);
 
     await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
@@ -862,19 +863,127 @@ describe('DocumentsService - getVerifiedRejectedDocuments', () => {
     expect(findManySpy).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          subStatus: { name: { in: ['documents_verified', 'submitted_to_client'] } },
+          OR: [
+            {
+              projectStatusHistory: {
+                some: {
+                  subStatus: { name: { in: ['documents_verified'] } },
+                },
+              },
+            },
+            {
+              AND: [
+                { subStatus: { name: { in: ['documents_verified', 'submitted_to_client'] } } },
+                {
+                  documentVerifications: {
+                    some: { status: { in: ['verified'] }, isDeleted: false },
+                  },
+                },
+              ],
+            },
+          ],
         }),
       }),
     );
+  });
+
+  it('includes processing-stage candidates with documents_verified history', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-pending', name: 'verification_in_progress_document' },
+      { id: 'ss-screening', name: 'screening_passed' },
+      { id: 'ss-client-rev', name: 'client_revision_requested' },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([
+      {
+        id: 'cpm-processing',
+        createdAt: new Date('2026-01-15'),
+        updatedAt: new Date('2026-03-01'),
+        candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe', email: 'j@test.com' },
+        project: { id: 'proj-1', title: 'Project Aster', documentRequirements: [] },
+        roleNeeded: { roleCatalog: { id: 'role-1' } },
+        subStatus: { name: 'processing_in_progress', label: 'Processing In Progress' },
+        documentVerifications: [],
+        screenings: [],
+      },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].subStatus?.name).toBe('processing_in_progress');
+  });
+
+  it('includes interview_completed candidates with verified documents in verified results', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-pending', name: 'verification_in_progress_document' },
+      { id: 'ss-screening', name: 'screening_passed' },
+      { id: 'ss-client-rev', name: 'client_revision_requested' },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([
+      {
+        id: 'cpm-interview',
+        createdAt: new Date('2026-01-15'),
+        updatedAt: new Date('2026-02-01'),
+        candidate: { id: 'cand-1', firstName: 'Jane', lastName: 'Doe', email: 'j@test.com' },
+        project: { id: 'proj-1', title: 'Project B', documentRequirements: [] },
+        roleNeeded: { roleCatalog: { id: 'role-1' } },
+        subStatus: { name: 'interview_completed', label: 'Interview Completed' },
+        documentVerifications: [{ id: 'ver-1', status: 'verified', document: { id: 'doc-1' } }],
+        screenings: [],
+      },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockResolvedValue(1);
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockImplementation(async ({ where }: any) => {
+      if (where?.subStatus?.name?.in?.includes('interview_completed')) {
+        return [{ candidateProjectMapId: 'cpm-interview' }];
+      }
+      return [];
+    });
+    jest.spyOn(prisma.documentForwardHistory, 'findFirst' as any).mockResolvedValue(null);
+
+    const result = await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].subStatus?.name).toBe('interview_completed');
+    expect(result.items[0].isInInterview).toBe(true);
+  });
+
+  it('counts verified candidates including post-interview sub-statuses', async () => {
+    jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
+      { id: 'ss-pending', name: 'verification_in_progress_document' },
+      { id: 'ss-screening', name: 'screening_passed' },
+      { id: 'ss-client-rev', name: 'client_revision_requested' },
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.candidateProjects, 'count' as any).mockImplementation(async ({ where }: any) => {
+      if (where?.subStatusId?.in?.includes('ss-client-rev')) return 1;
+      if (
+        where?.OR?.some?.(
+          (clause: any) =>
+            clause?.projectStatusHistory?.some?.subStatus?.name?.in?.includes('documents_verified') ||
+            clause?.AND?.some?.(
+              (part: any) => part?.documentVerifications?.some?.status?.in?.includes('verified'),
+            ),
+        )
+      ) {
+        return 7;
+      }
+      return 0;
+    });
+    jest.spyOn(prisma.candidateProjectStatusHistory, 'findMany' as any).mockResolvedValue([]);
+
+    const result = await service.getVerifiedRejectedDocuments({ status: 'verified', page: 1, limit: 10 });
+
+    expect(result.counts.verified).toBe(7);
   });
 
   it('includes client_revision_requested count in response counts', async () => {
     jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
       { id: 'ss-pending', name: 'verification_in_progress_document' },
       { id: 'ss-screening', name: 'screening_passed' },
-      { id: 'ss-verified', name: 'documents_verified' },
-      { id: 'ss-submitted', name: 'submitted_to_client' },
-      { id: 'ss-rejected', name: 'rejected_documents' },
       { id: 'ss-client-rev', name: 'client_revision_requested' },
     ]);
     jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([]);
@@ -893,9 +1002,6 @@ describe('DocumentsService - getVerifiedRejectedDocuments', () => {
     jest.spyOn(prisma.candidateProjectSubStatus, 'findMany' as any).mockResolvedValue([
       { id: 'ss-pending', name: 'verification_in_progress_document' },
       { id: 'ss-screening', name: 'screening_passed' },
-      { id: 'ss-verified', name: 'documents_verified' },
-      { id: 'ss-submitted', name: 'submitted_to_client' },
-      { id: 'ss-rejected', name: 'rejected_documents' },
       { id: 'ss-client-rev', name: 'client_revision_requested' },
     ]);
     jest.spyOn(prisma.candidateProjects, 'findMany' as any).mockResolvedValue([

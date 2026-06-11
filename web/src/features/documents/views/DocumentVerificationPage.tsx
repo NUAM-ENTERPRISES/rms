@@ -241,6 +241,17 @@ export default function DocumentVerificationPage() {
     { refetchOnMountOrArgChange: true },
   );
 
+  // Always fetch verified/rejected tile counts (verification history semantics).
+  const verifiedRejectedCountsQuery = useGetVerifiedRejectedDocumentsQuery(
+    {
+      status: "verified",
+      ...sharedListFilters,
+      page: 1,
+      limit: 1,
+    },
+    { refetchOnMountOrArgChange: true },
+  );
+
   // Pending (verification candidates) query — only call when viewing pending / in-progress
   const verificationCandidatesQuery = useGetVerificationCandidatesQuery(
     {
@@ -278,11 +289,13 @@ export default function DocumentVerificationPage() {
 
   const isLoading = 
     tileCountsQuery.isLoading ||
+    verifiedRejectedCountsQuery.isLoading ||
     verificationCandidatesQuery.isLoading || 
     verifiedRejectedQuery.isLoading;
     
   const error = 
     tileCountsQuery.error ||
+    verifiedRejectedCountsQuery.error ||
     verificationCandidatesQuery.error || 
     verifiedRejectedQuery.error;
 
@@ -290,6 +303,9 @@ export default function DocumentVerificationPage() {
   const refetch = () => {
     if (tileCountsQuery.status !== 'uninitialized') {
       tileCountsQuery.refetch?.();
+    }
+    if (verifiedRejectedCountsQuery.status !== 'uninitialized') {
+      verifiedRejectedCountsQuery.refetch?.();
     }
     if (verificationCandidatesQuery.status !== 'uninitialized') {
       verificationCandidatesQuery.refetch?.();
@@ -438,6 +454,7 @@ export default function DocumentVerificationPage() {
   const statusCounts = useMemo(() => {
     const tileCounts = extractVerificationCounts(tileCountsQuery.data);
     const listCounts = extractVerificationCounts(verificationCandidatesQuery.data);
+    const verifiedRejectedTileCounts = extractVerificationCounts(verifiedRejectedCountsQuery.data);
     const verifiedCounts = extractVerificationCounts(verifiedRejectedQuery.data);
 
     const counts = { ...listCounts, ...tileCounts };
@@ -446,8 +463,12 @@ export default function DocumentVerificationPage() {
       counts.pending ?? counts.verification_in_progress_document ?? 0
     );
 
-    const verified = Number(verifiedCounts.verified ?? counts.verified ?? 0);
-    const rejected = Number(verifiedCounts.rejected ?? counts.rejected ?? 0);
+    const verified = Number(
+      verifiedRejectedTileCounts.verified ?? verifiedCounts.verified ?? counts.verified ?? 0
+    );
+    const rejected = Number(
+      verifiedRejectedTileCounts.rejected ?? verifiedCounts.rejected ?? counts.rejected ?? 0
+    );
     const clientRevisionFromList =
       statusFilter === "client_revision_requested"
         ? Number(verificationData?.data?.pagination?.total ?? 0)
@@ -470,6 +491,7 @@ export default function DocumentVerificationPage() {
     };
   }, [
     tileCountsQuery.data,
+    verifiedRejectedCountsQuery.data,
     verificationCandidatesQuery.data,
     verifiedRejectedQuery.data,
     statusFilter,
@@ -553,7 +575,7 @@ export default function DocumentVerificationPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Verified Documents</p>
                     <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.documents_verified}</p>
-                    <p className="text-xs text-slate-500">Approved</p>
+                    <p className="text-xs text-slate-500">Verification history</p>
                   </div>
                   <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
                     <Building2 className={cn("h-5 w-5", s.icon)} />
@@ -588,7 +610,7 @@ export default function DocumentVerificationPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rejected Documents</p>
                     <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.rejected_documents}</p>
-                    <p className="text-xs text-slate-500">Need attention</p>
+                    <p className="text-xs text-slate-500">Rejection history</p>
                   </div>
                   <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
                     <XCircle className={cn("h-5 w-5", s.icon)} />

@@ -2841,16 +2841,90 @@ export class DocumentsService {
   }
 
   /**
+   * Verification-history where clause for verified/rejected dashboard tiles.
+   * Primary signal: candidate-project ever reached documents_verified / rejected_documents
+   * in status history (set when documentation completes or rejects verification).
+   * Fallback: current tile sub-status + matching document verifications (legacy rows).
+   */
+  private buildVerifiedRejectedListWhere(
+    status: 'verified' | 'rejected' | 'both',
+    countBase: Record<string, any>,
+  ): Record<string, unknown> {
+    const verificationStatuses =
+      status === 'verified'
+        ? ['verified']
+        : status === 'rejected'
+          ? ['rejected']
+          : ['verified', 'rejected'];
+
+    const historySubStatusNames =
+      status === 'verified'
+        ? ['documents_verified']
+        : status === 'rejected'
+          ? ['rejected_documents']
+          : ['documents_verified', 'rejected_documents'];
+
+    const currentSubStatusNames =
+      status === 'verified'
+        ? ['documents_verified', 'submitted_to_client']
+        : status === 'rejected'
+          ? ['rejected_documents']
+          : ['documents_verified', 'submitted_to_client', 'rejected_documents'];
+
+    return {
+      ...countBase,
+      OR: [
+        {
+          projectStatusHistory: {
+            some: {
+              subStatus: { name: { in: historySubStatusNames } },
+            },
+          },
+        },
+        {
+          AND: [
+            { subStatus: { name: { in: currentSubStatusNames } } },
+            {
+              documentVerifications: {
+                some: {
+                  status: { in: verificationStatuses },
+                  isDeleted: false,
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  /**
+   * Include clause for document verifications on verified/rejected history lists.
+   * Surfaces current verified/rejected rows and replaced rows that were verified before.
+   */
+  private buildVerifiedRejectedVerificationIncludeWhere(
+    statuses: string[],
+  ): Record<string, unknown> {
+    return {
+      OR: [
+        { status: { in: statuses }, isDeleted: false },
+        {
+          verificationHistory: {
+            some: { action: { in: statuses } },
+          },
+        },
+      ],
+    };
+  }
+
+  /**
    * Dashboard tile counts for the documentation verification page.
-   * Uses subStatusId lookups so counts stay aligned with list filters.
+   * Pending/client-revision use subStatus; verified/rejected use verification history.
    */
   private async getDocumentVerificationTileCounts(countBase: Record<string, any>) {
     const tileStatusNames = [
       'verification_in_progress_document',
       'screening_passed',
-      'documents_verified',
-      'submitted_to_client',
-      'rejected_documents',
       'client_revision_requested',
     ];
 
@@ -2876,8 +2950,12 @@ export class DocumentsService {
 
     const [pending, verified, rejected, clientRevisionRequested] = await Promise.all([
       countForStatusNames(['verification_in_progress_document', 'screening_passed']),
-      countForStatusNames(['documents_verified', 'submitted_to_client']),
-      countForStatusNames(['rejected_documents']),
+      this.prisma.candidateProjects.count({
+        where: this.buildVerifiedRejectedListWhere('verified', countBase) as any,
+      }),
+      this.prisma.candidateProjects.count({
+        where: this.buildVerifiedRejectedListWhere('rejected', countBase) as any,
+      }),
       countForStatusNames(['client_revision_requested']),
     ]);
 
@@ -4032,19 +4110,15 @@ export class DocumentsService {
     const { page = 1, limit = 20, search, status = 'verified', recruiterId, projectId, roleCatalogId, screening } = query as any;
     const skip = (page - 1) * limit;
 
+    const listStatus: 'verified' | 'rejected' | 'both' =
+      status === 'verified' ? 'verified' : status === 'rejected' ? 'rejected' : 'both';
+
     const statuses =
-      status === 'verified'
+      listStatus === 'verified'
         ? ['verified']
-        : status === 'rejected'
+        : listStatus === 'rejected'
           ? ['rejected']
           : ['verified', 'rejected'];
-
-    const listSubStatusNames =
-      status === 'verified'
-        ? ['documents_verified', 'submitted_to_client']
-        : status === 'rejected'
-          ? ['rejected_documents']
-          : ['documents_verified', 'submitted_to_client', 'rejected_documents'];
 
     const countBase: any = {};
     if (recruiterId) countBase.recruiterId = recruiterId;
@@ -4057,12 +4131,7 @@ export class DocumentsService {
       countBase.screenings = { some: { decision: 'approved' } };
     }
 
-    // Tile-scoped list: match candidate sub-status to the dashboard tile (never include client_revision_requested here)
-    const cpWhere: any = {
-      ...countBase,
-      subStatus: { name: { in: listSubStatusNames } },
-      documentVerifications: { some: { status: { in: statuses }, isDeleted: false } },
-    };
+    const cpWhere: any = this.buildVerifiedRejectedListWhere(listStatus, countBase);
 
     // Search across candidate name, project title and document file name
     if (search) {
@@ -4118,7 +4187,7 @@ export class DocumentsService {
             orderBy: { createdAt: 'desc' },
           },
           documentVerifications: {
-            where: { status: { in: statuses }, isDeleted: false } as any,
+            where: this.buildVerifiedRejectedVerificationIncludeWhere(statuses) as any,
             include: {
               document: {
                 select: {
@@ -4135,7 +4204,7 @@ export class DocumentsService {
             orderBy: { updatedAt: 'desc' },
           },
         },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { updatedAt: 'desc' },
         skip,
         take: Number(limit),
       }),
