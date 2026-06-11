@@ -43,6 +43,7 @@ import {
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 import { ROLE_NAMES } from "@/config/role-names";
+import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 
 // ==================== WORK EXPERIENCE TYPES ====================
 
@@ -109,6 +110,8 @@ export default function CreateCandidatePage() {
   const isRecruiter = hasRole("Recruiter");
   const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");
   const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
+  const { data: systemConfig } = useGetSystemConfigQuery("religions");
+  const religions = systemConfig?.data?.constants?.religions ?? [];
 
   const candidatesHomePath = isAgentCoordinator
     ? "/agents"
@@ -200,9 +203,11 @@ export default function CreateCandidatePage() {
       skinTone: "",
       languageProficiency: "",
       smartness: "",
+      religionId: "",
       licensingExam: "",
       dataFlow: false,
       eligibility: false,
+      eligibilityNumber: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -504,12 +509,18 @@ export default function CreateCandidatePage() {
       if (data.smartness) {
         payload.smartness = data.smartness;
       }
+      if (data.religionId) {
+        payload.religionId = data.religionId;
+      }
       if (data.licensingExam) {
         payload.licensingExam = data.licensingExam;
       }
       // dataFlow and eligibility default false but send anyway
       payload.dataFlow = data.dataFlow;
       payload.eligibility = data.eligibility;
+      if (data.eligibility && data.eligibilityNumber?.trim()) {
+        payload.eligibilityNumber = data.eligibilityNumber.trim();
+      }
 
       // Work experiences
       if (workExperiences && workExperiences.length > 0) {
@@ -870,6 +881,10 @@ export default function CreateCandidatePage() {
         licensingExam: form.getValues("licensingExam"),
         dataFlow: form.getValues("dataFlow"),
         eligibility: form.getValues("eligibility"),
+        eligibilityNumber: form.getValues("eligibilityNumber"),
+        religionName: religions.find(
+          (religion) => religion.id === form.getValues("religionId"),
+        )?.name,
       }}
       onConfirm={handlePreviewConfirm}
       onCancel={handlePreviewCancel}

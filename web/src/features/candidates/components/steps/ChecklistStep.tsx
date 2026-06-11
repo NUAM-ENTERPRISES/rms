@@ -3,6 +3,7 @@ import {
   Control,
   Controller,
   FieldErrors,
+  useWatch,
 } from "react-hook-form";
 import type { CreateCandidateFormData } from "@/features/candidates/createCandidateFormSchema";
 import {
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckSquare, FileCheck, ClipboardList } from "lucide-react";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
@@ -35,6 +37,8 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
   errors,
   isLoading,
 }) => {
+  const eligibilityEnabled = useWatch({ control, name: "eligibility" });
+
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
       <CardHeader>
@@ -126,13 +130,43 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
                   htmlFor="eligibility"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-700"
                 >
-                  Eligibllity
+                  Eligibility
                 </Label>
                 <p className="text-xs text-slate-500">
                   Candidate meets the eligibility criteria.
                 </p>
               </div>
             </div>
+
+            {eligibilityEnabled ? (
+              <div className="space-y-2 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
+                <Label
+                  htmlFor="eligibilityNumber"
+                  className="text-slate-700 font-medium flex items-center gap-2"
+                >
+                  <ClipboardList className="h-4 w-4 text-emerald-600" />
+                  Eligibility Number
+                </Label>
+                <Controller
+                  name="eligibilityNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="eligibilityNumber"
+                      placeholder="Enter eligibility number"
+                      disabled={isLoading}
+                      className="h-11 bg-white border-slate-200"
+                    />
+                  )}
+                />
+                {errors.eligibilityNumber?.message ? (
+                  <p className="text-sm text-red-600">
+                    {errors.eligibilityNumber.message as string}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </CardContent>

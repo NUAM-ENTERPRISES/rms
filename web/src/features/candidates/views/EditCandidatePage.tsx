@@ -86,6 +86,7 @@ const updateCandidateSchema = z.object({
   licensingExam: z.string().optional(),
   dataFlow: z.boolean().optional(),
   eligibility: z.boolean().optional(),
+  eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -103,6 +104,13 @@ const updateCandidateSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "Referral company name is required when source is referral",
       path: ["referralCompanyName"],
+    });
+  }
+  if (data.eligibility && !data.eligibilityNumber?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility number is required when eligibility is enabled",
+      path: ["eligibilityNumber"],
     });
   }
 });
@@ -231,6 +239,7 @@ export default function EditCandidatePage() {
         licensingExam: candidate.licensingExam || "",
         dataFlow: candidate.dataFlow ?? false,
         eligibility: candidate.eligibility ?? false,
+        eligibilityNumber: candidate.eligibilityNumber || "",
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -366,11 +375,17 @@ export default function EditCandidatePage() {
       payload.height = data.height;
       payload.weight = data.weight;
       payload.skinTone = data.skinTone;
-      payload.languageProficiency = data.languageProficiency;
+      payload.languageProficiency = data.languageProficiency?.trim()
+        ? data.languageProficiency.trim()
+        : null;
       payload.smartness = data.smartness;
       payload.licensingExam = data.licensingExam;
       payload.dataFlow = data.dataFlow;
       payload.eligibility = data.eligibility;
+      payload.eligibilityNumber =
+        data.eligibility && data.eligibilityNumber?.trim()
+          ? data.eligibilityNumber.trim()
+          : null;
 
       // Referral fields
       if (data.source === "referral") {
@@ -1029,13 +1044,38 @@ export default function EditCandidatePage() {
                         htmlFor="eligibility"
                         className="text-sm font-medium leading-none cursor-pointer text-slate-700"
                       >
-                        Eligibllity
+                        Eligibility
                       </FormLabel>
                       <p className="text-xs text-slate-500">
                         Candidate meets the eligibility criteria.
                       </p>
                     </div>
                   </div>
+
+                  {form.watch("eligibility") ? (
+                    <div className="space-y-2 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
+                      <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                        Eligibility Number
+                      </FormLabel>
+                      <Controller
+                        name="eligibilityNumber"
+                        control={form.control}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            id="eligibilityNumber"
+                            placeholder="Enter eligibility number"
+                            className="h-11 bg-white border-slate-200"
+                          />
+                        )}
+                      />
+                      {form.formState.errors.eligibilityNumber?.message ? (
+                        <p className="text-sm text-red-600">
+                          {form.formState.errors.eligibilityNumber.message as string}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </CardContent>

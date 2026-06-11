@@ -59,6 +59,8 @@ interface CandidatePreviewProps {
     languageProficiency?: string;
     dataFlow?: boolean;
     eligibility?: boolean;
+    eligibilityNumber?: string;
+    religionName?: string;
   };
   onConfirm: () => void;
   onCancel: () => void;
@@ -216,6 +218,16 @@ export default function CandidatePreview({
                   </label>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     {candidateData.languageProficiency}
+                  </p>
+                </div>
+              )}
+              {candidateData.religionName && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Religion
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.religionName}
                   </p>
                 </div>
               )}
@@ -673,6 +685,16 @@ export default function CandidatePreview({
                   )}
                 </div>
               </div>
+              {candidateData.eligibility && candidateData.eligibilityNumber ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Number
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.eligibilityNumber}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>

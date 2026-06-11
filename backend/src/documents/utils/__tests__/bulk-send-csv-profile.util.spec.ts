@@ -28,6 +28,8 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
       address: 'Riyadh',
       addressState: { name: 'Riyadh Region' },
       addressCountry: { name: 'Saudi Arabia' },
+      religion: { id: 'rel-1', name: 'Islam' },
+      eligibilityNumber: 'CAND-ELIG-1',
       qualifications: [
         {
           qualification: { name: 'BSc Nursing', shortName: 'BSc' },
@@ -87,9 +89,10 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
     expect(profile.gccExperience).toBe('2');
     expect(profile.indianExperience).toBe('2');
     expect(profile.saudiLicense).toBe('SCFHS-99');
-    expect(profile.eligibilityNumber).toBe('ELIG-1');
+    expect(profile.eligibilityNumber).toBe('CAND-ELIG-1');
+    expect(profile.religion).toBe('Islam');
     expect(profile.emailId).toBe('jane@example.com');
-    expect(profile.nationality).toBe('');
+    expect(profile.nationality).toBe('Saudi Arabia');
     expect(profile.mumarisId).toBe('');
   });
 
@@ -98,6 +101,7 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
       ...baseCandidateProject,
       candidate: {
         ...baseCandidateProject.candidate,
+        eligibilityNumber: undefined,
         processingTasks: [
           {
             projectId: 'other-project',
@@ -113,5 +117,18 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
     });
 
     expect(profile.eligibilityNumber).toBe('');
+  });
+
+  it('falls back to addressCountryCode when address country name is missing', () => {
+    const profile = mapCandidateProjectToBulkSendCsvProfile({
+      ...baseCandidateProject,
+      candidate: {
+        ...baseCandidateProject.candidate,
+        addressCountry: null,
+        addressCountryCode: 'IN',
+      },
+    });
+
+    expect(profile.nationality).toBe('IN');
   });
 });

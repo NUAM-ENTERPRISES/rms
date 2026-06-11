@@ -6,9 +6,12 @@ const baseValid = {
   lastName: "Doe",
   source: "manual" as const,
   gender: "MALE" as const,
+  professionTypeId: "prof-1",
   declaredProjectIds: [],
   dataFlow: false,
   eligibility: false,
+  eligibilityNumber: "",
+  religionId: "",
 };
 
 describe("createCandidateFormSchema", () => {
@@ -70,5 +73,26 @@ describe("createCandidateFormSchema", () => {
       passportNumber: "AB123456",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("requires eligibility number when eligibility is enabled", () => {
+    const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
+    const missingNumber = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "",
+    });
+    expect(missingNumber.success).toBe(false);
+
+    const withNumber = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "ELIG-123",
+    });
+    expect(withNumber.success).toBe(true);
   });
 });

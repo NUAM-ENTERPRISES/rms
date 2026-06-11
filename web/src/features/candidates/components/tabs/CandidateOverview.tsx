@@ -539,6 +539,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </div>
                   <div>
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Religion
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.religion?.name || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
                       Language Proficiency
                     </label>
                     <p className="text-sm mt-1">
@@ -745,6 +753,16 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         </Badge>
                       )}
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Eligibility Number
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.eligibility && candidate.eligibilityNumber
+                        ? candidate.eligibilityNumber
+                        : "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -38,6 +38,7 @@ import { useLookupCandidateByPassportQuery } from "@/features/candidates/api";
 import { PassportLookupHint } from "@/features/candidates/components/PassportLookupHint";
 import { useDebounce } from "@/hooks";
 import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
+import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
 import {
   User,
@@ -343,6 +344,9 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   const debouncedPassport = useDebounce(passportNumber ?? "", 400);
   const passportLookupEnabled =
     showPassportField && debouncedPassport.trim().length >= 3;
+
+  const { data: systemConfig } = useGetSystemConfigQuery("religions");
+  const religions = systemConfig?.data?.constants?.religions ?? [];
 
   const {
     data: passportLookup,
@@ -964,6 +968,36 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       {SMARTNESS_LEVELS.map((level) => (
                         <SelectItem key={level} value={level}>
                           {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Religion */}
+            <div className="space-y-2">
+              <Label htmlFor="religionId" className="text-slate-700 font-medium flex items-center gap-2">
+                <BookUser className="h-4 w-4 text-slate-500" />
+                Religion
+              </Label>
+              <Controller
+                name="religionId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ""}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select religion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {religions.map((religion) => (
+                        <SelectItem key={religion.id} value={religion.id}>
+                          {religion.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

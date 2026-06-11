@@ -237,8 +237,12 @@ export function mapCandidateProjectToBulkSendCsvProfile(
       mobileNumber?: string | null;
       countryCode?: string | null;
       address?: string | null;
+      addressCountryCode?: string | null;
       addressState?: { name?: string | null } | null;
       addressCountry?: { name?: string | null } | null;
+      religionId?: string | null;
+      eligibilityNumber?: string | null;
+      religion?: { id?: string; name?: string | null } | null;
       qualifications?: Array<{
         qualification?: { name?: string | null; shortName?: string | null } | null;
         university?: string | null;
@@ -313,7 +317,10 @@ export function mapCandidateProjectToBulkSendCsvProfile(
       prometricStep,
     ),
     recruiterName: cp.recruiter?.name?.trim() ?? '',
-    nationality: '',
+    nationality:
+      candidate.addressCountry?.name?.trim() ||
+      candidate.addressCountryCode?.trim() ||
+      '',
     gender: candidate.gender ? String(candidate.gender) : '',
     yearOfGraduation:
       candidate.graduationYear != null ? String(candidate.graduationYear) : '',
@@ -327,7 +334,7 @@ export function mapCandidateProjectToBulkSendCsvProfile(
     age: computeAge(candidate.dateOfBirth),
     height: candidate.height != null ? String(candidate.height) : '',
     weight: candidate.weight != null ? String(candidate.weight) : '',
-    religion: '',
+    religion: candidate.religion?.name?.trim() ?? '',
     saudiLicense: scfhsDoc?.documentNumber?.trim() ?? '',
     scfhsIssueDate:
       formatDate(scfhsDoc?.verifiedAt) ||
@@ -336,7 +343,10 @@ export function mapCandidateProjectToBulkSendCsvProfile(
     scfhsExpiryDate:
       formatDate(scfhsDoc?.expiryDate) ||
       formatDate(councilStep?.councilValidAt),
-    eligibilityNumber: eligibilityStep?.eligibilityNumber?.trim() ?? '',
+    eligibilityNumber:
+      candidate.eligibilityNumber?.trim() ||
+      eligibilityStep?.eligibilityNumber?.trim() ||
+      '',
     eligibilityExpiryDate: formatDate(eligibilityStep?.eligibilityValidAt),
     currentLocation: formatCurrentLocation(candidate),
     contactNumber: formatContactNumber(

@@ -486,11 +486,14 @@ model Candidate {
   skinTone            String?
   languageProficiency String?
   smartness           String?
+  religionId          String?
+  religion            Religion? @relation(fields: [religionId], references: [id], onDelete: SetNull)
 
   // Licensing and Verification
-  licensingExam String?
-  dataFlow      Boolean? @default(false)
-  eligibility   Boolean? @default(false)
+  licensingExam       String?
+  dataFlow            Boolean? @default(false)
+  eligibility         Boolean? @default(false)
+  eligibilityNumber   String?  @map("eligibility_number")
   /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
   isJunk        Boolean  @default(false) @map("is_junk")
 
@@ -541,6 +544,7 @@ model Candidate {
   @@index([candidateCode])
   @@index([passportNumber])
   @@index([professionTypeId])
+  @@index([religionId])
   @@index([isJunk])
   @@map("candidates")
 }
@@ -1681,6 +1685,8 @@ model Religion {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  candidates Candidate[]
 
   @@map("religions")
 }

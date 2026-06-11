@@ -21,10 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Ruler, Weight, Sparkles, Languages, Brain, Save, X } from "lucide-react";
+import { Ruler, Weight, Sparkles, Languages, Brain, Save, X, BookUser } from "lucide-react";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { toast } from "sonner";
 import { SKIN_TONES, SMARTNESS_LEVELS, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
+import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 
 const physicalInfoSchema = z.object({
   height: z.number().min(0).optional(),
@@ -32,6 +33,7 @@ const physicalInfoSchema = z.object({
   skinTone: z.string().optional(),
   languageProficiency: z.string().optional(),
   smartness: z.string().optional(),
+  religionId: z.string().optional().or(z.literal("")),
 });
 
 type PhysicalInfoFormData = z.infer<typeof physicalInfoSchema>;
@@ -46,6 +48,7 @@ interface UpdatePhysicalInfoModalProps {
     skinTone?: string | null;
     languageProficiency?: string | null;
     smartness?: string | null;
+    religionId?: string | null;
   };
 }
 
@@ -56,6 +59,8 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
   initialData,
 }) => {
   const [updateCandidate, { isLoading }] = useUpdateCandidateMutation();
+  const { data: systemConfig } = useGetSystemConfigQuery("religions");
+  const religions = systemConfig?.data?.constants?.religions ?? [];
 
   const {
     control,
@@ -70,6 +75,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
       skinTone: initialData.skinTone || "",
       languageProficiency: initialData.languageProficiency || "",
       smartness: initialData.smartness || "",
+      religionId: initialData.religionId || "",
     },
   });
 
@@ -81,6 +87,7 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
         skinTone: initialData.skinTone || "",
         languageProficiency: initialData.languageProficiency || "",
         smartness: initialData.smartness || "",
+        religionId: initialData.religionId || "",
       });
     }
   }, [isOpen, initialData, reset]);
@@ -92,8 +99,11 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
         height: data.height,
         weight: data.weight,
         skinTone: data.skinTone,
-        languageProficiency: data.languageProficiency,
+        languageProficiency: data.languageProficiency?.trim()
+          ? data.languageProficiency.trim()
+          : null,
         smartness: data.smartness,
+        religionId: data.religionId || null,
       }).unwrap();
       toast.success("Physical information updated successfully");
       onClose();
@@ -252,6 +262,36 @@ export const UpdatePhysicalInfoModal: React.FC<UpdatePhysicalInfoModalProps> = (
                       {SMARTNESS_LEVELS.map((level) => (
                         <SelectItem key={level} value={level}>
                           {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Religion */}
+            <div className="space-y-2">
+              <Label htmlFor="religionId" className="text-slate-700 font-medium flex items-center gap-2">
+                <BookUser className="h-4 w-4 text-slate-500" />
+                Religion
+              </Label>
+              <Controller
+                name="religionId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ""}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select religion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {religions.map((religion) => (
+                        <SelectItem key={religion.id} value={religion.id}>
+                          {religion.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -82,9 +82,11 @@ export function buildCreateCandidateSchema(
         .optional()
         .or(z.literal("")),
       smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
+      religionId: z.string().optional().or(z.literal("")),
       licensingExam: z.string().optional(),
       dataFlow: z.boolean().optional().default(false),
       eligibility: z.boolean().optional().default(false),
+      eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
 
       referralCompanyName: z.string().optional(),
       referralEmail: z
@@ -166,6 +168,15 @@ export function buildCreateCandidateSchema(
           code: z.ZodIssueCode.custom,
           message: "Mobile number must not exceed 15 characters",
           path: ["mobileNumber"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      if (data.eligibility && !data.eligibilityNumber?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility number is required when eligibility is enabled",
+          path: ["eligibilityNumber"],
         });
       }
     });

@@ -298,6 +298,30 @@ export class CandidatesService {
     }
   }
 
+  private async assertValidReligionId(
+    religionId?: string | null,
+  ): Promise<void> {
+    if (!religionId?.trim()) return;
+    const religion = await this.prisma.religion.findFirst({
+      where: { id: religionId.trim(), isActive: true },
+      select: { id: true },
+    });
+    if (!religion) {
+      throw new BadRequestException('Invalid religion selected');
+    }
+  }
+
+  private assertEligibilityNumberRequired(
+    eligibility?: boolean | null,
+    eligibilityNumber?: string | null,
+  ): void {
+    if (eligibility === true && !eligibilityNumber?.trim()) {
+      throw new BadRequestException(
+        'Eligibility number is required when eligibility is enabled',
+      );
+    }
+  }
+
   private async resolveCrmStatusIds(
     statusNames: readonly string[],
   ): Promise<number[]> {
@@ -705,6 +729,11 @@ export class CandidatesService {
     }
 
     await this.assertValidProfessionType(createCandidateDto.professionTypeId);
+    await this.assertValidReligionId(createCandidateDto.religionId);
+    this.assertEligibilityNumberRequired(
+      createCandidateDto.eligibility,
+      createCandidateDto.eligibilityNumber,
+    );
 
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
@@ -816,6 +845,9 @@ export class CandidatesService {
           },
         },
       },
+      religion: {
+        select: { id: true, name: true },
+      },
     } as const;
 
     const candidate = await this.prisma.$transaction(async (tx) => {
@@ -860,9 +892,14 @@ export class CandidatesService {
           skinTone: createCandidateDto.skinTone,
           languageProficiency: createCandidateDto.languageProficiency,
           smartness: createCandidateDto.smartness,
+          religionId: createCandidateDto.religionId?.trim() || null,
           licensingExam: createCandidateDto.licensingExam,
           dataFlow: createCandidateDto.dataFlow ?? null,
           eligibility: createCandidateDto.eligibility ?? null,
+          eligibilityNumber:
+            createCandidateDto.eligibility === true
+              ? createCandidateDto.eligibilityNumber?.trim() || null
+              : null,
           highestEducation: createCandidateDto.highestEducation,
           university: createCandidateDto.university,
           graduationYear: createCandidateDto.graduationYear,
@@ -3379,6 +3416,9 @@ export class CandidatesService {
         addressState: {
           select: { id: true, name: true, code: true },
         },
+        religion: {
+          select: { id: true, name: true },
+        },
         agentCandidateDeclaredProjects: {
           include: {
             project: {
@@ -3676,12 +3716,43 @@ export class CandidatesService {
       updateData.languageProficiency = updateCandidateDto.languageProficiency;
     if (updateCandidateDto.smartness !== undefined)
       updateData.smartness = updateCandidateDto.smartness;
+    if (updateCandidateDto.religionId !== undefined) {
+      const religionId =
+        updateCandidateDto.religionId === '' ||
+        updateCandidateDto.religionId === null
+          ? null
+          : updateCandidateDto.religionId;
+      await this.assertValidReligionId(religionId);
+      updateData.religionId = religionId;
+    }
     if (updateCandidateDto.licensingExam !== undefined)
       updateData.licensingExam = updateCandidateDto.licensingExam;
     if (updateCandidateDto.dataFlow !== undefined)
       updateData.dataFlow = updateCandidateDto.dataFlow;
-    if (updateCandidateDto.eligibility !== undefined)
+    if (updateCandidateDto.eligibility !== undefined) {
       updateData.eligibility = updateCandidateDto.eligibility;
+      if (!updateCandidateDto.eligibility) {
+        updateData.eligibilityNumber = null;
+      }
+    }
+    if (updateCandidateDto.eligibilityNumber !== undefined) {
+      updateData.eligibilityNumber =
+        updateCandidateDto.eligibilityNumber?.trim() || null;
+    }
+    const resolvedEligibility =
+      updateCandidateDto.eligibility !== undefined
+        ? updateCandidateDto.eligibility
+        : existingCandidate.eligibility;
+    const resolvedEligibilityNumber =
+      updateData.eligibilityNumber !== undefined
+        ? updateData.eligibilityNumber
+        : updateCandidateDto.eligibility === false
+          ? null
+          : existingCandidate.eligibilityNumber;
+    this.assertEligibilityNumberRequired(
+      resolvedEligibility,
+      resolvedEligibilityNumber,
+    );
     if (updateCandidateDto.highestEducation)
       updateData.highestEducation = updateCandidateDto.highestEducation;
     if (updateCandidateDto.university)
@@ -3761,6 +3832,9 @@ export class CandidatesService {
         include: { country: true },
       },
       facilityPreferences: true,
+      religion: {
+        select: { id: true, name: true },
+      },
       professionType: {
         select: {
           id: true,

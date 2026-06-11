@@ -890,6 +890,7 @@ export default function CandidateDetailPage() {
           skinTone: candidate.skinTone,
           languageProficiency: candidate.languageProficiency,
           smartness: candidate.smartness,
+          religionId: candidate.religionId ?? candidate.religion?.id,
         }}
       />
 
@@ -902,6 +903,7 @@ export default function CandidateDetailPage() {
           licensingExam: candidate.licensingExam,
           dataFlow: candidate.dataFlow,
           eligibility: candidate.eligibility,
+          eligibilityNumber: candidate.eligibilityNumber,
         }}
       />
 

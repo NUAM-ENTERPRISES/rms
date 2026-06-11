@@ -6301,8 +6301,11 @@ export class DocumentsService {
             mobileNumber: true,
             countryCode: true,
             address: true,
+            addressCountryCode: true,
+            eligibilityNumber: true,
             addressState: { select: { name: true } },
             addressCountry: { select: { name: true } },
+            religion: { select: { id: true, name: true } },
             qualifications: {
               include: {
                 qualification: { select: { name: true, shortName: true } },

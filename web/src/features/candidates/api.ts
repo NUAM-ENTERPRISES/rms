@@ -117,6 +117,9 @@ export interface Candidate {
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;
+  eligibilityNumber?: string | null;
+  religionId?: string | null;
+  religion?: { id: string; name: string } | null;
 
   // New fields for better contact management
   countryCode?: string | null;
@@ -578,6 +581,16 @@ export interface CreateCandidateRequest {
   addressCountryCode?: string;
   addressStateId?: string;
   address?: string;
+  height?: number;
+  weight?: number;
+  skinTone?: string;
+  languageProficiency?: string;
+  smartness?: string;
+  religionId?: string;
+  licensingExam?: string;
+  dataFlow?: boolean;
+  eligibility?: boolean;
+  eligibilityNumber?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -617,6 +630,8 @@ export interface UpdateCandidateRequest {
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;
+  eligibilityNumber?: string | null;
+  religionId?: string | null;
   /** Agent-linked declarations (intent only); only for agent-sourced candidates */
   declaredProjectIds?: string[];
   addressCountryCode?: string | null;

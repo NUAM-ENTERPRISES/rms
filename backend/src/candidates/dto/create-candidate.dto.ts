@@ -364,10 +364,10 @@ export class CreateCandidateDto {
     example: 'Professional',
     enum: ['Basic', 'Conversational', 'Professional', 'Native'],
   })
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsOptional()
-  @IsString()
   @IsEnum(['Basic', 'Conversational', 'Professional', 'Native'])
-  languageProficiency?: string;
+  languageProficiency?: string | null;
 
   @ApiPropertyOptional({
     description: 'Candidate smartness/personality rating',
@@ -400,6 +400,23 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsBoolean()
   eligibility?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Eligibility reference number (required when eligibility is true)',
+    example: 'ELIG-2024-001',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  eligibilityNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Religion id from religions lookup',
+    example: 'clxyz123',
+  })
+  @IsOptional()
+  @IsString()
+  religionId?: string;
 
   @ApiPropertyOptional({
     description: 'On hold duration in days',
