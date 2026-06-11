@@ -376,8 +376,8 @@ export function ProcessingStepsCard({
         label: "In Progress",
       },
       on_hold: {
-        color: "text-amber-600",
-        bg: "bg-amber-100",
+        color: "text-violet-600",
+        bg: "bg-violet-100",
         icon: AlertCircle,
         label: "Hold",
       },
@@ -388,8 +388,8 @@ export function ProcessingStepsCard({
         label: "N/A",
       },
       not_started: {
-        color: "text-slate-400",
-        bg: "bg-slate-50",
+        color: "text-violet-600",
+        bg: "bg-violet-100",
         icon: Clock,
         label: "Pending",
       },
@@ -397,127 +397,130 @@ export function ProcessingStepsCard({
     return config[status];
   };
 
+  const pendingCount = totalSteps - completedCount - inProgressCount;
+
   return (
     <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white">
 
-
-      <CardHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
+      <CardHeader className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 text-white px-4 py-4 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <CardTitle className="text-xs font-black uppercase tracking-widest opacity-80 flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" />
             Processing Steps
           </CardTitle>
 
-          {/* Refined File Number Display */}
-          <div className="hidden sm:flex items-center">
+          <div className="flex flex-wrap items-center gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button 
+                  <button
+                    type="button"
                     onClick={onEditFileNumber}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 transition-all group hover:scale-105 active:scale-95"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all group"
                   >
-                    <div className="flex items-center justify-center w-5 h-5 rounded bg-violet-500/30 group-hover:bg-violet-500/50 transition-colors">
-                      <Hash className="h-3.5 w-3.5 text-violet-200" />
+                    <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
+                      <Hash className="h-3.5 w-3.5 text-violet-100" />
                     </div>
                     <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] uppercase font-bold text-white/40 tracking-wider">File Number</span>
-                      <span className="text-xs font-black text-white group-hover:text-violet-200 transition-colors">
-                        {fileNumber || "NOT ASSIGNED"}
+                      <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider">File No.</span>
+                      <span className="text-xs font-black text-white group-hover:text-violet-100 transition-colors">
+                        {fileNumber || "Not assigned"}
                       </span>
                     </div>
-                    <div className="ml-1 p-1 rounded-md opacity-0 group-hover:opacity-100 bg-white/10 transition-all">
-                      <Edit3 className="h-3 w-3 text-white" />
-                    </div>
+                    <Edit3 className="h-3 w-3 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
-                  <p>{fileNumber ? `Modify File Reference: ${fileNumber}` : "Click to assign a tracking file number"}</p>
+                  <p>{fileNumber ? `Modify file reference: ${fileNumber}` : "Click to assign a tracking file number"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
               <div className="h-2 w-2 rounded-full bg-emerald-400" />
-              <span className="text-white/70">{completedCount}</span>
-              <div className="h-2 w-2 rounded-full bg-blue-400 ml-2" />
-              <span className="text-white/70">{inProgressCount}</span>
-              <div className="h-2 w-2 rounded-full bg-slate-400 ml-2" />
-              <span className="text-white/70">{totalSteps - completedCount - inProgressCount}</span>
+              <span>{completedCount}</span>
+              <span className="text-white/50 font-medium normal-case">done</span>
             </div>
-            <div className="h-10 w-10 rounded-full border-2 border-white/30 flex items-center justify-center bg-white/10">
-              <span className="text-sm font-black">{progressPercent}%</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
+              <div className="h-2 w-2 rounded-full bg-sky-300" />
+              <span>{inProgressCount}</span>
+              <span className="text-white/50 font-medium normal-case">active</span>
             </div>
-
-
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-white/10 border border-white/20 text-[10px] font-bold uppercase tracking-wider">
+              <div className="h-2 w-2 rounded-full bg-violet-300" />
+              <span>{pendingCount}</span>
+              <span className="text-white/50 font-medium normal-case">pending</span>
+            </div>
+            <div className="h-9 w-9 rounded-xl border border-white/30 flex items-center justify-center bg-white/10 shrink-0">
+              <span className="text-xs font-black">{progressPercent}%</span>
+            </div>
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="mt-3 h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Overall progress</span>
+            <span className="text-xs font-bold text-white/80">{completedCount} of {totalSteps} steps</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
       </CardHeader>
 
       {/* Status Message Banner */}
       <div
-        className={`px-4 py-3 flex items-center gap-3 border-b ${
-          statusMessage.type === "success"
-            ? "bg-emerald-50 border-emerald-200"
-            : statusMessage.type === "info"
-            ? "bg-blue-50 border-blue-200"
-            : statusMessage.type === "hold"
-            ? "bg-amber-50 border-amber-200"
-            : "bg-orange-50 border-orange-200"
-        }`}
+        className={cn(
+          "px-4 py-3 flex items-center gap-3 border-b",
+          statusMessage.type === "success" && "bg-emerald-50 border-emerald-100",
+          statusMessage.type === "info" && "bg-blue-50 border-blue-100",
+          (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-50 border-violet-100",
+        )}
       >
         <div
-          className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-            statusMessage.type === "success"
-              ? "bg-emerald-100"
-              : statusMessage.type === "info"
-              ? "bg-blue-100"
-              : statusMessage.type === "hold"
-              ? "bg-amber-100"
-              : "bg-orange-100"
-          }`}
+          className={cn(
+            "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
+            statusMessage.type === "success" && "bg-emerald-100",
+            statusMessage.type === "info" && "bg-blue-100",
+            (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-100",
+          )}
         >
           {statusMessage.type === "success" ? (
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           ) : statusMessage.type === "info" ? (
             <PlayCircle className="h-4 w-4 text-blue-600" />
           ) : statusMessage.type === "hold" ? (
-            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertCircle className="h-4 w-4 text-violet-600" />
           ) : (
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertTriangle className="h-4 w-4 text-violet-600" />
           )}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 justify-between">
-            <div className="min-w-0 pr-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <p
-                className={`text-sm font-semibold truncate ${
-                  statusMessage.type === "success"
-                    ? "text-emerald-800"
-                    : statusMessage.type === "info"
-                    ? "text-blue-800"
-                    : statusMessage.type === "hold"
-                    ? "text-amber-800"
-                    : "text-orange-800"
-                }`}
+                className={cn(
+                  "text-sm font-semibold truncate",
+                  statusMessage.type === "success" && "text-emerald-800",
+                  statusMessage.type === "info" && "text-blue-800",
+                  (statusMessage.type === "hold" || statusMessage.type === "warning") && "text-violet-800",
+                )}
                 title={statusMessage.message}
               >
                 {statusMessage.message}
               </p>
+              {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
+                <Badge className="bg-indigo-600 text-white text-[10px] uppercase font-bold shrink-0">
+                  Action required
+                </Badge>
+              )}
             </div>
 
             {/* Hire button (prefers opening Hire modal via `onOpenHire`; falls back to `onCompleteProcessing`) */}
-            <div className="flex-shrink-0 ml-4">
+            <div className="flex-shrink-0">
               {isHired ? (
                 <TooltipProvider>
                   <Tooltip>
@@ -574,30 +577,24 @@ export function ProcessingStepsCard({
             </div>
           </div>
         </div>
-        {activeStep && (activeStep.status === "not_started" || activeStep.status === "in_progress") && (
-          <Badge className="bg-orange-500 text-white text-[10px] uppercase font-bold">
-            Action Required
-          </Badge>
-        )}
       </div>
 
-      <CardContent className="p-0">
-        <div 
+      <CardContent className="p-0 bg-gradient-to-b from-slate-50/60 to-white">
+        <div
           className="overflow-visible"
           style={{ minHeight: maxHeight }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-            {/* Left Column */}
-            <div className="divide-y divide-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-slate-100">
+            <div className="p-3 space-y-2">
               {mergedSteps.slice(0, 6).map((step, index) => (
-                <StepItem 
-                  key={step.key} 
-                  step={step} 
-                  index={index} 
-                  getStatusConfig={getStatusConfig} 
+                <StepItem
+                  key={step.key}
+                  step={step}
+                  index={index}
+                  getStatusConfig={getStatusConfig}
                   onOpen={() => setOpenStepKey(step.key)}
-                  // If all steps are completed, treat every step as completed; enable all steps so uploads are always possible
                   isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
+                  isActive={index === activeStepIndex}
                   isEnabled={true}
                   offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
@@ -608,17 +605,16 @@ export function ProcessingStepsCard({
                 />
               ))}
             </div>
-            {/* Right Column */}
-            <div className="divide-y divide-slate-100">
+            <div className="p-3 space-y-2">
               {mergedSteps.slice(6).map((step, index) => (
-                <StepItem 
-                  key={step.key} 
-                  step={step} 
-                  index={index + 6} 
-                  getStatusConfig={getStatusConfig} 
+                <StepItem
+                  key={step.key}
+                  step={step}
+                  index={index + 6}
+                  getStatusConfig={getStatusConfig}
                   onOpen={() => setOpenStepKey(step.key)}
-                  // Show completed state + eye button for all steps when everything is completed
                   isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
+                  isActive={index + 6 === activeStepIndex}
                   isEnabled={true}
                   onStepClick={onStepClick}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
@@ -633,28 +629,33 @@ export function ProcessingStepsCard({
 
       {/* Step Details Dialog */}
       <Dialog open={!!openStepKey} onOpenChange={(isOpen) => { if (!isOpen) setOpenStepKey(null); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
           {openStepKey && (() => {
             const selected = mergedSteps.find((s) => s.key === openStepKey);
             if (!selected) return null;
-            const SelectedIcon = selected.icon as any;
+            const SelectedIcon = selected.icon;
             const statusCfg = getStatusConfig(selected.status);
             return (
               <div>
-                <DialogHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center ${selected.status === 'completed' ? 'bg-emerald-50' : selected.status === 'not_started' ? 'bg-orange-50' : selected.status === 'in_progress' ? 'bg-blue-50' : 'bg-slate-100'}`}>
-                      <SelectedIcon className={`h-5 w-5 ${statusCfg.color}`} />
+                <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 py-5 text-white">
+                  <DialogHeader className="space-y-0">
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center shadow-md">
+                        <SelectedIcon className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <DialogTitle className="text-lg font-bold text-white">{selected.label}</DialogTitle>
+                        <DialogDescription className="text-sm text-white/70">{selected.description}</DialogDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <DialogTitle className="text-lg font-bold text-slate-900">{selected.label}</DialogTitle>
-                      <DialogDescription className="text-sm text-slate-500">{selected.description}</DialogDescription>
-                    </div>
-                  </div>
-                </DialogHeader>
+                  </DialogHeader>
+                </div>
 
-                <div className="mt-4 text-sm text-slate-700">
-                  <p className="font-semibold">Status: <span className={`ml-2 px-2 py-0.5 rounded ${statusCfg.bg} ${statusCfg.color} text-[10px] uppercase`}>{statusCfg.label}</span></p>
+                <div className="px-6 py-4 text-sm text-slate-700">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Status</span>
+                    <span className={cn("px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold", statusCfg.bg, statusCfg.color)}>{statusCfg.label}</span>
+                  </div>
 
                   {selected.notes && (
                     <div className="mt-3">
@@ -710,20 +711,23 @@ export function ProcessingStepsCard({
 
                   {selected.subStepStatuses && (
                     <div className="mt-4">
-                      <h4 className="font-bold text-sm mb-2">Sub-steps</h4>
-                      <div className="space-y-2">
-                        {selected.subStepStatuses.map((ss) => (
-                          <div key={ss.key} className="flex items-center justify-between bg-slate-50 p-2 rounded">
-                            <div className="text-sm font-medium">{ss.label}</div>
-                            <div className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">{getStatusConfig(ss.status).label}</div>
-                          </div>
-                        ))}
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Sub-steps</h4>
+                      <div className="space-y-1.5">
+                        {selected.subStepStatuses.map((ss) => {
+                          const subCfg = getStatusConfig(ss.status);
+                          return (
+                            <div key={ss.key} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+                              <div className="text-sm font-medium text-slate-700">{ss.label}</div>
+                              <span className={cn("text-[10px] px-2 py-0.5 rounded-full uppercase font-bold", subCfg.bg, subCfg.color)}>{subCfg.label}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <DialogFooter className="mt-6">
+                <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
                   <Button variant="outline" onClick={() => setOpenStepKey(null)}>Close</Button>
                 </DialogFooter>
               </div>
@@ -780,6 +784,7 @@ function StepItem({
   getStatusConfig,
   onOpen,
   isCompleted,
+  isActive = false,
   isEnabled,
   offerLetterStatus,
   onOfferLetterClick,
@@ -794,7 +799,7 @@ function StepItem({
     description: string;
     icon: typeof CheckCircle2;
     status: ProcessingStepStatus;
-    apiStatus?: string; // raw API status for special cases like 'cancelled'
+    apiStatus?: string;
     notes?: string;
     updatedAt?: string;
     hasSubSteps?: boolean;
@@ -814,6 +819,7 @@ function StepItem({
     label: string;
   };
   isCompleted?: boolean;
+  isActive?: boolean;
   isEnabled?: boolean;
   offerLetterStatus?: OfferLetterStatus;
   onOfferLetterClick?: () => void;
@@ -823,6 +829,7 @@ function StepItem({
   onEditSubmitted?: () => void;
 }) {
   const statusConfig = getStatusConfig(step.status);
+  const StepIcon = step.icon;
 
   // Determine offer letter specific styling
   const isOfferLetterStep = step.key === "offer_letter";
@@ -840,16 +847,23 @@ function StepItem({
   const stepCompleted = isCompleted || offerLetterVerified || step.status === 'completed' || !!completedAt;
   const stepEnabled = isEnabled || stepCompleted || isPending || isInProgress; // enable pending/in-progress steps by default
 
-  // Card border color based on status
   const cardBorderClass = stepCompleted
-    ? 'border-2 border-emerald-300'
+    ? "border border-emerald-200"
     : isPending
-    ? 'border border-orange-200'
+    ? "border border-violet-200"
     : isInProgress
-    ? 'border border-blue-200'
+    ? "border border-blue-200"
     : offerLetterRejected
-    ? 'border border-rose-200'
-    : 'border border-slate-100';
+    ? "border border-rose-200"
+    : "border border-slate-100";
+
+  const cardShellClass = cn(
+    "rounded-xl overflow-hidden flex flex-col bg-white shadow-sm transition-all duration-200",
+    cardBorderClass,
+    stepCompleted && "ring-1 ring-emerald-100",
+    isActive && !stepCompleted && "ring-2 ring-indigo-400/70 ring-offset-2 shadow-md",
+    stepEnabled && "hover:shadow-md",
+  );
 
   // Override status display for offer letter based on document status
   const getOfferLetterBadgeText = () => {
@@ -884,38 +898,35 @@ function StepItem({
   // Check if this is the Medical step with sub-steps
   if (step.hasSubSteps && step.subStepStatuses) {
     return (
-      <div className={cn(
-        "m-2 rounded-lg overflow-hidden flex flex-col bg-white",
-        cardBorderClass,
-        stepCompleted ? "ring-1 ring-emerald-200" : ""
-      )}>
-        {/* Main Step Header */}
-        <div className={`flex items-center gap-3 p-3 ${
-          stepCompleted 
-            ? "bg-gradient-to-r from-emerald-50 to-emerald-100/50" 
-            : isPending
-            ? "bg-white"
-            : isInProgress
-            ? "bg-blue-50"
-            : "bg-white"
-        }`}>
+      <div className={cardShellClass}>
+        <div
+          className={cn(
+            "flex items-center gap-3 p-3",
+            stepCompleted && "bg-gradient-to-r from-emerald-50 to-emerald-100/50",
+            isPending && "bg-violet-50/40",
+            isInProgress && "bg-blue-50/60",
+            !stepCompleted && !isPending && !isInProgress && "bg-white",
+          )}
+        >
           <div
-            className={`h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-              stepCompleted
-                ? "bg-emerald-500 text-white"
-                : isPending
-                ? "bg-orange-500 text-white"
-                : isInProgress
-                ? "bg-blue-100 text-blue-600"
-                : !stepEnabled
-                ? "bg-slate-200 text-slate-500"
-                : "bg-rose-100 text-rose-500"
-            }`}
+            className={cn(
+              "h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-sm",
+              stepCompleted && "bg-emerald-500 text-white",
+              isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
+              isInProgress && "bg-blue-100 text-blue-600",
+              !stepEnabled && !stepCompleted && !isPending && !isInProgress && "bg-slate-200 text-slate-500",
+              stepEnabled && !stepCompleted && !isPending && !isInProgress && "bg-rose-100 text-rose-500",
+            )}
           >
             {stepCompleted ? (
               <CheckCircle2 className="h-4 w-4" />
             ) : (
-              index + 1
+              <div className="relative">
+                <StepIcon className="h-4 w-4" />
+                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-white text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
+                  {index + 1}
+                </span>
+              </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -923,7 +934,7 @@ function StepItem({
               stepCompleted 
                 ? "text-emerald-700" 
                 : isPending
-                ? "text-orange-700"
+                ? "text-violet-700"
                 : isInProgress
                 ? "text-blue-700"
                 : !stepEnabled
@@ -934,7 +945,7 @@ function StepItem({
               stepCompleted 
                 ? "text-emerald-500" 
                 : isPending
-                ? "text-orange-500"
+                ? "text-violet-500"
                 : isInProgress
                 ? "text-blue-500"
                 : !stepEnabled
@@ -959,7 +970,7 @@ function StepItem({
                 stepCompleted 
                   ? "bg-emerald-100 hover:bg-emerald-200" 
                   : isPending 
-                  ? "bg-orange-100 hover:bg-orange-200" 
+                  ? "bg-violet-100 hover:bg-violet-200" 
                   : isInProgress
                   ? "bg-blue-100 hover:bg-blue-200"
                   : "bg-rose-100/80 hover:bg-rose-100"
@@ -969,7 +980,7 @@ function StepItem({
                 stepCompleted 
                   ? "text-emerald-600" 
                   : isPending 
-                  ? "text-orange-600" 
+                  ? "text-violet-600" 
                   : isInProgress
                   ? "text-blue-600"
                   : "text-rose-600"
@@ -981,7 +992,7 @@ function StepItem({
             stepCompleted
               ? "bg-emerald-500 text-white"
               : isPending
-              ? "bg-orange-500 text-white"
+              ? "bg-violet-500 text-white"
               : isInProgress
               ? "bg-blue-500 text-white"
               : !stepEnabled
@@ -992,36 +1003,26 @@ function StepItem({
           </Badge>
         </div>
 
-        {/* Sub-steps */}
-        <div className={`pl-6 ${
-          step.status === "completed" 
-            ? "bg-gradient-to-r from-emerald-50/50 to-transparent" 
-            : "bg-gradient-to-r from-rose-50/50 to-transparent"
-        }`}>
+        <div
+          className={cn(
+            "border-t pl-4",
+            step.status === "completed" ? "border-emerald-100 bg-emerald-50/30" : "border-slate-100 bg-slate-50/40",
+          )}
+        >
           {step.subStepStatuses.map((subStep, subIndex) => {
             const subConfig = getStatusConfig(subStep.status);
             return (
               <div
                 key={subStep.key}
-                className={`flex items-center gap-3 py-2 px-3 border-b last:border-b-0 hover:bg-white/50 transition-colors ${
-                  step.status === "completed" 
-                    ? "border-emerald-100/50" 
-                    : "border-rose-100/50"
-                }`}
+                className="flex items-center gap-3 py-2.5 px-3 border-b border-slate-100/80 last:border-b-0 hover:bg-white/60 transition-colors"
               >
-                <div className={`h-5 w-5 rounded-md bg-white border flex items-center justify-center text-[10px] font-bold ${
-                  step.status === "completed" 
-                    ? "border-emerald-200 text-emerald-400" 
-                    : "border-rose-200 text-rose-400"
-                }`}>
+                <div className="h-5 w-5 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
                   {String.fromCharCode(97 + subIndex)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-xs text-slate-700">{subStep.label}</p>
                 </div>
-                <Badge
-                  className={`text-[8px] uppercase font-bold tracking-wider shrink-0 border-0 px-1.5 py-0 ${subConfig.bg} ${subConfig.color}`}
-                >
+                <Badge className={cn("text-[8px] uppercase font-bold tracking-wider shrink-0 border-0 px-1.5 py-0", subConfig.bg, subConfig.color)}>
                   {subConfig.label}
                 </Badge>
               </div>
@@ -1029,9 +1030,8 @@ function StepItem({
           })}
         </div>
 
-        {/* Footer */}
         {(isSubmissionDateRequired || stepCompleted) && (
-          <div className="mt-2 px-3 py-2 flex items-center justify-between gap-2">
+          <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-2 text-xs">
               {isOfferLetterStep ? (
                 <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
@@ -1044,7 +1044,7 @@ function StepItem({
                   </div>
                 </span>
               ) : isSubmissionDateRequired ? (
-                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
                   <span className="text-[10px] text-slate-400">Submitted at</span>
                   <div className="inline-flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -1093,26 +1093,19 @@ function StepItem({
     );
   }
 
-  // Regular step without sub-steps
   return (
-    <div className={cn("m-2 rounded-lg overflow-hidden flex flex-col bg-white", cardBorderClass, stepCompleted ? "ring-1 ring-emerald-200" : "") }>
+    <div className={cardShellClass}>
       <div
         className={cn(
           "flex items-center gap-3 p-3 transition-colors group",
-          stepCompleted
-            ? "bg-emerald-50/50 hover:bg-emerald-50"
-            : isPending
-            ? "bg-white"
-            : isInProgress
-            ? "bg-blue-50/50 hover:bg-blue-50"
-            : offerLetterRejected
-            ? "bg-red-50/50 hover:bg-red-50"
-            : step.apiStatus === 'cancelled'
-            ? "bg-rose-50/50 hover:bg-rose-50"
-            : !stepEnabled
-            ? "bg-slate-100/30 opacity-90"
-            : "hover:bg-slate-50",
-          stepEnabled ? "cursor-pointer" : "cursor-not-allowed"
+          stepCompleted && "bg-emerald-50/50 hover:bg-emerald-50",
+          isPending && "bg-violet-50/40 hover:bg-violet-50/60",
+          isInProgress && "bg-blue-50/50 hover:bg-blue-50",
+          offerLetterRejected && "bg-red-50/50 hover:bg-red-50",
+          step.apiStatus === "cancelled" && "bg-rose-50/50 hover:bg-rose-50",
+          !stepEnabled && !stepCompleted && "bg-slate-100/30 opacity-90",
+          stepEnabled && !stepCompleted && !isPending && !isInProgress && !offerLetterRejected && step.apiStatus !== "cancelled" && "hover:bg-slate-50",
+          stepEnabled ? "cursor-pointer" : "cursor-not-allowed",
         )}
         onClick={() => {
           if (!stepEnabled) return;
@@ -1123,29 +1116,26 @@ function StepItem({
           }
         }}
       >
-        {/* Step Number */}
         <div
           className={cn(
-            "h-8 w-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
-            stepCompleted
-              ? "bg-emerald-500 text-white"
-              : isPending
-              ? "bg-orange-500 text-white"
-              : isInProgress
-              ? "bg-blue-100 text-blue-600"
-              : offerLetterPending
-              ? "bg-blue-100 text-blue-600"
-              : offerLetterRejected
-              ? "bg-red-100 text-red-600"
-              : !stepEnabled
-              ? "bg-slate-200 text-slate-500"
-              : "bg-slate-100 text-slate-400"
+            "h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-sm",
+            stepCompleted && "bg-emerald-500 text-white",
+            isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
+            (isInProgress || offerLetterPending) && "bg-blue-100 text-blue-600",
+            offerLetterRejected && "bg-red-100 text-red-600",
+            !stepEnabled && !stepCompleted && "bg-slate-200 text-slate-500",
+            stepEnabled && !stepCompleted && !isPending && !isInProgress && !offerLetterPending && !offerLetterRejected && "bg-slate-100 text-slate-500",
           )}
         >
           {stepCompleted ? (
             <CheckCircle2 className="h-4 w-4" />
           ) : (
-            index + 1
+            <div className="relative">
+              <StepIcon className="h-4 w-4" />
+              <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 rounded-full bg-white text-[8px] font-black text-indigo-600 flex items-center justify-center leading-none">
+                {index + 1}
+              </span>
+            </div>
           )}
         </div>
 
@@ -1156,7 +1146,7 @@ function StepItem({
             stepCompleted
               ? "text-emerald-700"
               : isPending
-              ? "text-orange-700"
+              ? "text-violet-700"
               : isInProgress
               ? "text-blue-700"
               : offerLetterPending
@@ -1174,7 +1164,7 @@ function StepItem({
             stepCompleted
               ? "text-emerald-500"
               : isPending
-              ? "text-orange-500"
+              ? "text-violet-500"
               : isInProgress
               ? "text-blue-500"
               : offerLetterPending
@@ -1208,7 +1198,7 @@ function StepItem({
               stepCompleted
                 ? "bg-emerald-100 hover:bg-emerald-200"
                 : isPending
-                ? "bg-orange-100 hover:bg-orange-200"
+                ? "bg-violet-100 hover:bg-violet-200"
                 : isInProgress || offerLetterPending
                 ? "bg-blue-100 hover:bg-blue-200"
                 : offerLetterRejected
@@ -1221,7 +1211,7 @@ function StepItem({
               stepCompleted
                 ? "text-emerald-600"
                 : isPending
-                ? "text-orange-600"
+                ? "text-violet-600"
                 : isInProgress || offerLetterPending
                 ? "text-blue-600"
                 : offerLetterRejected
@@ -1238,7 +1228,7 @@ function StepItem({
             stepCompleted
               ? "bg-emerald-500 text-white"
               : isPending
-              ? "bg-orange-500 text-white"
+              ? "bg-violet-500 text-white"
               : isInProgress
               ? "bg-blue-500 text-white"
               : offerLetterPending
@@ -1268,9 +1258,8 @@ function StepItem({
       </Badge>
       </div>
 
-      {/* Footer */}
       {(isSubmissionDateRequired || stepCompleted) && (
-        <div className="mt-2 px-3 py-2 flex items-center justify-between">
+        <div className="px-3 py-2.5 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2 text-xs">
             {isOfferLetterStep ? (
               <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
@@ -1283,7 +1272,7 @@ function StepItem({
                 </div>
               </span>
             ) : isSubmissionDateRequired ? (
-              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-orange-50 border border-orange-200 text-orange-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
                 <span className="text-[10px] text-slate-400">Submitted at</span>
                 <div className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />

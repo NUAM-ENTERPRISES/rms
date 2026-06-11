@@ -430,11 +430,11 @@ export default function ProcessingCandidateDetailsPage() {
               <ProcessingHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
               
               {data.notes && (
-                <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">
+                <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-violet-50 to-indigo-50 border-l-4 border-l-violet-400 p-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-700 mb-1">
                     Notes
                   </h4>
-                  <p className="text-xs text-amber-900 font-medium leading-relaxed line-clamp-3">
+                  <p className="text-xs text-violet-900 font-medium leading-relaxed line-clamp-3">
                     {data.notes}
                   </p>
                 </Card>
