@@ -1,5 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { ROLE_NAMES } from '../common/constants/role-ids';
+
+/** Leadership roles notified when an interview coordinator sends a candidate for processing. */
+const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  'Processing Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+  'System Administrator',
+] as const;
+
 @Injectable()
 export class OutboxService {
   private readonly logger = new Logger(OutboxService.name);
@@ -448,7 +460,7 @@ export class OutboxService {
 
   /**
    * Publish candidate sent for ready-for-processing by interview coordinator.
-   * Notifies leadership roles and the assigned recruiter.
+   * Notifies manager, recruiter manager, processing manager, admin, and the assigned recruiter.
    */
   async publishCandidateReadyForProcessing(
     payload: {
@@ -489,27 +501,43 @@ export class OutboxService {
       tx,
     );
 
+    const changedBySuffix = changedBy ? ` by ${changedBy}` : '';
+    const leadershipMessage = `${candidateName} has been sent for ready for processing on project "${projectName}"${changedBySuffix}.`;
+    const leadershipLink = `/recruiter-docs/${projectId}/${candidateId}`;
+    const leadershipMeta = {
+      type: 'candidate_ready_for_processing',
+      candidateId,
+      projectId,
+      candidateProjectMapId,
+      changedById: changedById ?? null,
+      excludeUserId: changedById ?? undefined,
+      syncTags: [
+        'Interview',
+        'ProcessingSummary',
+        'Candidate',
+        'Processing',
+        'RecruiterDocuments',
+      ],
+    };
+
+    for (const roleName of READY_FOR_PROCESSING_LEADERSHIP_ROLES) {
+      await this.publishRoleNotification(
+        roleName,
+        leadershipMessage,
+        'Sent for Processing',
+        leadershipLink,
+        leadershipMeta,
+        tx,
+      );
+    }
+
     if (recruiterId) {
-      const changedBySuffix = changedBy ? ` by ${changedBy}` : '';
       await this.publishRecruiterNotification(
         recruiterId,
-        `${candidateName} has been sent for processing for project "${projectName}"${changedBySuffix}.`,
-        'Candidate Ready for Processing',
-        `/recruiter-docs/${projectId}/${candidateId}`,
-        {
-          type: 'candidate_ready_for_processing',
-          candidateId,
-          projectId,
-          candidateProjectMapId,
-          changedById: changedById ?? null,
-          syncTags: [
-            'Interview',
-            'ProcessingSummary',
-            'Candidate',
-            'Processing',
-            'RecruiterDocuments',
-          ],
-        },
+        leadershipMessage,
+        'Sent for Processing',
+        leadershipLink,
+        leadershipMeta,
         tx,
       );
     }

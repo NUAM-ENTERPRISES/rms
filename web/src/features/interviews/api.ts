@@ -148,6 +148,7 @@ export interface QueryInterviewsRequest {
   search?: string;
   mode?: string;
   status?: string;
+  readyForProcessingStatus?: "sent";
   projectId?: string;
   roleCatalogId?: string;
   candidateId?: string;

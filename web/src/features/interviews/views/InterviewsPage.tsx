@@ -311,6 +311,7 @@ export default function InterviewsPage() {
 
   // Date filter state
   const [dateRange, setDateRange] = useState<string>("all");
+  const [showSentForProcessing, setShowSentForProcessing] = useState(false);
 
   const { data: summaryStatsData, refetch: refetchStats } = useGetSummaryStatsQuery();
 
@@ -331,6 +332,12 @@ export default function InterviewsPage() {
             activeFilter === "interviewRejected" ? "failed" : 
             activeFilter === "interviewBackout" ? "backout" : 
             activeFilter === "interviewScheduled" ? "scheduled" : undefined,
+    readyForProcessingStatus:
+      activeFilter === "interviewPassed" &&
+      isInterviewCoordinator &&
+      showSentForProcessing
+        ? "sent"
+        : undefined,
   }, { skip: !["interviewScheduled", "interviewCompleted", "interviewPassed", "interviewRejected", "interviewBackout"].includes(activeFilter) });
 
   const {
@@ -602,6 +609,16 @@ export default function InterviewsPage() {
     () => buildCandidateSentForProcessingLookup(candidates),
     [candidates],
   );
+
+  const sendablePassedInterviewIds = useMemo(() => {
+    if (activeFilter !== "interviewPassed") return [];
+
+    return candidates
+      .filter((item) =>
+        canSendInterviewForProcessing(item, candidateSentForProcessingLookup),
+      )
+      .map((item) => item.id);
+  }, [activeFilter, candidates, candidateSentForProcessingLookup]);
 
   useEffect(() => {
     if (activeFilter !== "interviewPassed") return;
@@ -975,6 +992,23 @@ export default function InterviewsPage() {
     }
   }, [activeFilter]);
 
+  const sendablePassedInterviewIdsKey = sendablePassedInterviewIds.join("|");
+
+  useEffect(() => {
+    if (activeFilter !== "interviewPassed") return;
+
+    setSelectedBulkIds((prev) => {
+      const next = prev.filter((id) => sendablePassedInterviewIds.includes(id));
+      if (
+        next.length === prev.length &&
+        next.every((id, index) => id === prev[index])
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [activeFilter, showSentForProcessing, sendablePassedInterviewIdsKey, sendablePassedInterviewIds]);
+
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
     const d = new Date(dateString);
@@ -1067,31 +1101,57 @@ export default function InterviewsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex h-11 shrink-0 items-center gap-1.5 pr-1">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
-                  <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Date
-                  </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex h-11 shrink-0 items-center gap-1.5 pr-1">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Date
+                    </span>
+                  </div>
+                  {["all", "today", "this_week", "this_month"].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setDateRange(preset);
+                        setPage(1);
+                      }}
+                      className={cn(
+                        "h-9 shrink-0 px-3 text-xs font-medium rounded-full border transition-all",
+                        dateRange === preset
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      )}
+                    >
+                      {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
+                    </button>
+                  ))}
                 </div>
-                {["all", "today", "this_week", "this_month"].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => {
-                      setDateRange(preset);
-                      setPage(1);
-                    }}
+
+                {activeFilter === "interviewPassed" && isInterviewCoordinator && (
+                  <label
+                    htmlFor="show-sent-for-processing"
                     className={cn(
-                      "h-9 shrink-0 px-3 text-xs font-medium rounded-full border transition-all",
-                      dateRange === preset
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      "ml-auto flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-medium transition-all",
+                      showSentForProcessing
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
                     )}
                   >
-                    {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
-                  </button>
-                ))}
+                    <Checkbox
+                      id="show-sent-for-processing"
+                      checked={showSentForProcessing}
+                      onCheckedChange={(checked) => {
+                        setShowSentForProcessing(checked === true);
+                        setSelectedBulkIds([]);
+                        setPage(1);
+                      }}
+                      className={showSentForProcessing ? "border-white data-[state=checked]:bg-white data-[state=checked]:text-emerald-600" : undefined}
+                    />
+                    Sent for Ready For Processing
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -1105,7 +1165,12 @@ export default function InterviewsPage() {
                 <div>
                   <h2 className="text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
                   <p className="text-xs text-slate-500">
-                    {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
+                    {meta?.total ?? candidates.length} candidate{(meta?.total ?? candidates.length) !== 1 ? "s" : ""} found
+                    {activeFilter === "interviewPassed" &&
+                      isInterviewCoordinator &&
+                      showSentForProcessing && (
+                        <span className="text-slate-400"> (sent for ready for processing)</span>
+                      )}
                   </p>
                 </div>
               </div>
@@ -1252,10 +1317,23 @@ export default function InterviewsPage() {
                           <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
                             <Checkbox
                               id="select-all-candidates"
-                              checked={candidates.length > 0 && candidates.every((it) => selectedBulkIds.includes(it.id))}
+                              aria-label="Select all candidates"
+                              checked={
+                                activeFilter === "interviewPassed"
+                                  ? sendablePassedInterviewIds.length > 0 &&
+                                    sendablePassedInterviewIds.every((id) =>
+                                      selectedBulkIds.includes(id),
+                                    )
+                                  : candidates.length > 0 &&
+                                    candidates.every((it) => selectedBulkIds.includes(it.id))
+                              }
                               onCheckedChange={(value) => {
                                 if (value) {
-                                  setSelectedBulkIds(candidates.map((it) => it.id));
+                                  setSelectedBulkIds(
+                                    activeFilter === "interviewPassed"
+                                      ? sendablePassedInterviewIds
+                                      : candidates.map((it) => it.id),
+                                  );
                                 } else {
                                   setSelectedBulkIds([]);
                                 }
@@ -1362,6 +1440,13 @@ export default function InterviewsPage() {
                               <TableCell className="px-4 py-3">
                                 <Checkbox
                                   checked={selectedBulkIds.includes(item.id)}
+                                  disabled={
+                                    activeFilter === "interviewPassed" &&
+                                    !canSendInterviewForProcessing(
+                                      item,
+                                      candidateSentForProcessingLookup,
+                                    )
+                                  }
                                   onCheckedChange={(checked) => {
                                     if (checked) {
                                       setSelectedBulkIds((prev) => [...prev, item.id]);

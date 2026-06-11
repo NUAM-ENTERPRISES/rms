@@ -2318,63 +2318,10 @@ export class NotificationsProcessor extends WorkerHost {
   }
 
   async handleCandidateReadyForProcessing(job: Job<NotificationJobData>) {
-    const { eventId, payload } = job.data;
-    this.logger.log(`Processing candidate ready for processing event: ${eventId}`);
-
-    try {
-      const { candidateProjectMapId, candidateName, projectName, projectId, changedBy } =
-        payload as {
-          candidateProjectMapId: string;
-          candidateName: string;
-          projectName: string;
-          projectId: string;
-          changedBy?: string | null;
-        };
-
-      // Get target roles (Manager, System Admin, Director, CEO, Admin, Team Lead)
-      const targetRoles = [
-        'Manager',
-        'System Admin',
-        'System Administrator',
-        'Director',
-        'CEO',
-        'Admin',
-        'Team Lead',
-      ];
-      const targetUsers = await this.prisma.user.findMany({
-        where: withActiveAccountStatus({
-          userRoles: {
-            some: {
-              role: {
-                name: { in: targetRoles },
-              },
-            },
-          },
-        }),
-        select: { id: true },
-      });
-
-      this.logger.log(`Found ${targetUsers.length} users to notify for Ready for Processing`);
-
-      for (const user of targetUsers) {
-        const idemKey = `${eventId}:ready_processing:${candidateProjectMapId}:${user.id}`;
-        
-        await this.notificationsService.createNotification({
-          userId: user.id,
-          type: 'candidate_ready_for_processing',
-          title: 'Candidate Ready for Processing',
-          message: `${candidateName} is now ready for processing for project "${projectName}"${changedBy ? ` (marked by ${changedBy})` : ''}`,
-          link: '/ready-for-processing',
-          meta: { candidateProjectMapId, projectId },
-          idemKey,
-        });
-      }
-
-      this.logger.log(`Ready for processing notifications created for ${targetUsers.length} users`);
-    } catch (err) {
-      this.logger.error(`Failed to process CandidateReadyForProcessing event ${eventId}: ${err?.message || err}`, err?.stack);
-      throw err;
-    }
+    const { eventId } = job.data;
+    this.logger.log(
+      `Candidate ready for processing event ${eventId} acknowledged; leadership notifications are dispatched via RoleNotification from outbox`,
+    );
   }
 
   async handleDocumentsForwardedToClient(job: Job<NotificationJobData>) {

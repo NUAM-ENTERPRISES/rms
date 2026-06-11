@@ -126,14 +126,15 @@ When an interview coordinator marks a passed interview as **ready for processing
 
 | Event | Recipients |
 |-------|------------|
-| `CandidateReadyForProcessing` | Manager, System Admin, Director, CEO, Admin, Team Lead |
+| `CandidateReadyForProcessing` | Outbox job ack only (leadership bell notifications are sent via `RoleNotification`) |
+| `RoleNotification` | Manager, Recruiter Manager, Processing Manager, System Admin, Admin, System Administrator (interview coordinator excluded) |
 | `RecruiterNotification` | Assigned recruiter for that nomination |
 | `DataSync` (`ProcessingSummary`) | Connected clients (list refresh) |
 
-**Recruiter notification**
+**Leadership / recruiter bell notification**
 
-- Title: `Candidate Ready for Processing`
-- `meta.type`: `candidate_ready_for_processing`
+- Title: `Sent for Processing`
+- Type / `meta.type`: `candidate_ready_for_processing`
 - Link: `/recruiter-docs/{projectId}/{candidateId}`
 
 If no offer letter exists, the recruiter may also receive a separate `offer_letter_upload_requested` notification.
@@ -148,7 +149,7 @@ If no offer letter exists, the recruiter may also receive a separate `offer_lett
 | `Candidate` | Candidate detail |
 | `RecruiterDocuments` | Recruiter docs for the nomination |
 
-**Handler:** `notification-handlers/processing-handler.ts` (resolves `recruiter_notification` when `meta.type` is `candidate_ready_for_processing`).
+**Handler:** `notification-handlers/processing-handler.ts` (handles `candidate_ready_for_processing`, `candidate_sent_for_processing`, and resolves `role_notification` / `recruiter_notification` via `meta.type`).
 
 ---
 
