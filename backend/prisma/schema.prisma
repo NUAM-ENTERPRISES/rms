@@ -115,6 +115,12 @@ model User {
   screenings                  Screening[]                     @relation("ScreeningCoordinator")
   agentCandidateRequests      AgentCandidateRequest[]         @relation("AgentCandidateRequestRequester")
   operationsCallLogs          OperationsCallLog[]             @relation("OperationsCallLogger")
+  originalCollectionsLockerSubmitted OriginalDocumentCollection[] @relation("CollectionLockerSubmittedBy")
+  originalCollectionsCompleted OriginalDocumentCollection[]   @relation("CollectionCompletedBy")
+  originalCollectionsCreated   OriginalDocumentCollection[]   @relation("CollectionCreatedBy")
+  originalCollectionEventsCollected OriginalDocumentCollectionEvent[] @relation("EventCollectedBy")
+  originalCollectionEventsCreated OriginalDocumentCollectionEvent[] @relation("EventCreatedBy")
+  originalCollectionMergesUploaded OriginalDocumentCollectionMergeHistory[] @relation("MergeHistoryUploadedBy")
 
   addressCountryCode String?
   addressStateId     String?
@@ -521,6 +527,8 @@ model Candidate {
   metaLeads        MetaLead[]
   mergedDocuments  MergedDocument[]
   documentForwards DocumentForwardHistory[]
+  originalDocumentCollections OriginalDocumentCollection[]
+  lockerFileNumber            String? @map("locker_file_number")
 
   /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
   agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
@@ -607,8 +615,9 @@ model Agent {
   updatedAt       DateTime @updatedAt
 
   country       Country?       @relation("AgentCountry", fields: [countryCode], references: [code], onDelete: SetNull)
-  candidates    Candidate[]    @relation("AgentToCandidate")
-  agentProjects AgentProject[]
+  candidates                  Candidate[]                  @relation("AgentToCandidate")
+  agentProjects               AgentProject[]
+  originalDocumentCollectionEvents OriginalDocumentCollectionEvent[]
 
   @@index([countryCode])
   @@map("agents")
@@ -835,6 +844,8 @@ model Document {
   candidate      Candidate                              @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   roleCatalog    RoleCatalog?                           @relation(fields: [roleCatalogId], references: [id], onDelete: Cascade)
   workExperience WorkExperience?                        @relation(fields: [workExperienceId], references: [id], onDelete: SetNull)
+  originalDocumentCollectionsAsMerged OriginalDocumentCollection[] @relation("CollectionMergedDocument")
+  originalDocumentCollectionMergeHistory OriginalDocumentCollectionMergeHistory[] @relation("MergeHistoryDocument")
 
   @@index([candidateId])
   @@index([docType])
@@ -2318,4 +2329,107 @@ model DocumentForwardHistory {
   @@index([roleCatalogId])
   @@index([status])
   @@map("document_forward_history")
+}
+
+/// One physical original-document file per candidate (parent).
+model OriginalDocumentCollection {
+  id                      String    @id @default(cuid())
+  candidateId             String    @unique
+  mergedDocumentId        String?
+  lockerFileNumber        String?
+  lockerSubmittedAt       DateTime?
+  lockerSubmittedByUserId String?
+  status                  String    @default("draft")
+  completedAt             DateTime?
+  completedByUserId       String?
+  createdByUserId         String
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  candidate         Candidate                                @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  mergedDocument    Document?                                @relation("CollectionMergedDocument", fields: [mergedDocumentId], references: [id], onDelete: SetNull)
+  lockerSubmittedBy User?                                    @relation("CollectionLockerSubmittedBy", fields: [lockerSubmittedByUserId], references: [id], onDelete: SetNull)
+  completedBy       User?                                    @relation("CollectionCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  createdBy         User                                     @relation("CollectionCreatedBy", fields: [createdByUserId], references: [id])
+  events            OriginalDocumentCollectionEvent[]
+  mergeHistory      OriginalDocumentCollectionMergeHistory[]
+  syncLogs          OriginalDocumentCollectionSyncLog[]
+
+  @@index([status])
+  @@map("original_document_collections")
+}
+
+/// A single intake visit (source, date, docs received that time).
+model OriginalDocumentCollectionEvent {
+  id                String   @id @default(cuid())
+  collectionId      String
+  collectionType    String
+  collectedByUserId String
+  collectedAt       DateTime
+  directOffice      String?
+  directOfficeOther String?
+  interviewVenue    String?
+  agentId           String?
+  agentNameManual   String?
+  courierPartner    String?
+  trackingNumber    String?
+  remarks           String?
+  createdByUserId   String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  collection  OriginalDocumentCollection              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collectedBy User                                    @relation("EventCollectedBy", fields: [collectedByUserId], references: [id])
+  createdBy   User                                    @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
+  agent       Agent?                                  @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  items       OriginalDocumentCollectionEventItem[]
+
+  @@index([collectionId])
+  @@index([collectionType])
+  @@index([collectedAt])
+  @@map("original_document_collection_events")
+}
+
+model OriginalDocumentCollectionEventItem {
+  id         String  @id @default(cuid())
+  eventId    String
+  docType    String
+  isReceived Boolean @default(false)
+  remarks    String?
+
+  event OriginalDocumentCollectionEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, docType])
+  @@index([eventId])
+  @@map("original_document_collection_event_items")
+}
+
+model OriginalDocumentCollectionMergeHistory {
+  id               String    @id @default(cuid())
+  collectionId     String
+  documentId       String
+  uploadedAt       DateTime  @default(now())
+  uploadedByUserId String
+  replacedAt       DateTime?
+
+  collection OriginalDocumentCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  document   Document                   @relation("MergeHistoryDocument", fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy User                       @relation("MergeHistoryUploadedBy", fields: [uploadedByUserId], references: [id])
+
+  @@index([collectionId])
+  @@map("original_document_collection_merge_history")
+}
+
+model OriginalDocumentCollectionSyncLog {
+  id             String   @id @default(cuid())
+  collectionId   String
+  docType        String
+  syncedAt       DateTime @default(now())
+  syncedByUserId String
+
+  collection OriginalDocumentCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, docType])
+  @@index([collectionId])
+  @@map("original_document_collection_sync_logs")
 }

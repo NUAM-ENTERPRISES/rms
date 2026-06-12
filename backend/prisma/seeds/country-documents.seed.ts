@@ -346,6 +346,9 @@ export async function seedCountryDocuments(prisma: PrismaClient) {
       { docType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL, label: 'Marriage Certificate (Original)', mandatory: false },
       { docType: DOCUMENT_TYPE.BIRTH_CERTIFICATE_ORIGINAL, label: 'Birth Certificate (Original)', mandatory: false },
       { docType: DOCUMENT_TYPE.PCC_ORIGINAL, label: 'Police Clearance Certificate (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.SSLC_CERTIFICATE_ORIGINAL, label: 'SSLC Certificate (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.PLUS_TWO_CERTIFICATE_ORIGINAL, label: 'Plus Two Certificate (Original)', mandatory: false },
+      { docType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL, label: 'Experience Certificate (Original)', mandatory: false },
     ];
 
     await seedGlobalRequirements('document_received', documentReceivedDocs);

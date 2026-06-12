@@ -96,6 +96,10 @@ export function RoleBasedRedirect() {
     );
   }
 
+  if (user?.roles.includes("Documents Control Executive")) {
+    return <Navigate to="/original-documents" replace />;
+  }
+
   if (user?.roles.some(isAgentCoordinatorRole)) {
     return <Navigate to="/agents" replace />;
   }

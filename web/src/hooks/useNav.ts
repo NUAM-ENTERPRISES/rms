@@ -28,6 +28,15 @@ export function useNav(): NavItem[] {
       "projects-management",
       "profile",
     ]);
+    const isDocumentsControlExecutive = user.roles.includes(
+      "Documents Control Executive",
+    );
+    const documentsControlExecutiveAllowedIds = new Set([
+      "original-document-intake-main",
+      "candidates",
+      "candidates-list",
+      "profile",
+    ]);
     const isProjectCoordinator = user.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR);
     const projectCoordinatorAllowedIds = new Set([
       "project-coordinator-dashboard",
@@ -63,6 +72,13 @@ export function useNav(): NavItem[] {
       if (
         isDocumentationExecutive &&
         !documentationExecutiveAllowedIds.has(item.id)
+      ) {
+        return null;
+      }
+
+      if (
+        isDocumentsControlExecutive &&
+        !documentsControlExecutiveAllowedIds.has(item.id)
       ) {
         return null;
       }

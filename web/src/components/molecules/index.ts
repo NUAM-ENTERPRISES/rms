@@ -36,6 +36,8 @@ export { VerificationDocumentStatusBadge, getVerificationStatusBadge } from "./V
 export { ClientSelect } from "./ClientSelect";
 export { SelectAgent } from "./SelectAgent";
 export type { SelectAgentProps } from "./SelectAgent";
+export { SelectCandidate } from "./SelectCandidate";
+export type { SelectCandidateProps } from "./SelectCandidate";
 export { JobTitleSelect } from "./JobTitleSelect";
 export { DepartmentSelect } from "./DepartmentSelect";
 export { PreferredRoleMultiSelect } from "./PreferredRoleMultiSelect";

@@ -262,6 +262,24 @@ const ProcessingAdminDashboardPage = lazy(
 const DocumentVerificationDashboard = lazy(
   () => import("@/pages/DocumentVerificationDashboard")
 );
+const OriginalDocumentsRegisterPage = lazy(
+  () =>
+    import(
+      "@/features/original-document-collections/views/OriginalDocumentsRegisterPage"
+    )
+);
+const CreateCollectionPage = lazy(
+  () =>
+    import(
+      "@/features/original-document-collections/views/CreateCollectionPage"
+    )
+);
+const CollectionDetailPage = lazy(
+  () =>
+    import(
+      "@/features/original-document-collections/views/CollectionDetailPage"
+    )
+);
 
 function App() {
   return (
@@ -1100,6 +1118,43 @@ function App() {
                         <ProtectedRoute permissions={["read:documents"]}>
                           <AppLayout>
                             <DocumentVerificationPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/original-documents"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <OriginalDocumentsRegisterPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/original-documents/new"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:documents"]}>
+                          <AppLayout>
+                            <CreateCollectionPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/original-documents/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <CollectionDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

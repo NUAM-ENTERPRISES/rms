@@ -90,6 +90,10 @@ export function shouldShowDashboardWelcomeHeader(
     return path === "/" || path === "/interviews";
   }
 
+  if (roles.includes("Documents Control Executive")) {
+    return path === "/" || path === "/original-documents";
+  }
+
   if (roles.includes("Documentation Executive")) {
     return path === "/" || path === "/documents/verification";
   }

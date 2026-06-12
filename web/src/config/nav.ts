@@ -70,6 +70,14 @@ export const navigationConfig: NavItem[] = [
     // Documentation Executives should see this as their first dashboard item
   },
   {
+    id: "original-document-intake-main",
+    label: "Original Document Intake",
+    path: "/original-documents",
+    icon: FileText,
+    roles: ["Documents Control Executive"],
+    permissions: ["read:documents"],
+  },
+  {
     id: "processing-dashboard",
     label: "Dashboard",
     path: "/",
@@ -352,6 +360,7 @@ export const navigationConfig: NavItem[] = [
     permissions: ["read:documents"],
     activePathPatterns: [
       "^/documents/",
+      "^/original-documents",
       "^/candidates/[^/]+/documents/",
     ],
     hiddenForRoles: [
@@ -369,7 +378,21 @@ export const navigationConfig: NavItem[] = [
         label: "Document Verification",
         path: "/documents/verification",
         permissions: ["read:documents"],
-      }
+      },
+      {
+        id: "original-document-intake",
+        label: "Original Document Intake",
+        path: "/original-documents",
+        permissions: ["read:documents"],
+        roles: [
+          "Documents Control Executive",
+          "CEO",
+          "Director",
+          "Manager",
+          "Processing Manager",
+          "System Admin",
+        ],
+      },
     ],
   },
   {

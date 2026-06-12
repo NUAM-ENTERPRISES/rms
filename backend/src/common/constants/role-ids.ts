@@ -15,6 +15,7 @@ export const ROLE_NAMES = {
   TEAM_LEAD: 'Team Lead',
   RECRUITER: 'Recruiter',
   DOCUMENTATION_EXECUTIVE: 'Documentation Executive',
+  DOCUMENTS_CONTROL_EXECUTIVE: 'Documents Control Executive',
   PROCESSING_EXECUTIVE: 'Processing Executive',
   INTERVIEW_COORDINATOR: 'Interview Coordinator',
   SYSTEM_ADMIN: 'System Admin',

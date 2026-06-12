@@ -53,6 +53,7 @@ import { ProjectCoordinatorDashboardModule } from './project-coordinator-dashboa
 import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analytics.module';
 import { AgentsModule } from './agents/agents.module';
 import { IntroductionVideosModule } from './introduction-videos/introduction-videos.module';
+import { OriginalDocumentCollectionsModule } from './original-document-collections/original-document-collections.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { IntroductionVideosModule } from './introduction-videos/introduction-vid
     RecruiterAnalyticsModule,
     AgentsModule,
     IntroductionVideosModule,
+    OriginalDocumentCollectionsModule,
   ],
   controllers: [AppController],
   providers: [

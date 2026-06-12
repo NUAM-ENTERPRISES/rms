@@ -3486,6 +3486,9 @@ export class CandidatesService {
 
     // Extract the creator from the first active assignment
     const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
+    const activeAssignment = candidateWithoutHistories.recruiterAssignments?.find(
+      (assignment) => assignment.isActive,
+    );
     const createdBy =
       firstAssignment?.createdByUser ||
       firstAssignment?.assignedByUser ||
@@ -3535,6 +3538,7 @@ export class CandidatesService {
         documents: documents ?? [],
       }),
       currentStatus: base.currentStatus,
+      recruiter: activeAssignment?.recruiter || null,
       createdBy,
       isCREReassigned,
       creStatusNote: isCREReassigned

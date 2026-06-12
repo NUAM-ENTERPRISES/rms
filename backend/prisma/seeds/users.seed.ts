@@ -108,6 +108,14 @@ const TEST_USERS = [
     role: 'Documentation Executive',
   },
   {
+    email: 'dce@affiniks.com',
+    name: 'Priya Documents Control',
+    password: 'dce123',
+    countryCode: '+91',
+    phone: '9876543246',
+    role: 'Documents Control Executive',
+  },
+  {
     email: 'processing@affiniks.com',
     name: 'Jordan Processing',
     password: 'processing123',
@@ -353,6 +361,9 @@ export function logSeedUserCredentials(adminPassword: string) {
   console.log('🎯 Team Lead: +919876543214 / teamlead123 (teamlead@affiniks.com)');
   console.log('🔍 Recruiters 1–5: +919876543215–219 / recruiter123');
   console.log('📄 Documentation: +919876543220 / docs123 (docs@affiniks.com)');
+  console.log(
+    '📦 Documents Control Executive: +919876543246 / dce123 (dce@affiniks.com)',
+  );
   console.log('⚙️ Processing 1–5: +919876543221, +919876543231–234 / processing123');
   console.log('🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@affiniks.com)');
   console.log('🎓 Screening Trainers: +919876543224, +919876543240–241 / trainer123');

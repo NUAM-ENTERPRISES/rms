@@ -62,6 +62,7 @@ export const baseApi = createApi({
     "RecruiterAnalytics",
     "RecruiterPerformanceRating",
     "Agent",
+    "OriginalDocumentCollection",
     // Session monitoring — dedicated tag to prevent unrelated page refetches
     "AdminSessions",
   ],

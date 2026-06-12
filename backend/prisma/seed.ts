@@ -219,6 +219,16 @@ const roles = [
     ],
   },
   {
+    name: 'Documents Control Executive',
+    description: 'Physical original document intake, scanning, and locker management',
+    permissions: [
+      'read:documents',
+      'write:documents',
+      'read:candidates',
+      'read:agents',
+    ],
+  },
+  {
     name: 'Processing Executive',
     description: 'Processing department - Post-selection workflows',
     permissions: [
