@@ -348,9 +348,9 @@ describe('NotificationsProcessor', () => {
         payload: {
           roleName: 'Processing Manager',
           message:
-            'Jane Doe has been sent for ready for processing on project "ICU Project" by IC User.',
-          title: 'Sent for Processing',
-          link: '/recruiter-docs/proj-1/cand-1',
+            'Jane Doe has been sent to ready for processing on project "ICU Project" by IC User.',
+          title: 'Sent to Ready for Processing',
+          link: '/ready-for-processing?projectId=proj-1&search=Jane%20Doe',
           meta: {
             type: 'candidate_ready_for_processing',
             candidateId: 'cand-1',
@@ -381,7 +381,7 @@ describe('NotificationsProcessor', () => {
       expect.objectContaining({
         userId: 'pm-1',
         type: 'candidate_ready_for_processing',
-        title: 'Sent for Processing',
+        title: 'Sent to Ready for Processing',
         link: '/recruiter-docs/proj-1/cand-1',
       }),
     );

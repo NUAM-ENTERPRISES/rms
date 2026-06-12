@@ -18,6 +18,53 @@ export class OutboxService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private buildReadyForProcessingPageLink(
+    projectId: string,
+    candidateName: string,
+  ): string {
+    const params = new URLSearchParams({
+      projectId,
+      search: candidateName,
+    });
+    return `/ready-for-processing?${params.toString()}`;
+  }
+
+  private buildCandidateDetailLink(candidateId: string): string {
+    return `/candidates/${candidateId}`;
+  }
+
+  private buildSentForProcessingRoleLink(
+    roleName: string,
+    projectId: string,
+    candidateId: string,
+    candidateName: string,
+  ): string {
+    if (roleName === 'Recruiter Manager') {
+      return this.buildCandidateDetailLink(candidateId);
+    }
+
+    return this.buildReadyForProcessingPageLink(projectId, candidateName);
+  }
+
+  private buildSentForProcessingRoleMeta(
+    roleName: string,
+    leadershipMeta: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (roleName === 'Recruiter Manager') {
+      return {
+        ...leadershipMeta,
+        targetRole: roleName,
+        navigationTarget: 'candidate_detail',
+      };
+    }
+
+    return {
+      ...leadershipMeta,
+      targetRole: roleName,
+      navigationTarget: 'ready_for_processing',
+    };
+  }
+
   /**
    * Publish an event to the outbox for async processing
    */
@@ -502,11 +549,12 @@ export class OutboxService {
     );
 
     const changedBySuffix = changedBy ? ` by ${changedBy}` : '';
-    const leadershipMessage = `${candidateName} has been sent for ready for processing on project "${projectName}"${changedBySuffix}.`;
-    const leadershipLink = `/recruiter-docs/${projectId}/${candidateId}`;
+    const leadershipMessage = `${candidateName} has been sent to ready for processing on project "${projectName}"${changedBySuffix}.`;
+    const recruiterLink = this.buildCandidateDetailLink(candidateId);
     const leadershipMeta = {
       type: 'candidate_ready_for_processing',
       candidateId,
+      candidateName,
       projectId,
       candidateProjectMapId,
       changedById: changedById ?? null,
@@ -519,14 +567,23 @@ export class OutboxService {
         'RecruiterDocuments',
       ],
     };
+    const recruiterMeta = {
+      ...leadershipMeta,
+      navigationTarget: 'candidate_detail',
+    };
 
     for (const roleName of READY_FOR_PROCESSING_LEADERSHIP_ROLES) {
       await this.publishRoleNotification(
         roleName,
         leadershipMessage,
-        'Sent for Processing',
-        leadershipLink,
-        leadershipMeta,
+        'Sent to Ready for Processing',
+        this.buildSentForProcessingRoleLink(
+          roleName,
+          projectId,
+          candidateId,
+          candidateName,
+        ),
+        this.buildSentForProcessingRoleMeta(roleName, leadershipMeta),
         tx,
       );
     }
@@ -535,9 +592,9 @@ export class OutboxService {
       await this.publishRecruiterNotification(
         recruiterId,
         leadershipMessage,
-        'Sent for Processing',
-        leadershipLink,
-        leadershipMeta,
+        'Sent to Ready for Processing',
+        recruiterLink,
+        recruiterMeta,
         tx,
       );
     }

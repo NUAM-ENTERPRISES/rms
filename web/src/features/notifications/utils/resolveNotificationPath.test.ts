@@ -44,4 +44,90 @@ describe("resolveNotificationPath", () => {
 
     expect(path).toBe("/recruiter-docs/proj-1/cand-1");
   });
+
+  it("routes sent-for-processing processing leadership notifications to ready for processing page", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "candidate_ready_for_processing",
+      link: "/ready-for-processing?projectId=proj-1&search=Anandhu+TP+Stewart",
+      meta: {
+        type: "candidate_ready_for_processing",
+        candidateId: "cand-1",
+        candidateName: "Anandhu TP Stewart",
+        projectId: "proj-1",
+        targetRole: "Processing Manager",
+        navigationTarget: "ready_for_processing",
+      },
+    });
+
+    expect(path).toBe(
+      "/ready-for-processing?projectId=proj-1&search=Anandhu+TP+Stewart",
+    );
+  });
+
+  it("routes sent-for-processing recruiter notifications to candidate detail", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "recruiter_notification",
+      link: "/ready-for-processing?projectId=proj-1",
+      meta: {
+        type: "candidate_ready_for_processing",
+        candidateId: "cand-1",
+        candidateName: "Anandhu TP Stewart",
+        projectId: "proj-1",
+      },
+    });
+
+    expect(path).toBe("/candidates/cand-1");
+  });
+
+  it("routes sent-for-processing recruiter manager notifications to candidate detail", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "candidate_ready_for_processing",
+      link: "/candidates/cand-1",
+      meta: {
+        type: "candidate_ready_for_processing",
+        candidateId: "cand-1",
+        candidateName: "Anandhu TP Stewart",
+        projectId: "proj-1",
+        targetRole: "Recruiter Manager",
+        navigationTarget: "candidate_detail",
+      },
+    });
+
+    expect(path).toBe("/candidates/cand-1");
+  });
+
+  it("routes legacy sent-for-processing recruiter manager notifications to candidate detail", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "candidate_ready_for_processing",
+      link: "/ready-for-processing?projectId=proj-1&search=Anandhu+TP+Stewart",
+      meta: {
+        type: "candidate_ready_for_processing",
+        candidateId: "cand-1",
+        candidateName: "Anandhu TP Stewart",
+        projectId: "proj-1",
+      },
+    });
+
+    expect(path).toBe("/candidates/cand-1");
+  });
+
+  it("routes legacy sent-for-processing recruiter-docs links to candidate detail", () => {
+    const path = resolveNotificationPath({
+      ...baseNotification,
+      type: "candidate_ready_for_processing",
+      link: "/recruiter-docs/proj-1/cand-1",
+      meta: {
+        type: "candidate_ready_for_processing",
+        candidateId: "cand-1",
+        candidateName: "Anandhu TP Stewart",
+        projectId: "proj-1",
+      },
+    });
+
+    expect(path).toBe("/candidates/cand-1");
+  });
 });

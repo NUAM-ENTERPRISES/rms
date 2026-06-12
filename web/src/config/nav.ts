@@ -376,7 +376,8 @@ export const navigationConfig: NavItem[] = [
     id: "processing",
     label: "Processing",
     icon: ClipboardCheck,
-    roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
+    hiddenForRoles: ["Recruiter Manager"],
+    roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
     activePathPatterns: [
       "^/processing-admin",
       "^/processingCandidateDetails/",
@@ -388,14 +389,14 @@ export const navigationConfig: NavItem[] = [
         id: "processing-admin-dashboard",
         label: "Dashboard",
         path: "/processing-admin",
-        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
+        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
       },
 
       {
         id: "ready-for-processing",
         label: "Ready for Processing",
         path: "/ready-for-processing",
-        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager"],
+        roles: ["CEO", "Director", "Manager", "System Admin", "Processing Manager", "Admin"],
       },
 
     ]
