@@ -31,13 +31,26 @@ export class ProcessingService {
   private async mergeSectorAwareProgress(candidatesWithCountry: any[]): Promise<any[]> {
     const ids = candidatesWithCountry.map((c: any) => c.id);
     if (ids.length === 0) {
-      return candidatesWithCountry.map((c: any) => ({ ...c, progressCount: 0 }));
+      return candidatesWithCountry.map((c: any) => ({
+        ...c,
+        progressCount: 0,
+        progressCompletedSteps: 0,
+        progressTotalSteps: 0,
+        progressPendingSteps: [],
+      }));
     }
     const allRows = await this.prisma.processingStep.findMany({
       where: { processingCandidateId: { in: ids } },
-      select: { processingCandidateId: true, status: true, template: { select: { key: true } } },
+      select: {
+        processingCandidateId: true,
+        status: true,
+        template: { select: { key: true, label: true, order: true } },
+      },
     });
-    const byPc = new Map<string, { status: string; template: { key: string } }[]>();
+    const byPc = new Map<
+      string,
+      { status: string; template: { key: string; label: string; order: number } }[]
+    >();
     for (const r of allRows) {
       const list = byPc.get(r.processingCandidateId) ?? [];
       list.push({ status: r.status, template: r.template });
@@ -46,12 +59,24 @@ export class ProcessingService {
     return candidatesWithCountry.map((c: any) => {
       const steps = byPc.get(c.id) ?? [];
       const sector = c.project?.sector ?? null;
-      const { percent } = computeApplicableStepProgress(steps, sector);
-      let progressCount = percent;
+      const { percent, completedApplicable, totalApplicable, pendingSteps } =
+        computeApplicableStepProgress(steps, sector);
       if (c.processingStatus === 'completed') {
-        progressCount = 100;
+        return {
+          ...c,
+          progressCount: 100,
+          progressCompletedSteps: totalApplicable,
+          progressTotalSteps: totalApplicable,
+          progressPendingSteps: [],
+        };
       }
-      return { ...c, progressCount };
+      return {
+        ...c,
+        progressCount: percent,
+        progressCompletedSteps: completedApplicable,
+        progressTotalSteps: totalApplicable,
+        progressPendingSteps: pendingSteps,
+      };
     });
   }
 
@@ -4257,8 +4282,9 @@ export class ProcessingService {
       search,
       projectId,
       roleCatalogId,
-      status = 'assigned',
+      status,
       step,
+      filterType,
       page = 1,
       limit = 10,
     } = query as any;
@@ -4277,12 +4303,13 @@ export class ProcessingService {
       where.projectId = projectId;
     }
 
-    // Status and step filtering
-    // If step is explicitly requested, prefer it and ignore status-specific filter.
+    // Status and step filtering (aligned with admin list behaviour)
     if (step && step !== 'all') {
-      where.step = step;
-    } else if (status && status !== 'all') {
-      where.processingStatus = status;
+      where.step = this.resolveProcessingStepFilter(step);
+    } else if (filterType !== 'total_processing') {
+      if (status && status !== 'all' && status !== 'visa_stamped') {
+        where.processingStatus = status;
+      }
     }
 
     // Filter by role catalog (via roleNeeded mapping)
@@ -4501,7 +4528,7 @@ export class ProcessingService {
 
     // Filter by step or processing status (unless 'all' or `total_processing` filter is requested)
     if (step && step !== 'all') {
-      where.step = step;
+      where.step = this.resolveProcessingStepFilter(step);
     } else if (filterType !== 'total_processing') {
       if (status && status !== 'all' && status !== 'visa_stamped') {
         where.processingStatus = status;
@@ -5171,6 +5198,18 @@ export class ProcessingService {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  /** Map dashboard tile step keys to DB `processingCandidate.step` values (supports aliases). */
+  private resolveProcessingStepFilter(step: string): string | { in: string[] } {
+    const aliases: Record<string, string[]> = {
+      offer_letter_verified: ['offer_letter_verified', 'verify_offer_letter'],
+    };
+    const keys = aliases[step];
+    if (keys && keys.length > 1) {
+      return { in: keys };
+    }
+    return step;
   }
 
   private getCountryFlagEmoji(code?: string): string | null {

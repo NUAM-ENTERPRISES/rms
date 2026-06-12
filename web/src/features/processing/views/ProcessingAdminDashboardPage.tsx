@@ -29,7 +29,6 @@ import {
     Search,
     RefreshCw,
     Filter,
-    X,
     ChevronLeft,
     ChevronRight,
     UserCheck,
@@ -44,6 +43,8 @@ import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeade
 import { Can } from "@/components/auth/Can";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
+import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
+import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -135,7 +136,7 @@ export default function ProcessingAdminDashboardPage() {
       },
       {
         type: "status",
-        label: "Ready for Processing",
+        label: "Untouched",
         status: "assigned",
         icon: UserCheck,
         color: "text-blue-600",
@@ -144,7 +145,7 @@ export default function ProcessingAdminDashboardPage() {
         value: counts?.assigned || 0,
       },
       { type: "step", key: "offer_letter_verified", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
-      { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+      { type: "step", key: "document_received", label: "Document Original Received", gradient: "from-yellow-400 to-amber-500" },
       { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
       { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
       { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
@@ -187,7 +188,7 @@ export default function ProcessingAdminDashboardPage() {
     const displayStatus = (status: string) => {
         const labels: Record<string, string> = {
             "all": "All",
-            "assigned": "Ready for Processing",
+            "assigned": "Untouched",
             "in_progress": "In Progress",
             "completed": "Completed",
             "cancelled": "Cancelled"
@@ -195,13 +196,16 @@ export default function ProcessingAdminDashboardPage() {
         return labels[status] || status;
     };
 
-    const formatStep = (step?: string) => {
-        if (!step) return "—";
-        if (step === "verify_offer_letter") return "Verify Offer Letter";
-        return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const formatStep = (step?: string) => formatProcessingStepLabel(step);
+
+    const getStepTileCount = (stepKey: string) => {
+        const stepCounts = counts?.steps ?? {};
+        if (stepKey === "offer_letter_verified") {
+            return (stepCounts.offer_letter_verified ?? 0) + (stepCounts.verify_offer_letter ?? 0);
+        }
+        return stepCounts[stepKey] ?? 0;
     };
 
-    
     const rowBgClass = (status: string) => {
         switch (status) {
             case "in_progress": return "bg-blue-50/40";
@@ -247,7 +251,7 @@ export default function ProcessingAdminDashboardPage() {
                         {processingTiles.map((tile) => {
                             const isStepTile = tile.type === "step";
                             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-                            const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
+                            const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
                             const s = accentStyles[tile.accent || "blue"];
                             const Icon = isStepTile ? ClipboardList : tile.icon;
 
@@ -457,7 +461,13 @@ export default function ProcessingAdminDashboardPage() {
                                                     <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge></TableCell>
 
                                                     <TableCell className="py-4">
-                                                        <div className="space-y-1.5">{(() => { const raw = (procCandidate as any).progressCount; const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0); return (<><span className="text-xs font-black text-slate-700">{pct}%</span><div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200"><div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} /></div></>); })()}</div>
+                                                        <ProcessingProgressBar
+                                                            processingStatus={procCandidate.processingStatus}
+                                                            progressCount={procCandidate.progressCount}
+                                                            progressCompletedSteps={procCandidate.progressCompletedSteps}
+                                                            progressTotalSteps={procCandidate.progressTotalSteps}
+                                                            progressPendingSteps={procCandidate.progressPendingSteps}
+                                                        />
                                                     </TableCell>
 
                                                     <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(`/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>

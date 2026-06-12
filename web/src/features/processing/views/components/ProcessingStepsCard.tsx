@@ -89,8 +89,10 @@ interface TransformedStep {
   apiStatus?: string; // raw API status (e.g., 'cancelled')
   notes?: string;
   updatedAt?: string;
-  submittedAt?: string;
-  completedAt?: string;
+  submittedAt?: string | null;
+  completedAt?: string | null;
+  visaIssuedAt?: string | null;
+  visaValidAt?: string | null;
   hasSubSteps?: boolean; 
   subStepStatuses?: {
     key: string;
@@ -176,6 +178,19 @@ export function ProcessingStepsCard({
     }
   };
 
+  const formatShortDate = (iso?: string | null) => {
+    if (!iso) return "Not set";
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return "Not set";
+    }
+  };
+
   const toInputDate = (iso?: string | null) => {
     if (!iso) return "";
     try {
@@ -256,15 +271,25 @@ export function ProcessingStepsCard({
 
       return {
         key: step.template.key,
-        label: step.template.key === 'prometric' ? 'Licensing Exam' : step.template.label,
-        description: step.template.description || `Processing step ${step.template.order}`,
+        label:
+          step.template.key === "prometric"
+            ? "Licensing Exam"
+            : step.template.key === "document_received"
+              ? "Document Original Received"
+              : step.template.label,
+        description:
+          step.template.key === "document_received"
+            ? "Processing step 2"
+            : step.template.description || `Processing step ${step.template.order}`,
         icon: getStepIcon(step.template.key),
         status: finalStatus,
         apiStatus: step.status,
         notes: step.rejectionReason || undefined,
         updatedAt: step.updatedAt,
-        submittedAt: (step as any).submittedAt || null,
-        completedAt: (step as any).completedAt || null,
+        submittedAt: step.submittedAt || null,
+        completedAt: step.completedAt || null,
+        visaIssuedAt: step.visaIssuedAt || null,
+        visaValidAt: step.visaValidAt || null,
         stepId: step.id,
         hasDocuments: step.template.hasDocuments,
         documents: step.documents,
@@ -668,13 +693,36 @@ export function ProcessingStepsCard({
                     <p className="mt-3 text-xs text-slate-400">Updated: {selected.updatedAt}</p>
                   )}
 
+                  {selected.key === "visa" && (
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa issued
+                        </div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          {formatShortDate(selected.visaIssuedAt)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa expiry
+                        </div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          {formatShortDate(selected.visaValidAt)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Show submitted date and edit control in the details modal */}
-                  {!selected.key.startsWith("offer_letter") && (
+                  {!selected.key.startsWith("offer_letter") && selected.key !== "visa" && (
                     <div className="mt-3">
                       {selected.status === 'completed' ? (
                         <div className="w-full flex items-start justify-between gap-4">
                           <div className="text-xs">
-                            <div className="text-[10px] text-slate-400">Submitted at</div>
+                            <div className="text-[10px] text-slate-400">
+                              {selected.key === "document_received" ? "Document original received" : "Submitted at"}
+                            </div>
                             <div className="text-sm font-semibold">{formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt) || '—'}</div>
                           </div>
 
@@ -685,7 +733,9 @@ export function ProcessingStepsCard({
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <div className="text-xs text-slate-500">Submitted: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}</div>
+                          <div className="text-xs text-slate-500">
+                            {selected.key === "document_received" ? "Document original received" : "Submitted"}: {formatDisplayDate(submittedDates[selected.stepId] ?? selected.submittedAt)}
+                          </div>
 
                           <div>
                             <TooltipProvider>
@@ -778,6 +828,85 @@ export function ProcessingStepsCard({
   );
 }
 
+/** Glass + glow overlay for completed / verified step cards */
+function VerifiedStepGlazeOverlay() {
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-emerald-200/35"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -inset-px rounded-xl bg-emerald-400/10 blur-md"
+        aria-hidden
+      />
+    </>
+  );
+}
+
+const verifiedStepShellClasses =
+  "relative border-emerald-300/80 bg-gradient-to-br from-emerald-50/95 via-white/80 to-emerald-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(16,185,129,0.14),0_8px_32px_rgba(16,185,129,0.2)] ring-2 ring-emerald-300/40 hover:shadow-[0_0_0_1px_rgba(16,185,129,0.2),0_12px_40px_rgba(16,185,129,0.28)]";
+
+const verifiedStepHeaderClasses =
+  "bg-gradient-to-r from-emerald-50/80 via-white/50 to-emerald-100/45 backdrop-blur-sm";
+
+const verifiedStepIconClasses =
+  "bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_0_18px_rgba(16,185,129,0.55)] ring-2 ring-emerald-300/50";
+
+const verifiedStepBadgeClasses =
+  "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] ring-1 ring-emerald-300/60";
+
+const verifiedStepFooterClasses =
+  "border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50/60 via-white/40 to-emerald-50/50 backdrop-blur-sm";
+
+const verifiedSubStepRowClasses =
+  "bg-gradient-to-r from-emerald-50/90 via-white/60 to-emerald-100/40 border-emerald-100/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_0_16px_rgba(16,185,129,0.1)]";
+
+/** Glass + glow overlay for in-progress step cards */
+function InProgressStepGlazeOverlay() {
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-br from-white/70 via-white/25 to-blue-200/35"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-3 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-90"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -inset-px rounded-xl bg-blue-400/10 blur-md"
+        aria-hidden
+      />
+    </>
+  );
+}
+
+const inProgressStepShellClasses =
+  "relative border-blue-300/80 bg-gradient-to-br from-blue-50/95 via-white/80 to-blue-100/55 backdrop-blur-md shadow-[0_0_0_1px_rgba(59,130,246,0.14),0_8px_32px_rgba(59,130,246,0.2)] ring-2 ring-blue-300/40 hover:shadow-[0_0_0_1px_rgba(59,130,246,0.2),0_12px_40px_rgba(59,130,246,0.28)]";
+
+const inProgressStepHeaderClasses =
+  "bg-gradient-to-r from-blue-50/80 via-white/50 to-blue-100/45 backdrop-blur-sm";
+
+const inProgressStepIconClasses =
+  "bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-[0_0_18px_rgba(59,130,246,0.55)] ring-2 ring-blue-300/50";
+
+const inProgressStepBadgeClasses =
+  "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-[0_0_14px_rgba(59,130,246,0.45)] ring-1 ring-blue-300/60";
+
+const inProgressStepFooterClasses =
+  "border-t border-blue-200/80 bg-gradient-to-r from-blue-50/60 via-white/40 to-blue-50/50 backdrop-blur-sm";
+
+const inProgressSubStepRowClasses =
+  "bg-gradient-to-r from-blue-50/90 via-white/60 to-blue-100/40 border-blue-100/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_0_16px_rgba(59,130,246,0.1)]";
+
+const inProgressDateChipClasses =
+  "bg-white/60 backdrop-blur-sm border border-blue-200/80 text-blue-700 shadow-[0_0_12px_rgba(59,130,246,0.12)]";
+
 function StepItem({
   step,
   index,
@@ -809,6 +938,8 @@ function StepItem({
       description: string;
       status: ProcessingStepStatus;
     }[];
+    visaIssuedAt?: string | null;
+    visaValidAt?: string | null;
   };
   index: number;
   onOpen?: () => void;
@@ -831,8 +962,22 @@ function StepItem({
   const statusConfig = getStatusConfig(step.status);
   const StepIcon = step.icon;
 
+  const formatShortDate = (iso?: string | null) => {
+    if (!iso) return "Not set";
+    try {
+      return new Date(iso).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return "Not set";
+    }
+  };
+
   // Determine offer letter specific styling
   const isOfferLetterStep = step.key === "offer_letter";
+  const isVisaStep = step.key === "visa";
   const offerLetterPending = isOfferLetterStep && offerLetterStatus?.status === "pending";
   const offerLetterVerified = isOfferLetterStep && offerLetterStatus?.status === "verified";
   const offerLetterRejected = isOfferLetterStep && offerLetterStatus?.status === "rejected";
@@ -845,7 +990,17 @@ function StepItem({
   // Use isCompleted and step states to determine styling
   // Consider the step's actual status as well — mark completed when API reports 'completed' or when `completedAt` is present
   const stepCompleted = isCompleted || offerLetterVerified || step.status === 'completed' || !!completedAt;
+  const stepInProgressVisual = !stepCompleted && (isInProgress || offerLetterPending);
   const stepEnabled = isEnabled || stepCompleted || isPending || isInProgress; // enable pending/in-progress steps by default
+  const showVisaDatesFooter =
+    isVisaStep &&
+    (!!step.visaIssuedAt ||
+      !!step.visaValidAt ||
+      stepCompleted ||
+      isInProgress ||
+      isPending);
+  const isVisaExpired =
+    !!step.visaValidAt && new Date(step.visaValidAt).getTime() < Date.now();
 
   const cardBorderClass = stepCompleted
     ? "border border-emerald-200"
@@ -858,11 +1013,17 @@ function StepItem({
     : "border border-slate-100";
 
   const cardShellClass = cn(
-    "rounded-xl overflow-hidden flex flex-col bg-white shadow-sm transition-all duration-200",
-    cardBorderClass,
-    stepCompleted && "ring-1 ring-emerald-100",
-    isActive && !stepCompleted && "ring-2 ring-indigo-400/70 ring-offset-2 shadow-md",
-    stepEnabled && "hover:shadow-md",
+    "rounded-xl overflow-hidden flex flex-col transition-all duration-300",
+    stepCompleted
+      ? verifiedStepShellClasses
+      : stepInProgressVisual
+        ? inProgressStepShellClasses
+        : cn(
+            "bg-white shadow-sm",
+            cardBorderClass,
+            isActive && "ring-2 ring-indigo-400/70 ring-offset-2 shadow-md",
+            stepEnabled && "hover:shadow-md",
+          ),
   );
 
   // Override status display for offer letter based on document status
@@ -894,32 +1055,41 @@ function StepItem({
     "visa",
     "ticket",
   ].includes(step.key);
+  const isDocumentOriginalReceivedStep = step.key === "document_received";
+  const submittedAtLabel = isDocumentOriginalReceivedStep
+    ? "Document original received"
+    : "Submitted at";
+  const submittedAtEmptyLabel = isDocumentOriginalReceivedStep
+    ? "Not received"
+    : "Not submitted";
 
   // Check if this is the Medical step with sub-steps
   if (step.hasSubSteps && step.subStepStatuses) {
     return (
       <div className={cardShellClass}>
+        {stepCompleted && <VerifiedStepGlazeOverlay />}
+        {stepInProgressVisual && <InProgressStepGlazeOverlay />}
         <div
           className={cn(
-            "flex items-center gap-3 p-3",
-            stepCompleted && "bg-gradient-to-r from-emerald-50 to-emerald-100/50",
+            "relative flex items-start gap-3 p-3",
+            stepCompleted && verifiedStepHeaderClasses,
+            stepInProgressVisual && inProgressStepHeaderClasses,
             isPending && "bg-violet-50/40",
-            isInProgress && "bg-blue-50/60",
-            !stepCompleted && !isPending && !isInProgress && "bg-white",
+            !stepCompleted && !stepInProgressVisual && !isPending && "bg-white",
           )}
         >
           <div
             className={cn(
               "h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-sm",
-              stepCompleted && "bg-emerald-500 text-white",
+              stepCompleted && verifiedStepIconClasses,
+              stepInProgressVisual && inProgressStepIconClasses,
               isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
-              isInProgress && "bg-blue-100 text-blue-600",
-              !stepEnabled && !stepCompleted && !isPending && !isInProgress && "bg-slate-200 text-slate-500",
-              stepEnabled && !stepCompleted && !isPending && !isInProgress && "bg-rose-100 text-rose-500",
+              !stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && "bg-slate-200 text-slate-500",
+              stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && "bg-rose-100 text-rose-500",
             )}
           >
             {stepCompleted ? (
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className="h-4 w-4 drop-shadow-sm" />
             ) : (
               <div className="relative">
                 <StepIcon className="h-4 w-4" />
@@ -930,24 +1100,24 @@ function StepItem({
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className={`font-black text-sm ${
+            <h4 className={`font-black text-sm leading-snug break-words ${
               stepCompleted 
-                ? "text-emerald-700" 
+                ? "text-emerald-800 drop-shadow-sm" 
+                : stepInProgressVisual
+                ? "text-blue-800 drop-shadow-sm"
                 : isPending
                 ? "text-violet-700"
-                : isInProgress
-                ? "text-blue-700"
                 : !stepEnabled
                 ? "text-slate-600"
                 : "text-rose-700"
             }`}>{step.label}</h4>
-            <p className={`text-xs ${
+            <p className={`text-xs leading-snug break-words ${
               stepCompleted 
                 ? "text-emerald-500" 
+                : stepInProgressVisual
+                ? "text-blue-500"
                 : isPending
                 ? "text-violet-500"
-                : isInProgress
-                ? "text-blue-500"
                 : !stepEnabled
                 ? "text-slate-500"
                 : "text-rose-400"
@@ -966,15 +1136,16 @@ function StepItem({
                 }
               }}
               aria-label={`View ${step.label} details`}
-              className={`p-1.5 rounded-full hover:bg-white/50 ml-2 transition-colors ${
-                stepCompleted 
-                  ? "bg-emerald-100 hover:bg-emerald-200" 
-                  : isPending 
-                  ? "bg-violet-100 hover:bg-violet-200" 
-                  : isInProgress
-                  ? "bg-blue-100 hover:bg-blue-200"
-                  : "bg-rose-100/80 hover:bg-rose-100"
-              }`}
+              className={cn(
+                "shrink-0 mt-0.5 p-1.5 rounded-full ml-2 transition-colors",
+                stepCompleted
+                  ? "bg-white/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-white shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                  : stepInProgressVisual
+                  ? "bg-white/70 backdrop-blur-sm border border-blue-200/80 hover:bg-white shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+                  : isPending
+                  ? "bg-violet-100 hover:bg-violet-200"
+                  : "bg-rose-100/80 hover:bg-rose-100",
+              )}
             >
               <Eye className={`h-4 w-4 ${
                 stepCompleted 
@@ -988,33 +1159,47 @@ function StepItem({
             </button>
           )}
 
-          <Badge className={`text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5 ${
+          <Badge className={cn(
+            "text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5",
             stepCompleted
-              ? "bg-emerald-500 text-white"
+              ? verifiedStepBadgeClasses
+              : stepInProgressVisual
+              ? inProgressStepBadgeClasses
               : isPending
               ? "bg-violet-500 text-white"
-              : isInProgress
-              ? "bg-blue-500 text-white"
               : !stepEnabled
               ? "bg-slate-200 text-slate-400"
-              : "bg-rose-100 text-rose-600"
-          }`}>
-            {stepCompleted ? "Done" : isPending ? "Start" : isInProgress ? "In Progress" : !stepEnabled ? "Locked" : statusConfig.label}
+              : "bg-rose-100 text-rose-600",
+          )}>
+            {stepCompleted ? "Verified" : stepInProgressVisual ? "In Progress" : isPending ? "Start" : !stepEnabled ? "Locked" : statusConfig.label}
           </Badge>
         </div>
 
         <div
           className={cn(
-            "border-t pl-4",
-            step.status === "completed" ? "border-emerald-100 bg-emerald-50/30" : "border-slate-100 bg-slate-50/40",
+            "relative border-t pl-4",
+            stepCompleted
+              ? verifiedStepFooterClasses
+              : stepInProgressVisual
+                ? inProgressStepFooterClasses
+                : "border-slate-100 bg-slate-50/40",
           )}
         >
           {step.subStepStatuses.map((subStep, subIndex) => {
             const subConfig = getStatusConfig(subStep.status);
+            const isSubCompleted = subStep.status === "completed";
+            const isSubInProgress = subStep.status === "in_progress";
             return (
               <div
                 key={subStep.key}
-                className="flex items-center gap-3 py-2.5 px-3 border-b border-slate-100/80 last:border-b-0 hover:bg-white/60 transition-colors"
+                className={cn(
+                  "flex items-center gap-3 py-2.5 px-3 border-b last:border-b-0 transition-colors",
+                  isSubCompleted
+                    ? verifiedSubStepRowClasses
+                    : isSubInProgress
+                      ? inProgressSubStepRowClasses
+                      : "border-slate-100/80 hover:bg-white/60",
+                )}
               >
                 <div className="h-5 w-5 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
                   {String.fromCharCode(97 + subIndex)}
@@ -1022,16 +1207,32 @@ function StepItem({
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-xs text-slate-700">{subStep.label}</p>
                 </div>
-                <Badge className={cn("text-[8px] uppercase font-bold tracking-wider shrink-0 border-0 px-1.5 py-0", subConfig.bg, subConfig.color)}>
-                  {subConfig.label}
+                <Badge
+                  className={cn(
+                    "text-[8px] uppercase font-bold tracking-wider shrink-0 border-0 px-1.5 py-0",
+                    isSubCompleted
+                      ? verifiedStepBadgeClasses
+                      : isSubInProgress
+                        ? inProgressStepBadgeClasses
+                        : cn(subConfig.bg, subConfig.color),
+                  )}
+                >
+                  {isSubCompleted ? "Verified" : isSubInProgress ? "In Progress" : subConfig.label}
                 </Badge>
               </div>
             );
           })}
         </div>
 
-        {(isSubmissionDateRequired || stepCompleted) && (
-          <div className="px-3 py-2.5 flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/50">
+        {(isSubmissionDateRequired || stepCompleted || stepInProgressVisual) && (
+          <div className={cn(
+            "relative px-3 py-2.5 flex items-center justify-between gap-2 border-t",
+            stepCompleted
+              ? verifiedStepFooterClasses
+              : stepInProgressVisual
+                ? inProgressStepFooterClasses
+                : "border-slate-100 bg-slate-50/50",
+          )}>
             <div className="flex items-center gap-2 text-xs">
               {isOfferLetterStep ? (
                 <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
@@ -1044,12 +1245,12 @@ function StepItem({
                   </div>
                 </span>
               ) : isSubmissionDateRequired ? (
-                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-                  <span className="text-[10px] text-slate-400">Submitted at</span>
+                <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-white/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                  <span className="text-[10px] text-slate-400">{submittedAtLabel}</span>
                   <div className="inline-flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                      {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                      {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : submittedAtEmptyLabel}
                     </span>
                   </div>
                 </span>
@@ -1074,14 +1275,14 @@ function StepItem({
                       <button
                         onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
                         className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
-                        aria-label="Edit submitted date"
+                        aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
                       >
                         <Edit3 className="h-4 w-4" />
                         <span>Set date</span>
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Set or edit submitted date</p>
+                      <p>{isDocumentOriginalReceivedStep ? "Set or edit document original received date" : "Set or edit submitted date"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -1095,16 +1296,18 @@ function StepItem({
 
   return (
     <div className={cardShellClass}>
+      {stepCompleted && <VerifiedStepGlazeOverlay />}
+      {stepInProgressVisual && <InProgressStepGlazeOverlay />}
       <div
         className={cn(
-          "flex items-center gap-3 p-3 transition-colors group",
-          stepCompleted && "bg-emerald-50/50 hover:bg-emerald-50",
+          "relative flex items-start gap-3 p-3 transition-colors group",
+          stepCompleted && cn(verifiedStepHeaderClasses, "hover:from-emerald-50/90"),
+          stepInProgressVisual && cn(inProgressStepHeaderClasses, "hover:from-blue-50/90"),
           isPending && "bg-violet-50/40 hover:bg-violet-50/60",
-          isInProgress && "bg-blue-50/50 hover:bg-blue-50",
           offerLetterRejected && "bg-red-50/50 hover:bg-red-50",
           step.apiStatus === "cancelled" && "bg-rose-50/50 hover:bg-rose-50",
           !stepEnabled && !stepCompleted && "bg-slate-100/30 opacity-90",
-          stepEnabled && !stepCompleted && !isPending && !isInProgress && !offerLetterRejected && step.apiStatus !== "cancelled" && "hover:bg-slate-50",
+          stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && step.apiStatus !== "cancelled" && "hover:bg-slate-50",
           stepEnabled ? "cursor-pointer" : "cursor-not-allowed",
         )}
         onClick={() => {
@@ -1119,16 +1322,16 @@ function StepItem({
         <div
           className={cn(
             "h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-sm",
-            stepCompleted && "bg-emerald-500 text-white",
+            stepCompleted && verifiedStepIconClasses,
+            stepInProgressVisual && inProgressStepIconClasses,
             isPending && "bg-gradient-to-br from-violet-500 to-indigo-600 text-white",
-            (isInProgress || offerLetterPending) && "bg-blue-100 text-blue-600",
             offerLetterRejected && "bg-red-100 text-red-600",
-            !stepEnabled && !stepCompleted && "bg-slate-200 text-slate-500",
-            stepEnabled && !stepCompleted && !isPending && !isInProgress && !offerLetterPending && !offerLetterRejected && "bg-slate-100 text-slate-500",
+            !stepEnabled && !stepCompleted && !stepInProgressVisual && "bg-slate-200 text-slate-500",
+            stepEnabled && !stepCompleted && !stepInProgressVisual && !isPending && !offerLetterRejected && "bg-slate-100 text-slate-500",
           )}
         >
           {stepCompleted ? (
-            <CheckCircle2 className="h-4 w-4" />
+            <CheckCircle2 className="h-4 w-4 drop-shadow-sm" />
           ) : (
             <div className="relative">
               <StepIcon className="h-4 w-4" />
@@ -1142,15 +1345,13 @@ function StepItem({
         {/* Step Info */}
         <div className="flex-1 min-w-0">
           <h4 className={cn(
-            "font-bold text-sm truncate",
+            "font-bold text-sm leading-snug break-words",
             stepCompleted
-              ? "text-emerald-700"
+              ? "text-emerald-800 drop-shadow-sm"
+              : stepInProgressVisual
+              ? "text-blue-800 drop-shadow-sm"
               : isPending
               ? "text-violet-700"
-              : isInProgress
-              ? "text-blue-700"
-              : offerLetterPending
-              ? "text-blue-700"
               : offerLetterRejected
               ? "text-red-700"
               : !stepEnabled
@@ -1160,22 +1361,26 @@ function StepItem({
             {step.label}
           </h4>
           <p className={cn(
-            "text-xs truncate",
+            "text-xs leading-snug break-words",
             stepCompleted
               ? "text-emerald-500"
+              : stepInProgressVisual
+              ? "text-blue-500"
               : isPending
               ? "text-violet-500"
-              : isInProgress
-              ? "text-blue-500"
-              : offerLetterPending
-              ? "text-blue-500"
               : offerLetterRejected
               ? "text-red-500"
               : !stepEnabled
               ? "text-slate-500"
               : "text-slate-400"
           )}>
-            {isOfferLetterStep ? getOfferLetterDescription() : (step.apiStatus === 'cancelled' ? `Processing cancelled — ${step.notes || 'No reason provided'}` : step.description)}
+            {isOfferLetterStep
+              ? getOfferLetterDescription()
+              : isVisaStep && step.visaValidAt
+              ? `Visa expires ${formatShortDate(step.visaValidAt)}`
+              : step.apiStatus === "cancelled"
+              ? `Processing cancelled — ${step.notes || "No reason provided"}`
+              : step.description}
           </p>
         </div>
 
@@ -1194,9 +1399,9 @@ function StepItem({
             }}
             aria-label={`View ${step.label} details`}
             className={cn(
-              "p-1.5 rounded-full transition-colors",
+              "shrink-0 mt-0.5 p-1.5 rounded-full transition-colors",
               stepCompleted
-                ? "bg-emerald-100 hover:bg-emerald-200"
+                ? "bg-white/70 backdrop-blur-sm border border-emerald-200/80 hover:bg-white shadow-[0_0_10px_rgba(16,185,129,0.2)]"
                 : isPending
                 ? "bg-violet-100 hover:bg-violet-200"
                 : isInProgress || offerLetterPending
@@ -1210,10 +1415,10 @@ function StepItem({
               "h-4 w-4",
               stepCompleted
                 ? "text-emerald-600"
+                : stepInProgressVisual
+                ? "text-blue-600"
                 : isPending
                 ? "text-violet-600"
-                : isInProgress || offerLetterPending
-                ? "text-blue-600"
                 : offerLetterRejected
                 ? "text-red-600"
                 : "text-slate-600"
@@ -1224,15 +1429,13 @@ function StepItem({
         {/* Status Badge */}
         <Badge
           className={cn(
-            "text-[9px] uppercase font-black tracking-wider shrink-0 border-0 px-2 py-0.5",
+            "text-[9px] uppercase font-black tracking-wider shrink-0 mt-0.5 border-0 px-2 py-0.5",
             stepCompleted
-              ? "bg-emerald-500 text-white"
+              ? verifiedStepBadgeClasses
+              : stepInProgressVisual
+              ? inProgressStepBadgeClasses
               : isPending
               ? "bg-violet-500 text-white"
-              : isInProgress
-              ? "bg-blue-500 text-white"
-              : offerLetterPending
-              ? "bg-blue-500 text-white"
               : offerLetterRejected
               ? "bg-red-500 text-white"
               : step.apiStatus === 'cancelled'
@@ -1247,19 +1450,26 @@ function StepItem({
           : step.apiStatus === 'cancelled'
           ? "Cancelled"
           : stepCompleted 
-          ? "Done" 
+          ? "Verified" 
+          : stepInProgressVisual
+          ? "In Progress"
           : isPending
           ? "Start"
-          : isInProgress
-          ? "In Progress"
           : !stepEnabled
           ? "Locked"
           : statusConfig.label}
       </Badge>
       </div>
 
-      {(isSubmissionDateRequired || stepCompleted) && (
-        <div className="px-3 py-2.5 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
+      {(isSubmissionDateRequired || stepCompleted || stepInProgressVisual || showVisaDatesFooter) && (
+        <div className={cn(
+          "relative px-3 py-2.5 flex items-center justify-between border-t",
+          stepCompleted
+            ? verifiedStepFooterClasses
+            : stepInProgressVisual
+              ? inProgressStepFooterClasses
+              : "border-slate-100 bg-slate-50/50",
+        )}>
           <div className="flex items-center gap-2 text-xs">
             {isOfferLetterStep ? (
               <span className="inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md bg-slate-50 border border-slate-100 text-slate-600">
@@ -1271,13 +1481,26 @@ function StepItem({
                   </span>
                 </div>
               </span>
+            ) : isVisaStep ? (
+              <span className="inline-flex flex-col items-start gap-0 rounded-md border border-teal-100 bg-teal-50 px-2 py-1 text-teal-800">
+                <span className="text-[10px] text-teal-600">Visa issued</span>
+                <div className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <span
+                    className="text-xs font-semibold"
+                    title={step.visaIssuedAt ? new Date(step.visaIssuedAt).toLocaleString() : undefined}
+                  >
+                    {formatShortDate(step.visaIssuedAt)}
+                  </span>
+                </div>
+              </span>
             ) : isSubmissionDateRequired ? (
-              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : isInProgress ? 'bg-blue-50 border border-blue-200 text-blue-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
-                <span className="text-[10px] text-slate-400">Submitted at</span>
+              <span className={`inline-flex flex-col items-start gap-0 px-2 py-1 rounded-md ${stepCompleted ? 'bg-white/60 backdrop-blur-sm border border-emerald-200/80 text-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : stepInProgressVisual ? inProgressDateChipClasses : isPending ? 'bg-violet-50 border border-violet-200 text-violet-700' : offerLetterRejected ? 'bg-rose-50 border border-rose-200 text-rose-700' : 'bg-slate-50 border border-slate-100 text-slate-600'}`}>
+                <span className="text-[10px] text-slate-400">{submittedAtLabel}</span>
                 <div className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="text-xs font-semibold" title={submittedAt ? new Date(submittedAt).toLocaleString() : undefined}>
-                    {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not submitted"}
+                    {submittedAt ? new Date(submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : submittedAtEmptyLabel}
                   </span>
                 </div>
               </span>
@@ -1291,6 +1514,19 @@ function StepItem({
                 <div className={`text-sm font-semibold ${statusConfig.color}`}>{completedAt ? new Date(completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : offerLetterStatus?.receivedAt ? new Date(offerLetterStatus.receivedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Not completed"}</div>
               </div>
             ) : null
+          ) : isVisaStep ? (
+            <div className="text-xs text-right">
+              <div className="text-[10px] text-slate-400">Visa expiry</div>
+              <div
+                className={cn(
+                  "text-sm font-semibold",
+                  isVisaExpired ? "text-rose-600" : "text-teal-700",
+                )}
+                title={step.visaValidAt ? new Date(step.visaValidAt).toLocaleString() : undefined}
+              >
+                {formatShortDate(step.visaValidAt)}
+              </div>
+            </div>
           ) : stepCompleted ? (
             <div className="text-xs text-right">
               <div className="text-[10px] text-slate-400">Completed at</div>
@@ -1304,13 +1540,13 @@ function StepItem({
                     <button
                       onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
                       className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
-                      aria-label="Edit submitted date"
+                      aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
                     >
                       <Edit3 className="h-4 w-4" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Edit submitted date</p>
+                    <p>{isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

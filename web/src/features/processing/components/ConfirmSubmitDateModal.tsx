@@ -10,9 +10,17 @@ interface Props {
   onConfirm: () => Promise<void>;
   date?: Date | null;
   isSubmitting?: boolean;
+  stepLabel?: string;
 }
 
-export default function ConfirmSubmitDateModal({ isOpen, onClose, onConfirm, date, isSubmitting }: Props) {
+export default function ConfirmSubmitDateModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  date,
+  isSubmitting,
+  stepLabel = "HRD",
+}: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-md flex flex-col p-0 overflow-hidden">
@@ -22,7 +30,7 @@ export default function ConfirmSubmitDateModal({ isOpen, onClose, onConfirm, dat
             Confirm Submission Date
           </DialogTitle>
           <DialogDescription>
-            Please confirm the HRD submission date you wish to save for this step.
+            Please confirm the {stepLabel} date you wish to save for this step.
           </DialogDescription>
         </DialogHeader>
 
@@ -31,7 +39,7 @@ export default function ConfirmSubmitDateModal({ isOpen, onClose, onConfirm, dat
             {date ? (
               <div>
                 <div className="font-semibold">{format(date, "PPP 'at' p")}</div>
-                <div className="text-xs text-slate-500 mt-1">This will be recorded as the HRD submitted time.</div>
+                <div className="text-xs text-slate-500 mt-1">This will be recorded as the {stepLabel} time.</div>
               </div>
             ) : (
               <div className="text-rose-600 flex items-center gap-2">

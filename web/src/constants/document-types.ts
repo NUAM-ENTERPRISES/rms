@@ -23,6 +23,20 @@ export const DOCUMENT_TYPE = {
   MEDICAL_LICENSE: "medical_license",
   REGISTRATION_CERTIFICATE: "registration_certificate",
 
+  // HRD / country-specific documents
+  EXPERIENCE_CERTIFICATE: "experience_certificate",
+  EXPERIENCE_CERTIFICATES: "experience_certificates",
+  SAUDI_PROMETRIC: "saudi_prometric",
+  MOH_PROMETRIC: "moh_prometric",
+  QCHP_PROMETRIC: "qchp_prometric",
+  PROMETRIC_RESULT: "prometric_result",
+  GOOD_STANDING_CERTIFICATE: "good_standing_certificate",
+  PCC: "pcc",
+  PASSPORT_COVER_BIO: "passport_cover_bio",
+  NAME_CHANGE_AFFIDAVIT: "name_change_affidavit",
+  MARRIAGE_CERTIFICATE: "marriage_certificate",
+  BIOMETRIC_ACKNOWLEDGEMENT: "biometric_acknowledgement",
+
   // Processing — original hardcopy documents (Document Received step)
   PASSPORT_ORIGINAL: "passport_original",
   DEGREE_CERTIFICATE_ORIGINAL: "degree_certificate_original",
@@ -32,6 +46,9 @@ export const DOCUMENT_TYPE = {
   MARRIAGE_CERTIFICATE_ORIGINAL: "marriage_certificate_original",
   BIRTH_CERTIFICATE_ORIGINAL: "birth_certificate_original",
   PCC_ORIGINAL: "pcc_original",
+  E_VISA: "e_visa",
+  VISA_STAMP: "visa_stamp",
+  FLIGHT_TICKET: "flight_ticket",
 
   // Licensing Exams
   PROMETRIC: 'prometric',
@@ -227,6 +244,138 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     icon: "Award",
     commonlyRequired: false,
   },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE]: {
+    displayName: "Experience Certificate",
+    description: "Experience certificate (HRD)",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Briefcase",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATES]: {
+    displayName: "Experience Certificates",
+    description: "Experience certificates (multiple)",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Briefcase",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.SAUDI_PROMETRIC]: {
+    displayName: "Saudi Prometric Result",
+    description: "Saudi Council / Prometric Result",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.MOH_PROMETRIC]: {
+    displayName: "MOH Prometric / License",
+    description: "MOH License / Prometric",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "Medal",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.QCHP_PROMETRIC]: {
+    displayName: "QCHP Prometric / Evaluation",
+    description: "QCHP Evaluation / Prometric",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "ShieldCheck",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PROMETRIC_RESULT]: {
+    displayName: "Prometric Result",
+    description: "Prometric / Examination result (output)",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.GOOD_STANDING_CERTIFICATE]: {
+    displayName: "Good Standing Certificate",
+    description: "Certificate of Good Standing from previous regulator/employer",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "Shield",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PCC]: {
+    displayName: "Police Clearance (PCC)",
+    description: "Police Clearance Certificate (PCC)",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Shield",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COVER_BIO]: {
+    displayName: "Passport Cover & Bio Page",
+    description: "Passport cover and bio page",
+    category: "identity",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT]: {
+    displayName: "Name Change Affidavit",
+    description: "Affidavit for name change",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE]: {
+    displayName: "Marriage Certificate",
+    description: "Marriage certificate (marriage/union proof)",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.BIOMETRIC_ACKNOWLEDGEMENT]: {
+    displayName: "Biometric Acknowledgement",
+    description: "Acknowledgement/consent for biometric capture",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 2,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Scan",
+    commonlyRequired: false,
+  },
   [DOCUMENT_TYPE.PASSPORT_ORIGINAL]: {
     displayName: "Original Passport (presented)",
     description: "Original passport presented / scanned original passport (for in-person verification)",
@@ -313,6 +462,39 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     maxSizeMB: 5,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Shield",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.E_VISA]: {
+    displayName: "e-Visa",
+    description: "Electronic visa (e-visa) document or approval",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.VISA_STAMP]: {
+    displayName: "Visa Stamp",
+    description: "Visa stamp in passport (if applicable)",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.FLIGHT_TICKET]: {
+    displayName: "Flight Ticket / e-ticket",
+    description: "Flight ticket or e-ticket / booking confirmation",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
     commonlyRequired: false,
   },
   [DOCUMENT_TYPE.PROMETRIC]: {
@@ -779,11 +961,25 @@ export const DOCUMENT_TYPE_CONFIG: Record<
   },
 };
 
+/** Legacy DB / API aliases → canonical document type keys. */
+const DOCUMENT_TYPE_ALIASES: Record<string, DocumentType> = {
+  passport: DOCUMENT_TYPE.PASSPORT,
+  degree: DOCUMENT_TYPE.DEGREE,
+};
+
+function resolveDocumentType(docType: string): DocumentType | undefined {
+  const normalized = DOCUMENT_TYPE_ALIASES[docType] ?? docType;
+  return DOCUMENT_TYPE_CONFIG[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+}
+
 /**
  * Get document type configuration
  */
-export function getDocumentTypeConfig(docType: DocumentType) {
-  return DOCUMENT_TYPE_CONFIG[docType];
+export function getDocumentTypeConfig(docType: DocumentType | string) {
+  const resolved = resolveDocumentType(docType);
+  return resolved ? DOCUMENT_TYPE_CONFIG[resolved] : undefined;
 }
 
 /**
@@ -851,7 +1047,7 @@ export function getAllowedFormatsString(docType: DocumentType): string {
 export const PASSPORT_DOCUMENT_TYPES = [
   DOCUMENT_TYPE.PASSPORT,
   DOCUMENT_TYPE.PASSPORT_ORIGINAL,
-  "passport_cover_bio",
+  DOCUMENT_TYPE.PASSPORT_COVER_BIO,
   "passport",
 ] as const;
 
