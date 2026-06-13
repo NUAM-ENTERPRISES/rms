@@ -20,7 +20,6 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 import { CollectionItemDto } from './dto/collection-item.dto';
-import { OriginalDocumentCollectionSyncService } from './original-document-collection-sync.service';
 
 const candidateSelect = {
   id: true,
@@ -99,7 +98,6 @@ export class OriginalDocumentCollectionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadService: UploadService,
-    private readonly syncService: OriginalDocumentCollectionSyncService,
   ) {}
 
   async create(dto: CreateCollectionDto, userId: string) {
@@ -512,11 +510,6 @@ export class OriginalDocumentCollectionsService {
       throw new BadRequestException('Locker submission is required');
     }
 
-    const syncResult = await this.syncService.syncCollectionToProcessing(
-      id,
-      userId,
-    );
-
     const updated = await this.prisma.originalDocumentCollection.update({
       where: { id },
       data: {
@@ -530,7 +523,6 @@ export class OriginalDocumentCollectionsService {
     return {
       success: true,
       data: this.enrichCollection(updated),
-      syncedDocTypes: syncResult.syncedDocTypes,
     };
   }
 

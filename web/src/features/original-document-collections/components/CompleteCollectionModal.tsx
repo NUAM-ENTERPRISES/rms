@@ -176,8 +176,8 @@ export function CompleteCollectionModal({
                   properly received, verified, and uploaded to the system.
                 </Label>
                 <p className="text-xs text-slate-600 mt-1">
-                  This action will mark the collection as complete and sync
-                  applicable document types to the processing workflow.
+                  This action will mark the collection as complete. No further
+                  intake events can be logged after completion.
                 </p>
               </div>
             </div>

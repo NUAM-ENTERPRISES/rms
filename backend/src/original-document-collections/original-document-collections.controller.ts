@@ -145,7 +145,7 @@ export class OriginalDocumentCollectionsController {
 
   @Post(':id/complete')
   @Permissions('write:documents')
-  @ApiOperation({ summary: 'Sync new documents to processing for this collection' })
+  @ApiOperation({ summary: 'Mark collection as completed' })
   complete(@Param('id') id: string, @Req() req: { user: { id: string } }) {
     return this.collectionsService.complete(id, req.user.id);
   }

@@ -216,20 +216,14 @@ export default function CollectionDetailPage() {
 
   const handleComplete = async () => {
     try {
-      const result = await completeCollection(id).unwrap();
-      toast.success(
-        `Collection completed${
-          result.syncedDocTypes.length
-            ? ` — synced ${result.syncedDocTypes.length} doc type(s) to processing`
-            : ""
-        }`,
-      );
+      await completeCollection(id).unwrap();
+      toast.success("Collection completed");
       await refetch();
     } catch (error) {
       toast.error(
         "Complete failed — ensure merge upload and locker submission are done",
       );
-      throw error; // Re-throw so modal knows it failed
+      throw error;
     }
   };
 

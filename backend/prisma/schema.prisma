@@ -2353,7 +2353,6 @@ model OriginalDocumentCollection {
   createdBy         User                                     @relation("CollectionCreatedBy", fields: [createdByUserId], references: [id])
   events            OriginalDocumentCollectionEvent[]
   mergeHistory      OriginalDocumentCollectionMergeHistory[]
-  syncLogs          OriginalDocumentCollectionSyncLog[]
 
   @@index([status])
   @@map("original_document_collections")
@@ -2418,18 +2417,4 @@ model OriginalDocumentCollectionMergeHistory {
 
   @@index([collectionId])
   @@map("original_document_collection_merge_history")
-}
-
-model OriginalDocumentCollectionSyncLog {
-  id             String   @id @default(cuid())
-  collectionId   String
-  docType        String
-  syncedAt       DateTime @default(now())
-  syncedByUserId String
-
-  collection OriginalDocumentCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-
-  @@unique([collectionId, docType])
-  @@index([collectionId])
-  @@map("original_document_collection_sync_logs")
 }

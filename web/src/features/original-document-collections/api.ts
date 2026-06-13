@@ -209,7 +209,6 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       {
         success: boolean;
         data: OriginalDocumentCollection;
-        syncedDocTypes: string[];
       },
       string
     >({

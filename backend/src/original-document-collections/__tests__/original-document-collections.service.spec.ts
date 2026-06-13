@@ -20,9 +20,6 @@ describe('OriginalDocumentCollectionsService', () => {
   };
 
   const uploadService = {} as never;
-  const syncService = {
-    syncCollectionToProcessing: jest.fn(),
-  };
 
   let service: OriginalDocumentCollectionsService;
 
@@ -31,7 +28,6 @@ describe('OriginalDocumentCollectionsService', () => {
     service = new OriginalDocumentCollectionsService(
       prisma as never,
       uploadService,
-      syncService as never,
     );
   });
 
@@ -114,9 +110,6 @@ describe('OriginalDocumentCollectionsService', () => {
       prisma.originalDocumentCollection.findUnique.mockResolvedValue(
         existingCollection,
       );
-      syncService.syncCollectionToProcessing.mockResolvedValue({
-        syncedDocTypes: ['degree_certificate_original'],
-      });
       prisma.originalDocumentCollection.update.mockResolvedValue({
         ...existingCollection,
         status: COLLECTION_STATUS.COMPLETED,
@@ -138,7 +131,6 @@ describe('OriginalDocumentCollectionsService', () => {
       );
       expect(result.success).toBe(true);
       expect(result.data.status).toBe(COLLECTION_STATUS.COMPLETED);
-      expect(result.syncedDocTypes).toEqual(['degree_certificate_original']);
     });
   });
 });
