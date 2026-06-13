@@ -30,6 +30,7 @@ export type ProcessingCandidatesQuery = {
   roleCatalogId?: string;
   status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all" | "visa_stamped";
   step?: string;
+  filterType?: "visa_stamped" | "total_processing";
   page?: number;
   limit?: number;
 };

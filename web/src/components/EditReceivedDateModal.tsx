@@ -13,6 +13,7 @@ interface Props {
   currentDate?: string | null;
   onConfirm: (date: Date) => Promise<boolean>;
   isSaving?: boolean;
+  dateLabel?: string;
 }
 
 export function EditReceivedDateModal({
@@ -22,6 +23,7 @@ export function EditReceivedDateModal({
   currentDate,
   onConfirm,
   isSaving,
+  dateLabel = "received",
 }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(currentDate ? new Date(currentDate) : undefined);
 
@@ -43,16 +45,16 @@ export function EditReceivedDateModal({
         <DialogHeader className="p-4">
           <DialogTitle className="flex items-center gap-3 text-lg">
             <Edit3 className="h-5 w-5 text-indigo-600" />
-            Update Received Date
+            Update {dateLabel} date
           </DialogTitle>
           <DialogDescription>
-            {documentLabel ? `Document: ${documentLabel}` : 'Update document received date.'}
+            {documentLabel ? `Document: ${documentLabel}` : `Update document ${dateLabel} date.`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-4 space-y-3">
           <div className="rounded-md bg-slate-50 border p-3 text-sm text-slate-700">
-            <div className="font-semibold">Existing received date:</div>
+            <div className="font-semibold">Existing {dateLabel} date:</div>
             {currentDate ? (
               <div className="mt-1">{format(new Date(currentDate), "PPP 'at' p")}</div>
             ) : (
@@ -61,7 +63,7 @@ export function EditReceivedDateModal({
           </div>
 
           <div>
-            <Label className="text-xs text-slate-600 mb-1 block">New received date</Label>
+            <Label className="text-xs text-slate-600 mb-1 block">New {dateLabel} date</Label>
             <DatePicker value={selectedDate} onChange={setSelectedDate} compact />
           </div>
         </div>

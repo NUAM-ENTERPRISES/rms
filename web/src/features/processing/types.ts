@@ -131,4 +131,13 @@ export interface ProcessingCandidate {
       email: string;
     };
   };
+  /** Sector-aware completion percentage (0–100) from applicable processing steps */
+  progressCount?: number;
+  progressCompletedSteps?: number;
+  progressTotalSteps?: number;
+  progressPendingSteps?: Array<{
+    key: string;
+    label: string;
+    status: string;
+  }>;
 }

@@ -44,6 +44,8 @@ import {
     Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
+import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -65,7 +67,7 @@ export default function ProcessingDashboardPage() {
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<
     "all" | "assigned" | "in_progress" | "completed" | "cancelled"
-  >("assigned");
+  >("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
@@ -78,16 +80,38 @@ export default function ProcessingDashboardPage() {
   const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const projects = projectsData?.data?.projects || [];
 
+  const listQueryParams = useMemo(() => {
+    const params: {
+      search?: string;
+      projectId?: string;
+      roleCatalogId?: string;
+      status?: typeof statusFilter;
+      step?: string;
+      filterType?: "total_processing";
+      page: number;
+      limit: number;
+    } = {
+      search: debouncedSearch || undefined,
+      projectId: projectFilter === "all" ? undefined : projectFilter,
+      roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
+      page,
+      limit: pageSize,
+    };
+
+    if (stepFilter) {
+      params.step = stepFilter;
+      params.filterType = "total_processing";
+    } else if (statusFilter === "all") {
+      params.filterType = "total_processing";
+    } else {
+      params.status = statusFilter;
+    }
+
+    return params;
+  }, [debouncedSearch, projectFilter, roleFilter, statusFilter, stepFilter, page, pageSize]);
+
   // API Call for Candidates
-  const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesQuery({
-    search: debouncedSearch,
-    projectId: projectFilter === "all" ? undefined : projectFilter,
-    roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
-    status: stepFilter ? undefined : (statusFilter === "all" ? undefined : statusFilter) as any,
-    step: stepFilter || undefined,
-    page,
-    limit: pageSize,
-  });
+  const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesQuery(listQueryParams);
 
   const candidates = apiResponse?.data?.candidates || [];
   const pagination = apiResponse?.data?.pagination;
@@ -143,14 +167,14 @@ export default function ProcessingDashboardPage() {
     },
     {
       type: "status",
-      label: "Ready for Processing",
+      label: "Untouched",
       status: "assigned",
       icon: UserCheck,
       accent: "blue",
       value: counts?.assigned || 0,
     },
     { type: "step", key: "offer_letter_verified", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
-    { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+    { type: "step", key: "document_received", label: "Document Original Received", gradient: "from-yellow-400 to-amber-500" },
     { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
     { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
     { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
@@ -208,7 +232,7 @@ export default function ProcessingDashboardPage() {
   const displayStatus = (status: string) => {
     const labels: Record<string, string> = {
       "all": "All",
-      "assigned": "Ready for Processing",
+      "assigned": "Untouched",
       "in_progress": "In Progress",
       "completed": "Completed",
       "cancelled": "Cancelled"
@@ -216,11 +240,14 @@ export default function ProcessingDashboardPage() {
     return labels[status] || status;
   };
 
-  const formatStep = (step?: string) => {
-    if (!step) return "—";
-    if (step === "verify_offer_letter") return "Verify Offer Letter";
-    // Fallback: replace underscores and title case
-    return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const formatStep = (step?: string) => formatProcessingStepLabel(step);
+
+  const getStepTileCount = (stepKey: string) => {
+    const stepCounts = counts?.steps ?? {};
+    if (stepKey === "offer_letter_verified") {
+      return (stepCounts.offer_letter_verified ?? 0) + (stepCounts.verify_offer_letter ?? 0);
+    }
+    return stepCounts[stepKey] ?? 0;
   };
 
   // Row background mapping to match tile colors (subtle)
@@ -265,7 +292,7 @@ export default function ProcessingDashboardPage() {
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-            const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
+            const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
             const s = accentStyles[tile.accent || "blue"];
             const Icon = isStepTile ? ClipboardList : tile.icon;
 
@@ -375,130 +402,7 @@ export default function ProcessingDashboardPage() {
               </div>
             </div>
           </div>
-              <div className="flex items-center gap-3">
-                {isFetching && <Loader2 className="h-5 w-5 animate-spin text-violet-500" />}
-                <Badge className="bg-violet-100 text-violet-700 border-0 px-4 py-2 text-sm font-bold self-start sm:self-center">
-                  {totalItems} Results
-                </Badge>
-              </div>
-            </div>
 
-            {/* Filter Bar */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-2xl border border-slate-100">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Search */}
-                <div className="relative flex-1 max-w-md">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-violet-100 rounded-lg p-1.5">
-                    <Search className="h-4 w-4 text-violet-600" />
-                  </div>
-                  <Input 
-                    placeholder="Search by name, email or project..." 
-                    className="pl-14 h-11 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="hidden lg:block w-px h-8 bg-slate-200" />
-
-                {/* Filters Group */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <Filter className="h-4 w-4 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters:</span>
-                  </div>
-
-                  <Select value={projectFilter} onValueChange={(val) => {
-                    setProjectFilter(val);
-                    setRoleFilter("all");
-                  }}>
-                    <SelectTrigger className="h-10 w-[220px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors">
-                      <SelectValue placeholder="All Projects" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all">All Projects</SelectItem>
-                      {projects.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {projectFilter !== "all" && (
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="h-10 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors animate-in fade-in slide-in-from-left-2">
-                        <SelectValue placeholder="All Roles" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="all">All Roles</SelectItem>
-                        {rolesForSelectedProject.map(r => (
-                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  
-                  {(search || projectFilter !== "all" || statusFilter !== "assigned") && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-10 px-4 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold gap-2 transition-all"
-                      onClick={() => {
-                        setSearch("");
-                        setProjectFilter("all");
-                        setRoleFilter("all");
-                        setStatusFilter("assigned");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Active Filters Display */}
-              {((statusFilter && statusFilter !== "all") || projectFilter !== "all" || roleFilter !== "all") && (
-                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
-                  <span className="text-xs font-semibold text-slate-500">Active:</span>
-                  {(statusFilter && statusFilter !== "all") && (
-                    <Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Status: {displayStatus(statusFilter)}
-                      <button 
-                        className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => setStatusFilter("all")}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {projectFilter !== "all" && (
-                    <Badge className="bg-blue-100 text-blue-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Project: {projects.find(p => p.id === projectFilter)?.title || projectFilter}
-                      <button 
-                        className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => {
-                          setProjectFilter("all");
-                          setRoleFilter("all");
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {roleFilter !== "all" && (
-                    <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Role: {rolesForSelectedProject.find(r => r.id === roleFilter)?.name || roleFilter}
-                      <button 
-                        className="ml-1 hover:bg-emerald-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => setRoleFilter("all")}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                </div>
-              )}
           <div className="p-0">
             <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
               <Table>
@@ -633,21 +537,13 @@ export default function ProcessingDashboardPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="space-y-1.5">
-                          {/* Use progressCount from API if available (interpreted as a percent 0-100). Fall back to status-based value. */}
-                          {(() => {
-                            const raw = (procCandidate as any).progressCount;
-                            const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0);
-                            return (
-                              <>
-                                <span className="text-xs font-black text-slate-700">{pct}%</span>
-                                <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                                  <div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
+                        <ProcessingProgressBar
+                          processingStatus={procCandidate.processingStatus}
+                          progressCount={procCandidate.progressCount}
+                          progressCompletedSteps={procCandidate.progressCompletedSteps}
+                          progressTotalSteps={procCandidate.progressTotalSteps}
+                          progressPendingSteps={procCandidate.progressPendingSteps}
+                        />
                       </TableCell>
                       <TableCell className="py-4 text-center">
                         <Button 
@@ -672,7 +568,8 @@ export default function ProcessingDashboardPage() {
                           setSearch("");
                           setProjectFilter("all");
                           setRoleFilter("all");
-                          setStatusFilter("assigned");
+                          setStatusFilter("all");
+                          setStepFilter(null);
                         }}>Clear all filters</Button>
                       </div>
                     </TableCell>
