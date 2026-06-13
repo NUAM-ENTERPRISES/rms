@@ -13,9 +13,18 @@ interface Props {
   initialDate?: string | null; // optional prefill for the 'New date' picker
   onConfirm: (newDate: Date) => Promise<boolean>;
   isSubmitting?: boolean;
+  stepLabel?: string;
 }
 
-export default function ConfirmEditSubmitDateModal({ isOpen, onClose, existingDate, initialDate, onConfirm, isSubmitting }: Props) {
+export default function ConfirmEditSubmitDateModal({
+  isOpen,
+  onClose,
+  existingDate,
+  initialDate,
+  onConfirm,
+  isSubmitting,
+  stepLabel = "HRD",
+}: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate ? new Date(initialDate) : existingDate ? new Date(existingDate) : undefined);
 
   useEffect(() => {
@@ -41,7 +50,7 @@ export default function ConfirmEditSubmitDateModal({ isOpen, onClose, existingDa
             Edit Submission Date
           </DialogTitle>
           <DialogDescription>
-            Change the previously saved HRD submission date for this step.
+            Change the previously saved {stepLabel} date for this step.
           </DialogDescription>
         </DialogHeader>
 

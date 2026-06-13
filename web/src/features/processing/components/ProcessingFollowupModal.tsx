@@ -32,7 +32,7 @@ const STEP_LABELS: Record<string, string> = {
   biometrics: "Biometrics",
   prometric: "Prometric",
   emigration: "Emigration",
-  document_received: "Document Received",
+  document_received: "Document Original Received",
   council_registration: "Council Registration",
 };
 

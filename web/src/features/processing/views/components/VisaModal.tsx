@@ -16,6 +16,8 @@ import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 
 
@@ -382,6 +384,32 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
               <div className="border rounded-lg bg-teal-50/30">
                 <div className="bg-teal-100/50 px-3 py-1 border-b text-[11px] font-bold uppercase text-teal-700">Visa Details</div>
                 <div className="p-3 space-y-3">
+                  {(visaIssuedDate || visaExpiryDate) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa issued
+                        </div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          {visaIssuedDate ? format(visaIssuedDate, "PPP") : "Not set"}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa expiry
+                        </div>
+                        <div
+                          className={`mt-1 text-sm font-semibold ${
+                            visaExpiryDate && visaExpiryDate.getTime() < Date.now()
+                              ? "text-rose-600"
+                              : "text-slate-800"
+                          }`}
+                        >
+                          {visaExpiryDate ? format(visaExpiryDate, "PPP") : "Not set"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Visa issue date</Label>
@@ -401,7 +429,21 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b text-xs font-black uppercase text-slate-600">Required Documents</div>
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isVisaCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Visa"
+                      disabled={isVerifying}
+                    />
+                  )}
+                </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
                     const pdoc = processingDocsByDocType[req.docType]?.[0];

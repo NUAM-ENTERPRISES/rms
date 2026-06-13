@@ -133,9 +133,10 @@ When an interview coordinator marks a passed interview as **ready for processing
 
 **Leadership / recruiter bell notification**
 
-- Title: `Sent for Processing`
+- Title: `Sent to Ready for Processing`
 - Type / `meta.type`: `candidate_ready_for_processing`
-- Link: `/recruiter-docs/{projectId}/{candidateId}`
+- Processing leadership link (Manager, Processing Manager, Admin): `/ready-for-processing?projectId={projectId}&search={candidateName}`
+- Recruiter Manager + assigned recruiter link: `/candidates/{candidateId}`
 
 If no offer letter exists, the recruiter may also receive a separate `offer_letter_upload_requested` notification.
 

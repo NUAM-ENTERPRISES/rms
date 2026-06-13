@@ -30,12 +30,11 @@ export class QueryAllProcessingCandidatesDto {
   @ApiProperty({
     description: 'Filter by processing status',
     enum: ['assigned', 'in_progress', 'completed', 'cancelled', 'all', 'visa_stamped'],
-    default: 'assigned',
     required: false,
   })
   @IsString()
   @IsOptional()
-  status?: string = 'assigned';
+  status?: string;
 
   @ApiProperty({
     description: 'Filter by current processing step key (e.g., offer_letter, hrd, visa, completed)',

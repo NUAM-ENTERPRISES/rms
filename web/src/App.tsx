@@ -571,7 +571,14 @@ function App() {
                     path="/candidates/:id"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute>
+                        <ProtectedRoute
+                          matchRolesOrPermissions
+                          roles={["Recruiter Manager"]}
+                          permissions={[
+                            "read:candidates",
+                            "read:assigned_candidates",
+                          ]}
+                        >
                           <AppLayout>
                             <CandidateDetailPage />
                           </AppLayout>
@@ -831,13 +838,16 @@ function App() {
                     element={
                       <RouteErrorBoundary>
                         <ProtectedRoute
+                          matchRolesOrPermissions
                           roles={[
                             "CEO",
                             "Director",
                             "Manager",
                             "System Admin",
                             "Processing Manager",
+                            "Admin",
                           ]}
+                          permissions={["read:processing"]}
                         >
                           <AppLayout>
                             <PassedCandidatesPage />

@@ -42,6 +42,9 @@ export interface ProcessingStep {
   dueDate?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  submittedAt?: string | null;
+  visaIssuedAt?: string | null;
+  visaValidAt?: string | null;
   rejectionReason?: string | null;
   meta?: any;
   documents: ProcessingStepDocument[];
