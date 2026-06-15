@@ -157,6 +157,24 @@
   animation: merged-document-ready-glow 2s ease-in-out infinite;
 }
 
+@keyframes collection-completed-banner-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 12px 40px rgb(16 185 129 / 0.12),
+      0 0 0 1px rgb(167 243 208);
+  }
+  50% {
+    box-shadow:
+      0 16px 48px rgb(16 185 129 / 0.26),
+      0 0 28px 4px rgb(16 185 129 / 0.18);
+  }
+}
+
+.animate-collection-completed-banner {
+  animation: collection-completed-banner-glow 2.5s ease-in-out infinite;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

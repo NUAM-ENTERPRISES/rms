@@ -917,23 +917,66 @@ export default function CollectionDetailPage() {
         )}
 
         {collection.status === "completed" && (
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-              <div>
-                <p className="font-medium text-foreground">
-                  Collection completed
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  All original documents have been received, verified, and processed
-                  {collection.completedBy && collection.completedAt && (
-                    <>
-                      {" "}
-                      · Completed by {collection.completedBy.name} on{" "}
-                      {format(new Date(collection.completedAt), "dd MMM yyyy")}
-                    </>
-                  )}
-                </p>
+          <div className="sticky bottom-4 z-20 -mx-1 px-1 pt-2">
+            <div
+              className={cn(
+                "animate-collection-completed-banner relative overflow-hidden rounded-xl border border-emerald-300/80 bg-gradient-to-r from-emerald-50/95 via-white/95 to-green-50/95 p-4 backdrop-blur-xl sm:p-5",
+                "ring-2 ring-emerald-200/70",
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              <div
+                className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-emerald-300/25 blur-2xl"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-8 left-1/4 h-20 w-32 rounded-full bg-green-300/15 blur-2xl"
+                aria-hidden
+              />
+
+              <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-start gap-3 sm:items-center">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-[0_8px_20px_rgba(16,185,129,0.35)]">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-bold text-emerald-950 sm:text-lg">
+                        Collection completed
+                      </p>
+                      <Badge className="border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                        All done
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-emerald-800/90">
+                      All original documents have been received, verified, and
+                      processed.
+                      {collection.completedBy && collection.completedAt ? (
+                        <>
+                          {" "}
+                          Completed by{" "}
+                          <span className="font-semibold text-emerald-950">
+                            {collection.completedBy.name}
+                          </span>{" "}
+                          on{" "}
+                          {format(
+                            new Date(collection.completedAt),
+                            "dd MMM yyyy",
+                          )}
+                          .
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className="w-fit shrink-0 self-start border-emerald-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-emerald-700 sm:self-center"
+                >
+                  {COLLECTION_STATUS_LABELS.completed}
+                </Badge>
               </div>
             </div>
           </div>
