@@ -865,7 +865,9 @@ export class CandidatesService {
           profileImage: createCandidateDto.profileImage,
           addressCountryCode: createCandidateDto.addressCountryCode,
           addressStateId: createCandidateDto.addressStateId,
-          address: createCandidateDto.address,
+          address: createCandidateDto.address?.trim() || null,
+          addressPincode: createCandidateDto.addressPincode?.trim() || null,
+          alternatePhone: createCandidateDto.alternatePhone?.trim() || null,
           source: resolvedSource,
           agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
           referralCompanyName: createCandidateDto.referralCompanyName,
@@ -3665,7 +3667,15 @@ export class CandidatesService {
     if (updateCandidateDto.addressStateId !== undefined)
       updateData.addressStateId = updateCandidateDto.addressStateId;
     if (updateCandidateDto.address !== undefined)
-      updateData.address = updateCandidateDto.address;
+      updateData.address = updateCandidateDto.address?.trim() || null;
+    if (updateCandidateDto.addressPincode !== undefined) {
+      const pincode = updateCandidateDto.addressPincode;
+      updateData.addressPincode =
+        pincode === null ? null : String(pincode).trim() || null;
+    }
+    if (updateCandidateDto.alternatePhone !== undefined)
+      updateData.alternatePhone =
+        updateCandidateDto.alternatePhone?.trim() || null;
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.agentId !== undefined) {

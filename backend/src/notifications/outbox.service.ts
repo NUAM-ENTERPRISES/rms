@@ -877,5 +877,16 @@ export class OutboxService {
     );
   }
 
+  async publishCourierShipmentReceived(
+    shipmentId: string,
+    receivedByUserId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CourierShipmentReceived',
+      { shipmentId, receivedByUserId },
+      tx,
+    );
+  }
 }
 

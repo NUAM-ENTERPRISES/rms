@@ -17,6 +17,7 @@ import {
   User,
   UserCircle2,
   Users,
+  Truck,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -43,6 +44,8 @@ import {
 } from "../constants";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
+import { CandidateCourierPipeline } from "@/features/courier-shipments/components/CandidateCourierPipeline";
+import { useGetCandidateCourierPipelineQuery } from "@/features/courier-shipments/api";
 
 /* ---------- helpers ---------- */
 
@@ -184,6 +187,10 @@ export default function CollectionDetailPage() {
     useUpdateOriginalDocumentCollectionEventMutation();
 
   const collection = data?.data;
+  const { data: courierPipelineData } = useGetCandidateCourierPipelineQuery(
+    collection?.candidateId ?? "",
+    { skip: !collection?.candidateId },
+  );
 
   // Aggregate all documents across all events to show cumulative checklist
   // MUST be called before any conditional returns (Rules of Hooks)
@@ -749,6 +756,35 @@ export default function CollectionDetailPage() {
               </Button>
             </div>
           </motion.div>
+        )}
+
+        {/* ── Courier History ── */}
+        {collection.candidateId && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-teal-600" />
+                  <CardTitle className="text-sm font-semibold">
+                    Courier History
+                  </CardTitle>
+                </div>
+                <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                  <Link
+                    to={`/courier-management/candidates/${collection.candidateId}`}
+                  >
+                    View courier details
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <CandidateCourierPipeline
+                legs={courierPipelineData?.data?.legs ?? []}
+                variant="compact"
+              />
+            </CardContent>
+          </Card>
         )}
 
         {/* ── Completed Status ── */}

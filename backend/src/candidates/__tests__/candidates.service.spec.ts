@@ -542,6 +542,64 @@ describe('CandidatesService', () => {
         }),
       );
     });
+
+    it('persists optional addressPincode and alternatePhone on create', async () => {
+      const createCandidateDto = {
+        firstName: 'John',
+        lastName: 'Doe',
+        countryCode: '+91',
+        mobileNumber: '9999999999',
+        source: 'manual',
+        currentStatusId: 1,
+        dateOfBirth: '1990-01-01T00:00:00.000Z',
+        professionTypeId: validProfessionTypeId,
+        address: '12 MG Road',
+        addressPincode: '682016',
+        alternatePhone: '9876543211',
+      } as unknown as CreateCandidateDto;
+
+      prismaService.candidate.findUnique.mockResolvedValue(null);
+      prismaService.user.findUnique.mockResolvedValue({
+        name: 'Creator',
+        email: 'creator@test.com',
+        userRoles: [],
+      });
+      prismaService.candidateStatus.findUnique.mockResolvedValue({
+        statusName: 'Untouched',
+      });
+      prismaService.candidateStatusHistory.create.mockResolvedValue({} as any);
+      (mockRecruiterAssignmentService.assignRecruiterToCandidate as any).mockResolvedValue({
+        id: 'rec-1',
+        name: 'Recruiter',
+        email: 'rec@test.com',
+      });
+
+      mockCandidateCodeService.reserveNextCode.mockResolvedValue('AFFCD012026');
+
+      const tx: any = {
+        candidate: {
+          create: jest.fn(async () => ({ id: 'cand-1' })),
+          findUniqueOrThrow: jest.fn(async () => ({
+            id: 'cand-1',
+            candidateCode: 'AFFCD012026',
+          })),
+        },
+      };
+
+      prismaService.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+      await service.create(createCandidateDto, 'user-1');
+
+      expect(tx.candidate.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            address: '12 MG Road',
+            addressPincode: '682016',
+            alternatePhone: '9876543211',
+          }),
+        }),
+      );
+    });
   });
 
   describe('findAll', () => {

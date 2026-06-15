@@ -101,6 +101,13 @@ export function buildCreateCandidateSchema(
       addressCountryCode: z.string().max(8).optional().or(z.literal("")),
       addressStateId: z.string().optional().or(z.literal("")),
       address: z.string().max(500).optional().or(z.literal("")),
+      addressPincode: z.string().max(12).optional().or(z.literal("")),
+      alternatePhone: z
+        .string()
+        .max(15)
+        .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
+        .optional()
+        .or(z.literal("")),
 
       highestEducation: z.string().max(100).optional(),
       university: z.string().max(200).optional(),

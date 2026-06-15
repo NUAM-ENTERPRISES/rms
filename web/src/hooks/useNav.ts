@@ -33,6 +33,7 @@ export function useNav(): NavItem[] {
     );
     const documentsControlExecutiveAllowedIds = new Set([
       "original-document-intake-main",
+      "courier-management-main",
       "candidates",
       "candidates-list",
       "profile",

@@ -466,6 +466,22 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                       {candidate.address?.trim() ? candidate.address : "N/A"}
                     </p>
                   </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Pincode
+                    </label>
+                    <p className="text-sm mt-1 font-mono">
+                      {candidate.addressPincode?.trim() || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Alternate phone
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.alternatePhone?.trim() || "N/A"}
+                    </p>
+                  </div>
                 </div>
               </div>
 

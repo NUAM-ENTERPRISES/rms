@@ -91,7 +91,11 @@ export function shouldShowDashboardWelcomeHeader(
   }
 
   if (roles.includes("Documents Control Executive")) {
-    return path === "/" || path === "/original-documents";
+    return (
+      path === "/" ||
+      path === "/original-documents" ||
+      path === "/courier-management"
+    );
   }
 
   if (roles.includes("Documentation Executive")) {

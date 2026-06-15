@@ -100,6 +100,8 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleCandidateProjectStatusChangeRequested(job);
         case 'CandidateProjectStatusChangeReviewed':
           return await this.handleCandidateProjectStatusChangeReviewed(job);
+        case 'CourierShipmentReceived':
+          return await this.handleCourierShipmentReceived(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
@@ -3103,5 +3105,75 @@ export class NotificationsProcessor extends WorkerHost {
         err.stack,
       );
     }
+  }
+
+  async handleCourierShipmentReceived(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing courier shipment received event: ${eventId}`);
+
+    const { shipmentId, receivedByUserId } = payload as {
+      shipmentId: string;
+      receivedByUserId: string;
+    };
+
+    const shipment = await this.prisma.courierShipment.findUnique({
+      where: { id: shipmentId },
+      include: {
+        candidate: {
+          select: { firstName: true, lastName: true, candidateCode: true },
+        },
+        receivedBy: { select: { name: true } },
+      },
+    });
+
+    if (!shipment) {
+      this.logger.warn(`Courier shipment ${shipmentId} not found for notification`);
+      return;
+    }
+
+    const candidateName = `${shipment.candidate.firstName} ${shipment.candidate.lastName}`;
+    const code = shipment.candidate.candidateCode ?? '';
+    const receiverName = shipment.receivedBy?.name ?? 'Office team';
+    const title = 'Courier documents received';
+    const message = `Original documents for ${candidateName}${code ? ` (${code})` : ''} were received by ${receiverName} (Leg ${shipment.legNumber}).`;
+    const link = `/courier-management/candidates/${shipment.candidateId}?leg=${shipmentId}`;
+
+    const recipientIds = new Set<string>();
+    if (shipment.sentByUserId) recipientIds.add(shipment.sentByUserId);
+    if (shipment.createdByUserId) recipientIds.add(shipment.createdByUserId);
+    recipientIds.delete(receivedByUserId);
+
+    const processingManagers = await this.prisma.user.findMany({
+      where: withActiveAccountStatus({
+        userRoles: {
+          some: { role: { name: 'Processing Manager' } },
+        },
+      }),
+      select: { id: true },
+    });
+
+    for (const pm of processingManagers) {
+      recipientIds.add(pm.id);
+    }
+
+    for (const userId of recipientIds) {
+      await this.notificationsService.createNotification({
+        userId,
+        type: 'courier_shipment_received',
+        title,
+        message,
+        link,
+        meta: {
+          shipmentId,
+          candidateId: shipment.candidateId,
+          legNumber: shipment.legNumber,
+        },
+        idemKey: `${eventId}:${userId}:courier_received`,
+      });
+    }
+
+    this.logger.log(
+      `Courier received notifications sent to ${recipientIds.size} users for shipment ${shipmentId}`,
+    );
   }
 }

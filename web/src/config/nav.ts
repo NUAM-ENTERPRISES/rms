@@ -14,6 +14,7 @@ import {
   BookOpen,
   BarChart3,
   UserSquare2,
+  Truck,
 } from "lucide-react";
 import { LEGACY_CLIENT_COORDINATOR_ROLE_NAME, ROLE_NAMES } from "@/config/role-names";
 
@@ -74,6 +75,14 @@ export const navigationConfig: NavItem[] = [
     label: "Original Document Intake",
     path: "/original-documents",
     icon: FileText,
+    roles: ["Documents Control Executive"],
+    permissions: ["read:documents"],
+  },
+  {
+    id: "courier-management-main",
+    label: "Courier Management",
+    path: "/courier-management",
+    icon: Truck,
     roles: ["Documents Control Executive"],
     permissions: ["read:documents"],
   },
