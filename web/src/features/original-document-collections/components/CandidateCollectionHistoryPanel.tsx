@@ -608,7 +608,7 @@ export function CandidateCollectionHistoryPanel({
           ) : null}
           {content}
         </div>
-        {pdfViewerModal}
+        {documentPreviewModal}
       </>
     );
   }
