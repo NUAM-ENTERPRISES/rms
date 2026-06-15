@@ -846,6 +846,7 @@ model Document {
   workExperience WorkExperience?                        @relation(fields: [workExperienceId], references: [id], onDelete: SetNull)
   originalDocumentCollectionsAsMerged OriginalDocumentCollection[] @relation("CollectionMergedDocument")
   originalDocumentCollectionMergeHistory OriginalDocumentCollectionMergeHistory[] @relation("MergeHistoryDocument")
+  originalDocumentCollectionEventsAsMerged OriginalDocumentCollectionEvent[] @relation("EventMergedDocument")
 
   @@index([candidateId])
   @@index([docType])
@@ -2365,6 +2366,7 @@ model OriginalDocumentCollectionEvent {
   collectionType    String
   collectedByUserId String
   collectedAt       DateTime
+  mergedDocumentId  String?
   directOffice      String?
   directOfficeOther String?
   interviewVenue    String?
@@ -2377,7 +2379,8 @@ model OriginalDocumentCollectionEvent {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  collection  OriginalDocumentCollection              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collection      OriginalDocumentCollection              @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  mergedDocument  Document?                               @relation("EventMergedDocument", fields: [mergedDocumentId], references: [id], onDelete: SetNull)
   collectedBy User                                    @relation("EventCollectedBy", fields: [collectedByUserId], references: [id])
   createdBy   User                                    @relation("EventCreatedBy", fields: [createdByUserId], references: [id])
   agent       Agent?                                  @relation(fields: [agentId], references: [id], onDelete: SetNull)

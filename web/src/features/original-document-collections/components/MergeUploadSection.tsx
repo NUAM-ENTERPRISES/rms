@@ -1,12 +1,33 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileStack, Loader2, ExternalLink, Eye, Upload } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Download,
+  Eye,
+  FileStack,
+  Loader2,
+  RefreshCw,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
-import { useUploadCollectionMergeMutation } from "../api";
+import {
+  useRebuildCollectionMergeMutation,
+  useUploadCollectionMergeMutation,
+} from "../api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import type { OriginalDocumentCollection } from "../types";
-import { cn } from "@/lib/utils";
 
 interface MergeUploadSectionProps {
   collection: OriginalDocumentCollection;
@@ -21,7 +42,19 @@ export function MergeUploadSection({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [uploadMerge, { isLoading }] = useUploadCollectionMergeMutation();
-  
+  const [rebuildMerge, { isLoading: isRebuilding }] =
+    useRebuildCollectionMergeMutation();
+
+  const eventsWithMerge = collection.events.filter(
+    (event) => event.mergedDocumentId,
+  );
+
+  const mergedDocument = collection.mergedDocument;
+  const isPdfMerge =
+    !mergedDocument?.mimeType ||
+    mergedDocument.mimeType.includes("pdf") ||
+    mergedDocument.fileName.toLowerCase().endsWith(".pdf");
+
   const handleUpload = async () => {
     if (!selectedFiles.length) {
       toast.error("Select at least one scan file");
@@ -31,8 +64,8 @@ export function MergeUploadSection({
       await uploadMerge({ id: collection.id, files: selectedFiles }).unwrap();
       toast.success(
         collection.mergedDocument
-          ? "Merged document replaced with new upload"
-          : "Merged document uploaded",
+          ? "Combined merged document replaced"
+          : "Combined merged document uploaded",
       );
       setSelectedFiles([]);
       if (inputRef.current) inputRef.current.value = "";
@@ -42,135 +75,162 @@ export function MergeUploadSection({
     }
   };
 
+  const handleRebuild = async () => {
+    try {
+      await rebuildMerge(collection.id).unwrap();
+      toast.success("Combined PDF rebuilt from event merges");
+      onUpdated?.();
+    } catch {
+      toast.error("Failed to rebuild combined merge — upload event merges first");
+    }
+  };
+
   return (
     <>
-      <Card className="border-slate-200 bg-white shadow-sm">
-        <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-purple-50/50 to-transparent py-2.5 px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-100">
-              <Upload className="h-3.5 w-3.5 text-purple-600" />
-            </div>
-            <CardTitle className="text-sm font-semibold">
-              Step 2: Upload Merged Scan
-            </CardTitle>
-          </div>
+      <Card>
+        <CardHeader className="border-b py-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Upload className="h-4 w-4" />
+            Combined merged scan
+          </CardTitle>
+          <CardDescription>
+            Built automatically when you upload each event merge. You can also
+            upload or rebuild the full combined PDF here.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 space-y-3">
+        <CardContent className="space-y-3 p-4">
           {collection.mergedDocument ? (
-            <div className="rounded-lg border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileStack className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <p className="text-xs font-semibold text-emerald-900">
-                      Merged Document Uploaded
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <FileStack className="h-4 w-4 shrink-0 text-primary" />
+                    <p className="text-sm font-medium text-foreground">
+                      Combined document ready
                     </p>
                   </div>
-                  <p className="text-xs text-emerald-700 truncate">
-                    <span className="font-medium">File:</span>{" "}
+                  <p className="truncate text-xs text-muted-foreground">
                     {collection.mergedDocument.fileName}
                   </p>
-                  <p className="text-xs text-emerald-700 font-mono mt-0.5">
-                    <span className="font-medium">ID:</span>{" "}
-                    {collection.mergedDocumentId}
-                  </p>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex shrink-0 gap-1.5">
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
+                    className="h-8 gap-1.5"
                     onClick={() => setShowPdfViewer(true)}
-                    className="h-8 w-8 p-0 border-emerald-300 hover:bg-emerald-100"
-                    title="Preview PDF"
                   >
-                    <Eye className="h-3.5 w-3.5 text-emerald-700" />
+                    <Eye className="h-3.5 w-3.5" />
+                    Preview
                   </Button>
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
+                    className="h-8 gap-1.5"
                     asChild
-                    className="h-8 w-8 p-0 border-emerald-300 hover:bg-emerald-100"
-                    title="Open in new tab"
                   >
                     <a
                       href={collection.mergedDocument.fileUrl}
+                      download={collection.mergedDocument.fileName}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <ExternalLink className="h-3.5 w-3.5 text-emerald-700" />
+                      <Download className="h-3.5 w-3.5" />
+                      Download
                     </a>
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs text-slate-600">
-                Upload one pre-merged PDF or multiple image/PDF scans to merge.
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Upload a merged scan on each intake event in the history section
+              above. The combined PDF appears here automatically.
+            </p>
           )}
 
-          {collection.mergeHistory && collection.mergeHistory.length > 0 ? (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
-              <p className="text-[10px] text-blue-700">
-                Re-uploading will archive the current merge and save a new combined
-                scan ({collection.mergeHistory.length} prior merge
-                {collection.mergeHistory.length !== 1 ? "s" : ""} on file).
-              </p>
-            </div>
-          ) : null}
-
-          <div className="space-y-2.5">
-            <div className="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-3">
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                multiple
-                className="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
-                onChange={(e) =>
-                  setSelectedFiles(Array.from(e.target.files ?? []))
-                }
-                aria-label="Select scan files to merge"
-              />
-              {selectedFiles.length > 0 && (
-                <p className="text-[10px] text-slate-600 mt-2">
-                  {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
-                </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleRebuild}
+              disabled={isRebuilding || eventsWithMerge.length === 0}
+            >
+              {isRebuilding ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
               )}
-            </div>
+              Rebuild from events ({eventsWithMerge.length})
+            </Button>
+          </div>
+
+          <div className="space-y-2 border-t border-border pt-3">
+            <p className="text-xs text-muted-foreground">
+              Or upload a single combined PDF manually (replaces current merge).
+            </p>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              multiple
+              className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium"
+              onChange={(e) =>
+                setSelectedFiles(Array.from(e.target.files ?? []))
+              }
+              aria-label="Select scan files to merge manually"
+            />
             <Button
               type="button"
               onClick={handleUpload}
               disabled={isLoading || !selectedFiles.length}
-              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              className="w-full gap-2"
+              size="sm"
             >
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload & Save Merge
-                </>
+                <Upload className="h-4 w-4" />
               )}
+              Upload manual combined merge
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* PDF Viewer Modal */}
-      {collection.mergedDocument && (
+      {mergedDocument && isPdfMerge ? (
         <PDFViewer
-          fileUrl={collection.mergedDocument.fileUrl}
-          fileName={collection.mergedDocument.fileName}
+          key={mergedDocument.id}
+          fileUrl={mergedDocument.fileUrl}
+          fileName={mergedDocument.fileName}
+          cacheKey={mergedDocument.id}
           isOpen={showPdfViewer}
           onClose={() => setShowPdfViewer(false)}
         />
-      )}
+      ) : null}
+
+      {mergedDocument && !isPdfMerge ? (
+        <Dialog open={showPdfViewer} onOpenChange={setShowPdfViewer}>
+          <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+            <DialogHeader className="border-b px-4 py-3">
+              <DialogTitle className="truncate pr-8 text-base">
+                {mergedDocument.fileName}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-auto bg-slate-100 p-4">
+              <img
+                src={`${mergedDocument.fileUrl}${mergedDocument.fileUrl.includes("?") ? "&" : "?"}_cb=${mergedDocument.id}`}
+                alt={mergedDocument.fileName}
+                className="mx-auto max-h-[calc(92vh-6rem)] w-full object-contain"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </>
   );
 }

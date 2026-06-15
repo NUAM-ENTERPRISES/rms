@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   Archive,
   ArrowUpRight,
+  Calendar,
   CheckCircle2,
   Clock,
   Eye,
@@ -15,6 +16,7 @@ import {
   Package,
   Plus,
   Search,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,9 +40,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
@@ -49,6 +54,7 @@ import {
   useGetOriginalDocumentCollectionsQuery,
 } from "../api";
 import { CollectionExportButton } from "../components/CollectionExportButton";
+import { CollectionProgressCell } from "../components/CollectionProgressCell";
 import {
   COLLECTION_STATUS,
   COLLECTION_STATUS_LABELS,
@@ -57,7 +63,10 @@ import {
   DIRECT_OFFICE_LABELS,
 } from "../constants";
 
-type StatusFilter = "all" | "pending" | "completed" | "in_locker" | "this_month";
+type StatusFilter = "all" | "pending" | "completed" | "in_locker";
+
+const DEFAULT_PROFILE_IMAGE =
+  "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
 
 function formatSourceDetail(collection: {
   collectionType: string;
@@ -93,16 +102,36 @@ function formatSourceDetail(collection: {
   }
 }
 
-function getStatusBadgeClass(status: string) {
+function getStatusInfo(status: string) {
   switch (status) {
     case "completed":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return {
+        icon: CheckCircle2,
+        textColor: "text-emerald-700",
+        bgColor: "bg-emerald-100",
+        borderColor: "border-emerald-300",
+      };
     case "locker_submitted":
-      return "bg-blue-50 text-blue-700 border-blue-200";
+      return {
+        icon: Archive,
+        textColor: "text-blue-700",
+        bgColor: "bg-blue-100",
+        borderColor: "border-blue-300",
+      };
     case "merged_uploaded":
-      return "bg-purple-50 text-purple-700 border-purple-200";
+      return {
+        icon: Upload,
+        textColor: "text-purple-700",
+        bgColor: "bg-purple-100",
+        borderColor: "border-purple-300",
+      };
     default:
-      return "bg-amber-50 text-amber-700 border-amber-200";
+      return {
+        icon: Clock,
+        textColor: "text-amber-700",
+        bgColor: "bg-amber-100",
+        borderColor: "border-amber-300",
+      };
   }
 }
 
@@ -179,10 +208,6 @@ export default function OriginalDocumentsRegisterPage() {
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounce(search, 400);
 
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
   const filters = {
     search: debouncedSearch || undefined,
     collectionType: collectionType === "all" ? undefined : collectionType,
@@ -190,8 +215,6 @@ export default function OriginalDocumentsRegisterPage() {
       statusFilter === "completed" ? COLLECTION_STATUS.COMPLETED : undefined,
     pendingOnly: statusFilter === "pending" ? true : undefined,
     lockerSubmittedOnly: statusFilter === "in_locker" ? true : undefined,
-    dateFrom:
-      statusFilter === "this_month" ? monthStart.toISOString() : undefined,
     page,
     limit: 10,
   };
@@ -202,11 +225,9 @@ export default function OriginalDocumentsRegisterPage() {
 
   const stats = statsResponse?.data ?? {
     totalCollections: 0,
-    totalDocumentsCollected: 0,
     completedCollections: 0,
     pendingCollections: 0,
     inLocker: 0,
-    thisMonthCollections: 0,
     byType: {},
   };
 
@@ -219,14 +240,6 @@ export default function OriginalDocumentsRegisterPage() {
   };
 
   const statTiles = [
-    {
-      label: "Original Documents Collected",
-      value: stats.totalDocumentsCollected,
-      icon: FileStack,
-      accent: "blue",
-      subtitle: "Physical originals marked received",
-      filter: "all" as StatusFilter,
-    },
     {
       label: "Candidates",
       value: stats.totalCollections,
@@ -259,14 +272,6 @@ export default function OriginalDocumentsRegisterPage() {
       subtitle: "Submitted to physical locker",
       filter: "in_locker" as StatusFilter,
     },
-    {
-      label: "This Month",
-      value: stats.thisMonthCollections,
-      icon: Package,
-      accent: "teal",
-      subtitle: "Collections this month",
-      filter: "this_month" as StatusFilter,
-    },
   ];
 
   const handleTileClick = (filter: StatusFilter) => {
@@ -287,6 +292,23 @@ export default function OriginalDocumentsRegisterPage() {
     const tile = statTiles.find((t) => t.filter === statusFilter);
     return tile?.label ?? "Collection List";
   };
+
+  const getTableSubtitle = () => {
+    switch (statusFilter) {
+      case "completed":
+        return "Fully processed collections";
+      case "pending":
+        return "Draft or in-progress collections";
+      case "in_locker":
+        return "Collections submitted to physical locker";
+      default:
+        return "All candidate document collections";
+    }
+  };
+
+  const totalCount = pagination.total;
+  const totalPages = pagination.totalPages;
+  const limit = pagination.limit;
 
   const hasActiveFilters =
     search.trim().length > 0 ||
@@ -357,14 +379,14 @@ export default function OriginalDocumentsRegisterPage() {
                   className="h-11 shrink-0 gap-2 rounded-xl bg-blue-600 px-4 font-medium text-white shadow-sm hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4" />
-                  Log Intake Event
+                  Add Original Documents
                 </Button>
               )}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -416,190 +438,320 @@ export default function OriginalDocumentsRegisterPage() {
           })}
         </div>
 
-        <div
-          ref={tableRef}
-          className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-        >
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2.5 shadow-md">
-                <FileStack className="h-5 w-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="truncate text-base font-bold text-gray-900">
-                  {getTableTitle()}
-                </h2>
-                <p className="mt-0.5 text-xs text-gray-500">
-                  {pagination.total} collection
-                  {pagination.total !== 1 ? "s" : ""} found
-                </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 p-2.5 shadow-md">
+                  <FileStack className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h2 className="truncate text-base font-bold text-gray-900">
+                    {getTableTitle()}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {getTableSubtitle()} — {totalCount} collection
+                    {totalCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <Table>
-            <TableHeader className="sticky">
-              <TableRow className="border-b border-gray-200 bg-slate-50/80 hover:bg-slate-50/80">
-                <TableHead className="h-10 min-w-[12rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Candidate
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Events
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Latest Type
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Latest Source
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Latest Date
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Locker #
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Received
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Status
-                </TableHead>
-                <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading || isFetching ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="animate-pulse">
-                    <TableCell colSpan={9} className="px-4 py-3">
-                      <div className="h-10 rounded bg-slate-100" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : collections.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-64 text-center">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-                        <FileStack className="h-8 w-8 text-slate-300" />
-                      </div>
-                      <p className="font-semibold text-slate-600">
-                        No collections found
-                      </p>
-                      <p className="text-sm text-slate-400">
-                        Try adjusting your search or filters.
-                      </p>
-                    </div>
-                  </TableCell>
+          <div ref={tableRef} className="overflow-hidden">
+            <Table>
+              <TableHeader className="sticky">
+                <TableRow className="border-b border-gray-200 bg-slate-50/80 hover:bg-slate-50/80">
+                  <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Candidate
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Events
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Latest Type
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Latest Source
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Latest Date
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Locker #
+                  </TableHead>
+                  <TableHead className="h-10 min-w-[10rem] px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Progress
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Received
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Status
+                  </TableHead>
+                  <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ) : (
-                collections.map((collection) => {
-                  const latest = collection.latestEvent;
-                  const docsOnFile =
-                    collection.cumulativeReceivedCount ??
-                    collection.cumulativeReceived?.length ??
-                    0;
-                  return (
-                    <TableRow
-                      key={collection.id}
-                      className="border-b border-slate-100 transition-colors hover:bg-slate-50/60"
-                    >
-                      <TableCell className="px-4 py-3">
-                        <div className="font-semibold text-slate-900">
-                          {collection.candidate.firstName}{" "}
-                          {collection.candidate.lastName}
-                        </div>
-                        {collection.candidate.candidateCode && (
-                          <p className="text-xs text-slate-500">
-                            {collection.candidate.candidateCode}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-700">
-                        {collection.eventCount ?? collection.events?.length ?? 0}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-700">
-                        {latest
-                          ? COLLECTION_TYPE_LABELS[latest.collectionType]
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="max-w-[180px] truncate px-4 py-3 text-sm text-slate-600">
-                        {latest ? formatSourceDetail(latest) : "—"}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-600">
-                        {latest
-                          ? format(new Date(latest.collectedAt), "dd MMM yyyy")
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-sm text-slate-700">
-                        {collection.lockerFileNumber ?? "—"}
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge variant="secondary" className="font-medium">
-                          {docsOnFile} doc{docsOnFile !== 1 ? "s" : ""}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={getStatusBadgeClass(collection.status)}
-                        >
-                          {COLLECTION_STATUS_LABELS[collection.status] ??
-                            collection.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              aria-label="Collection actions"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem asChild>
-                              <Link to={`/original-documents/${collection.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                View details
-                              </Link>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
 
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-              <p className="text-sm text-slate-500">
-                Page {pagination.page} of {pagination.totalPages}
+              <TableBody>
+                {isLoading || isFetching
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i} className="animate-pulse">
+                        <TableCell colSpan={10} className="px-4 py-3">
+                          <div className="h-10 rounded bg-slate-100" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  : collections.map((collection) => {
+                      const latest = collection.latestEvent;
+                      const docsOnFile =
+                        collection.cumulativeReceivedCount ??
+                        collection.cumulativeReceived?.length ??
+                        0;
+                      const statusInfo = getStatusInfo(collection.status);
+                      const StatusIcon = statusInfo.icon;
+
+                      return (
+                        <TableRow
+                          key={collection.id}
+                          className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-blue-50/30"
+                        >
+                          <TableCell className="min-w-[14rem] whitespace-normal px-4 py-3 align-top">
+                            <div className="flex items-start gap-3">
+                              <ImageViewer
+                                title={`${collection.candidate.firstName} ${collection.candidate.lastName}`}
+                                src={collection.candidate.profileImage || null}
+                                fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                                className="h-10 w-10 shrink-0 rounded-full"
+                                ariaLabel={`View full image for ${collection.candidate.firstName} ${collection.candidate.lastName}`}
+                                enableHoverPreview
+                              />
+                              <div className="min-w-0 flex-1">
+                                <CandidateListIdentityCell
+                                  firstName={collection.candidate.firstName}
+                                  lastName={collection.candidate.lastName}
+                                  candidateCode={
+                                    collection.candidate.candidateCode
+                                  }
+                                  onNameClick={() =>
+                                    navigate(
+                                      `/original-documents/${collection.id}`,
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center text-sm text-slate-700">
+                            <Badge
+                              variant="secondary"
+                              className="font-medium tabular-nums"
+                            >
+                              {collection.eventCount ??
+                                collection.events?.length ??
+                                0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-slate-700">
+                            {latest
+                              ? COLLECTION_TYPE_LABELS[latest.collectionType]
+                              : "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[180px] truncate px-4 py-3 text-sm text-slate-600">
+                            {latest ? formatSourceDetail(latest) : "—"}
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            {latest ? (
+                              <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                                {format(
+                                  new Date(latest.collectedAt),
+                                  "dd MMM yyyy",
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-slate-500">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm font-medium text-slate-700">
+                            {collection.lockerFileNumber ?? (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="px-4 py-3 align-top">
+                            <CollectionProgressCell
+                              cumulativeReceived={collection.cumulativeReceived}
+                            />
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            <Badge variant="secondary" className="font-medium">
+                              {docsOnFile} doc{docsOnFile !== 1 ? "s" : ""}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={cn(
+                                  "rounded-full p-1",
+                                  statusInfo.bgColor,
+                                )}
+                              >
+                                <StatusIcon
+                                  className={cn(
+                                    "h-3.5 w-3.5",
+                                    statusInfo.textColor.replace("700", "600"),
+                                  )}
+                                />
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "border px-2 py-0.5 text-[10px] font-medium",
+                                  statusInfo.textColor,
+                                  statusInfo.bgColor,
+                                  statusInfo.borderColor,
+                                )}
+                              >
+                                {COLLECTION_STATUS_LABELS[collection.status] ??
+                                  collection.status}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  aria-label="Collection actions"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                  <Link
+                                    to={`/original-documents/${collection.id}`}
+                                  >
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+              </TableBody>
+            </Table>
+
+            {!isLoading && !isFetching && collections.length === 0 && (
+              <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-400">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+                  <FileStack className="h-8 w-8 text-slate-300" />
+                </div>
+                <p className="font-semibold text-slate-600">
+                  No collections found
+                </p>
+                <p className="max-w-xs text-center text-sm text-slate-400">
+                  {hasActiveFilters
+                    ? "Try adjusting your search criteria or filters."
+                    : "Get started by adding candidate documents."}
+                </p>
+                {!hasActiveFilters && canWrite && (
+                  <Button
+                    onClick={() => navigate("/original-documents/new")}
+                    size="sm"
+                    className="mt-1 h-9 gap-1.5 rounded-xl bg-blue-600 px-4 text-white hover:bg-blue-700"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Original Documents
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {totalCount > 0 && (
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:flex-row">
+              <p className="text-xs text-slate-500">
+                Showing{" "}
+                <span className="font-semibold text-slate-700">
+                  {(page - 1) * limit + 1}
+                </span>
+                –
+                <span className="font-semibold text-slate-700">
+                  {Math.min(page * limit, totalCount)}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-slate-700">
+                  {totalCount}
+                </span>{" "}
+                collections
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 gap-1 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
                 >
-                  Previous
+                  Prev
                 </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (p) => {
+                      if (
+                        totalPages <= 7 ||
+                        p === 1 ||
+                        p === totalPages ||
+                        (p >= page - 1 && p <= page + 1)
+                      ) {
+                        return (
+                          <Button
+                            key={p}
+                            variant={page === p ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setPage(p)}
+                            className={cn(
+                              "h-8 w-8 p-0 text-xs",
+                              page === p
+                                ? "bg-blue-600 shadow-sm hover:bg-blue-700"
+                                : "text-slate-500 hover:bg-slate-100",
+                            )}
+                          >
+                            {p}
+                          </Button>
+                        );
+                      }
+                      if (p === page - 2 || p === page + 2) {
+                        return (
+                          <span
+                            key={p}
+                            className="px-0.5 text-xs text-slate-300"
+                          >
+                            …
+                          </span>
+                        );
+                      }
+                      return null;
+                    },
+                  )}
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page >= pagination.totalPages}
                   onClick={() =>
-                    setPage((p) => Math.min(pagination.totalPages, p + 1))
+                    setPage((p) => Math.min(totalPages, p + 1))
                   }
+                  disabled={page >= totalPages}
+                  className="h-8 gap-1 border-slate-200 text-xs text-slate-600 hover:bg-slate-100"
                 >
                   Next
                 </Button>

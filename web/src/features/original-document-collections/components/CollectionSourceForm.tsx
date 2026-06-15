@@ -1,4 +1,4 @@
-import { Control, Controller, UseFormRegister, UseFormWatch } from "react-hook-form";
+import { Control, Controller, FieldErrors, UseFormRegister, UseFormWatch } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,11 +20,23 @@ import {
   DIRECT_OFFICE_LABELS,
 } from "../constants";
 import type { CreateCollectionFormValues } from "../schemas/collection-form.schema";
+import { cn } from "@/lib/utils";
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="text-sm text-destructive" role="alert">
+      {message}
+    </p>
+  );
+}
 
 interface CollectionSourceFormProps {
   register: UseFormRegister<CreateCollectionFormValues>;
   control: Control<CreateCollectionFormValues>;
   watch: UseFormWatch<CreateCollectionFormValues>;
+  errors: FieldErrors<CreateCollectionFormValues>;
+  showErrors?: boolean;
   disabled?: boolean;
 }
 
@@ -32,10 +44,17 @@ export function CollectionSourceForm({
   register,
   control,
   watch,
+  errors,
+  showErrors = false,
   disabled,
 }: CollectionSourceFormProps) {
   const collectionType = watch("collectionType");
   const directOffice = watch("directOffice");
+
+  const fieldError = (name: keyof CreateCollectionFormValues) => {
+    const message = showErrors ? errors[name]?.message : undefined;
+    return typeof message === "string" ? message : undefined;
+  };
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -50,7 +69,12 @@ export function CollectionSourceForm({
               onValueChange={field.onChange}
               disabled={disabled}
             >
-              <SelectTrigger id="collectionType">
+              <SelectTrigger
+                id="collectionType"
+                className={cn(
+                  fieldError("collectionType") && "border-destructive",
+                )}
+              >
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
@@ -63,6 +87,7 @@ export function CollectionSourceForm({
             </Select>
           )}
         />
+        <FieldError message={fieldError("collectionType")} />
       </div>
 
       <div className="space-y-2">
@@ -71,19 +96,27 @@ export function CollectionSourceForm({
           control={control}
           name="collectedByUserId"
           render={({ field }) => (
-            <UserSelect
-              value={field.value}
-              onChange={field.onChange}
-              role={
-                collectionType === COLLECTION_TYPE.RECRUITER
-                  ? "Recruiter"
-                  : undefined
-              }
-              disabled={disabled}
-              placeholder="Select who collected documents"
-            />
+            <div
+              className={cn(
+                fieldError("collectedByUserId") &&
+                  "[&_button]:border-destructive",
+              )}
+            >
+              <UserSelect
+                value={field.value}
+                onChange={field.onChange}
+                role={
+                  collectionType === COLLECTION_TYPE.RECRUITER
+                    ? "Recruiter"
+                    : undefined
+                }
+                disabled={disabled}
+                placeholder="Select who collected documents"
+              />
+            </div>
           )}
         />
+        <FieldError message={fieldError("collectedByUserId")} />
       </div>
 
       <div className="space-y-2">
@@ -101,6 +134,7 @@ export function CollectionSourceForm({
             />
           )}
         />
+        <FieldError message={fieldError("collectedAt")} />
       </div>
 
       {collectionType === COLLECTION_TYPE.DIRECT && (
@@ -116,7 +150,11 @@ export function CollectionSourceForm({
                   onValueChange={field.onChange}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger
+                    className={cn(
+                      fieldError("directOffice") && "border-destructive",
+                    )}
+                  >
                     <SelectValue placeholder="Select office" />
                   </SelectTrigger>
                   <SelectContent>
@@ -129,6 +167,7 @@ export function CollectionSourceForm({
                 </Select>
               )}
             />
+            <FieldError message={fieldError("directOffice")} />
           </div>
           {directOffice === DIRECT_OFFICE.OTHER && (
             <div className="space-y-2 md:col-span-2">
@@ -137,7 +176,11 @@ export function CollectionSourceForm({
                 id="directOfficeOther"
                 {...register("directOfficeOther")}
                 disabled={disabled}
+                className={cn(
+                  fieldError("directOfficeOther") && "border-destructive",
+                )}
               />
+              <FieldError message={fieldError("directOfficeOther")} />
             </div>
           )}
         </>
@@ -176,7 +219,11 @@ export function CollectionSourceForm({
               id="agentNameManual"
               {...register("agentNameManual")}
               disabled={disabled}
+              className={cn(
+                fieldError("agentNameManual") && "border-destructive",
+              )}
             />
+            <FieldError message={fieldError("agentNameManual")} />
           </div>
         </>
       )}

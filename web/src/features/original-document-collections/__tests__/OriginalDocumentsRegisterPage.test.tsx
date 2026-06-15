@@ -103,5 +103,8 @@ describe("OriginalDocumentsRegisterPage", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Courier")).toBeInTheDocument();
     expect(screen.getByText("1 doc")).toBeInTheDocument();
+    expect(screen.getByText("Progress")).toBeInTheDocument();
+    expect(screen.getByText("2/8")).toBeInTheDocument();
+    expect(screen.getByText("25%")).toBeInTheDocument();
   });
 });

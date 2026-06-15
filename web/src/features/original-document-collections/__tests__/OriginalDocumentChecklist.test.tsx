@@ -6,18 +6,6 @@ import {
   OriginalDocumentChecklist,
 } from "../components/OriginalDocumentChecklist";
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({
-      children,
-      ...props
-    }: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
-  AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
-}));
-
 describe("OriginalDocumentChecklist", () => {
   it("disables and badges previously received document types", async () => {
     const user = userEvent.setup();
@@ -32,8 +20,8 @@ describe("OriginalDocumentChecklist", () => {
       />,
     );
 
-    expect(screen.getByText("Previously received")).toBeInTheDocument();
-    expect(screen.getByText(/1 previously received/)).toBeInTheDocument();
+    expect(screen.getByText("On file")).toBeInTheDocument();
+    expect(screen.getByText(/1 already on file/)).toBeInTheDocument();
 
     const degreeCheckbox = screen.getByRole("checkbox", {
       name: /degree certificate/i,

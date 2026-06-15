@@ -28,6 +28,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
+import { ListMergeHistoryQueryDto } from './dto/list-merge-history-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 
 @ApiTags('Original Document Collections')
@@ -72,6 +73,16 @@ export class OriginalDocumentCollectionsController {
     return this.collectionsService.findByCandidate(candidateId);
   }
 
+  @Get(':id/merge-history')
+  @Permissions('read:documents')
+  @ApiOperation({ summary: 'Get prior merged scan history for a collection' })
+  getMergeHistory(
+    @Param('id') id: string,
+    @Query() query: ListMergeHistoryQueryDto,
+  ) {
+    return this.collectionsService.getMergeHistory(id, query);
+  }
+
   @Get(':id')
   @Permissions('read:documents')
   @ApiOperation({ summary: 'Get collection detail with intake events' })
@@ -106,6 +117,51 @@ export class OriginalDocumentCollectionsController {
     @Body() dto: UpdateEventDto,
   ) {
     return this.collectionsService.updateEvent(id, eventId, dto);
+  }
+
+  @Post(':id/events/:eventId/upload-merge')
+  @Permissions('write:documents')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  })
+  @UseInterceptors(FilesInterceptor('files', 20))
+  @ApiOperation({
+    summary:
+      'Upload merged scan for a single intake event and rebuild collection merge',
+  })
+  uploadEventMerge(
+    @Param('id') id: string,
+    @Param('eventId') eventId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Req() req: { user: { id: string } },
+  ) {
+    return this.collectionsService.uploadEventMerge(
+      id,
+      eventId,
+      files,
+      req.user.id,
+    );
+  }
+
+  @Post(':id/rebuild-merge')
+  @Permissions('write:documents')
+  @ApiOperation({
+    summary: 'Rebuild collection merged PDF from all event merged scans',
+  })
+  rebuildMerge(@Param('id') id: string, @Req() req: { user: { id: string } }) {
+    return this.collectionsService.rebuildCollectionMergeFromEvents(
+      id,
+      req.user.id,
+    );
   }
 
   @Post(':id/upload-merge')

@@ -84,7 +84,7 @@ describe("CreateCollectionPage add-event flow", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Log Intake Event")).toBeInTheDocument();
+    expect(screen.getByText("Log intake event")).toBeInTheDocument();
     expect(screen.getByTestId("history-badges")).toBeInTheDocument();
     expect(screen.getByTestId("history-panel")).toBeInTheDocument();
   });
@@ -111,8 +111,8 @@ describe("CreateCollectionPage add-event flow", () => {
       screen.getByText("Original documents already collected"),
     ).toBeInTheDocument();
     expect(screen.getAllByText(/Jane Collector/).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Save & Continue" })).toBeNull();
-    expect(screen.getByRole("link", { name: "View Collection" })).toHaveAttribute(
+    expect(screen.queryByRole("button", { name: "Save & continue" })).toBeNull();
+    expect(screen.getByRole("link", { name: "View collection" })).toHaveAttribute(
       "href",
       "/original-documents/col-completed",
     );

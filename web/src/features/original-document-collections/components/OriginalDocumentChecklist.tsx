@@ -3,17 +3,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  GraduationCap,
-  Award,
-  Briefcase,
-  Search,
-  CheckCircle2,
-  Circle,
-  Lock,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Check, Lock, Search, X } from "lucide-react";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { ORIGINAL_DOCUMENT_CHECKLIST } from "../constants";
 import type { CollectionItem } from "../types";
@@ -23,22 +13,16 @@ interface OriginalDocumentChecklistProps {
   items: CollectionItem[];
   onChange: (items: CollectionItem[]) => void;
   disabled?: boolean;
+  error?: string;
   /** Doc types already received in prior completed collection events */
   previouslyReceivedDocTypes?: string[];
-}
-
-function getDocumentIcon(docType: string) {
-  if (docType.includes("degree") || docType.includes("certificate")) return GraduationCap;
-  if (docType.includes("passport")) return FileText;
-  if (docType.includes("registration")) return Award;
-  if (docType.includes("experience")) return Briefcase;
-  return FileText;
 }
 
 export function OriginalDocumentChecklist({
   items,
   onChange,
   disabled,
+  error,
   previouslyReceivedDocTypes = [],
 }: OriginalDocumentChecklistProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,198 +91,124 @@ export function OriginalDocumentChecklist({
   });
 
   return (
-    <div className="space-y-4">
-      {/* Progress Header */}
-      <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-emerald-900">
-              {hasPriorReceipts
-                ? `${newReceivedCount} new of ${totalCount} total`
-                : `${newReceivedCount} of ${totalCount} documents received`}
-            </p>
-            {hasPriorReceipts ? (
-              <p className="text-xs text-emerald-700/80">
-                {lockedCount} previously received — mark only new documents for
-                this event
-              </p>
-            ) : null}
-            <div className="mt-1.5 h-2 w-40 overflow-hidden rounded-full bg-emerald-100">
-              <motion.div
-                className="h-full bg-gradient-to-r from-emerald-500 to-green-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-              />
-            </div>
-          </div>
-        </div>
-        <Badge
-          variant="outline"
-          className="border-emerald-300 bg-white px-3 py-1.5 text-sm font-bold text-emerald-700"
-        >
-          {progressPercent}%
+    <div className="space-y-3">
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {hasPriorReceipts
+            ? `${newReceivedCount} new this visit · ${lockedCount} already on file`
+            : `${newReceivedCount} of ${totalCount} marked received`}
+        </p>
+        <Badge variant="outline" className="text-xs">
+          {progressPercent}% complete
         </Badge>
       </div>
 
-      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search documents..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 h-10 border-slate-200 focus:border-emerald-300 focus:ring-emerald-100"
+          className="h-9 pl-9"
         />
       </div>
 
-      {/* Document Grid */}
-      <div className="max-h-[400px] overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/30 p-2">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <AnimatePresence mode="popLayout">
-            {filteredDocs.map((docType) => {
-              const item = itemMap.get(docType);
-              const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
-              const Icon = getDocumentIcon(docType);
-              const isPreviouslyReceived = lockedSet.has(docType);
-              const isReceived =
-                isPreviouslyReceived || (item?.isReceived ?? false);
-              const isLocked = isPreviouslyReceived;
+      <div className="max-h-[360px] space-y-1.5 overflow-y-auto">
+        {filteredDocs.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No documents match your search.
+          </p>
+        ) : (
+          filteredDocs.map((docType) => {
+            const item = itemMap.get(docType);
+            const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
+            const isPreviouslyReceived = lockedSet.has(docType);
+            const isReceived =
+              isPreviouslyReceived || (item?.isReceived ?? false);
+            const isLocked = isPreviouslyReceived;
+            const showRemarks = isReceived && !isLocked;
 
-              return (
-                <motion.div
-                  key={docType}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn(
-                    "group relative overflow-hidden rounded-lg border-2 bg-white p-3 transition-all",
-                    isLocked
-                      ? "border-slate-200 bg-slate-50/80 opacity-90"
-                      : isReceived
-                        ? "border-emerald-200 bg-emerald-50/50 shadow-sm"
-                        : "border-slate-200 hover:border-slate-300 hover:shadow-sm",
-                  )}
-                >
-                  {/* Checkmark / Lock Badge */}
+            return (
+              <div
+                key={docType}
+                className={cn(
+                  "rounded-lg border px-2.5 py-2",
+                  isReceived
+                    ? "border-border bg-muted/40"
+                    : "border-border bg-background",
+                )}
+              >
+                <div className="flex items-center gap-2">
                   {isLocked ? (
-                    <div className="absolute right-2 top-2">
-                      <Badge
-                        variant="outline"
-                        className="border-slate-300 bg-white text-[10px] text-slate-600"
-                      >
-                        <Lock className="mr-1 inline h-3 w-3" />
-                        Previously received
-                      </Badge>
-                    </div>
-                  ) : isReceived ? (
-                    <div className="absolute right-2 top-2">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 shadow-sm">
-                        <CheckCircle2 className="h-4 w-4 text-white" />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {/* Document Header */}
-                  <div className="mb-2 flex items-start gap-2.5 pr-8">
-                    <div
-                      className={cn(
-                        "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-                        isReceived
-                          ? "bg-emerald-100 text-emerald-600"
-                          : "bg-slate-100 text-slate-500 group-hover:bg-slate-200",
-                      )}
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 gap-1 border-border bg-muted text-muted-foreground"
                     >
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`doc-${docType}`}
-                          checked={isReceived}
-                          onCheckedChange={(checked) =>
-                            handleToggle(docType, checked === true)
-                          }
-                          disabled={disabled || isLocked}
-                          className={cn(
-                            "h-5 w-5 transition-all",
-                            isReceived && "border-emerald-500 bg-emerald-500",
-                            isLocked && "opacity-60",
-                          )}
-                        />
-                        <Label
-                          htmlFor={`doc-${docType}`}
-                          className={cn(
-                            "text-sm font-medium leading-tight transition-colors",
-                            isLocked
-                              ? "cursor-not-allowed text-slate-500"
-                              : "cursor-pointer",
-                            !isLocked &&
-                              (isReceived
-                                ? "text-emerald-900"
-                                : "text-slate-700 group-hover:text-slate-900"),
-                          )}
-                        >
-                          {label}
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Remarks Input */}
+                      <Lock className="h-3 w-3" />
+                      On file
+                    </Badge>
+                  ) : (
+                    <Checkbox
+                      id={`doc-${docType}`}
+                      checked={isReceived}
+                      onCheckedChange={(checked) =>
+                        handleToggle(docType, checked === true)
+                      }
+                      disabled={disabled || isLocked}
+                      className="h-4 w-4 shrink-0"
+                    />
+                  )}
+                  <Label
+                    htmlFor={isLocked ? undefined : `doc-${docType}`}
+                    className={cn(
+                      "min-w-0 flex-1 text-sm",
+                      isLocked
+                        ? "text-muted-foreground"
+                        : isReceived
+                          ? "font-medium text-foreground"
+                          : "text-muted-foreground",
+                      !isLocked && !disabled && "cursor-pointer",
+                    )}
+                  >
+                    {label}
+                  </Label>
+                  {isReceived ? (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                    >
+                      <Check className="h-3 w-3" />
+                      Received
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 gap-1 border-destructive/30 bg-destructive/10 text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                      Not uploaded
+                    </Badge>
+                  )}
+                </div>
+                {showRemarks ? (
                   <Input
-                    placeholder="Add remarks..."
+                    placeholder="Remarks (optional)"
                     value={item?.remarks ?? ""}
                     onChange={(e) => handleRemarks(docType, e.target.value)}
-                    disabled={disabled || isLocked}
-                    className={cn(
-                      "h-8 text-xs transition-all",
-                      isReceived
-                        ? "border-emerald-200 bg-white focus:border-emerald-300"
-                        : "border-slate-200 bg-slate-50/50 focus:border-slate-300",
-                    )}
+                    disabled={disabled}
+                    className="mt-2 h-8 text-xs"
                     aria-label={`Remarks for ${label}`}
                   />
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-
-        {filteredDocs.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Circle className="mb-2 h-12 w-12 text-slate-300" />
-            <p className="text-sm font-medium text-slate-600">No documents found</p>
-            <p className="text-xs text-slate-400">Try a different search term</p>
-          </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-          <p className="text-2xl font-bold text-slate-900">{newReceivedCount}</p>
-          <p className="text-xs text-slate-500">
-            {hasPriorReceipts ? "New this event" : "Received"}
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-          <p className="text-2xl font-bold text-slate-900">
-            {newTotalCount - newReceivedCount}
-          </p>
-          <p className="text-xs text-slate-500">
-            {hasPriorReceipts ? "Remaining new" : "Pending"}
-          </p>
-        </div>
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-center">
-          <p className="text-2xl font-bold text-emerald-700">{progressPercent}%</p>
-          <p className="text-xs text-emerald-600">Complete</p>
-        </div>
       </div>
     </div>
   );

@@ -13,6 +13,10 @@ describe('OriginalDocumentCollectionsService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
     },
+    originalDocumentCollectionMergeHistory: {
+      findMany: jest.fn(),
+      count: jest.fn(),
+    },
     candidate: {
       findUnique: jest.fn(),
     },
@@ -93,6 +97,44 @@ describe('OriginalDocumentCollectionsService', () => {
       expect(result.data.collection).toBeNull();
       expect(result.data.events).toEqual([]);
       expect(result.data.cumulativeReceived).toEqual([]);
+    });
+  });
+
+  describe('getMergeHistory', () => {
+    it('returns merge history for a collection', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+      });
+      prisma.originalDocumentCollectionMergeHistory.findMany.mockResolvedValue([
+        {
+          id: 'hist-1',
+          collectionId: 'col-1',
+          documentId: 'doc-old',
+          uploadedAt: new Date('2026-06-12'),
+          uploadedByUserId: 'user-1',
+          replacedAt: new Date('2026-06-12'),
+          document: {
+            id: 'doc-old',
+            fileName: 'combined.pdf',
+            fileUrl: 'https://example.com/combined.pdf',
+            mimeType: 'application/pdf',
+          },
+          uploadedBy: { id: 'user-1', name: 'DCE User' },
+        },
+      ]);
+      prisma.originalDocumentCollectionMergeHistory.count.mockResolvedValue(1);
+
+      const result = await service.getMergeHistory('col-1', { page: 1, limit: 10 });
+
+      expect(result.success).toBe(true);
+      expect(result.data.items).toHaveLength(1);
+      expect(result.data.items[0].document.fileName).toBe('combined.pdf');
+      expect(result.data.pagination).toEqual({
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      });
     });
   });
 

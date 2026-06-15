@@ -1,21 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
-import { ExternalLink, FileStack, History, Eye } from "lucide-react";
+import { Download, ExternalLink, Eye, FileStack, History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { useCan } from "@/hooks/useCan";
-import { useGetCandidateOriginalDocumentCollectionsQuery } from "../api";
+import { useGetCandidateOriginalDocumentCollectionsQuery, useGetOriginalDocumentCollectionMergeHistoryQuery } from "../api";
+import { EventMergeUploadRow } from "./EventMergeUploadRow";
 import {
   COLLECTION_STATUS_LABELS,
   COLLECTION_TYPE,
   COLLECTION_TYPE_LABELS,
   DIRECT_OFFICE_LABELS,
 } from "../constants";
-import type { OriginalDocumentCollectionEvent } from "../types";
+import type {
+  CollectionMergedDocument,
+  OriginalDocumentCollectionEvent,
+} from "../types";
 import { cn } from "@/lib/utils";
 
 export type CandidateCollectionHistoryPanelProps = {
@@ -23,11 +33,21 @@ export type CandidateCollectionHistoryPanelProps = {
   variant?: "compact" | "full";
   highlightEventId?: string;
   showAddEventLink?: boolean;
+  onUpdated?: () => void;
+  allowEventMergeUpload?: boolean;
   className?: string;
 };
 
 function docTypeLabel(docType: string): string {
   return getDocumentTypeConfig(docType)?.displayName ?? docType;
+}
+
+function isPdfDocument(doc: CollectionMergedDocument): boolean {
+  return (
+    !doc.mimeType ||
+    doc.mimeType.includes("pdf") ||
+    doc.fileName.toLowerCase().endsWith(".pdf")
+  );
 }
 
 function formatSourceDetail(event: OriginalDocumentCollectionEvent): string {
@@ -54,19 +74,39 @@ export function CandidateCollectionHistoryPanel({
   variant = "full",
   highlightEventId,
   showAddEventLink = true,
+  onUpdated,
+  allowEventMergeUpload = false,
   className,
 }: CandidateCollectionHistoryPanelProps) {
   const canRead = useCan("read:documents");
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [previewDocument, setPreviewDocument] =
+    useState<CollectionMergedDocument | null>(null);
+  const [mergeHistoryPage, setMergeHistoryPage] = useState(1);
+  const mergeHistoryLimit = 10;
   const { data, isLoading } = useGetCandidateOriginalDocumentCollectionsQuery(
     candidateId,
     { skip: !canRead || !candidateId },
   );
+  const collection = data?.data?.collection;
+  const { data: mergeHistoryResponse } =
+    useGetOriginalDocumentCollectionMergeHistoryQuery(
+      {
+        id: collection?.id ?? "",
+        page: mergeHistoryPage,
+        limit: mergeHistoryLimit,
+      },
+      { skip: !canRead || !collection?.id },
+    );
+  const mergeHistory = mergeHistoryResponse?.data?.items ?? [];
+  const mergeHistoryPagination = mergeHistoryResponse?.data?.pagination;
+
+  useEffect(() => {
+    setMergeHistoryPage(1);
+  }, [collection?.id]);
 
   if (!canRead || !candidateId) return null;
 
   const payload = data?.data;
-  const collection = payload?.collection;
   const events = payload?.events ?? collection?.events ?? [];
   const cumulative = payload?.cumulativeReceived ?? [];
   const isCompact = variant === "compact";
@@ -151,40 +191,41 @@ export function CandidateCollectionHistoryPanel({
       )}
 
       {collection?.mergedDocument ? (
-        <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 p-4">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-purple-900">
-            Current merged scan
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="mb-2 text-xs font-medium text-foreground">
+            Combined merged scan (all events)
           </p>
-          <div className="flex items-center justify-between gap-2 rounded-md bg-white/80 border border-purple-200 p-2.5">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <FileStack className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-              <span className="text-xs font-medium text-purple-900 truncate">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <FileStack className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate text-xs text-muted-foreground">
                 {collection.mergedDocument.fileName}
               </span>
             </div>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex shrink-0 gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowPdfViewer(true)}
-                className="h-7 w-7 p-0 border-purple-300 hover:bg-purple-100"
+                onClick={() => setPreviewDocument(collection.mergedDocument!)}
+                className="h-7 w-7 p-0"
                 title="Preview PDF"
               >
-                <Eye className="h-3.5 w-3.5 text-purple-700" />
+                <Eye className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 asChild
-                className="h-7 w-7 p-0 border-purple-300 hover:bg-purple-100"
-                title="Open in new tab"
+                className="h-7 w-7 p-0"
+                title="Download PDF"
               >
                 <a
                   href={collection.mergedDocument.fileUrl}
+                  download={collection.mergedDocument.fileName}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 text-purple-700" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </Button>
             </div>
@@ -251,48 +292,154 @@ export function CandidateCollectionHistoryPanel({
                   No documents marked received in this event.
                 </p>
               )}
+
+              {collection && received.length > 0 ? (
+                <EventMergeUploadRow
+                  collectionId={collection.id}
+                  eventId={event.id}
+                  eventLabel={`Event ${index + 1}`}
+                  mergedDocument={event.mergedDocument}
+                  disabled={
+                    collection.status === "completed" || !allowEventMergeUpload
+                  }
+                  onUpdated={onUpdated}
+                />
+              ) : null}
             </div>
           );
         })}
       </div>
 
-      {collection?.mergeHistory && collection.mergeHistory.length > 0 ? (
+      {mergeHistory.length > 0 ? (
         <div className="rounded-lg border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-gray-50 p-3.5">
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-700">
-            Prior merged scans
-          </p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-700">
+              Prior merged scans
+            </p>
+            {mergeHistoryPagination ? (
+              <span className="text-[10px] text-slate-500">
+                {mergeHistoryPagination.total} total
+              </span>
+            ) : null}
+          </div>
           <div className="space-y-1.5">
-            {collection.mergeHistory.map((entry) => (
-              <a
+            {mergeHistory.map((entry) => (
+              <div
                 key={entry.id}
-                href={entry.document.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 text-xs text-primary hover:underline rounded-md bg-white border border-slate-200 p-2 transition-colors hover:border-slate-300"
+                className="flex items-center gap-2 rounded-md border border-slate-200 bg-white p-2 transition-colors hover:border-slate-300"
               >
-                <FileStack className="h-3 w-3 shrink-0" />
-                <span className="flex-1 truncate">{entry.document.fileName}</span>
-                <span className="text-slate-500 text-[10px] shrink-0">
+                <FileStack className="h-3 w-3 shrink-0 text-slate-500" />
+                <span className="min-w-0 flex-1 truncate text-xs text-slate-800">
+                  {entry.document.fileName}
+                </span>
+                <span className="shrink-0 text-[10px] text-slate-500">
                   {format(new Date(entry.uploadedAt), "dd MMM yyyy")}
                 </span>
-                <ExternalLink className="h-3 w-3 shrink-0" />
-              </a>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    title="View"
+                    onClick={() => setPreviewDocument(entry.document)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="h-7 w-7 p-0"
+                    title="Download"
+                  >
+                    <a
+                      href={entry.document.fileUrl}
+                      download={entry.document.fileName}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
             ))}
           </div>
+          {mergeHistoryPagination && mergeHistoryPagination.totalPages > 1 ? (
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-200 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                disabled={mergeHistoryPage <= 1}
+                onClick={() => setMergeHistoryPage((p) => Math.max(1, p - 1))}
+              >
+                Prev
+              </Button>
+              <span className="text-[10px] text-slate-500">
+                Page {mergeHistoryPagination.page} of{" "}
+                {mergeHistoryPagination.totalPages}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                disabled={
+                  mergeHistoryPage >= mergeHistoryPagination.totalPages
+                }
+                onClick={() =>
+                  setMergeHistoryPage((p) =>
+                    Math.min(mergeHistoryPagination.totalPages, p + 1),
+                  )
+                }
+              >
+                Next
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
   );
 
-  // PDF Viewer Modal
-  const pdfViewerModal = collection?.mergedDocument && (
-    <PDFViewer
-      fileUrl={collection.mergedDocument.fileUrl}
-      fileName={collection.mergedDocument.fileName}
-      isOpen={showPdfViewer}
-      onClose={() => setShowPdfViewer(false)}
-    />
-  );
+  const documentPreviewModal = previewDocument ? (
+    isPdfDocument(previewDocument) ? (
+      <PDFViewer
+        key={previewDocument.id}
+        fileUrl={previewDocument.fileUrl}
+        fileName={previewDocument.fileName}
+        cacheKey={previewDocument.id}
+        isOpen
+        onClose={() => setPreviewDocument(null)}
+      />
+    ) : (
+      <Dialog
+        open
+        onOpenChange={(open) => {
+          if (!open) setPreviewDocument(null);
+        }}
+      >
+        <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col overflow-hidden p-0">
+          <DialogHeader className="border-b px-4 py-3">
+            <DialogTitle className="truncate pr-8 text-base">
+              {previewDocument.fileName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-auto bg-slate-100 p-4">
+            <img
+              src={`${previewDocument.fileUrl}${previewDocument.fileUrl.includes("?") ? "&" : "?"}_cb=${previewDocument.id}`}
+              alt={previewDocument.fileName}
+              className="mx-auto max-h-[calc(92vh-6rem)] w-full object-contain"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  ) : null;
 
   if (isCompact) {
     return (
@@ -330,7 +477,7 @@ export function CandidateCollectionHistoryPanel({
           </div>
           {content}
         </div>
-        {pdfViewerModal}
+        {documentPreviewModal}
       </>
     );
   }
@@ -370,20 +517,27 @@ export function CandidateCollectionHistoryPanel({
           ) : null}
         </CardHeader>
         <CardContent className="space-y-4 p-4">
-          {payload?.candidate?.lockerFileNumber ? (
+          {collection ? (
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium text-slate-600">
                 Locker File Number
               </p>
-              <p className="text-sm font-bold font-mono text-slate-900 mt-0.5">
-                {payload.candidate.lockerFileNumber}
+              <p
+                className={cn(
+                  "mt-0.5 text-sm font-bold font-mono",
+                  collection.lockerFileNumber?.trim()
+                    ? "text-slate-900"
+                    : "text-slate-400",
+                )}
+              >
+                {collection.lockerFileNumber?.trim() || "N/A"}
               </p>
             </div>
           ) : null}
           {content}
         </CardContent>
       </Card>
-      {pdfViewerModal}
+      {documentPreviewModal}
     </>
   );
 }

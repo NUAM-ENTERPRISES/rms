@@ -34,24 +34,16 @@ import { useUpdateCandidateStatusMutation } from "../api";
 import { useGetCandidateStatusesQuery } from "@/services/candidatesApi";
 import {
   Loader2,
-  AlertCircle,
-  UserCheck,
-  XCircle,
-  Mail,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  Briefcase,
-  CheckCircle,
-  FileText,
-  Award,
-  UserX,
   Target,
   ArrowRight,
   Sparkles,
-  Phone,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getCandidateStatusVisualConfig,
+  normalizeCandidateStatusKey,
+} from "../utils/candidateStatusVisualConfig";
 
 const statusUpdateSchema = z.object({
   currentStatusId: z.string().min(1, "Please select a status"),
@@ -70,146 +62,6 @@ interface StatusUpdateModalProps {
   currentStatus: string;
   candidateName: string;
 }
-
-const statusConfigMap: Record<string, any> = {
-  untouched: {
-    color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
-    iconColor: "text-orange-500",
-    icon: AlertCircle,
-  },
-  interested: {
-    color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
-    iconColor: "text-green-500",
-    icon: UserCheck,
-  },
-  "not interested": {
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-    icon: XCircle,
-  },
-  "not eligible": {
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-    icon: XCircle,
-  },
-  "other enquiry": {
-    color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
-    iconColor: "text-purple-500",
-    icon: Mail,
-  },
-  future: {
-    color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
-    iconColor: "text-indigo-500",
-    icon: Calendar,
-  },
-  "on hold": {
-    color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
-    iconColor: "text-yellow-500",
-    icon: Clock,
-  },
-  onhold: {
-    color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
-    iconColor: "text-yellow-500",
-    icon: Clock,
-  },
-  rnr: {
-    color: "from-pink-400 to-pink-600",
-    bgColor: "bg-pink-50",
-    iconColor: "text-pink-500",
-    icon: AlertCircle,
-  },
-  "call back": {
-    color: "from-cyan-400 to-teal-600",
-    bgColor: "bg-cyan-50",
-    iconColor: "text-cyan-500",
-    icon: Phone,
-  },
-  call_back: {
-    color: "from-cyan-400 to-teal-600",
-    bgColor: "bg-cyan-50",
-    iconColor: "text-cyan-500",
-    icon: Phone,
-  },
-  qualified: {
-    color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-    icon: CheckCircle2,
-  },
-  working: {
-    color: "from-blue-400 to-blue-600",
-    bgColor: "bg-blue-50",
-    iconColor: "text-blue-500",
-    icon: Briefcase,
-  },
-  selected: {
-    icon: CheckCircle,
-    color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
-    iconColor: "text-green-500",
-  },
-  rejected: {
-    icon: XCircle,
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-  },
-  "in-process": {
-    icon: FileText,
-    color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
-    iconColor: "text-indigo-500",
-  },
-  shortlisted: {
-    icon: UserCheck,
-    color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
-    iconColor: "text-cyan-500",
-  },
-  interviewed: {
-    icon: Calendar,
-    color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
-    iconColor: "text-purple-500",
-  },
-  offered: {
-    icon: Award,
-    color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
-    iconColor: "text-orange-500",
-  },
-  placed: {
-    icon: Briefcase,
-    color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-  },
-  withdrawn: {
-    icon: UserX,
-    color: "from-rose-400 to-rose-600",
-    bgColor: "bg-rose-50",
-    iconColor: "text-rose-500",
-  },
-  default: {
-    color: "from-gray-400 to-gray-600",
-    bgColor: "bg-gray-50",
-    iconColor: "text-gray-500",
-    icon: AlertCircle,
-  },
-};
-
-const getStatusConfig = (statusName?: string) => {
-  const name = (statusName || "").toLowerCase().trim();
-  return statusConfigMap[name] || statusConfigMap.default;
-};
 
 export function StatusUpdateModal({
   isOpen,
@@ -242,10 +94,9 @@ export function StatusUpdateModal({
     );
   }, [statusesData?.data]);
 
-  const normalizeStatusKey = (name?: string) =>
-    (name || "").toLowerCase().trim().replace(/_/g, " ");
+  const normalizeStatusKey = normalizeCandidateStatusKey;
 
-  const currentConfig = getStatusConfig(currentStatus);
+  const currentConfig = getCandidateStatusVisualConfig(currentStatus);
   const CurrentIcon = currentConfig.icon;
 
   useEffect(() => {
@@ -375,7 +226,7 @@ export function StatusUpdateModal({
     (status) => String(status.id) === selectedStatusId,
   );
   const selectedStatusName = (selectedStatus?.statusName || "").toLowerCase();
-  const selectedConfig = getStatusConfig(selectedStatus?.statusName);
+  const selectedConfig = getCandidateStatusVisualConfig(selectedStatus?.statusName);
   const SelectedIcon = selectedConfig.icon;
 
   return (
@@ -474,7 +325,7 @@ export function StatusUpdateModal({
                             </div>
                         ) : (
                             statuses.map((status) => {
-                            const config = getStatusConfig(status.statusName);
+                            const config = getCandidateStatusVisualConfig(status.statusName);
                             const Icon = config.icon;
                             return (
                                 <SelectItem 

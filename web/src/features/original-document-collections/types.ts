@@ -36,6 +36,8 @@ export interface OriginalDocumentCollectionEvent {
   collectionType: CollectionType;
   collectedByUserId: string;
   collectedAt: string;
+  mergedDocumentId?: string | null;
+  mergedDocument?: CollectionMergedDocument | null;
   directOffice?: string | null;
   directOfficeOther?: string | null;
   interviewVenue?: string | null;

@@ -18,6 +18,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
+import { ListMergeHistoryQueryDto } from './dto/list-merge-history-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 import { CollectionItemDto } from './dto/collection-item.dto';
 
@@ -44,10 +45,19 @@ const candidateSelect = {
   },
 } satisfies Prisma.CandidateSelect;
 
+const documentSelect = {
+  id: true,
+  fileName: true,
+  fileUrl: true,
+  mimeType: true,
+  docType: true,
+} satisfies Prisma.DocumentSelect;
+
 const eventInclude = {
   collectedBy: { select: { id: true, name: true, email: true } },
   createdBy: { select: { id: true, name: true } },
   agent: { select: { id: true, name: true } },
+  mergedDocument: { select: documentSelect },
   items: true,
 } satisfies Prisma.OriginalDocumentCollectionEventInclude;
 
@@ -57,33 +67,28 @@ const collectionInclude = {
   completedBy: { select: { id: true, name: true, email: true } },
   createdBy: { select: { id: true, name: true, email: true } },
   mergedDocument: {
-    select: {
-      id: true,
-      fileName: true,
-      fileUrl: true,
-      mimeType: true,
-      docType: true,
-    },
-  },
-  mergeHistory: {
-    orderBy: { uploadedAt: 'desc' as const },
-    include: {
-      document: {
-        select: {
-          id: true,
-          fileName: true,
-          fileUrl: true,
-          mimeType: true,
-        },
-      },
-      uploadedBy: { select: { id: true, name: true } },
-    },
+    select: documentSelect,
   },
   events: {
     include: eventInclude,
     orderBy: { collectedAt: 'asc' as const },
   },
 } satisfies Prisma.OriginalDocumentCollectionInclude;
+
+const mergeHistoryInclude = {
+  orderBy: { uploadedAt: 'desc' as const },
+  include: {
+    document: {
+      select: {
+        id: true,
+        fileName: true,
+        fileUrl: true,
+        mimeType: true,
+      },
+    },
+    uploadedBy: { select: { id: true, name: true } },
+  },
+} satisfies Prisma.OriginalDocumentCollectionMergeHistoryFindManyArgs;
 
 type CollectionWithRelations = Prisma.OriginalDocumentCollectionGetPayload<{
   include: typeof collectionInclude;
@@ -231,6 +236,45 @@ export class OriginalDocumentCollectionsService {
   async findOne(id: string) {
     const collection = await this.findOrThrow(id);
     return { success: true, data: this.enrichCollection(collection) };
+  }
+
+  async getMergeHistory(id: string, query: ListMergeHistoryQueryDto = {}) {
+    const collection = await this.prisma.originalDocumentCollection.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!collection) {
+      throw new NotFoundException('Collection not found');
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const [mergeHistory, total] = await Promise.all([
+      this.prisma.originalDocumentCollectionMergeHistory.findMany({
+        where: { collectionId: id },
+        ...mergeHistoryInclude,
+        skip,
+        take: limit,
+      }),
+      this.prisma.originalDocumentCollectionMergeHistory.count({
+        where: { collectionId: id },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items: mergeHistory,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.max(1, Math.ceil(total / limit)),
+        },
+      },
+    };
   }
 
   async findByCandidate(candidateId: string) {
@@ -413,7 +457,7 @@ export class OriginalDocumentCollectionsService {
     const slug = this.slugify(
       `${collection.candidate.firstName}_${collection.candidate.lastName}`,
     );
-    const fileName = `${slug}_original_documents.pdf`;
+    const fileName = `${slug}_original_documents_${Date.now()}.pdf`;
     const folder = `candidates/documents/${collection.candidateId}/original_documents_bundle`;
 
     const upload = await this.uploadService.uploadBuffer(
@@ -471,6 +515,152 @@ export class OriginalDocumentCollectionsService {
     };
   }
 
+  async uploadEventMerge(
+    collectionId: string,
+    eventId: string,
+    files: Express.Multer.File[],
+    userId: string,
+  ) {
+    const collection = await this.findOrThrow(collectionId);
+    const event = collection.events.find((e) => e.id === eventId);
+    if (!event) {
+      throw new NotFoundException('Intake event not found');
+    }
+    if (!files?.length) {
+      throw new BadRequestException('At least one file is required');
+    }
+
+    const mergedBuffer = await this.mergeFiles(files);
+    const slug = this.slugify(
+      `${collection.candidate.firstName}_${collection.candidate.lastName}`,
+    );
+    const eventIndex =
+      [...collection.events]
+        .sort(
+          (a, b) =>
+            new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
+        )
+        .findIndex((e) => e.id === eventId) + 1;
+    const fileName = `${slug}_intake_event_${eventIndex}.pdf`;
+    const folder = `candidates/documents/${collection.candidateId}/original_documents_bundle/events`;
+
+    const upload = await this.uploadService.uploadBuffer(
+      mergedBuffer,
+      folder,
+      fileName,
+      'application/pdf',
+    );
+
+    const document = await this.prisma.document.create({
+      data: {
+        candidateId: collection.candidateId,
+        docType: DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE,
+        fileName: upload.fileName,
+        fileUrl: upload.fileUrl,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+        uploadedBy: userId,
+        status: 'pending',
+        notes: `DCE merged original documents (collection ${collectionId}, event ${eventId})`,
+      },
+    });
+
+    await this.prisma.originalDocumentCollectionEvent.update({
+      where: { id: eventId },
+      data: { mergedDocumentId: document.id },
+    });
+
+    const updated = await this.rebuildCollectionMergeFromEvents(
+      collectionId,
+      userId,
+    );
+
+    return {
+      success: true,
+      data: updated,
+      mergedDocumentId: document.id,
+    };
+  }
+
+  async rebuildCollectionMergeFromEvents(collectionId: string, userId: string) {
+    const collection = await this.findOrThrow(collectionId);
+    const eventsWithMerge = [...collection.events]
+      .filter((event) => event.mergedDocument?.fileUrl)
+      .sort(
+        (a, b) =>
+          new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
+      );
+
+    if (eventsWithMerge.length === 0) {
+      throw new BadRequestException(
+        'Upload at least one event merged scan before building the collection merge',
+      );
+    }
+
+    const buffers: Buffer[] = [];
+    for (const event of eventsWithMerge) {
+      const fileUrl = event.mergedDocument!.fileUrl;
+      buffers.push(await this.uploadService.getFile(fileUrl));
+    }
+
+    const combinedBuffer = await this.mergePdfBuffers(buffers);
+    const slug = this.slugify(
+      `${collection.candidate.firstName}_${collection.candidate.lastName}`,
+    );
+    const fileName = `${slug}_original_documents_combined_${Date.now()}.pdf`;
+    const folder = `candidates/documents/${collection.candidateId}/original_documents_bundle`;
+
+    const upload = await this.uploadService.uploadBuffer(
+      combinedBuffer,
+      folder,
+      fileName,
+      'application/pdf',
+    );
+
+    const document = await this.prisma.document.create({
+      data: {
+        candidateId: collection.candidateId,
+        docType: DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE,
+        fileName: upload.fileName,
+        fileUrl: upload.fileUrl,
+        fileSize: upload.fileSize,
+        mimeType: upload.mimeType,
+        uploadedBy: userId,
+        status: 'pending',
+        notes: `DCE combined merge from ${eventsWithMerge.length} intake event(s) (collection ${collectionId})`,
+      },
+    });
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (collection.mergedDocumentId) {
+        await tx.originalDocumentCollectionMergeHistory.create({
+          data: {
+            collectionId,
+            documentId: collection.mergedDocumentId,
+            uploadedByUserId: userId,
+            replacedAt: new Date(),
+          },
+        });
+      }
+
+      return tx.originalDocumentCollection.update({
+        where: { id: collectionId },
+        data: {
+          mergedDocumentId: document.id,
+          status:
+            collection.status === COLLECTION_STATUS.DRAFT
+              ? COLLECTION_STATUS.MERGED_UPLOADED
+              : collection.status === COLLECTION_STATUS.LOCKER_SUBMITTED
+                ? COLLECTION_STATUS.LOCKER_SUBMITTED
+                : COLLECTION_STATUS.MERGED_UPLOADED,
+        },
+        include: collectionInclude,
+      });
+    });
+
+    return this.enrichCollection(updated);
+  }
+
   async submitToLocker(id: string, dto: SubmitToLockerDto, userId: string) {
     const collection = await this.findOrThrow(id);
     if (!collection.mergedDocumentId) {
@@ -479,6 +669,7 @@ export class OriginalDocumentCollectionsService {
       );
     }
 
+    const isUpdate = Boolean(collection.lockerSubmittedAt);
     const now = new Date();
     const updated = await this.prisma.$transaction(async (tx) => {
       await tx.candidate.update({
@@ -490,9 +681,13 @@ export class OriginalDocumentCollectionsService {
         where: { id },
         data: {
           lockerFileNumber: dto.lockerFileNumber,
-          lockerSubmittedAt: now,
-          lockerSubmittedByUserId: userId,
-          status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+          ...(isUpdate
+            ? {}
+            : {
+                lockerSubmittedAt: now,
+                lockerSubmittedByUserId: userId,
+                status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+              }),
         },
         include: collectionInclude,
       });
@@ -842,6 +1037,25 @@ export class OriginalDocumentCollectionsService {
           `Unsupported file type: ${file.originalname}`,
         );
       }
+    }
+
+    if (mergedPdf.getPageCount() === 0) {
+      throw new BadRequestException('No valid pages to merge');
+    }
+
+    return Buffer.from(await mergedPdf.save());
+  }
+
+  private async mergePdfBuffers(buffers: Buffer[]): Promise<Buffer> {
+    if (buffers.length === 1) {
+      return buffers[0];
+    }
+
+    const mergedPdf = await PDFDocument.create();
+    for (const buffer of buffers) {
+      const pdfDoc = await PDFDocument.load(buffer);
+      const copied = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+      copied.forEach((page) => mergedPdf.addPage(page));
     }
 
     if (mergedPdf.getPageCount() === 0) {

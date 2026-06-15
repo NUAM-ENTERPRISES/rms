@@ -1,23 +1,24 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type RefObject } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ArrowLeft,
   Loader2,
   UserSearch,
-  FileStack,
   ClipboardList,
-  Check,
-  Circle,
-  Sparkles,
   CheckCircle2,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SelectCandidate } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
 import {
@@ -40,8 +41,23 @@ import {
   createCollectionSchema,
   type CreateCollectionFormValues,
 } from "../schemas/collection-form.schema";
-import type { CollectionItem } from "../types";
+import {
+  getCollectionSourceErrorMessage,
+  getFirstInvalidSection,
+  type CreateCollectionFormSection,
+  validateChecklistItemsForVisit,
+} from "../utils/createCollectionFormValidation";
 import { cn } from "@/lib/utils";
+
+function normalizeChecklistItems(
+  items: ReturnType<typeof buildDefaultChecklistItems>,
+): NonNullable<CreateCollectionFormValues["items"]> {
+  return items.map(({ docType, isReceived, remarks }) => ({
+    docType,
+    isReceived,
+    remarks: remarks ?? undefined,
+  }));
+}
 
 export default function CreateCollectionPage() {
   const navigate = useNavigate();
@@ -54,21 +70,19 @@ export default function CreateCollectionPage() {
   const [addEvent, { isLoading: isAddingEvent }] =
     useAddOriginalDocumentCollectionEventMutation();
 
-  const defaultItems = useMemo(() => buildDefaultChecklistItems(), []);
+  const defaultItems = useMemo(() => normalizeChecklistItems(buildDefaultChecklistItems()), []);
 
-  const form = useForm<CreateCollectionFormValues & { items: CollectionItem[] }>(
-    {
-      resolver: zodResolver(createCollectionSchema),
-      defaultValues: {
-        candidateId: preselectedCandidateId,
-        collectionType: COLLECTION_TYPE.DIRECT,
-        collectedByUserId: "",
-        collectedAt: new Date().toISOString(),
-        directOffice: "kochi",
-        items: defaultItems,
-      },
+  const form = useForm<CreateCollectionFormValues>({
+    resolver: zodResolver(createCollectionSchema),
+    defaultValues: {
+      candidateId: preselectedCandidateId,
+      collectionType: COLLECTION_TYPE.DIRECT,
+      collectedByUserId: "",
+      collectedAt: new Date().toISOString(),
+      directOffice: "kochi",
+      items: defaultItems,
     },
-  );
+  });
 
   const selectedCandidateId = form.watch("candidateId");
   const { data: historyData } = useGetCandidateOriginalDocumentCollectionsQuery(
@@ -90,26 +104,64 @@ export default function CreateCollectionPage() {
   const isLoading = isCreating || isAddingEvent;
 
   const prevCandidateRef = useRef(selectedCandidateId);
+  const candidateSectionRef = useRef<HTMLDivElement>(null);
+  const collectionSourceSectionRef = useRef<HTMLDivElement>(null);
+  const checklistSectionRef = useRef<HTMLDivElement>(null);
+
+  const sectionRefs: Record<
+    CreateCollectionFormSection,
+    RefObject<HTMLDivElement | null>
+  > = {
+    candidate: candidateSectionRef,
+    collectionSource: collectionSourceSectionRef,
+    checklist: checklistSectionRef,
+  };
+
+  const scrollToSection = (section: CreateCollectionFormSection) => {
+    sectionRefs[section].current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
+  const handleInvalidSubmit = (
+    errors: FieldErrors<CreateCollectionFormValues>,
+  ) => {
+    const section = getFirstInvalidSection(errors);
+    if (section) {
+      scrollToSection(section);
+    }
+    toast.error("Please complete the highlighted sections before saving.");
+  };
   useEffect(() => {
     if (prevCandidateRef.current !== selectedCandidateId) {
-      form.setValue("items", buildDefaultChecklistItems());
+      form.setValue("items", normalizeChecklistItems(buildDefaultChecklistItems()));
       prevCandidateRef.current = selectedCandidateId;
     }
   }, [selectedCandidateId, form]);
 
   if (!canWrite) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         You do not have permission to create collections.
       </div>
     );
   }
 
-  const onSubmit = async (
-    values: CreateCollectionFormValues & { items: CollectionItem[] },
-  ) => {
+  const onSubmit = async (values: CreateCollectionFormValues) => {
     if (isCollectionCompleted) {
       toast.error("This candidate's original document collection is already completed.");
+      return;
+    }
+
+    const checklistError = validateChecklistItemsForVisit(
+      values.items,
+      previouslyReceivedDocTypes,
+    );
+    if (checklistError) {
+      form.setError("items", { type: "manual", message: checklistError });
+      scrollToSection("checklist");
+      toast.error(checklistError);
       return;
     }
 
@@ -155,102 +207,73 @@ export default function CreateCollectionPage() {
     }
   };
 
+  const {
+    errors,
+    isSubmitted,
+  } = form.formState;
+  const showValidation = isSubmitted;
+  const candidateSectionError = showValidation && Boolean(errors.candidateId);
+  const collectionSourceSectionError =
+    showValidation && Boolean(getCollectionSourceErrorMessage(errors));
+  const checklistSectionError =
+    showValidation && Boolean(errors.items?.message);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-indigo-50/30">
-      {/* Premium Header Section */}
-      <div className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="hover:bg-slate-100 rounded-xl transition-all"
-              >
-                <Link to="/original-documents" aria-label="Back to register">
-                  <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute -inset-1 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 opacity-75 blur"></div>
-                  <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 shadow-lg">
-                    <FileStack className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    {hasExistingCollection
-                      ? "Log Intake Event"
-                      : "Start Document Collection"}
-                  </h1>
-                  <p className="text-sm text-slate-500 font-medium mt-0.5">
-                    {hasExistingCollection
-                      ? "Add documents received in this visit to the candidate's collection"
-                      : "Create the candidate's collection and log the first intake event"}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Progress Steps */}
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
-                  1
-                </div>
-                <span className="text-sm font-semibold text-indigo-900">Collection Details</span>
-              </div>
-              <div className="h-px w-8 bg-slate-200"></div>
-              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 opacity-50">
-                <Circle className="h-5 w-5 text-slate-400" />
-                <span className="text-sm font-medium text-slate-600">Review</span>
-              </div>
-              <div className="h-px w-8 bg-slate-200"></div>
-              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 opacity-50">
-                <Circle className="h-5 w-5 text-slate-400" />
-                <span className="text-sm font-medium text-slate-600">Submit</span>
-              </div>
-            </div>
-          </div>
+    <div className="w-full space-y-4">
+      <div className="space-y-3">
+        <Button variant="ghost" size="sm" asChild className="gap-2 px-0">
+          <Link to="/original-documents" aria-label="Back to register">
+            <ArrowLeft className="h-4 w-4" />
+            Back to register
+          </Link>
+        </Button>
+
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            {hasExistingCollection
+              ? "Log intake event"
+              : "Start document collection"}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {hasExistingCollection
+              ? "Record documents received in this visit."
+              : "Select a candidate, note how documents were collected, and mark what was received."}
+          </p>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Two-column top section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid gap-6 lg:grid-cols-2"
-          >
-            {/* Left: Candidate Selection */}
-            <Card className="group relative overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <CardHeader className="relative border-b border-slate-100 bg-gradient-to-r from-blue-50/50 to-transparent">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-md ring-4 ring-blue-50">
-                      <UserSearch className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900">
-                        Select Candidate
-                      </CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Search and choose the candidate
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
-                    1
-                  </div>
-                </div>
+      <form
+        onSubmit={form.handleSubmit(onSubmit, handleInvalidSubmit)}
+        className="space-y-4"
+        noValidate
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+            <div
+              ref={candidateSectionRef}
+              id="create-collection-candidate"
+              className="scroll-mt-6"
+            >
+            <Card
+              className={cn(
+                candidateSectionError &&
+                  "border-destructive ring-1 ring-destructive/20",
+              )}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UserSearch className="h-4 w-4" />
+                  Candidate
+                </CardTitle>
+                <CardDescription>
+                  Search and select the candidate for this intake.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="relative space-y-4 p-6">
+              <CardContent className="space-y-4">
+                {candidateSectionError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {errors.candidateId?.message}
+                  </p>
+                ) : null}
                 <Controller
                   control={form.control}
                   name="candidateId"
@@ -264,34 +287,28 @@ export default function CreateCollectionPage() {
                     />
                   )}
                 />
+
                 {selectedCandidateId ? (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-4"
-                  >
+                  <div className="space-y-4">
                     <CandidateCollectionHistoryBadges
                       candidateId={selectedCandidateId}
                     />
+
                     {isCollectionCompleted ? (
-                      <div className="rounded-xl border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500 shadow-sm">
-                            <CheckCircle2 className="h-5 w-5 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-bold text-emerald-900">
+                      <div className="rounded-lg border border-border bg-muted/40 p-4">
+                        <div className="flex gap-3">
+                          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                          <div className="min-w-0 space-y-2">
+                            <p className="text-sm font-medium text-foreground">
                               Original documents already collected
                             </p>
-                            <p className="mt-1 text-xs text-emerald-800">
-                              This candidate&apos;s original document collection is
-                              complete
+                            <p className="text-sm text-muted-foreground">
+                              This candidate&apos;s collection is complete
                               {completedByName ? (
                                 <>
                                   {" "}
                                   by{" "}
-                                  <span className="font-semibold">
+                                  <span className="font-medium text-foreground">
                                     {completedByName}
                                   </span>
                                 </>
@@ -311,9 +328,10 @@ export default function CreateCollectionPage() {
                                 variant="outline"
                                 size="sm"
                                 asChild
-                                className="mt-3 border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-50"
                               >
-                                <Link to={`/original-documents/${existingCollectionId}`}>
+                                <Link
+                                  to={`/original-documents/${existingCollectionId}`}
+                                >
                                   View completed collection
                                 </Link>
                               </Button>
@@ -322,7 +340,9 @@ export default function CreateCollectionPage() {
                         </div>
                       </div>
                     ) : null}
+
                     <SelectedCandidateSummary candidateId={selectedCandidateId} />
+
                     {hasExistingCollection && !isCollectionCompleted ? (
                       <CandidateCollectionHistoryPanel
                         candidateId={selectedCandidateId}
@@ -330,167 +350,127 @@ export default function CreateCollectionPage() {
                         showAddEventLink={false}
                       />
                     ) : null}
-                  </motion.div>
-                ) : (
-                  <div className="rounded-xl border-2 border-dashed border-slate-200 bg-gradient-to-br from-slate-50 to-white p-6 text-center">
-                    <Sparkles className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                    <p className="text-sm font-medium text-slate-600">
-                      No candidate selected yet
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Use the search box above to find a candidate
-                    </p>
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Search for a candidate to continue.
+                  </p>
                 )}
               </CardContent>
             </Card>
+            </div>
 
-            {/* Right: Collection Source */}
-            <Card className="group relative overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <CardHeader className="relative border-b border-slate-100 bg-gradient-to-r from-amber-50/50 to-transparent">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-md ring-4 ring-amber-50">
-                      <FileStack className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900">
-                        Collection Source
-                      </CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        How were the documents collected?
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-700">
-                    2
-                  </div>
-                </div>
+            <div
+              ref={collectionSourceSectionRef}
+              id="create-collection-source"
+              className="scroll-mt-6"
+            >
+            <Card
+              className={cn(
+                collectionSourceSectionError &&
+                  "border-destructive ring-1 ring-destructive/20",
+              )}
+            >
+              <CardHeader>
+                <CardTitle className="text-base">Collection source</CardTitle>
+                <CardDescription>
+                  How were the documents collected?
+                </CardDescription>
               </CardHeader>
-              <CardContent className="relative p-6">
+              <CardContent className="space-y-4">
+                {collectionSourceSectionError ? (
+                  <p className="text-sm text-destructive" role="alert">
+                    {getCollectionSourceErrorMessage(errors)}
+                  </p>
+                ) : null}
                 <CollectionSourceForm
                   register={form.register}
                   control={form.control}
                   watch={form.watch}
+                  errors={errors}
+                  showErrors={showValidation}
                   disabled={isCollectionCompleted}
                 />
               </CardContent>
             </Card>
-          </motion.div>
+            </div>
+        </div>
 
-          {/* Full-width: Checklist */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <Card className="group relative overflow-hidden border-slate-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <CardHeader className="relative border-b border-slate-100 bg-gradient-to-r from-emerald-50/50 to-transparent">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-md ring-4 ring-emerald-50">
-                      <ClipboardList className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900">
-                        Document Checklist
-                      </CardTitle>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Mark which original documents were received
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                    3
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="relative p-6">
+        <div
+          ref={checklistSectionRef}
+          id="create-collection-checklist"
+          className="scroll-mt-6"
+        >
+        <Card
+          className={cn(
+            "gap-0",
+            checklistSectionError &&
+              "border-destructive ring-1 ring-destructive/20",
+          )}
+        >
+          <CardHeader className="border-b py-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ClipboardList className="h-4 w-4" />
+              Document checklist
+            </CardTitle>
+            <CardDescription>
+              Mark documents received this visit, then upload each event&apos;s
+              merged scan on the collection detail page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-3">
+            <Controller
+              control={form.control}
+              name="items"
+              render={({ field }) => (
                 <OriginalDocumentChecklist
-                  items={form.watch("items") ?? defaultItems}
-                  onChange={(items) => form.setValue("items", items)}
+                  items={field.value ?? defaultItems}
+                  onChange={(items) => {
+                    field.onChange(items);
+                    if (errors.items) {
+                      form.clearErrors("items");
+                    }
+                  }}
                   previouslyReceivedDocTypes={previouslyReceivedDocTypes}
                   disabled={isCollectionCompleted}
+                  error={
+                    showValidation
+                      ? (errors.items?.message as string | undefined)
+                      : undefined
+                  }
                 />
-              </CardContent>
-            </Card>
-          </motion.div>
+              )}
+            />
+          </CardContent>
+        </Card>
+        </div>
 
-          {/* Action Footer */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="sticky bottom-0 z-10 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-xl p-6 shadow-2xl"
-          >
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-sm">
-                <div
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg",
-                    isCollectionCompleted ? "bg-emerald-50" : "bg-blue-50",
-                  )}
-                >
-                  {isCollectionCompleted ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  ) : (
-                    <Check className="h-4 w-4 text-blue-600" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {isCollectionCompleted
-                      ? "Collection already completed"
-                      : "Ready to save?"}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {isCollectionCompleted
-                      ? completedByName
-                        ? `Original documents were collected by ${completedByName}. No further intake events can be logged.`
-                        : "Original documents are already collected. No further intake events can be logged."
-                      : "You can continue editing after saving as draft"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  asChild
-                  className="rounded-xl border-slate-300 hover:bg-slate-50"
-                >
-                  <Link to="/original-documents">Cancel</Link>
-                </Button>
-                {isCollectionCompleted && existingCollectionId ? (
-                  <Button
-                    type="button"
-                    size="lg"
-                    asChild
-                    className="gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-lg px-8"
-                  >
-                    <Link to={`/original-documents/${existingCollectionId}`}>
-                      View Collection
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    size="lg"
-                    disabled={isLoading || isCollectionCompleted}
-                    className="gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600 hover:from-indigo-700 hover:via-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all px-8"
-                  >
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Save & Continue
-                  </Button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </form>
-      </div>
+        {isCollectionCompleted ? (
+          <p className="text-sm text-muted-foreground">
+            {completedByName
+              ? `Original documents were collected by ${completedByName}. No further intake events can be logged.`
+              : "Original documents are already collected. No further intake events can be logged."}
+          </p>
+        ) : null}
+
+        <div className="flex flex-col-reverse gap-3 border-t border-border pt-4 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" asChild>
+            <Link to="/original-documents">Cancel</Link>
+          </Button>
+          {isCollectionCompleted && existingCollectionId ? (
+            <Button type="button" asChild>
+              <Link to={`/original-documents/${existingCollectionId}`}>
+                View collection
+              </Link>
+            </Button>
+          ) : (
+            <Button type="submit" disabled={isLoading || isCollectionCompleted}>
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save & continue
+            </Button>
+          )}
+        </div>
+      </form>
     </div>
   );
 }

@@ -4,7 +4,7 @@
  * Following FE_GUIDELINES.md molecules pattern
  */
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,8 @@ export interface PDFViewerProps {
   showFullscreenToggle?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /** Bust CDN/browser cache when the file at fileUrl is replaced (e.g. document id) */
+  cacheKey?: string;
 }
 
 /**
@@ -64,6 +66,14 @@ function isExternalUrl(url: string): boolean {
   }
 }
 
+function appendCacheBust(url: string, versionKey: string) {
+  return `${url}${url.includes("?") ? "&" : "?"}_cb=${encodeURIComponent(versionKey)}`;
+}
+
+function isBlobUrl(url: string | null) {
+  return Boolean(url?.startsWith("blob:"));
+}
+
 export function PDFViewer({
   fileUrl,
   fileName = "Document",
@@ -74,13 +84,14 @@ export function PDFViewer({
   showRotationControls = true,
   showFullscreenToggle = true,
   className = "",
+  cacheKey,
 }: PDFViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Get access token for authenticated PDF fetches
@@ -90,40 +101,51 @@ export function PDFViewer({
    * Fetch PDF with authentication and convert to blob URL
    * This prevents iframe from making unauthenticated requests that could corrupt session
    */
-  const fetchPdfAsBlob = useCallback(async (url: string): Promise<string | null> => {
-    try {
-      const headers: HeadersInit = {};
-      
-      // Only add auth header for internal API URLs
-      if (!isExternalUrl(url) && accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-      }
-      
-      const response = await fetch(url, {
-        headers,
-        credentials: isExternalUrl(url) ? "omit" : "include",
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch PDF: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error("Error fetching PDF:", err);
-      return null;
-    }
-  }, [accessToken]);
+  const fetchPdfAsBlob = useCallback(
+    async (url: string, versionKey?: string): Promise<string | null> => {
+      try {
+        const headers: HeadersInit = {};
 
-  // Reset state and fetch PDF when file URL changes
+        if (!isExternalUrl(url) && accessToken) {
+          headers["Authorization"] = `Bearer ${accessToken}`;
+        }
+
+        const cacheBust = versionKey ?? String(Date.now());
+        const fetchUrl = appendCacheBust(url, cacheBust);
+
+        const response = await fetch(fetchUrl, {
+          headers,
+          credentials: isExternalUrl(url) ? "omit" : "include",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDF: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+      } catch (err) {
+        console.error("Error fetching PDF:", err);
+        return null;
+      }
+    },
+    [accessToken],
+  );
+
+  const clearPreviewUrl = useCallback((url: string | null) => {
+    if (isBlobUrl(url)) {
+      URL.revokeObjectURL(url!);
+    }
+  }, []);
+
+  // Reset state and load PDF when file URL changes
   useEffect(() => {
     if (!fileUrl || !isOpen) {
-      // Clean up old blob URL when closing or no URL
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
+      setPreviewUrl((previous) => {
+        clearPreviewUrl(previous);
+        return null;
+      });
       return;
     }
 
@@ -132,42 +154,53 @@ export function PDFViewer({
     setZoom(100);
     setRotation(0);
 
-    // For external URLs (S3, etc.), use directly - they don't affect auth
+    const versionKey = cacheKey ?? fileUrl;
+
+    // CDN / Spaces URLs: iframe can load cross-origin PDFs; fetch() is blocked by CORS
     if (isExternalUrl(fileUrl)) {
-      setBlobUrl(null); // Use fileUrl directly
+      setPreviewUrl((previous) => {
+        clearPreviewUrl(previous);
+        return appendCacheBust(fileUrl, versionKey);
+      });
       return;
     }
 
-    // For internal API URLs, fetch with auth and create blob URL
-    // This prevents iframe from making unauthenticated cookie requests
     let isMounted = true;
-    fetchPdfAsBlob(fileUrl).then((url) => {
+    fetchPdfAsBlob(fileUrl, versionKey).then((url) => {
       if (isMounted) {
         if (url) {
-          setBlobUrl(url);
+          setPreviewUrl((previous) => {
+            clearPreviewUrl(previous);
+            return url;
+          });
         } else {
           setError("Failed to load PDF. Please try again.");
           setIsLoading(false);
         }
+      } else if (url) {
+        URL.revokeObjectURL(url);
       }
     });
 
     return () => {
       isMounted = false;
     };
-  }, [fileUrl, isOpen, fetchPdfAsBlob]);
+  }, [fileUrl, isOpen, cacheKey, fetchPdfAsBlob, clearPreviewUrl]);
 
   // Cleanup blob URL on unmount
   useEffect(() => {
     return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
+      clearPreviewUrl(previewUrl);
     };
-  }, [blobUrl]);
+  }, [previewUrl, clearPreviewUrl]);
 
-  // Determine which URL to use for the iframe
-  const displayUrl = blobUrl || (isExternalUrl(fileUrl) ? fileUrl : null);
+  const displayUrl = previewUrl;
+
+  const pdfViewerSrc = useMemo(() => {
+    if (!displayUrl) return null;
+    const [base] = displayUrl.split("#");
+    return `${base}#toolbar=1&navpanes=0&scrollbar=1&view=FitH&zoom=${zoom}`;
+  }, [displayUrl, zoom]);
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -217,11 +250,10 @@ export function PDFViewer({
     setIsFullscreen(false);
     setZoom(100);
     setRotation(0);
-    // Clean up blob URL when closing
-    if (blobUrl) {
-      URL.revokeObjectURL(blobUrl);
-      setBlobUrl(null);
-    }
+    setPreviewUrl((previous) => {
+      clearPreviewUrl(previous);
+      return null;
+    });
     onClose();
   };
 
@@ -235,7 +267,7 @@ export function PDFViewer({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent
         className={cn(
-          "flex flex-col h-[92vh] w-[95vw] max-w-7xl overflow-hidden p-0 shadow-2xl sm:max-w-7xl",
+          "flex min-h-0 flex-col h-[92vh] w-[95vw] max-w-7xl overflow-hidden p-0 shadow-2xl sm:max-w-7xl",
           isFullscreen && "h-screen w-screen max-w-none sm:max-w-none",
           className
         )}
@@ -330,9 +362,9 @@ export function PDFViewer({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden p-2">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           {isLoading && (
-            <div className="flex items-center justify-center h-64">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 <p className="text-sm text-slate-600">Loading PDF...</p>
@@ -341,42 +373,53 @@ export function PDFViewer({
           )}
 
           {error && (
-            <div className="flex items-center justify-center h-64">
+            <div className="flex h-full min-h-[20rem] items-center justify-center p-4">
               <div className="text-center">
-                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-sm text-slate-600 mb-2">{error}</p>
+                <FileText className="mx-auto mb-4 h-12 w-12 text-slate-400" />
+                <p className="mb-2 text-sm text-slate-600">{error}</p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownload}
-                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Download PDF
                 </Button>
               </div>
             </div>
           )}
 
-          {!error && displayUrl && (
-            <div className="h-full w-full overflow-hidden bg-white">
-              <iframe
-                ref={iframeRef}
-                src={`${displayUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-                className="h-full w-full border-0 min-h-[600px]"
-                onLoad={handleLoad}
-                onError={handleError}
-                title={fileName}
+          {!error && pdfViewerSrc && (
+            <div className="h-full min-h-0 overflow-auto bg-slate-100 p-2">
+              <div
+                className="mx-auto flex min-h-full w-full justify-center"
                 style={{
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  transformOrigin: "center top",
+                  transform: rotation ? `rotate(${rotation}deg)` : undefined,
+                  transformOrigin: "center center",
                 }}
-              />
+              >
+                <iframe
+                  ref={iframeRef}
+                  key={`${pdfViewerSrc}-${rotation}`}
+                  src={pdfViewerSrc}
+                  className="w-full max-w-full border-0 bg-white shadow-sm"
+                  style={{
+                    height: isFullscreen
+                      ? "calc(100vh - 5.5rem)"
+                      : "calc(92vh - 6rem)",
+                    minHeight: "70vh",
+                  }}
+                  onLoad={handleLoad}
+                  onError={handleError}
+                  title={fileName}
+                />
+              </div>
             </div>
           )}
 
-          {!error && !displayUrl && !isLoading && (
-            <div className="flex items-center justify-center h-64">
+          {!error && !pdfViewerSrc && !isLoading && (
+            <div className="flex h-full min-h-[20rem] items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                 <p className="text-sm text-slate-600">Preparing PDF...</p>

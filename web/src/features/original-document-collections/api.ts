@@ -4,6 +4,7 @@ import type {
   CreateEventPayload,
   CumulativeReceivedItem,
   ListCollectionsParams,
+  MergeHistoryEntry,
   OriginalDocumentCollection,
   OriginalDocumentCollectionEvent,
 } from "./types";
@@ -72,6 +73,30 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       query: (id) => `/original-document-collections/${id}`,
       providesTags: (_result, _error, id) => [
         { type: "OriginalDocumentCollection", id },
+      ],
+    }),
+
+    getOriginalDocumentCollectionMergeHistory: builder.query<
+      {
+        success: boolean;
+        data: {
+          items: MergeHistoryEntry[];
+          pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+          };
+        };
+      },
+      { id: string; page?: number; limit?: number }
+    >({
+      query: ({ id, page = 1, limit = 10 }) => ({
+        url: `/original-document-collections/${id}/merge-history`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { id }) => [
+        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
       ],
     }),
 
@@ -176,6 +201,59 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       },
       invalidatesTags: (result, _error, { id }) => [
         { type: "OriginalDocumentCollection", id },
+        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
+        { type: "OriginalDocumentCollection", id: "LIST" },
+        { type: "OriginalDocumentCollection", id: "STATS" },
+        "Document",
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
+    uploadEventCollectionMerge: builder.mutation<
+      {
+        success: boolean;
+        data: OriginalDocumentCollection;
+        mergedDocumentId: string;
+      },
+      { collectionId: string; eventId: string; files: File[] }
+    >({
+      query: ({ collectionId, eventId, files }) => {
+        const formData = new FormData();
+        files.forEach((file) => formData.append("files", file));
+        return {
+          url: `/original-document-collections/${collectionId}/events/${eventId}/upload-merge`,
+          method: "POST",
+          body: formData,
+        };
+      },
+      invalidatesTags: (result, _error, { collectionId }) => [
+        { type: "OriginalDocumentCollection", id: collectionId },
+        {
+          type: "OriginalDocumentCollection",
+          id: `${collectionId}-merge-history`,
+        },
+        { type: "OriginalDocumentCollection", id: "LIST" },
+        { type: "OriginalDocumentCollection", id: "STATS" },
+        "Document",
+        ...(result?.data?.candidateId
+          ? [candidateTag(result.data.candidateId)]
+          : []),
+      ],
+    }),
+
+    rebuildCollectionMerge: builder.mutation<
+      { success: boolean; data: OriginalDocumentCollection },
+      string
+    >({
+      query: (id) => ({
+        url: `/original-document-collections/${id}/rebuild-merge`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, _error, id) => [
+        { type: "OriginalDocumentCollection", id },
+        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
         { type: "OriginalDocumentCollection", id: "LIST" },
         { type: "OriginalDocumentCollection", id: "STATS" },
         "Document",
@@ -262,11 +340,14 @@ export const {
   useGetOriginalDocumentCollectionStatsQuery,
   useGetOriginalDocumentCollectionsQuery,
   useGetOriginalDocumentCollectionQuery,
+  useGetOriginalDocumentCollectionMergeHistoryQuery,
   useGetCandidateOriginalDocumentCollectionsQuery,
   useCreateOriginalDocumentCollectionMutation,
   useAddOriginalDocumentCollectionEventMutation,
   useUpdateOriginalDocumentCollectionEventMutation,
   useUploadCollectionMergeMutation,
+  useUploadEventCollectionMergeMutation,
+  useRebuildCollectionMergeMutation,
   useSubmitCollectionToLockerMutation,
   useCompleteOriginalDocumentCollectionMutation,
   useLazyExportOriginalDocumentCollectionsQuery,

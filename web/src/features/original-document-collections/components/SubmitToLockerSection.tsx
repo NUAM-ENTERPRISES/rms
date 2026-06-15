@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Archive, Loader2, AlertTriangle, CheckCircle2, Lock, User } from "lucide-react";
+import {
+  Archive,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  Lock,
+  Pencil,
+  User,
+} from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useSubmitCollectionToLockerMutation } from "../api";
@@ -29,26 +43,39 @@ interface SubmitToLockerSectionProps {
 
 type LockerFormValues = { lockerFileNumber: string };
 
+function getLockerFileNumber(collection: OriginalDocumentCollection) {
+  return collection.lockerFileNumber?.trim() ?? "";
+}
+
 export function SubmitToLockerSection({
   collection,
   onUpdated,
 }: SubmitToLockerSectionProps) {
   const [submitToLocker, { isLoading }] = useSubmitCollectionToLockerMutation();
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const isCompleted = collection.status === "completed";
+  const isSubmitted = Boolean(collection.lockerSubmittedAt);
+  const showForm = !isCompleted && (!isSubmitted || isEditing);
 
   const form = useForm<LockerFormValues>({
     resolver: zodResolver(submitToLockerSchema),
     defaultValues: {
-      lockerFileNumber:
-        collection.lockerFileNumber ??
-        collection.candidate.lockerFileNumber ??
-        "",
+      lockerFileNumber: getLockerFileNumber(collection),
     },
   });
 
-  const onSubmit = async (values: LockerFormValues) => {
-    // Show confirmation modal before submitting
+  const startEditing = () => {
+    form.reset({ lockerFileNumber: getLockerFileNumber(collection) });
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    form.reset({ lockerFileNumber: getLockerFileNumber(collection) });
+    setIsEditing(false);
+  };
+
+  const onSubmit = async () => {
     setShowConfirmModal(true);
   };
 
@@ -59,201 +86,214 @@ export function SubmitToLockerSection({
         id: collection.id,
         lockerFileNumber: values.lockerFileNumber,
       }).unwrap();
-      toast.success("Submitted to locker");
+      toast.success(
+        isSubmitted ? "Locker file number updated" : "Submitted to locker",
+      );
       setShowConfirmModal(false);
+      setIsEditing(false);
       onUpdated?.();
     } catch {
-      toast.error("Failed to submit to locker");
+      toast.error(
+        isSubmitted
+          ? "Failed to update locker file number"
+          : "Failed to submit to locker",
+      );
     }
   };
 
   const candidateName = `${collection.candidate.firstName || ""} ${collection.candidate.lastName || ""}`.trim();
 
   return (
-    <Card className="border-slate-200 bg-white shadow-sm">
-      <CardHeader className="border-b border-slate-100 bg-gradient-to-r from-amber-50/50 to-transparent py-2.5 px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100">
-            <Lock className="h-3.5 w-3.5 text-amber-600" />
-          </div>
-          <CardTitle className="text-sm font-semibold">
-            Step 3: Submit to Locker
-          </CardTitle>
-        </div>
+    <Card>
+      <CardHeader className="border-b py-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Lock className="h-4 w-4" />
+          Submit to locker
+        </CardTitle>
+        <CardDescription>
+          Record the physical locker file number after placing originals in the
+          locker.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="p-4 space-y-3">
-        {collection.lockerSubmittedAt ? (
-          <div className="rounded-lg border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-4">
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <p className="text-xs font-semibold text-emerald-900">
-                  Submitted to Locker
-                </p>
+      <CardContent className="space-y-3 p-4">
+        {isSubmitted ? (
+          <div className="relative overflow-hidden rounded-xl border-2 border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100/80 p-5 shadow-[0_0_24px_rgba(16,185,129,0.18)] ring-1 ring-emerald-200/60">
+            <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-300/30 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-10 -left-6 h-24 w-24 rounded-full bg-green-300/25 blur-2xl" />
+
+            <div className="relative mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-[0_0_16px_rgba(16,185,129,0.45)] ring-4 ring-emerald-100">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-950">
+                    Submitted to locker
+                  </p>
+                  <p className="text-xs text-emerald-700/90">
+                    Physical originals recorded in locker
+                  </p>
+                </div>
               </div>
-              <Badge
-                variant="outline"
-                className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[10px] px-2 py-0.5"
-              >
-                Complete
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-emerald-300 bg-emerald-100/80 text-emerald-800 shadow-sm"
+                >
+                  Complete
+                </Badge>
+                {!isCompleted && !isEditing ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-emerald-300 bg-white/70 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+                    onClick={startEditing}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
+                ) : null}
+              </div>
             </div>
-            <div className="space-y-2">
-              <div className="rounded-md bg-white/80 border border-emerald-200 p-3">
-                <p className="text-[10px] font-medium text-emerald-600 mb-1">
-                  LOCKER FILE NUMBER
+
+            <div className="relative space-y-3">
+              <div className="rounded-lg border border-emerald-200/80 bg-white/75 p-4 shadow-sm backdrop-blur-sm">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-emerald-600">
+                  Locker file number
                 </p>
-                <p className="text-lg font-bold text-emerald-900 font-mono tracking-wider">
+                <p className="font-mono text-2xl font-bold tracking-widest text-emerald-950">
                   {collection.lockerFileNumber}
                 </p>
               </div>
-              <div className="flex items-start gap-2 rounded-md bg-white/80 border border-emerald-200 p-2.5">
-                <User className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-medium text-emerald-600">
-                    Submitted on {format(new Date(collection.lockerSubmittedAt), "dd MMM yyyy, h:mm a")}
+
+              <div className="flex items-start gap-3 rounded-lg border border-emerald-200/70 bg-white/60 p-3.5 backdrop-blur-sm">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                  <User className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-0.5">
+                  <p className="text-xs font-medium text-emerald-800">
+                    Submitted on{" "}
+                    {format(
+                      new Date(collection.lockerSubmittedAt!),
+                      "dd MMM yyyy, h:mm a",
+                    )}
                   </p>
-                  {collection.lockerSubmittedBy && (
-                    <p className="text-xs text-emerald-800 font-medium">
+                  {collection.lockerSubmittedBy ? (
+                    <p className="text-sm font-semibold text-emerald-950">
                       by {collection.lockerSubmittedBy.name}
                     </p>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="rounded-lg border border-border bg-muted/20 p-3">
             <div className="flex items-start gap-2">
-              <Archive className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <Archive className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
-                <p className="text-xs font-semibold text-amber-900">
-                  Ready to Submit
+                <p className="text-sm font-medium text-foreground">
+                  Ready to submit
                 </p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  Enter the physical locker file number after placing originals in the locker.
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Enter the locker file number after placing originals in the
+                  locker.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {!isCompleted && (
+        {showForm ? (
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <div className="space-y-2">
-              <Label 
-                htmlFor="lockerFileNumber"
-                className="text-xs font-semibold text-slate-700"
-              >
-                Locker File Number *
-              </Label>
+              <Label htmlFor="lockerFileNumber">Locker file number *</Label>
               <Input
                 id="lockerFileNumber"
                 {...form.register("lockerFileNumber")}
                 className={cn(
-                  "font-mono text-sm border-2 focus:border-amber-400 focus:ring-amber-400",
-                  form.formState.errors.lockerFileNumber
-                    ? "border-red-300"
-                    : "border-slate-300"
+                  "font-mono",
+                  form.formState.errors.lockerFileNumber && "border-destructive",
                 )}
                 placeholder="Enter locker file number"
               />
-              {form.formState.errors.lockerFileNumber && (
-                <div className="flex items-start gap-1.5 rounded-md bg-red-50 border border-red-200 p-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-600 mt-0.5 shrink-0" />
-                  <p className="text-xs text-red-700">
-                    {form.formState.errors.lockerFileNumber.message}
-                  </p>
-                </div>
-              )}
+              {form.formState.errors.lockerFileNumber ? (
+                <p className="flex items-center gap-1.5 text-xs text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {form.formState.errors.lockerFileNumber.message}
+                </p>
+              ) : null}
             </div>
 
-            {!collection.mergedDocumentId && (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-3.5 w-3.5 text-slate-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-slate-600">
-                    Upload merged scan before submitting to locker.
-                  </p>
-                </div>
-              </div>
-            )}
+            {!collection.mergedDocumentId ? (
+              <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Upload merged scan before submitting to locker.
+              </p>
+            ) : null}
 
-            <Button 
-              type="submit" 
-              disabled={isLoading || !collection.mergedDocumentId}
-              className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-md"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Archive className="mr-2 h-4 w-4" />
-                  Submit to Locker
-                </>
-              )}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {isEditing ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelEditing}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={isLoading || !collection.mergedDocumentId}
+                className="gap-2"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Archive className="h-4 w-4" />
+                )}
+                {isEditing ? "Save file number" : "Submit to locker"}
+              </Button>
+            </div>
           </form>
-        )}
+        ) : null}
       </CardContent>
 
-      {/* Confirmation Modal */}
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-bold text-slate-900">
-                  Confirm Locker Submission
-                </DialogTitle>
-                <DialogDescription className="text-sm text-slate-600">
-                  Please verify the file number is correct
-                </DialogDescription>
-              </div>
-            </div>
+            <DialogTitle>
+              {isSubmitted
+                ? "Confirm locker file number"
+                : "Confirm locker submission"}
+            </DialogTitle>
+            <DialogDescription>
+              {isSubmitted
+                ? "Verify the updated locker file number is correct."
+                : "Verify the locker file number is correct before submitting."}
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
-              <p className="text-xs font-medium text-blue-600 mb-1">
-                Candidate
+          <div className="space-y-4 py-2">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Candidate</p>
+              <p className="text-sm font-medium text-foreground">
+                {candidateName}
               </p>
-              <p className="text-sm font-bold text-blue-900">{candidateName}</p>
-              {collection.candidate.candidateCode && (
-                <p className="text-xs font-mono text-blue-600 mt-0.5">
+              {collection.candidate.candidateCode ? (
+                <p className="font-mono text-xs text-muted-foreground">
                   {collection.candidate.candidateCode}
                 </p>
-              )}
+              ) : null}
             </div>
 
-            <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-4">
-              <p className="text-xs font-medium text-emerald-600 mb-1">
-                Locker File Number
-              </p>
-              <p className="text-2xl font-bold text-emerald-900 font-mono">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Locker file number</p>
+              <p className="font-mono text-2xl font-semibold text-foreground">
                 {form.getValues("lockerFileNumber")}
               </p>
-            </div>
-
-            <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-semibold text-amber-900">
-                    Important
-                  </p>
-                  <p className="text-xs text-amber-700 mt-0.5">
-                    Please ensure the locker file number is correct. This will
-                    be used to track the physical documents in the locker.
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -265,21 +305,13 @@ export function SubmitToLockerSection({
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleConfirmSubmit}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-            >
+            <Button onClick={handleConfirmSubmit} disabled={isLoading}>
               {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isSubmitted ? (
+                "Confirm update"
               ) : (
-                <>
-                  <Archive className="mr-2 h-4 w-4" />
-                  Confirm & Submit
-                </>
+                "Confirm & submit"
               )}
             </Button>
           </DialogFooter>
