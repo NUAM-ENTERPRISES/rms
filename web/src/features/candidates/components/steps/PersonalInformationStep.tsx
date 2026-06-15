@@ -588,6 +588,35 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label
+                htmlFor="alternatePhone"
+                className="text-slate-700 font-medium flex items-center gap-2"
+              >
+                <Phone className="h-4 w-4 text-slate-500" />
+                Alternate phone (optional)
+              </Label>
+              <Controller
+                name="alternatePhone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="alternatePhone"
+                    type="tel"
+                    placeholder="9876543211"
+                    disabled={isLoading}
+                    className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                )}
+              />
+              {errors.alternatePhone && (
+                <p className="text-sm text-red-600">
+                  {errors.alternatePhone.message as string}
+                </p>
+              )}
+            </div>
+
             {/* Email */}
             <div className="space-y-2">
               <Label

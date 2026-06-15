@@ -879,6 +879,8 @@ export default function CandidateDetailPage() {
           addressCountryCode: candidate.addressCountryCode,
           addressStateId: candidate.addressStateId,
           address: candidate.address,
+          addressPincode: candidate.addressPincode,
+          alternatePhone: candidate.alternatePhone,
         }}
       />
 

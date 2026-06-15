@@ -280,6 +280,22 @@ const CollectionDetailPage = lazy(
       "@/features/original-document-collections/views/CollectionDetailPage"
     )
 );
+const CourierRegisterPage = lazy(
+  () =>
+    import("@/features/courier-shipments/views/CourierRegisterPage"),
+);
+const CreateShipmentPage = lazy(
+  () => import("@/features/courier-shipments/views/CreateShipmentPage"),
+);
+const ShipmentDetailPage = lazy(
+  () => import("@/features/courier-shipments/views/ShipmentDetailPage"),
+);
+const CandidateCourierPipelinePage = lazy(
+  () =>
+    import(
+      "@/features/courier-shipments/views/CandidateCourierPipelinePage"
+    ),
+);
 
 function App() {
   return (
@@ -1165,6 +1181,55 @@ function App() {
                         <ProtectedRoute permissions={["read:documents"]}>
                           <AppLayout>
                             <CollectionDetailPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+
+                  <Route
+                    path="/courier-management"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <CourierRegisterPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/courier-management/new"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["write:documents"]}>
+                          <AppLayout>
+                            <CreateShipmentPage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/courier-management/candidates/:candidateId"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <CandidateCourierPipelinePage />
+                          </AppLayout>
+                        </ProtectedRoute>
+                      </RouteErrorBoundary>
+                    }
+                  />
+                  <Route
+                    path="/courier-management/:id"
+                    element={
+                      <RouteErrorBoundary>
+                        <ProtectedRoute permissions={["read:documents"]}>
+                          <AppLayout>
+                            <ShipmentDetailPage />
                           </AppLayout>
                         </ProtectedRoute>
                       </RouteErrorBoundary>

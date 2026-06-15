@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 
 export type CandidateCollectionHistoryPanelProps = {
   candidateId: string;
-  variant?: "compact" | "full";
+  variant?: "compact" | "full" | "modal";
   highlightEventId?: string;
   showAddEventLink?: boolean;
   onUpdated?: () => void;
@@ -174,6 +174,7 @@ export function CandidateCollectionHistoryPanel({
   const events = payload?.events ?? collection?.events ?? [];
   const cumulative = payload?.cumulativeReceived ?? [];
   const isCompact = variant === "compact";
+  const isModal = variant === "modal";
 
   // Color schemes for document badges
   const badgeColors = [
@@ -587,6 +588,27 @@ export function CandidateCollectionHistoryPanel({
           <div className="p-4">{content}</div>
         </div>
         {documentPreviewModal}
+      </>
+    );
+  }
+
+  if (isModal) {
+    return (
+      <>
+        <div className={cn("space-y-4", className)}>
+          {payload?.candidate?.lockerFileNumber ? (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-medium text-slate-600">
+                Locker file number
+              </p>
+              <p className="mt-0.5 font-mono text-sm font-bold text-slate-900">
+                {payload.candidate.lockerFileNumber}
+              </p>
+            </div>
+          ) : null}
+          {content}
+        </div>
+        {pdfViewerModal}
       </>
     );
   }

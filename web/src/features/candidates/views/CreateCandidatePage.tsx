@@ -171,6 +171,7 @@ export default function CreateCandidatePage() {
     resolver: zodResolver(candidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
+    shouldUnregister: false,
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -197,6 +198,8 @@ export default function CreateCandidatePage() {
       addressCountryCode: "",
       addressStateId: "",
       address: "",
+      addressPincode: "",
+      alternatePhone: "",
       // physical information defaults
       height: undefined,
       weight: undefined,
@@ -435,6 +438,17 @@ export default function CreateCandidatePage() {
       }
       if (data.address?.trim()) {
         payload.address = data.address.trim();
+      }
+      const addressPincode = (
+        data.addressPincode ??
+        form.getValues("addressPincode") ??
+        ""
+      ).trim();
+      if (addressPincode) {
+        payload.addressPincode = addressPincode;
+      }
+      if (data.alternatePhone?.trim()) {
+        payload.alternatePhone = data.alternatePhone.trim();
       }
 
       payload.professionTypeId = data.professionTypeId;

@@ -54,6 +54,7 @@ import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analyt
 import { AgentsModule } from './agents/agents.module';
 import { IntroductionVideosModule } from './introduction-videos/introduction-videos.module';
 import { OriginalDocumentCollectionsModule } from './original-document-collections/original-document-collections.module';
+import { CourierShipmentsModule } from './courier-shipments/courier-shipments.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { OriginalDocumentCollectionsModule } from './original-document-collectio
     AgentsModule,
     IntroductionVideosModule,
     OriginalDocumentCollectionsModule,
+    CourierShipmentsModule,
   ],
   controllers: [AppController],
   providers: [

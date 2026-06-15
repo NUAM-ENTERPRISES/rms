@@ -20,6 +20,7 @@ import {
   UserCircle2,
   Users,
   X,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageViewer } from "@/components/molecules";
@@ -54,6 +55,8 @@ import {
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
 import { getCandidateStatusVisualConfig } from "@/features/candidates/utils/candidateStatusVisualConfig";
+import { CandidateCourierPipeline } from "@/features/courier-shipments/components/CandidateCourierPipeline";
+import { useGetCandidateCourierPipelineQuery } from "@/features/courier-shipments/api";
 
 /* ---------- helpers ---------- */
 
@@ -219,6 +222,10 @@ export default function CollectionDetailPage() {
     useCompleteOriginalDocumentCollectionMutation();
 
   const collection = data?.data;
+  const { data: courierPipelineData } = useGetCandidateCourierPipelineQuery(
+    collection?.candidateId ?? "",
+    { skip: !collection?.candidateId },
+  );
 
   const allDocuments = React.useMemo(() => {
     const receivedMap = new Map(
@@ -916,6 +923,36 @@ export default function CollectionDetailPage() {
           </div>
         )}
 
+        {/* ── Courier History ── */}
+        {collection.candidateId && (
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-teal-600" />
+                  <CardTitle className="text-sm font-semibold">
+                    Courier History
+                  </CardTitle>
+                </div>
+                <Button variant="link" size="sm" className="h-auto p-0" asChild>
+                  <Link
+                    to={`/courier-management/candidates/${collection.candidateId}`}
+                  >
+                    View courier details
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <CandidateCourierPipeline
+                legs={courierPipelineData?.data?.legs ?? []}
+                variant="compact"
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Completed Status ── */}
         {collection.status === "completed" && (
           <div className="sticky bottom-4 z-20 -mx-1 px-1 pt-2">
             <div

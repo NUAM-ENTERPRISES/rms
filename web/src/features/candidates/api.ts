@@ -137,6 +137,8 @@ export interface Candidate {
   addressCountryCode?: string | null;
   addressStateId?: string | null;
   address?: string | null;
+  addressPincode?: string | null;
+  alternatePhone?: string | null;
   addressCountry?: { code: string; name: string } | null;
   addressState?: { id: string; name: string; code: string } | null;
 
@@ -581,6 +583,8 @@ export interface CreateCandidateRequest {
   addressCountryCode?: string;
   addressStateId?: string;
   address?: string;
+  addressPincode?: string;
+  alternatePhone?: string;
   height?: number;
   weight?: number;
   skinTone?: string;
@@ -637,6 +641,8 @@ export interface UpdateCandidateRequest {
   addressCountryCode?: string | null;
   addressStateId?: string | null;
   address?: string | null;
+  addressPincode?: string | null;
+  alternatePhone?: string | null;
 }
 
 export interface UpdateCandidateStatusRequest {
@@ -1467,12 +1473,20 @@ export const candidatesApi = baseApi.injectEndpoints({
         message: string;
       }) => {
         const row = response.data;
+        const legacy = row as Candidate & {
+          address_pincode?: string | null;
+          alternate_phone?: string | null;
+        };
         return {
           ...row,
           passportNumber:
             row.passportNumber ??
             (row as { passport_number?: string | null }).passport_number ??
             null,
+          addressPincode:
+            row.addressPincode ?? legacy.address_pincode ?? null,
+          alternatePhone:
+            row.alternatePhone ?? legacy.alternate_phone ?? null,
         };
       },
       providesTags: (_, __, id) => [{ type: "Candidate", id }],
@@ -1512,6 +1526,24 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: candidateData,
       }),
+      transformResponse: (response: {
+        success: boolean;
+        data: Candidate;
+        message: string;
+      }) => {
+        const row = response.data;
+        const legacy = row as Candidate & {
+          address_pincode?: string | null;
+          alternate_phone?: string | null;
+        };
+        return {
+          ...row,
+          addressPincode:
+            row.addressPincode ?? legacy.address_pincode ?? null,
+          alternatePhone:
+            row.alternatePhone ?? legacy.alternate_phone ?? null,
+        };
+      },
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },
         "Candidate",

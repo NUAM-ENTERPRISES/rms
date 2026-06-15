@@ -10,6 +10,7 @@ import {
 } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { CountrySelect } from "./CountrySelect";
 import { StateSelect } from "./StateSelect";
 import { MapPin } from "lucide-react";
@@ -19,6 +20,7 @@ export type PhysicalAddressFormFields = {
   addressCountryCode?: string;
   addressStateId?: string;
   address?: string;
+  addressPincode?: string;
 };
 
 export interface PhysicalAddressFieldsProps<T extends FieldValues> {
@@ -32,6 +34,8 @@ export interface PhysicalAddressFieldsProps<T extends FieldValues> {
   title?: string;
   /** Custom description for the section */
   description?: React.ReactNode;
+  /** When false, pincode is omitted (use a dedicated field elsewhere in the form). */
+  includePincode?: boolean;
   /**
    * Nested form path prefix (e.g. `subClient` for `subClient.addressCountryCode`).
    */
@@ -50,6 +54,7 @@ export function PhysicalAddressFields<T extends FieldValues>({
   initialCountryData,
   title = "Address (optional)",
   description = "",
+  includePincode = true,
   fieldPrefix,
 }: PhysicalAddressFieldsProps<T>) {
   const countryCodePath = (
@@ -60,6 +65,9 @@ export function PhysicalAddressFields<T extends FieldValues>({
   ) as Path<T>;
   const addressLinePath = (
     fieldPrefix ? `${fieldPrefix}.address` : "address"
+  ) as Path<T>;
+  const pincodePath = (
+    fieldPrefix ? `${fieldPrefix}.addressPincode` : "addressPincode"
   ) as Path<T>;
 
   const countryCode = useWatch({
@@ -96,6 +104,9 @@ export function PhysicalAddressFields<T extends FieldValues>({
   const addressError = (fieldPrefix ? nestedErrors?.address : errors.address)?.message as
     | string
     | undefined;
+  const pincodeError = (
+    fieldPrefix ? nestedErrors?.addressPincode : errors.addressPincode
+  )?.message as string | undefined;
 
   const addressLineId = fieldPrefix
     ? "physical-address-line-subclient"
@@ -175,6 +186,46 @@ export function PhysicalAddressFields<T extends FieldValues>({
             <p className="text-sm text-red-600">{addressError}</p>
           ) : null}
         </div>
+        {includePincode ? (
+          <div className="space-y-2">
+            <Label
+              htmlFor={
+                fieldPrefix
+                  ? "physical-address-pincode-subclient"
+                  : "physical-address-pincode"
+              }
+              className="text-slate-700 font-medium"
+            >
+              Pincode
+            </Label>
+            <Controller
+              name={pincodePath}
+              control={control}
+              render={({ field }) => (
+                <Input
+                  id={
+                    fieldPrefix
+                      ? "physical-address-pincode-subclient"
+                      : "physical-address-pincode"
+                  }
+                  name={field.name}
+                  ref={field.ref}
+                  value={field.value ?? ""}
+                  onBlur={field.onBlur}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  placeholder="e.g. 682016"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  disabled={disabled}
+                  className="h-11 bg-white border-slate-200"
+                />
+              )}
+            />
+            {pincodeError ? (
+              <p className="text-sm text-red-600">{pincodeError}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   Calendar,
   Loader2,
   Mail,
+  MapPin,
   Phone,
   UserCircle2,
   Users,
@@ -13,10 +14,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useGetCandidateByIdQuery } from "@/features/candidates/api";
 import { cn } from "@/lib/utils";
+import {
+  hasCandidateMailingAddress,
+} from "@/features/courier-shipments/utils/candidate-address";
 
 type SelectedCandidateSummaryProps = {
   candidateId: string;
   className?: string;
+  subtitle?: string;
+  showMailingAddress?: boolean;
 };
 
 type RecruiterInfo = {
@@ -131,6 +137,8 @@ function SummaryField({
 export function SelectedCandidateSummary({
   candidateId,
   className,
+  subtitle = "Selected for original document intake",
+  showMailingAddress = false,
 }: SelectedCandidateSummaryProps) {
   const { data: candidate, isLoading, isError } = useGetCandidateByIdQuery(
     candidateId,
@@ -200,9 +208,7 @@ export function SelectedCandidateSummary({
                 {candidate.candidateCode}
               </p>
             ) : null}
-            <p className="mt-1 text-sm text-muted-foreground">
-              Selected for original document intake
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
           </div>
         </div>
         {statusName ? (
@@ -252,6 +258,40 @@ export function SelectedCandidateSummary({
           className="sm:col-span-2 lg:col-span-1"
         />
       </dl>
+
+      {showMailingAddress ? (
+        <div className="border-t border-slate-100 px-4 pb-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+            <MapPin className="h-4 w-4 text-teal-600" />
+            Mailing address
+          </div>
+          {!hasCandidateMailingAddress(candidate) ? (
+            <p className="rounded-lg border border-dashed border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Address not on file. You can add it in the courier address step;
+              it will be saved to the candidate profile when this leg is
+              created.
+            </p>
+          ) : null}
+          <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+            <SummaryField
+              icon={MapPin}
+              label="Street address"
+              value={candidate.address?.trim() || "—"}
+              className="sm:col-span-2"
+            />
+            <SummaryField
+              icon={MapPin}
+              label="Pincode"
+              value={candidate.addressPincode?.trim() || "—"}
+            />
+            <SummaryField
+              icon={Phone}
+              label="Alternate phone"
+              value={candidate.alternatePhone?.trim() || "—"}
+            />
+          </dl>
+        </div>
+      ) : null}
     </div>
   );
 }

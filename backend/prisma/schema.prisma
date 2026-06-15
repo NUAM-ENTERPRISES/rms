@@ -121,6 +121,10 @@ model User {
   originalCollectionEventsCollected OriginalDocumentCollectionEvent[] @relation("EventCollectedBy")
   originalCollectionEventsCreated OriginalDocumentCollectionEvent[] @relation("EventCreatedBy")
   originalCollectionMergesUploaded OriginalDocumentCollectionMergeHistory[] @relation("MergeHistoryUploadedBy")
+  courierShipmentsSent             CourierShipment[] @relation("CourierShipmentSentBy")
+  courierShipmentsApproved         CourierShipment[] @relation("CourierShipmentApprovedBy")
+  courierShipmentsReceived         CourierShipment[] @relation("CourierShipmentReceivedBy")
+  courierShipmentsCreated          CourierShipment[] @relation("CourierShipmentCreatedBy")
 
   addressCountryCode String?
   addressStateId     String?
@@ -377,6 +381,7 @@ model Project {
   agentProjects                  AgentProject[]
   agentCandidateDeclaredProjects AgentCandidateDeclaredProject[]
   agentCandidateRequests         AgentCandidateRequest[]
+  courierShipments               CourierShipment[]
 
   @@map("projects")
 }
@@ -528,6 +533,7 @@ model Candidate {
   mergedDocuments  MergedDocument[]
   documentForwards DocumentForwardHistory[]
   originalDocumentCollections OriginalDocumentCollection[]
+  courierShipments            CourierShipment[]
   lockerFileNumber            String? @map("locker_file_number")
 
   /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
@@ -536,6 +542,8 @@ model Candidate {
   addressCountryCode String?
   addressStateId     String?
   address            String?
+  addressPincode     String? @map("address_pincode")
+  alternatePhone     String? @map("alternate_phone")
   addressCountry     Country? @relation("PhysicalAddressCountryCandidate", fields: [addressCountryCode], references: [code], onDelete: SetNull)
   addressState       State?   @relation("PhysicalAddressStateCandidate", fields: [addressStateId], references: [id], onDelete: SetNull)
 
@@ -847,6 +855,7 @@ model Document {
   originalDocumentCollectionsAsMerged OriginalDocumentCollection[] @relation("CollectionMergedDocument")
   originalDocumentCollectionMergeHistory OriginalDocumentCollectionMergeHistory[] @relation("MergeHistoryDocument")
   originalDocumentCollectionEventsAsMerged OriginalDocumentCollectionEvent[] @relation("EventMergedDocument")
+  courierShipmentsAsMerged              CourierShipment[] @relation("CourierShipmentMergedDocument")
 
   @@index([candidateId])
   @@index([docType])
@@ -2354,6 +2363,7 @@ model OriginalDocumentCollection {
   createdBy         User                                     @relation("CollectionCreatedBy", fields: [createdByUserId], references: [id])
   events            OriginalDocumentCollectionEvent[]
   mergeHistory      OriginalDocumentCollectionMergeHistory[]
+  courierShipments  CourierShipment[]
 
   @@index([status])
   @@map("original_document_collections")
@@ -2420,4 +2430,65 @@ model OriginalDocumentCollectionMergeHistory {
 
   @@index([collectionId])
   @@map("original_document_collection_merge_history")
+}
+
+/// One physical movement leg of original documents (courier or direct handover).
+model CourierShipment {
+  id                 String    @id @default(cuid())
+  candidateId        String
+  collectionId       String
+  projectId          String?
+  legNumber          Int
+  purposeType        String    @default("internal")
+  deliveryMode       String    @default("courier")
+  status             String    @default("draft")
+  trackingId         String?
+  courierPartner     String?
+  sentAt             DateTime?
+  sentByUserId       String?
+  approvedByUserId   String?
+  fromAddressType    String
+  toAddressType      String
+  fromAddressSnapshot Json     @default("{}")
+  toAddressSnapshot   Json     @default("{}")
+  receivedAt         DateTime?
+  receivedByUserId   String?
+  receivedByName     String?
+  lockerFileNumber   String?
+  mergedDocumentId   String?
+  remarks            String?
+  createdByUserId    String
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  candidate      Candidate                  @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  collection     OriginalDocumentCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  project        Project?                   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  mergedDocument Document?                  @relation("CourierShipmentMergedDocument", fields: [mergedDocumentId], references: [id], onDelete: SetNull)
+  sentBy         User?                      @relation("CourierShipmentSentBy", fields: [sentByUserId], references: [id], onDelete: SetNull)
+  approvedBy     User?                      @relation("CourierShipmentApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  receivedBy     User?                      @relation("CourierShipmentReceivedBy", fields: [receivedByUserId], references: [id], onDelete: SetNull)
+  createdBy      User                       @relation("CourierShipmentCreatedBy", fields: [createdByUserId], references: [id])
+  documents      CourierShipmentDocument[]
+
+  @@unique([candidateId, legNumber])
+  @@index([candidateId])
+  @@index([collectionId])
+  @@index([status])
+  @@index([deliveryMode])
+  @@index([purposeType])
+  @@index([sentAt])
+  @@map("courier_shipments")
+}
+
+model CourierShipmentDocument {
+  id         String @id @default(cuid())
+  shipmentId String
+  docType    String
+
+  shipment CourierShipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, docType])
+  @@index([shipmentId])
+  @@map("courier_shipment_documents")
 }

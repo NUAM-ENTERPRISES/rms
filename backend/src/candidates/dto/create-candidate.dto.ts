@@ -139,6 +139,41 @@ export class CreateCandidateDto {
   address?: string;
 
   @ApiPropertyOptional({
+    description: 'Postal / PIN code for mailing address',
+    example: '682016',
+  })
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const normalized =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number'
+          ? String(value)
+          : value;
+    if (typeof normalized !== 'string') return undefined;
+    const trimmed = normalized.trim();
+    return trimmed ? trimmed : undefined;
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  addressPincode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alternate contact phone number',
+    example: '9876543211',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MaxLength(15)
+  @Matches(/^[\d+\-\s()]*$/, {
+    message: 'Alternate phone may only contain digits, spaces, and + - ( )',
+  })
+  alternatePhone?: string;
+
+  @ApiPropertyOptional({
     description: 'Source of the candidate',
     enum: ['manual', 'meta', 'direct_enquiry', 'referral', 'paid_ads', 'agent', 'hospital_visit', 'expo_event', 'job_board', 'social_media', 'direct_application', 'internal'],
     default: 'manual',
