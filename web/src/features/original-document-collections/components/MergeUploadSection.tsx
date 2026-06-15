@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type RefObject } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,15 +29,20 @@ import {
 } from "../api";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import type { OriginalDocumentCollection } from "../types";
+import { cn } from "@/lib/utils";
 
 interface MergeUploadSectionProps {
   collection: OriginalDocumentCollection;
   onUpdated?: () => void;
+  highlightReady?: boolean;
+  sectionRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function MergeUploadSection({
   collection,
   onUpdated,
+  highlightReady = false,
+  sectionRef,
 }: MergeUploadSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -87,16 +93,42 @@ export function MergeUploadSection({
 
   return (
     <>
-      <Card>
+      <div
+        ref={sectionRef}
+        id="combined-merged-scan"
+        className={cn("scroll-mt-6", highlightReady && "rounded-xl")}
+      >
+      <Card
+        className={cn(
+          "transition-shadow",
+          highlightReady && "ring-2 ring-primary ring-offset-2",
+        )}
+      >
         <CardHeader className="border-b py-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Upload className="h-4 w-4" />
-            Combined merged scan
-          </CardTitle>
-          <CardDescription>
-            Built automatically when you upload each event merge. You can also
-            upload or rebuild the full combined PDF here.
-          </CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Upload className="h-4 w-4" />
+                Combined merged scan
+              </CardTitle>
+              <CardDescription>
+                Built automatically when you upload each event merge. You can also
+                upload or rebuild the full combined PDF here.
+              </CardDescription>
+            </div>
+            {collection.mergedDocument ? (
+              <Badge
+                className={cn(
+                  "animate-merged-document-ready-glow shrink-0 gap-1.5 border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800",
+                  highlightReady && "scale-105",
+                )}
+                variant="outline"
+              >
+                <FileStack className="h-4 w-4 shrink-0" />
+                Merged document ready
+              </Badge>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
           {collection.mergedDocument ? (
@@ -105,7 +137,7 @@ export function MergeUploadSection({
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex items-center gap-2">
                     <FileStack className="h-4 w-4 shrink-0 text-primary" />
-                    <p className="text-sm font-medium text-foreground">
+                    <p className="text-base font-semibold text-foreground">
                       Combined document ready
                     </p>
                   </div>
@@ -201,6 +233,7 @@ export function MergeUploadSection({
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {mergedDocument && isPdfMerge ? (
         <PDFViewer

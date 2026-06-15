@@ -13,10 +13,6 @@ describe('OriginalDocumentCollectionsService', () => {
       create: jest.fn(),
       findMany: jest.fn(),
     },
-    originalDocumentCollectionMergeHistory: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
     candidate: {
       findUnique: jest.fn(),
     },
@@ -100,41 +96,108 @@ describe('OriginalDocumentCollectionsService', () => {
     });
   });
 
-  describe('getMergeHistory', () => {
-    it('returns merge history for a collection', async () => {
+  describe('getEventMerges', () => {
+    it('returns event merged scans newest first with stable event numbers', async () => {
       prisma.originalDocumentCollection.findUnique.mockResolvedValue({
         id: 'col-1',
-      });
-      prisma.originalDocumentCollectionMergeHistory.findMany.mockResolvedValue([
-        {
-          id: 'hist-1',
-          collectionId: 'col-1',
-          documentId: 'doc-old',
-          uploadedAt: new Date('2026-06-12'),
-          uploadedByUserId: 'user-1',
-          replacedAt: new Date('2026-06-12'),
-          document: {
-            id: 'doc-old',
-            fileName: 'combined.pdf',
-            fileUrl: 'https://example.com/combined.pdf',
-            mimeType: 'application/pdf',
+        candidateId: 'cand-1',
+        events: [
+          {
+            id: 'evt-1',
+            collectedAt: new Date('2026-06-10'),
+            mergedDocument: {
+              id: 'doc-1',
+              fileName: 'candidate_intake_event_1.pdf',
+              fileUrl: 'https://example.com/event-1.pdf',
+              mimeType: 'application/pdf',
+            },
           },
-          uploadedBy: { id: 'user-1', name: 'DCE User' },
-        },
-      ]);
-      prisma.originalDocumentCollectionMergeHistory.count.mockResolvedValue(1);
+          {
+            id: 'evt-2',
+            collectedAt: new Date('2026-06-15'),
+            mergedDocument: {
+              id: 'doc-2',
+              fileName: 'candidate_intake_event_2.pdf',
+              fileUrl: 'https://example.com/event-2.pdf',
+              mimeType: 'application/pdf',
+            },
+          },
+        ],
+      });
 
-      const result = await service.getMergeHistory('col-1', { page: 1, limit: 10 });
+      const result = await service.getEventMerges('col-1', { page: 1, limit: 5 });
 
       expect(result.success).toBe(true);
-      expect(result.data.items).toHaveLength(1);
-      expect(result.data.items[0].document.fileName).toBe('combined.pdf');
       expect(result.data.pagination).toEqual({
         page: 1,
-        limit: 10,
-        total: 1,
+        limit: 5,
+        total: 2,
         totalPages: 1,
       });
+      expect(result.data.items).toHaveLength(2);
+      expect(result.data.items[0]).toMatchObject({
+        eventId: 'evt-2',
+        eventNumber: 2,
+        document: { fileName: 'candidate_intake_event_2.pdf' },
+      });
+      expect(result.data.items[1]).toMatchObject({
+        eventId: 'evt-1',
+        eventNumber: 1,
+        document: { fileName: 'candidate_intake_event_1.pdf' },
+      });
+    });
+
+    it('paginates event merged scans', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        events: [
+          {
+            id: 'evt-1',
+            collectedAt: new Date('2026-06-10'),
+            mergedDocument: {
+              id: 'doc-1',
+              fileName: 'event-1.pdf',
+              fileUrl: 'https://example.com/event-1.pdf',
+              mimeType: 'application/pdf',
+            },
+          },
+          {
+            id: 'evt-2',
+            collectedAt: new Date('2026-06-12'),
+            mergedDocument: {
+              id: 'doc-2',
+              fileName: 'event-2.pdf',
+              fileUrl: 'https://example.com/event-2.pdf',
+              mimeType: 'application/pdf',
+            },
+          },
+          {
+            id: 'evt-3',
+            collectedAt: new Date('2026-06-15'),
+            mergedDocument: {
+              id: 'doc-3',
+              fileName: 'event-3.pdf',
+              fileUrl: 'https://example.com/event-3.pdf',
+              mimeType: 'application/pdf',
+            },
+          },
+        ],
+      });
+
+      const page1 = await service.getEventMerges('col-1', { page: 1, limit: 2 });
+      const page2 = await service.getEventMerges('col-1', { page: 2, limit: 2 });
+
+      expect(page1.data.pagination).toEqual({
+        page: 1,
+        limit: 2,
+        total: 3,
+        totalPages: 2,
+      });
+      expect(page1.data.items).toHaveLength(2);
+      expect(page1.data.items[0].eventId).toBe('evt-3');
+      expect(page2.data.items).toHaveLength(1);
+      expect(page2.data.items[0].eventId).toBe('evt-1');
     });
   });
 

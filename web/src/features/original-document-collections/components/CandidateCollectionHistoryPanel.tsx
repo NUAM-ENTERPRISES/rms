@@ -14,7 +14,7 @@ import {
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { useCan } from "@/hooks/useCan";
-import { useGetCandidateOriginalDocumentCollectionsQuery, useGetOriginalDocumentCollectionMergeHistoryQuery } from "../api";
+import { useGetCandidateOriginalDocumentCollectionsQuery, useGetOriginalDocumentCollectionEventMergesQuery } from "../api";
 import { EventMergeUploadRow } from "./EventMergeUploadRow";
 import {
   COLLECTION_STATUS_LABELS,
@@ -34,6 +34,7 @@ export type CandidateCollectionHistoryPanelProps = {
   highlightEventId?: string;
   showAddEventLink?: boolean;
   onUpdated?: () => void;
+  onEventMergeUploaded?: () => void;
   allowEventMergeUpload?: boolean;
   className?: string;
 };
@@ -69,39 +70,98 @@ function formatSourceDetail(event: OriginalDocumentCollectionEvent): string {
   }
 }
 
+function MergedScanFileRow({
+  title,
+  subtitle,
+  document,
+  dateLabel,
+  onPreview,
+}: {
+  title: string;
+  subtitle?: string;
+  document: CollectionMergedDocument;
+  dateLabel?: string;
+  onPreview: (document: CollectionMergedDocument) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white p-2 transition-colors hover:border-slate-300">
+      <FileStack className="h-3 w-3 shrink-0 text-slate-500" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-medium text-slate-800">{title}</p>
+        {subtitle ? (
+          <p className="truncate text-[10px] text-slate-500">{subtitle}</p>
+        ) : null}
+      </div>
+      {dateLabel ? (
+        <span className="shrink-0 text-[10px] text-slate-500">{dateLabel}</span>
+      ) : null}
+      <div className="flex shrink-0 gap-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 w-7 p-0"
+          title="View"
+          onClick={() => onPreview(document)}
+        >
+          <Eye className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          asChild
+          className="h-7 w-7 p-0"
+          title="Download"
+        >
+          <a
+            href={document.fileUrl}
+            download={document.fileName}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function CandidateCollectionHistoryPanel({
   candidateId,
   variant = "full",
   highlightEventId,
   showAddEventLink = true,
   onUpdated,
+  onEventMergeUploaded,
   allowEventMergeUpload = false,
   className,
 }: CandidateCollectionHistoryPanelProps) {
   const canRead = useCan("read:documents");
   const [previewDocument, setPreviewDocument] =
     useState<CollectionMergedDocument | null>(null);
-  const [mergeHistoryPage, setMergeHistoryPage] = useState(1);
-  const mergeHistoryLimit = 10;
+  const [eventMergesPage, setEventMergesPage] = useState(1);
+  const eventMergesLimit = 5;
   const { data, isLoading } = useGetCandidateOriginalDocumentCollectionsQuery(
     candidateId,
     { skip: !canRead || !candidateId },
   );
   const collection = data?.data?.collection;
-  const { data: mergeHistoryResponse } =
-    useGetOriginalDocumentCollectionMergeHistoryQuery(
+  const { data: eventMergesResponse } =
+    useGetOriginalDocumentCollectionEventMergesQuery(
       {
         id: collection?.id ?? "",
-        page: mergeHistoryPage,
-        limit: mergeHistoryLimit,
+        page: eventMergesPage,
+        limit: eventMergesLimit,
       },
       { skip: !canRead || !collection?.id },
     );
-  const mergeHistory = mergeHistoryResponse?.data?.items ?? [];
-  const mergeHistoryPagination = mergeHistoryResponse?.data?.pagination;
+  const eventMergedScans = eventMergesResponse?.data?.items ?? [];
+  const eventMergesPagination = eventMergesResponse?.data?.pagination;
 
   useEffect(() => {
-    setMergeHistoryPage(1);
+    setEventMergesPage(1);
   }, [collection?.id]);
 
   if (!canRead || !candidateId) return null;
@@ -153,10 +213,14 @@ export function CandidateCollectionHistoryPanel({
     );
   }
 
-  const timeline = [...events].sort(
+  const chronologicalEvents = [...events].sort(
     (a, b) =>
       new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
   );
+  const eventNumberById = new Map(
+    chronologicalEvents.map((event, index) => [event.id, index + 1]),
+  );
+  const timeline = [...chronologicalEvents].reverse();
 
   const content = (
     <div className="space-y-3">
@@ -234,10 +298,11 @@ export function CandidateCollectionHistoryPanel({
       ) : null}
 
       <div className="space-y-2">
-        {timeline.map((event, index) => {
+        {timeline.map((event) => {
           const received = event.items.filter((item) => item.isReceived);
           const isHighlighted = event.id === highlightEventId;
           const source = formatSourceDetail(event);
+          const eventNumber = eventNumberById.get(event.id) ?? 0;
 
           return (
             <div
@@ -253,7 +318,7 @@ export function CandidateCollectionHistoryPanel({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-slate-900">
-                      Event {index + 1}
+                      Event {eventNumber}
                     </span>
                     {isHighlighted ? (
                       <Badge className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-[10px] px-2 py-0.5 shadow-sm">
@@ -297,12 +362,13 @@ export function CandidateCollectionHistoryPanel({
                 <EventMergeUploadRow
                   collectionId={collection.id}
                   eventId={event.id}
-                  eventLabel={`Event ${index + 1}`}
+                  eventLabel={`Event ${eventNumber}`}
                   mergedDocument={event.mergedDocument}
                   disabled={
                     collection.status === "completed" || !allowEventMergeUpload
                   }
                   onUpdated={onUpdated}
+                  onMergedReady={onEventMergeUploaded}
                 />
               ) : null}
             </div>
@@ -310,78 +376,48 @@ export function CandidateCollectionHistoryPanel({
         })}
       </div>
 
-      {mergeHistory.length > 0 ? (
-        <div className="rounded-lg border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-gray-50 p-3.5">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-700">
-              Prior merged scans
+      {eventMergedScans.length > 0 || (eventMergesPagination?.total ?? 0) > 0 ? (
+        <div className="rounded-lg border-2 border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-3.5">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+              Event merged scans
             </p>
-            {mergeHistoryPagination ? (
-              <span className="text-[10px] text-slate-500">
-                {mergeHistoryPagination.total} total
+            {eventMergesPagination ? (
+              <span className="text-[10px] text-emerald-700">
+                {eventMergesPagination.total} total
               </span>
             ) : null}
           </div>
+          <p className="mb-2 text-[10px] text-emerald-800">
+            Each intake event&apos;s uploaded merge PDF, newest first.
+          </p>
           <div className="space-y-1.5">
-            {mergeHistory.map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center gap-2 rounded-md border border-slate-200 bg-white p-2 transition-colors hover:border-slate-300"
-              >
-                <FileStack className="h-3 w-3 shrink-0 text-slate-500" />
-                <span className="min-w-0 flex-1 truncate text-xs text-slate-800">
-                  {entry.document.fileName}
-                </span>
-                <span className="shrink-0 text-[10px] text-slate-500">
-                  {format(new Date(entry.uploadedAt), "dd MMM yyyy")}
-                </span>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    title="View"
-                    onClick={() => setPreviewDocument(entry.document)}
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="h-7 w-7 p-0"
-                    title="Download"
-                  >
-                    <a
-                      href={entry.document.fileUrl}
-                      download={entry.document.fileName}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
+            {eventMergedScans.map((entry) => (
+              <MergedScanFileRow
+                key={entry.eventId}
+                title={`Event ${entry.eventNumber}`}
+                subtitle={entry.document.fileName}
+                document={entry.document}
+                dateLabel={format(new Date(entry.collectedAt), "dd MMM yyyy")}
+                onPreview={setPreviewDocument}
+              />
             ))}
           </div>
-          {mergeHistoryPagination && mergeHistoryPagination.totalPages > 1 ? (
-            <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-200 pt-2">
+          {eventMergesPagination && eventMergesPagination.totalPages > 1 ? (
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-emerald-200 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="h-7 text-xs"
-                disabled={mergeHistoryPage <= 1}
-                onClick={() => setMergeHistoryPage((p) => Math.max(1, p - 1))}
+                disabled={eventMergesPage <= 1}
+                onClick={() => setEventMergesPage((p) => Math.max(1, p - 1))}
               >
                 Prev
               </Button>
-              <span className="text-[10px] text-slate-500">
-                Page {mergeHistoryPagination.page} of{" "}
-                {mergeHistoryPagination.totalPages}
+              <span className="text-[10px] text-emerald-700">
+                Page {eventMergesPagination.page} of{" "}
+                {eventMergesPagination.totalPages}
               </span>
               <Button
                 type="button"
@@ -389,11 +425,11 @@ export function CandidateCollectionHistoryPanel({
                 size="sm"
                 className="h-7 text-xs"
                 disabled={
-                  mergeHistoryPage >= mergeHistoryPagination.totalPages
+                  eventMergesPage >= eventMergesPagination.totalPages
                 }
                 onClick={() =>
-                  setMergeHistoryPage((p) =>
-                    Math.min(mergeHistoryPagination.totalPages, p + 1),
+                  setEventMergesPage((p) =>
+                    Math.min(eventMergesPagination.totalPages, p + 1),
                   )
                 }
               >

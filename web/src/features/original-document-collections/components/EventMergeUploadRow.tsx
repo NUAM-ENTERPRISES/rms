@@ -15,6 +15,7 @@ interface EventMergeUploadRowProps {
   mergedDocument?: CollectionMergedDocument | null;
   disabled?: boolean;
   onUpdated?: () => void;
+  onMergedReady?: () => void | Promise<void>;
 }
 
 function triggerDownload(fileUrl: string, fileName: string) {
@@ -35,6 +36,7 @@ export function EventMergeUploadRow({
   mergedDocument,
   disabled = false,
   onUpdated,
+  onMergedReady,
 }: EventMergeUploadRowProps) {
   const canWrite = useCan("write:documents");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,10 +55,11 @@ export function EventMergeUploadRow({
         eventId,
         files: selectedFiles,
       }).unwrap();
-      toast.success("Event merge uploaded and collection PDF updated");
+      toast.success("Merged document ready");
       setSelectedFiles([]);
       if (inputRef.current) inputRef.current.value = "";
       onUpdated?.();
+      await onMergedReady?.();
     } catch {
       toast.error("Failed to upload event merge");
     }

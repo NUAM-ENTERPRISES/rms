@@ -139,6 +139,24 @@
   animation: nav-recruiter-star-glow 2.5s ease-in-out infinite;
 }
 
+@keyframes merged-document-ready-glow {
+  0%,
+  100% {
+    background-color: rgb(236 253 245);
+    border-color: rgb(167 243 208);
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0%);
+  }
+  50% {
+    background-color: rgb(209 250 229);
+    border-color: rgb(52 211 153);
+    box-shadow: 0 0 20px 4px rgb(16 185 129 / 0.45);
+  }
+}
+
+.animate-merged-document-ready-glow {
+  animation: merged-document-ready-glow 2s ease-in-out infinite;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

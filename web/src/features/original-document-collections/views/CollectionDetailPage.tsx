@@ -1,4 +1,4 @@
-import React, { type ComponentType, useState } from "react";
+import React, { type ComponentType, useCallback, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import {
@@ -7,6 +7,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  ExternalLink,
   FileStack,
   FileText,
   Loader2,
@@ -181,20 +182,22 @@ function InfoTile({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5",
+        "group flex items-start gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/60 p-3 transition-all hover:border-slate-200 hover:shadow-sm",
         className,
       )}
     >
-      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <p className="mt-0.5 truncate text-xs font-semibold text-slate-800">
+        <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">
           {value}
         </p>
         {sub ? (
-          <p className="truncate text-[10px] text-slate-500">{sub}</p>
+          <p className="truncate text-xs text-muted-foreground">{sub}</p>
         ) : null}
       </div>
     </div>
@@ -207,6 +210,9 @@ export default function CollectionDetailPage() {
   const { id = "" } = useParams();
   const canWrite = useCan("write:documents");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [highlightCombinedMerge, setHighlightCombinedMerge] = useState(false);
+  const combinedMergeSectionRef = useRef<HTMLDivElement>(null);
+  const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { data, isLoading, isError, refetch } =
     useGetOriginalDocumentCollectionQuery(id, { skip: !id });
   const [completeCollection, { isLoading: isCompleting }] =
@@ -263,6 +269,24 @@ export default function CollectionDetailPage() {
   ]);
 
   const canComplete = completeDisabledReason === null;
+
+  const handleEventMergeUploaded = useCallback(async () => {
+    await refetch();
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    setHighlightCombinedMerge(true);
+    window.requestAnimationFrame(() => {
+      combinedMergeSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightCombinedMerge(false);
+      highlightTimeoutRef.current = null;
+    }, 4000);
+  }, [refetch]);
 
   const handleComplete = async () => {
     try {
@@ -334,9 +358,10 @@ export default function CollectionDetailPage() {
                 .join(" / ")
             : "";
 
-  const docsOnFile = getCollectionDocumentProgress(
+  const documentProgress = getCollectionDocumentProgress(
     collection.cumulativeReceived,
-  ).receivedCount;
+  );
+  const docsOnFile = documentProgress.receivedCount;
 
   const statusSteps = [
     { key: COLLECTION_STATUS_STEPS[0].key, label: COLLECTION_STATUS_STEPS[0].label, icon: FileText },
@@ -470,154 +495,303 @@ export default function CollectionDetailPage() {
 
       <div className="space-y-4">
         <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader className="border-b py-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="h-4 w-4" />
-                Candidate
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              {/* Profile strip */}
-              <div className="flex items-center gap-3 mb-3">
-                <ImageViewer
-                  title={fullName}
-                  src={cand.profileImage || null}
-                  fallbackSrc={DEFAULT_PROFILE_IMAGE}
-                  className="h-12 w-12 shrink-0 rounded-full border-2 border-white ring-2 ring-slate-100 shadow-sm"
-                  ariaLabel={`View full image for ${fullName}`}
-                  enableHoverPreview
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-base font-bold text-slate-900 truncate">
-                      {fullName}
-                    </p>
-                    {cand.currentStatus?.statusName && (() => {
-                      const statusConfig = getCandidateStatusVisualConfig(
-                        cand.currentStatus.statusName,
-                      );
-                      const StatusIcon = statusConfig.icon;
-                      return (
-                        <div className="flex items-center gap-1.5">
-                          <div
-                            className={cn(
-                              "rounded-full p-1",
-                              statusConfig.bgColor,
-                            )}
-                          >
-                            <StatusIcon
-                              className={cn("h-3 w-3", statusConfig.iconColor)}
-                            />
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "border px-1.5 py-0.5 text-[10px] font-medium",
-                              statusConfig.badgeClass,
-                            )}
-                          >
-                            {cand.currentStatus.statusName}
-                          </Badge>
-                        </div>
-                      );
-                    })()}
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <div className="relative border-b border-slate-100 bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 px-4 py-4 sm:px-5">
+              <div
+                className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-300/20 blur-2xl"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-8 left-1/4 h-20 w-20 rounded-full bg-blue-200/15 blur-2xl"
+                aria-hidden
+              />
+
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="relative shrink-0">
+                    <div
+                      className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-400/25 to-blue-400/15 blur-md"
+                      aria-hidden
+                    />
+                    <ImageViewer
+                      title={fullName}
+                      src={cand.profileImage || null}
+                      fallbackSrc={DEFAULT_PROFILE_IMAGE}
+                      className="relative h-16 w-16 shrink-0 rounded-full border-[3px] border-white shadow-md ring-2 ring-slate-100 sm:h-[4.5rem] sm:w-[4.5rem]"
+                      ariaLabel={`View full image for ${fullName}`}
+                      enableHoverPreview
+                    />
                   </div>
-                  {cand.candidateCode && (
-                    <p className="font-mono text-[10px] text-slate-500">
-                      {cand.candidateCode}
+
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600/80">
+                      Candidate profile
                     </p>
-                  )}
+                    <h2 className="mt-0.5 truncate text-lg font-bold text-slate-900 sm:text-xl">
+                      {fullName}
+                    </h2>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      {cand.candidateCode ? (
+                        <Badge
+                          variant="outline"
+                          className="border-slate-200 bg-white/80 font-mono text-[11px] text-slate-600"
+                        >
+                          {cand.candidateCode}
+                        </Badge>
+                      ) : null}
+                      {cand.professionType?.label || cand.professionType?.name ? (
+                        <Badge
+                          variant="outline"
+                          className="border-indigo-200/80 bg-indigo-50/80 text-[11px] font-medium text-indigo-700"
+                        >
+                          {cand.professionType?.label || cand.professionType?.name}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+                  {cand.currentStatus?.statusName
+                    ? (() => {
+                        const statusConfig = getCandidateStatusVisualConfig(
+                          cand.currentStatus.statusName,
+                        );
+                        const StatusIcon = statusConfig.icon;
+                        return (
+                          <div className="flex items-center gap-2 sm:justify-end">
+                            <div
+                              className={cn(
+                                "rounded-full p-1.5 shadow-sm",
+                                statusConfig.bgColor,
+                              )}
+                            >
+                              <StatusIcon
+                                className={cn("h-3.5 w-3.5", statusConfig.iconColor)}
+                              />
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "px-2.5 py-1 text-xs font-semibold",
+                                statusConfig.badgeClass,
+                              )}
+                            >
+                              {cand.currentStatus.statusName}
+                            </Badge>
+                          </div>
+                        );
+                      })()
+                    : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 border-slate-200 bg-white/80 text-xs shadow-sm hover:bg-white"
+                    asChild
+                  >
+                    <Link to={`/candidates/${cand.id}`}>
+                      View candidate
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
                 </div>
               </div>
+            </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <InfoTile icon={Mail} label="Email" value={cand.email?.trim() || "—"} className="py-2" />
-                <InfoTile icon={Phone} label="Phone" value={formatPhone(cand)} className="py-2" />
-                <InfoTile icon={Users} label="Gender" value={formatGender(cand.gender)} className="py-2" />
-                <InfoTile icon={Calendar} label="Date of Birth" value={formatDob(cand.dateOfBirth)} className="py-2" />
+            <CardContent className="p-4 sm:p-5">
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <InfoTile
+                  icon={Mail}
+                  label="Email"
+                  value={cand.email?.trim() || "—"}
+                />
+                <InfoTile icon={Phone} label="Phone" value={formatPhone(cand)} />
+                <InfoTile
+                  icon={Users}
+                  label="Gender"
+                  value={formatGender(cand.gender)}
+                />
+                <InfoTile
+                  icon={Calendar}
+                  label="Date of Birth"
+                  value={formatDob(cand.dateOfBirth)}
+                />
                 <InfoTile
                   icon={Briefcase}
                   label="Profession"
-                  value={cand.professionType?.label || cand.professionType?.name || "—"}
-                  className="py-2"
+                  value={
+                    cand.professionType?.label || cand.professionType?.name || "—"
+                  }
                 />
                 <InfoTile
                   icon={UserCircle2}
                   label="Recruiter"
                   value={recruiter?.name?.trim() || "Not assigned"}
                   sub={recruiter?.email}
-                  className="py-2"
                 />
-              </div>
+              </dl>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="border-b py-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FileStack className="h-4 w-4" />
-                Collection info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-2.5">
-              <div className="grid gap-2.5 grid-cols-1">
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <div className="relative border-b border-slate-100 bg-gradient-to-br from-emerald-50/70 via-white to-amber-50/40 px-4 py-4 sm:px-5">
+              <div
+                className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-emerald-300/20 blur-2xl"
+                aria-hidden
+              />
+              <div
+                className="pointer-events-none absolute -bottom-6 left-1/3 h-16 w-24 rounded-full bg-amber-200/20 blur-2xl"
+                aria-hidden
+              />
+
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700/90">
+                    Collection overview
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-bold text-slate-900 sm:text-xl">
+                    Intake record
+                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "px-2.5 py-1 text-xs font-semibold",
+                        getStatusColor(collection.status),
+                      )}
+                    >
+                      {COLLECTION_STATUS_LABELS[collection.status] ??
+                        collection.status}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="border-slate-200 bg-white/80 text-[11px] text-slate-600"
+                    >
+                      {collection.events.length} intake event
+                      {collection.events.length !== 1 ? "s" : ""}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "border-slate-200 bg-white/80 text-[11px] font-medium",
+                        collection.lockerFileNumber
+                          ? "text-slate-700"
+                          : "text-slate-400",
+                      )}
+                    >
+                      Locker: {collection.lockerFileNumber?.trim() || "N/A"}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_8px_20px_rgba(16,185,129,0.3)] sm:flex">
+                  <FileStack className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="relative mt-4 rounded-xl border border-emerald-100/80 bg-white/70 p-3 backdrop-blur-sm">
+                <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-slate-700">
+                    Documents on file
+                  </span>
+                  <span className="font-medium text-emerald-700">
+                    {docsOnFile} of {documentProgress.totalCount} ·{" "}
+                    {documentProgress.percent}%
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all duration-500"
+                    style={{ width: `${documentProgress.percent}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <CardContent className="space-y-4 p-4 sm:p-5">
+              <dl className="grid gap-3 sm:grid-cols-2">
                 <InfoTile
                   icon={User}
                   label="Created By"
                   value={collection.createdBy.name}
                   sub={collection.createdBy.email}
-                  className="py-2"
                 />
                 <InfoTile
                   icon={Calendar}
                   label="Latest Intake"
                   value={
                     latest
-                      ? format(new Date(latest.collectedAt), "dd MMM yyyy, h:mm a")
+                      ? format(
+                          new Date(latest.collectedAt),
+                          "dd MMM yyyy, h:mm a",
+                        )
                       : "—"
                   }
-                  sub={latest?.collectedBy.name}
-                  className="py-2"
+                  sub={
+                    latest
+                      ? [
+                          COLLECTION_TYPE_LABELS[latest.collectionType],
+                          sourceDetail,
+                          latest.collectedBy.name,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")
+                      : undefined
+                  }
                 />
                 <InfoTile
                   icon={FileStack}
                   label="Documents On File"
-                  value={`${docsOnFile} received`}
-                  className="py-2"
+                  value={`${docsOnFile} of ${documentProgress.totalCount} received`}
+                  sub={
+                    documentProgress.isComplete
+                      ? "All checklist documents received"
+                      : `${documentProgress.totalCount - docsOnFile} still pending`
+                  }
                 />
-                {collection.completedBy && (
+                {collection.completedBy ? (
                   <InfoTile
                     icon={CheckCircle2}
                     label="Completed By"
                     value={collection.completedBy.name}
                     sub={collection.completedBy.email}
-                    className="py-2"
                   />
-                )}
-              </div>
-              {canWrite && collection.status !== "completed" && (
-                <Button variant="outline" size="sm" className="w-full mt-2" asChild>
+                ) : null}
+              </dl>
+
+              {canWrite && collection.status !== "completed" ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 w-full gap-2 border-slate-200 bg-white text-sm shadow-sm hover:bg-slate-50"
+                  asChild
+                >
                   <Link
                     to={`/original-documents/new?candidateId=${collection.candidateId}&collectionId=${collection.id}`}
                   >
+                    <Plus className="h-4 w-4" />
                     Add more documents
                   </Link>
                 </Button>
-              )}
-              {collection.status === "completed" && (
-                <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
-                    <p className="text-sm font-medium text-foreground">
-                      Collection completed
-                    </p>
+              ) : null}
+
+              {collection.status === "completed" ? (
+                <div className="rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-green-50 p-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-900">
+                        Collection completed
+                      </p>
+                      <p className="text-xs text-emerald-700/80">
+                        All documents received and processed
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    All documents received and processed
-                  </p>
                 </div>
-              )}
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -629,6 +803,7 @@ export default function CollectionDetailPage() {
           showAddEventLink={false}
           allowEventMergeUpload
           onUpdated={refetch}
+          onEventMergeUploaded={handleEventMergeUploaded}
         />
 
         <Card>
@@ -695,7 +870,12 @@ export default function CollectionDetailPage() {
         </Card>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <MergeUploadSection collection={collection} onUpdated={refetch} />
+          <MergeUploadSection
+            collection={collection}
+            onUpdated={refetch}
+            highlightReady={highlightCombinedMerge}
+            sectionRef={combinedMergeSectionRef}
+          />
           <SubmitToLockerSection collection={collection} onUpdated={refetch} />
         </div>
 

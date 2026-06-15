@@ -18,7 +18,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
-import { ListMergeHistoryQueryDto } from './dto/list-merge-history-query.dto';
+import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 import { CollectionItemDto } from './dto/collection-item.dto';
 
@@ -74,21 +74,6 @@ const collectionInclude = {
     orderBy: { collectedAt: 'asc' as const },
   },
 } satisfies Prisma.OriginalDocumentCollectionInclude;
-
-const mergeHistoryInclude = {
-  orderBy: { uploadedAt: 'desc' as const },
-  include: {
-    document: {
-      select: {
-        id: true,
-        fileName: true,
-        fileUrl: true,
-        mimeType: true,
-      },
-    },
-    uploadedBy: { select: { id: true, name: true } },
-  },
-} satisfies Prisma.OriginalDocumentCollectionMergeHistoryFindManyArgs;
 
 type CollectionWithRelations = Prisma.OriginalDocumentCollectionGetPayload<{
   include: typeof collectionInclude;
@@ -238,35 +223,37 @@ export class OriginalDocumentCollectionsService {
     return { success: true, data: this.enrichCollection(collection) };
   }
 
-  async getMergeHistory(id: string, query: ListMergeHistoryQueryDto = {}) {
-    const collection = await this.prisma.originalDocumentCollection.findUnique({
-      where: { id },
-      select: { id: true },
-    });
-    if (!collection) {
-      throw new NotFoundException('Collection not found');
-    }
+  async getEventMerges(id: string, query: ListEventMergesQueryDto = {}) {
+    const collection = await this.findOrThrow(id);
+    const chronologicalEvents = [...collection.events].sort(
+      (a, b) =>
+        new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
+    );
+
+    const allItems = chronologicalEvents
+      .map((event, index) => ({
+        event,
+        eventNumber: index + 1,
+      }))
+      .filter(({ event }) => Boolean(event.mergedDocument?.fileUrl))
+      .reverse()
+      .map(({ event, eventNumber }) => ({
+        eventId: event.id,
+        eventNumber,
+        collectedAt: event.collectedAt,
+        document: event.mergedDocument!,
+      }));
 
     const page = query.page ?? 1;
-    const limit = query.limit ?? 10;
+    const limit = query.limit ?? 5;
+    const total = allItems.length;
     const skip = (page - 1) * limit;
-
-    const [mergeHistory, total] = await Promise.all([
-      this.prisma.originalDocumentCollectionMergeHistory.findMany({
-        where: { collectionId: id },
-        ...mergeHistoryInclude,
-        skip,
-        take: limit,
-      }),
-      this.prisma.originalDocumentCollectionMergeHistory.count({
-        where: { collectionId: id },
-      }),
-    ]);
+    const items = allItems.slice(skip, skip + limit);
 
     return {
       success: true,
       data: {
-        items: mergeHistory,
+        items,
         pagination: {
           page,
           limit,
@@ -481,31 +468,18 @@ export class OriginalDocumentCollectionsService {
       },
     });
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (collection.mergedDocumentId) {
-        await tx.originalDocumentCollectionMergeHistory.create({
-          data: {
-            collectionId: id,
-            documentId: collection.mergedDocumentId,
-            uploadedByUserId: userId,
-            replacedAt: new Date(),
-          },
-        });
-      }
-
-      return tx.originalDocumentCollection.update({
-        where: { id },
-        data: {
-          mergedDocumentId: document.id,
-          status:
-            collection.status === COLLECTION_STATUS.DRAFT
-              ? COLLECTION_STATUS.MERGED_UPLOADED
-              : collection.status === COLLECTION_STATUS.LOCKER_SUBMITTED
-                ? COLLECTION_STATUS.LOCKER_SUBMITTED
-                : COLLECTION_STATUS.MERGED_UPLOADED,
-        },
-        include: collectionInclude,
-      });
+    const updated = await this.prisma.originalDocumentCollection.update({
+      where: { id },
+      data: {
+        mergedDocumentId: document.id,
+        status:
+          collection.status === COLLECTION_STATUS.DRAFT
+            ? COLLECTION_STATUS.MERGED_UPLOADED
+            : collection.status === COLLECTION_STATUS.LOCKER_SUBMITTED
+              ? COLLECTION_STATUS.LOCKER_SUBMITTED
+              : COLLECTION_STATUS.MERGED_UPLOADED,
+      },
+      include: collectionInclude,
     });
 
     return {
@@ -631,31 +605,18 @@ export class OriginalDocumentCollectionsService {
       },
     });
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (collection.mergedDocumentId) {
-        await tx.originalDocumentCollectionMergeHistory.create({
-          data: {
-            collectionId,
-            documentId: collection.mergedDocumentId,
-            uploadedByUserId: userId,
-            replacedAt: new Date(),
-          },
-        });
-      }
-
-      return tx.originalDocumentCollection.update({
-        where: { id: collectionId },
-        data: {
-          mergedDocumentId: document.id,
-          status:
-            collection.status === COLLECTION_STATUS.DRAFT
-              ? COLLECTION_STATUS.MERGED_UPLOADED
-              : collection.status === COLLECTION_STATUS.LOCKER_SUBMITTED
-                ? COLLECTION_STATUS.LOCKER_SUBMITTED
-                : COLLECTION_STATUS.MERGED_UPLOADED,
-        },
-        include: collectionInclude,
-      });
+    const updated = await this.prisma.originalDocumentCollection.update({
+      where: { id: collectionId },
+      data: {
+        mergedDocumentId: document.id,
+        status:
+          collection.status === COLLECTION_STATUS.DRAFT
+            ? COLLECTION_STATUS.MERGED_UPLOADED
+            : collection.status === COLLECTION_STATUS.LOCKER_SUBMITTED
+              ? COLLECTION_STATUS.LOCKER_SUBMITTED
+              : COLLECTION_STATUS.MERGED_UPLOADED,
+      },
+      include: collectionInclude,
     });
 
     return this.enrichCollection(updated);

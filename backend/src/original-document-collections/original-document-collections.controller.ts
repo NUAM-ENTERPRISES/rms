@@ -28,7 +28,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
-import { ListMergeHistoryQueryDto } from './dto/list-merge-history-query.dto';
+import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
 
 @ApiTags('Original Document Collections')
@@ -73,14 +73,14 @@ export class OriginalDocumentCollectionsController {
     return this.collectionsService.findByCandidate(candidateId);
   }
 
-  @Get(':id/merge-history')
+  @Get(':id/event-merges')
   @Permissions('read:documents')
-  @ApiOperation({ summary: 'Get prior merged scan history for a collection' })
-  getMergeHistory(
+  @ApiOperation({ summary: 'Get merged scan PDFs uploaded per intake event' })
+  getEventMerges(
     @Param('id') id: string,
-    @Query() query: ListMergeHistoryQueryDto,
+    @Query() query: ListEventMergesQueryDto,
   ) {
-    return this.collectionsService.getMergeHistory(id, query);
+    return this.collectionsService.getEventMerges(id, query);
   }
 
   @Get(':id')

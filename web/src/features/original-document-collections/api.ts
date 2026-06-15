@@ -3,8 +3,8 @@ import type {
   CreateCollectionPayload,
   CreateEventPayload,
   CumulativeReceivedItem,
+  EventMergeScanEntry,
   ListCollectionsParams,
-  MergeHistoryEntry,
   OriginalDocumentCollection,
   OriginalDocumentCollectionEvent,
 } from "./types";
@@ -76,11 +76,11 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       ],
     }),
 
-    getOriginalDocumentCollectionMergeHistory: builder.query<
+    getOriginalDocumentCollectionEventMerges: builder.query<
       {
         success: boolean;
         data: {
-          items: MergeHistoryEntry[];
+          items: EventMergeScanEntry[];
           pagination: {
             page: number;
             limit: number;
@@ -91,12 +91,12 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       },
       { id: string; page?: number; limit?: number }
     >({
-      query: ({ id, page = 1, limit = 10 }) => ({
-        url: `/original-document-collections/${id}/merge-history`,
+      query: ({ id, page = 1, limit = 5 }) => ({
+        url: `/original-document-collections/${id}/event-merges`,
         params: { page, limit },
       }),
       providesTags: (_result, _error, { id }) => [
-        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
+        { type: "OriginalDocumentCollection", id: `${id}-event-merges` },
       ],
     }),
 
@@ -201,7 +201,7 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       },
       invalidatesTags: (result, _error, { id }) => [
         { type: "OriginalDocumentCollection", id },
-        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
+        { type: "OriginalDocumentCollection", id: `${id}-event-merges` },
         { type: "OriginalDocumentCollection", id: "LIST" },
         { type: "OriginalDocumentCollection", id: "STATS" },
         "Document",
@@ -232,7 +232,7 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
         { type: "OriginalDocumentCollection", id: collectionId },
         {
           type: "OriginalDocumentCollection",
-          id: `${collectionId}-merge-history`,
+          id: `${collectionId}-event-merges`,
         },
         { type: "OriginalDocumentCollection", id: "LIST" },
         { type: "OriginalDocumentCollection", id: "STATS" },
@@ -253,7 +253,7 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (result, _error, id) => [
         { type: "OriginalDocumentCollection", id },
-        { type: "OriginalDocumentCollection", id: `${id}-merge-history` },
+        { type: "OriginalDocumentCollection", id: `${id}-event-merges` },
         { type: "OriginalDocumentCollection", id: "LIST" },
         { type: "OriginalDocumentCollection", id: "STATS" },
         "Document",
@@ -340,7 +340,7 @@ export const {
   useGetOriginalDocumentCollectionStatsQuery,
   useGetOriginalDocumentCollectionsQuery,
   useGetOriginalDocumentCollectionQuery,
-  useGetOriginalDocumentCollectionMergeHistoryQuery,
+  useGetOriginalDocumentCollectionEventMergesQuery,
   useGetCandidateOriginalDocumentCollectionsQuery,
   useCreateOriginalDocumentCollectionMutation,
   useAddOriginalDocumentCollectionEventMutation,

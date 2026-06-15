@@ -21,13 +21,11 @@ export interface CollectionMergedDocument {
   docType?: string;
 }
 
-export interface MergeHistoryEntry {
-  id: string;
-  documentId: string;
-  uploadedAt: string;
-  replacedAt?: string | null;
+export interface EventMergeScanEntry {
+  eventId: string;
+  eventNumber: number;
+  collectedAt: string;
   document: CollectionMergedDocument;
-  uploadedBy: CollectionUserRef;
 }
 
 export interface OriginalDocumentCollectionEvent {
@@ -99,7 +97,6 @@ export interface OriginalDocumentCollection {
   completedBy?: CollectionUserRef | null;
   createdBy: CollectionUserRef;
   mergedDocument?: CollectionMergedDocument | null;
-  mergeHistory?: MergeHistoryEntry[];
   events: OriginalDocumentCollectionEvent[];
 }
 
