@@ -67,5 +67,10 @@ export const createCollectionSchema = baseSchema
 export type CreateCollectionFormValues = z.infer<typeof createCollectionSchema>;
 
 export const submitToLockerSchema = z.object({
-  lockerFileNumber: z.string().min(1, "Locker file number is required").max(100),
+  lockerFileNumber: z
+    .string()
+    .trim()
+    .min(1, "Locker file number is required")
+    .max(100, "Locker file number must be 100 characters or less")
+    .transform((value) => value.toUpperCase()),
 });

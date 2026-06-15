@@ -72,6 +72,63 @@ export function OriginalDocumentChecklist({
     onChange(next);
   };
 
+  const filteredDocs = ORIGINAL_DOCUMENT_CHECKLIST.filter((docType) => {
+    if (!searchTerm.trim()) return true;
+    const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
+    return label.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const selectableFilteredDocTypes = filteredDocs.filter(
+    (docType) => !lockedSet.has(docType),
+  );
+
+  const selectedSelectableCount = selectableFilteredDocTypes.filter((docType) => {
+    const item = itemMap.get(docType);
+    return item?.isReceived ?? false;
+  }).length;
+
+  const allSelectableSelected =
+    selectableFilteredDocTypes.length > 0 &&
+    selectedSelectableCount === selectableFilteredDocTypes.length;
+  const someSelectableSelected =
+    selectedSelectableCount > 0 && !allSelectableSelected;
+  const selectAllChecked: boolean | "indeterminate" = allSelectableSelected
+    ? true
+    : someSelectableSelected
+      ? "indeterminate"
+      : false;
+
+  const handleSelectAll = (checked: boolean) => {
+    const targetSet = new Set(selectableFilteredDocTypes);
+    const next = ORIGINAL_DOCUMENT_CHECKLIST.map((type) => {
+      const existing = itemMap.get(type);
+      if (lockedSet.has(type)) {
+        return (
+          existing ?? {
+            docType: type,
+            isReceived: false,
+            remarks: "",
+          }
+        );
+      }
+      if (targetSet.has(type)) {
+        return {
+          docType: type,
+          isReceived: checked,
+          remarks: checked ? (existing?.remarks ?? "") : "",
+        };
+      }
+      return (
+        existing ?? {
+          docType: type,
+          isReceived: false,
+          remarks: "",
+        }
+      );
+    });
+    onChange(next);
+  };
+
   const newReceivedCount = items.filter(
     (item) => item.isReceived && !lockedSet.has(item.docType),
   ).length;
@@ -83,12 +140,10 @@ export function OriginalDocumentChecklist({
       ? Math.round((newReceivedCount / newTotalCount) * 100)
       : 0;
   const hasPriorReceipts = lockedCount > 0;
-
-  const filteredDocs = ORIGINAL_DOCUMENT_CHECKLIST.filter((docType) => {
-    if (!searchTerm.trim()) return true;
-    const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
-    return label.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const isFiltering = searchTerm.trim().length > 0;
+  const selectAllLabel = isFiltering
+    ? "Select all visible"
+    : "Select all documents";
 
   return (
     <div className="space-y-3">
@@ -106,6 +161,31 @@ export function OriginalDocumentChecklist({
         <Badge variant="outline" className="text-xs">
           {progressPercent}% complete
         </Badge>
+      </div>
+
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+        <Checkbox
+          id="select-all-documents"
+          checked={selectAllChecked}
+          onCheckedChange={(checked) => handleSelectAll(checked === true)}
+          disabled={disabled || selectableFilteredDocTypes.length === 0}
+          className="h-4 w-4 shrink-0"
+          aria-label={selectAllLabel}
+        />
+        <Label
+          htmlFor="select-all-documents"
+          className={cn(
+            "text-sm font-medium text-foreground",
+            !disabled && selectableFilteredDocTypes.length > 0 && "cursor-pointer",
+          )}
+        >
+          {selectAllLabel}
+        </Label>
+        {isFiltering ? (
+          <span className="text-xs text-muted-foreground">
+            ({selectableFilteredDocTypes.length} shown)
+          </span>
+        ) : null}
       </div>
 
       <div className="relative">

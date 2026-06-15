@@ -2337,7 +2337,7 @@ model OriginalDocumentCollection {
   id                      String    @id @default(cuid())
   candidateId             String    @unique
   mergedDocumentId        String?
-  lockerFileNumber        String?
+  lockerFileNumber        String?   @unique
   lockerSubmittedAt       DateTime?
   lockerSubmittedByUserId String?
   status                  String    @default("draft")

@@ -20,6 +20,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
 import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
+import { CheckLockerFileNumberQueryDto } from './dto/check-locker-file-number-query.dto';
 import { CollectionItemDto } from './dto/collection-item.dto';
 
 const candidateSelect = {
@@ -622,6 +623,47 @@ export class OriginalDocumentCollectionsService {
     return this.enrichCollection(updated);
   }
 
+  normalizeLockerFileNumber(lockerFileNumber: string): string {
+    return lockerFileNumber.trim().toUpperCase();
+  }
+
+  async checkLockerFileNumberAvailability(
+    query: CheckLockerFileNumberQueryDto,
+  ) {
+    const normalized = this.normalizeLockerFileNumber(query.lockerFileNumber);
+    if (!normalized) {
+      return {
+        success: true,
+        data: {
+          available: false,
+          lockerFileNumber: normalized,
+          usedBy: null,
+        },
+      };
+    }
+
+    const conflict = await this.findLockerFileNumberConflict(
+      normalized,
+      query.excludeCollectionId,
+    );
+
+    return {
+      success: true,
+      data: {
+        available: !conflict,
+        lockerFileNumber: normalized,
+        usedBy: conflict
+          ? {
+              collectionId: conflict.id,
+              candidateName:
+                `${conflict.candidate.firstName ?? ''} ${conflict.candidate.lastName ?? ''}`.trim(),
+              candidateCode: conflict.candidate.candidateCode,
+            }
+          : null,
+      },
+    };
+  }
+
   async submitToLocker(id: string, dto: SubmitToLockerDto, userId: string) {
     const collection = await this.findOrThrow(id);
     if (!collection.mergedDocumentId) {
@@ -630,31 +672,83 @@ export class OriginalDocumentCollectionsService {
       );
     }
 
+    const normalized = this.normalizeLockerFileNumber(dto.lockerFileNumber);
+    if (!normalized) {
+      throw new BadRequestException('Locker file number is required');
+    }
+
+    const conflict = await this.findLockerFileNumberConflict(normalized, id);
+    if (conflict) {
+      const candidateLabel =
+        `${conflict.candidate.firstName ?? ''} ${conflict.candidate.lastName ?? ''}`.trim() ||
+        'another candidate';
+      throw new ConflictException(
+        `Locker file number "${normalized}" is already assigned to ${candidateLabel}`,
+      );
+    }
+
     const isUpdate = Boolean(collection.lockerSubmittedAt);
     const now = new Date();
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.candidate.update({
-        where: { id: collection.candidateId },
-        data: { lockerFileNumber: dto.lockerFileNumber },
+    try {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await tx.candidate.update({
+          where: { id: collection.candidateId },
+          data: { lockerFileNumber: normalized },
+        });
+
+        return tx.originalDocumentCollection.update({
+          where: { id },
+          data: {
+            lockerFileNumber: normalized,
+            ...(isUpdate
+              ? {}
+              : {
+                  lockerSubmittedAt: now,
+                  lockerSubmittedByUserId: userId,
+                  status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+                }),
+          },
+          include: collectionInclude,
+        });
       });
 
-      return tx.originalDocumentCollection.update({
-        where: { id },
-        data: {
-          lockerFileNumber: dto.lockerFileNumber,
-          ...(isUpdate
-            ? {}
-            : {
-                lockerSubmittedAt: now,
-                lockerSubmittedByUserId: userId,
-                status: COLLECTION_STATUS.LOCKER_SUBMITTED,
-              }),
+      return { success: true, data: this.enrichCollection(updated) };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Locker file number "${normalized}" is already in use`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async findLockerFileNumberConflict(
+    lockerFileNumber: string,
+    excludeCollectionId?: string,
+  ) {
+    return this.prisma.originalDocumentCollection.findFirst({
+      where: {
+        lockerFileNumber: {
+          equals: lockerFileNumber,
+          mode: 'insensitive',
         },
-        include: collectionInclude,
-      });
+        ...(excludeCollectionId ? { NOT: { id: excludeCollectionId } } : {}),
+      },
+      select: {
+        id: true,
+        candidate: {
+          select: {
+            firstName: true,
+            lastName: true,
+            candidateCode: true,
+          },
+        },
+      },
     });
-
-    return { success: true, data: this.enrichCollection(updated) };
   }
 
   async complete(id: string, userId: string) {

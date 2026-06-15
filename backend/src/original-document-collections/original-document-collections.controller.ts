@@ -30,6 +30,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { ListCollectionsQueryDto } from './dto/list-collections-query.dto';
 import { ListEventMergesQueryDto } from './dto/list-event-merges-query.dto';
 import { SubmitToLockerDto } from './dto/submit-to-locker.dto';
+import { CheckLockerFileNumberQueryDto } from './dto/check-locker-file-number-query.dto';
 
 @ApiTags('Original Document Collections')
 @ApiBearerAuth()
@@ -64,6 +65,13 @@ export class OriginalDocumentCollectionsController {
   @ApiOperation({ summary: 'Export collection register as CSV' })
   async exportCsv(@Query() query: ListCollectionsQueryDto) {
     return this.collectionsService.exportCsv(query);
+  }
+
+  @Get('check-locker-file-number')
+  @Permissions('read:documents')
+  @ApiOperation({ summary: 'Check whether a locker file number is available' })
+  checkLockerFileNumber(@Query() query: CheckLockerFileNumberQueryDto) {
+    return this.collectionsService.checkLockerFileNumberAvailability(query);
   }
 
   @Get('candidates/:candidateId')

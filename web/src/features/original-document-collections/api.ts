@@ -20,6 +20,16 @@ export interface OriginalDocumentCollectionStats {
   byType: Record<string, number>;
 }
 
+export interface LockerFileNumberAvailability {
+  available: boolean;
+  lockerFileNumber: string;
+  usedBy: {
+    collectionId: string;
+    candidateName: string;
+    candidateCode: string | null;
+  } | null;
+}
+
 const candidateTag = (candidateId: string) => ({
   type: "OriginalDocumentCollection" as const,
   id: `candidate-${candidateId}`,
@@ -33,6 +43,19 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
     >({
       query: () => "/original-document-collections/stats",
       providesTags: [{ type: "OriginalDocumentCollection", id: "STATS" }],
+    }),
+
+    checkLockerFileNumberAvailability: builder.query<
+      { success: boolean; data: LockerFileNumberAvailability },
+      { lockerFileNumber: string; excludeCollectionId?: string }
+    >({
+      query: ({ lockerFileNumber, excludeCollectionId }) => ({
+        url: "/original-document-collections/check-locker-file-number",
+        params: {
+          lockerFileNumber,
+          ...(excludeCollectionId ? { excludeCollectionId } : {}),
+        },
+      }),
     }),
 
     getOriginalDocumentCollections: builder.query<
@@ -338,6 +361,7 @@ export const originalDocumentCollectionsApi = baseApi.injectEndpoints({
 
 export const {
   useGetOriginalDocumentCollectionStatsQuery,
+  useCheckLockerFileNumberAvailabilityQuery,
   useGetOriginalDocumentCollectionsQuery,
   useGetOriginalDocumentCollectionQuery,
   useGetOriginalDocumentCollectionEventMergesQuery,

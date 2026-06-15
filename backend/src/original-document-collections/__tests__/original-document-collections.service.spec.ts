@@ -1,3 +1,4 @@
+import { ConflictException } from '@nestjs/common';
 import { OriginalDocumentCollectionsService } from '../original-document-collections.service';
 import { COLLECTION_STATUS } from '../constants/collection-types';
 
@@ -5,6 +6,7 @@ describe('OriginalDocumentCollectionsService', () => {
   const prisma = {
     originalDocumentCollection: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -15,6 +17,7 @@ describe('OriginalDocumentCollectionsService', () => {
     },
     candidate: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(prisma)),
   };
@@ -198,6 +201,105 @@ describe('OriginalDocumentCollectionsService', () => {
       expect(page1.data.items[0].eventId).toBe('evt-3');
       expect(page2.data.items).toHaveLength(1);
       expect(page2.data.items[0].eventId).toBe('evt-1');
+    });
+  });
+
+  describe('checkLockerFileNumberAvailability', () => {
+    it('returns unavailable when another collection uses the locker number', async () => {
+      prisma.originalDocumentCollection.findFirst.mockResolvedValue({
+        id: 'col-other',
+        candidate: {
+          firstName: 'Jane',
+          lastName: 'Doe',
+          candidateCode: 'C-002',
+        },
+      });
+
+      const result = await service.checkLockerFileNumberAvailability({
+        lockerFileNumber: 'l-100',
+        excludeCollectionId: 'col-1',
+      });
+
+      expect(result.data.available).toBe(false);
+      expect(result.data.lockerFileNumber).toBe('L-100');
+      expect(result.data.usedBy).toEqual({
+        collectionId: 'col-other',
+        candidateName: 'Jane Doe',
+        candidateCode: 'C-002',
+      });
+    });
+
+    it('returns available when no conflict exists', async () => {
+      prisma.originalDocumentCollection.findFirst.mockResolvedValue(null);
+
+      const result = await service.checkLockerFileNumberAvailability({
+        lockerFileNumber: 'L-200',
+      });
+
+      expect(result.data.available).toBe(true);
+      expect(result.data.usedBy).toBeNull();
+    });
+  });
+
+  describe('submitToLocker', () => {
+    it('rejects duplicate locker file numbers', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerSubmittedAt: null,
+        lockerFileNumber: null,
+        events: [],
+      });
+      prisma.originalDocumentCollection.findFirst.mockResolvedValue({
+        id: 'col-other',
+        candidate: {
+          firstName: 'Other',
+          lastName: 'Candidate',
+          candidateCode: 'C-002',
+        },
+      });
+
+      await expect(
+        service.submitToLocker('col-1', { lockerFileNumber: 'L-100' }, 'user-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('stores normalized locker file numbers', async () => {
+      prisma.originalDocumentCollection.findUnique.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerSubmittedAt: null,
+        lockerFileNumber: null,
+        events: [],
+      });
+      prisma.originalDocumentCollection.findFirst.mockResolvedValue(null);
+      prisma.originalDocumentCollection.update.mockResolvedValue({
+        id: 'col-1',
+        candidateId: 'cand-1',
+        mergedDocumentId: 'doc-1',
+        lockerFileNumber: 'L-100',
+        lockerSubmittedAt: new Date('2026-06-15'),
+        lockerSubmittedByUserId: 'user-1',
+        status: COLLECTION_STATUS.LOCKER_SUBMITTED,
+        events: [],
+      });
+
+      await service.submitToLocker('col-1', { lockerFileNumber: ' l-100 ' }, 'user-1');
+
+      expect(prisma.candidate.update).toHaveBeenCalledWith({
+        where: { id: 'cand-1' },
+        data: { lockerFileNumber: 'L-100' },
+      });
+      expect(prisma.originalDocumentCollection.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            lockerFileNumber: 'L-100',
+          }),
+        }),
+      );
     });
   });
 

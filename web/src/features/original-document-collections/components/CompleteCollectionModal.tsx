@@ -14,6 +14,7 @@ import { AlertTriangle, CheckCircle2, FileCheck, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import type { OriginalDocumentCollection } from "../types";
+import { cn } from "@/lib/utils";
 
 interface CompleteCollectionModalProps {
   collection: OriginalDocumentCollection;
@@ -32,7 +33,6 @@ export function CompleteCollectionModal({
 }: CompleteCollectionModalProps) {
   const [isConfirmed, setIsConfirmed] = useState(false);
 
-  // Get all received documents across all events
   const receivedDocuments = new Map<string, boolean>();
   collection.events.forEach((event) => {
     event.items.forEach((item) => {
@@ -43,10 +43,11 @@ export function CompleteCollectionModal({
   });
 
   const receivedDocsList = Array.from(receivedDocuments.keys()).sort((a, b) =>
-    a.localeCompare(b)
+    a.localeCompare(b),
   );
 
   const candidateName = `${collection.candidate.firstName || ""} ${collection.candidate.lastName || ""}`.trim();
+  const hasNoDocuments = receivedDocsList.length === 0;
 
   const handleConfirm = async () => {
     try {
@@ -54,7 +55,6 @@ export function CompleteCollectionModal({
       setIsConfirmed(false);
       onClose();
     } catch (error) {
-      // Don't close modal on error - let user try again
       console.error("Failed to complete collection:", error);
     }
   };
@@ -66,131 +66,123 @@ export function CompleteCollectionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-              <AlertTriangle className="h-6 w-6 text-amber-600" />
+      <DialogContent className="flex max-h-[88vh] w-[min(96vw,56rem)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:max-w-none">
+        <DialogHeader className="shrink-0 border-b border-border bg-muted/30 px-5 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
             </div>
-            <div>
-              <DialogTitle className="text-xl font-bold text-slate-900">
-                Complete Collection
+            <div className="min-w-0 text-left">
+              <DialogTitle className="text-base font-semibold text-foreground">
+                Complete collection
               </DialogTitle>
-              <DialogDescription className="text-sm text-slate-600">
-                Please verify all details before completing
+              <DialogDescription className="text-xs text-muted-foreground">
+                Verify details before marking this collection complete.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Candidate Info */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileCheck className="h-4 w-4 text-blue-600" />
-              <p className="text-sm font-semibold text-blue-900">Candidate</p>
-            </div>
-            <p className="text-base font-bold text-blue-800">{candidateName}</p>
-            {collection.candidate.candidateCode && (
-              <p className="text-xs font-mono text-blue-600 mt-1">
-                {collection.candidate.candidateCode}
-              </p>
-            )}
-          </div>
-
-          {/* Documents List */}
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <p className="text-sm font-semibold text-emerald-900">
-                  Documents Received
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,14rem)_1fr]">
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <FileCheck className="h-3.5 w-3.5 text-primary" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Candidate
                 </p>
               </div>
-              <Badge
-                variant="outline"
-                className="bg-emerald-100 text-emerald-700 border-emerald-300"
-              >
-                {receivedDocsList.length} docs
-              </Badge>
+              <p className="text-sm font-semibold text-foreground">{candidateName}</p>
+              {collection.candidate.candidateCode ? (
+                <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                  {collection.candidate.candidateCode}
+                </p>
+              ) : null}
             </div>
 
-            {receivedDocsList.length === 0 ? (
-              <p className="text-sm text-emerald-700 italic">
-                No documents marked as received yet
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {receivedDocsList.map((docType) => {
-                  const config = getDocumentTypeConfig(docType);
-                  return (
-                    <div
-                      key={docType}
-                      className="flex items-center gap-2 rounded-md bg-white border border-emerald-200 px-3 py-2"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                      <span className="text-xs font-medium text-emerald-800">
-                        {config?.displayName || docType}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Warning if no documents */}
-          {receivedDocsList.length === 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-amber-900">
-                    No Documents Received
-                  </p>
-                  <p className="text-xs text-amber-700 mt-1">
-                    This collection has no documents marked as received. Are you
-                    sure you want to complete it?
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Documents received
                   </p>
                 </div>
+                <Badge variant="outline" className="h-6 px-2 text-xs">
+                  {receivedDocsList.length}
+                </Badge>
               </div>
-            </div>
-          )}
 
-          {/* Confirmation Checkbox */}
-          <div className="rounded-lg border-2 border-slate-200 bg-slate-50 p-4">
-            <div className="flex items-start gap-3">
+              {hasNoDocuments ? (
+                <p className="text-xs italic text-muted-foreground">
+                  No documents marked as received yet.
+                </p>
+              ) : (
+                <div className="max-h-36 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-2 gap-1.5 xl:grid-cols-3">
+                    {receivedDocsList.map((docType) => {
+                      const config = getDocumentTypeConfig(docType);
+                      return (
+                        <div
+                          key={docType}
+                          className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5"
+                        >
+                          <CheckCircle2 className="h-3 w-3 shrink-0 text-primary" />
+                          <span className="truncate text-xs font-medium text-foreground">
+                            {config?.displayName || docType}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {hasNoDocuments ? (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200/80 bg-amber-50/60 px-3 py-2.5">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
+              <p className="text-xs text-amber-900">
+                <span className="font-semibold">No documents received.</span>{" "}
+                Completing now will close the collection without any received
+                documents on file.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+            <div className="flex items-start gap-2.5">
               <Checkbox
                 id="confirm-completion"
                 checked={isConfirmed}
                 onCheckedChange={(checked) => setIsConfirmed(checked === true)}
-                className="mt-1"
+                className="mt-0.5"
               />
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Label
                   htmlFor="confirm-completion"
-                  className="text-sm font-medium text-slate-900 cursor-pointer"
+                  className="cursor-pointer text-sm font-medium leading-snug text-foreground"
                 >
-                  I confirm that all original documents for{" "}
-                  <span className="font-bold">{candidateName}</span> have been
-                  properly received, verified, and uploaded to the system.
+                  I confirm all original documents for{" "}
+                  <span className="font-semibold">{candidateName}</span> have been
+                  received, verified, and uploaded.
                 </Label>
-                <p className="text-xs text-slate-600 mt-1">
-                  This action will mark the collection as complete. No further
-                  intake events can be logged after completion.
+                <p className="mt-1 text-xs text-muted-foreground">
+                  No further intake events can be logged after completion.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="border-slate-300"
-          >
+        <DialogFooter
+          className={cn(
+            "shrink-0 gap-2 border-t border-border bg-muted/20 px-5 py-3",
+            "sm:justify-end",
+          )}
+        >
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button
@@ -206,7 +198,7 @@ export function CompleteCollectionModal({
             ) : (
               <>
                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                Complete Collection
+                Complete collection
               </>
             )}
           </Button>
