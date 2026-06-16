@@ -22,8 +22,8 @@ JWT_REFRESH_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
 
-# CORS Configuration
-CORS_ORIGIN="http://localhost:5173"
+# CORS Configuration (comma-separated origins, no trailing slash)
+CORS_ORIGIN="http://localhost:5173,http://localhost:5174"
 
 # Seed Configuration
 SEED_ADMIN_PASSWORD="admin123"
