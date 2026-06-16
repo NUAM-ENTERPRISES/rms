@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { applyDocumentsControlCapabilityPermissions } from './documents-control-permissions.util';
 
 interface UserRolesAndPermissions {
   roles: string[];
@@ -62,15 +63,28 @@ export class RbacUtil {
       }
     }
 
-    // Get user's updatedAt for version tracking
+    // Get user's updatedAt and documents control capability flags
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { updatedAt: true },
+      select: {
+        updatedAt: true,
+        originalDocumentIntakeEnabled: true,
+        courierManagementEnabled: true,
+      },
     });
+
+    const mergedPermissions = applyDocumentsControlCapabilityPermissions(
+      permissions,
+      {
+        originalDocumentIntakeEnabled:
+          user?.originalDocumentIntakeEnabled ?? false,
+        courierManagementEnabled: user?.courierManagementEnabled ?? false,
+      },
+    );
 
     const result: UserRolesAndPermissions = {
       roles,
-      permissions: Array.from(permissions),
+      permissions: mergedPermissions,
       teamIds,
       userVersion: user?.updatedAt.getTime() || Date.now(),
     };

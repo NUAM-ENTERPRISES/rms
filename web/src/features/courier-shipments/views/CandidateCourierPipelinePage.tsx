@@ -32,7 +32,7 @@ export default function CandidateCourierPipelinePage() {
   const [searchParams] = useSearchParams();
   const highlightLegId = searchParams.get("leg");
   const navigate = useNavigate();
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
 
   const { data, isLoading } = useGetCandidateCourierPipelineQuery(
     candidateId,

@@ -27,6 +27,8 @@ export interface UserWithRoles {
       label: string;
     };
   }>;
+  originalDocumentIntakeEnabled?: boolean;
+  courierManagementEnabled?: boolean;
 }
 
 export interface PaginatedUsers {

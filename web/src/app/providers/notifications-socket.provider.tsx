@@ -7,6 +7,7 @@ import { notificationsApi } from "@/features/notifications/data/notifications.en
 import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
 import { toast } from "sonner";
+import { store } from "@/app/store";
 import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
 import { handleIntroductionVideoNotifications, registerIntroductionVideoSocketEvents } from "./notification-handlers/introduction-video-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
@@ -29,6 +30,11 @@ import {
   handleOfferLetterSync,
 } from "./notification-handlers/offer-letter-handler";
 import { handleCandidateProjectStatusChangeNotifications } from "./notification-handlers/candidate-project-status-change-handler";
+import {
+  handleDocumentsControlCapabilitiesChanged,
+  handleDocumentsControlCapabilitiesSync,
+  type DocumentsControlCapabilitiesChangedPayload,
+} from "./notification-handlers/documents-control-capabilities-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -378,6 +384,15 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleOperationsSync(payload, context)) return;
       if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
+      if (
+        handleDocumentsControlCapabilitiesSync(
+          payload,
+          dispatch,
+          store.getState,
+        )
+      ) {
+        return;
+      }
 
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
@@ -410,6 +425,17 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       }
     });
 
+    newSocket.on(
+      "user:documents-control-capabilities-changed",
+      (payload: DocumentsControlCapabilitiesChangedPayload) => {
+        handleDocumentsControlCapabilitiesChanged(
+          payload,
+          dispatch,
+          store.getState,
+        );
+      },
+    );
+
     // Session monitoring — debounced to prevent refetch storms on rapid events
     newSocket.on("session:updated", (payload: SessionEventPayload) => {
       if (sessionInvalidateTimerRef.current) {
@@ -430,7 +456,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       newSocket?.disconnect(); // Disconnect the newly created socket on cleanup
       socketRef.current = null;
     };
-  }, [accessToken, user, dispatch]);
+  }, [accessToken, user?.id, dispatch]);
 
   return <>{children}</>;
 }

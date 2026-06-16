@@ -64,7 +64,7 @@ export default function CreateCollectionPage() {
   const [searchParams] = useSearchParams();
   const preselectedCandidateId = searchParams.get("candidateId") ?? "";
   const preselectedCollectionId = searchParams.get("collectionId") ?? "";
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:original_document_intake");
   const [createCollection, { isLoading: isCreating }] =
     useCreateOriginalDocumentCollectionMutation();
   const [addEvent, { isLoading: isAddingEvent }] =

@@ -142,7 +142,7 @@ export function CandidateCollectionHistoryPanel({
   allowEventMergeUpload = false,
   className,
 }: CandidateCollectionHistoryPanelProps) {
-  const canRead = useCan("read:documents");
+  const canRead = useCan("read:original_document_intake");
   const [previewDocument, setPreviewDocument] =
     useState<CollectionMergedDocument | null>(null);
   const [eventMergesPage, setEventMergesPage] = useState(1);
@@ -722,7 +722,7 @@ export function CandidateCollectionHistoryBadges({
 }: {
   candidateId: string;
 }) {
-  const canRead = useCan("read:documents");
+  const canRead = useCan("read:original_document_intake");
   const { data } = useGetCandidateOriginalDocumentCollectionsQuery(candidateId, {
     skip: !canRead || !candidateId,
   });

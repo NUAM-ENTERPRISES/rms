@@ -42,21 +42,21 @@ export class OriginalDocumentCollectionsController {
   ) {}
 
   @Get()
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'List original document collections (one per candidate)' })
   findAll(@Query() query: ListCollectionsQueryDto) {
     return this.collectionsService.findAll(query);
   }
 
   @Get('stats')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'Get original document intake statistics' })
   getStats() {
     return this.collectionsService.getStats();
   }
 
   @Get('export')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @Header('Content-Type', 'text/csv')
   @Header(
     'Content-Disposition',
@@ -68,21 +68,21 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Get('check-locker-file-number')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'Check whether a locker file number is available' })
   checkLockerFileNumber(@Query() query: CheckLockerFileNumberQueryDto) {
     return this.collectionsService.checkLockerFileNumberAvailability(query);
   }
 
   @Get('candidates/:candidateId')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'Get collection and intake events for a candidate' })
   findByCandidate(@Param('candidateId') candidateId: string) {
     return this.collectionsService.findByCandidate(candidateId);
   }
 
   @Get(':id/event-merges')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'Get merged scan PDFs uploaded per intake event' })
   getEventMerges(
     @Param('id') id: string,
@@ -92,21 +92,21 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Get(':id')
-  @Permissions('read:documents')
+  @Permissions('read:original_document_intake')
   @ApiOperation({ summary: 'Get collection detail with intake events' })
   findOne(@Param('id') id: string) {
     return this.collectionsService.findOne(id);
   }
 
   @Post()
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({ summary: 'Create collection and first intake event for candidate' })
   create(@Body() dto: CreateCollectionDto, @Req() req: { user: { id: string } }) {
     return this.collectionsService.create(dto, req.user.id);
   }
 
   @Post(':id/events')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({ summary: 'Add a new intake event to an existing collection' })
   addEvent(
     @Param('id') id: string,
@@ -117,7 +117,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Patch(':id/events/:eventId')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({ summary: 'Update intake event metadata and checklist' })
   updateEvent(
     @Param('id') id: string,
@@ -128,7 +128,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Post(':id/events/:eventId/upload-merge')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -161,7 +161,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Post(':id/rebuild-merge')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({
     summary: 'Rebuild collection merged PDF from all event merged scans',
   })
@@ -173,7 +173,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Post(':id/upload-merge')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -197,7 +197,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Post(':id/submit-to-locker')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({ summary: 'Submit physical originals to locker' })
   submitToLocker(
     @Param('id') id: string,
@@ -208,7 +208,7 @@ export class OriginalDocumentCollectionsController {
   }
 
   @Post(':id/complete')
-  @Permissions('write:documents')
+  @Permissions('write:original_document_intake')
   @ApiOperation({ summary: 'Mark collection as completed' })
   complete(@Param('id') id: string, @Req() req: { user: { id: string } }) {
     return this.collectionsService.complete(id, req.user.id);

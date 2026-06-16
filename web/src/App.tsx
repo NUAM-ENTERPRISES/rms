@@ -1154,7 +1154,7 @@ function App() {
                     path="/original-documents"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:documents"]}>
+                        <ProtectedRoute permissions={["read:original_document_intake"]}>
                           <AppLayout>
                             <OriginalDocumentsRegisterPage />
                           </AppLayout>
@@ -1166,7 +1166,7 @@ function App() {
                     path="/original-documents/new"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["write:documents"]}>
+                        <ProtectedRoute permissions={["write:original_document_intake"]}>
                           <AppLayout>
                             <CreateCollectionPage />
                           </AppLayout>
@@ -1178,7 +1178,7 @@ function App() {
                     path="/original-documents/:id"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:documents"]}>
+                        <ProtectedRoute permissions={["read:original_document_intake"]}>
                           <AppLayout>
                             <CollectionDetailPage />
                           </AppLayout>
@@ -1191,7 +1191,7 @@ function App() {
                     path="/courier-management"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:documents"]}>
+                        <ProtectedRoute permissions={["read:courier_management"]}>
                           <AppLayout>
                             <CourierRegisterPage />
                           </AppLayout>
@@ -1203,7 +1203,7 @@ function App() {
                     path="/courier-management/new"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["write:documents"]}>
+                        <ProtectedRoute permissions={["write:courier_management"]}>
                           <AppLayout>
                             <CreateShipmentPage />
                           </AppLayout>
@@ -1215,7 +1215,7 @@ function App() {
                     path="/courier-management/candidates/:candidateId"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:documents"]}>
+                        <ProtectedRoute permissions={["read:courier_management"]}>
                           <AppLayout>
                             <CandidateCourierPipelinePage />
                           </AppLayout>
@@ -1227,7 +1227,7 @@ function App() {
                     path="/courier-management/:id"
                     element={
                       <RouteErrorBoundary>
-                        <ProtectedRoute permissions={["read:documents"]}>
+                        <ProtectedRoute permissions={["read:courier_management"]}>
                           <AppLayout>
                             <ShipmentDetailPage />
                           </AppLayout>

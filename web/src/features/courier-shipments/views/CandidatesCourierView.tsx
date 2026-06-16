@@ -60,7 +60,7 @@ export function CandidatesCourierView({
   onPageChange,
 }: CandidatesCourierViewProps) {
   const navigate = useNavigate();
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
 
   const openCandidateCourier = (candidateId: string) => {
     navigate(`/courier-management/candidates/${candidateId}`);

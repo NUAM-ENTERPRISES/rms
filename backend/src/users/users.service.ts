@@ -32,6 +32,7 @@ import {
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { UpdateDocumentsControlCapabilitiesDto } from './dto/update-documents-control-capabilities.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BLOCKED_ACCOUNT_MESSAGE } from '../auth/assert-user-not-blocked';
@@ -40,7 +41,12 @@ import {
   ACCOUNT_STATUS_NOTIFICATION_TYPE,
   getAccountStatusNotificationContent,
 } from './account-status-notifications';
+import {
+  DOCUMENTS_CONTROL_CAPABILITIES_SOCKET_EVENT,
+  DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
+} from './documents-control-capabilities-notifications';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import {
   resolveUserListAccountStatusFilter,
@@ -63,6 +69,7 @@ export class UsersService {
     @Inject(forwardRef(() => NotificationsService))
     private readonly notificationsService: NotificationsService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly rbacUtil: RbacUtil,
   ) {}
 
   async onModuleInit() {
@@ -2214,6 +2221,67 @@ export class UsersService {
         userId,
         { recruiterCapabilities: 'replaced' },
         { action: 'recruiter_capabilities_updated' },
+      );
+    }
+
+    return this.findOne(userId);
+  }
+
+  async updateDocumentsControlCapabilities(
+    userId: string,
+    dto: UpdateDocumentsControlCapabilitiesDto,
+    updatedByUserId?: string,
+  ): Promise<UserWithRoles> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+        courierManagementEnabled: dto.courierManagementEnabled,
+      },
+    });
+
+    this.rbacUtil.clearUserCache(userId);
+    const { roles, permissions, userVersion } =
+      await this.rbacUtil.getUserRolesAndPermissions(userId);
+
+    const capabilityPayload = {
+      userId,
+      originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+      courierManagementEnabled: dto.courierManagementEnabled,
+      updatedAt: new Date().toISOString(),
+      roles,
+      permissions,
+      userVersion,
+    };
+
+    await this.notificationsGateway.emitToUser(
+      userId,
+      DOCUMENTS_CONTROL_CAPABILITIES_SOCKET_EVENT,
+      capabilityPayload,
+    );
+    await this.notificationsGateway.emitToUser(userId, 'data:sync', {
+      type: DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
+      ...capabilityPayload,
+    });
+
+    if (updatedByUserId) {
+      await this.auditService.logUserAction(
+        'update',
+        updatedByUserId,
+        userId,
+        {
+          originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+          courierManagementEnabled: dto.courierManagementEnabled,
+        },
+        { action: 'documents_control_capabilities_updated' },
       );
     }
 

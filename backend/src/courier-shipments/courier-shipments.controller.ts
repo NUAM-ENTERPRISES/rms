@@ -32,21 +32,21 @@ export class CourierShipmentsController {
   constructor(private readonly courierShipmentsService: CourierShipmentsService) {}
 
   @Get('stats')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get courier shipment statistics for dashboard tiles' })
   getStats() {
     return this.courierShipmentsService.getStats();
   }
 
   @Get('office-addresses')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get Affiniks office address presets' })
   getOfficeAddresses() {
     return this.courierShipmentsService.getOfficeAddresses();
   }
 
   @Get('export')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @Header('Content-Type', 'text/csv')
   @Header('Content-Disposition', 'attachment; filename="courier-shipments.csv"')
   @ApiOperation({ summary: 'Export courier legs as CSV' })
@@ -55,7 +55,7 @@ export class CourierShipmentsController {
   }
 
   @Get('candidate-groups')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({
     summary: 'List courier candidates grouped (paginated by unique candidate)',
   })
@@ -64,42 +64,42 @@ export class CourierShipmentsController {
   }
 
   @Get('candidates/:candidateId/collection-docs')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get cumulative received documents for courier selection' })
   getCollectionDocs(@Param('candidateId') candidateId: string) {
     return this.courierShipmentsService.getCollectionDocs(candidateId);
   }
 
   @Get('candidates/:candidateId/pipeline')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get candidate courier pipeline summary' })
   getPipeline(@Param('candidateId') candidateId: string) {
     return this.courierShipmentsService.getPipeline(candidateId);
   }
 
   @Get('candidates/:candidateId')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'List all courier legs for a candidate' })
   findByCandidate(@Param('candidateId') candidateId: string) {
     return this.courierShipmentsService.findByCandidate(candidateId);
   }
 
   @Get()
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'List courier shipment legs' })
   findAll(@Query() query: ListShipmentsQueryDto) {
     return this.courierShipmentsService.findAll(query);
   }
 
   @Get(':id')
-  @Permissions('read:documents')
+  @Permissions('read:courier_management')
   @ApiOperation({ summary: 'Get courier leg detail' })
   findOne(@Param('id') id: string) {
     return this.courierShipmentsService.findOne(id);
   }
 
   @Post()
-  @Permissions('write:documents')
+  @Permissions('write:courier_management')
   @ApiOperation({ summary: 'Create a draft courier leg' })
   create(
     @Body() dto: CreateShipmentDto,
@@ -109,21 +109,21 @@ export class CourierShipmentsController {
   }
 
   @Post(':id/dispatch')
-  @Permissions('write:documents')
+  @Permissions('write:courier_management')
   @ApiOperation({ summary: 'Dispatch a courier leg (courier mode)' })
   dispatch(@Param('id') id: string, @Body() dto: DispatchShipmentDto) {
     return this.courierShipmentsService.dispatch(id, dto);
   }
 
   @Post(':id/handover')
-  @Permissions('write:documents')
+  @Permissions('write:courier_management')
   @ApiOperation({ summary: 'Confirm direct handover (direct mode)' })
   handover(@Param('id') id: string, @Body() dto: MarkHandoverDto) {
     return this.courierShipmentsService.handover(id, dto);
   }
 
   @Post(':id/receive')
-  @Permissions('write:documents')
+  @Permissions('write:courier_management')
   @ApiOperation({ summary: 'Mark leg as received at destination' })
   receive(
     @Param('id') id: string,

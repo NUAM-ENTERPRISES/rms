@@ -110,7 +110,7 @@ export default function CourierRegisterPage() {
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");

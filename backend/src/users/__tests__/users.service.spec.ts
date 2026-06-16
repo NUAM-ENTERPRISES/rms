@@ -10,6 +10,7 @@ import {
   ACCOUNT_STATUS_NOTIFICATION_TYPE,
 } from '../account-status-notifications';
 import { SystemConfigService } from '../../system-config/system-config.service';
+import { RbacUtil } from '../../auth/rbac/rbac.util';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
@@ -111,6 +112,22 @@ describe('UsersService', () => {
         {
           provide: SystemConfigService,
           useValue: mockSystemConfigService,
+        },
+        {
+          provide: RbacUtil,
+          useValue: {
+            clearUserCache: jest.fn(),
+            getUserRolesAndPermissions: jest.fn().mockResolvedValue({
+              roles: ['Operations'],
+              permissions: [
+                'read:cre',
+                'read:original_document_intake',
+                'read:courier_management',
+              ],
+              teamIds: [],
+              userVersion: Date.now(),
+            }),
+          },
         },
         {
           provide: UploadService,
@@ -724,6 +741,61 @@ describe('UsersService', () => {
         where: { userId: 'user123' },
         include: expect.any(Object),
       });
+    });
+  });
+
+  describe('updateDocumentsControlCapabilities', () => {
+    it('should persist flags and emit realtime socket events to the user', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        originalDocumentIntakeEnabled: true,
+        courierManagementEnabled: false,
+      } as any);
+
+      await service.updateDocumentsControlCapabilities(
+        'target',
+        {
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        },
+        'admin1',
+      );
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'target' },
+        data: {
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        },
+      });
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'user:documents-control-capabilities-changed',
+        expect.objectContaining({
+          userId: 'target',
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+          roles: ['Operations'],
+          permissions: expect.arrayContaining([
+            'read:original_document_intake',
+            'read:courier_management',
+          ]),
+        }),
+      );
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'data:sync',
+        expect.objectContaining({
+          type: 'DocumentsControlCapabilitiesUpdated',
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        }),
+      );
+
+      findOneSpy.mockRestore();
     });
   });
 });

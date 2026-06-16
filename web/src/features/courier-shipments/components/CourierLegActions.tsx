@@ -32,7 +32,7 @@ interface CourierLegActionsProps {
 }
 
 export function CourierLegActions({ leg }: CourierLegActionsProps) {
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showMarkReceived, setShowMarkReceived] = useState(false);
   const [trackingId, setTrackingId] = useState("");
