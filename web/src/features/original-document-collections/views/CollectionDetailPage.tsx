@@ -47,7 +47,6 @@ import {
   getCollectionDocumentProgress,
   getCollectionStatusStepIndex,
 } from "../utils/collectionProgress";
-import { getOriginalDocumentChecklistClasses } from "../utils/documentChecklistStyles";
 import {
   COLLECTION_STATUS_LABELS,
   COLLECTION_TYPE_LABELS,
@@ -838,10 +837,9 @@ export default function CollectionDetailPage() {
                     key={item.docType}
                     className={cn(
                       "flex items-center gap-2 rounded-lg border px-2.5 py-2",
-                      getOriginalDocumentChecklistClasses(
-                        item.docType,
-                        item.isReceived,
-                      ),
+                      item.isReceived
+                        ? "border-border bg-muted/40"
+                        : "border-border bg-background",
                     )}
                   >
                     <span
