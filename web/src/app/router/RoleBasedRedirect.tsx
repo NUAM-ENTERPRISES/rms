@@ -100,6 +100,14 @@ export function RoleBasedRedirect() {
     return <Navigate to="/original-documents" replace />;
   }
 
+  if (user?.permissions.includes("read:original_document_intake")) {
+    return <Navigate to="/original-documents" replace />;
+  }
+
+  if (user?.permissions.includes("read:courier_management")) {
+    return <Navigate to="/courier-management" replace />;
+  }
+
   if (user?.roles.some(isAgentCoordinatorRole)) {
     return <Navigate to="/agents" replace />;
   }

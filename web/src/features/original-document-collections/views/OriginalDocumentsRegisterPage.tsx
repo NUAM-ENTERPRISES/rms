@@ -200,7 +200,7 @@ export default function OriginalDocumentsRegisterPage() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:original_document_intake");
 
   const [search, setSearch] = useState("");
   const [collectionType, setCollectionType] = useState<string>("all");

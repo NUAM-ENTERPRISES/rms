@@ -37,6 +37,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { UpdateDocumentsControlCapabilitiesDto } from './dto/update-documents-control-capabilities.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 import { EmployeeCodeService } from './services/employee-code.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
@@ -834,6 +835,38 @@ export class UsersController {
       success: true,
       data: user,
       message: 'Recruiter capabilities updated successfully',
+    };
+  }
+
+  @Put(':id/documents-control-capabilities')
+  @Permissions('manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'Update documents control feature access for a user',
+    description:
+      'Grant or revoke Original Document Intake and Courier Management access independently. Documents Control Executive role users retain full access via role permissions.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Capabilities updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateDocumentsControlCapabilities(
+    @Param('id') id: string,
+    @Body() dto: UpdateDocumentsControlCapabilitiesDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateDocumentsControlCapabilities(
+      id,
+      dto,
+      req.user.id,
+    );
+    this.rbacUtil.clearUserCache(id);
+    return {
+      success: true,
+      data: user,
+      message: 'Documents control capabilities updated successfully',
     };
   }
 

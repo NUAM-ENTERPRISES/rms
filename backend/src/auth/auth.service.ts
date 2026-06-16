@@ -19,6 +19,7 @@ import { ForgotPasswordWhatsappDto } from './dto/forgot-password-whatsapp.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { assertUserNotBlocked } from './assert-user-not-blocked';
+import { applyDocumentsControlCapabilityPermissions } from './rbac/documents-control-permissions.util';
 
 const REFRESH_DAYS = Number(process.env.JWT_REFRESH_DAYS ?? 7);
 const REFRESH_MS = REFRESH_DAYS * 24 * 60 * 60 * 1000;
@@ -818,8 +819,17 @@ export class AuthService {
 
     const roles = (user.userRoles ?? []).map((ur: any) => ur.role?.name).filter(Boolean);
 
-    const permissions = (user.userRoles ?? []).flatMap((ur: any) =>
-      (ur.role?.rolePermissions ?? []).map((rp: any) => rp.permission?.key).filter(Boolean),
+    const permissions = applyDocumentsControlCapabilityPermissions(
+      (user.userRoles ?? []).flatMap((ur: any) =>
+        (ur.role?.rolePermissions ?? [])
+          .map((rp: any) => rp.permission?.key)
+          .filter(Boolean),
+      ),
+      {
+        originalDocumentIntakeEnabled:
+          user.originalDocumentIntakeEnabled ?? false,
+        courierManagementEnabled: user.courierManagementEnabled ?? false,
+      },
     );
 
     return {

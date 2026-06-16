@@ -73,7 +73,7 @@ import { buildCandidateAddressSnapshot } from "../utils/candidate-address";
 export default function CreateShipmentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:courier_management");
   const [step, setStep] = useState(0);
 
   const [candidateId, setCandidateId] = useState(

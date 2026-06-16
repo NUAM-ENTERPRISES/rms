@@ -74,6 +74,24 @@ const authSlice = createSlice({
     ) => {
       state.sessionAccountStatus = action.payload;
     },
+    updateUserAuthorization: (
+      state,
+      action: PayloadAction<{
+        permissions: string[];
+        roles?: string[];
+        userVersion?: number;
+      }>,
+    ) => {
+      if (!state.user) return;
+      state.user.permissions = action.payload.permissions;
+      if (action.payload.roles) {
+        state.user.roles = action.payload.roles;
+      }
+      if (action.payload.userVersion !== undefined) {
+        state.user.userVersion = action.payload.userVersion;
+        state.userVersion = action.payload.userVersion;
+      }
+    },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
       state.status = action.payload
@@ -95,5 +113,6 @@ export const {
   setLoading,
   setStatus,
   setSessionAccountStatus,
+  updateUserAuthorization,
 } = authSlice.actions;
 export default authSlice.reducer;

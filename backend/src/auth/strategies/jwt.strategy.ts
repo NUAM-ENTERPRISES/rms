@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { assertUserNotBlocked } from '../assert-user-not-blocked';
+import { applyDocumentsControlCapabilityPermissions } from '../rbac/documents-control-permissions.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -51,8 +52,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Extract roles and permissions
     const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
-      ur.role.rolePermissions.map((rp) => rp.permission.key),
+    const permissions = applyDocumentsControlCapabilityPermissions(
+      user.userRoles.flatMap((ur) =>
+        ur.role.rolePermissions.map((rp) => rp.permission.key),
+      ),
+      {
+        originalDocumentIntakeEnabled: user.originalDocumentIntakeEnabled,
+        courierManagementEnabled: user.courierManagementEnabled,
+      },
     );
 
     return {

@@ -38,7 +38,7 @@ export function EventMergeUploadRow({
   onUpdated,
   onMergedReady,
 }: EventMergeUploadRowProps) {
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:original_document_intake");
   const inputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showPdfViewer, setShowPdfViewer] = useState(false);

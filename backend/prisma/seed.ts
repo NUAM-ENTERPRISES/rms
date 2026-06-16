@@ -226,6 +226,10 @@ const roles = [
       'write:documents',
       'read:candidates',
       'read:agents',
+      'read:original_document_intake',
+      'write:original_document_intake',
+      'read:courier_management',
+      'write:courier_management',
     ],
   },
   {
@@ -398,6 +402,10 @@ const allPermissions = [
   'verify:documents',
   'manage:documents',
   'request:resubmission',
+  'read:original_document_intake',
+  'write:original_document_intake',
+  'read:courier_management',
+  'write:courier_management',
 
   // Processing management
   'read:processing',

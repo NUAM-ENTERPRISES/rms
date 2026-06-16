@@ -23,7 +23,32 @@ import {
   BLOCKED_ACCOUNT_SESSION_KEY,
   BLOCKED_ACCOUNT_QUERY_PARAM,
   isBlockedAccountMessage,
+  extractApiErrorMessage,
 } from "@/shared/constants/account-status";
+
+function getLoginErrorMessage(error: unknown): string {
+  if (error && typeof error === "object") {
+    if ("data" in error) {
+      const message = extractApiErrorMessage(
+        (error as { data: unknown }).data,
+      );
+      if (message) return message;
+    }
+    if (
+      "status" in error &&
+      (error as { status: unknown }).status === "FETCH_ERROR"
+    ) {
+      return "Unable to reach the server. Check your connection and try again.";
+    }
+    if (
+      "message" in error &&
+      typeof (error as { message: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+  }
+  return "Invalid mobile number or password";
+}
 
 const loginSchema = z.object({
   countryCode: z
@@ -304,19 +329,22 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await login(data).unwrap();
+      const loginData = result.data;
+      const accessToken = loginData?.accessToken;
+      const user = loginData?.user;
 
-      if (result.success) {
+      if (result.success !== false && accessToken && user) {
         sessionStorage.removeItem(BLOCKED_ACCOUNT_SESSION_KEY);
 
         dispatch(
           setCredentials({
-            user: result.data.user,
-            accessToken: result.data.accessToken,
-            refreshToken: result.data.refreshToken,
-          })
+            user,
+            accessToken,
+            refreshToken: loginData.refreshToken ?? "",
+          }),
         );
 
-        const userName = result.data.user?.name || "User";
+        const userName = user.name || "User";
         toast.success(`Welcome back, ${userName}!`);
 
         const nextParam = searchParams.get("next");
@@ -326,14 +354,12 @@ export default function LoginPage() {
         pendingNavigationRef.current = nextUrl;
         setLoginTransition({ userName, nextUrl });
       } else {
-        setError("root", { message: result.message || "Login failed" });
+        const message = result.message || "Login failed";
+        setError("root", { message });
+        toast.error(message);
       }
     } catch (error: unknown) {
-      const apiError = error as { data?: { message?: string | string[] } };
-      const rawMessage = apiError?.data?.message;
-      const errorMessage = Array.isArray(rawMessage)
-        ? rawMessage[0]
-        : rawMessage || "Invalid mobile number or password";
+      const errorMessage = getLoginErrorMessage(error);
       setError("root", { message: errorMessage });
       toast.error(errorMessage);
     }

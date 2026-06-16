@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   Languages,
   Globe2,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -86,6 +87,10 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "reject:candidates": { label: "Reject Candidates" },
   "read:documents": { label: "View Documents" },
   "write:documents": { label: "Upload Documents" },
+  "read:original_document_intake": { label: "View Original Document Intake" },
+  "write:original_document_intake": { label: "Manage Original Document Intake" },
+  "read:courier_management": { label: "View Courier Management" },
+  "write:courier_management": { label: "Manage Courier Management" },
   "verify:documents": { label: "Verify Documents" },
   "manage:documents": { label: "Manage Documents" },
   "request:resubmission": { label: "Request Resubmission" },
@@ -137,7 +142,7 @@ const PERMISSION_CATEGORIES: Record<string, { label: string; icon: React.Element
   teams: { label: "Teams", icon: Users, patterns: ["teams", "assigned_teams"] },
   projects: { label: "Projects", icon: Briefcase, patterns: ["projects", "assigned_projects"] },
   candidates: { label: "Candidates", icon: UserCheck, patterns: ["candidates", "assigned_candidates"] },
-  documents: { label: "Documents", icon: FileText, patterns: ["documents", "resubmission"] },
+  documents: { label: "Documents", icon: FileText, patterns: ["documents", "resubmission", "original_document_intake", "courier_management"] },
   processing: { label: "Processing", icon: ClipboardCheck, patterns: ["processing"] },
   interviews: { label: "Interviews", icon: Headphones, patterns: ["interviews"] },
   recruiters: { label: "Recruiters", icon: UserCheck, patterns: ["recruiters"] },
@@ -658,6 +663,62 @@ export default function UserDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            <Card className="border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  Documents control access
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Per-user feature toggles. Documents Control Executive role
+                  users also receive full access via their role.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant={
+                      user.originalDocumentIntakeEnabled ||
+                      user.userRoles?.some(
+                        (ur) => ur.role.name === "Documents Control Executive",
+                      )
+                        ? "default"
+                        : "outline"
+                    }
+                    className="text-xs font-normal"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Original Document Intake
+                    {user.originalDocumentIntakeEnabled ? " enabled" : ""}
+                  </Badge>
+                  <Badge
+                    variant={
+                      user.courierManagementEnabled ||
+                      user.userRoles?.some(
+                        (ur) => ur.role.name === "Documents Control Executive",
+                      )
+                        ? "default"
+                        : "outline"
+                    }
+                    className="text-xs font-normal"
+                  >
+                    <Truck className="h-3 w-3 mr-1" />
+                    Courier Management
+                    {user.courierManagementEnabled ? " enabled" : ""}
+                  </Badge>
+                </div>
+                {!user.originalDocumentIntakeEnabled &&
+                  !user.courierManagementEnabled &&
+                  !user.userRoles?.some(
+                    (ur) => ur.role.name === "Documents Control Executive",
+                  ) && (
+                    <p className="text-sm text-slate-500">
+                      No documents control features enabled for this user.
+                    </p>
+                  )}
+              </CardContent>
+            </Card>
 
             {/* Permissions Card - Grouped & Human-Readable */}
             <Card className="border border-slate-200 shadow-sm">

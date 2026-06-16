@@ -139,6 +139,9 @@ const createUserFieldsShape = {
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
 
+  originalDocumentIntakeEnabled: z.boolean().default(false),
+  courierManagementEnabled: z.boolean().default(false),
+
   professionTypeIds: z
     .array(z.string())
     .min(1, "Select at least one profession type"),
@@ -221,6 +224,9 @@ const updateUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+
+  originalDocumentIntakeEnabled: z.boolean().default(false),
+  courierManagementEnabled: z.boolean().default(false),
 
   professionTypeIds: z
     .array(z.string())

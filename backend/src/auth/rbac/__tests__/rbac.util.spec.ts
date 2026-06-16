@@ -61,6 +61,8 @@ describe('RbacUtil', () => {
 
       const mockUser = {
         updatedAt: new Date('2024-01-01T00:00:00Z'),
+        originalDocumentIntakeEnabled: false,
+        courierManagementEnabled: false,
       };
 
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
@@ -113,6 +115,43 @@ describe('RbacUtil', () => {
 
       // Should only call database once
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('should merge documents control capability permissions from user flags', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams: { teamId: string }[] = [];
+      const mockUser = {
+        updatedAt: new Date('2024-01-01T00:00:00Z'),
+        originalDocumentIntakeEnabled: true,
+        courierManagementEnabled: false,
+      };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getUserRolesAndPermissions('user1');
+
+      expect(result.permissions).toEqual(
+        expect.arrayContaining([
+          'read:users',
+          'read:original_document_intake',
+          'write:original_document_intake',
+        ]),
+      );
+      expect(result.permissions).not.toContain('read:candidates');
     });
   });
 

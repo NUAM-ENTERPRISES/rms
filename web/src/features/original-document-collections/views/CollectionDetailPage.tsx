@@ -211,7 +211,7 @@ function InfoTile({
 
 export default function CollectionDetailPage() {
   const { id = "" } = useParams();
-  const canWrite = useCan("write:documents");
+  const canWrite = useCan("write:original_document_intake");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [highlightCombinedMerge, setHighlightCombinedMerge] = useState(false);
   const combinedMergeSectionRef = useRef<HTMLDivElement>(null);

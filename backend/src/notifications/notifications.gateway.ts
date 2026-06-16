@@ -13,10 +13,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { UserAccountStatus } from '@prisma/client';
+import { buildCorsOriginAllowlist } from '../common/cors.util';
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: buildCorsOriginAllowlist(),
     credentials: true,
     methods: ['GET', 'POST'],
   },

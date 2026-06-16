@@ -35,6 +35,8 @@ export interface NavItem {
   };
   children?: NavItem[];
   disabled?: boolean;
+  /** When true with both roles and permissions set, access requires role OR permission (not both). */
+  matchRolesOrPermissions?: boolean;
 }
 
 export const navigationConfig: NavItem[] = [
@@ -75,16 +77,14 @@ export const navigationConfig: NavItem[] = [
     label: "Original Document Intake",
     path: "/original-documents",
     icon: FileText,
-    roles: ["Documents Control Executive"],
-    permissions: ["read:documents"],
+    permissions: ["read:original_document_intake"],
   },
   {
     id: "courier-management-main",
     label: "Courier Management",
     path: "/courier-management",
     icon: Truck,
-    roles: ["Documents Control Executive"],
-    permissions: ["read:documents"],
+    permissions: ["read:courier_management"],
   },
   {
     id: "processing-dashboard",
@@ -185,16 +185,19 @@ export const navigationConfig: NavItem[] = [
       "Recruiter",
       "Documentation Executive",
       "System Admin",
-      ROLE_NAMES.OPERATIONS,
-      "CRE",
       // "Screening Trainer",
     ],
+    permissions: ["read:candidates"],
+    matchRolesOrPermissions: true,
     hiddenForRoles: [
       ROLE_NAMES.AGENT_COORDINATOR,
       LEGACY_CLIENT_COORDINATOR_ROLE_NAME,
       ROLE_NAMES.PROJECT_COORDINATOR,
       "Documentation Executive",
       "Recruiter",
+      "Documents Control Executive",
+      ROLE_NAMES.OPERATIONS,
+      "CRE",
     ],
     children: [
       {
@@ -392,15 +395,15 @@ export const navigationConfig: NavItem[] = [
         id: "original-document-intake",
         label: "Original Document Intake",
         path: "/original-documents",
-        permissions: ["read:documents"],
+        permissions: ["read:original_document_intake"],
         roles: [
-          "Documents Control Executive",
           "CEO",
           "Director",
           "Manager",
           "Processing Manager",
           "System Admin",
         ],
+        matchRolesOrPermissions: true,
       },
     ],
   },

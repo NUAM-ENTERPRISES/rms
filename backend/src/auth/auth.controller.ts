@@ -101,7 +101,11 @@ export class AuthController {
     this.setRefreshCookies(res, refresh); // writes rfi & rft
     return {
       success: true,
-      data: { accessToken, user },
+      data: {
+        accessToken,
+        user,
+        refreshToken: refresh.value,
+      },
       message: 'Login successful',
     };
   }
@@ -285,7 +289,11 @@ export class AuthController {
     this.setRefreshCookies(res, next);
     return {
       success: true,
-      data: { accessToken, user },
+      data: {
+        accessToken,
+        user,
+        refreshToken: next.value,
+      },
       message: 'Token refreshed successfully',
     };
   }

@@ -99,6 +99,10 @@ model User {
   // user preference: should notification sounds be muted?
   notificationSoundMuted Boolean @default(false)
 
+  // Per-user documents control feature access (admin toggles; DCE role also grants via RBAC)
+  originalDocumentIntakeEnabled Boolean @default(false) @map("original_document_intake_enabled")
+  courierManagementEnabled        Boolean @default(false) @map("courier_management_enabled")
+
   assignedProcessingTasks    ProcessingCandidate[] @relation("AssignedToProcessing")
   processingHistoryChanges   ProcessingHistory[]   @relation("UserToProcessingHistory")
   recruiterProcessingHistory ProcessingHistory[]   @relation("RecruiterToProcessingHistory")

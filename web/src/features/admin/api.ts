@@ -56,6 +56,8 @@ export interface UserWithRoles {
     professionTypeId: string;
     professionType: { id: string; name: string; label: string };
   }>;
+  originalDocumentIntakeEnabled?: boolean;
+  courierManagementEnabled?: boolean;
 }
 
 export interface PaginatedUsersData {
@@ -111,6 +113,11 @@ export interface RecruiterCapabilityCountryItem {
 export interface UpdateRecruiterCapabilitiesRequest {
   languages: RecruiterCapabilityLanguageItem[];
   countryCoverages: RecruiterCapabilityCountryItem[];
+}
+
+export interface UpdateDocumentsControlCapabilitiesRequest {
+  originalDocumentIntakeEnabled: boolean;
+  courierManagementEnabled: boolean;
 }
 
 export interface UserLanguagesResponse {
@@ -281,6 +288,18 @@ export const usersApi = baseApi.injectEndpoints({
     >({
       query: ({ id, body }) => ({
         url: `/users/${id}/recruiter-capabilities`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateDocumentsControlCapabilities: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateDocumentsControlCapabilitiesRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/documents-control-capabilities`,
         method: "PUT",
         body,
       }),
@@ -543,6 +562,7 @@ export const {
   useCreateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
+  useUpdateDocumentsControlCapabilitiesMutation,
   useUpdateUserMutation,
   useUpdateUserAccountStatusMutation,
   useGetUserAccountStatusHistoryQuery,

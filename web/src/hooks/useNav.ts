@@ -31,11 +31,9 @@ export function useNav(): NavItem[] {
     const isDocumentsControlExecutive = user.roles.includes(
       "Documents Control Executive",
     );
-    const documentsControlExecutiveAllowedIds = new Set([
+    const documentsControlFocusedNavIds = new Set([
       "original-document-intake-main",
       "courier-management-main",
-      "candidates",
-      "candidates-list",
       "profile",
     ]);
     const isProjectCoordinator = user.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR);
@@ -77,9 +75,11 @@ export function useNav(): NavItem[] {
         return null;
       }
 
+      // Documents Control Executive only: focused sidebar (intake, courier, profile).
+      // Other roles with capability flags keep their full role nav plus intake/courier items.
       if (
         isDocumentsControlExecutive &&
-        !documentsControlExecutiveAllowedIds.has(item.id)
+        !documentsControlFocusedNavIds.has(item.id)
       ) {
         return null;
       }
@@ -102,11 +102,30 @@ export function useNav(): NavItem[] {
         const hasRequiredRole = item.roles.some((role) =>
           user.roles.includes(role)
         );
-        if (!hasRequiredRole) return null;
+        const hasRequiredPermission =
+          item.permissions && item.permissions.length > 0
+            ? item.permissions.some(
+                (permission) =>
+                  user.permissions.includes(permission) ||
+                  user.permissions.includes("*") ||
+                  user.permissions.includes("manage:all") ||
+                  user.permissions.includes("read:all")
+              )
+            : false;
+
+        if (item.matchRolesOrPermissions) {
+          if (!hasRequiredRole && !hasRequiredPermission) return null;
+        } else if (!hasRequiredRole) {
+          return null;
+        }
       }
 
-      // Check permission requirements
-      if (item.permissions && item.permissions.length > 0) {
+      // Check permission requirements (skip when matchRolesOrPermissions already evaluated both)
+      if (
+        item.permissions &&
+        item.permissions.length > 0 &&
+        !(item.roles && item.roles.length > 0 && item.matchRolesOrPermissions)
+      ) {
         const hasRequiredPermission = item.permissions.some(
           (permission) =>
             user.permissions.includes(permission) ||

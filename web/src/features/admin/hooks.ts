@@ -5,6 +5,7 @@ export {
   useCreateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
+  useUpdateDocumentsControlCapabilitiesMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,
 } from "./api";
