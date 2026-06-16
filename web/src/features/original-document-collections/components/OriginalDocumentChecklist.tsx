@@ -7,6 +7,7 @@ import { Check, Lock, Search, X } from "lucide-react";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { ORIGINAL_DOCUMENT_CHECKLIST } from "../constants";
 import type { CollectionItem } from "../types";
+import { getOriginalDocumentChecklistClasses } from "../utils/documentChecklistStyles";
 import { cn } from "@/lib/utils";
 
 interface OriginalDocumentChecklistProps {
@@ -218,9 +219,7 @@ export function OriginalDocumentChecklist({
                 key={docType}
                 className={cn(
                   "rounded-lg border px-2.5 py-2",
-                  isReceived
-                    ? "border-border bg-muted/40"
-                    : "border-border bg-background",
+                  getOriginalDocumentChecklistClasses(docType, isReceived),
                 )}
               >
                 <div className="flex items-center gap-2">

@@ -81,27 +81,89 @@ export default function CandidateCourierPipelinePage() {
           </Link>
         </Button>
 
-        <div className="overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 via-background to-background p-4 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
-                  <Truck className="h-5 w-5 text-teal-600" />
+        <div className="relative overflow-hidden rounded-2xl border border-teal-100 shadow-md">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-8 left-1/3 h-28 w-28 rounded-full bg-teal-300/15 blur-2xl" />
+
+          <div className="relative bg-gradient-to-r from-teal-600 via-teal-600 to-emerald-600 px-5 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 shadow-lg ring-4 ring-white/10 backdrop-blur-sm">
+                  <Truck className="h-6 w-6 text-white" />
                 </span>
-                Candidate Courier Details
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Profile and document movement history for this candidate
-              </p>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-teal-100">
+                    Courier pipeline
+                  </p>
+                  <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                    Candidate Courier Details
+                  </h1>
+                  <p className="text-sm text-teal-100/90">
+                    Profile and document movement history for this candidate
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <Badge className="border-white/20 bg-white/10 text-[11px] text-white hover:bg-white/10">
+                  {progress}% complete
+                </Badge>
+                {pipeline?.currentLocationHint && (
+                  <Badge className="max-w-[200px] truncate border-white/20 bg-white/10 text-[11px] text-white hover:bg-white/10">
+                    <MapPin className="mr-1 h-3 w-3 shrink-0" />
+                    {pipeline.currentLocationHint}
+                  </Badge>
+                )}
+                {/* {canWrite && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="gap-1.5 rounded-xl bg-white px-4 text-teal-700 shadow-sm hover:bg-teal-50"
+                    onClick={handleAddLeg}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New leg
+                  </Button>
+                )} */}
+              </div>
             </div>
-            {canWrite && (
-              <Button
-                className="gap-2 rounded-xl bg-teal-600 hover:bg-teal-700"
-                onClick={handleAddLeg}
+          </div>
+
+          <div className="relative flex flex-wrap items-center gap-2 border-t border-teal-100/80 bg-gradient-to-r from-teal-50/80 via-background to-emerald-50/40 px-5 py-3 sm:px-6">
+            <Badge
+              variant="outline"
+              className="border-teal-200 bg-teal-50 text-[11px] text-teal-800"
+            >
+              <Route className="mr-1 h-3 w-3" />
+              {totalLegs} leg{totalLegs !== 1 ? "s" : ""}
+            </Badge>
+            <Badge
+              variant="outline"
+              className="border-emerald-200 bg-emerald-50 text-[11px] text-emerald-800"
+            >
+              <CheckCircle2 className="mr-1 h-3 w-3" />
+              {receivedLegs} received
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[11px]",
+                inTransitLegs > 0
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                  : "border-border bg-muted/40 text-muted-foreground",
+              )}
+            >
+              <Package className="mr-1 h-3 w-3" />
+              {inTransitLegs} in transit
+            </Badge>
+            {highlightLegId && (
+              <Badge
+                variant="outline"
+                className="ml-auto border-teal-300 bg-teal-100 text-[11px] text-teal-800"
               >
-                <Plus className="h-4 w-4" />
-                New leg
-              </Button>
+                <MapPin className="mr-1 h-3 w-3" />
+                Leg highlighted
+              </Badge>
             )}
           </div>
         </div>
