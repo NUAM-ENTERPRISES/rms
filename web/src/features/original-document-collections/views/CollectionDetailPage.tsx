@@ -47,7 +47,6 @@ import {
   getCollectionDocumentProgress,
   getCollectionStatusStepIndex,
 } from "../utils/collectionProgress";
-import { getOriginalDocumentChecklistClasses } from "../utils/documentChecklistStyles";
 import {
   COLLECTION_STATUS_LABELS,
   COLLECTION_TYPE_LABELS,
@@ -212,7 +211,7 @@ function InfoTile({
 
 export default function CollectionDetailPage() {
   const { id = "" } = useParams();
-  const canWrite = useCan("write:original_document_intake");
+  const canWrite = useCan("write:documents");
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [highlightCombinedMerge, setHighlightCombinedMerge] = useState(false);
   const combinedMergeSectionRef = useRef<HTMLDivElement>(null);
@@ -838,10 +837,9 @@ export default function CollectionDetailPage() {
                     key={item.docType}
                     className={cn(
                       "flex items-center gap-2 rounded-lg border px-2.5 py-2",
-                      getOriginalDocumentChecklistClasses(
-                        item.docType,
-                        item.isReceived,
-                      ),
+                      item.isReceived
+                        ? "border-border bg-muted/40"
+                        : "border-border bg-background",
                     )}
                   >
                     <span
@@ -902,7 +900,7 @@ export default function CollectionDetailPage() {
             {canComplete ? (
               <Button
                 onClick={() => setShowCompleteModal(true)}
-                className="gap-2 shrink-0"
+                className="shrink-0 gap-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 focus-visible:ring-emerald-200"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 Complete collection

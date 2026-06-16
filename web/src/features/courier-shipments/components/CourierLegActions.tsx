@@ -32,7 +32,7 @@ interface CourierLegActionsProps {
 }
 
 export function CourierLegActions({ leg }: CourierLegActionsProps) {
-  const canWrite = useCan("write:courier_management");
+  const canWrite = useCan("write:documents");
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showMarkReceived, setShowMarkReceived] = useState(false);
   const [trackingId, setTrackingId] = useState("");
@@ -111,7 +111,7 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
       )}
 
       {(hasPdf || canMarkReceived) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col items-start gap-2">
           {hasPdf && (
             <Button
               variant="outline"

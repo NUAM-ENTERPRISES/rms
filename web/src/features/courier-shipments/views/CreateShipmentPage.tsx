@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { format } from "date-fns";
 import {
   ArrowLeft,
   ArrowRight,
@@ -23,6 +24,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -54,6 +63,7 @@ import {
 } from "../api";
 import { CourierAddressFields } from "../components/CourierAddressFields";
 import { CourierCollectionSummary } from "../components/CourierCollectionSummary";
+import { DispatchAnimationScene } from "../components/DispatchAnimationScene";
 import { DeliveryModeToggle } from "../components/DeliveryModeToggle";
 import { DocumentSelectionChecklist } from "../components/DocumentSelectionChecklist";
 import { SelectedCandidateSummary } from "@/features/original-document-collections/components/SelectedCandidateSummary";
@@ -67,14 +77,22 @@ import {
   SHIPMENT_PURPOSE_LABELS,
   WIZARD_STEPS,
 } from "../constants";
+import type { AddressType } from "../constants";
 import type { AddressSnapshot } from "../types";
 import { buildCandidateAddressSnapshot } from "../utils/candidate-address";
 
 export default function CreateShipmentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const canWrite = useCan("write:courier_management");
+  const canWrite = useCan("write:documents");
   const [step, setStep] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [dispatchAnimating, setDispatchAnimating] = useState(false);
+  const [dispatchPhase, setDispatchPhase] = useState<
+    "idle" | "throw" | "drive" | "success"
+  >("idle");
+  const dispatchUiDoneRef = useRef(false);
+  const dispatchUiDoneResolverRef = useRef<null | (() => void)>(null);
 
   const [candidateId, setCandidateId] = useState(
     searchParams.get("candidateId") ?? "",
@@ -86,11 +104,15 @@ export default function CreateShipmentPage() {
   const [deliveryMode, setDeliveryMode] = useState<"courier" | "direct">(
     DELIVERY_MODE.COURIER,
   );
-  const [fromAddressType, setFromAddressType] = useState(ADDRESS_TYPE.KOCHI);
-  const [toAddressType, setToAddressType] = useState(ADDRESS_TYPE.DELHI);
+  const [fromAddressType, setFromAddressType] = useState<AddressType>(
+    ADDRESS_TYPE.KOCHI,
+  );
+  const [toAddressType, setToAddressType] = useState<AddressType>(
+    ADDRESS_TYPE.DELHI,
+  );
   const [fromSnapshot, setFromSnapshot] = useState<AddressSnapshot>({});
   const [toSnapshot, setToSnapshot] = useState<AddressSnapshot>({});
-  const [projectId, setProjectId] = useState("");
+  const projectId = "";
   const [remarks, setRemarks] = useState("");
   const [trackingId, setTrackingId] = useState("");
   const [courierPartner, setCourierPartner] = useState<string>(COURIER_PARTNERS[0]);
@@ -154,7 +176,7 @@ export default function CreateShipmentPage() {
     setToSnapshot(snapshot);
   };
 
-  const handleFromAddressTypeChange = (type: typeof fromAddressType) => {
+  const handleFromAddressTypeChange = (type: AddressType) => {
     fromSnapshotEdited.current = false;
     setFromAddressType(type);
     if (type === ADDRESS_TYPE.CANDIDATE && candidate) {
@@ -162,7 +184,7 @@ export default function CreateShipmentPage() {
     }
   };
 
-  const handleToAddressTypeChange = (type: typeof toAddressType) => {
+  const handleToAddressTypeChange = (type: AddressType) => {
     toSnapshotEdited.current = false;
     setToAddressType(type);
     if (type === ADDRESS_TYPE.CANDIDATE && candidate) {
@@ -205,8 +227,51 @@ export default function CreateShipmentPage() {
     setStep((s) => Math.min(s + 1, WIZARD_STEPS.length - 1));
   };
 
-  const handleSubmit = async () => {
+  const formatSnapshotLine = (snapshot: AddressSnapshot): string => {
+    const parts = [
+      snapshot.label,
+      snapshot.address,
+      snapshot.pincode ? `PIN ${snapshot.pincode}` : undefined,
+      snapshot.phone ? `Ph ${snapshot.phone}` : undefined,
+    ].filter(Boolean);
+    return parts.join(" · ") || "—";
+  };
+
+  const openConfirm = () => {
     if (!validateStep()) return;
+    setConfirmOpen(true);
+  };
+
+  const getDocChipClasses = (index: number) => {
+    const palette = [
+      "border-emerald-200 bg-emerald-50 text-emerald-800",
+      "border-blue-200 bg-blue-50 text-blue-800",
+      "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800",
+      "border-orange-200 bg-orange-50 text-orange-800",
+      "border-indigo-200 bg-indigo-50 text-indigo-800",
+      "border-rose-200 bg-rose-50 text-rose-800",
+      "border-cyan-200 bg-cyan-50 text-cyan-800",
+      "border-violet-200 bg-violet-50 text-violet-800",
+    ];
+    return palette[index % palette.length];
+  };
+
+  const waitForDispatchUiDone = () => {
+    if (dispatchUiDoneRef.current) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      dispatchUiDoneResolverRef.current = resolve;
+    });
+  };
+
+  const markDispatchUiDone = () => {
+    if (dispatchUiDoneRef.current) return;
+    dispatchUiDoneRef.current = true;
+    dispatchUiDoneResolverRef.current?.();
+    dispatchUiDoneResolverRef.current = null;
+  };
+
+  const handleSubmit = async (): Promise<boolean> => {
+    if (!validateStep()) return false;
     try {
       const created = await createShipment({
         candidateId,
@@ -245,11 +310,15 @@ export default function CreateShipmentPage() {
       }
 
       toast.success(`Leg ${created.data.legNumber} created successfully`);
+      // Wait until the UI animation completes, then navigate.
+      await waitForDispatchUiDone();
       navigate(
         `/courier-management/candidates/${created.data.candidateId}?leg=${id}`,
       );
+      return true;
     } catch {
       toast.error("Failed to create courier leg");
+      return false;
     }
   };
 
@@ -960,7 +1029,7 @@ export default function CreateShipmentPage() {
           </Button>
         ) : (
           <Button
-            onClick={handleSubmit}
+            onClick={openConfirm}
             disabled={isLoading}
             className="rounded-xl gap-2 bg-teal-600 hover:bg-teal-700"
           >
@@ -971,6 +1040,274 @@ export default function CreateShipmentPage() {
           </Button>
         )}
       </div>
+
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (dispatchAnimating) return;
+          setConfirmOpen(open);
+        }}
+      >
+        <DialogContent className="overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-5 py-4 text-left text-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <DialogTitle className="flex items-center gap-2 text-base">
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 shadow-sm",
+                      deliveryMode === DELIVERY_MODE.COURIER
+                        ? "bg-teal-500/20 text-teal-200"
+                        : "bg-indigo-500/20 text-indigo-200",
+                    )}
+                  >
+                    {deliveryMode === DELIVERY_MODE.COURIER ? (
+                      <Truck className="h-4 w-4" />
+                    ) : (
+                      <Footprints className="h-4 w-4" />
+                    )}
+                  </span>
+                  {deliveryMode === DELIVERY_MODE.COURIER
+                    ? "Confirm courier dispatch"
+                    : "Confirm direct handover"}
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-white/70">
+                  Review the details below before saving this leg.
+                </DialogDescription>
+              </div>
+
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <Badge className="border-white/15 bg-white/10 text-[11px] text-white hover:bg-white/10">
+                  {SHIPMENT_PURPOSE_LABELS[purposeType]}
+                </Badge>
+                <Badge
+                  className={cn(
+                    "text-[11px] text-white hover:bg-white/10",
+                    deliveryMode === DELIVERY_MODE.COURIER
+                      ? "border-teal-300/30 bg-teal-500/15"
+                      : "border-indigo-300/30 bg-indigo-500/15",
+                  )}
+                >
+                  {DELIVERY_MODE_LABELS[deliveryMode]}
+                </Badge>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="max-h-[70vh] space-y-3 overflow-y-auto bg-gradient-to-b from-white to-slate-50/70 px-5 py-4 text-sm">
+            {dispatchAnimating ? (
+              <div>
+                <DispatchAnimationScene
+                  phase={dispatchPhase === "idle" ? "throw" : dispatchPhase}
+                  onThrowComplete={() => setDispatchPhase("drive")}
+                  onDriveComplete={() => {
+                    setDispatchPhase("success");
+                    markDispatchUiDone();
+                    window.setTimeout(() => {
+                      setConfirmOpen(false);
+                      setDispatchAnimating(false);
+                      setDispatchPhase("idle");
+                    }, 10_000);
+                  }}
+                />
+
+                {deliveryMode === DELIVERY_MODE.COURIER ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                    <Badge className="border-teal-200 bg-white/70 text-[11px] text-teal-800 hover:bg-white/70">
+                      {courierPartner}
+                    </Badge>
+                    <code className="rounded-lg border border-teal-200/70 bg-white/70 px-2 py-1 text-[11px] text-teal-900 shadow-sm">
+                      {trackingId || "—"}
+                    </code>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!dispatchAnimating ? (
+              <>
+                <div className="relative overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 p-4">
+              <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-200/40 blur-2xl" />
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Candidate
+              </p>
+              <p className="mt-1 truncate text-base font-semibold text-foreground">
+                {candidateFullName}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {candidate?.candidateCode || candidateId || "—"}
+              </p>
+                </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-4">
+                <span className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-blue-200/40 blur-2xl" />
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Date & time
+                </p>
+                <p className="mt-1 font-semibold text-foreground">
+                  {sentAt
+                    ? format(new Date(sentAt), "MMM d, yyyy · p")
+                    : "—"}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Recorded in system timezone
+                </p>
+              </div>
+
+              {deliveryMode === DELIVERY_MODE.COURIER ? (
+                <div className="relative overflow-hidden rounded-2xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-4">
+                  <span className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-teal-200/40 blur-2xl" />
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Courier details
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge className="border-teal-200 bg-teal-50 text-xs text-teal-800 hover:bg-teal-50">
+                      {courierPartner}
+                    </Badge>
+                    <code className="rounded-lg border border-teal-200/70 bg-white/70 px-2 py-1 text-xs text-teal-900 shadow-sm">
+                      {trackingId || "—"}
+                    </code>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Ensure the tracking ID matches the courier slip.
+                  </p>
+                </div>
+              ) : (
+                <div className="relative overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 p-4">
+                  <span className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl" />
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Handover type
+                  </p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    Direct handover
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    No tracking ID required.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-slate-50 p-4">
+              <span className="pointer-events-none absolute -left-10 -top-10 h-28 w-28 rounded-full bg-violet-200/35 blur-2xl" />
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Route
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge className="border-blue-200 bg-blue-50 text-xs text-blue-800 hover:bg-blue-50">
+                  {ADDRESS_TYPE_LABELS[fromAddressType]}
+                </Badge>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <Badge className="border-violet-200 bg-violet-50 text-xs text-violet-800 hover:bg-violet-50">
+                  {ADDRESS_TYPE_LABELS[toAddressType]}
+                </Badge>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-blue-200/70 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    From snapshot
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-foreground">
+                    {formatSnapshotLine(fromSnapshot)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-violet-200/70 bg-white/70 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    To snapshot
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-foreground">
+                    {formatSnapshotLine(toSnapshot)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {docTypes.length > 0 ? (
+              <div className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-4">
+                <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-200/35 blur-2xl" />
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Documents
+                  </p>
+                  <Badge className="border-amber-200 bg-white/70 text-[11px] text-amber-900 hover:bg-white/70">
+                    {docTypes.length}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {docTypes.map((docType, index) => (
+                    <Badge
+                      key={docType}
+                      variant="outline"
+                      className={cn(
+                        "max-w-full truncate border px-2.5 py-1 text-[11px] font-semibold shadow-sm",
+                        getDocChipClasses(index),
+                      )}
+                    >
+                      {getDocumentTypeConfig(docType)?.displayName ?? docType}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+                {remarks.trim() ? (
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Remarks
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                      {remarks}
+                    </p>
+                  </div>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+
+          <DialogFooter className="gap-2 border-t border-border bg-muted/10 px-5 py-4 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmOpen(false)}
+              disabled={isLoading || dispatchAnimating}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={async () => {
+                dispatchUiDoneRef.current = false;
+                setDispatchAnimating(true);
+                setDispatchPhase("throw");
+                try {
+                  const ok = await handleSubmit();
+                  if (!ok) {
+                    // Let the user try again; unlock navigation gate.
+                    markDispatchUiDone();
+                    setDispatchAnimating(false);
+                    setDispatchPhase("idle");
+                    setConfirmOpen(true);
+                  }
+                } finally {
+                  // UI controls its own end-state on animation complete
+                }
+              }}
+              disabled={isLoading || dispatchAnimating}
+              className={cn(
+                "gap-2 rounded-xl text-white",
+                deliveryMode === DELIVERY_MODE.COURIER
+                  ? "bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
+                  : "bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700",
+              )}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {deliveryMode === DELIVERY_MODE.COURIER ? "Dispatch" : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

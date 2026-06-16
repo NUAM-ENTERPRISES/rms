@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
@@ -109,7 +108,7 @@ const accentStyles: Record<
 export default function CourierRegisterPage() {
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
-  const { user } = useAppSelector((state) => state.auth);
+  useAppSelector((state) => state.auth);
   const canWrite = useCan("write:courier_management");
 
   const [search, setSearch] = useState("");
@@ -238,11 +237,6 @@ export default function CourierRegisterPage() {
   return (
     <div className="min-h-screen">
       <div className="mx-auto mt-2 max-w-7xl w-full space-y-6 px-6">
-        <DashboardWelcomeHeader
-          userName={user?.name ?? "Documents Control Executive"}
-          subtitle="Track document movements across offices and clients"
-        />
-
         <div className="sticky top-0 z-10 overflow-hidden rounded-2xl border border-border bg-background/80 shadow-sm backdrop-blur">
           <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
             <div className="group relative flex-1">
@@ -302,7 +296,7 @@ export default function CourierRegisterPage() {
                 transition={{ delay: i * 0.04 }}
                 onClick={() => handleTileClick(stat.id, stat.filter)}
                 className={cn(
-                  "group relative rounded-2xl border bg-gradient-to-br p-4 text-left shadow-sm transition-all",
+                  "group relative min-h-[112px] rounded-2xl border bg-gradient-to-br p-5 text-left shadow-sm transition-all",
                   s.card,
                   isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md",
                 )}
@@ -315,15 +309,15 @@ export default function CourierRegisterPage() {
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {stat.label}
                     </p>
-                    <p className={cn("text-2xl font-bold tabular-nums", s.value)}>
+                    <p className={cn("text-3xl font-bold tabular-nums leading-none", s.value)}>
                       {stat.value}
                     </p>
                   </div>
-                  <div className={cn("rounded-lg p-2", s.iconBg)}>
-                    <Icon className={cn("h-4 w-4", s.icon)} />
+                  <div className={cn("rounded-xl p-3", s.iconBg)}>
+                    <Icon className={cn("h-5 w-5", s.icon)} />
                   </div>
                 </div>
-                <p className="mt-1 text-[10px] text-muted-foreground">{stat.subtitle}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{stat.subtitle}</p>
               </motion.button>
             );
           })}
