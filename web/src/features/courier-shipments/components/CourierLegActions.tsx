@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Eye, Loader2 } from "lucide-react";
+import { CheckCircle2, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   SHIPMENT_STATUS,
 } from "../constants";
 import type { CourierShipment } from "../types";
+import { MarkReceivedModal } from "./MarkReceivedModal";
 
 interface CourierLegActionsProps {
   leg: CourierShipment;
@@ -33,6 +34,7 @@ interface CourierLegActionsProps {
 export function CourierLegActions({ leg }: CourierLegActionsProps) {
   const canWrite = useCan("write:documents");
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [showMarkReceived, setShowMarkReceived] = useState(false);
   const [trackingId, setTrackingId] = useState("");
   const [courierPartner, setCourierPartner] = useState<string>(COURIER_PARTNERS[0]);
   const [sentAt, setSentAt] = useState(new Date().toISOString().slice(0, 16));
@@ -45,9 +47,17 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
     useHandoverCourierShipmentMutation();
 
   const isDraft = leg.status === SHIPMENT_STATUS.DRAFT;
+  const isInTransit = leg.status === SHIPMENT_STATUS.IN_TRANSIT;
   const hasPdf = Boolean(leg.mergedDocument?.fileUrl);
+  const canMarkReceived = canWrite && isInTransit;
 
-  if (!hasPdf && !(canWrite && isDraft)) {
+  if (
+    !hasPdf &&
+    !(canWrite && isDraft) &&
+    !canMarkReceived &&
+    !leg.lockerFileNumber &&
+    !(leg.sentAt && !isDraft)
+  ) {
     return null;
   }
 
@@ -100,16 +110,31 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
         </p>
       )}
 
-      {hasPdf && (
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          onClick={() => setShowPdfViewer(true)}
-        >
-          <Eye className="mr-2 h-4 w-4" />
-          View merged PDF
-        </Button>
+      {(hasPdf || canMarkReceived) && (
+        <div className="flex flex-col items-start gap-2">
+          {hasPdf && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setShowPdfViewer(true)}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              View merged PDF
+            </Button>
+          )}
+          {canMarkReceived && (
+            <Button
+              size="sm"
+              type="button"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => setShowMarkReceived(true)}
+            >
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Mark as received
+            </Button>
+          )}
+        </div>
       )}
 
       {canWrite && isDraft && (
@@ -188,6 +213,14 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
           fileName={leg.mergedDocument.fileName}
           isOpen={showPdfViewer}
           onClose={() => setShowPdfViewer(false)}
+        />
+      )}
+
+      {canMarkReceived && (
+        <MarkReceivedModal
+          open={showMarkReceived}
+          onOpenChange={setShowMarkReceived}
+          shipment={leg}
         />
       )}
     </div>

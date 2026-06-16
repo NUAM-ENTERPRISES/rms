@@ -175,6 +175,78 @@
   animation: collection-completed-banner-glow 2.5s ease-in-out infinite;
 }
 
+@keyframes courier-wizard-bar-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 24px rgb(20 184 166 / 0.08),
+      0 0 0 1px rgb(153 246 228 / 0.4);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgb(20 184 166 / 0.18),
+      0 0 20px 2px rgb(45 212 191 / 0.22);
+  }
+}
+
+@keyframes courier-wizard-step-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(153 246 228 / 0.5),
+      0 0 12px 2px rgb(20 184 166 / 0.35),
+      0 0 24px 4px rgb(20 184 166 / 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgb(94 234 212 / 0.7),
+      0 0 20px 6px rgb(20 184 166 / 0.55),
+      0 0 36px 8px rgb(20 184 166 / 0.25);
+  }
+}
+
+@keyframes courier-wizard-step-complete-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px 1px rgb(16 185 129 / 0.25),
+      0 0 16px 2px rgb(16 185 129 / 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 14px 3px rgb(16 185 129 / 0.4),
+      0 0 24px 4px rgb(16 185 129 / 0.18);
+  }
+}
+
+@keyframes courier-wizard-line-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+    box-shadow: 0 0 6px 0 rgb(52 211 153 / 0.35);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 12px 2px rgb(52 211 153 / 0.55);
+  }
+}
+
+.animate-courier-wizard-bar-glow {
+  animation: courier-wizard-bar-glow 3s ease-in-out infinite;
+}
+
+.animate-courier-wizard-step-glow {
+  animation: courier-wizard-step-glow 2s ease-in-out infinite;
+}
+
+.animate-courier-wizard-step-complete-glow {
+  animation: courier-wizard-step-complete-glow 2.5s ease-in-out infinite;
+}
+
+.animate-courier-wizard-line-glow {
+  animation: courier-wizard-line-glow 2s ease-in-out infinite;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);

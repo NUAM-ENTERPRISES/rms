@@ -41,20 +41,27 @@ export function CourierAddressFields({
   const prevType = useRef(addressType);
 
   useEffect(() => {
-    if (prevType.current === addressType) return;
-    prevType.current = addressType;
-    if (addressType === ADDRESS_TYPE.KOCHI && officePresets.kochi) {
-      onSnapshotChange({
-        ...officePresets.kochi,
-        label: "Kochi Office",
-      });
-    } else if (addressType === ADDRESS_TYPE.DELHI && officePresets.delhi) {
-      onSnapshotChange({
-        ...officePresets.delhi,
-        label: "Delhi Office",
-      });
+    const preset =
+      addressType === ADDRESS_TYPE.KOCHI && officePresets.kochi
+        ? { ...officePresets.kochi, label: "Kochi Office" }
+        : addressType === ADDRESS_TYPE.DELHI && officePresets.delhi
+          ? { ...officePresets.delhi, label: "Delhi Office" }
+          : null;
+
+    if (!preset) {
+      prevType.current = addressType;
+      return;
     }
-  }, [addressType, officePresets, onSnapshotChange]);
+
+    const typeChanged = prevType.current !== addressType;
+    const snapshotEmpty = !snapshot.address?.trim();
+
+    if (typeChanged || snapshotEmpty) {
+      onSnapshotChange(preset);
+    }
+
+    prevType.current = addressType;
+  }, [addressType, officePresets, onSnapshotChange, snapshot.address]);
 
   return (
     <div className="space-y-3">
