@@ -28,6 +28,7 @@ import { useGetCandidateByIdQuery } from "@/features/candidates/api";
 import { SelectedCandidateSummary } from "@/features/original-document-collections/components/SelectedCandidateSummary";
 import { useGetCandidateCourierPipelineQuery } from "../api";
 import { CandidateCourierPipeline } from "../components/CandidateCourierPipeline";
+import { CourierPipelineProgressCard } from "../components/CourierPipelineProgressCard";
 
 export default function CandidateCourierPipelinePage() {
   const { candidateId = "" } = useParams();
@@ -347,67 +348,13 @@ export default function CandidateCourierPipelinePage() {
         </div>
 
         <aside className="space-y-3 xl:sticky xl:top-20 xl:self-start">
-          <Card className="overflow-hidden border-teal-100 shadow-md">
-            <div className="bg-gradient-to-br from-teal-600 to-teal-700 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-teal-50">
-                Pipeline progress
-              </p>
-              <p className="mt-1 text-2xl font-bold text-white">{progress}%</p>
-            </div>
-            <CardContent className="space-y-4 p-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Legs received</span>
-                  <span className="font-medium">
-                    {receivedLegs} / {totalLegs}
-                  </span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </div>
-
-              {pipeline?.currentLocationHint ? (
-                <div className="rounded-lg border border-teal-100 bg-teal-50/50 p-3">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Current location
-                      </p>
-                      <p className="text-sm font-medium text-foreground">
-                        {pipeline.currentLocationHint}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border/70 bg-muted/10 px-3 py-4 text-center">
-                  <MapPin className="mx-auto mb-1.5 h-4 w-4 text-muted-foreground/50" />
-                  <p className="text-xs text-muted-foreground">
-                    No active location hint
-                  </p>
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-1.5">
-                <Badge
-                  variant="outline"
-                  className="border-emerald-200 bg-emerald-50 text-emerald-700"
-                >
-                  {receivedLegs} received
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    inTransitLegs > 0
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
-                      : "border-border bg-muted/30 text-muted-foreground",
-                  )}
-                >
-                  {inTransitLegs} in transit
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+          <CourierPipelineProgressCard
+            legs={pipeline?.legs ?? []}
+            receivedLegs={receivedLegs}
+            totalLegs={totalLegs}
+            currentLocationHint={pipeline?.currentLocationHint}
+            highlightLegId={highlightLegId}
+          />
         </aside>
       </div>
 
