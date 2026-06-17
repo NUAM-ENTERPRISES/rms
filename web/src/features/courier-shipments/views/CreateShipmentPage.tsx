@@ -17,7 +17,10 @@ import {
   RotateCcw,
   Send,
   Truck,
+  ShieldCheck,
+  User,
   UserSearch,
+  Users,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -52,6 +55,7 @@ import { SelectCandidate } from "@/components/molecules";
 import { UserSelect } from "@/features/candidates/components/UserSelect";
 import { useGetCandidateByIdQuery } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
+import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
 import { cn } from "@/lib/utils";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import {
@@ -63,7 +67,7 @@ import {
 } from "../api";
 import { CourierAddressFields } from "../components/CourierAddressFields";
 import { CourierCollectionSummary } from "../components/CourierCollectionSummary";
-import { DispatchAnimationScene } from "../components/DispatchAnimationScene";
+import { DispatchSuccessAnimation } from "../components/DispatchSuccessAnimation";
 import { DeliveryModeToggle } from "../components/DeliveryModeToggle";
 import { DocumentSelectionChecklist } from "../components/DocumentSelectionChecklist";
 import { SelectedCandidateSummary } from "@/features/original-document-collections/components/SelectedCandidateSummary";
@@ -88,11 +92,13 @@ export default function CreateShipmentPage() {
   const [step, setStep] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [dispatchAnimating, setDispatchAnimating] = useState(false);
-  const [dispatchPhase, setDispatchPhase] = useState<
-    "idle" | "throw" | "drive" | "success"
+  const [dispatchUiPhase, setDispatchUiPhase] = useState<
+    "idle" | "processing" | "success"
   >("idle");
-  const dispatchUiDoneRef = useRef(false);
-  const dispatchUiDoneResolverRef = useRef<null | (() => void)>(null);
+  const createdShipmentRef = useRef<{
+    candidateId: string;
+    legId: string;
+  } | null>(null);
 
   const [candidateId, setCandidateId] = useState(
     searchParams.get("candidateId") ?? "",
@@ -145,6 +151,9 @@ export default function CreateShipmentPage() {
   const availableDocs =
     docsData?.data?.cumulativeReceived.map((d) => d.docType) ?? [];
   const isLoading = creating || dispatching || handingOver;
+  const { getUserById } = useUsersLookup();
+  const sentByName = getUserById(sentByUserId)?.name ?? "—";
+  const approvedByName = getUserById(approvedByUserId)?.name ?? "—";
 
   useEffect(() => {
     setDocTypes([]);
@@ -256,20 +265,6 @@ export default function CreateShipmentPage() {
     return palette[index % palette.length];
   };
 
-  const waitForDispatchUiDone = () => {
-    if (dispatchUiDoneRef.current) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      dispatchUiDoneResolverRef.current = resolve;
-    });
-  };
-
-  const markDispatchUiDone = () => {
-    if (dispatchUiDoneRef.current) return;
-    dispatchUiDoneRef.current = true;
-    dispatchUiDoneResolverRef.current?.();
-    dispatchUiDoneResolverRef.current = null;
-  };
-
   const handleSubmit = async (): Promise<boolean> => {
     if (!validateStep()) return false;
     try {
@@ -310,11 +305,10 @@ export default function CreateShipmentPage() {
       }
 
       toast.success(`Leg ${created.data.legNumber} created successfully`);
-      // Wait until the UI animation completes, then navigate.
-      await waitForDispatchUiDone();
-      navigate(
-        `/courier-management/candidates/${created.data.candidateId}?leg=${id}`,
-      );
+      createdShipmentRef.current = {
+        candidateId: created.data.candidateId,
+        legId: id,
+      };
       return true;
     } catch {
       toast.error("Failed to create courier leg");
@@ -1048,8 +1042,8 @@ export default function CreateShipmentPage() {
           setConfirmOpen(open);
         }}
       >
-        <DialogContent className="overflow-hidden p-0 sm:max-w-xl">
-          <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-5 py-4 text-left text-white">
+        <DialogContent className="overflow-hidden p-0 sm:max-w-4xl">
+          <DialogHeader className="space-y-0 border-b border-border bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 px-5 py-3 text-left text-white">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <DialogTitle className="flex items-center gap-2 text-base">
@@ -1094,178 +1088,297 @@ export default function CreateShipmentPage() {
             </div>
           </DialogHeader>
 
-          <div className="max-h-[70vh] space-y-3 overflow-y-auto bg-gradient-to-b from-white to-slate-50/70 px-5 py-4 text-sm">
+          <div className="max-h-[62vh] overflow-y-auto bg-gradient-to-b from-white to-slate-50/70 px-4 py-3 text-sm">
             {dispatchAnimating ? (
-              <div>
-                <DispatchAnimationScene
-                  phase={dispatchPhase === "idle" ? "throw" : dispatchPhase}
-                  onThrowComplete={() => setDispatchPhase("drive")}
-                  onDriveComplete={() => {
-                    setDispatchPhase("success");
-                    markDispatchUiDone();
-                    window.setTimeout(() => {
-                      setConfirmOpen(false);
-                      setDispatchAnimating(false);
-                      setDispatchPhase("idle");
-                    }, 10_000);
-                  }}
-                />
-
-                {deliveryMode === DELIVERY_MODE.COURIER ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                    <Badge className="border-teal-200 bg-white/70 text-[11px] text-teal-800 hover:bg-white/70">
-                      {courierPartner}
-                    </Badge>
-                    <code className="rounded-lg border border-teal-200/70 bg-white/70 px-2 py-1 text-[11px] text-teal-900 shadow-sm">
-                      {trackingId || "—"}
-                    </code>
-                  </div>
-                ) : null}
-              </div>
+              <DispatchSuccessAnimation
+                deliveryMode={deliveryMode}
+                courierPartner={courierPartner}
+                trackingId={trackingId}
+                phase={dispatchUiPhase === "success" ? "success" : "processing"}
+                onComplete={() => {
+                  const created = createdShipmentRef.current;
+                  if (created) {
+                    navigate(
+                      `/courier-management/candidates/${created.candidateId}?leg=${created.legId}`,
+                    );
+                    createdShipmentRef.current = null;
+                  }
+                  window.setTimeout(() => {
+                    setConfirmOpen(false);
+                    setDispatchAnimating(false);
+                    setDispatchUiPhase("idle");
+                  }, 300);
+                }}
+              />
             ) : null}
 
             {!dispatchAnimating ? (
-              <>
-                <div className="relative overflow-hidden rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 p-4">
-              <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-200/40 blur-2xl" />
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Candidate
-              </p>
-              <p className="mt-1 truncate text-base font-semibold text-foreground">
-                {candidateFullName}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {candidate?.candidateCode || candidateId || "—"}
-              </p>
-                </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-4">
-                <span className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-blue-200/40 blur-2xl" />
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Date & time
-                </p>
-                <p className="mt-1 font-semibold text-foreground">
-                  {sentAt
-                    ? format(new Date(sentAt), "MMM d, yyyy · p")
-                    : "—"}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Recorded in system timezone
-                </p>
-              </div>
-
-              {deliveryMode === DELIVERY_MODE.COURIER ? (
-                <div className="relative overflow-hidden rounded-2xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-4">
-                  <span className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-teal-200/40 blur-2xl" />
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Courier details
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge className="border-teal-200 bg-teal-50 text-xs text-teal-800 hover:bg-teal-50">
-                      {courierPartner}
-                    </Badge>
-                    <code className="rounded-lg border border-teal-200/70 bg-white/70 px-2 py-1 text-xs text-teal-900 shadow-sm">
-                      {trackingId || "—"}
-                    </code>
+              <div className="grid gap-2.5 lg:grid-cols-2">
+                <div className="space-y-2.5">
+                  <div className="relative overflow-hidden rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/60 p-3">
+                    <span className="pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full bg-emerald-200/40 blur-2xl" />
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-9 w-9 shrink-0 border border-emerald-200 shadow-sm">
+                        <AvatarImage
+                          src={candidate?.profileImage || undefined}
+                          alt={candidateFullName}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-[10px] font-semibold text-white">
+                          {candidateInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700/80">
+                          Candidate
+                        </p>
+                        <p className="truncate text-sm font-semibold text-emerald-950">
+                          {candidateFullName}
+                        </p>
+                        <p className="text-[11px] text-emerald-800/70">
+                          {candidate?.candidateCode || candidateId || "—"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Ensure the tracking ID matches the courier slip.
-                  </p>
-                </div>
-              ) : (
-                <div className="relative overflow-hidden rounded-2xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 p-4">
-                  <span className="pointer-events-none absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl" />
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Handover type
-                  </p>
-                  <p className="mt-1 font-semibold text-foreground">
-                    Direct handover
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    No tracking ID required.
-                  </p>
-                </div>
-              )}
-            </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-slate-50 p-4">
-              <span className="pointer-events-none absolute -left-10 -top-10 h-28 w-28 rounded-full bg-violet-200/35 blur-2xl" />
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Route
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge className="border-blue-200 bg-blue-50 text-xs text-blue-800 hover:bg-blue-50">
-                  {ADDRESS_TYPE_LABELS[fromAddressType]}
-                </Badge>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <Badge className="border-violet-200 bg-violet-50 text-xs text-violet-800 hover:bg-violet-50">
-                  {ADDRESS_TYPE_LABELS[toAddressType]}
-                </Badge>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-blue-200/70 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    From snapshot
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-foreground">
-                    {formatSnapshotLine(fromSnapshot)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-violet-200/70 bg-white/70 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    To snapshot
-                  </p>
-                  <p className="mt-1 text-xs font-medium text-foreground">
-                    {formatSnapshotLine(toSnapshot)}
-                  </p>
-                </div>
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="relative overflow-hidden rounded-xl border border-blue-200/70 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-100 text-blue-700">
+                          <Building2 className="h-3.5 w-3.5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-700/80">
+                            Purpose
+                          </p>
+                          <p className="mt-0.5 truncate text-xs font-semibold text-blue-950">
+                            {SHIPMENT_PURPOSE_LABELS[purposeType]}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-            {docTypes.length > 0 ? (
-              <div className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-4">
-                <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-amber-200/35 blur-2xl" />
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Documents
-                  </p>
-                  <Badge className="border-amber-200 bg-white/70 text-[11px] text-amber-900 hover:bg-white/70">
-                    {docTypes.length}
-                  </Badge>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {docTypes.map((docType, index) => (
-                    <Badge
-                      key={docType}
-                      variant="outline"
+                    <div
                       className={cn(
-                        "max-w-full truncate border px-2.5 py-1 text-[11px] font-semibold shadow-sm",
-                        getDocChipClasses(index),
+                        "relative overflow-hidden rounded-xl border p-3",
+                        deliveryMode === DELIVERY_MODE.COURIER
+                          ? "border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40"
+                          : "border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40",
                       )}
                     >
-                      {getDocumentTypeConfig(docType)?.displayName ?? docType}
-                    </Badge>
-                  ))}
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md",
+                            deliveryMode === DELIVERY_MODE.COURIER
+                              ? "bg-teal-100 text-teal-700"
+                              : "bg-indigo-100 text-indigo-700",
+                          )}
+                        >
+                          {deliveryMode === DELIVERY_MODE.COURIER ? (
+                            <Truck className="h-3.5 w-3.5" />
+                          ) : (
+                            <Footprints className="h-3.5 w-3.5" />
+                          )}
+                        </span>
+                        <div className="min-w-0">
+                          <p
+                            className={cn(
+                              "text-[10px] font-semibold uppercase tracking-wider",
+                              deliveryMode === DELIVERY_MODE.COURIER
+                                ? "text-teal-700/80"
+                                : "text-indigo-700/80",
+                            )}
+                          >
+                            Mode
+                          </p>
+                          <p
+                            className={cn(
+                              "mt-0.5 truncate text-xs font-semibold",
+                              deliveryMode === DELIVERY_MODE.COURIER
+                                ? "text-teal-950"
+                                : "text-indigo-950",
+                            )}
+                          >
+                            {DELIVERY_MODE_LABELS[deliveryMode]}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-slate-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700">
+                          <Calendar className="h-3.5 w-3.5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-700/80">
+                            {deliveryMode === DELIVERY_MODE.COURIER ? "Dispatch" : "Handover"}
+                          </p>
+                          <p className="mt-0.5 text-[11px] font-semibold leading-tight text-sky-950">
+                            {sentAt
+                              ? format(new Date(sentAt), "MMM d, yyyy · p")
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {deliveryMode === DELIVERY_MODE.COURIER ? (
+                      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-100 text-teal-700">
+                            <Hash className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-700/80">
+                              Courier
+                            </p>
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              <Badge className="border-teal-200 bg-teal-50 px-1.5 py-0 text-[10px] text-teal-800 hover:bg-teal-50">
+                                {courierPartner}
+                              </Badge>
+                              <code className="max-w-full truncate rounded border border-teal-200/70 bg-white/70 px-1.5 py-0 text-[10px] text-teal-900">
+                                {trackingId || "—"}
+                              </code>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-indigo-100 text-indigo-700">
+                            <Footprints className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700/80">
+                              Handover
+                            </p>
+                            <p className="mt-0.5 text-xs font-semibold text-indigo-950">
+                              Direct · no tracking
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative overflow-hidden rounded-xl border border-rose-200/70 bg-gradient-to-br from-rose-50 via-white to-pink-50/40 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-rose-100 text-rose-700">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="grid flex-1 grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-rose-200/60 bg-white/70 px-2.5 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700/80">
+                            {deliveryMode === DELIVERY_MODE.COURIER ? "Sent by" : "Handed by"}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-rose-950">
+                            <User className="h-3 w-3 shrink-0" />
+                            {sentByName}
+                          </p>
+                        </div>
+                        <div className="rounded-lg border border-rose-200/60 bg-white/70 px-2.5 py-1.5">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700/80">
+                            Approved by
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-rose-950">
+                            <Users className="h-3 w-3 shrink-0" />
+                            {approvedByName}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="relative overflow-hidden rounded-xl border border-violet-200/70 bg-gradient-to-br from-violet-50 via-white to-slate-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-violet-100 text-violet-700">
+                        <MapPin className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-700/80">
+                            Route
+                          </p>
+                          <Badge className="border-blue-200 bg-blue-50 px-1.5 py-0 text-[10px] text-blue-800 hover:bg-blue-50">
+                            {ADDRESS_TYPE_LABELS[fromAddressType]}
+                          </Badge>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <Badge className="border-violet-200 bg-violet-50 px-1.5 py-0 text-[10px] text-violet-800 hover:bg-violet-50">
+                            {ADDRESS_TYPE_LABELS[toAddressType]}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                          <div className="rounded-lg border border-blue-200/70 bg-white/70 p-2">
+                            <p className="text-[9px] font-semibold uppercase tracking-wider text-blue-700/80">
+                              From
+                            </p>
+                            <p className="mt-0.5 line-clamp-2 text-[11px] font-medium text-foreground">
+                              {formatSnapshotLine(fromSnapshot)}
+                            </p>
+                          </div>
+                          <div className="rounded-lg border border-violet-200/70 bg-white/70 p-2">
+                            <p className="text-[9px] font-semibold uppercase tracking-wider text-violet-700/80">
+                              To
+                            </p>
+                            <p className="mt-0.5 line-clamp-2 text-[11px] font-medium text-foreground">
+                              {formatSnapshotLine(toSnapshot)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {docTypes.length > 0 ? (
+                    <div className="relative overflow-hidden rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-3">
+                      <div className="mb-1.5 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-100 text-amber-700">
+                            <FileText className="h-3.5 w-3.5" />
+                          </span>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/80">
+                            Documents ({docTypes.length})
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {docTypes.map((docType, index) => (
+                          <Badge
+                            key={docType}
+                            variant="outline"
+                            className={cn(
+                              "max-w-full truncate border px-2 py-0.5 text-[10px] font-semibold",
+                              getDocChipClasses(index),
+                            )}
+                          >
+                            {getDocumentTypeConfig(docType)?.displayName ?? docType}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {remarks.trim() ? (
+                    <div className="rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 via-white to-slate-50/40 p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                        Remarks
+                      </p>
+                      <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-foreground">
+                        {remarks}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            ) : null}
-
-                {remarks.trim() ? (
-                  <div className="rounded-2xl border border-border bg-background p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Remarks
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                      {remarks}
-                    </p>
-                  </div>
-                ) : null}
-              </>
             ) : null}
           </div>
 
-          <DialogFooter className="gap-2 border-t border-border bg-muted/10 px-5 py-4 sm:gap-2">
+          <DialogFooter className="gap-2 border-t border-border bg-muted/10 px-4 py-3 sm:gap-2">
             <Button
               type="button"
               variant="outline"
@@ -1278,20 +1391,22 @@ export default function CreateShipmentPage() {
             <Button
               type="button"
               onClick={async () => {
-                dispatchUiDoneRef.current = false;
+                createdShipmentRef.current = null;
                 setDispatchAnimating(true);
-                setDispatchPhase("throw");
+                setDispatchUiPhase("processing");
                 try {
                   const ok = await handleSubmit();
-                  if (!ok) {
-                    // Let the user try again; unlock navigation gate.
-                    markDispatchUiDone();
+                  if (ok) {
+                    setDispatchUiPhase("success");
+                  } else {
                     setDispatchAnimating(false);
-                    setDispatchPhase("idle");
+                    setDispatchUiPhase("idle");
                     setConfirmOpen(true);
                   }
-                } finally {
-                  // UI controls its own end-state on animation complete
+                } catch {
+                  setDispatchAnimating(false);
+                  setDispatchUiPhase("idle");
+                  setConfirmOpen(true);
                 }
               }}
               disabled={isLoading || dispatchAnimating}

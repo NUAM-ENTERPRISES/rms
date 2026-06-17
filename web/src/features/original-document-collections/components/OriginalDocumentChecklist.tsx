@@ -8,6 +8,7 @@ import { getDocumentTypeConfig } from "@/constants/document-types";
 import { ORIGINAL_DOCUMENT_CHECKLIST } from "../constants";
 import type { CollectionItem } from "../types";
 import { cn } from "@/lib/utils";
+import { getDocumentChecklistStyles } from "../utils/documentChecklistColors";
 
 interface OriginalDocumentChecklistProps {
   items: CollectionItem[];
@@ -198,7 +199,7 @@ export function OriginalDocumentChecklist({
         />
       </div>
 
-      <div className="max-h-[360px] space-y-1.5 overflow-y-auto">
+      <div className="space-y-1">
         {filteredDocs.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             No documents match your search.
@@ -207,6 +208,7 @@ export function OriginalDocumentChecklist({
           filteredDocs.map((docType) => {
             const item = itemMap.get(docType);
             const label = getDocumentTypeConfig(docType)?.displayName ?? docType;
+            const docStyles = getDocumentChecklistStyles(docType);
             const isPreviouslyReceived = lockedSet.has(docType);
             const isReceived =
               isPreviouslyReceived || (item?.isReceived ?? false);
@@ -217,60 +219,64 @@ export function OriginalDocumentChecklist({
               <div
                 key={docType}
                 className={cn(
-                  "rounded-lg border px-2.5 py-2",
-                  isReceived
-                    ? "border-border bg-muted/40"
-                    : "border-border bg-background",
+                  "rounded-md border px-2 py-1",
+                  docStyles.row,
                 )}
               >
-                <div className="flex items-center gap-2">
-                  {isLocked ? (
-                    <Badge
-                      variant="outline"
-                      className="shrink-0 gap-1 border-border bg-muted text-muted-foreground"
-                    >
-                      <Lock className="h-3 w-3" />
-                      On file
-                    </Badge>
-                  ) : (
-                    <Checkbox
-                      id={`doc-${docType}`}
-                      checked={isReceived}
-                      onCheckedChange={(checked) =>
-                        handleToggle(docType, checked === true)
-                      }
-                      disabled={disabled || isLocked}
-                      className="h-4 w-4 shrink-0"
-                    />
-                  )}
-                  <Label
-                    htmlFor={isLocked ? undefined : `doc-${docType}`}
-                    className={cn(
-                      "min-w-0 flex-1 text-sm",
-                      isLocked
-                        ? "text-muted-foreground"
-                        : isReceived
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground",
-                      !isLocked && !disabled && "cursor-pointer",
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {isLocked ? (
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 gap-0.5 border-border bg-background/70 px-1.5 py-0 text-[10px] text-muted-foreground"
+                      >
+                        <Lock className="h-2.5 w-2.5" />
+                        On file
+                      </Badge>
+                    ) : (
+                      <Checkbox
+                        id={`doc-${docType}`}
+                        checked={isReceived}
+                        onCheckedChange={(checked) =>
+                          handleToggle(docType, checked === true)
+                        }
+                        disabled={disabled || isLocked}
+                        className="h-4 w-4 shrink-0"
+                      />
                     )}
-                  >
-                    {label}
-                  </Label>
+                    <Label
+                      htmlFor={isLocked ? undefined : `doc-${docType}`}
+                      className={cn(
+                        "min-w-0",
+                        !isLocked && !disabled && "cursor-pointer",
+                      )}
+                    >
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "max-w-full truncate px-2 py-0.5 text-[11px] font-semibold",
+                          docStyles.chip,
+                          isLocked && "opacity-80",
+                        )}
+                      >
+                        {label}
+                      </Badge>
+                    </Label>
+                  </div>
                   {isReceived ? (
                     <Badge
                       variant="outline"
-                      className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                      className="ml-auto h-5 shrink-0 gap-0.5 border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700"
                     >
-                      <Check className="h-3 w-3" />
+                      <Check className="h-2.5 w-2.5" />
                       Received
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
-                      className="shrink-0 gap-1 border-destructive/30 bg-destructive/10 text-destructive"
+                      className="ml-auto h-5 shrink-0 gap-0.5 border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-2.5 w-2.5" />
                       Not uploaded
                     </Badge>
                   )}
@@ -281,7 +287,7 @@ export function OriginalDocumentChecklist({
                     value={item?.remarks ?? ""}
                     onChange={(e) => handleRemarks(docType, e.target.value)}
                     disabled={disabled}
-                    className="mt-2 h-8 text-xs"
+                    className="mt-1.5 h-7 text-xs"
                     aria-label={`Remarks for ${label}`}
                   />
                 ) : null}
