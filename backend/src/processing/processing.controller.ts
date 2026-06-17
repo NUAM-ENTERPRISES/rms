@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Query,
   Param,
@@ -35,6 +36,11 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { CompleteProcessingDto } from './dto/complete-processing.dto';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
+import {
+  CreateStepRequirementRuleDto,
+  StepRequirementRulesQueryDto,
+  UpdateStepRequirementRuleDto,
+} from './dto/manage-step-requirement-rule.dto';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
@@ -573,6 +579,77 @@ export class ProcessingController {
   async getTicketRequirements(@Param('processingId') processingId: string, @Query('docType') docType?: string) {
     const data = await this.processingService.getTicketRequirements(processingId, docType);
     return { success: true, data, message: 'Ticket requirements retrieved' };
+  }
+
+  @Get('steps/:processingId/requirement-rules')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Get editable document requirement rules for a processing step',
+    description:
+      'Returns merged requirement rules (global + country override) for the given processing candidate country and step key.',
+  })
+  async getStepRequirementRules(
+    @Param('processingId') processingId: string,
+    @Query() query: StepRequirementRulesQueryDto,
+  ) {
+    const data = await this.processingService.getStepRequirementRules(
+      processingId,
+      query.stepKey,
+    );
+    return { success: true, data, message: 'Requirement rules retrieved' };
+  }
+
+  @Post('steps/:processingId/requirement-rules')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Add a document requirement rule for a processing step',
+  })
+  async createStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Body() body: CreateStepRequirementRuleDto,
+  ) {
+    const data = await this.processingService.createStepRequirementRule(
+      processingId,
+      body,
+    );
+    return { success: true, data, message: 'Requirement rule created' };
+  }
+
+  @Patch('steps/:processingId/requirement-rules/:ruleId')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Update a document requirement rule for a processing step',
+  })
+  async updateStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Param('ruleId') ruleId: string,
+    @Body() body: UpdateStepRequirementRuleDto,
+  ) {
+    const data = await this.processingService.updateStepRequirementRule(
+      processingId,
+      ruleId,
+      body,
+    );
+    return { success: true, data, message: 'Requirement rule updated' };
+  }
+
+  @Delete('steps/:processingId/requirement-rules/:ruleId')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Remove/exclude a document requirement rule for a processing step',
+  })
+  async deleteStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Param('ruleId') ruleId: string,
+    @Query() query: StepRequirementRulesQueryDto,
+  ) {
+    const data = await this.processingService.deleteStepRequirementRule(
+      processingId,
+      ruleId,
+      query.stepKey,
+    );
+    return { success: true, data, message: 'Requirement rule removed' };
   }
 
   @Post('steps/:stepId/cancel')

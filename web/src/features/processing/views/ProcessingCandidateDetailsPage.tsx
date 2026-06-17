@@ -35,7 +35,9 @@ import {
   EditFileNumberModal,
 } from "./components";
 import DocumentReceivedModal from "./components/DocumentReceivedModal";
+import ManageStepDocumentsModal from "@/features/processing/components/ManageStepDocumentsModal";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
+import { useCan } from "@/hooks/useCan";
 
 export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
@@ -54,7 +56,11 @@ export default function ProcessingCandidateDetailsPage() {
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [showDocumentReceivedModal, setShowDocumentReceivedModal] = useState(false);
+  const [showManageStepDocsModal, setShowManageStepDocsModal] = useState(false);
+  const [manageStepDocsKey, setManageStepDocsKey] = useState<string>("");
+  const [manageStepDocsLabel, setManageStepDocsLabel] = useState<string>("");
   const [showEditFileNumberModal, setShowEditFileNumberModal] = useState(false);
+  const canManageStepDocs = useCan("write:processing");
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -376,6 +382,16 @@ export default function ProcessingCandidateDetailsPage() {
                   return;
                 }
               }}
+              canManageStepDocs={canManageStepDocs}
+              onManageStepDocs={(stepKey) => {
+                if (!canManageStepDocs) return;
+                const step = (processingSteps || []).find(
+                  (s: any) => s.template?.key === stepKey,
+                );
+                setManageStepDocsKey(stepKey);
+                setManageStepDocsLabel(step?.template?.label || stepKey);
+                setShowManageStepDocsModal(true);
+              }}
             />
 
             {/* Project Info Card - Below Steps */}
@@ -652,6 +668,14 @@ export default function ProcessingCandidateDetailsPage() {
         }}
         processingId={data.id}
         initialFileNumber={data.fileNumber}
+      />
+
+      <ManageStepDocumentsModal
+        isOpen={showManageStepDocsModal}
+        onClose={() => setShowManageStepDocsModal(false)}
+        processingId={data.id}
+        stepKey={manageStepDocsKey}
+        stepLabel={manageStepDocsLabel}
       />
     </div>
   );

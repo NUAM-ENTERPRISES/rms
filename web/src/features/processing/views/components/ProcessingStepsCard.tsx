@@ -28,6 +28,7 @@ import {
   Stamp,
   Calendar,
   Edit3,
+  Settings2,
 } from "lucide-react";
 import type { ProcessingStep as ApiProcessingStep } from "@/services/processingApi";
 import { useSubmitHrdDateMutation } from "@/services/processingApi";
@@ -138,6 +139,10 @@ interface ProcessingStepsCardProps {
   fileNumber?: string | null;
   /** @deprecated No longer used in header. */
   onEditFileNumber?: () => void;
+  /** Optional handler to manage step document requirement rules. */
+  onManageStepDocs?: (stepKey: string) => void;
+  /** Whether current user can manage step rules. */
+  canManageStepDocs?: boolean;
 }
 
 export function ProcessingStepsCard({
@@ -152,6 +157,8 @@ export function ProcessingStepsCard({
   onCompleteProcessing,
   onUpdateSubmittedDate,
   lockerFileNumber,
+  onManageStepDocs,
+  canManageStepDocs = false,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
   const [localCompleting, setLocalCompleting] = useState(false);
@@ -625,6 +632,8 @@ export function ProcessingStepsCard({
                   offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
                   onStepClick={onStepClick}
+                  onManageStepDocs={onManageStepDocs}
+                  canManageStepDocs={canManageStepDocs}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
@@ -643,6 +652,8 @@ export function ProcessingStepsCard({
                   isActive={index + 6 === activeStepIndex}
                   isEnabled={true}
                   onStepClick={onStepClick}
+                  onManageStepDocs={onManageStepDocs}
+                  canManageStepDocs={canManageStepDocs}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
@@ -898,6 +909,8 @@ function StepItem({
   offerLetterStatus,
   onOfferLetterClick,
   onStepClick,
+  onManageStepDocs,
+  canManageStepDocs,
   submittedAt,
   completedAt,
   onEditSubmitted,
@@ -911,6 +924,7 @@ function StepItem({
     apiStatus?: string;
     notes?: string;
     updatedAt?: string;
+    hasDocuments: boolean;
     hasSubSteps?: boolean;
     subStepStatuses?: {
       key: string;
@@ -935,6 +949,8 @@ function StepItem({
   offerLetterStatus?: OfferLetterStatus;
   onOfferLetterClick?: () => void;
   onStepClick?: (stepKey: string) => void;
+  onManageStepDocs?: (stepKey: string) => void;
+  canManageStepDocs?: boolean;
   submittedAt?: string | null;
   completedAt?: string | null;
   onEditSubmitted?: () => void;
@@ -1319,6 +1335,19 @@ function StepItem({
 
         {/* View details button - only show for enabled steps */}
         {stepEnabled && (
+          <div className="flex items-center gap-1 shrink-0">
+          {canManageStepDocs && step.hasDocuments && onManageStepDocs && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onManageStepDocs(step.key);
+              }}
+              aria-label={`Manage ${step.label} document rules`}
+              className="mt-0.5 p-1.5 rounded-full bg-indigo-100 hover:bg-indigo-200 transition-colors"
+            >
+              <Settings2 className="h-4 w-4 text-indigo-700" />
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -1357,6 +1386,7 @@ function StepItem({
                 : "text-slate-600"
             )} />
           </button>
+          </div>
         )}
 
         {/* Status Badge */}

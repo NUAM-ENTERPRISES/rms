@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
 import { QueryAllProcessingCandidatesDto } from './dto/query-all-processing-candidates.dto';
-import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS } from '../common/constants';
+import { DOCUMENT_TYPE, DOCUMENT_STATUS, CANDIDATE_STATUS, resolveCanonicalDocumentType } from '../common/constants';
 import { ProcessingDocumentReuploadDto } from './dto/processing-document-reupload.dto';
 import { VerifyProcessingDocumentDto } from './dto/verify-processing-document.dto';
 import { UpdateProcessingStepDto } from './dto/update-processing-step.dto';
@@ -536,6 +536,251 @@ export class ProcessingService {
     });
 
     return filterProcessingStepsForSector(stepsWithoutDocs as any, pc?.project?.sector);
+  }
+
+  private async resolveRequirementRuleContext(
+    processingCandidateId: string,
+    stepKey: string,
+  ) {
+    const processingCandidate = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingCandidateId },
+      include: { candidate: true, project: true },
+    });
+    if (!processingCandidate) {
+      throw new NotFoundException(
+        `Processing candidate ${processingCandidateId} not found`,
+      );
+    }
+
+    const countryCode =
+      processingCandidate.project?.countryCode ||
+      processingCandidate.candidate?.countryCode ||
+      null;
+    if (!countryCode) {
+      throw new BadRequestException(
+        'Unable to resolve candidate country for requirement rule management',
+      );
+    }
+
+    const template = await this.prisma.processingStepTemplate.findUnique({
+      where: { key: stepKey },
+    });
+    if (!template) {
+      throw new NotFoundException(
+        `Processing step template "${stepKey}" not found`,
+      );
+    }
+
+    return {
+      processingCandidate,
+      countryCode: countryCode.toUpperCase(),
+      template,
+    };
+  }
+
+  async getStepRequirementRules(processingCandidateId: string, stepKey: string) {
+    await this.createStepsForProcessingCandidate(processingCandidateId);
+    const { countryCode, template } = await this.resolveRequirementRuleContext(
+      processingCandidateId,
+      stepKey,
+    );
+
+    const rules = await this.prisma.countryDocumentRequirement.findMany({
+      where: {
+        processingStepTemplateId: template.id,
+        countryCode: { in: ['ALL', countryCode] },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const existingCountryDocTypes = rules
+      .filter((rule) => rule.countryCode === countryCode)
+      .map((rule) => rule.docType);
+    const existingGlobalDocTypes = rules
+      .filter((rule) => rule.countryCode === 'ALL')
+      .map((rule) => rule.docType);
+    const globalDocTypes = new Set(existingGlobalDocTypes);
+
+    const merged = new Map<string, any>();
+    for (const rule of rules) {
+      const current = merged.get(rule.docType);
+      if (!current || rule.countryCode === countryCode) {
+        merged.set(rule.docType, rule);
+      }
+    }
+
+    const data = Array.from(merged.values())
+      .map((rule) => ({
+        id: rule.id,
+        docType: rule.docType,
+        label: rule.label || rule.docType,
+        mandatory: rule.mandatory,
+        description: rule.description || null,
+        sourceCountryCode: rule.countryCode,
+        isEditable:
+          rule.countryCode === countryCode || rule.countryCode === 'ALL',
+        overridesGlobal:
+          rule.countryCode === countryCode && globalDocTypes.has(rule.docType),
+      }))
+      .sort((a, b) => {
+        if (a.mandatory !== b.mandatory) return a.mandatory ? -1 : 1;
+        return a.label.localeCompare(b.label);
+      });
+
+    return {
+      processingCandidateId,
+      countryCode,
+      stepKey: template.key,
+      stepLabel: template.label,
+      rules: data,
+      existingCountryDocTypes,
+      existingGlobalDocTypes,
+    };
+  }
+
+  async createStepRequirementRule(
+    processingCandidateId: string,
+    dto: {
+      stepKey: string;
+      docType: string;
+      mandatory?: boolean;
+      label?: string;
+      description?: string;
+      scope?: 'country' | 'global';
+    },
+  ) {
+    const { countryCode, template } = await this.resolveRequirementRuleContext(
+      processingCandidateId,
+      dto.stepKey,
+    );
+
+    const canonicalDocType = resolveCanonicalDocumentType(dto.docType);
+    if (!canonicalDocType) {
+      throw new BadRequestException(
+        `Invalid document type "${dto.docType}"`,
+      );
+    }
+
+    const scope = dto.scope === 'global' ? 'global' : 'country';
+    const targetCountryCode = scope === 'global' ? 'ALL' : countryCode;
+
+    const existing = await this.prisma.countryDocumentRequirement.findUnique({
+      where: {
+        countryCode_docType_processingStepTemplateId: {
+          countryCode: targetCountryCode,
+          docType: canonicalDocType,
+          processingStepTemplateId: template.id,
+        },
+      },
+    });
+
+    if (existing) {
+      const scopeLabel =
+        scope === 'global'
+          ? 'as a global rule for all countries'
+          : `for step "${template.key}" in ${countryCode}`;
+      throw new ConflictException(
+        `Document requirement "${canonicalDocType}" already exists ${scopeLabel}`,
+      );
+    }
+
+    return this.prisma.countryDocumentRequirement.create({
+      data: {
+        countryCode: targetCountryCode,
+        processingStepTemplateId: template.id,
+        docType: canonicalDocType,
+        mandatory: dto.mandatory ?? false,
+        label: dto.label?.trim() || canonicalDocType,
+        description: dto.description?.trim() || null,
+      },
+    });
+  }
+
+  async updateStepRequirementRule(
+    processingCandidateId: string,
+    ruleId: string,
+    dto: {
+      stepKey: string;
+      mandatory?: boolean;
+      label?: string;
+      description?: string;
+    },
+  ) {
+    const { countryCode, template } = await this.resolveRequirementRuleContext(
+      processingCandidateId,
+      dto.stepKey,
+    );
+
+    const existing = await this.prisma.countryDocumentRequirement.findUnique({
+      where: { id: ruleId },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Requirement rule ${ruleId} not found`);
+    }
+
+    if (existing.processingStepTemplateId !== template.id) {
+      throw new BadRequestException(
+        'Rule does not belong to the selected step',
+      );
+    }
+    if (existing.countryCode !== countryCode && existing.countryCode !== 'ALL') {
+      throw new BadRequestException(
+        'Rule does not belong to the selected country context',
+      );
+    }
+
+    return this.prisma.countryDocumentRequirement.update({
+      where: { id: ruleId },
+      data: {
+        mandatory:
+          typeof dto.mandatory === 'boolean'
+            ? dto.mandatory
+            : existing.mandatory,
+        label:
+          typeof dto.label === 'string'
+            ? dto.label.trim() || existing.label
+            : existing.label,
+        description:
+          typeof dto.description === 'string'
+            ? dto.description.trim() || null
+            : existing.description,
+      },
+    });
+  }
+
+  async deleteStepRequirementRule(
+    processingCandidateId: string,
+    ruleId: string,
+    stepKey: string,
+  ) {
+    const { countryCode, template } = await this.resolveRequirementRuleContext(
+      processingCandidateId,
+      stepKey,
+    );
+
+    const existing = await this.prisma.countryDocumentRequirement.findUnique({
+      where: { id: ruleId },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Requirement rule ${ruleId} not found`);
+    }
+
+    if (existing.processingStepTemplateId !== template.id) {
+      throw new BadRequestException(
+        'Rule does not belong to the selected step',
+      );
+    }
+    if (existing.countryCode !== countryCode && existing.countryCode !== 'ALL') {
+      throw new BadRequestException(
+        'Rule does not belong to the selected country context',
+      );
+    }
+
+    await this.prisma.countryDocumentRequirement.delete({
+      where: { id: ruleId },
+    });
+
+    return { id: ruleId, removed: true };
   }
 
   // -----------------
