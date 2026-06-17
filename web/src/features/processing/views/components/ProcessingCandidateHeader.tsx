@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { ArrowLeft, Briefcase, Phone, Mail, FileStack, Archive, MapPin } from "l
 import { ImageViewer } from "@/components/molecules";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { AffiniksOriginalDocsModal } from "./AffiniksOriginalDocsModal.tsx";
 
 interface OriginalDocumentCollectionSummary {
   id: string;
@@ -39,6 +41,7 @@ interface ProcessingCandidateHeaderProps {
   };
   processingStatus: string;
   processingId: string;
+  fileNumber?: string | null;
   recruiter?: {
     name: string;
   };
@@ -52,18 +55,22 @@ export function ProcessingCandidateHeader({
   role,
   processingStatus,
   processingId,
+  fileNumber,
   recruiter,
   originalDocumentCollection,
   documentReceivedStepStatus,
 }: ProcessingCandidateHeaderProps) {
   const navigate = useNavigate();
+  const [originalDocsOpen, setOriginalDocsOpen] = useState(false);
   const mergedDocument = originalDocumentCollection?.mergedDocument;
-  const showOriginalDocumentBadge = Boolean(
-    mergedDocument?.fileUrl &&
-      documentReceivedStepStatus &&
-      documentReceivedStepStatus !== "cancelled",
-  );
+  const hasOriginalDocCollection = Boolean(originalDocumentCollection?.id);
+  const showOriginalDocumentBadge =
+    documentReceivedStepStatus !== "cancelled" &&
+    (hasOriginalDocCollection || Boolean(documentReceivedStepStatus));
   const lockerLocation = originalDocumentCollection?.lockerFileNumber?.trim();
+  const showCollectedLabel =
+    documentReceivedStepStatus === "completed" && Boolean(mergedDocument?.fileUrl);
+  const showSubmittedLabel = !showCollectedLabel && hasOriginalDocCollection;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -124,16 +131,74 @@ export function ProcessingCandidateHeader({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div
+                      <button
+                        type="button"
+                        onClick={() => setOriginalDocsOpen(true)}
                         className={cn(
-                          "inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold shadow-sm whitespace-nowrap",
-                          documentReceivedStepStatus === "completed"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                            : "border-teal-200 bg-teal-50 text-teal-800",
+                          "relative inline-flex shrink-0 items-center gap-1.5 overflow-hidden rounded-xl border px-2.5 py-1.5 text-[10px] font-black shadow-sm whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          showCollectedLabel
+                            ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 text-emerald-900 hover:shadow-md hover:bg-emerald-50"
+                            : "border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 text-amber-950 hover:shadow-md hover:bg-amber-50",
                         )}
+                        aria-label="View original document collection details"
                       >
-                        <FileStack className="h-3 w-3 shrink-0" />
-                        <span>Step 2 · Original docs</span>
+                        {/* Glow + glancing sheen (motion-safe) */}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "pointer-events-none absolute inset-0 opacity-0 transition-opacity",
+                            "motion-safe:opacity-100",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "absolute -inset-x-10 -inset-y-6",
+                              "bg-gradient-to-r from-transparent via-white/60 to-transparent",
+                              "motion-safe:animate-pulse",
+                              showCollectedLabel ? "via-emerald-200/40" : "via-amber-200/40",
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "absolute inset-0",
+                              showCollectedLabel
+                                ? "shadow-[0_0_22px_rgba(16,185,129,0.25)]"
+                                : "shadow-[0_0_22px_rgba(245,158,11,0.22)]",
+                            )}
+                          />
+                        </span>
+                        <span
+                          className={cn(
+                            "mr-0.5 inline-flex h-5 w-5 items-center justify-center rounded-lg shadow-sm ring-1 ring-inset",
+                            showCollectedLabel
+                              ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                              : "bg-amber-100 text-amber-700 ring-amber-200",
+                          )}
+                        >
+                          <FileStack className="h-3 w-3 shrink-0" />
+                        </span>
+                        <span>
+                          {showCollectedLabel
+                            ? "Document collected"
+                            : showSubmittedLabel
+                              ? "Original Documents submitted"
+                              : "Original Documents not submitted"}
+                        </span>
+                        {fileNumber ? (
+                          <span className="inline-flex items-center gap-0.5 font-mono">
+                            <span className="opacity-50">·</span>
+                            <span
+                              className={cn(
+                                "rounded-md px-1.5 py-0.5 text-[10px] font-black shadow-sm ring-1 ring-inset",
+                                showCollectedLabel
+                                  ? "bg-white text-slate-900 ring-emerald-200"
+                                  : "bg-white text-slate-900 ring-amber-200",
+                              )}
+                            >
+                              {fileNumber}
+                            </span>
+                          </span>
+                        ) : null}
                         {lockerLocation ? (
                           <span className="inline-flex items-center gap-0.5 font-mono">
                             <span className="opacity-50">·</span>
@@ -147,12 +212,30 @@ export function ProcessingCandidateHeader({
                             In collection
                           </span>
                         )}
-                      </div>
+
+                        <span
+                          className={cn(
+                            "ml-0.5 inline-flex h-1.5 w-1.5 rounded-full",
+                            showCollectedLabel ? "bg-emerald-500" : "bg-amber-500",
+                          )}
+                          aria-hidden="true"
+                        />
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="max-w-xs bg-slate-800 text-white border-slate-700">
-                      <p className="font-bold">Original document collection merged PDF</p>
+                      <p className="font-bold">
+                        {showCollectedLabel
+                          ? "Original document collection by Affiniks"
+                          : showSubmittedLabel
+                            ? "Original documents submitted"
+                            : "Original documents pending"}
+                      </p>
                       <p className="mt-1 text-xs text-slate-300">
-                        Available for Documents Received (Step 2)
+                        {showCollectedLabel
+                          ? "Available for Documents Received (Step 2)"
+                          : showSubmittedLabel
+                            ? "Documents are submitted (merge may still be processing)"
+                            : "Documents have not been submitted for Step 2 yet"}
                         {lockerLocation ? ` · Locker ${lockerLocation}` : ""}
                       </p>
                       {mergedDocument?.fileName ? (
@@ -164,6 +247,14 @@ export function ProcessingCandidateHeader({
               ) : null}
             </div>
           </div>
+
+          <AffiniksOriginalDocsModal
+            open={originalDocsOpen}
+            onOpenChange={setOriginalDocsOpen}
+            processingId={processingId}
+            fileNumber={fileNumber ?? null}
+            originalDocumentCollection={originalDocumentCollection ?? null}
+          />
 
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
             <Badge variant="outline" className="bg-violet-50 font-bold border-violet-200 text-violet-700 text-[10px] px-1.5 py-0">
@@ -193,9 +284,9 @@ export function ProcessingCandidateHeader({
           </p>
         )}
        
-        <p className="text-[10px] font-medium text-slate-400">
+        {/* <p className="text-[10px] font-medium text-slate-400">
           ID: <span className="text-slate-600 font-mono font-bold">{processingId.slice(-8).toUpperCase()}</span>
-        </p>
+        </p> */}
       </div>
     </div>
   );

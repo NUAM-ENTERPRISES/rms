@@ -14,6 +14,8 @@ import { useGetCourierHistoryPaginatedQuery } from "@/features/processing/data/p
 import { ShipmentStatusBadge } from "@/features/courier-shipments/components/ShipmentStatusBadge";
 import { DELIVERY_MODE_LABELS, type DeliveryMode } from "@/features/courier-shipments/constants";
 import { CandidateHistoryModalShell } from "./CandidateHistoryModalShell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getDocumentTypeConfig } from "@/constants/document-types";
 
 interface CourierHistoryModalProps {
   processingId: string;
@@ -90,6 +92,9 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
             <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
               Status
             </TableHead>
+            <TableHead className="w-[90px] text-xs font-bold uppercase tracking-wider text-slate-700">
+              Docs
+            </TableHead>
             <TableHead className="w-[160px] text-xs font-bold uppercase tracking-wider text-slate-700">
               Tracking
             </TableHead>
@@ -131,6 +136,48 @@ export function CourierHistoryModal({ processingId, refreshKey }: CourierHistory
                 </TableCell>
                 <TableCell>
                   <ShipmentStatusBadge status={item.status} />
+                </TableCell>
+                <TableCell>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Badge className="cursor-help border-0 bg-slate-100 text-xs font-bold text-slate-700">
+                            {item.documentCount ?? 0}
+                          </Badge>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-sm border-slate-700 bg-slate-900 text-white">
+                        <div className="space-y-2">
+                          <div className="text-xs font-black uppercase tracking-widest text-slate-300">
+                            Leg {item.legNumber} documents
+                          </div>
+                          {Array.isArray(item.documentTypes) && item.documentTypes.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.documentTypes.slice(0, 14).map((dt) => {
+                                const label = getDocumentTypeConfig(dt)?.displayName ?? dt;
+                                return (
+                                  <Badge
+                                    key={dt}
+                                    className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-100"
+                                  >
+                                    {label}
+                                  </Badge>
+                                );
+                              })}
+                              {item.documentTypes.length > 14 ? (
+                                <Badge className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-200">
+                                  +{item.documentTypes.length - 14} more
+                                </Badge>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-300">No documents recorded for this leg.</div>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="text-sm text-slate-700">
                   {item.trackingId ?? "—"}

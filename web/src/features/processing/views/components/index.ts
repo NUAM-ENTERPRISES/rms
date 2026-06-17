@@ -8,6 +8,7 @@ export { ProcessingHistoryCard } from "./ProcessingHistoryCard";
 export { ProcessingHistoryModal } from "./ProcessingHistoryModal";
 export { DocumentCollectionHistoryModal } from "./DocumentCollectionHistoryModal";
 export { CourierHistoryModal } from "./CourierHistoryModal";
+export { AffiniksOriginalDocsModal } from "./AffiniksOriginalDocsModal";
 export { DocumentVerificationCard } from "./DocumentVerificationCard";
 export { ProcessingOfferLetterModal } from "./ProcessingOfferLetterModal";
 export type { OfferLetterDocument, DocumentVerification } from "./ProcessingOfferLetterModal";

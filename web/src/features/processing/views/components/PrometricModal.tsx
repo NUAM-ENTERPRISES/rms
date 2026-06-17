@@ -623,13 +623,15 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       onValueChange={(value) => setLicensingExam(value === "none" ? "" : value)}
                       disabled={isPrometricCompleted || isStepCancelled}
                     >
-                      <SelectTrigger className="h-8 w-full bg-white text-xs">
+                      <SelectTrigger className="h-7 w-full bg-white px-2 text-[11px]">
                         <SelectValue placeholder="Select licensing exam" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None / Not set</SelectItem>
+                      <SelectContent className="max-h-56 w-[--radix-select-trigger-width]">
+                        <SelectItem value="none" className="py-1 text-[11px]">
+                          None / Not set
+                        </SelectItem>
                         {Object.entries(LICENSING_EXAMS).map(([key, value]) => (
-                          <SelectItem key={value} value={value}>
+                          <SelectItem key={value} value={value} className="py-1 text-[11px]">
                             {key.replace(/_/g, " ")}
                           </SelectItem>
                         ))}

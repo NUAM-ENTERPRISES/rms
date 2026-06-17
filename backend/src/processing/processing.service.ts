@@ -5420,6 +5420,7 @@ export class ProcessingService {
       where,
       include: {
         sentBy: { select: { id: true, name: true } },
+        documents: { select: { docType: true } },
       },
       orderBy: { legNumber: 'desc' },
       skip: (page - 1) * limit,
@@ -5434,6 +5435,8 @@ export class ProcessingService {
       status: leg.status,
       trackingId: leg.trackingId,
       courierPartner: leg.courierPartner,
+      documentCount: leg.documents?.length ?? 0,
+      documentTypes: (leg.documents ?? []).map((d) => d.docType),
       fromAddressLabel:
         ADDRESS_TYPE_LABELS[leg.fromAddressType] ?? leg.fromAddressType,
       toAddressLabel: ADDRESS_TYPE_LABELS[leg.toAddressType] ?? leg.toAddressType,

@@ -273,6 +273,7 @@ export default function ProcessingCandidateDetailsPage() {
           role={data.role}
           processingStatus={data.processingStatus}
           processingId={data.id}
+          fileNumber={data.fileNumber ?? null}
           recruiter={data.candidateProjectMap?.recruiter}
           originalDocumentCollection={data.originalDocumentCollection ?? null}
           documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
@@ -308,8 +309,7 @@ export default function ProcessingCandidateDetailsPage() {
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
               onOpenHire={() => setShowHireModal(true)}
               isHired={data?.candidateProjectMap?.subStatus?.name === "hired"}
-              fileNumber={data.fileNumber}
-              onEditFileNumber={() => setShowEditFileNumberModal(true)}
+              lockerFileNumber={data.originalDocumentCollection?.lockerFileNumber ?? null}
               onStepClick={(stepKey) => {
                 const k = String(stepKey || "").replace(/[_-]/g, "").toLowerCase();
                 if (k === "hrd") {

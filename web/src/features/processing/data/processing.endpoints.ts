@@ -516,6 +516,8 @@ export const processingApi = baseApi.injectEndpoints({
         status: string;
         trackingId: string | null;
         courierPartner: string | null;
+        documentCount: number;
+        documentTypes: string[];
         fromAddressLabel: string;
         toAddressLabel: string;
         sentAt: string | null;

@@ -10,8 +10,14 @@ import {
 import { Calendar, FileStack } from "lucide-react";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-import { useGetDocumentCollectionHistoryPaginatedQuery } from "@/features/processing/data/processing.endpoints";
+import {
+  useGetCandidateProcessingDetailsQuery,
+  useGetDocumentCollectionHistoryPaginatedQuery,
+} from "@/features/processing/data/processing.endpoints";
 import { CandidateHistoryModalShell } from "./CandidateHistoryModalShell";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useGetOriginalDocumentCollectionQuery } from "@/features/original-document-collections/api";
+import { getDocumentTypeConfig } from "@/constants/document-types";
 
 interface DocumentCollectionHistoryModalProps {
   processingId: string;
@@ -25,6 +31,16 @@ export function DocumentCollectionHistoryModal({
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
   const limit = 10;
+
+  const { data: processingDetailsRes } = useGetCandidateProcessingDetailsQuery(processingId, {
+    skip: !processingId || !open,
+  });
+  const collectionId = processingDetailsRes?.data?.originalDocumentCollection?.id ?? "";
+
+  const { data: collectionRes } = useGetOriginalDocumentCollectionQuery(collectionId, {
+    skip: !collectionId || !open,
+  });
+  const collectionEvents = collectionRes?.data?.events ?? [];
 
   const { data, isLoading, error, refetch } = useGetDocumentCollectionHistoryPaginatedQuery(
     { processingId, page, limit },
@@ -44,6 +60,15 @@ export function DocumentCollectionHistoryModal({
     pagination?.totalPages ??
     pagination?.pages ??
     Math.max(1, Math.ceil(total / limit));
+
+  const chronologicalEvents = [...collectionEvents].sort(
+    (a, b) => new Date(a.collectedAt).getTime() - new Date(b.collectedAt).getTime(),
+  );
+
+  const eventByNumber = new Map<number, (typeof chronologicalEvents)[number]>();
+  chronologicalEvents.forEach((ev, idx) => {
+    eventByNumber.set(idx + 1, ev);
+  });
 
   return (
     <CandidateHistoryModalShell
@@ -90,6 +115,15 @@ export function DocumentCollectionHistoryModal({
             <TableHead className="w-[120px] text-xs font-bold uppercase tracking-wider text-slate-700">
               Locker
             </TableHead>
+            <TableHead className="w-[140px] text-xs font-bold uppercase tracking-wider text-slate-700">
+              Status
+            </TableHead>
+            <TableHead className="w-[120px] text-xs font-bold uppercase tracking-wider text-slate-700">
+              Merged
+            </TableHead>
+            <TableHead className="min-w-[220px] text-xs font-bold uppercase tracking-wider text-slate-700">
+              Merged File
+            </TableHead>
             <TableHead className="w-[200px] text-xs font-bold uppercase tracking-wider text-slate-700">
               Collected By
             </TableHead>
@@ -124,12 +158,103 @@ export function DocumentCollectionHistoryModal({
                   {item.sourceDetail || "—"}
                 </TableCell>
                 <TableCell>
-                  <Badge className="border-0 bg-slate-100 text-xs font-bold text-slate-700">
-                    {item.documentCount}
-                  </Badge>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          <Badge className="cursor-help border-0 bg-slate-100 text-xs font-bold text-slate-700">
+                            {item.documentCount}
+                          </Badge>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="right"
+                        className="max-w-sm border-slate-700 bg-slate-900 text-white"
+                      >
+                        <div className="space-y-2">
+                          <div className="text-xs font-black uppercase tracking-widest text-slate-300">
+                            Event {item.eventNumber} documents
+                          </div>
+                          {(() => {
+                            const event = eventByNumber.get(item.eventNumber);
+                            const receivedItems = (event?.items ?? []).filter((it) => it.isReceived);
+                            if (!collectionId) {
+                              return (
+                                <div className="text-xs text-slate-300">
+                                  Document list not available (missing collection id).
+                                </div>
+                              );
+                            }
+                            if (!event) {
+                              return (
+                                <div className="text-xs text-slate-300">
+                                  Document list not available for this event.
+                                </div>
+                              );
+                            }
+                            if (receivedItems.length === 0) {
+                              return (
+                                <div className="text-xs text-slate-300">
+                                  No documents marked as received for this event.
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex flex-wrap gap-1.5">
+                                {receivedItems.slice(0, 14).map((doc) => {
+                                  const label =
+                                    getDocumentTypeConfig(doc.docType)?.displayName ?? doc.docType;
+                                  return (
+                                    <Badge
+                                      key={doc.docType}
+                                      className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-100"
+                                    >
+                                      {label}
+                                    </Badge>
+                                  );
+                                })}
+                                {receivedItems.length > 14 ? (
+                                  <Badge className="border border-slate-700 bg-slate-800 text-[10px] font-bold text-slate-200">
+                                    +{receivedItems.length - 14} more
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </TableCell>
                 <TableCell className="text-sm font-medium text-slate-700">
                   {item.lockerFileNumber ?? "—"}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    className={
+                      item.collectionStatus === "completed"
+                        ? "border-0 bg-emerald-100 text-[10px] font-black uppercase tracking-wider text-emerald-800"
+                        : item.collectionStatus === "cancelled"
+                          ? "border-0 bg-rose-100 text-[10px] font-black uppercase tracking-wider text-rose-800"
+                          : "border-0 bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-700"
+                    }
+                  >
+                    {item.collectionStatus ?? "—"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    className={
+                      item.hasMergedScan
+                        ? "border-0 bg-violet-100 text-[10px] font-black uppercase tracking-wider text-violet-800"
+                        : "border-0 bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-600"
+                    }
+                  >
+                    {item.hasMergedScan ? "Yes" : "No"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate text-sm text-slate-700">
+                  {item.mergedFileName ?? "—"}
                 </TableCell>
                 <TableCell>
                   {item.collectedBy ? (

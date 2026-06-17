@@ -132,9 +132,11 @@ interface ProcessingStepsCardProps {
   onCompleteProcessing?: () => void | Promise<void>;
   /** Optional handler to update a step's submitted date */
   onUpdateSubmittedDate?: (stepId: string, submittedAt: string | null) => void | Promise<void>;
-  /** File number to display */
+  /** Locker file number to display (preferred) */
+  lockerFileNumber?: string | null;
+  /** @deprecated Prefer `lockerFileNumber`. */
   fileNumber?: string | null;
-  /** Edit file number handler */
+  /** @deprecated No longer used in header. */
   onEditFileNumber?: () => void;
 }
 
@@ -149,8 +151,7 @@ export function ProcessingStepsCard({
   isHired = false,
   onCompleteProcessing,
   onUpdateSubmittedDate,
-  fileNumber,
-  onEditFileNumber,
+  lockerFileNumber,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
   const [localCompleting, setLocalCompleting] = useState(false);
@@ -423,6 +424,7 @@ export function ProcessingStepsCard({
   };
 
   const pendingCount = totalSteps - completedCount - inProgressCount;
+  const lockerDisplay = lockerFileNumber ?? null;
 
   return (
     <Card className="min-h-[950px] border-0 shadow-xl overflow-hidden bg-white">
@@ -438,25 +440,24 @@ export function ProcessingStepsCard({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={onEditFileNumber}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 transition-all group"
-                  >
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 border border-white/20">
                     <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/20 group-hover:bg-white/30 transition-colors">
                       <Hash className="h-3.5 w-3.5 text-violet-100" />
                     </div>
                     <div className="flex flex-col items-start leading-tight">
-                      <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider">File No.</span>
+                      <span className="text-[10px] uppercase font-bold text-white/50 tracking-wider">Locker No.</span>
                       <span className="text-xs font-black text-white group-hover:text-violet-100 transition-colors">
-                        {fileNumber || "Not assigned"}
+                        {lockerDisplay || "Not assigned"}
                       </span>
                     </div>
-                    <Edit3 className="h-3 w-3 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
-                  <p>{fileNumber ? `Modify file reference: ${fileNumber}` : "Click to assign a tracking file number"}</p>
+                  <p>
+                    {lockerDisplay
+                      ? `Locker location: ${lockerDisplay}`
+                      : "Locker number not assigned yet"}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -759,22 +760,7 @@ export function ProcessingStepsCard({
                     </div>
                   )}  
 
-                  {selected.subStepStatuses && (
-                    <div className="mt-4">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-2">Sub-steps</h4>
-                      <div className="space-y-1.5">
-                        {selected.subStepStatuses.map((ss) => {
-                          const subCfg = getStatusConfig(ss.status);
-                          return (
-                            <div key={ss.key} className="flex items-center justify-between bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
-                              <div className="text-sm font-medium text-slate-700">{ss.label}</div>
-                              <span className={cn("text-[10px] px-2 py-0.5 rounded-full uppercase font-bold", subCfg.bg, subCfg.color)}>{subCfg.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                  {/* Sub-steps intentionally hidden in this card UI */}
                 </div>
 
                 <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
@@ -863,9 +849,6 @@ const verifiedStepBadgeClasses =
 const verifiedStepFooterClasses =
   "border-t border-emerald-200/80 bg-gradient-to-r from-emerald-50/60 via-white/40 to-emerald-50/50 backdrop-blur-sm";
 
-const verifiedSubStepRowClasses =
-  "bg-gradient-to-r from-emerald-50/90 via-white/60 to-emerald-100/40 border-emerald-100/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_0_16px_rgba(16,185,129,0.1)]";
-
 /** Glass + glow overlay for in-progress step cards */
 function InProgressStepGlazeOverlay() {
   return (
@@ -900,9 +883,6 @@ const inProgressStepBadgeClasses =
 
 const inProgressStepFooterClasses =
   "border-t border-blue-200/80 bg-gradient-to-r from-blue-50/60 via-white/40 to-blue-50/50 backdrop-blur-sm";
-
-const inProgressSubStepRowClasses =
-  "bg-gradient-to-r from-blue-50/90 via-white/60 to-blue-100/40 border-blue-100/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_0_16px_rgba(59,130,246,0.1)]";
 
 const inProgressDateChipClasses =
   "bg-white/60 backdrop-blur-sm border border-blue-200/80 text-blue-700 shadow-[0_0_12px_rgba(59,130,246,0.12)]";
@@ -1175,54 +1155,7 @@ function StepItem({
           </Badge>
         </div>
 
-        <div
-          className={cn(
-            "relative border-t pl-4",
-            stepCompleted
-              ? verifiedStepFooterClasses
-              : stepInProgressVisual
-                ? inProgressStepFooterClasses
-                : "border-slate-100 bg-slate-50/40",
-          )}
-        >
-          {step.subStepStatuses.map((subStep, subIndex) => {
-            const subConfig = getStatusConfig(subStep.status);
-            const isSubCompleted = subStep.status === "completed";
-            const isSubInProgress = subStep.status === "in_progress";
-            return (
-              <div
-                key={subStep.key}
-                className={cn(
-                  "flex items-center gap-3 py-2.5 px-3 border-b last:border-b-0 transition-colors",
-                  isSubCompleted
-                    ? verifiedSubStepRowClasses
-                    : isSubInProgress
-                      ? inProgressSubStepRowClasses
-                      : "border-slate-100/80 hover:bg-white/60",
-                )}
-              >
-                <div className="h-5 w-5 rounded-md bg-white border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                  {String.fromCharCode(97 + subIndex)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-xs text-slate-700">{subStep.label}</p>
-                </div>
-                <Badge
-                  className={cn(
-                    "text-[8px] uppercase font-bold tracking-wider shrink-0 border-0 px-1.5 py-0",
-                    isSubCompleted
-                      ? verifiedStepBadgeClasses
-                      : isSubInProgress
-                        ? inProgressStepBadgeClasses
-                        : cn(subConfig.bg, subConfig.color),
-                  )}
-                >
-                  {isSubCompleted ? "Verified" : isSubInProgress ? "In Progress" : subConfig.label}
-                </Badge>
-              </div>
-            );
-          })}
-        </div>
+        {/* Sub-step list intentionally hidden in this card UI */}
 
         {(isSubmissionDateRequired || stepCompleted || stepInProgressVisual) && (
           <div className={cn(
