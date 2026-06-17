@@ -3,13 +3,13 @@ import { format } from "date-fns";
 import {
   ArrowRight,
   Calendar,
+  CheckCircle2,
   Copy,
   Footprints,
   MapPin,
   Package,
   Plus,
   Truck,
-  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -62,6 +62,7 @@ export function CandidateCourierPipeline({
   onAddLeg,
 }: CandidateCourierPipelineProps) {
   const isCompact = variant === "compact";
+  const showTimelineStatusInTable = !showLegActions;
 
   const sortedLegs = [...legs].sort((a, b) =>
     order === "newest-first"
@@ -129,7 +130,7 @@ export function CandidateCourierPipeline({
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Mode
                     </TableHead>
-                    <TableHead className="h-10 min-w-[10rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 min-w-[14rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Documents
                     </TableHead>
                     <TableHead className="h-10 min-w-[9rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -137,17 +138,21 @@ export function CandidateCourierPipeline({
                     </TableHead>
                   </>
                 )}
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Timeline
-                </TableHead>
-                <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Status
-                </TableHead>
-                {!isCompact && showLegActions && (
+                {showTimelineStatusInTable && (
+                  <>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Timeline
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Status
+                    </TableHead>
+                  </>
+                )}
+                {/* {!isCompact && showLegActions && (
                   <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Actions
                   </TableHead>
-                )}
+                )} */}
               </TableRow>
             </TableHeader>
 
@@ -156,14 +161,13 @@ export function CandidateCourierPipeline({
                 const docTypes =
                   leg.docTypes ?? leg.documents.map((d) => d.docType);
                 const isHighlighted = highlightLegId === leg.id;
-                const showActionsRow =
-                  showLegActions &&
-                  (leg.status === SHIPMENT_STATUS.DRAFT ||
-                    leg.status === SHIPMENT_STATUS.IN_TRANSIT ||
-                    Boolean(leg.mergedDocument?.fileUrl) ||
-                    Boolean(leg.lockerFileNumber));
-
-                const actionColSpan = isCompact ? 4 : showLegActions ? 9 : 8;
+                const actionColSpan = isCompact
+                  ? showTimelineStatusInTable
+                    ? 4
+                    : 2
+                  : showTimelineStatusInTable
+                    ? 8
+                    : 6;
 
                 return (
                   <Fragment key={leg.id}>
@@ -228,23 +232,18 @@ export function CandidateCourierPipeline({
                             </Badge>
                           </TableCell>
 
-                          <TableCell className="px-4 py-3 align-top">
+                          <TableCell className="min-w-[14rem] px-4 py-3 align-top">
                             <div className="flex flex-wrap gap-1">
-                              {docTypes.slice(0, isCompact ? 2 : 3).map((docType) => (
+                              {docTypes.map((docType, index) => (
                                 <Badge
-                                  key={docType}
+                                  key={`${docType}-${index}`}
                                   variant="secondary"
-                                  className="max-w-[140px] truncate text-[10px] font-normal"
+                                  className="h-auto whitespace-normal px-2 py-0.5 text-[10px] font-normal leading-snug"
                                 >
                                   {getDocumentTypeConfig(docType)?.displayName ??
                                     docType}
                                 </Badge>
                               ))}
-                              {docTypes.length > 3 && (
-                                <Badge variant="outline" className="text-[10px]">
-                                  +{docTypes.length - 3}
-                                </Badge>
-                              )}
                             </div>
                           </TableCell>
 
@@ -278,42 +277,48 @@ export function CandidateCourierPipeline({
                         </>
                       )}
 
-                      <TableCell className="px-4 py-3 align-top">
-                        <div className="space-y-1 text-xs text-muted-foreground">
-                          {leg.sentAt && (
-                            <div className="flex items-center gap-1.5">
-                              <Calendar className="h-3 w-3 shrink-0" />
-                              <span>
-                                Sent {format(new Date(leg.sentAt), "dd MMM yyyy")}
-                              </span>
+                      {showTimelineStatusInTable && (
+                        <>
+                          <TableCell className="px-4 py-3 align-top">
+                            <div className="space-y-1 text-xs text-muted-foreground">
+                              {leg.sentAt && (
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="h-3 w-3 shrink-0" />
+                                  <span>
+                                    Sent{" "}
+                                    {format(new Date(leg.sentAt), "dd MMM yyyy")}
+                                  </span>
+                                </div>
+                              )}
+                              {leg.status === SHIPMENT_STATUS.RECEIVED &&
+                                leg.receivedAt && (
+                                  <div className="flex items-center gap-1.5 text-emerald-700">
+                                    <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                    <span>
+                                      Received{" "}
+                                      {format(
+                                        new Date(leg.receivedAt),
+                                        "dd MMM yyyy",
+                                      )}
+                                      {leg.receivedBy?.name &&
+                                        ` · ${leg.receivedBy.name}`}
+                                      {leg.receivedByName &&
+                                        !leg.receivedBy?.name &&
+                                        ` · ${leg.receivedByName}`}
+                                    </span>
+                                  </div>
+                                )}
+                              {!leg.sentAt && !leg.receivedAt && <span>—</span>}
                             </div>
-                          )}
-                          {leg.status === SHIPMENT_STATUS.RECEIVED &&
-                            leg.receivedAt && (
-                              <div className="flex items-center gap-1.5 text-emerald-700">
-                                <CheckCircle2 className="h-3 w-3 shrink-0" />
-                                <span>
-                                  Received{" "}
-                                  {format(new Date(leg.receivedAt), "dd MMM yyyy")}
-                                  {leg.receivedBy?.name &&
-                                    ` · ${leg.receivedBy.name}`}
-                                  {leg.receivedByName &&
-                                    !leg.receivedBy?.name &&
-                                    ` · ${leg.receivedByName}`}
-                                </span>
-                              </div>
-                            )}
-                          {!leg.sentAt && !leg.receivedAt && (
-                            <span>—</span>
-                          )}
-                        </div>
-                      </TableCell>
+                          </TableCell>
 
-                      <TableCell className="px-4 py-3 align-top">
-                        <ShipmentStatusBadge status={leg.status} />
-                      </TableCell>
+                          <TableCell className="px-4 py-3 align-top">
+                            <ShipmentStatusBadge status={leg.status} />
+                          </TableCell>
+                        </>
+                      )}
 
-                      {!isCompact && showLegActions && (
+                      {/* {!isCompact && showLegActions && (
                         <TableCell className="px-4 py-3 text-right align-top">
                           {leg.mergedDocument?.fileUrl ? (
                             <Badge variant="outline" className="text-[10px]">
@@ -328,10 +333,10 @@ export function CandidateCourierPipeline({
                             </Badge>
                           ) : null}
                         </TableCell>
-                      )}
+                      )} */}
                     </TableRow>
 
-                    {showActionsRow && (
+                    {showLegActions && (
                       <TableRow className="border-b border-border/60 bg-muted/10 hover:bg-muted/10">
                         <TableCell colSpan={actionColSpan} className="px-4 py-3">
                           <CourierLegActions leg={leg} />
