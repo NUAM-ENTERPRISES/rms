@@ -27,14 +27,14 @@ import type { WorkExperience } from "@/features/candidates/api";
 
 const EMPLOYMENT_DOC_TYPES = new Set([
   DOCUMENT_TYPE.EXPERIENCE_LETTERS,
-  DOCUMENT_TYPE.EXPERIENCE_LETTER,
+  "experience_letter",
   DOCUMENT_TYPE.RELIEVING_LETTER,
   DOCUMENT_TYPE.SALARY_SLIP,
   DOCUMENT_TYPE.APPOINTMENT_LETTER,
 ]);
 
 const HIDDEN_DOCUMENT_TYPES = new Set<string>([
-  DOCUMENT_TYPE.EXPERIENCE_LETTER,
+  "experience_letter",
 ]);
 
 interface ExistingPassportDocument {

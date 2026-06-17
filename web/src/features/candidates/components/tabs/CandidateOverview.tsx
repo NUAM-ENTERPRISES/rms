@@ -1128,7 +1128,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             (d) =>
                               !d.workExperienceId &&
                               (d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS ||
-                                d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTER ||
+                                d.docType === "experience_letter" ||
                                 d.docType === DOCUMENT_TYPE.RELIEVING_LETTER ||
                                 d.docType === DOCUMENT_TYPE.SALARY_SLIP ||
                                 d.docType === DOCUMENT_TYPE.APPOINTMENT_LETTER)

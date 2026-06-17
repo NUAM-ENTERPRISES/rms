@@ -77,9 +77,8 @@ import {
 
 // Document type options based on backend constants
 const DOCUMENT_TYPES = [
-  { value: "passport", label: "Passport", category: "identity" },
-  { value: "passport_copy", label: "Passport Copy", category: "identity" },
-  { value: "passport_photo", label: "Passport Photo", category: "other" },
+  { value: DOCUMENT_TYPE.PASSPORT, label: "Passport Copy", category: "identity" },
+  { value: DOCUMENT_TYPE.PASSPORT_PHOTO, label: "Passport Photo", category: "other" },
   { value: "aadhaar", label: "Aadhaar Card", category: "identity" },
   { value: "pan_card", label: "PAN Card", category: "identity" },
   { value: "driving_license", label: "Driving License", category: "identity" },
@@ -104,12 +103,7 @@ const DOCUMENT_TYPES = [
     label: "Registration Certificate",
     category: "professional",
   },
-  { value: "degree", label: "Degree Certificate", category: "educational" },
-  {
-    value: "degree_certificate",
-    label: "Degree Certificate",
-    category: "educational",
-  },
+  { value: DOCUMENT_TYPE.DEGREE, label: "Degree Certificate", category: "educational" },
   { value: "diploma", label: "Diploma Certificate", category: "educational" },
   { value: "certificate", label: "Certificate", category: "educational" },
   { value: "transcript", label: "Transcript", category: "educational" },
@@ -138,8 +132,8 @@ const DOCUMENT_TYPES = [
     category: "verification",
   },
   {
-    value: "police_clearance",
-    label: "Police Clearance",
+    value: DOCUMENT_TYPE.PCC,
+    label: "Police Clearance (PCC)",
     category: "verification",
   },
   {
@@ -182,11 +176,10 @@ const DOCUMENT_TYPES = [
     label: "Medical Insurance",
     category: "medical",
   },
-  { value: "photo", label: "Photograph", category: "other" },
-  { value: "bank_details", label: "Bank Account Details", category: "other" },
-  { value: "offer_letter", label: "Offer Letter", category: "other" },
-  { value: "joining_letter", label: "Joining Letter", category: "other" },
-  { value: "other", label: "Other Document", category: "other" },
+  { value: DOCUMENT_TYPE.BANK_DETAILS, label: "Bank Account Details", category: "other" },
+  { value: DOCUMENT_TYPE.OFFER_LETTER, label: "Offer Letter", category: "other" },
+  { value: DOCUMENT_TYPE.JOINING_LETTER, label: "Joining Letter", category: "other" },
+  { value: DOCUMENT_TYPE.OTHER, label: "Other Document", category: "other" },
 ];
 
 interface DocumentUploadSectionProps {

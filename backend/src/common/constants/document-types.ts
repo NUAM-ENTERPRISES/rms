@@ -92,7 +92,6 @@ export const DOCUMENT_TYPE = {
 
   // Verification Documents
   BACKGROUND_CHECK: 'background_check',
-  POLICE_CLEARANCE: 'police_clearance',
   REFERENCE_LETTER: 'reference_letter',
 
   // Medical Documents
@@ -106,7 +105,6 @@ export const DOCUMENT_TYPE = {
   INTRODUCTION_VIDEO: 'introduction_video',
 
   // Other Documents
-  PHOTO: 'photo',
   BANK_DETAILS: 'bank_details',
   OFFER_LETTER: 'offer_letter',
   JOINING_LETTER: 'joining_letter',
@@ -114,6 +112,202 @@ export const DOCUMENT_TYPE = {
 } as const;
 
 export type DocumentType = (typeof DOCUMENT_TYPE)[keyof typeof DOCUMENT_TYPE];
+
+// ==================== COPY / ORIGINAL VARIANTS ====================
+
+export const DOCUMENT_VARIANT = {
+  COPY: 'copy',
+  ORIGINAL: 'original',
+} as const;
+
+export type DocumentVariant =
+  (typeof DOCUMENT_VARIANT)[keyof typeof DOCUMENT_VARIANT];
+
+export type DocumentTypeRelation = {
+  variant: DocumentVariant;
+  baseType: string;
+  pairedDocType: string | null;
+};
+
+/** Legacy DB / API aliases → canonical document type keys. */
+export const DOCUMENT_TYPE_ALIASES: Record<string, DocumentType> = {
+  passport: DOCUMENT_TYPE.PASSPORT_COPY,
+  degree: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
+  photo: DOCUMENT_TYPE.PASSPORT_PHOTO,
+  police_clearance: DOCUMENT_TYPE.PCC,
+  experience_letter: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+};
+
+/**
+ * Maps copy/scan types to their original hardcopy counterparts (and vice versa).
+ * `baseType` is the logical document family (without variant suffix).
+ */
+export const DOCUMENT_TYPE_RELATIONS: Record<string, DocumentTypeRelation> = {
+  [DOCUMENT_TYPE.PASSPORT_COPY]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: 'passport',
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COVER_BIO]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: 'passport',
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PASSPORT_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: 'passport',
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_COPY,
+  },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.DEGREE_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.TRANSCRIPT,
+    pairedDocType: DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.TRANSCRIPT,
+    pairedDocType: DOCUMENT_TYPE.TRANSCRIPT,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.PCC]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.PCC,
+    pairedDocType: DOCUMENT_TYPE.PCC_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PCC_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.PCC,
+    pairedDocType: DOCUMENT_TYPE.PCC,
+  },
+  [DOCUMENT_TYPE.OFFER_LETTER]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.OFFER_LETTER,
+    pairedDocType: DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.OFFER_LETTER,
+    pairedDocType: DOCUMENT_TYPE.OFFER_LETTER,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.BIRTH_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: 'birth_certificate',
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.SSLC_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: 'sslc_certificate',
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.PLUS_TWO_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: 'plus_two_certificate',
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: 'original_documents_bundle',
+    pairedDocType: null,
+  },
+};
+
+function normalizeDocumentTypeKey(docType: string): string {
+  return DOCUMENT_TYPE_ALIASES[docType] ?? docType;
+}
+
+/** Resolve legacy/duplicate doc type strings to the canonical catalog key. */
+export function resolveCanonicalDocumentType(
+  docType: string,
+): DocumentType | undefined {
+  const normalized = normalizeDocumentTypeKey(docType);
+  return DOCUMENT_TYPE_META[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+}
+
+export function getDocumentTypeRelation(
+  docType: string,
+): DocumentTypeRelation | undefined {
+  return DOCUMENT_TYPE_RELATIONS[normalizeDocumentTypeKey(docType)];
+}
+
+export function isOriginalDocType(docType: string): boolean {
+  return getDocumentTypeRelation(docType)?.variant === DOCUMENT_VARIANT.ORIGINAL;
+}
+
+export function isCopyDocType(docType: string): boolean {
+  return getDocumentTypeRelation(docType)?.variant === DOCUMENT_VARIANT.COPY;
+}
+
+export function getPairedDocType(docType: string): string | null {
+  return getDocumentTypeRelation(docType)?.pairedDocType ?? null;
+}
+
+export function getDocumentVariantLabel(
+  docType: string,
+): 'Copy' | 'Original' | null {
+  const variant = getDocumentTypeRelation(docType)?.variant;
+  if (variant === DOCUMENT_VARIANT.COPY) return 'Copy';
+  if (variant === DOCUMENT_VARIANT.ORIGINAL) return 'Original';
+  return null;
+}
+
+export function resolveDocumentTypeWithVariant(docType: string): {
+  resolved: DocumentType | undefined;
+  variant: DocumentVariant | null;
+  pairedDocType: string | null;
+} {
+  const normalized = normalizeDocumentTypeKey(docType);
+  const resolved = DOCUMENT_TYPE_META[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+  const relation = DOCUMENT_TYPE_RELATIONS[normalized];
+
+  return {
+    resolved,
+    variant: relation?.variant ?? null,
+    pairedDocType: relation?.pairedDocType ?? null,
+  };
+}
 
 // ==================== DOCUMENT METADATA ====================
 
@@ -139,6 +333,8 @@ export const DOCUMENT_TYPE_META: Record<
     maxSizeMB: number;
     allowedFormats: string[];
     commonlyRequired: boolean;
+    variant?: DocumentVariant;
+    pairedDocType?: string | null;
   }
 > = {
   [DOCUMENT_TYPE.AADHAAR]: {
@@ -763,16 +959,6 @@ export const DOCUMENT_TYPE_META: Record<
     allowedFormats: ['pdf'],
     commonlyRequired: true,
   },
-  [DOCUMENT_TYPE.POLICE_CLEARANCE]: {
-    displayName: 'Police Clearance',
-    description: 'Police clearance certificate',
-    category: 'verification',
-    hasExpiry: true,
-    expiryRequired: true,
-    maxSizeMB: 5,
-    allowedFormats: ['pdf', 'jpg', 'jpeg', 'png'],
-    commonlyRequired: true,
-  },
   [DOCUMENT_TYPE.REFERENCE_LETTER]: {
     displayName: 'Reference Letter',
     description: 'Professional reference letter',
@@ -842,16 +1028,6 @@ export const DOCUMENT_TYPE_META: Record<
     maxSizeMB: 100,
     allowedFormats: ['mp4', 'webm', 'mov', 'avi'],
     commonlyRequired: false,
-  },
-  [DOCUMENT_TYPE.PHOTO]: {
-    displayName: 'Photograph',
-    description: 'Passport-size photograph',
-    category: 'other',
-    hasExpiry: false,
-    expiryRequired: false,
-    maxSizeMB: 1,
-    allowedFormats: ['jpg', 'jpeg', 'png'],
-    commonlyRequired: true,
   },
   [DOCUMENT_TYPE.BANK_DETAILS]: {
     displayName: 'Bank Account Details',
