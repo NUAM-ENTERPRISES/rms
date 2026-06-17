@@ -41,6 +41,10 @@ import {
   useGetOriginalDocumentCollectionQuery,
 } from "../api";
 import { CandidateCollectionHistoryPanel } from "../components/CandidateCollectionHistoryPanel";
+import {
+  CollectionSourceDetail,
+  getCollectionSourceDetailText,
+} from "../components/CollectionSourceDetail";
 import { MergeUploadSection } from "../components/MergeUploadSection";
 import { SubmitToLockerSection } from "../components/SubmitToLockerSection";
 import { CompleteCollectionModal } from "../components/CompleteCollectionModal";
@@ -53,8 +57,8 @@ import {
 import { getDocumentChecklistStyles } from "../utils/documentChecklistColors";
 import {
   COLLECTION_STATUS_LABELS,
+  COLLECTION_TYPE,
   COLLECTION_TYPE_LABELS,
-  DIRECT_OFFICE_LABELS,
 } from "../constants";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import { cn } from "@/lib/utils";
@@ -183,7 +187,7 @@ function InfoTile({
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  sub?: string | null;
+  sub?: React.ReactNode;
   className?: string;
 }) {
   return (
@@ -204,7 +208,7 @@ function InfoTile({
           {value}
         </p>
         {sub ? (
-          <p className="truncate text-xs text-muted-foreground">{sub}</p>
+          <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>
         ) : null}
       </div>
     </div>
@@ -363,19 +367,9 @@ export default function CollectionDetailPage() {
     collection.events[collection.events.length - 1] ??
     null;
   const sourceDetail =
-    latest?.collectionType === "direct"
-      ? latest.directOffice === "other"
-        ? latest.directOfficeOther
-        : DIRECT_OFFICE_LABELS[latest.directOffice ?? ""]
-      : latest?.collectionType === "agent"
-        ? latest.agent?.name ?? latest.agentNameManual
-        : latest?.collectionType === "interview_coordinator"
-          ? latest.interviewVenue
-          : latest?.collectionType === "courier"
-            ? [latest.courierPartner, latest.trackingNumber]
-                .filter(Boolean)
-                .join(" / ")
-            : "";
+    latest && latest.collectionType !== COLLECTION_TYPE.COURIER
+      ? getCollectionSourceDetailText(latest)
+      : "";
 
   const documentProgress = getCollectionDocumentProgress(
     collection.cumulativeReceived,
@@ -475,9 +469,16 @@ export default function CollectionDetailPage() {
                       {collection.eventCount !== 1 ? "s" : ""}
                     </span>
                     {latest ? (
-                      <span className="inline-flex items-center rounded-full border border-white/60 bg-white/55 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
-                        Latest: {COLLECTION_TYPE_LABELS[latest.collectionType]}
-                        {sourceDetail ? ` · ${sourceDetail}` : ""}
+                      <span className="inline-flex flex-wrap items-center gap-1 rounded-full border border-white/60 bg-white/55 px-2.5 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+                        <span>Latest: {COLLECTION_TYPE_LABELS[latest.collectionType]}</span>
+                        {latest.collectionType === COLLECTION_TYPE.COURIER ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <CollectionSourceDetail collection={latest} />
+                          </>
+                        ) : sourceDetail ? (
+                          <span>· {sourceDetail}</span>
+                        ) : null}
                       </span>
                     ) : null}
                     <span className="inline-flex items-center rounded-full border border-emerald-200/70 bg-emerald-50/70 px-2.5 py-1 text-xs font-medium text-emerald-800 shadow-sm backdrop-blur-sm md:hidden">
@@ -796,15 +797,20 @@ export default function CollectionDetailPage() {
                       : "—"
                   }
                   sub={
-                    latest
-                      ? [
-                          COLLECTION_TYPE_LABELS[latest.collectionType],
-                          sourceDetail,
-                          latest.collectedBy.name,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")
-                      : undefined
+                    latest ? (
+                      <span className="flex flex-wrap items-center gap-1">
+                        <span>{COLLECTION_TYPE_LABELS[latest.collectionType]}</span>
+                        {latest.collectionType === COLLECTION_TYPE.COURIER ? (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <CollectionSourceDetail collection={latest} />
+                          </>
+                        ) : sourceDetail ? (
+                          <span>· {sourceDetail}</span>
+                        ) : null}
+                        <span>· {latest.collectedBy.name}</span>
+                      </span>
+                    ) : undefined
                   }
                 />
                 <InfoTile

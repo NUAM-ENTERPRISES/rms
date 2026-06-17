@@ -7,7 +7,6 @@ import {
   Building2,
   Calendar,
   ClipboardCheck,
-  Hash,
   Check,
   FileText,
   Footprints,
@@ -44,18 +43,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SelectCandidate } from "@/components/molecules";
 import { UserSelect } from "@/features/candidates/components/UserSelect";
 import { useGetCandidateByIdQuery } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { cn } from "@/lib/utils";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 import {
@@ -67,6 +60,7 @@ import {
 } from "../api";
 import { CourierAddressFields } from "../components/CourierAddressFields";
 import { CourierCollectionSummary } from "../components/CourierCollectionSummary";
+import { CourierPartnerFields } from "../components/CourierPartnerFields";
 import { DispatchSuccessAnimation } from "../components/DispatchSuccessAnimation";
 import { DeliveryModeToggle } from "../components/DeliveryModeToggle";
 import { DocumentSelectionChecklist } from "../components/DocumentSelectionChecklist";
@@ -615,6 +609,34 @@ export default function CreateShipmentPage() {
                   </div>
                 </div>
 
+                {deliveryMode === DELIVERY_MODE.COURIER && (
+                  <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-teal-600" />
+                      <p className="text-xs font-semibold uppercase tracking-wide text-teal-800/90">
+                        Courier details
+                      </p>
+                    </div>
+                    <CourierPartnerFields
+                      trackingId={trackingId}
+                      courierPartner={courierPartner}
+                      onTrackingIdChange={setTrackingId}
+                      onCourierPartnerChange={setCourierPartner}
+                    />
+                    {trackingId.trim() ? (
+                      <div className="mt-3 border-t border-teal-100/80 pt-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Tracking preview
+                        </p>
+                        <CourierTrackingDisplay
+                          courierPartner={courierPartner}
+                          trackingId={trackingId}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
                 <div className="rounded-xl border border-border/70 bg-muted/10 p-3">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Route
@@ -781,45 +803,12 @@ export default function CreateShipmentPage() {
                     </div>
 
                     {deliveryMode === DELIVERY_MODE.COURIER && (
-                      <>
-                        <div>
-                          <Label
-                            htmlFor="trackingId"
-                            className="flex items-center gap-1.5 text-xs"
-                          >
-                            <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                            Tracking ID
-                          </Label>
-                          <Input
-                            id="trackingId"
-                            value={trackingId}
-                            onChange={(e) => setTrackingId(e.target.value)}
-                            placeholder="Courier tracking number"
-                            className="mt-1.5 h-9 rounded-lg"
-                          />
-                        </div>
-                        <div>
-                          <Label className="flex items-center gap-1.5 text-xs">
-                            <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-                            Courier partner
-                          </Label>
-                          <Select
-                            value={courierPartner}
-                            onValueChange={setCourierPartner}
-                          >
-                            <SelectTrigger className="mt-1.5 h-9 rounded-lg">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COURIER_PARTNERS.map((p) => (
-                                <SelectItem key={p} value={p}>
-                                  {p}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </>
+                      <CourierPartnerFields
+                        trackingId={trackingId}
+                        courierPartner={courierPartner}
+                        onTrackingIdChange={setTrackingId}
+                        onCourierPartnerChange={setCourierPartner}
+                      />
                     )}
 
                     <div>
@@ -977,6 +966,28 @@ export default function CreateShipmentPage() {
                     </p>
                   </div>
                 )}
+
+                {step >= 2 && deliveryMode === DELIVERY_MODE.COURIER ? (
+                  <div className="space-y-2 rounded-xl border border-teal-100 bg-teal-50/20 p-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-teal-800/80">
+                      Courier tracking
+                    </p>
+                    {trackingId.trim() ? (
+                      <CourierTrackingDisplay
+                        courierPartner={courierPartner}
+                        trackingId={trackingId}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-lg border border-dashed border-teal-200/80 bg-background/80 px-2.5 py-2">
+                        <Truck className="h-3.5 w-3.5 shrink-0 text-teal-600" />
+                        <p className="text-[11px] text-muted-foreground">
+                          {courierPartner} · add tracking ID on route or dispatch step
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 {docTypes.length > 0 && (
                   <div className="space-y-1.5">
@@ -1225,25 +1236,21 @@ export default function CreateShipmentPage() {
                     </div>
 
                     {deliveryMode === DELIVERY_MODE.COURIER ? (
-                      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-3">
-                        <div className="flex items-start gap-2">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-100 text-teal-700">
-                            <Hash className="h-3.5 w-3.5" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-700/80">
-                              Courier
-                            </p>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              <Badge className="border-teal-200 bg-teal-50 px-1.5 py-0 text-[10px] text-teal-800 hover:bg-teal-50">
-                                {courierPartner}
-                              </Badge>
-                              <code className="max-w-full truncate rounded border border-teal-200/70 bg-white/70 px-1.5 py-0 text-[10px] text-teal-900">
-                                {trackingId || "—"}
-                              </code>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50 via-white to-emerald-50/40 p-3 sm:col-span-2">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-teal-700/80">
+                          Courier tracking
+                        </p>
+                        {trackingId.trim() ? (
+                          <CourierTrackingDisplay
+                            courierPartner={courierPartner}
+                            trackingId={trackingId}
+                            className="w-full max-w-none"
+                          />
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {courierPartner} · tracking ID required before dispatch
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="relative overflow-hidden rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 via-white to-violet-50/40 p-3">

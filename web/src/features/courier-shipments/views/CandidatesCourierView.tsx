@@ -28,6 +28,7 @@ import {
 } from "@/components/molecules";
 import { cn } from "@/lib/utils";
 import { useCan } from "@/hooks/useCan";
+import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { ShipmentStatusBadge } from "../components/ShipmentStatusBadge";
 import {
   DELIVERY_MODE,
@@ -269,9 +270,10 @@ export function CandidatesCourierView({
 
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-slate-500">
                         {latest.trackingId && (
-                          <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-700">
-                            {latest.courierPartner} · {latest.trackingId}
-                          </code>
+                          <CourierTrackingDisplay
+                            courierPartner={latest.courierPartner}
+                            trackingId={latest.trackingId}
+                          />
                         )}
                         {latest.sentAt && (
                           <span className="inline-flex items-center gap-1">

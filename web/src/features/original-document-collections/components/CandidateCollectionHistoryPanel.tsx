@@ -18,10 +18,9 @@ import { useGetCandidateOriginalDocumentCollectionsQuery, useGetOriginalDocument
 import { EventMergeUploadRow } from "./EventMergeUploadRow";
 import {
   COLLECTION_STATUS_LABELS,
-  COLLECTION_TYPE,
   COLLECTION_TYPE_LABELS,
-  DIRECT_OFFICE_LABELS,
 } from "../constants";
+import { CollectionSourceDetail } from "./CollectionSourceDetail";
 import type {
   CollectionMergedDocument,
   OriginalDocumentCollectionEvent,
@@ -49,25 +48,6 @@ function isPdfDocument(doc: CollectionMergedDocument): boolean {
     doc.mimeType.includes("pdf") ||
     doc.fileName.toLowerCase().endsWith(".pdf")
   );
-}
-
-function formatSourceDetail(event: OriginalDocumentCollectionEvent): string {
-  switch (event.collectionType) {
-    case COLLECTION_TYPE.DIRECT:
-      return event.directOffice === "other"
-        ? (event.directOfficeOther ?? "Other")
-        : (DIRECT_OFFICE_LABELS[event.directOffice ?? ""] ??
-            event.directOffice ??
-            "");
-    case COLLECTION_TYPE.AGENT:
-      return event.agent?.name ?? event.agentNameManual ?? "";
-    case COLLECTION_TYPE.COURIER:
-      return [event.courierPartner, event.trackingNumber]
-        .filter(Boolean)
-        .join(" / ");
-    default:
-      return event.interviewVenue ?? "";
-  }
 }
 
 function MergedScanFileRow({
@@ -335,7 +315,6 @@ export function CandidateCollectionHistoryPanel({
         {timeline.map((event) => {
           const received = event.items.filter((item) => item.isReceived);
           const isHighlighted = event.id === highlightEventId;
-          const source = formatSourceDetail(event);
           const eventNumber = eventNumberById.get(event.id) ?? 0;
 
           return (
@@ -389,9 +368,10 @@ export function CandidateCollectionHistoryPanel({
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm font-medium text-slate-700">
-                    {COLLECTION_TYPE_LABELS[event.collectionType]}
-                    {source ? ` · ${source}` : ""}
+                  <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-slate-700">
+                    <span>{COLLECTION_TYPE_LABELS[event.collectionType]}</span>
+                    <span aria-hidden="true">·</span>
+                    <CollectionSourceDetail collection={event} />
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {format(new Date(event.collectedAt), "dd MMM yyyy, h:mm a")}{" "}

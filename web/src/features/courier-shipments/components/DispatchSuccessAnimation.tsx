@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, Footprints, Loader2, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DELIVERY_MODE } from "../constants";
+import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 
 const CONFETTI = [
   { x: -72, y: -48, color: "bg-teal-400", delay: 0.05 },
@@ -191,18 +192,13 @@ export function DispatchSuccessAnimation({
                   initial={reducedMotion ? false : { opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: reducedMotion ? 0 : 0.55, duration: 0.4 }}
-                  className="mt-3 flex flex-wrap items-center justify-center gap-2"
                 >
-                  {courierPartner ? (
-                    <span className="rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-xs font-medium text-teal-800">
-                      {courierPartner}
-                    </span>
-                  ) : null}
-                  {trackingId ? (
-                    <code className="rounded-lg border border-teal-200/70 bg-white/80 px-2.5 py-1 text-xs text-teal-900">
-                      {trackingId}
-                    </code>
-                  ) : null}
+                  <CourierTrackingDisplay
+                    variant="success"
+                    courierPartner={courierPartner}
+                    trackingId={trackingId}
+                    className="mt-0"
+                  />
                 </motion.div>
               ) : null}
             </motion.div>

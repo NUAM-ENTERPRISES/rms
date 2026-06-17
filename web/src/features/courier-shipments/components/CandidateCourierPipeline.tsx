@@ -4,14 +4,12 @@ import {
   ArrowRight,
   Calendar,
   CheckCircle2,
-  Copy,
   Footprints,
   MapPin,
   Package,
   Plus,
   Truck,
 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +30,7 @@ import {
 import type { CourierShipment } from "../types";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { CourierLegActions } from "./CourierLegActions";
+import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { getDocumentTypeConfig } from "@/constants/document-types";
 
 interface CandidateCourierPipelineProps {
@@ -69,11 +68,6 @@ export function CandidateCourierPipeline({
       ? b.legNumber - a.legNumber
       : a.legNumber - b.legNumber,
   );
-
-  const copyTracking = (tracking: string) => {
-    void navigator.clipboard.writeText(tracking);
-    toast.success("Tracking ID copied");
-  };
 
   if (sortedLegs.length === 0) {
     return (
@@ -133,7 +127,7 @@ export function CandidateCourierPipeline({
                     <TableHead className="h-10 min-w-[14rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Documents
                     </TableHead>
-                    <TableHead className="h-10 min-w-[9rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <TableHead className="h-10 min-w-[12rem] px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Tracking
                     </TableHead>
                   </>
@@ -250,21 +244,10 @@ export function CandidateCourierPipeline({
                           <TableCell className="px-4 py-3 align-top">
                             {leg.deliveryMode === DELIVERY_MODE.COURIER &&
                             leg.trackingId ? (
-                              <div className="flex items-center gap-1">
-                                <code className="max-w-[160px] truncate rounded bg-muted px-2 py-1 text-[10px] font-mono">
-                                  {leg.courierPartner} · {leg.trackingId}
-                                </code>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 shrink-0"
-                                  aria-label="Copy tracking ID"
-                                  onClick={() => copyTracking(leg.trackingId!)}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
+                              <CourierTrackingDisplay
+                                courierPartner={leg.courierPartner}
+                                trackingId={leg.trackingId}
+                              />
                             ) : leg.deliveryMode === DELIVERY_MODE.DIRECT &&
                               leg.sentBy ? (
                               <span className="text-xs text-muted-foreground">

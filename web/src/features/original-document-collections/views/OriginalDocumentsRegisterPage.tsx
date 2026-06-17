@@ -55,52 +55,18 @@ import {
 } from "../api";
 import { CollectionExportButton } from "../components/CollectionExportButton";
 import { CollectionProgressCell } from "../components/CollectionProgressCell";
+import { CollectionSourceDetail } from "../components/CollectionSourceDetail";
 import {
   COLLECTION_STATUS,
   COLLECTION_STATUS_LABELS,
   COLLECTION_TYPE,
   COLLECTION_TYPE_LABELS,
-  DIRECT_OFFICE_LABELS,
 } from "../constants";
 
 type StatusFilter = "all" | "pending" | "completed" | "in_locker";
 
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
-
-function formatSourceDetail(collection: {
-  collectionType: string;
-  directOffice?: string | null;
-  directOfficeOther?: string | null;
-  interviewVenue?: string | null;
-  agent?: { name: string } | null;
-  agentNameManual?: string | null;
-  courierPartner?: string | null;
-  trackingNumber?: string | null;
-}) {
-  switch (collection.collectionType) {
-    case COLLECTION_TYPE.DIRECT:
-      return collection.directOffice === "other"
-        ? collection.directOfficeOther ?? "Other"
-        : DIRECT_OFFICE_LABELS[collection.directOffice ?? ""] ??
-            collection.directOffice ??
-            "—";
-    case COLLECTION_TYPE.AGENT:
-      return collection.agent?.name ?? collection.agentNameManual ?? "—";
-    case COLLECTION_TYPE.INTERVIEW_COORDINATOR:
-      return collection.interviewVenue ?? "—";
-    case COLLECTION_TYPE.COURIER:
-      return (
-        [collection.courierPartner, collection.trackingNumber]
-          .filter(Boolean)
-          .join(" / ") || "—"
-      );
-    case COLLECTION_TYPE.RECRUITER:
-      return "Recruiter handover";
-    default:
-      return "—";
-  }
-}
 
 function getStatusInfo(status: string) {
   switch (status) {
@@ -559,8 +525,12 @@ export default function OriginalDocumentsRegisterPage() {
                               ? COLLECTION_TYPE_LABELS[latest.collectionType]
                               : "—"}
                           </TableCell>
-                          <TableCell className="max-w-[180px] truncate px-4 py-3 text-sm text-slate-600">
-                            {latest ? formatSourceDetail(latest) : "—"}
+                          <TableCell className="max-w-[220px] px-4 py-3 text-sm text-slate-600">
+                            {latest ? (
+                              <CollectionSourceDetail collection={latest} />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                           <TableCell className="px-4 py-3">
                             {latest ? (
