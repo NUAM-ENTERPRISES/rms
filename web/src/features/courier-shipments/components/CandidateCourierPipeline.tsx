@@ -1,11 +1,9 @@
 import { Fragment } from "react";
 import { format } from "date-fns";
 import {
-  ArrowRight,
   Calendar,
   CheckCircle2,
   Footprints,
-  MapPin,
   Package,
   Plus,
   Truck,
@@ -32,6 +30,7 @@ import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 import { CourierLegActions } from "./CourierLegActions";
 import { CourierTrackingDisplay } from "@/shared/components/CourierTrackingDisplay";
 import { DocumentTypeTruncatedBadges } from "@/components/molecules";
+import { CourierRouteDisplay } from "./CourierRouteDisplay";
 
 interface CandidateCourierPipelineProps {
   legs: CourierShipment[];
@@ -100,13 +99,12 @@ function CourierLegCard({
     >
       {isHighlighted && (
         <div className="flex items-center gap-2 border-b border-teal-200 bg-teal-50 px-4 py-2 text-xs font-medium text-teal-800">
-          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
           Opened leg — details below
         </div>
       )}
 
       <header className="flex flex-col gap-3 border-b border-border/60 bg-muted/20 px-4 py-3.5 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
           <span
             className={cn(
               "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold",
@@ -117,25 +115,15 @@ function CourierLegCard({
             {leg.legNumber}
           </span>
 
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 flex-1 space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Leg {leg.legNumber}
             </p>
-            <div className="flex min-w-0 items-start gap-1.5">
-              <MapPin
-                className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-600"
-                aria-hidden
-              />
-              <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {leg.fromAddressLabel}
-                </p>
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
-                  <span className="truncate text-sm">{leg.toAddressLabel}</span>
-                </div>
-              </div>
-            </div>
+            <CourierRouteDisplay
+              fromLabel={leg.fromAddressLabel}
+              toLabel={leg.toAddressLabel}
+              status={leg.status}
+            />
           </div>
         </div>
 
@@ -378,19 +366,13 @@ export function CandidateCourierPipeline({
                       </span>
                     </TableCell>
 
-                    <TableCell className="px-4 py-3 align-top">
-                      <div className="flex min-w-0 items-start gap-1.5 text-sm font-medium">
-                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-600" />
-                        <div className="min-w-0 space-y-0.5">
-                          <p className="truncate">{leg.fromAddressLabel}</p>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <ArrowRight className="h-3 w-3 shrink-0" />
-                            <span className="truncate">
-                              {leg.toAddressLabel}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                    <TableCell className="min-w-[14rem] px-4 py-3 align-top">
+                      <CourierRouteDisplay
+                        fromLabel={leg.fromAddressLabel}
+                        toLabel={leg.toAddressLabel}
+                        status={leg.status}
+                        variant="inline"
+                      />
                     </TableCell>
 
                     {!isCompact && (

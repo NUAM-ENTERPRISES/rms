@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import {
-  ArrowRight,
   CheckCircle2,
   Clock,
   Footprints,
@@ -15,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DELIVERY_MODE, SHIPMENT_STATUS } from "../constants";
 import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
+import { CourierRouteDisplay } from "./CourierRouteDisplay";
 import type { CourierShipment, CourierShipmentCandidate } from "../types";
 
 export interface CandidateCourierGroup {
@@ -116,12 +116,13 @@ export function CandidateCourierCard({ group }: CandidateCourierCardProps) {
             <ShipmentStatusBadge status={latestLeg.status} className="text-[10px]" />
           </div>
 
-          <div className="flex items-start gap-1.5 text-xs font-medium">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-600" />
-            <span className="min-w-0 truncate">{latestLeg.fromAddressLabel}</span>
-            <ArrowRight className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
-            <span className="min-w-0 truncate">{latestLeg.toAddressLabel}</span>
-          </div>
+          <CourierRouteDisplay
+            fromLabel={latestLeg.fromAddressLabel}
+            toLabel={latestLeg.toAddressLabel}
+            status={latestLeg.status}
+            variant="inline"
+            className="text-xs"
+          />
 
           <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
             <span className="flex items-center gap-1">

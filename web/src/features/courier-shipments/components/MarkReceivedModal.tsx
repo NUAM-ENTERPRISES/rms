@@ -3,17 +3,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import {
-  ArrowRight,
   CalendarClock,
   CheckCircle2,
   Footprints,
   Loader2,
-  MapPin,
   PackageCheck,
   Truck,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CourierRouteDisplay } from "./CourierRouteDisplay";
 import {
   Dialog,
   DialogContent,
@@ -133,19 +132,11 @@ export function MarkReceivedModal({
               </Badge>
             </div>
 
-            <div className="flex items-start gap-2 text-sm font-medium">
-              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-              <div className="min-w-0">
-                <p className="truncate">{shipment.fromAddressLabel}</p>
-                <div className="my-1 flex items-center gap-1 text-muted-foreground">
-                  <ArrowRight className="h-3.5 w-3.5" />
-                  <span className="text-xs uppercase tracking-wide">
-                    Delivered to
-                  </span>
-                </div>
-                <p className="truncate">{shipment.toAddressLabel}</p>
-              </div>
-            </div>
+            <CourierRouteDisplay
+              fromLabel={shipment.fromAddressLabel}
+              toLabel={shipment.toAddressLabel}
+              status={shipment.status}
+            />
 
             {shipment.sentAt && (
               <p className="text-xs text-muted-foreground">
