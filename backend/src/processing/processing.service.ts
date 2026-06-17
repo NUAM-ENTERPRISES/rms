@@ -459,6 +459,21 @@ export class ProcessingService {
       }
     }
 
+    const offerLetterUploaderIds = new Set<string>();
+    for (const doc of candidateOfferDocuments || []) {
+      if (doc.uploadedBy) offerLetterUploaderIds.add(doc.uploadedBy);
+    }
+    const offerLetterUploaders =
+      offerLetterUploaderIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(offerLetterUploaderIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+    const offerLetterUploadersById = new Map(
+      offerLetterUploaders.map((user) => [user.id, user]),
+    );
+
     const stepsWithoutDocs = steps.map((s) => {
       // omit `documents` by destructuring
       const { documents, ...rest } = s as any;
@@ -474,6 +489,9 @@ export class ProcessingService {
               fileUrl: first.fileUrl,
               uploadedAt: first.createdAt,
               uploadedBy: first.uploadedBy,
+              uploadedByUser: first.uploadedBy
+                ? offerLetterUploadersById.get(first.uploadedBy) || null
+                : null,
               docType: first.docType,
               // Minimize verification shape to only relevant fields (no nested candidateProjectMap/project/role objects)
               verifications: (first.verifications || [])
@@ -5134,7 +5152,33 @@ export class ProcessingService {
     const total = all.length;
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const start = (page - 1) * limit;
-    const items = all.slice(start, start + limit);
+    const pageItems = all.slice(start, start + limit);
+
+    const uploaderIds = new Set<string>();
+    for (const item of pageItems) {
+      const uploadedBy = item?.document?.uploadedBy;
+      if (uploadedBy) uploaderIds.add(uploadedBy);
+    }
+    const uploaders =
+      uploaderIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(uploaderIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+    const uploadersById = new Map(uploaders.map((user) => [user.id, user]));
+
+    const items = pageItems.map((item) => {
+      const uploadedBy = item?.document?.uploadedBy;
+      if (!uploadedBy) return item;
+      return {
+        ...item,
+        document: {
+          ...item.document,
+          uploadedByUser: uploadersById.get(uploadedBy) || null,
+        },
+      };
+    });
 
     return {
       items,

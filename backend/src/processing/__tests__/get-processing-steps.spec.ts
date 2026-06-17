@@ -86,6 +86,9 @@ describe('ProcessingService - getProcessingSteps', () => {
     jest.spyOn(prisma.document, 'findMany' as any).mockResolvedValue([
       { id: 'd1', fileName: 'offer.pdf', fileUrl: 'https://s3/off.pdf', createdAt: new Date('2025-01-01T00:00:00Z'), uploadedBy: 'u1', docType: 'offer_letter', verifications: [{ id: 'ver-1', status: 'verified', documentId: 'd1', candidateProjectMapId: 'cpm-1', roleCatalogId: 'rc-1', createdAt: new Date('2025-01-01T00:00:00Z') }] },
     ]);
+    jest.spyOn(prisma.user, 'findMany' as any).mockResolvedValue([
+      { id: 'u1', name: 'Recruiter One', email: 'recruiter@example.com' },
+    ]);
 
     const out = (await service.getProcessingSteps('pc-1')) as any[];
 
@@ -100,6 +103,11 @@ describe('ProcessingService - getProcessingSteps', () => {
 
     const doc = step!.offerLetters.candidateDocument;
     expect(doc.fileName).toBe('offer.pdf');
+    expect(doc.uploadedByUser).toEqual({
+      id: 'u1',
+      name: 'Recruiter One',
+      email: 'recruiter@example.com',
+    });
     expect(doc.verifications[0].id).toBe('ver-1');
     expect(doc.verifications[0].candidateProjectMapId).toBe('cpm-1');
     // Nested project/role objects should NOT be present in the verification shape

@@ -23,11 +23,21 @@ import {
   ShieldCheck,
   AlertTriangle,
   RefreshCw,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { useAppSelector } from "@/app/hooks";
+import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useGetUserByIdQuery } from "@/services/usersApi";
 import { useUploadOfferLetterMutation, useUpdateOfferLetterReceivedDateMutation } from "@/services/uploadApi";
+
+export interface OfferLetterUploader {
+  id: string;
+  name: string;
+  email?: string;
+}
 
 export interface OfferLetterDocument {
   id: string;
@@ -36,6 +46,7 @@ export interface OfferLetterDocument {
   fileName: string;
   fileUrl: string;
   uploadedBy: string;
+  uploadedByUser?: OfferLetterUploader | null;
   verifiedBy: string | null;
   status: "pending" | "verified" | "rejected";
   notes: string | null;
@@ -74,8 +85,24 @@ interface ProcessingOfferLetterModalProps {
   roleCatalogId: string;
   roleDesignation: string;
   documentVerification?: DocumentVerification | null;
+  uploadedByName?: string | null;
   onVerify?: (data: { documentId: string; candidateProjectMapId: string; notes: string }) => Promise<void>;
   isVerifying?: boolean;
+}
+
+function getUploaderLabel(
+  uploadedByUser?: OfferLetterUploader | null,
+  uploadedBy?: string | null,
+  uploadedByName?: string | null,
+  resolvedName?: string | null,
+): string | null {
+  if (resolvedName?.trim()) return resolvedName.trim();
+  if (uploadedByName?.trim() && uploadedByName.trim() !== uploadedBy?.trim()) {
+    return uploadedByName.trim();
+  }
+  if (uploadedByUser?.name?.trim()) return uploadedByUser.name.trim();
+  if (uploadedByUser?.email?.trim()) return uploadedByUser.email.trim();
+  return null;
 }
 
 export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProps> = ({
@@ -88,9 +115,12 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
   roleCatalogId,
   roleDesignation,
   documentVerification,
+  uploadedByName,
   onVerify,
   isVerifying = false,
 }) => {
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { getUserById } = useUsersLookup();
   const [notes, setNotes] = useState("");
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
@@ -106,6 +136,32 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
   const activeDocumentVerification = uploadedDocument || documentVerification;
   const offerLetterDoc = activeDocumentVerification?.document;
   const hasOfferLetter = !!offerLetterDoc;
+  const lookedUpUploader = offerLetterDoc?.uploadedBy
+    ? getUserById(offerLetterDoc.uploadedBy)
+    : undefined;
+  const shouldFetchUploader =
+    !!offerLetterDoc?.uploadedBy &&
+    !offerLetterDoc?.uploadedByUser?.name &&
+    !offerLetterDoc?.uploadedByUser?.email &&
+    !uploadedByName &&
+    !lookedUpUploader?.name &&
+    !lookedUpUploader?.email;
+  const { data: fetchedUploaderResponse } = useGetUserByIdQuery(
+    offerLetterDoc?.uploadedBy || "",
+    { skip: !shouldFetchUploader },
+  );
+  const fetchedUploader = (fetchedUploaderResponse as { data?: OfferLetterUploader } | undefined)
+    ?.data;
+  const uploaderLabel = getUploaderLabel(
+    offerLetterDoc?.uploadedByUser,
+    offerLetterDoc?.uploadedBy,
+    uploadedByName,
+    lookedUpUploader?.name ||
+      lookedUpUploader?.email ||
+      fetchedUploader?.name ||
+      fetchedUploader?.email ||
+      null,
+  );
   const isPending = offerLetterDoc?.status === "pending";
   const isVerified = offerLetterDoc?.status === "verified";
   const isRejected = offerLetterDoc?.status === "rejected";
@@ -164,7 +220,16 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
           notes: response.data.verification.notes,
           rejectionReason: response.data.verification.rejectionReason,
           resubmissionRequested: response.data.verification.resubmissionRequested,
-          document: response.data.document,
+          document: {
+            ...response.data.document,
+            uploadedByUser: currentUser
+              ? {
+                  id: currentUser.id,
+                  name: currentUser.name,
+                  email: currentUser.email,
+                }
+              : null,
+          },
         };
         
         setUploadedDocument(newDocumentVerification);
@@ -336,6 +401,21 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                         <p className="text-xs text-muted-foreground">
                           {formatFileSize(offerLetterDoc.fileSize)} • Uploaded {formatDate(offerLetterDoc.createdAt)}
                         </p>
+                        {uploaderLabel ? (
+                          <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 px-3 py-2 shadow-sm">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700 ring-2 ring-orange-200/80">
+                              <User className="h-3.5 w-3.5" aria-hidden="true" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-orange-700/80">
+                                Uploaded by
+                              </p>
+                              <p className="truncate text-sm font-semibold text-orange-950">
+                                {uploaderLabel}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
                           <span className="font-semibold">Original hardcopy received date:</span>
                           {isVerified ? (

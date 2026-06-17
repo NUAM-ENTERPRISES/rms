@@ -2560,7 +2560,7 @@ export class DocumentsService {
 
     const uploader = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true },
+      select: { id: true, name: true, email: true },
     });
 
     await this.outboxService.publishOfferLetterUploaded({
@@ -2576,7 +2576,13 @@ export class DocumentsService {
       uploadedByName: uploader?.name ?? null,
     });
 
-    return result;
+    return {
+      document: {
+        ...result.document,
+        uploadedByUser: uploader,
+      },
+      verification: result.verification,
+    };
   }
 
   /**

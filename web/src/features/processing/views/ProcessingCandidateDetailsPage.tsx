@@ -123,9 +123,13 @@ export default function ProcessingCandidateDetailsPage() {
   const handleEligibilityComplete = handleStepComplete;
 
   // Extract offer letter status from the paginated documents
-  const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
+  const { offerLetterStatus, offerLetterVerification, offerLetterUploadedByName } = useMemo(() => {
     const verifications = (docsResponse?.data?.items || []) as any[];
     const offerLetterDoc = verifications.find((v) => v.document?.docType === "offer_letter");
+
+    const getUploaderLabel = (
+      uploadedByUser?: { name?: string; email?: string } | null,
+    ) => uploadedByUser?.name || uploadedByUser?.email || null;
 
     // If not found in paginated documents, fall back to processing steps payload which may contain offerLetters
     if (!offerLetterDoc) {
@@ -154,6 +158,7 @@ export default function ProcessingCandidateDetailsPage() {
                 fileName: candidateDoc.fileName,
                 fileUrl: candidateDoc.fileUrl,
                 uploadedBy: candidateDoc.uploadedBy || "",
+                uploadedByUser: candidateDoc.uploadedByUser || null,
                 verifiedBy: null,
                 status: verification.status,
                 notes: null,
@@ -181,6 +186,7 @@ export default function ProcessingCandidateDetailsPage() {
             receivedAt: verification?.offerLetterReceivedAt || candidateDoc.uploadedAt || null,
           } as OfferLetterStatus,
           offerLetterVerification: constructedVerification,
+          offerLetterUploadedByName: getUploaderLabel(candidateDoc.uploadedByUser),
         };
       }
 
@@ -190,6 +196,7 @@ export default function ProcessingCandidateDetailsPage() {
           status: "not_uploaded" as const,
         } as OfferLetterStatus,
         offerLetterVerification: null,
+        offerLetterUploadedByName: null,
       };
     }
 
@@ -207,8 +214,9 @@ export default function ProcessingCandidateDetailsPage() {
         ...offerLetterDoc,
         offerLetterReceivedAt: offerLetterDoc.offerLetterReceivedAt || offerLetterDoc.document?.offerLetterReceivedAt || offerLetterDoc.document?.createdAt || null,
       } as any,
+      offerLetterUploadedByName: getUploaderLabel(offerLetterDoc.document?.uploadedByUser),
     };
-  }, [docsResponse?.data?.items, processingSteps]);
+  }, [docsResponse?.data?.items, processingSteps, data?.candidate?.id]);
 
   // If processing was cancelled, find the most recent cancellation history entry to show the reason
   // We intentionally avoid fetching history on page load. The history modal fetches history when opened.
@@ -458,6 +466,7 @@ export default function ProcessingCandidateDetailsPage() {
         roleCatalogId={data.role?.roleCatalogId || ""}
         roleDesignation={data.role?.designation || ""}
         documentVerification={offerLetterVerification as DocumentVerification | null}
+        uploadedByName={offerLetterUploadedByName}
         isVerifying={isVerifying}
         onVerify={async (verifyData) => {
           try {

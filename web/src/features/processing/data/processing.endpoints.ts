@@ -417,6 +417,7 @@ export const processingApi = baseApi.injectEndpoints({
           fileName: string;
           fileUrl: string;
           uploadedBy?: string;
+          uploadedByUser?: { id: string; name: string; email?: string } | null;
           verifiedBy?: string | null;
           status: string;
           createdAt: string;
