@@ -299,13 +299,6 @@ export default function CandidateCourierPipelinePage() {
               </div>
             </div>
 
-            {highlightLegId && (
-              <div className="flex items-center gap-2 border-b border-teal-100 bg-teal-50/70 px-4 py-2 text-xs text-teal-800">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                Highlighting the leg you opened — scroll to view details below
-              </div>
-            )}
-
             <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-muted/10 px-4 py-2.5">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Timeline
@@ -340,7 +333,7 @@ export default function CandidateCourierPipelinePage() {
               )}
             </div>
 
-            <CardContent className="bg-gradient-to-b from-muted/10 to-background p-4 sm:p-5">
+            <CardContent className="bg-gradient-to-b from-muted/10 to-background p-4 sm:p-6">
               <CandidateCourierPipeline
                 legs={pipeline?.legs ?? []}
                 variant="full"

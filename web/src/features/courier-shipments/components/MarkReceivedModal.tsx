@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getDocumentTypeConfig } from "@/constants/document-types";
+import { DocumentTypeTruncatedBadges } from "@/components/molecules";
 import { useAppSelector } from "@/app/hooks";
 import { useReceiveCourierShipmentMutation } from "../api";
 import {
@@ -155,12 +155,12 @@ export function MarkReceivedModal({
             )}
 
             {docTypes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {docTypes.map((docType) => (
-                  <Badge key={docType} variant="outline" className="text-[10px]">
-                    {getDocumentTypeConfig(docType)?.label ?? docType}
-                  </Badge>
-                ))}
+              <div className="pt-1">
+                <DocumentTypeTruncatedBadges
+                  docTypes={docTypes}
+                  maxVisible={3}
+                  badgeVariant="outline"
+                />
               </div>
             )}
           </div>

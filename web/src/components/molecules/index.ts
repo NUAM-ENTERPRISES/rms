@@ -58,3 +58,12 @@ export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";
 // Tile used across dashboards
 export { StatusTile } from "./StatusTile";
 export { default as ProjectFilters } from "./ProjectFilters";
+export {
+  TruncatedBadgeList,
+  DocumentTypeTruncatedBadges,
+} from "./TruncatedBadgeList";
+export type {
+  TruncatedBadgeListItem,
+  TruncatedBadgeListProps,
+  DocumentTypeTruncatedBadgesProps,
+} from "./TruncatedBadgeList";

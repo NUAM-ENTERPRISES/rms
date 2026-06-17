@@ -87,7 +87,7 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   };
 
   return (
-    <div className="space-y-3 border-t pt-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
