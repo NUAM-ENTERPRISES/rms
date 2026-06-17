@@ -175,6 +175,56 @@
   animation: collection-completed-banner-glow 2.5s ease-in-out infinite;
 }
 
+@keyframes project-country-badge-glow {
+  0%,
+  100% {
+    background-color: rgb(255 251 235);
+    box-shadow:
+      0 0 0 0 rgb(245 158 11 / 0%),
+      0 0 10px 0 rgb(250 204 21 / 0.1);
+    border-color: rgb(253 230 138);
+  }
+  50% {
+    background-color: rgb(254 243 199);
+    box-shadow:
+      0 0 22px 4px rgb(245 158 11 / 0.38),
+      0 0 32px 6px rgb(250 204 21 / 0.28);
+    border-color: rgb(251 191 36);
+  }
+}
+
+@keyframes project-country-badge-sheen {
+  0% {
+    transform: translateX(-140%) skewX(-14deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(240%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+.animate-project-country-badge-glow {
+  animation: project-country-badge-glow 2.5s ease-in-out infinite;
+}
+
+.animate-project-country-badge-sheen {
+  animation: project-country-badge-sheen 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-project-country-badge-glow,
+  .animate-project-country-badge-sheen {
+    animation: none;
+  }
+}
+
 @keyframes courier-wizard-bar-glow {
   0%,
   100% {

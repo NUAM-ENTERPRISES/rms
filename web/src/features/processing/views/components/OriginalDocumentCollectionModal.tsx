@@ -25,6 +25,7 @@ import {
 } from "@/features/processing/data/processing.endpoints";
 import { ShipmentStatusBadge } from "@/features/courier-shipments/components/ShipmentStatusBadge";
 import { DELIVERY_MODE_LABELS, type DeliveryMode } from "@/features/courier-shipments/constants";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
 
 interface OriginalDocumentCollectionSummary {
   id: string;
@@ -38,7 +39,7 @@ interface OriginalDocumentCollectionSummary {
   } | null;
 }
 
-export interface AffiniksOriginalDocsModalProps {
+export interface OriginalDocumentCollectionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   processingId: string;
@@ -62,19 +63,20 @@ function formatDateTime(value: string | null | undefined): string {
   return format(d, "MMM d, yyyy h:mm a");
 }
 
-export function AffiniksOriginalDocsModal({
+export function OriginalDocumentCollectionModal({
   open,
   onOpenChange,
   processingId,
   fileNumber,
   originalDocumentCollection,
-}: AffiniksOriginalDocsModalProps) {
+}: OriginalDocumentCollectionModalProps) {
   const lockerFileNumber = originalDocumentCollection?.lockerFileNumber?.trim() || null;
   const mergedDocument = originalDocumentCollection?.mergedDocument ?? null;
 
   const [activeTab, setActiveTab] = useState<"overview" | "collection" | "courier">("overview");
   const [collectionPage, setCollectionPage] = useState(1);
   const [courierPage, setCourierPage] = useState(1);
+  const [mergedScanViewerOpen, setMergedScanViewerOpen] = useState(false);
   const limit = 10;
 
   // Reset tab/pagination whenever the modal is opened
@@ -83,7 +85,13 @@ export function AffiniksOriginalDocsModal({
     setActiveTab("overview");
     setCollectionPage(1);
     setCourierPage(1);
+    setMergedScanViewerOpen(false);
   }, [open]);
+
+  const handleOpenMergedScan = () => {
+    if (!mergedDocument?.fileUrl) return;
+    setMergedScanViewerOpen(true);
+  };
 
   const {
     data: collectionRes,
@@ -163,15 +171,15 @@ export function AffiniksOriginalDocsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex !h-[82vh] !max-h-[82vh] !w-[92vw] !max-w-[92vw] flex-col overflow-hidden border-slate-200 bg-gradient-to-br from-slate-50 via-white to-emerald-50/40 p-0 shadow-2xl lg:!w-[min(92vw,1100px)] lg:!max-w-[min(92vw,1100px)]">
-        <DialogHeader className="border-b border-slate-200/80 bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/60 px-6 pb-4 pt-5">
+      <DialogContent className="flex !h-[82vh] !max-h-[82vh] !w-[92vw] !max-w-[92vw] flex-col overflow-hidden border-slate-200 bg-white p-0 shadow-2xl lg:!w-[min(92vw,1100px)] lg:!max-w-[min(92vw,1100px)]">
+        <DialogHeader className="border-b border-slate-200 bg-white px-6 pb-4 pt-5">
           <DialogTitle className="flex flex-wrap items-center gap-3 text-xl font-black text-slate-900">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
               <FileStack className="h-5 w-5 text-white" />
             </div>
             Original Documents Collection
             {fileNumber ? (
-              <Badge className="border border-slate-200 bg-white/90 font-mono font-black text-slate-800 shadow-sm">
+              <Badge className="border border-slate-200 bg-white font-mono font-black text-slate-800 shadow-sm">
                 File #{fileNumber}
               </Badge>
             ) : null}
@@ -197,7 +205,7 @@ export function AffiniksOriginalDocsModal({
             className="flex h-full flex-col"
           >
             <div className="flex items-center justify-between gap-3">
-              <TabsList className="w-fit border border-slate-200 bg-white/80 shadow-sm">
+              <TabsList className="w-fit border border-slate-200 bg-white shadow-sm">
                 <TabsTrigger value="overview" className="gap-2">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   Overview
@@ -218,13 +226,16 @@ export function AffiniksOriginalDocsModal({
 
               <div className="hidden items-center gap-2 md:flex">
                 {mergedDocument?.fileUrl ? (
-                  <Button asChild size="sm" className="rounded-xl font-black shadow-sm">
-                    <a href={mergedDocument.fileUrl} target="_blank" rel="noreferrer">
-                      Open merged scan
-                    </a>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-xl font-black shadow-sm"
+                    onClick={handleOpenMergedScan}
+                  >
+                    Open merged scan
                   </Button>
                 ) : (
-                  <Badge className="border border-slate-200 bg-white/80 text-[10px] font-black text-slate-600">
+                  <Badge className="border border-slate-200 bg-white text-[10px] font-black text-slate-600">
                     No merged scan
                   </Badge>
                 )}
@@ -233,44 +244,44 @@ export function AffiniksOriginalDocsModal({
 
             <TabsContent value="overview" className="flex-1 overflow-auto">
               <div className="grid gap-4 md:grid-cols-3">
-                <div className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-white p-4 shadow-sm">
-                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-200/40 blur-2xl" />
-                  <p className="relative text-[10px] font-black uppercase tracking-widest text-emerald-700/70">
+                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                     Documents in Affiniks
                   </p>
-                  <p className="relative mt-2 text-3xl font-black text-slate-900">
+                  <p className="mt-2 text-3xl font-black text-slate-900">
                     {affiniksDocCount ?? "—"}
                   </p>
-                  <p className="relative mt-1 text-xs font-medium text-slate-500">From latest collection event</p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">From latest collection event</p>
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white p-4 shadow-sm">
-                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl" />
-                  <p className="relative text-[10px] font-black uppercase tracking-widest text-indigo-700/70">
+                <div className="rounded-2xl border border-indigo-100 bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-700">
                     Documents in Delhi
                   </p>
-                  <p className="relative mt-2 text-3xl font-black text-slate-900">
+                  <p className="mt-2 text-3xl font-black text-slate-900">
                     {delhiDocCount ?? "—"}
                   </p>
-                  <p className="relative mt-1 text-xs font-medium text-slate-500">
+                  <p className="mt-1 text-xs font-medium text-slate-500">
                     Based on latest courier destination
                   </p>
                 </div>
 
-                <div className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-4 shadow-sm">
-                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-violet-200/40 blur-2xl" />
-                  <p className="relative text-[10px] font-black uppercase tracking-widest text-violet-700/70">
+                <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-violet-700">
                     Merged Document
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     {mergedDocument?.fileUrl ? (
-                      <Button asChild variant="outline" className="rounded-xl font-black">
-                        <a href={mergedDocument.fileUrl} target="_blank" rel="noreferrer">
-                          Open merged scan
-                        </a>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl font-black"
+                        onClick={handleOpenMergedScan}
+                      >
+                        Open merged scan
                       </Button>
                     ) : (
-                      <Badge className="border border-slate-200 bg-white/80 font-bold text-slate-600">
+                      <Badge className="border border-slate-200 bg-white font-bold text-slate-600">
                         Not available
                       </Badge>
                     )}
@@ -279,11 +290,11 @@ export function AffiniksOriginalDocsModal({
                     <p className="mt-2 truncate text-xs text-slate-500">{mergedDocument.fileName}</p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <Badge className="border border-slate-200 bg-white/80 font-bold text-slate-700 shadow-sm">
+                    <Badge className="border border-slate-200 bg-white font-bold text-slate-700 shadow-sm">
                       <MapPin className="mr-1 h-3 w-3" />
                       {lockerFileNumber ? `Locker ${lockerFileNumber}` : "Location pending"}
                     </Badge>
-                    <Badge className="border border-slate-200 bg-white/80 font-bold text-slate-700 shadow-sm">
+                    <Badge className="border border-slate-200 bg-white font-bold text-slate-700 shadow-sm">
                       <Link2 className="mr-1 h-3 w-3" />
                       {mergedDocument?.mimeType ?? "—"}
                     </Badge>
@@ -292,9 +303,9 @@ export function AffiniksOriginalDocsModal({
               </div>
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/60 via-white to-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-700/70">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
                       Latest collection (Affiniks intake)
                     </p>
                     {latestCollection?.eventNumber ? (
@@ -307,49 +318,49 @@ export function AffiniksOriginalDocsModal({
                   </div>
 
                   <div className="mt-3 grid gap-2">
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Intake type</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCollection?.collectionTypeLabel ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Source</span>
                       <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
                         {latestCollection?.sourceDetail ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Docs collected</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCollection?.documentCount ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Collected by</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCollection?.collectedBy?.name ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Collection status</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCollection?.collectionStatus ?? originalDocumentCollection?.status ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Collected at</span>
                       <span className="text-xs font-medium text-slate-900">
                         {formatDateTime(latestCollection?.collectedAt)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Merged scan from event</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCollection?.hasMergedScan ? "Yes" : "No"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-amber-100">
                       <span className="text-xs font-bold text-slate-600">Merged file name (event)</span>
                       <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
                         {latestCollection?.mergedFileName ?? "—"}
@@ -358,9 +369,9 @@ export function AffiniksOriginalDocsModal({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50/60 via-white to-white p-4 shadow-sm">
+                <div className="rounded-2xl border border-teal-100 bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-teal-700/70">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-teal-700">
                       Latest courier movement
                     </p>
                     {latestCourier?.legNumber ? (
@@ -373,49 +384,49 @@ export function AffiniksOriginalDocsModal({
                   </div>
 
                   <div className="mt-3 grid gap-2">
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Route</span>
                       <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
                         {latestCourier ? `${latestCourier.fromAddressLabel} → ${latestCourier.toAddressLabel}` : "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Purpose</span>
                       <span className="text-xs font-black text-slate-900">{latestCourier?.purposeType ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Delivery mode</span>
                       <span className="text-xs font-black text-slate-900">
                         {latestCourier?.deliveryMode ? formatDeliveryMode(latestCourier.deliveryMode) : "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Status</span>
                       <span className="text-xs font-black text-slate-900">{latestCourier?.status ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Tracking ID</span>
                       <span className="max-w-[60%] truncate text-right text-xs font-mono font-black text-slate-900">
                         {latestCourier?.trackingId ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Courier partner</span>
                       <span className="max-w-[60%] truncate text-right text-xs font-medium text-slate-900">
                         {latestCourier?.courierPartner ?? "—"}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Sent by</span>
                       <span className="text-xs font-black text-slate-900">{latestCourier?.sentBy?.name ?? "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Sent at</span>
                       <span className="text-xs font-medium text-slate-900">
                         {formatDateTime(latestCourier?.sentAt)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
+                    <div className="flex items-center justify-between rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-inset ring-teal-100">
                       <span className="text-xs font-bold text-slate-600">Received at</span>
                       <span className="text-xs font-medium text-slate-900">
                         {formatDateTime(latestCourier?.receivedAt)}
@@ -480,7 +491,7 @@ export function AffiniksOriginalDocsModal({
                         return (
                           <TableRow
                             key={item.id}
-                            className={cn("hover:bg-slate-50", index === 0 ? "bg-amber-50/50" : "")}
+                            className={cn("bg-white hover:bg-slate-50", index === 0 ? "bg-amber-50" : "")}
                           >
                             <TableCell className="font-bold text-slate-400">
                               {(collectionPage - 1) * limit + index + 1}
@@ -605,7 +616,7 @@ export function AffiniksOriginalDocsModal({
                         return (
                           <TableRow
                             key={item.id}
-                            className={cn("hover:bg-slate-50", index === 0 ? "bg-teal-50/50" : "")}
+                            className={cn("bg-white hover:bg-slate-50", index === 0 ? "bg-teal-50" : "")}
                           >
                             <TableCell className="font-bold text-slate-400">
                               {(courierPage - 1) * limit + index + 1}
@@ -681,6 +692,16 @@ export function AffiniksOriginalDocsModal({
           </Tabs>
         </div>
       </DialogContent>
+
+      {mergedDocument?.fileUrl ? (
+        <PDFViewer
+          fileUrl={mergedDocument.fileUrl}
+          fileName={mergedDocument.fileName || "Merged document scan"}
+          isOpen={mergedScanViewerOpen}
+          onClose={() => setMergedScanViewerOpen(false)}
+          cacheKey={mergedDocument.id}
+        />
+      ) : null}
     </Dialog>
   );
 }

@@ -81,7 +81,7 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
         </div>
 
         {/* Referral Quick View - shows at top for fast access */}
-        {candidate.source === 'referral' && (
+        {/* {candidate.source === 'referral' && (
           <div className="p-3 rounded-lg bg-amber-50 border-l-4 border-amber-400">
             <div className="flex items-start justify-between">
               <div className="min-w-0">
@@ -106,7 +106,7 @@ export function CandidateInfoCard({ candidate }: CandidateInfoCardProps) {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Personal Details Grid - Compact */}
         <div className="grid grid-cols-2 gap-2">
