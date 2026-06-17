@@ -7,20 +7,23 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  Clock,
   ExternalLink,
   FileStack,
   FileText,
+  History,
   Loader2,
   Mail,
+  MapPin,
   Phone,
   Plus,
+  Route,
   Upload,
   Archive,
   User,
   UserCircle2,
   Users,
   X,
-  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ImageViewer } from "@/components/molecules";
@@ -47,6 +50,7 @@ import {
   getCollectionDocumentProgress,
   getCollectionStatusStepIndex,
 } from "../utils/collectionProgress";
+import { getDocumentChecklistStyles } from "../utils/documentChecklistColors";
 import {
   COLLECTION_STATUS_LABELS,
   COLLECTION_TYPE_LABELS,
@@ -227,6 +231,14 @@ export default function CollectionDetailPage() {
     { skip: !collection?.candidateId },
   );
 
+  const courierPipeline = courierPipelineData?.data;
+  const courierTotalLegs = courierPipeline?.totalLegs ?? 0;
+  const courierReceivedLegs = courierPipeline?.receivedLegs ?? 0;
+  const courierInTransitLegs = Math.max(
+    courierTotalLegs - courierReceivedLegs,
+    0,
+  );
+
   const allDocuments = React.useMemo(() => {
     const receivedMap = new Map(
       (collection?.cumulativeReceived ?? []).map((item) => [
@@ -378,6 +390,8 @@ export default function CollectionDetailPage() {
   ];
   const currentIdx = getCollectionStatusStepIndex(collection.status);
   const isCollectionComplete = collection.status === "completed";
+  const lockerFileNumber = collection.lockerFileNumber?.trim() ?? "";
+  const hasLockerNumber = lockerFileNumber.length > 0;
 
   return (
     <div className="-mx-4 space-y-4 px-4 md:-mx-6 md:px-6">
@@ -429,7 +443,33 @@ export default function CollectionDetailPage() {
                       </span>
                     ) : null}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {hasLockerNumber ? (
+                      <div
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-xl border border-amber-300/80 bg-gradient-to-r from-amber-50 via-amber-100/70 to-orange-50 px-2.5 py-1.5 shadow-[0_4px_18px_rgba(245,158,11,0.18)] ring-1 ring-amber-200/70 sm:hidden",
+                          collection.lockerSubmittedAt &&
+                            "ring-2 ring-amber-300/50",
+                        )}
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm">
+                          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-amber-800/80">
+                            Locker file
+                          </p>
+                          <p className="truncate font-mono text-sm font-bold tracking-wide text-amber-950">
+                            {lockerFileNumber}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-amber-200/80 bg-amber-50/40 px-2.5 py-1.5 text-xs text-amber-800/70 sm:hidden">
+                        <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        Locker not assigned
+                      </span>
+                    )}
                     <span className="inline-flex items-center rounded-full border border-white/60 bg-white/55 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm">
                       {collection.eventCount} intake event
                       {collection.eventCount !== 1 ? "s" : ""}
@@ -450,6 +490,27 @@ export default function CollectionDetailPage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              {hasLockerNumber ? (
+                <div
+                  className={cn(
+                    "hidden shrink-0 items-center gap-2.5 rounded-xl border border-amber-300/80 bg-gradient-to-r from-amber-50 via-amber-100/70 to-orange-50 px-3 py-2 shadow-[0_6px_24px_rgba(245,158,11,0.22)] ring-1 ring-amber-200/70 sm:inline-flex",
+                    collection.lockerSubmittedAt && "ring-2 ring-amber-300/50",
+                  )}
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-[0_4px_14px_rgba(245,158,11,0.35)]">
+                    <Archive className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-800/80">
+                      Locker file number
+                    </p>
+                    <p className="font-mono text-base font-bold tracking-wide text-amber-950">
+                      {lockerFileNumber}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="hidden items-center gap-1 md:flex">
                 {statusSteps.map((step, i) => {
                   const isStepCompleted =
@@ -814,58 +875,56 @@ export default function CollectionDetailPage() {
         />
 
         <Card>
-          <CardHeader className="border-b py-3">
-            <CardTitle className="flex items-center gap-2 text-base">
+          <CardHeader className="border-b py-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="h-4 w-4" />
               Document checklist
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               {docsOnFile} of {allDocuments.length} documents on file across all
               events (
               {getCollectionDocumentProgress(collection.cumulativeReceived).percent}
               %)
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 pt-3">
-            <div className="max-h-[360px] space-y-1.5 overflow-y-auto">
+          <CardContent className="p-3 pt-2">
+            <div className="space-y-1">
               {allDocuments.map((item) => {
                 const label =
                   getDocumentTypeConfig(item.docType)?.displayName ??
                   item.docType;
+                const docStyles = getDocumentChecklistStyles(item.docType);
                 return (
                   <div
                     key={item.docType}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg border px-2.5 py-2",
-                      item.isReceived
-                        ? "border-border bg-muted/40"
-                        : "border-border bg-background",
+                      "flex items-center justify-between gap-2 rounded-md border px-2 py-1",
+                      docStyles.row,
                     )}
                   >
-                    <span
+                    <Badge
+                      variant="outline"
                       className={cn(
-                        "min-w-0 flex-1 text-sm",
-                        item.isReceived
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground",
+                        "min-w-0 max-w-[70%] truncate px-2 py-0.5 text-[11px] font-semibold",
+                        docStyles.chip,
                       )}
                     >
                       {label}
-                    </span>
+                    </Badge>
                     {item.isReceived ? (
                       <Badge
                         variant="outline"
-                        className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                        className="ml-auto h-5 shrink-0 gap-0.5 border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700"
                       >
-                        <Check className="h-3 w-3" />
+                        <Check className="h-2.5 w-2.5" />
                         Received
                       </Badge>
                     ) : (
                       <Badge
                         variant="outline"
-                        className="shrink-0 gap-1 border-destructive/30 bg-destructive/10 text-destructive"
+                        className="ml-auto h-5 shrink-0 gap-0.5 border-destructive/30 bg-destructive/10 px-1.5 py-0 text-[10px] text-destructive"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-2.5 w-2.5" />
                         Not uploaded
                       </Badge>
                     )}
@@ -925,28 +984,95 @@ export default function CollectionDetailPage() {
 
         {/* ── Courier History ── */}
         {collection.candidateId && (
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="border-b border-slate-100 py-3 px-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-teal-600" />
-                  <CardTitle className="text-sm font-semibold">
-                    Courier History
-                  </CardTitle>
+          <Card className="overflow-hidden border-teal-100 shadow-md">
+            <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15">
+                    <History className="h-4 w-4 text-white" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-sm font-semibold text-white">
+                      Courier history
+                    </CardTitle>
+                    <CardDescription className="text-[11px] text-teal-100">
+                      Document movement for this candidate
+                    </CardDescription>
+                  </div>
                 </div>
-                <Button variant="link" size="sm" className="h-auto p-0" asChild>
-                  <Link
-                    to={`/courier-management/candidates/${collection.candidateId}`}
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {courierTotalLegs > 0 ? (
+                    <>
+                      <Badge className="border-white/20 bg-white/10 text-[10px] text-white hover:bg-white/10">
+                        <Route className="mr-1 h-2.5 w-2.5" />
+                        {courierTotalLegs} leg{courierTotalLegs !== 1 ? "s" : ""}
+                      </Badge>
+                      {courierInTransitLegs > 0 ? (
+                        <Badge className="border-amber-200/30 bg-amber-400/20 text-[10px] text-amber-50 hover:bg-amber-400/20">
+                          {courierInTransitLegs} in transit
+                        </Badge>
+                      ) : null}
+                    </>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-7 gap-1 rounded-lg bg-white px-2.5 text-[11px] text-teal-700 hover:bg-teal-50"
+                    asChild
                   >
-                    View courier details
-                  </Link>
-                </Button>
+                    <Link
+                      to={`/courier-management/candidates/${collection.candidateId}`}
+                    >
+                      View details
+                      <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                    </Link>
+                  </Button>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="p-4">
+            </div>
+
+            {courierTotalLegs > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-border/60 bg-muted/10 px-4 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Timeline
+                </span>
+                <Badge
+                  variant="outline"
+                  className="h-5 border-emerald-200 bg-emerald-50 px-1.5 py-0 text-[10px] text-emerald-700"
+                >
+                  <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
+                  {courierReceivedLegs} received
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "h-5 px-1.5 py-0 text-[10px]",
+                    courierInTransitLegs > 0
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-border bg-background text-muted-foreground",
+                  )}
+                >
+                  <Clock className="mr-1 h-2.5 w-2.5" />
+                  {courierInTransitLegs} pending
+                </Badge>
+                {courierPipeline?.currentLocationHint ? (
+                  <Badge
+                    variant="outline"
+                    className="ml-auto max-w-[200px] truncate border-teal-200 bg-teal-50 px-1.5 py-0 text-[10px] text-teal-700"
+                  >
+                    <MapPin className="mr-1 h-2.5 w-2.5 shrink-0" />
+                    {courierPipeline.currentLocationHint}
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
+
+            <CardContent className="bg-gradient-to-b from-muted/10 to-background p-4">
               <CandidateCourierPipeline
-                legs={courierPipelineData?.data?.legs ?? []}
+                legs={courierPipeline?.legs ?? []}
                 variant="compact"
+                order="newest-first"
               />
             </CardContent>
           </Card>

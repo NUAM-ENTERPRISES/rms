@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -23,6 +24,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useCan } from "@/hooks/useCan";
 import { cn } from "@/lib/utils";
+import { useGetCandidateByIdQuery } from "@/features/candidates/api";
 import { SelectedCandidateSummary } from "@/features/original-document-collections/components/SelectedCandidateSummary";
 import { useGetCandidateCourierPipelineQuery } from "../api";
 import { CandidateCourierPipeline } from "../components/CandidateCourierPipeline";
@@ -39,7 +41,18 @@ export default function CandidateCourierPipelinePage() {
     { skip: !candidateId },
   );
 
+  const { data: candidate } = useGetCandidateByIdQuery(candidateId, {
+    skip: !candidateId,
+  });
+
   const pipeline = data?.data;
+  const candidateName =
+    candidate?.name?.trim() ||
+    [candidate?.firstName, candidate?.lastName].filter(Boolean).join(" ") ||
+    "Candidate";
+  const candidateInitials =
+    `${candidate?.firstName?.charAt(0) ?? ""}${candidate?.lastName?.charAt(0) ?? ""}`.toUpperCase() ||
+    "?";
   const totalLegs = pipeline?.totalLegs ?? 0;
   const receivedLegs = pipeline?.receivedLegs ?? 0;
   const progress =
@@ -81,28 +94,110 @@ export default function CandidateCourierPipelinePage() {
           </Link>
         </Button>
 
-        <div className="overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 via-background to-background p-4 sm:p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-100">
-                  <Truck className="h-5 w-5 text-teal-600" />
-                </span>
-                Candidate Courier Details
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Profile and document movement history for this candidate
-              </p>
+        <div className="relative overflow-hidden rounded-xl border border-teal-200/60 shadow-sm">
+          <span
+            className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-teal-400/20 blur-2xl"
+            aria-hidden="true"
+          />
+          <span
+            className="pointer-events-none absolute -bottom-12 -left-10 h-32 w-32 rounded-full bg-emerald-400/15 blur-2xl"
+            aria-hidden="true"
+          />
+
+          <div className="relative bg-gradient-to-br from-slate-950 via-teal-950 to-emerald-950 px-4 py-3 sm:px-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="relative shrink-0">
+                  <Avatar className="relative h-10 w-10 border border-white/20 shadow-sm">
+                    <AvatarImage
+                      src={candidate?.profileImage || undefined}
+                      alt={candidateName}
+                    />
+                    <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-[10px] font-semibold text-white">
+                      {candidateInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-md border border-white/20 bg-teal-600 text-white">
+                    <Truck className="h-2.5 w-2.5" aria-hidden="true" />
+                  </span>
+                </div>
+
+                <div className="min-w-0 space-y-1.5">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-200/80">
+                      Courier pipeline
+                    </p>
+                    <h1 className="truncate text-base font-semibold text-white sm:text-lg">
+                      {candidateName}
+                    </h1>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {candidate?.candidateCode ? (
+                      <Badge className="border-white/15 bg-white/10 px-1.5 py-0 text-[10px] text-white hover:bg-white/10">
+                        {candidate.candidateCode}
+                      </Badge>
+                    ) : null}
+                    <Badge className="border-teal-300/25 bg-teal-500/15 px-1.5 py-0 text-[10px] text-teal-50 hover:bg-teal-500/15">
+                      <Route className="mr-1 h-2.5 w-2.5" />
+                      {totalLegs} leg{totalLegs !== 1 ? "s" : ""}
+                    </Badge>
+                    <Badge className="border-emerald-300/25 bg-emerald-500/15 px-1.5 py-0 text-[10px] text-emerald-50 hover:bg-emerald-500/15">
+                      <CheckCircle2 className="mr-1 h-2.5 w-2.5" />
+                      {receivedLegs} received
+                    </Badge>
+                    <Badge
+                      className={cn(
+                        "px-1.5 py-0 text-[10px] hover:bg-amber-500/15",
+                        inTransitLegs > 0
+                          ? "border-amber-300/30 bg-amber-500/15 text-amber-50"
+                          : "border-white/15 bg-white/10 text-white/70",
+                      )}
+                    >
+                      <Clock className="mr-1 h-2.5 w-2.5" />
+                      {inTransitLegs} in transit
+                    </Badge>
+                    {pipeline?.currentLocationHint ? (
+                      <Badge className="max-w-[180px] truncate border-white/15 bg-white/10 px-1.5 py-0 text-[10px] text-white hover:bg-white/10">
+                        <MapPin className="mr-1 h-2.5 w-2.5 shrink-0" />
+                        {pipeline.currentLocationHint}
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:shrink-0">
+                <div className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-sm sm:min-w-[160px] sm:flex-none">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-teal-100/70">
+                        Progress
+                      </p>
+                      <p className="text-sm font-bold text-white">{progress}%</p>
+                    </div>
+                    <p className="truncate text-[10px] text-teal-100/70">
+                      {receivedLegs}/{totalLegs}
+                    </p>
+                  </div>
+                  <Progress
+                    value={progress}
+                    className="mt-1.5 h-1 bg-white/10 [&>div]:bg-gradient-to-r [&>div]:from-teal-300 [&>div]:to-emerald-400"
+                  />
+                </div>
+
+                {/* {canWrite ? (
+                  <Button
+                    size="sm"
+                    className="shrink-0 gap-1.5 rounded-lg bg-white px-3 text-teal-800 hover:bg-teal-50"
+                    onClick={handleAddLeg}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New leg
+                  </Button>
+                ) : null} */}
+              </div>
             </div>
-            {canWrite && (
-              <Button
-                className="gap-2 rounded-xl bg-teal-600 hover:bg-teal-700"
-                onClick={handleAddLeg}
-              >
-                <Plus className="h-4 w-4" />
-                New leg
-              </Button>
-            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, Eye, Loader2 } from "lucide-react";
+import { Calendar, CheckCircle2, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
 } from "../constants";
 import type { CourierShipment } from "../types";
 import { MarkReceivedModal } from "./MarkReceivedModal";
+import { ShipmentStatusBadge } from "./ShipmentStatusBadge";
 
 interface CourierLegActionsProps {
   leg: CourierShipment;
@@ -50,16 +51,6 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
   const isInTransit = leg.status === SHIPMENT_STATUS.IN_TRANSIT;
   const hasPdf = Boolean(leg.mergedDocument?.fileUrl);
   const canMarkReceived = canWrite && isInTransit;
-
-  if (
-    !hasPdf &&
-    !(canWrite && isDraft) &&
-    !canMarkReceived &&
-    !leg.lockerFileNumber &&
-    !(leg.sentAt && !isDraft)
-  ) {
-    return null;
-  }
 
   const handleDispatch = async () => {
     try {
@@ -97,21 +88,52 @@ export function CourierLegActions({ leg }: CourierLegActionsProps) {
 
   return (
     <div className="space-y-3 border-t pt-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Timeline
+          </p>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            {leg.sentAt && leg.status !== SHIPMENT_STATUS.DRAFT && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3 w-3 shrink-0" />
+                <span>
+                  Sent {format(new Date(leg.sentAt), "dd MMM yyyy")}
+                  {leg.sentBy?.name && ` · ${leg.sentBy.name}`}
+                </span>
+              </div>
+            )}
+            {leg.status === SHIPMENT_STATUS.RECEIVED && leg.receivedAt && (
+              <div className="flex items-center gap-1.5 text-emerald-700">
+                <CheckCircle2 className="h-3 w-3 shrink-0" />
+                <span>
+                  Received {format(new Date(leg.receivedAt), "dd MMM yyyy")}
+                  {leg.receivedBy?.name && ` · ${leg.receivedBy.name}`}
+                  {leg.receivedByName &&
+                    !leg.receivedBy?.name &&
+                    ` · ${leg.receivedByName}`}
+                </span>
+              </div>
+            )}
+            {!leg.sentAt && !leg.receivedAt && <span>—</span>}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Status
+          </p>
+          <ShipmentStatusBadge status={leg.status} />
+        </div>
+      </div>
+
       {leg.lockerFileNumber && (
         <p className="text-xs text-muted-foreground">
           Locker file: <span className="font-medium">{leg.lockerFileNumber}</span>
         </p>
       )}
 
-      {leg.sentAt && leg.status !== SHIPMENT_STATUS.DRAFT && (
-        <p className="text-xs text-muted-foreground">
-          Sent {format(new Date(leg.sentAt), "PPp")}
-          {leg.sentBy?.name && ` by ${leg.sentBy.name}`}
-        </p>
-      )}
-
       {(hasPdf || canMarkReceived) && (
-        <div className="flex flex-col items-start gap-2">
+        <div className="flex flex-wrap items-center gap-1">
           {hasPdf && (
             <Button
               variant="outline"

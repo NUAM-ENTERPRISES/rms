@@ -81,31 +81,28 @@ vi.mock("../../components/DocumentSelectionChecklist", () => ({
   ),
 }));
 
-vi.mock("../../components/DispatchAnimationScene", () => ({
-  DispatchAnimationScene: ({
+vi.mock("../../components/DispatchSuccessAnimation", () => ({
+  DispatchSuccessAnimation: ({
     phase,
-    onThrowComplete,
-    onDriveComplete,
+    onComplete,
   }: {
-    phase: "throw" | "drive" | "success";
-    onThrowComplete: () => void;
-    onDriveComplete: () => void;
+    phase: "processing" | "success";
+    onComplete: () => void;
   }) => {
     useEffect(() => {
-      if (phase === "throw") onThrowComplete();
-    }, [phase, onThrowComplete]);
+      if (phase === "success") onComplete();
+    }, [phase, onComplete]);
 
-    useEffect(() => {
-      if (phase === "drive") onDriveComplete();
-    }, [phase, onDriveComplete]);
-
-    return <div>ANIMATION</div>;
+    return <div>{phase === "success" ? "SUCCESS" : "PROCESSING"}</div>;
   },
 }));
 
 vi.mock("../../api", () => {
   const createShipment = vi.fn().mockReturnValue({
-    unwrap: () => Promise.resolve({ data: { id: "ship-1" } }),
+    unwrap: () =>
+      Promise.resolve({
+        data: { id: "ship-1", legNumber: "L-1", candidateId: "cand-1" },
+      }),
   });
   const dispatchShipment = vi.fn().mockReturnValue({
     unwrap: () => Promise.resolve({ data: {} }),
@@ -138,8 +135,8 @@ vi.mock("@/features/candidates/api", () => ({
   }),
 }));
 
-describe("CreateShipmentPage dispatch animation", () => {
-  it("auto-closes the confirm modal after dispatch animation completes", async () => {
+describe("CreateShipmentPage dispatch success animation", () => {
+  it("shows processing then success and auto-closes the confirm modal", async () => {
     const user = userEvent.setup();
 
     const store = configureStore({
@@ -167,17 +164,13 @@ describe("CreateShipmentPage dispatch animation", () => {
     await user.click(screen.getByRole("button", { name: /Dispatch Courier/i }));
     expect(screen.getByText(/Confirm courier dispatch/i)).toBeInTheDocument();
 
-    vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: /^Dispatch$/i }));
-    expect(screen.getByText("ANIMATION")).toBeInTheDocument();
+    expect(await screen.findByText("SUCCESS")).toBeInTheDocument();
 
     await act(async () => {
-      vi.advanceTimersByTime(10_050);
+      await Promise.resolve();
     });
 
     expect(screen.queryByText(/Confirm courier dispatch/i)).not.toBeInTheDocument();
-
-    vi.useRealTimers();
   });
 });
-
