@@ -2,12 +2,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Download, FileStack, Archive } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Download, FileStack, Archive, Calendar, Send, Edit3 } from "lucide-react";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo } from "react";
+import { DatePicker } from "@/components/molecules/DatePicker";
+import { Label } from "@/components/ui/label";
+import { format } from "date-fns";
+import { EditReceivedDateModal } from "@/components/EditReceivedDateModal";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
+const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
+const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
 const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
@@ -17,7 +23,9 @@ import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsContro
 import { getUploadErrorMessage } from "@/lib/document-upload";
 
 const DOCUMENT_ORIGINAL_RECEIVED_LABEL = "Document Original Received";
-import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useReuploadProcessingDocumentMutation } from "@/services/processingApi";
+const AGENT_SUBMIT_HARD_COPY_DATE_LABEL = "Agent Submit Hard Copy Date";
+const AGENT_SUBMIT_HARD_COPY_STEP_LABEL = "Agent Submit Hard Copy";
+import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useReuploadProcessingDocumentMutation, useSubmitHrdDateMutation, useSetProcessingDocumentReceivedDateMutation } from "@/services/processingApi";
 
 interface DocumentReceivedModalProps {
   isOpen: boolean;
@@ -52,6 +60,18 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
+  const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [setProcessingDocumentReceivedDate, { isLoading: isSettingReceivedDate }] = useSetProcessingDocumentReceivedDateMutation();
+
+  const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [editSubmitOpen, setEditSubmitOpen] = useState(false);
+  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+
+  const [isEditReceivedDateModalOpen, setIsEditReceivedDateModalOpen] = useState(false);
+  const [editReceivedDateVerificationId, setEditReceivedDateVerificationId] = useState<string | null>(null);
+  const [editReceivedDateDocumentLabel, setEditReceivedDateDocumentLabel] = useState<string>("");
+  const [editReceivedDateValue, setEditReceivedDateValue] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -162,6 +182,36 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     setReplaceOldDocumentId(oldDocumentId ?? null);
     setReplaceCandidateProjectMapId(candidateProjectMapId ?? null);
     setUploadModalOpen(true);
+  };
+
+  const handleOpenEditReceivedDate = (verificationId: string, label: string, currentDate?: string | null) => {
+    setEditReceivedDateVerificationId(verificationId);
+    setEditReceivedDateDocumentLabel(label);
+    setEditReceivedDateValue(currentDate ? new Date(currentDate) : undefined);
+    setIsEditReceivedDateModalOpen(true);
+  };
+
+  const handleSaveReceivedDate = async (date: Date) => {
+    if (!editReceivedDateVerificationId) {
+      toast.error("Missing document verification ID");
+      return false;
+    }
+
+    try {
+      await setProcessingDocumentReceivedDate({
+        verificationId: editReceivedDateVerificationId,
+        receivedAt: date.toISOString(),
+        processingId,
+      }).unwrap();
+      toast.success("Agent submit hard copy date updated");
+      setIsEditReceivedDateModalOpen(false);
+      await refetchRequirements();
+      return true;
+    } catch (err: any) {
+      console.error("Set received date failed", err);
+      toast.error(err?.data?.message || "Failed to set agent submit hard copy date");
+      return false;
+    }
   };
 
   const handleUploadFile = async (file: File) => {
@@ -318,10 +368,32 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     if (!activeStep?.id) return;
     if (statMissing > 0) { toast.error('Cannot complete — Missing mandatory docs'); return; }
     if (!hasSubmittedAt) {
-      toast.error(`Cannot complete — set document original received date on the step card first`);
+      toast.error(`Cannot complete — ${AGENT_SUBMIT_HARD_COPY_DATE_LABEL} not set`);
       return;
     }
     setCompleteModalOpen(true);
+  };
+
+  const handleSubmitDate = async (date?: Date): Promise<boolean> => {
+    if (!activeStep?.id) {
+      toast.error('No active step');
+      return false;
+    }
+    const payloadDate = date ?? submissionDate;
+    if (!payloadDate) {
+      toast.error('Please select a date and time');
+      return false;
+    }
+    try {
+      await submitHrdDate({ stepId: activeStep.id, submittedAt: payloadDate.toISOString() }).unwrap();
+      toast.success(`${AGENT_SUBMIT_HARD_COPY_DATE_LABEL} saved successfully`);
+      try { await refetchRequirements(); } catch { /* ignore */ }
+      return true;
+    } catch (err: any) {
+      console.error('Submit date failed', err);
+      toast.error(err?.data?.message || `Failed to save ${AGENT_SUBMIT_HARD_COPY_DATE_LABEL}`);
+      return false;
+    }
   };
 
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
@@ -390,6 +462,73 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                 <div className="bg-slate-50 rounded-lg p-3 text-center border"><div className="text-2xl font-black text-slate-700">{statTotal}</div><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div></div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100"><div className="text-2xl font-black text-emerald-600">{statVerified}</div><div className="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">Verified</div></div>
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100"><div className="text-2xl font-black text-amber-600">{statMissing}</div><div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div></div>
+              </div>
+
+              <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
+                <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5" />
+                    {AGENT_SUBMIT_HARD_COPY_DATE_LABEL} & Time
+                  </h4>
+                </div>
+                <div className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <Label className="text-xs text-slate-600 mb-1 block">Select agent submit hard copy date and time</Label>
+                      {activeStep?.submittedAt ? (
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-slate-700 font-semibold">{format(new Date(activeStep.submittedAt), "PPP p")}</div>
+                          {!activeStep?.completedAt && !isStepCancelled && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditDate(activeStep.submittedAt ? new Date(activeStep.submittedAt) : undefined);
+                                setEditSubmitOpen(true);
+                              }}
+                              className="h-8"
+                            >
+                              Edit
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <DatePicker
+                            value={submissionDate}
+                            onChange={setSubmissionDate}
+                            placeholder="Pick date and time"
+                            disabled={Boolean(activeStep?.completedAt) || isStepCancelled}
+                            className="w-full sm:min-w-[220px] h-8"
+                            compact
+                          />
+                          {!activeStep?.submittedAt && !activeStep?.completedAt && !isStepCancelled && (
+                            <div className="text-xs text-slate-500 mt-2">
+                              Please set an agent submit hard copy date before marking this step complete.
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center">
+                      {!activeStep?.submittedAt && !activeStep?.completedAt && !isStepCancelled && (
+                        <Button
+                          size="sm"
+                          onClick={() => setSubmitConfirmOpen(true)}
+                          disabled={isSubmittingDate || !submissionDate || Boolean(activeStep?.completedAt)}
+                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          {isSubmittingDate ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5 mr-1" />
+                          )}
+                          {AGENT_SUBMIT_HARD_COPY_DATE_LABEL}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="overflow-hidden rounded-lg border border-teal-200 bg-gradient-to-r from-teal-50/80 to-white">
@@ -470,7 +609,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                       processingDocsByDocType={processingDocsByDocType}
                       verifyProcessingDocument={verifyProcessingDocument}
                       refetch={refetchRequirements}
-                      stepLabel={DOCUMENT_ORIGINAL_RECEIVED_LABEL}
+                      stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
                       disabled={isVerifying}
                     />
                   )}
@@ -488,6 +627,17 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                     const hasProcessing = !!processingDoc;
                     const hasCandidate = !!candidateDoc;
 
+                    const existingReceivedAt =
+                      processingDoc?.receivedAt ||
+                      processingDoc?.verification?.receivedAt ||
+                      candidateDoc?.receivedAt ||
+                      candidateDoc?.verifications?.[0]?.receivedAt;
+
+                    const verificationId =
+                      processingDoc?.verification?.id ||
+                      candidateDoc?.verifications?.[0]?.id ||
+                      null;
+
                     return (
                       <div key={req.docType} className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${processingVerified ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : hasRejected ? 'border-rose-200 bg-rose-50/40 shadow-sm' : 'border-slate-200 bg-white'}`}>
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || (candidateDoc?.status === 'verified') ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'}`}>
@@ -499,6 +649,25 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                             <span className="font-semibold text-sm text-slate-800 truncate">{req.label}</span>
                             {req.mandatory ? <Badge className="text-[9px] bg-rose-100 text-rose-600 px-1.5 py-0 border-0">Required</Badge> : <Badge className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0 border-0">Optional</Badge>}
                           </div>
+                          {(hasCandidate || hasProcessing) && (
+                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                              <span>
+                                Agent submit hard copy date:{" "}
+                                {existingReceivedAt ? format(new Date(existingReceivedAt), "PPP") : "Not set"}
+                              </span>
+                              {verificationId && !isStepCompleted && !isStepCancelled && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 p-0"
+                                  onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)}
+                                  title="Edit agent submit hard copy date"
+                                >
+                                  <Edit3 className="h-2 w-2" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -573,6 +742,28 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={async () => { try { await refetchRequirements(); toast.success('Refreshed'); } catch (err) { toast.error('Refresh failed'); } }}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh</Button>
 
+              <React.Suspense fallback={null}>
+                <ConfirmSubmitDateModal
+                  isOpen={submitConfirmOpen}
+                  onClose={() => setSubmitConfirmOpen(false)}
+                  date={submissionDate}
+                  onConfirm={async () => { const ok = await handleSubmitDate(); if (ok) setSubmitConfirmOpen(false); }}
+                  isSubmitting={isSubmittingDate}
+                  stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
+                />
+              </React.Suspense>
+
+              <React.Suspense fallback={null}>
+                <ConfirmEditSubmitDateModal
+                  isOpen={editSubmitOpen}
+                  onClose={() => setEditSubmitOpen(false)}
+                  existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
+                  onConfirm={async (newDate: Date) => handleSubmitDate(newDate)}
+                  isSubmitting={isSubmittingDate}
+                  stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
+                />
+              </React.Suspense>
+
               <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>{isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step</Button>
 
               <Button size="sm" onClick={handleMarkComplete} disabled={isCompletingStep || statMissing > 0 || !hasSubmittedAt}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Step Complete'}</Button>
@@ -593,6 +784,16 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
           isUploading={isUploading || isReusing}
         />
       </React.Suspense>
+
+      <EditReceivedDateModal
+        isOpen={isEditReceivedDateModalOpen}
+        onClose={() => setIsEditReceivedDateModalOpen(false)}
+        documentLabel={editReceivedDateDocumentLabel}
+        currentDate={editReceivedDateValue ? editReceivedDateValue.toISOString() : undefined}
+        onConfirm={handleSaveReceivedDate}
+        isSaving={isSettingReceivedDate}
+        dateLabel="agent submit hard copy"
+      />
 
       <React.Suspense fallback={null}>
         <VerifyProcessingDocumentModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} documentId={verifyDocId} documentLabel={verifyDocLabel} processingStepId={activeStep?.id || ''} onConfirm={handleConfirmVerify} isVerifying={isVerifying} />

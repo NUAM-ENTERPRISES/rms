@@ -273,8 +273,6 @@ export default function ProcessingCandidateDetailsPage() {
           role={data.role}
           processingStatus={data.processingStatus}
           processingId={data.id}
-          fileNumber={data.fileNumber}
-          onEditFileNumber={() => setShowEditFileNumberModal(true)}
           recruiter={data.candidateProjectMap?.recruiter}
           originalDocumentCollection={data.originalDocumentCollection ?? null}
           documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
