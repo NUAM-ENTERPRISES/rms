@@ -16,6 +16,21 @@ import {
   filterProcessingStepsForSector,
   PROCESSING_STEP_SECTOR_MISMATCH_REASON,
 } from './processing-sector-steps';
+import { ADDRESS_TYPE_LABELS } from '../courier-shipments/constants/shipment-types';
+
+const COLLECTION_TYPE_LABELS: Record<string, string> = {
+  direct: 'Direct',
+  recruiter: 'Recruiter',
+  interview_coordinator: 'Interview Coordinator',
+  agent: 'Agent',
+  courier: 'Courier',
+};
+
+const DIRECT_OFFICE_LABELS: Record<string, string> = {
+  kochi: 'Kochi',
+  delhi: 'Delhi',
+  other: 'Other',
+};
 
 @Injectable()
 export class ProcessingService {
@@ -1010,6 +1025,7 @@ export class ProcessingService {
           email: pc.candidate?.email || null,
           mobileNumber: pc.candidate?.mobileNumber || null,
           countryCode: pc.candidate?.countryCode || null,
+          passportNumber: pc.candidate?.passportNumber || null,
         },
         project: {
           id: pc.project?.id || null,
@@ -1174,6 +1190,18 @@ export class ProcessingService {
       return rest;
     })() : null;
 
+    const collection = await this.prisma.originalDocumentCollection.findUnique({
+      where: { candidateId: pc.candidate.id },
+      select: {
+        id: true,
+        status: true,
+        lockerFileNumber: true,
+        mergedDocument: {
+          select: { id: true, fileName: true, fileUrl: true, mimeType: true },
+        },
+      },
+    });
+
     return {
       isDocumentReceivedCompleted,
       step,
@@ -1201,6 +1229,16 @@ export class ProcessingService {
       requiredDocuments,
       processing_documents,
       candidateDocuments,
+      originalDocumentCollection: collection
+        ? {
+            id: collection.id,
+            status: collection.status,
+            lockerFileNumber: collection.lockerFileNumber,
+            mergedDocument: collection.mergedDocument?.fileUrl
+              ? collection.mergedDocument
+              : null,
+          }
+        : null,
       counts: {
         totalConfigured: requiredDocuments.length,
         totalMandatory: mandatoryDocTypes.length,
@@ -2798,8 +2836,8 @@ export class ProcessingService {
       processingCandidate: {
         id: pc.id,
         processingStatus: pc.processingStatus,
-        candidate: { id: pc.candidate?.id || null, firstName: pc.candidate?.firstName || null, lastName: pc.candidate?.lastName || null, email: pc.candidate?.email || null, mobileNumber: pc.candidate?.mobileNumber || null, countryCode: pc.candidate?.countryCode || null },
-        project: { id: pc.project?.id || null, title: pc.project?.title || null, countryCode: pc.project?.countryCode || null, description: pc.project?.description || null, clientId: pc.project?.clientId || null, teamId: pc.project?.teamId || null },
+        candidate: { id: pc.candidate?.id || null, firstName: pc.candidate?.firstName || null, lastName: pc.candidate?.lastName || null, email: pc.candidate?.email || null, mobileNumber: pc.candidate?.mobileNumber || null, countryCode: pc.candidate?.countryCode || null, licensingExam: pc.candidate?.licensingExam || null },
+        project: { id: pc.project?.id || null, title: pc.project?.title || null, countryCode: pc.project?.countryCode || null, description: pc.project?.description || null, clientId: pc.project?.clientId || null, teamId: pc.project?.teamId || null, licensingExam: pc.project?.licensingExam || null },
         role: pc.role ? { id: pc.role.id, designation: pc.role.designation, roleCatalog: pc.role.roleCatalog || null } : null,
       },
       requiredDocuments,
@@ -5070,9 +5108,41 @@ export class ProcessingService {
       progressCount = 100;
     }
 
+    const collection = await this.prisma.originalDocumentCollection.findUnique({
+      where: { candidateId: processingCandidate.candidateId },
+      select: {
+        id: true,
+        status: true,
+        lockerFileNumber: true,
+        mergedDocument: {
+          select: { id: true, fileName: true, fileUrl: true, mimeType: true },
+        },
+      },
+    });
+
+    const documentReceivedStep = allStepsForProgress.find(
+      (step) => step.template.key === 'document_received',
+    );
+
     return {
       ...processingCandidate,
       progressCount,
+      originalDocumentCollection: collection
+        ? {
+            id: collection.id,
+            status: collection.status,
+            lockerFileNumber: collection.lockerFileNumber,
+            mergedDocument: collection.mergedDocument?.fileUrl
+              ? collection.mergedDocument
+              : null,
+          }
+        : null,
+      documentReceivedStep: documentReceivedStep
+        ? {
+            status: documentReceivedStep.status,
+            templateKey: documentReceivedStep.template.key,
+          }
+        : null,
     };
   }
 
@@ -5242,6 +5312,173 @@ export class ProcessingService {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  /**
+   * Document collection intake history for a processing candidate (read-only proxy).
+   */
+  async getDocumentCollectionHistory(
+    processingId: string,
+    opts?: { page?: number; limit?: number },
+  ) {
+    const page = Math.max(1, opts?.page || 1);
+    const limit = Math.min(100, Math.max(1, opts?.limit || 10));
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingId },
+      select: { candidateId: true },
+    });
+    if (!pc) throw new NotFoundException(`Processing record with ID ${processingId} not found`);
+
+    const collection = await this.prisma.originalDocumentCollection.findUnique({
+      where: { candidateId: pc.candidateId },
+      select: {
+        id: true,
+        status: true,
+        lockerFileNumber: true,
+      },
+    });
+
+    if (!collection) {
+      return {
+        items: [],
+        pagination: { page, limit, total: 0, totalPages: 1 },
+      };
+    }
+
+    const total = await this.prisma.originalDocumentCollectionEvent.count({
+      where: { collectionId: collection.id },
+    });
+
+    const chronologicalEvents =
+      await this.prisma.originalDocumentCollectionEvent.findMany({
+        where: { collectionId: collection.id },
+        orderBy: { collectedAt: 'asc' },
+        select: { id: true },
+      });
+    const eventNumberById = new Map(
+      chronologicalEvents.map((event, index) => [event.id, index + 1]),
+    );
+
+    const events = await this.prisma.originalDocumentCollectionEvent.findMany({
+      where: { collectionId: collection.id },
+      include: {
+        collectedBy: { select: { id: true, name: true } },
+        agent: { select: { id: true, name: true } },
+        items: true,
+        mergedDocument: { select: { id: true, fileName: true } },
+      },
+      orderBy: { collectedAt: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const items = events.map((event) => ({
+      id: event.id,
+      eventNumber: eventNumberById.get(event.id) ?? 0,
+      collectionType: event.collectionType,
+      collectionTypeLabel:
+        COLLECTION_TYPE_LABELS[event.collectionType] ?? event.collectionType,
+      sourceDetail: this.formatCollectionEventSourceDetail(event),
+      documentCount: event.items.filter((item) => item.isReceived).length,
+      lockerFileNumber: collection.lockerFileNumber,
+      collectionStatus: collection.status,
+      collectedBy: event.collectedBy,
+      collectedAt: event.collectedAt,
+      hasMergedScan: Boolean(event.mergedDocumentId),
+      mergedFileName: event.mergedDocument?.fileName ?? null,
+    }));
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  /**
+   * Courier leg history for a processing candidate (read-only proxy).
+   */
+  async getCourierHistory(processingId: string, opts?: { page?: number; limit?: number }) {
+    const page = Math.max(1, opts?.page || 1);
+    const limit = Math.min(100, Math.max(1, opts?.limit || 10));
+
+    const pc = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingId },
+      select: { candidateId: true },
+    });
+    if (!pc) throw new NotFoundException(`Processing record with ID ${processingId} not found`);
+
+    const where = { candidateId: pc.candidateId };
+    const total = await this.prisma.courierShipment.count({ where });
+
+    const legs = await this.prisma.courierShipment.findMany({
+      where,
+      include: {
+        sentBy: { select: { id: true, name: true } },
+      },
+      orderBy: { legNumber: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    const items = legs.map((leg) => ({
+      id: leg.id,
+      legNumber: leg.legNumber,
+      purposeType: leg.purposeType,
+      deliveryMode: leg.deliveryMode,
+      status: leg.status,
+      trackingId: leg.trackingId,
+      courierPartner: leg.courierPartner,
+      fromAddressLabel:
+        ADDRESS_TYPE_LABELS[leg.fromAddressType] ?? leg.fromAddressType,
+      toAddressLabel: ADDRESS_TYPE_LABELS[leg.toAddressType] ?? leg.toAddressType,
+      sentAt: leg.sentAt,
+      receivedAt: leg.receivedAt,
+      sentBy: leg.sentBy,
+    }));
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  private formatCollectionEventSourceDetail(event: {
+    collectionType: string;
+    directOffice?: string | null;
+    directOfficeOther?: string | null;
+    interviewVenue?: string | null;
+    agent?: { name: string } | null;
+    agentNameManual?: string | null;
+    courierPartner?: string | null;
+    trackingNumber?: string | null;
+  }): string {
+    switch (event.collectionType) {
+      case 'direct':
+        return event.directOffice === 'other'
+          ? (event.directOfficeOther ?? 'Other')
+          : (DIRECT_OFFICE_LABELS[event.directOffice ?? ''] ??
+              event.directOffice ??
+              '');
+      case 'agent':
+        return event.agent?.name ?? event.agentNameManual ?? '';
+      case 'courier':
+        return [event.courierPartner, event.trackingNumber].filter(Boolean).join(' / ');
+      case 'interview_coordinator':
+        return event.interviewVenue ?? '';
+      default:
+        return event.interviewVenue ?? '';
+    }
   }
 
   /** Map dashboard tile step keys to DB `processingCandidate.step` values (supports aliases). */

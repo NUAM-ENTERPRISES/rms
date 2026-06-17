@@ -16,6 +16,8 @@ import {
   AssignmentCard,
   ProcessingStepsCard,
   ProcessingHistoryModal,
+  DocumentCollectionHistoryModal,
+  CourierHistoryModal,
   DocumentVerificationCard,
   ProcessingOfferLetterModal,
   DataFlowModal,
@@ -274,6 +276,8 @@ export default function ProcessingCandidateDetailsPage() {
           fileNumber={data.fileNumber}
           onEditFileNumber={() => setShowEditFileNumberModal(true)}
           recruiter={data.candidateProjectMap?.recruiter}
+          originalDocumentCollection={data.originalDocumentCollection ?? null}
+          documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
         />
 
         {/* If processing is cancelled, show a clear banner with cancellation reason */}
@@ -436,6 +440,8 @@ export default function ProcessingCandidateDetailsPage() {
             {/* History Modal Button + Processing Notes stacked */}
             <div className="flex flex-col gap-3">
               <ProcessingHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
+              <DocumentCollectionHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
+              <CourierHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
               
               {data.notes && (
                 <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-violet-50 to-indigo-50 border-l-4 border-l-violet-400 p-3">

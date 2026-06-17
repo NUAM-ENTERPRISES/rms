@@ -224,6 +224,53 @@ export class ProcessingController {
     };
   }
 
+  @Get('candidate/:processingId/document-collection-history')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get document collection intake history for a processing candidate',
+    description: 'Read-only proxy of original document collection events for the candidate linked to this processing record.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getDocumentCollectionHistory(
+    @Param('processingId') processingId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getDocumentCollectionHistory(processingId, {
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data,
+      message: 'Document collection history retrieved successfully',
+    };
+  }
+
+  @Get('candidate/:processingId/courier-history')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get courier leg history for a processing candidate',
+    description: 'Read-only proxy of courier shipment legs for the candidate linked to this processing record.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getCourierHistory(
+    @Param('processingId') processingId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getCourierHistory(processingId, { page, limit });
+    return {
+      success: true,
+      data,
+      message: 'Courier history retrieved successfully',
+    };
+  }
+
   @Get('candidate-history/:candidateId/:projectId/:roleCatalogId')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({

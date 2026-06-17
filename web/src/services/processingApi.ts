@@ -52,6 +52,40 @@ export interface ProcessingStep {
   updatedAt: string;
 }
 
+export interface ProcessingMergedCollectionDocument {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
+}
+
+export interface ProcessingOriginalDocumentCollectionSummary {
+  id: string;
+  status: string;
+  lockerFileNumber?: string | null;
+  mergedDocument?: ProcessingMergedCollectionDocument | null;
+}
+
+export interface DocumentReceivedRequirementsResponse {
+  isDocumentReceivedCompleted: boolean;
+  step: ProcessingStep | null;
+  activeStep?: ProcessingStep | null;
+  processingCandidate: Record<string, unknown>;
+  candidate?: Record<string, unknown>;
+  requiredDocuments: Array<Record<string, unknown>>;
+  processing_documents: unknown[];
+  candidateDocuments: unknown[];
+  uploads?: unknown[];
+  originalDocumentCollection: ProcessingOriginalDocumentCollectionSummary | null;
+  counts: {
+    totalConfigured: number;
+    totalMandatory: number;
+    uploadedCount: number;
+    verifiedCount: number;
+    missingCount: number;
+  };
+}
+
 export interface UpdateStepStatusRequest {
   status: "completed" | "in_progress" | "rejected" | "resubmission_requested";
   assignedTo?: string;
@@ -154,7 +188,7 @@ export const processingApi = baseApi.injectEndpoints({
 
     // Get Document Received requirements and uploads for a processing candidate (same shape as HRD)
     getDocumentReceivedRequirements: builder.query<
-      any,
+      DocumentReceivedRequirementsResponse,
       string
     >({
       query: (processingId) => `/processing/steps/${processingId}/document-received-requirements`,

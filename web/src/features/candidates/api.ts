@@ -643,6 +643,7 @@ export interface UpdateCandidateRequest {
   address?: string | null;
   addressPincode?: string | null;
   alternatePhone?: string | null;
+  passportNumber?: string | null;
 }
 
 export interface UpdateCandidateStatusRequest {

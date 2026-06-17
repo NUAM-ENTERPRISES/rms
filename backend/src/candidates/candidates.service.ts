@@ -3676,6 +3676,29 @@ export class CandidatesService {
     if (updateCandidateDto.alternatePhone !== undefined)
       updateData.alternatePhone =
         updateCandidateDto.alternatePhone?.trim() || null;
+    if (updateCandidateDto.passportNumber !== undefined) {
+      const normalizedPassport = normalizePassportNumber(
+        updateCandidateDto.passportNumber,
+      );
+      if (normalizedPassport && normalizedPassport.length < 3) {
+        throw new BadRequestException(
+          'Passport number must be at least 3 characters',
+        );
+      }
+      if (normalizedPassport) {
+        const passportConflict = await findExistingCandidateByPassport(
+          this.prisma,
+          normalizedPassport,
+          id,
+        );
+        if (passportConflict) {
+          throw new ConflictException(
+            `Candidate with passport number ${normalizedPassport} already exists`,
+          );
+        }
+      }
+      updateData.passportNumber = normalizedPassport;
+    }
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.agentId !== undefined) {

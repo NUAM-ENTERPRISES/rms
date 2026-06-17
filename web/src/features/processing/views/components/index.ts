@@ -6,6 +6,8 @@ export { ProcessingStepsCard } from "./ProcessingStepsCard";
 export type { OfferLetterStatus } from "./ProcessingStepsCard";
 export { ProcessingHistoryCard } from "./ProcessingHistoryCard";
 export { ProcessingHistoryModal } from "./ProcessingHistoryModal";
+export { DocumentCollectionHistoryModal } from "./DocumentCollectionHistoryModal";
+export { CourierHistoryModal } from "./CourierHistoryModal";
 export { DocumentVerificationCard } from "./DocumentVerificationCard";
 export { ProcessingOfferLetterModal } from "./ProcessingOfferLetterModal";
 export type { OfferLetterDocument, DocumentVerification } from "./ProcessingOfferLetterModal";

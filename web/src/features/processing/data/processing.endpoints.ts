@@ -20,7 +20,8 @@ type Paginated<T> = {
     page: number;
     limit: number;
     total: number;
-    pages: number;
+    pages?: number;
+    totalPages?: number;
   };
 };
 
@@ -377,6 +378,21 @@ export const processingApi = baseApi.injectEndpoints({
             order?: number;
           };
         };
+        originalDocumentCollection?: {
+          id: string;
+          status: string;
+          lockerFileNumber?: string | null;
+          mergedDocument?: {
+            id: string;
+            fileName: string;
+            fileUrl: string;
+            mimeType?: string;
+          } | null;
+        } | null;
+        documentReceivedStep?: {
+          status: string;
+          templateKey: string;
+        } | null;
       }>,
       string
     >({
@@ -464,6 +480,58 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingHistory", id: processingId },
       ],
     }),
+
+    getDocumentCollectionHistoryPaginated: builder.query<
+      ApiResponse<Paginated<{
+        id: string;
+        eventNumber: number;
+        collectionType: string;
+        collectionTypeLabel: string;
+        sourceDetail: string;
+        documentCount: number;
+        lockerFileNumber: string | null;
+        collectionStatus: string;
+        collectedBy: { id: string; name: string } | null;
+        collectedAt: string;
+        hasMergedScan: boolean;
+        mergedFileName: string | null;
+      }>>,
+      { processingId: string; page?: number; limit?: number }
+    >({
+      query: ({ processingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${processingId}/document-collection-history`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingHistory", id: `${processingId}-doc-collection` },
+      ],
+    }),
+
+    getCourierHistoryPaginated: builder.query<
+      ApiResponse<Paginated<{
+        id: string;
+        legNumber: number;
+        purposeType: string;
+        deliveryMode: string;
+        status: string;
+        trackingId: string | null;
+        courierPartner: string | null;
+        fromAddressLabel: string;
+        toAddressLabel: string;
+        sentAt: string | null;
+        receivedAt: string | null;
+        sentBy: { id: string; name: string } | null;
+      }>>,
+      { processingId: string; page?: number; limit?: number }
+    >({
+      query: ({ processingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${processingId}/courier-history`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingHistory", id: `${processingId}-courier` },
+      ],
+    }),
   }),
 });
 
@@ -482,5 +550,7 @@ export const {
   useGetCandidateHistoryQuery,
   useGetCandidateDocumentsQuery,
   useGetCandidateHistoryPaginatedQuery,
+  useGetDocumentCollectionHistoryPaginatedQuery,
+  useGetCourierHistoryPaginatedQuery,
   useGetCandidateProcessingDetailsQuery,
 } = processingApi;
