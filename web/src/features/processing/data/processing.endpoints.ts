@@ -34,6 +34,13 @@ export type ProcessingCandidatesQuery = {
   filterType?: "visa_stamped" | "total_processing";
   page?: number;
   limit?: number;
+  recruiterId?: string;
+  assignedToId?: string;
+  countryCodes?: string;
+  sector?: string;
+  fileNumber?: string;
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 export const processingApi = baseApi.injectEndpoints({
