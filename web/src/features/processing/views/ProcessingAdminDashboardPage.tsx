@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ import {
     Mail,
     Phone,
     ArrowUpRight,
-    FilterX,
+    SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
@@ -45,6 +45,15 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
 import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
 import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
+import { ProcessingAdvancedFiltersSheet } from "./components/ProcessingAdvancedFiltersSheet";
+import {
+  advancedFiltersToQueryParams,
+  countProcessingAdvancedFilters,
+  DEFAULT_PROCESSING_ADVANCED_FILTERS,
+  parseProcessingAdvancedFiltersFromSearchParams,
+  writeProcessingAdvancedFiltersToSearchParams,
+  type ProcessingAdvancedFilters,
+} from "../utils/processingListQuery";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -61,6 +70,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAppSelector((state) => state.auth);
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -87,24 +97,64 @@ export default function ProcessingAdminDashboardPage() {
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
+    const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+    const [advancedFilters, setAdvancedFilters] = useState<ProcessingAdvancedFilters>(() =>
+        parseProcessingAdvancedFiltersFromSearchParams(searchParams),
+    );
 
-    // API call for admin processing candidates
-    const adminQueryParams: any = {
-        search: debouncedSearch || undefined,
-        projectId: projectFilter === "all" ? undefined : projectFilter,
-        roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
-        page,
-        limit: pageSize,
+    const syncAdvancedFiltersToUrl = useCallback(
+        (nextFilters: ProcessingAdvancedFilters) => {
+            const params = new URLSearchParams(searchParams);
+            writeProcessingAdvancedFiltersToSearchParams(params, nextFilters);
+            setSearchParams(params, { replace: true });
+        },
+        [searchParams, setSearchParams],
+    );
+
+    const handleApplyAdvancedFilters = (nextFilters: ProcessingAdvancedFilters) => {
+        setAdvancedFilters(nextFilters);
+        syncAdvancedFiltersToUrl(nextFilters);
+        setPage(1);
     };
 
-    if (stepFilter) {
-        adminQueryParams.step = stepFilter;
-        adminQueryParams.filterType = "total_processing";
-    } else if (statusFilter === "all") {
-        adminQueryParams.filterType = "total_processing";
-    } else {
-        adminQueryParams.status = statusFilter;
-    }
+    const handleResetAdvancedFilters = () => {
+        setAdvancedFilters(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+        syncAdvancedFiltersToUrl(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+        setPage(1);
+    };
+
+    const advancedFilterCount = countProcessingAdvancedFilters(advancedFilters);
+
+    const adminQueryParams = useMemo(() => {
+        const params: Record<string, unknown> = {
+            search: debouncedSearch || undefined,
+            projectId: projectFilter === "all" ? undefined : projectFilter,
+            roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
+            page,
+            limit: pageSize,
+            ...advancedFiltersToQueryParams(advancedFilters),
+        };
+
+        if (stepFilter) {
+            params.step = stepFilter;
+            params.filterType = "total_processing";
+        } else if (statusFilter === "all") {
+            params.filterType = "total_processing";
+        } else {
+            params.status = statusFilter;
+        }
+
+        return params;
+    }, [
+        debouncedSearch,
+        projectFilter,
+        roleFilter,
+        page,
+        pageSize,
+        stepFilter,
+        statusFilter,
+        advancedFilters,
+    ]);
 
     const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesAdminQuery(adminQueryParams);
 
@@ -116,7 +166,7 @@ export default function ProcessingAdminDashboardPage() {
     // Pagination (driven by API when available)
     const totalItems = pagination?.total ?? candidates.length;
     const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
-    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, pageSize]);
+    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, pageSize, advancedFilters]);
     const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalItems);
 
@@ -313,13 +363,23 @@ export default function ProcessingAdminDashboardPage() {
                                         />
 
                                         <Button
+                                            type="button"
                                             variant="outline"
-                                            size="icon"
-                                            className="shrink-0 h-11 w-11 rounded-xl border-slate-200 hover:bg-slate-50"
-                                            onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}
-                                            title="Reset Filters"
+                                            className={cn(
+                                                "h-11 shrink-0 gap-2 rounded-xl border px-4 shadow-sm",
+                                                isAdvancedFiltersOpen || advancedFilterCount > 0
+                                                    ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                                            )}
+                                            onClick={() => setIsAdvancedFiltersOpen(true)}
                                         >
-                                            <FilterX className="h-4 w-4 text-slate-500" />
+                                            <SlidersHorizontal className="h-4 w-4" />
+                                            Filters
+                                            {advancedFilterCount > 0 ? (
+                                                <Badge className="border-0 bg-white/20 px-1.5 text-[10px] text-white">
+                                                    {advancedFilterCount}
+                                                </Badge>
+                                            ) : null}
                                         </Button>
                                     </div>
                                 </div>
@@ -498,6 +558,15 @@ export default function ProcessingAdminDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <ProcessingAdvancedFiltersSheet
+                isOpen={isAdvancedFiltersOpen}
+                onOpenChange={setIsAdvancedFiltersOpen}
+                filters={advancedFilters}
+                onApply={handleApplyAdvancedFilters}
+                onReset={handleResetAdvancedFilters}
+                showAssignedToFilter
+            />
         </Can>
     );
 }

@@ -73,4 +73,41 @@ export class QueryAllProcessingCandidatesDto {
   @IsNumber()
   @IsOptional()
   limit?: number = 10;
+
+  @ApiPropertyOptional({ description: 'Filter by recruiter user ID' })
+  @IsString()
+  @IsOptional()
+  recruiterId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by assigned processing team user ID (admin)' })
+  @IsString()
+  @IsOptional()
+  assignedToId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Comma-separated project country codes (ISO-2)',
+  })
+  @IsString()
+  @IsOptional()
+  countryCodes?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by project sector' })
+  @IsString()
+  @IsOptional()
+  sector?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by locker/file number (partial match)' })
+  @IsString()
+  @IsOptional()
+  fileNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Filter processing records updated on/after (ISO date)' })
+  @IsString()
+  @IsOptional()
+  dateFrom?: string;
+
+  @ApiPropertyOptional({ description: 'Filter processing records updated on/before (ISO date)' })
+  @IsString()
+  @IsOptional()
+  dateTo?: string;
 }

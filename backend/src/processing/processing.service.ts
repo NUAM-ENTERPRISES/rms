@@ -4641,6 +4641,8 @@ export class ProcessingService {
       ];
     }
 
+    this.applyProcessingAdvancedFilters(where, query as QueryAllProcessingCandidatesDto);
+
     const countsWhere: any = {
       ...(projectId ? { projectId } : {}),
       ...(roleCatalogId ? { role: { roleCatalogId: roleCatalogId } } : {}),
@@ -4874,6 +4876,10 @@ export class ProcessingService {
         },
       ];
     }
+
+    this.applyProcessingAdvancedFilters(where, query as QueryAllProcessingCandidatesDto, {
+      allowAssignedTo: true,
+    });
 
     // Base counts respect only project/role filters so `counts.*` stays stable regardless of other filters
     const baseCountsWhere: any = {
@@ -5730,6 +5736,72 @@ export class ProcessingService {
   }
 
   /** Map dashboard tile step keys to DB `processingCandidate.step` values (supports aliases). */
+  private applyProcessingAdvancedFilters(
+    where: Record<string, any>,
+    query: QueryAllProcessingCandidatesDto & { assignedToId?: string },
+    options?: { allowAssignedTo?: boolean },
+  ): void {
+    const { recruiterId, assignedToId, countryCodes, sector, fileNumber, dateFrom, dateTo } =
+      query as QueryAllProcessingCandidatesDto & { assignedToId?: string };
+
+    if (options?.allowAssignedTo && assignedToId) {
+      where.assignedProcessingTeamUserId = assignedToId;
+    }
+
+    if (recruiterId) {
+      where.candidateProjectMap = {
+        ...(where.candidateProjectMap ?? {}),
+        recruiterId,
+      };
+    }
+
+    const parsedCountryCodes =
+      typeof countryCodes === 'string'
+        ? countryCodes
+            .split(',')
+            .map((code) => code.trim().toUpperCase())
+            .filter(Boolean)
+        : [];
+
+    if (parsedCountryCodes.length > 0) {
+      where.project = {
+        ...(where.project ?? {}),
+        countryCode: { in: parsedCountryCodes },
+      };
+    }
+
+    if (sector) {
+      where.project = {
+        ...(where.project ?? {}),
+        sector,
+      };
+    }
+
+    if (fileNumber?.trim()) {
+      where.fileNumber = { contains: fileNumber.trim(), mode: 'insensitive' };
+    }
+
+    if (dateFrom || dateTo) {
+      where.updatedAt = {};
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+        if (!Number.isNaN(from.getTime())) {
+          where.updatedAt.gte = from;
+        }
+      }
+      if (dateTo) {
+        const to = new Date(dateTo);
+        if (!Number.isNaN(to.getTime())) {
+          to.setHours(23, 59, 59, 999);
+          where.updatedAt.lte = to;
+        }
+      }
+      if (Object.keys(where.updatedAt).length === 0) {
+        delete where.updatedAt;
+      }
+    }
+  }
+
   private resolveProcessingStepFilter(step: string): string | { in: string[] } {
     const aliases: Record<string, string[]> = {
       offer_letter_verified: ['offer_letter_verified', 'verify_offer_letter'],
