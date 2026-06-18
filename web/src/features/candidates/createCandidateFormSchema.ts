@@ -87,6 +87,8 @@ export function buildCreateCandidateSchema(
       dataFlow: z.boolean().optional().default(false),
       eligibility: z.boolean().optional().default(false),
       eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+      eligibilityIssuedAt: z.string().optional().or(z.literal("")),
+      eligibilityExpiryAt: z.string().optional().or(z.literal("")),
 
       referralCompanyName: z.string().optional(),
       referralEmail: z
@@ -179,12 +181,43 @@ export function buildCreateCandidateSchema(
       }
     })
     .superRefine((data, ctx) => {
-      if (data.eligibility && !data.eligibilityNumber?.trim()) {
+      if (!data.eligibility) return;
+
+      if (!data.eligibilityNumber?.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Eligibility number is required when eligibility is enabled",
           path: ["eligibilityNumber"],
         });
+      }
+      if (!data.eligibilityIssuedAt?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility issued date is required when eligibility is enabled",
+          path: ["eligibilityIssuedAt"],
+        });
+      }
+      if (!data.eligibilityExpiryAt?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility expiry date is required when eligibility is enabled",
+          path: ["eligibilityExpiryAt"],
+        });
+      }
+      if (data.eligibilityIssuedAt?.trim() && data.eligibilityExpiryAt?.trim()) {
+        const issued = new Date(data.eligibilityIssuedAt);
+        const expiry = new Date(data.eligibilityExpiryAt);
+        if (
+          !Number.isNaN(issued.getTime()) &&
+          !Number.isNaN(expiry.getTime()) &&
+          expiry < issued
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Eligibility expiry date must be on or after issued date",
+            path: ["eligibilityExpiryAt"],
+          });
+        }
       }
     });
 }

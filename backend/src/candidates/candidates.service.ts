@@ -311,15 +311,51 @@ export class CandidatesService {
     }
   }
 
-  private assertEligibilityNumberRequired(
+  private assertEligibilityFieldsRequired(
     eligibility?: boolean | null,
     eligibilityNumber?: string | null,
+    eligibilityIssuedAt?: string | Date | null,
+    eligibilityExpiryAt?: string | Date | null,
   ): void {
-    if (eligibility === true && !eligibilityNumber?.trim()) {
+    if (eligibility !== true) return;
+
+    if (!eligibilityNumber?.trim()) {
       throw new BadRequestException(
         'Eligibility number is required when eligibility is enabled',
       );
     }
+    if (!eligibilityIssuedAt) {
+      throw new BadRequestException(
+        'Eligibility issued date is required when eligibility is enabled',
+      );
+    }
+    if (!eligibilityExpiryAt) {
+      throw new BadRequestException(
+        'Eligibility expiry date is required when eligibility is enabled',
+      );
+    }
+
+    const issued = new Date(eligibilityIssuedAt);
+    const expiry = new Date(eligibilityExpiryAt);
+    if (Number.isNaN(issued.getTime()) || Number.isNaN(expiry.getTime())) {
+      throw new BadRequestException('Invalid eligibility issued or expiry date');
+    }
+    if (expiry < issued) {
+      throw new BadRequestException(
+        'Eligibility expiry date must be on or after issued date',
+      );
+    }
+  }
+
+  private parseEligibilityDate(
+    value?: string | null,
+  ): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException('Invalid eligibility date');
+    }
+    return parsed;
   }
 
   private async resolveCrmStatusIds(
@@ -730,9 +766,11 @@ export class CandidatesService {
 
     await this.assertValidProfessionType(createCandidateDto.professionTypeId);
     await this.assertValidReligionId(createCandidateDto.religionId);
-    this.assertEligibilityNumberRequired(
+    this.assertEligibilityFieldsRequired(
       createCandidateDto.eligibility,
       createCandidateDto.eligibilityNumber,
+      createCandidateDto.eligibilityIssuedAt,
+      createCandidateDto.eligibilityExpiryAt,
     );
 
     // Calculate total experience from work experiences if provided
@@ -901,6 +939,14 @@ export class CandidatesService {
           eligibilityNumber:
             createCandidateDto.eligibility === true
               ? createCandidateDto.eligibilityNumber?.trim() || null
+              : null,
+          eligibilityIssuedAt:
+            createCandidateDto.eligibility === true
+              ? this.parseEligibilityDate(createCandidateDto.eligibilityIssuedAt)
+              : null,
+          eligibilityExpiryAt:
+            createCandidateDto.eligibility === true
+              ? this.parseEligibilityDate(createCandidateDto.eligibilityExpiryAt)
               : null,
           highestEducation: createCandidateDto.highestEducation,
           university: createCandidateDto.university,
@@ -3770,11 +3816,23 @@ export class CandidatesService {
       updateData.eligibility = updateCandidateDto.eligibility;
       if (!updateCandidateDto.eligibility) {
         updateData.eligibilityNumber = null;
+        updateData.eligibilityIssuedAt = null;
+        updateData.eligibilityExpiryAt = null;
       }
     }
     if (updateCandidateDto.eligibilityNumber !== undefined) {
       updateData.eligibilityNumber =
         updateCandidateDto.eligibilityNumber?.trim() || null;
+    }
+    if (updateCandidateDto.eligibilityIssuedAt !== undefined) {
+      updateData.eligibilityIssuedAt = updateCandidateDto.eligibilityIssuedAt
+        ? this.parseEligibilityDate(updateCandidateDto.eligibilityIssuedAt)
+        : null;
+    }
+    if (updateCandidateDto.eligibilityExpiryAt !== undefined) {
+      updateData.eligibilityExpiryAt = updateCandidateDto.eligibilityExpiryAt
+        ? this.parseEligibilityDate(updateCandidateDto.eligibilityExpiryAt)
+        : null;
     }
     const resolvedEligibility =
       updateCandidateDto.eligibility !== undefined
@@ -3786,9 +3844,23 @@ export class CandidatesService {
         : updateCandidateDto.eligibility === false
           ? null
           : existingCandidate.eligibilityNumber;
-    this.assertEligibilityNumberRequired(
+    const resolvedEligibilityIssuedAt =
+      updateData.eligibilityIssuedAt !== undefined
+        ? updateData.eligibilityIssuedAt
+        : updateCandidateDto.eligibility === false
+          ? null
+          : existingCandidate.eligibilityIssuedAt;
+    const resolvedEligibilityExpiryAt =
+      updateData.eligibilityExpiryAt !== undefined
+        ? updateData.eligibilityExpiryAt
+        : updateCandidateDto.eligibility === false
+          ? null
+          : existingCandidate.eligibilityExpiryAt;
+    this.assertEligibilityFieldsRequired(
       resolvedEligibility,
       resolvedEligibilityNumber,
+      resolvedEligibilityIssuedAt,
+      resolvedEligibilityExpiryAt,
     );
     if (updateCandidateDto.highestEducation)
       updateData.highestEducation = updateCandidateDto.highestEducation;

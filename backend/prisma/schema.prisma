@@ -509,6 +509,8 @@ model Candidate {
   dataFlow            Boolean? @default(false)
   eligibility         Boolean? @default(false)
   eligibilityNumber   String?  @map("eligibility_number")
+  eligibilityIssuedAt DateTime? @map("eligibility_issued_at")
+  eligibilityExpiryAt DateTime? @map("eligibility_expiry_at")
   /// Set when CRE marks candidate junk via follow-up; cleared on reassign/convert
   isJunk        Boolean  @default(false) @map("is_junk")
 

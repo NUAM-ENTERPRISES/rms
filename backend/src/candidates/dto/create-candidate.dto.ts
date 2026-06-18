@@ -446,6 +446,22 @@ export class CreateCandidateDto {
   eligibilityNumber?: string;
 
   @ApiPropertyOptional({
+    description: 'Eligibility issued date (required when eligibility is true)',
+    example: '2024-01-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  eligibilityIssuedAt?: string;
+
+  @ApiPropertyOptional({
+    description: 'Eligibility expiry date (required when eligibility is true)',
+    example: '2026-01-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  eligibilityExpiryAt?: string;
+
+  @ApiPropertyOptional({
     description: 'Religion id from religions lookup',
     example: 'clxyz123',
   })

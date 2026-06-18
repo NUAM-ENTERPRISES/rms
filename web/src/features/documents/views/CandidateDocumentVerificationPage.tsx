@@ -59,9 +59,9 @@ import {
 } from "@/features/documents";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
-import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
+import { DOCUMENT_TYPE_CONFIG, DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetProjectQuery } from "@/features/projects";
-import { useGetCandidateByIdQuery } from "@/features/candidates";
+import { useGetCandidateByIdQuery, useGetDocumentsQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
@@ -195,6 +195,16 @@ export default function CandidateDocumentVerificationPage() {
   } = useGetCandidateByIdQuery(candidateId!, {
     skip: !candidateId,
   });
+
+  const { data: eligibilityLetterDocsData } = useGetDocumentsQuery(
+    {
+      candidateId: candidateId!,
+      docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      limit: 1,
+    },
+    { skip: !candidateId },
+  );
+  const eligibilityLetterDoc = eligibilityLetterDocsData?.data?.documents?.[0] ?? null;
 
   const hideContactInfo = projectResponse?.data?.hideContactInfo ?? false;
   const candidatePhoneDigits = useMemo(
@@ -1094,6 +1104,72 @@ export default function CandidateDocumentVerificationPage() {
                   </p>
                 </div>
               </div>
+              {candidate.eligibility ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="h-3.5 w-3.5 text-slate-400" />
+                    <div>
+                      <p className="text-slate-400">Eligibility Number</p>
+                      <p className="font-semibold text-slate-700">
+                        {candidate.eligibilityNumber || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <div>
+                      <p className="text-slate-400">Eligibility Issued</p>
+                      <p className="font-semibold text-slate-700">
+                        {candidate.eligibilityIssuedAt
+                          ? new Date(candidate.eligibilityIssuedAt).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                    <div>
+                      <p className="text-slate-400">Eligibility Expiry</p>
+                      <p className="font-semibold text-slate-700">
+                        {candidate.eligibilityExpiryAt
+                          ? new Date(candidate.eligibilityExpiryAt).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-3.5 w-3.5 text-slate-400" />
+                    <div>
+                      <p className="text-slate-400">Eligibility Letter</p>
+                      {eligibilityLetterDoc ? (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto p-0 text-xs font-semibold text-blue-600"
+                          onClick={() =>
+                            handleOpenPDF(
+                              eligibilityLetterDoc.fileUrl,
+                              eligibilityLetterDoc.fileName,
+                            )
+                          }
+                        >
+                          View letter
+                        </Button>
+                      ) : (
+                        <p className="font-semibold text-slate-700">N/A</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </div>
 
             {candidate.skills && candidate.skills.length > 0 && (

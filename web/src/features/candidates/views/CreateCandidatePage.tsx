@@ -124,6 +124,8 @@ export default function CreateCandidatePage() {
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
   const [uploadDocument] = useUploadDocumentMutation();
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
+  const [eligibilityLetterFileError, setEligibilityLetterFileError] = useState<string | null>(null);
   const [createDocument] = useCreateDocumentMutation();
   const [updateDocument] = useUpdateDocumentMutation();
   
@@ -211,6 +213,8 @@ export default function CreateCandidatePage() {
       dataFlow: false,
       eligibility: false,
       eligibilityNumber: "",
+      eligibilityIssuedAt: "",
+      eligibilityExpiryAt: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -532,8 +536,23 @@ export default function CreateCandidatePage() {
       // dataFlow and eligibility default false but send anyway
       payload.dataFlow = data.dataFlow;
       payload.eligibility = data.eligibility;
-      if (data.eligibility && data.eligibilityNumber?.trim()) {
-        payload.eligibilityNumber = data.eligibilityNumber.trim();
+      if (data.eligibility) {
+        if (data.eligibilityNumber?.trim()) {
+          payload.eligibilityNumber = data.eligibilityNumber.trim();
+        }
+        if (data.eligibilityIssuedAt?.trim()) {
+          payload.eligibilityIssuedAt = data.eligibilityIssuedAt.trim();
+        }
+        if (data.eligibilityExpiryAt?.trim()) {
+          payload.eligibilityExpiryAt = data.eligibilityExpiryAt.trim();
+        }
+        if (!eligibilityLetterFile) {
+          setEligibilityLetterFileError(
+            "Eligibility letter is required when eligibility is enabled",
+          );
+          toast.error("Please upload the eligibility letter");
+          return;
+        }
       }
 
       // Work experiences
@@ -665,6 +684,54 @@ export default function CreateCandidatePage() {
           }
         }
 
+        if (candidateId && data.eligibility && eligibilityLetterFile) {
+          try {
+            const formData = new FormData();
+            formData.append("file", eligibilityLetterFile);
+            formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+            if (data.eligibilityNumber?.trim()) {
+              formData.append("documentNumber", data.eligibilityNumber.trim());
+            }
+            if (data.eligibilityExpiryAt?.trim()) {
+              formData.append("expiryDate", data.eligibilityExpiryAt.trim());
+            }
+            const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+            const uploadData: any = (uploadResult as any).data;
+            const uploadedDocument =
+              uploadData?.document && uploadData.document.id
+                ? uploadData.document
+                : uploadData?.id
+                  ? uploadData
+                  : null;
+
+            if (!uploadedDocument) {
+              await createDocument({
+                candidateId,
+                docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+                fileName: uploadData.fileName,
+                fileUrl: uploadData.fileUrl,
+                fileSize: uploadData.fileSize,
+                mimeType: uploadData.mimeType,
+                documentNumber: data.eligibilityNumber?.trim() || undefined,
+                expiryDate: data.eligibilityExpiryAt?.trim()
+                  ? new Date(data.eligibilityExpiryAt.trim()).toISOString()
+                  : undefined,
+              }).unwrap();
+            } else if (data.eligibilityNumber?.trim() || data.eligibilityExpiryAt?.trim()) {
+              await updateDocument({
+                id: uploadedDocument.id,
+                documentNumber: data.eligibilityNumber?.trim() || undefined,
+                expiryDate: data.eligibilityExpiryAt?.trim()
+                  ? new Date(data.eligibilityExpiryAt.trim()).toISOString()
+                  : undefined,
+              }).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility letter upload failed:", uploadError);
+            toast.warning("Candidate created but eligibility letter upload failed");
+          }
+        }
+
         toast.success("Candidate created successfully!");
         navigate(candidatesHomePath);
       }
@@ -738,6 +805,12 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            eligibilityLetterFile={eligibilityLetterFile}
+            onEligibilityLetterFileChange={(file) => {
+              setEligibilityLetterFile(file);
+              if (file) setEligibilityLetterFileError(null);
+            }}
+            eligibilityLetterFileError={eligibilityLetterFileError}
           />
         );
       default:
@@ -896,6 +969,8 @@ export default function CreateCandidatePage() {
         dataFlow: form.getValues("dataFlow"),
         eligibility: form.getValues("eligibility"),
         eligibilityNumber: form.getValues("eligibilityNumber"),
+        eligibilityIssuedAt: form.getValues("eligibilityIssuedAt"),
+        eligibilityExpiryAt: form.getValues("eligibilityExpiryAt"),
         religionName: religions.find(
           (religion) => religion.id === form.getValues("religionId"),
         )?.name,

@@ -131,4 +131,50 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
 
     expect(profile.nationality).toBe('IN');
   });
+
+  it('prefers candidate eligibility expiry over processing step and document', () => {
+    const profile = mapCandidateProjectToBulkSendCsvProfile({
+      ...baseCandidateProject,
+      candidate: {
+        ...baseCandidateProject.candidate,
+        eligibilityExpiryAt: new Date('2028-06-01'),
+        documents: [
+          ...(baseCandidateProject.candidate.documents ?? []),
+          {
+            docType: 'eligibility_letter',
+            documentNumber: 'DOC-ELIG-9',
+            expiryDate: new Date('2029-01-01'),
+            status: 'verified',
+            isDeleted: false,
+          },
+        ],
+      },
+    });
+
+    expect(profile.eligibilityExpiryDate).toBe('01 Jun 2028');
+  });
+
+  it('falls back to eligibility letter document number when candidate number is missing', () => {
+    const profile = mapCandidateProjectToBulkSendCsvProfile({
+      ...baseCandidateProject,
+      candidate: {
+        ...baseCandidateProject.candidate,
+        eligibilityNumber: undefined,
+        documents: [
+          ...(baseCandidateProject.candidate.documents ?? []),
+          {
+            docType: 'eligibility_letter',
+            documentNumber: 'DOC-ELIG-9',
+            expiryDate: new Date('2029-01-01'),
+            status: 'verified',
+            isDeleted: false,
+          },
+        ],
+        processingTasks: [],
+      },
+    });
+
+    expect(profile.eligibilityNumber).toBe('DOC-ELIG-9');
+    expect(profile.eligibilityExpiryDate).toBe('01 Jan 2029');
+  });
 });

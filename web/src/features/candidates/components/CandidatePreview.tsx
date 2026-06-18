@@ -60,6 +60,8 @@ interface CandidatePreviewProps {
     dataFlow?: boolean;
     eligibility?: boolean;
     eligibilityNumber?: string;
+    eligibilityIssuedAt?: string;
+    eligibilityExpiryAt?: string;
     religionName?: string;
   };
   onConfirm: () => void;
@@ -692,6 +694,26 @@ export default function CandidatePreview({
                   </label>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     {candidateData.eligibilityNumber}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityIssuedAt ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Issued
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityIssuedAt)}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityExpiryAt ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Expiry
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityExpiryAt)}
                   </p>
                 </div>
               ) : null}

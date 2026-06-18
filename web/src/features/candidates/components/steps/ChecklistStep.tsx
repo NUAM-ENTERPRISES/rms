@@ -21,21 +21,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckSquare, FileCheck, ClipboardList } from "lucide-react";
+import { CheckSquare, FileCheck } from "lucide-react";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
+import { EligibilityDetailsSection } from "@/features/candidates/components/EligibilityDetailsSection";
 
 interface ChecklistStepProps {
   control: Control<CreateCandidateFormData>;
   errors: FieldErrors<CreateCandidateFormData>;
   isLoading: boolean;
+  eligibilityLetterFile: File | null;
+  onEligibilityLetterFileChange: (file: File | null) => void;
+  eligibilityLetterFileError?: string | null;
 }
 
 export const ChecklistStep: React.FC<ChecklistStepProps> = ({
   control,
   errors,
   isLoading,
+  eligibilityLetterFile,
+  onEligibilityLetterFileChange,
+  eligibilityLetterFileError,
 }) => {
   const eligibilityEnabled = useWatch({ control, name: "eligibility" });
 
@@ -139,33 +145,14 @@ export const ChecklistStep: React.FC<ChecklistStepProps> = ({
             </div>
 
             {eligibilityEnabled ? (
-              <div className="space-y-2 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
-                <Label
-                  htmlFor="eligibilityNumber"
-                  className="text-slate-700 font-medium flex items-center gap-2"
-                >
-                  <ClipboardList className="h-4 w-4 text-emerald-600" />
-                  Eligibility Number
-                </Label>
-                <Controller
-                  name="eligibilityNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      {...field}
-                      id="eligibilityNumber"
-                      placeholder="Enter eligibility number"
-                      disabled={isLoading}
-                      className="h-11 bg-white border-slate-200"
-                    />
-                  )}
-                />
-                {errors.eligibilityNumber?.message ? (
-                  <p className="text-sm text-red-600">
-                    {errors.eligibilityNumber.message as string}
-                  </p>
-                ) : null}
-              </div>
+              <EligibilityDetailsSection
+                control={control}
+                errors={errors}
+                isLoading={isLoading}
+                eligibilityLetterFile={eligibilityLetterFile}
+                onEligibilityLetterFileChange={onEligibilityLetterFileChange}
+                letterFileError={eligibilityLetterFileError}
+              />
             ) : null}
           </div>
         </div>

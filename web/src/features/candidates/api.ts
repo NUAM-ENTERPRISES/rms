@@ -118,6 +118,8 @@ export interface Candidate {
   dataFlow?: boolean;
   eligibility?: boolean;
   eligibilityNumber?: string | null;
+  eligibilityIssuedAt?: string | null;
+  eligibilityExpiryAt?: string | null;
   religionId?: string | null;
   religion?: { id: string; name: string } | null;
 
@@ -595,6 +597,8 @@ export interface CreateCandidateRequest {
   dataFlow?: boolean;
   eligibility?: boolean;
   eligibilityNumber?: string;
+  eligibilityIssuedAt?: string;
+  eligibilityExpiryAt?: string;
 }
 
 export interface UpdateCandidateRequest {
@@ -635,6 +639,8 @@ export interface UpdateCandidateRequest {
   dataFlow?: boolean;
   eligibility?: boolean;
   eligibilityNumber?: string | null;
+  eligibilityIssuedAt?: string | null;
+  eligibilityExpiryAt?: string | null;
   religionId?: string | null;
   /** Agent-linked declarations (intent only); only for agent-sourced candidates */
   declaredProjectIds?: string[];

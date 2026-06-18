@@ -83,6 +83,8 @@ describe("createCandidateFormSchema", () => {
       mobileNumber: "9876543210",
       eligibility: true,
       eligibilityNumber: "",
+      eligibilityIssuedAt: "2024-01-01",
+      eligibilityExpiryAt: "2025-01-01",
     });
     expect(missingNumber.success).toBe(false);
 
@@ -92,7 +94,34 @@ describe("createCandidateFormSchema", () => {
       mobileNumber: "9876543210",
       eligibility: true,
       eligibilityNumber: "ELIG-123",
+      eligibilityIssuedAt: "2024-01-01",
+      eligibilityExpiryAt: "2025-01-01",
     });
     expect(withNumber.success).toBe(true);
+  });
+
+  it("requires eligibility dates and validates expiry ordering", () => {
+    const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
+    const missingDates = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "ELIG-123",
+      eligibilityIssuedAt: "",
+      eligibilityExpiryAt: "",
+    });
+    expect(missingDates.success).toBe(false);
+
+    const invalidOrder = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "ELIG-123",
+      eligibilityIssuedAt: "2025-01-01",
+      eligibilityExpiryAt: "2024-01-01",
+    });
+    expect(invalidOrder.success).toBe(false);
   });
 });

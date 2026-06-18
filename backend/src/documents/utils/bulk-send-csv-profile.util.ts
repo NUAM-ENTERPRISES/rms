@@ -42,6 +42,8 @@ export interface BulkSendCsvProfile {
   mumarisPassword: string;
 }
 
+const ELIGIBILITY_LETTER_DOC_TYPES = new Set([DOCUMENT_TYPE.ELIGIBILITY_LETTER]);
+
 const SCFHS_DOC_TYPES = new Set([
   DOCUMENT_TYPE.SCFHS,
   DOCUMENT_TYPE.SAUDI_PROMETRIC,
@@ -242,6 +244,8 @@ export function mapCandidateProjectToBulkSendCsvProfile(
       addressCountry?: { name?: string | null } | null;
       religionId?: string | null;
       eligibilityNumber?: string | null;
+      eligibilityIssuedAt?: Date | string | null;
+      eligibilityExpiryAt?: Date | string | null;
       religion?: { id?: string; name?: string | null } | null;
       qualifications?: Array<{
         qualification?: { name?: string | null; shortName?: string | null } | null;
@@ -283,6 +287,10 @@ export function mapCandidateProjectToBulkSendCsvProfile(
   const documents = (candidate.documents ?? []).filter((doc) => !doc.isDeleted);
   const workExperiences = candidate.workExperiences ?? [];
   const scfhsDoc = findDocumentByTypes(documents, SCFHS_DOC_TYPES);
+  const eligibilityLetterDoc = findDocumentByTypes(
+    documents,
+    ELIGIBILITY_LETTER_DOC_TYPES,
+  );
   const projectProcessingTasks = (candidate.processingTasks ?? []).filter(
     (task) => !cp.projectId || task.projectId === cp.projectId,
   );
@@ -346,8 +354,13 @@ export function mapCandidateProjectToBulkSendCsvProfile(
     eligibilityNumber:
       candidate.eligibilityNumber?.trim() ||
       eligibilityStep?.eligibilityNumber?.trim() ||
+      eligibilityLetterDoc?.documentNumber?.trim() ||
       '',
-    eligibilityExpiryDate: formatDate(eligibilityStep?.eligibilityValidAt),
+    eligibilityExpiryDate:
+      formatDate(candidate.eligibilityExpiryAt) ||
+      formatDate(eligibilityStep?.eligibilityValidAt) ||
+      formatDate(eligibilityLetterDoc?.expiryDate) ||
+      '',
     currentLocation: formatCurrentLocation(candidate),
     contactNumber: formatContactNumber(
       candidate.countryCode,

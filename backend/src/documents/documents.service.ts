@@ -6309,6 +6309,8 @@ export class DocumentsService {
             address: true,
             addressCountryCode: true,
             eligibilityNumber: true,
+            eligibilityIssuedAt: true,
+            eligibilityExpiryAt: true,
             addressState: { select: { name: true } },
             addressCountry: { select: { name: true } },
             religion: { select: { id: true, name: true } },

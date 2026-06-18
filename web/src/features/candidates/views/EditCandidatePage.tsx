@@ -33,9 +33,15 @@ import {
 import { buildPreferredRoleLabels } from "@/features/candidates/utils/role-preference";
 import {
   useGetCandidateByIdQuery,
+  useGetDocumentsQuery,
   useGetProfessionTypesQuery,
   useUpdateCandidateMutation,
+  useUploadDocumentMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+import { EligibilityDetailsSection } from "@/features/candidates/components/EligibilityDetailsSection";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -87,6 +93,8 @@ const updateCandidateSchema = z.object({
   dataFlow: z.boolean().optional(),
   eligibility: z.boolean().optional(),
   eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+  eligibilityIssuedAt: z.string().optional().or(z.literal("")),
+  eligibilityExpiryAt: z.string().optional().or(z.literal("")),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -113,6 +121,35 @@ const updateCandidateSchema = z.object({
       path: ["eligibilityNumber"],
     });
   }
+  if (data.eligibility && !data.eligibilityIssuedAt?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility issued date is required when eligibility is enabled",
+      path: ["eligibilityIssuedAt"],
+    });
+  }
+  if (data.eligibility && !data.eligibilityExpiryAt?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility expiry date is required when eligibility is enabled",
+      path: ["eligibilityExpiryAt"],
+    });
+  }
+  if (data.eligibility && data.eligibilityIssuedAt?.trim() && data.eligibilityExpiryAt?.trim()) {
+    const issued = new Date(data.eligibilityIssuedAt);
+    const expiry = new Date(data.eligibilityExpiryAt);
+    if (
+      !Number.isNaN(issued.getTime()) &&
+      !Number.isNaN(expiry.getTime()) &&
+      expiry < issued
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Eligibility expiry date must be on or after issued date",
+        path: ["eligibilityExpiryAt"],
+      });
+    }
+  }
 });
 
 type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
@@ -134,9 +171,29 @@ export default function EditCandidatePage() {
     useUpdateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
+  const [eligibilityLetterFileError, setEligibilityLetterFileError] = useState<string | null>(null);
+  const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<{
+    fileUrl: string;
+    fileName: string;
+  } | null>(null);
+
+  const { data: eligibilityDocsData } = useGetDocumentsQuery(
+    {
+      candidateId: id!,
+      docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      limit: 1,
+    },
+    { skip: !id },
+  );
+  const existingEligibilityLetter = eligibilityDocsData?.data?.documents?.[0] ?? null;
 
   const candidate = candidateData;
 
@@ -240,6 +297,12 @@ export default function EditCandidatePage() {
         dataFlow: candidate.dataFlow ?? false,
         eligibility: candidate.eligibility ?? false,
         eligibilityNumber: candidate.eligibilityNumber || "",
+        eligibilityIssuedAt: candidate.eligibilityIssuedAt
+          ? new Date(candidate.eligibilityIssuedAt).toISOString().split("T")[0]
+          : "",
+        eligibilityExpiryAt: candidate.eligibilityExpiryAt
+          ? new Date(candidate.eligibilityExpiryAt).toISOString().split("T")[0]
+          : "",
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -386,6 +449,22 @@ export default function EditCandidatePage() {
         data.eligibility && data.eligibilityNumber?.trim()
           ? data.eligibilityNumber.trim()
           : null;
+      payload.eligibilityIssuedAt =
+        data.eligibility && data.eligibilityIssuedAt?.trim()
+          ? data.eligibilityIssuedAt.trim()
+          : null;
+      payload.eligibilityExpiryAt =
+        data.eligibility && data.eligibilityExpiryAt?.trim()
+          ? data.eligibilityExpiryAt.trim()
+          : null;
+
+      if (data.eligibility && !eligibilityLetterFile && !existingEligibilityLetter) {
+        setEligibilityLetterFileError(
+          "Eligibility letter is required when eligibility is enabled",
+        );
+        toast.error("Please upload the eligibility letter");
+        return;
+      }
 
       // Referral fields
       if (data.source === "referral") {
@@ -412,6 +491,54 @@ export default function EditCandidatePage() {
           } catch (uploadError: any) {
             console.error("Profile image upload failed:", uploadError);
             toast.warning("Candidate updated but profile image upload failed");
+          }
+        }
+
+        if (data.eligibility && eligibilityLetterFile) {
+          try {
+            const formData = new FormData();
+            formData.append("file", eligibilityLetterFile);
+            formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+            if (data.eligibilityNumber?.trim()) {
+              formData.append("documentNumber", data.eligibilityNumber.trim());
+            }
+            if (data.eligibilityExpiryAt?.trim()) {
+              formData.append("expiryDate", data.eligibilityExpiryAt.trim());
+            }
+            const uploadResult = await uploadDocument({ candidateId: id!, formData }).unwrap();
+            const uploadData: any = (uploadResult as any).data;
+            const uploadedDocument =
+              uploadData?.document && uploadData.document.id
+                ? uploadData.document
+                : uploadData?.id
+                  ? uploadData
+                  : null;
+
+            if (!uploadedDocument) {
+              await createDocument({
+                candidateId: id!,
+                docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+                fileName: uploadData.fileName,
+                fileUrl: uploadData.fileUrl,
+                fileSize: uploadData.fileSize,
+                mimeType: uploadData.mimeType,
+                documentNumber: data.eligibilityNumber?.trim() || undefined,
+                expiryDate: data.eligibilityExpiryAt?.trim()
+                  ? new Date(data.eligibilityExpiryAt.trim()).toISOString()
+                  : undefined,
+              }).unwrap();
+            } else {
+              await updateDocument({
+                id: uploadedDocument.id,
+                documentNumber: data.eligibilityNumber?.trim() || undefined,
+                expiryDate: data.eligibilityExpiryAt?.trim()
+                  ? new Date(data.eligibilityExpiryAt.trim()).toISOString()
+                  : undefined,
+              }).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility letter upload failed:", uploadError);
+            toast.warning("Candidate updated but eligibility letter upload failed");
           }
         }
 
@@ -1053,28 +1180,30 @@ export default function EditCandidatePage() {
                   </div>
 
                   {form.watch("eligibility") ? (
-                    <div className="space-y-2 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
-                      <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
-                        Eligibility Number
-                      </FormLabel>
-                      <Controller
-                        name="eligibilityNumber"
-                        control={form.control}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            id="eligibilityNumber"
-                            placeholder="Enter eligibility number"
-                            className="h-11 bg-white border-slate-200"
-                          />
-                        )}
-                      />
-                      {form.formState.errors.eligibilityNumber?.message ? (
-                        <p className="text-sm text-red-600">
-                          {form.formState.errors.eligibilityNumber.message as string}
-                        </p>
-                      ) : null}
-                    </div>
+                    <EligibilityDetailsSection
+                      control={form.control}
+                      errors={form.formState.errors}
+                      isLoading={isUpdating}
+                      eligibilityLetterFile={eligibilityLetterFile}
+                      onEligibilityLetterFileChange={(file) => {
+                        setEligibilityLetterFile(file);
+                        if (file) setEligibilityLetterFileError(null);
+                      }}
+                      existingEligibilityLetter={
+                        existingEligibilityLetter
+                          ? {
+                              id: existingEligibilityLetter.id,
+                              fileName: existingEligibilityLetter.fileName,
+                              fileUrl: existingEligibilityLetter.fileUrl,
+                            }
+                          : null
+                      }
+                      onViewExistingLetter={(fileUrl, fileName) => {
+                        setPreviewDocument({ fileUrl, fileName });
+                        setIsPDFViewerOpen(true);
+                      }}
+                      letterFileError={eligibilityLetterFileError}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -1112,6 +1241,16 @@ export default function EditCandidatePage() {
           </div>
         </form>
       </div>
+
+      <PDFViewer
+        fileUrl={previewDocument?.fileUrl ?? ""}
+        fileName={previewDocument?.fileName ?? "Eligibility Letter"}
+        isOpen={isPDFViewerOpen}
+        onClose={() => {
+          setIsPDFViewerOpen(false);
+          setPreviewDocument(null);
+        }}
+      />
     </div>
   );
 }
