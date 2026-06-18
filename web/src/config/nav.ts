@@ -198,6 +198,8 @@ export const navigationConfig: NavItem[] = [
       "Documents Control Executive",
       ROLE_NAMES.OPERATIONS,
       "CRE",
+      "Processing Executive",
+      "Processing Manager",
     ],
     children: [
       {

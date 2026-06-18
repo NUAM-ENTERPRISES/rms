@@ -20,6 +20,14 @@ export function useNav(): NavItem[] {
       "ready-for-processing",
       "profile",
     ]);
+    const isProcessingExecutive = user.roles.includes("Processing Executive");
+    const processingExecutiveAllowedIds = new Set([
+      "processing-dashboard",
+      "projects",
+      "projects-overview",
+      "projects-management",
+      "profile",
+    ]);
     const isDocumentationExecutive = user.roles.includes("Documentation Executive");
     const documentationExecutiveAllowedIds = new Set([
       "documentation-dashboard",
@@ -64,6 +72,14 @@ export function useNav(): NavItem[] {
 
       // Processing Manager sees only processing menu + profile.
       if (isProcessingManager && !processingManagerAllowedIds.has(item.id)) {
+        return null;
+      }
+
+      // Processing Executive sees only dashboard, projects, and profile.
+      if (
+        isProcessingExecutive &&
+        !processingExecutiveAllowedIds.has(item.id)
+      ) {
         return null;
       }
 
