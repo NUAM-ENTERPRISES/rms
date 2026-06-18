@@ -16,6 +16,12 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('health')
+  @Public()
+  health() {
+    return { status: 'ok' };
+  }
+
   @Get('test-db')
   @Public()
   async testDatabase() {

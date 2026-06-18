@@ -31,8 +31,8 @@ async function bootstrap() {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-  // Global prefix
-  app.setGlobalPrefix('api/v1');
+  // Global prefix (health excluded for deploy/Docker healthchecks)
+  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
 
 
   // CORS configuration with preflight optimization
