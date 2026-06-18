@@ -31,10 +31,10 @@ import {
 } from "./notification-handlers/offer-letter-handler";
 import { handleCandidateProjectStatusChangeNotifications } from "./notification-handlers/candidate-project-status-change-handler";
 import {
-  handleDocumentsControlCapabilitiesChanged,
-  handleDocumentsControlCapabilitiesSync,
-  type DocumentsControlCapabilitiesChangedPayload,
-} from "./notification-handlers/documents-control-capabilities-handler";
+  handleDocumentsControlPermissionsChanged,
+  handleDocumentsControlPermissionsSync,
+  type DocumentsControlPermissionsChangedPayload,
+} from "./notification-handlers/documents-control-permissions-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -385,7 +385,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
       if (
-        handleDocumentsControlCapabilitiesSync(
+        handleDocumentsControlPermissionsSync(
           payload,
           dispatch,
           store.getState,
@@ -426,9 +426,9 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     });
 
     newSocket.on(
-      "user:documents-control-capabilities-changed",
-      (payload: DocumentsControlCapabilitiesChangedPayload) => {
-        handleDocumentsControlCapabilitiesChanged(
+      "user:documents-control-permissions-changed",
+      (payload: DocumentsControlPermissionsChangedPayload) => {
+        handleDocumentsControlPermissionsChanged(
           payload,
           dispatch,
           store.getState,

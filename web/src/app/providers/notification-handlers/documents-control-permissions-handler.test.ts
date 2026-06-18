@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer, { updateUserAuthorization } from "@/features/auth/authSlice";
 import {
-  DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
-  handleDocumentsControlCapabilitiesChanged,
-  handleDocumentsControlCapabilitiesSync,
-} from "./documents-control-capabilities-handler";
+  DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
+  handleDocumentsControlPermissionsChanged,
+  handleDocumentsControlPermissionsSync,
+} from "./documents-control-permissions-handler";
 
 function createStore() {
   return configureStore({
@@ -30,15 +30,13 @@ function createStore() {
   });
 }
 
-describe("documents-control-capabilities-handler", () => {
+describe("documents-control-permissions-handler", () => {
   it("applies permissions from direct socket payload", () => {
     const store = createStore();
 
-    handleDocumentsControlCapabilitiesChanged(
+    handleDocumentsControlPermissionsChanged(
       {
         userId: "user-1",
-        originalDocumentIntakeEnabled: true,
-        courierManagementEnabled: true,
         updatedAt: new Date().toISOString(),
         roles: ["Operations"],
         permissions: [
@@ -59,15 +57,13 @@ describe("documents-control-capabilities-handler", () => {
     ]);
   });
 
-  it("handles DocumentsControlCapabilitiesUpdated data:sync payloads", () => {
+  it("handles DocumentsControlPermissionsUpdated data:sync payloads", () => {
     const store = createStore();
 
-    const handled = handleDocumentsControlCapabilitiesSync(
+    const handled = handleDocumentsControlPermissionsSync(
       {
-        type: DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
+        type: DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
         userId: "user-1",
-        originalDocumentIntakeEnabled: true,
-        courierManagementEnabled: false,
         updatedAt: new Date().toISOString(),
         roles: ["Operations"],
         permissions: ["read:cre", "read:original_document_intake"],

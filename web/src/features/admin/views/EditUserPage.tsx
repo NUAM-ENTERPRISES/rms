@@ -22,13 +22,13 @@ import {
   ProfessionTypeMultiSelect,
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
-import { DocumentsControlCapabilitiesFormCard } from "@/features/admin/components/DocumentsControlCapabilitiesFormCard";
+import { DocumentsControlPermissionsFormCard } from "@/features/admin/components/DocumentsControlPermissionsFormCard";
 import {
   useGetUserQuery,
   useUpdateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
-  useUpdateDocumentsControlCapabilitiesMutation,
+  useUpdateDocumentsControlPermissionsMutation,
 } from "@/features/admin/api";
 import {
   useUploadUserProfileImageMutation,
@@ -56,8 +56,8 @@ export default function EditUserPage() {
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
     useUpdateRecruiterCapabilitiesMutation();
-  const [updateDocumentsControlCapabilities, { isLoading: savingDocControlCaps }] =
-    useUpdateDocumentsControlCapabilitiesMutation();
+  const [updateDocumentsControlPermissions, { isLoading: savingDocControlCaps }] =
+    useUpdateDocumentsControlPermissionsMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [deleteFile] = useDeleteFileMutation();
@@ -183,8 +183,10 @@ export default function EditUserPage() {
         professionTypeIds: (user.userProfessionScopes ?? []).map(
           (scope) => scope.professionTypeId,
         ),
-        originalDocumentIntakeEnabled: user.originalDocumentIntakeEnabled ?? false,
-        courierManagementEnabled: user.courierManagementEnabled ?? false,
+        originalDocumentIntakeEnabled:
+          user.documentsControlAccess?.originalDocumentIntakeEnabled ?? false,
+        courierManagementEnabled:
+          user.documentsControlAccess?.courierManagementEnabled ?? false,
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -321,7 +323,7 @@ export default function EditUserPage() {
         }
 
         try {
-          await updateDocumentsControlCapabilities({
+          await updateDocumentsControlPermissions({
             id: id!,
             body: {
               originalDocumentIntakeEnabled: data.originalDocumentIntakeEnabled,
@@ -331,7 +333,7 @@ export default function EditUserPage() {
         } catch (capErr: unknown) {
           console.error(capErr);
           toast.warning(
-            "Profile was updated, but documents control access could not be saved."
+            "Profile was updated, but documents control permissions could not be saved."
           );
         }
 
@@ -767,7 +769,7 @@ export default function EditUserPage() {
             />
           )}
 
-          <DocumentsControlCapabilitiesFormCard
+          <DocumentsControlPermissionsFormCard
             control={form.control}
             disabled={isUpdating || savingDocControlCaps}
           />

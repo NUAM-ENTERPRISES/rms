@@ -37,7 +37,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
-import { UpdateDocumentsControlCapabilitiesDto } from './dto/update-documents-control-capabilities.dto';
+import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
 import { EmployeeCodeService } from './services/employee-code.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
@@ -838,26 +838,26 @@ export class UsersController {
     };
   }
 
-  @Put(':id/documents-control-capabilities')
+  @Put(':id/documents-control-permissions')
   @Permissions('manage:users', 'write:users')
   @ApiOperation({
-    summary: 'Update documents control feature access for a user',
+    summary: 'Update documents control permissions for a user',
     description:
-      'Grant or revoke Original Document Intake and Courier Management access independently. Documents Control Executive role users retain full access via role permissions.',
+      'Grant or revoke direct Original Document Intake and Courier Management permissions independently. Documents Control Executive role users retain full access via role permissions.',
   })
   @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Capabilities updated' })
+  @ApiResponse({ status: 200, description: 'Permissions updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async updateDocumentsControlCapabilities(
+  async updateDocumentsControlPermissions(
     @Param('id') id: string,
-    @Body() dto: UpdateDocumentsControlCapabilitiesDto,
+    @Body() dto: UpdateDocumentsControlPermissionsDto,
     @Request() req,
   ): Promise<{
     success: boolean;
     data: UserWithRoles;
     message: string;
   }> {
-    const user = await this.usersService.updateDocumentsControlCapabilities(
+    const user = await this.usersService.updateDocumentsControlPermissions(
       id,
       dto,
       req.user.id,
@@ -866,7 +866,7 @@ export class UsersController {
     return {
       success: true,
       data: user,
-      message: 'Documents control capabilities updated successfully',
+      message: 'Documents control permissions updated successfully',
     };
   }
 

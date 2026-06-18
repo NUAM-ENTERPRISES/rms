@@ -1,16 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean } from 'class-validator';
 
-export class UpdateDocumentsControlCapabilitiesDto {
+export class UpdateDocumentsControlPermissionsDto {
   @ApiProperty({
-    description: 'Grant access to Original Document Intake features',
+    description: 'Grant direct Original Document Intake permissions to this user',
     example: true,
   })
   @IsBoolean()
   originalDocumentIntakeEnabled!: boolean;
 
   @ApiProperty({
-    description: 'Grant access to Courier Management features',
+    description: 'Grant direct Courier Management permissions to this user',
     example: false,
   })
   @IsBoolean()

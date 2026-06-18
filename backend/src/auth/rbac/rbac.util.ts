@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { applyDocumentsControlCapabilityPermissions } from './documents-control-permissions.util';
+import { collectEffectivePermissions } from './documents-control-permissions.util';
 
 interface UserRolesAndPermissions {
   roles: string[];
@@ -52,34 +52,40 @@ export class RbacUtil {
       select: { teamId: true },
     });
 
+    const userPermissions = await this.prisma.userPermission.findMany({
+      where: { userId },
+      include: {
+        permission: {
+          select: { key: true },
+        },
+      },
+    });
+
     const roles = userRoles.map((ur) => ur.role.name);
-    const permissions = new Set<string>();
+    const rolePermissionKeys = new Set<string>();
     const teamIds = userTeams.map((ut) => ut.teamId);
 
     // Collect all permissions from user's roles
     for (const userRole of userRoles) {
       for (const rolePermission of userRole.role.rolePermissions) {
-        permissions.add(rolePermission.permission.key);
+        rolePermissionKeys.add(rolePermission.permission.key);
       }
     }
 
-    // Get user's updatedAt and documents control capability flags
+    const directPermissionKeys = userPermissions.map(
+      (up) => up.permission.key,
+    );
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         updatedAt: true,
-        originalDocumentIntakeEnabled: true,
-        courierManagementEnabled: true,
       },
     });
 
-    const mergedPermissions = applyDocumentsControlCapabilityPermissions(
-      permissions,
-      {
-        originalDocumentIntakeEnabled:
-          user?.originalDocumentIntakeEnabled ?? false,
-        courierManagementEnabled: user?.courierManagementEnabled ?? false,
-      },
+    const mergedPermissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
     );
 
     const result: UserRolesAndPermissions = {

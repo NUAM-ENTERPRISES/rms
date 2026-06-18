@@ -10,35 +10,35 @@ import {
 } from "@/components/ui/card";
 import { FileText, Truck } from "lucide-react";
 
-export type DocumentsControlCapabilityFields = {
+export type DocumentsControlPermissionFields = {
   originalDocumentIntakeEnabled: boolean;
   courierManagementEnabled: boolean;
 };
 
-export interface DocumentsControlCapabilitiesFormCardProps<
-  T extends DocumentsControlCapabilityFields,
+export interface DocumentsControlPermissionsFormCardProps<
+  T extends DocumentsControlPermissionFields,
 > {
   control: Control<T>;
   disabled?: boolean;
 }
 
-export function DocumentsControlCapabilitiesFormCard<
-  T extends DocumentsControlCapabilityFields,
+export function DocumentsControlPermissionsFormCard<
+  T extends DocumentsControlPermissionFields,
 >({
   control,
   disabled = false,
-}: DocumentsControlCapabilitiesFormCardProps<T>) {
+}: DocumentsControlPermissionsFormCardProps<T>) {
   return (
     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-slate-800 flex items-center gap-2">
           <FileText className="h-5 w-5 text-blue-600" />
-          Documents control access
+          Documents control permissions
         </CardTitle>
         <CardDescription className="text-slate-600">
-          Grant Original Document Intake and/or Courier Management independently.
-          Users with the Documents Control Executive role always retain full
-          access via their role.
+          Grant direct Original Document Intake and/or Courier Management
+          permissions to this user. Users with the Documents Control Executive
+          role always retain full access via their role.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -52,7 +52,7 @@ export function DocumentsControlCapabilitiesFormCard<
                 checked={field.value}
                 onCheckedChange={(checked) => field.onChange(checked === true)}
                 disabled={disabled}
-                aria-label="Original Document Intake access"
+                aria-label="Original Document Intake permissions"
               />
               <div className="space-y-1">
                 <Label
@@ -80,7 +80,7 @@ export function DocumentsControlCapabilitiesFormCard<
                 checked={field.value}
                 onCheckedChange={(checked) => field.onChange(checked === true)}
                 disabled={disabled}
-                aria-label="Courier Management access"
+                aria-label="Courier Management permissions"
               />
               <div className="space-y-1">
                 <Label

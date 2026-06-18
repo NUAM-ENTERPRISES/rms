@@ -67,6 +67,13 @@ describe('UsersService', () => {
       createMany: jest.fn(),
       deleteMany: jest.fn(),
     },
+    permission: {
+      findMany: jest.fn(),
+    },
+    userPermission: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
 
@@ -309,13 +316,23 @@ describe('UsersService', () => {
         email: 'test@example.com',
         name: 'Test User',
         userRoles: [],
+        userPermissions: [],
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
       const result = await service.findOne('user123');
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual({
+        id: 'user123',
+        email: 'test@example.com',
+        name: 'Test User',
+        userRoles: [],
+        documentsControlAccess: {
+          originalDocumentIntakeEnabled: false,
+          courierManagementEnabled: false,
+        },
+      });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user123' },
         include: expect.any(Object),
@@ -744,18 +761,28 @@ describe('UsersService', () => {
     });
   });
 
-  describe('updateDocumentsControlCapabilities', () => {
-    it('should persist flags and emit realtime socket events to the user', async () => {
+  describe('updateDocumentsControlPermissions', () => {
+    it('should persist direct permissions and emit realtime socket events to the user', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.permission.findMany.mockResolvedValue([
+        { id: 'perm-intake-read', key: 'read:original_document_intake' },
+        { id: 'perm-intake-write', key: 'write:original_document_intake' },
+        { id: 'perm-courier-read', key: 'read:courier_management' },
+        { id: 'perm-courier-write', key: 'write:courier_management' },
+      ]);
+      mockPrismaService.userPermission.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userPermission.createMany.mockResolvedValue({ count: 2 });
       mockPrismaService.user.update.mockResolvedValue({});
 
       const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
         id: 'target',
-        originalDocumentIntakeEnabled: true,
-        courierManagementEnabled: false,
+        documentsControlAccess: {
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        },
       } as any);
 
-      await service.updateDocumentsControlCapabilities(
+      await service.updateDocumentsControlPermissions(
         'target',
         {
           originalDocumentIntakeEnabled: true,
@@ -764,20 +791,19 @@ describe('UsersService', () => {
         'admin1',
       );
 
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 'target' },
-        data: {
-          originalDocumentIntakeEnabled: true,
-          courierManagementEnabled: false,
-        },
+      expect(mockPrismaService.userPermission.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.userPermission.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: 'target', permissionId: 'perm-intake-read' },
+          { userId: 'target', permissionId: 'perm-intake-write' },
+        ],
+        skipDuplicates: true,
       });
       expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
         'target',
-        'user:documents-control-capabilities-changed',
+        'user:documents-control-permissions-changed',
         expect.objectContaining({
           userId: 'target',
-          originalDocumentIntakeEnabled: true,
-          courierManagementEnabled: false,
           roles: ['Operations'],
           permissions: expect.arrayContaining([
             'read:original_document_intake',
@@ -789,9 +815,7 @@ describe('UsersService', () => {
         'target',
         'data:sync',
         expect.objectContaining({
-          type: 'DocumentsControlCapabilitiesUpdated',
-          originalDocumentIntakeEnabled: true,
-          courierManagementEnabled: false,
+          type: 'DocumentsControlPermissionsUpdated',
         }),
       );
 

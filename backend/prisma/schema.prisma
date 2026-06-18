@@ -89,6 +89,7 @@ model User {
   statusChangeRequestsRequested    CandidateProjectStatusChangeRequest[] @relation("StatusChangeRequester")
   statusChangeRequestsReviewed     CandidateProjectStatusChangeRequest[] @relation("StatusChangeReviewer")
   userRoles                        UserRole[]
+  userPermissions                  UserPermission[]
   userTeams                        UserTeam[]
   candidateProjectMaps             CandidateProjects[]
   candidateRecruiterAssignments    CandidateRecruiterAssignment[]
@@ -98,10 +99,6 @@ model User {
 
   // user preference: should notification sounds be muted?
   notificationSoundMuted Boolean @default(false)
-
-  // Per-user documents control feature access (admin toggles; DCE role also grants via RBAC)
-  originalDocumentIntakeEnabled Boolean @default(false) @map("original_document_intake_enabled")
-  courierManagementEnabled        Boolean @default(false) @map("courier_management_enabled")
 
   assignedProcessingTasks    ProcessingCandidate[] @relation("AssignedToProcessing")
   processingHistoryChanges   ProcessingHistory[]   @relation("UserToProcessingHistory")
@@ -199,8 +196,21 @@ model Permission {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   rolePermissions RolePermission[]
+  userPermissions UserPermission[]
 
   @@map("permissions")
+}
+
+model UserPermission {
+  userId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@index([userId])
+  @@index([permissionId])
+  @@map("user_permissions")
 }
 
 model RolePermission {

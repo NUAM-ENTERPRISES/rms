@@ -6,6 +6,22 @@ type RoleSeed = {
   permissions: string[];
 };
 
+const PERMISSION_DESCRIPTIONS: Record<string, string> = {
+  'read:original_document_intake':
+    'View original document intake register and collections',
+  'write:original_document_intake':
+    'Create and manage original document intake collections',
+  'read:courier_management': 'View courier management register and legs',
+  'write:courier_management': 'Create and manage courier legs',
+};
+
+function permissionDescription(key: string): string {
+  return (
+    PERMISSION_DESCRIPTIONS[key] ??
+    `Permission to ${key.replace(':', ' ')}`
+  );
+}
+
 export async function seedPermissionsAndRoles(
   prisma: PrismaClient,
   roles: RoleSeed[],
@@ -13,12 +29,13 @@ export async function seedPermissionsAndRoles(
 ) {
   console.log('📝 Creating permissions...');
   for (const permissionKey of allPermissions) {
+    const description = permissionDescription(permissionKey);
     await prisma.permission.upsert({
       where: { key: permissionKey },
-      update: {},
+      update: { description },
       create: {
         key: permissionKey,
-        description: `Permission to ${permissionKey.replace(':', ' ')}`,
+        description,
       },
     });
   }

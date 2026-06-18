@@ -56,8 +56,10 @@ export interface UserWithRoles {
     professionTypeId: string;
     professionType: { id: string; name: string; label: string };
   }>;
-  originalDocumentIntakeEnabled?: boolean;
-  courierManagementEnabled?: boolean;
+  documentsControlAccess?: {
+    originalDocumentIntakeEnabled: boolean;
+    courierManagementEnabled: boolean;
+  };
 }
 
 export interface PaginatedUsersData {
@@ -115,7 +117,7 @@ export interface UpdateRecruiterCapabilitiesRequest {
   countryCoverages: RecruiterCapabilityCountryItem[];
 }
 
-export interface UpdateDocumentsControlCapabilitiesRequest {
+export interface UpdateDocumentsControlPermissionsRequest {
   originalDocumentIntakeEnabled: boolean;
   courierManagementEnabled: boolean;
 }
@@ -294,12 +296,12 @@ export const usersApi = baseApi.injectEndpoints({
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
     }),
 
-    updateDocumentsControlCapabilities: builder.mutation<
+    updateDocumentsControlPermissions: builder.mutation<
       UserResponse,
-      { id: string; body: UpdateDocumentsControlCapabilitiesRequest }
+      { id: string; body: UpdateDocumentsControlPermissionsRequest }
     >({
       query: ({ id, body }) => ({
-        url: `/users/${id}/documents-control-capabilities`,
+        url: `/users/${id}/documents-control-permissions`,
         method: "PUT",
         body,
       }),
@@ -562,7 +564,7 @@ export const {
   useCreateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
-  useUpdateDocumentsControlCapabilitiesMutation,
+  useUpdateDocumentsControlPermissionsMutation,
   useUpdateUserMutation,
   useUpdateUserAccountStatusMutation,
   useGetUserAccountStatusHistoryQuery,

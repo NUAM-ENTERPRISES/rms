@@ -228,6 +228,13 @@ export default function UserDetailPage() {
 
   const groupedPermissions = useMemo(() => groupPermissions(permissions), [permissions]);
 
+  const hasIntakeAccess = permissions.includes("read:original_document_intake");
+  const hasCourierAccess = permissions.includes("read:courier_management");
+  const hasDirectIntakeGrant =
+    user?.documentsControlAccess?.originalDocumentIntakeEnabled ?? false;
+  const hasDirectCourierGrant =
+    user?.documentsControlAccess?.courierManagementEnabled ?? false;
+
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -668,53 +675,36 @@ export default function UserDetailPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
                   <FileText className="h-4 w-4 text-blue-600" />
-                  Documents control access
+                  Documents control permissions
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Per-user feature toggles. Documents Control Executive role
-                  users also receive full access via their role.
+                  Effective access from role and direct user permissions.
+                  Documents Control Executive role users receive full access via
+                  their role.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
-                    variant={
-                      user.originalDocumentIntakeEnabled ||
-                      user.userRoles?.some(
-                        (ur) => ur.role.name === "Documents Control Executive",
-                      )
-                        ? "default"
-                        : "outline"
-                    }
+                    variant={hasIntakeAccess ? "default" : "outline"}
                     className="text-xs font-normal"
                   >
                     <FileText className="h-3 w-3 mr-1" />
                     Original Document Intake
-                    {user.originalDocumentIntakeEnabled ? " enabled" : ""}
+                    {hasDirectIntakeGrant ? " (direct grant)" : ""}
                   </Badge>
                   <Badge
-                    variant={
-                      user.courierManagementEnabled ||
-                      user.userRoles?.some(
-                        (ur) => ur.role.name === "Documents Control Executive",
-                      )
-                        ? "default"
-                        : "outline"
-                    }
+                    variant={hasCourierAccess ? "default" : "outline"}
                     className="text-xs font-normal"
                   >
                     <Truck className="h-3 w-3 mr-1" />
                     Courier Management
-                    {user.courierManagementEnabled ? " enabled" : ""}
+                    {hasDirectCourierGrant ? " (direct grant)" : ""}
                   </Badge>
                 </div>
-                {!user.originalDocumentIntakeEnabled &&
-                  !user.courierManagementEnabled &&
-                  !user.userRoles?.some(
-                    (ur) => ur.role.name === "Documents Control Executive",
-                  ) && (
+                {!hasIntakeAccess && !hasCourierAccess && (
                     <p className="text-sm text-slate-500">
-                      No documents control features enabled for this user.
+                      No documents control permissions for this user.
                     </p>
                   )}
               </CardContent>

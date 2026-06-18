@@ -124,6 +124,12 @@ export const PERMISSIONS = {
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
 
+  // Documents control
+  READ_ORIGINAL_DOCUMENT_INTAKE: 'read:original_document_intake',
+  WRITE_ORIGINAL_DOCUMENT_INTAKE: 'write:original_document_intake',
+  READ_COURIER_MANAGEMENT: 'read:courier_management',
+  WRITE_COURIER_MANAGEMENT: 'write:courier_management',
+
   // Audit
   READ_AUDIT: 'read:audit',
   WRITE_AUDIT: 'write:audit',

@@ -32,7 +32,7 @@ import {
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
-import { UpdateDocumentsControlCapabilitiesDto } from './dto/update-documents-control-capabilities.dto';
+import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { NotificationsService } from '../notifications/notifications.service';
 import { BLOCKED_ACCOUNT_MESSAGE } from '../auth/assert-user-not-blocked';
@@ -42,9 +42,15 @@ import {
   getAccountStatusNotificationContent,
 } from './account-status-notifications';
 import {
-  DOCUMENTS_CONTROL_CAPABILITIES_SOCKET_EVENT,
-  DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
-} from './documents-control-capabilities-notifications';
+  DOCUMENTS_CONTROL_PERMISSIONS_SOCKET_EVENT,
+  DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
+} from './documents-control-permissions-notifications';
+import {
+  DOCUMENTS_CONTROL_PERMISSION_KEYS,
+  documentsControlPermissionKeysToToggles,
+  documentsControlTogglesToPermissionKeys,
+  collectEffectivePermissions,
+} from '../auth/rbac/documents-control-permissions.util';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { RbacUtil } from '../auth/rbac/rbac.util';
 import { ROLE_NAMES } from '../common/constants/role-ids';
@@ -386,6 +392,11 @@ export class UsersService {
         userProfessionScopes: {
           include: {
             professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
+        userPermissions: {
+          include: {
+            permission: { select: { key: true } },
           },
         },
       },
@@ -822,33 +833,9 @@ export class UsersService {
   }
 
   async getUserPermissions(userId: string): Promise<string[]> {
-    const userRoles = await (this.prisma as any).userRole.findMany({
-      where: { userId },
-      include: {
-        role: {
-          include: {
-            rolePermissions: {
-              include: {
-                permission: {
-                  select: {
-                    key: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const permissions = new Set<string>();
-    for (const userRole of userRoles) {
-      for (const rolePermission of userRole.role.rolePermissions) {
-        permissions.add(rolePermission.permission.key);
-      }
-    }
-
-    return Array.from(permissions);
+    const { permissions } =
+      await this.rbacUtil.getUserRolesAndPermissions(userId);
+    return permissions;
   }
 
   /**
@@ -909,6 +896,15 @@ export class UsersService {
     if (user.profileImage) {
       user.profileImage = this.getProfileImageUrl(user.profileImage);
     }
+
+    const directPermissionKeys = (user.userPermissions ?? []).map(
+      (up: { permission: { key: string } }) => up.permission.key,
+    );
+    user.documentsControlAccess = documentsControlPermissionKeysToToggles(
+      directPermissionKeys,
+    );
+    delete user.userPermissions;
+
     return user;
   }
 
@@ -945,6 +941,11 @@ export class UsersService {
             country: { select: { code: true, name: true } },
           },
         },
+        userPermissions: {
+          include: {
+            permission: true,
+          },
+        },
       },
     });
 
@@ -957,8 +958,15 @@ export class UsersService {
 
     // Extract roles and permissions
     const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
+    const rolePermissionKeys = user.userRoles.flatMap((ur) =>
       ur.role.rolePermissions.map((rp) => rp.permission.key),
+    );
+    const directPermissionKeys = user.userPermissions.map(
+      (up) => up.permission.key,
+    );
+    const permissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
     );
 
     // Format profile data
@@ -2227,9 +2235,9 @@ export class UsersService {
     return this.findOne(userId);
   }
 
-  async updateDocumentsControlCapabilities(
+  async updateDocumentsControlPermissions(
     userId: string,
-    dto: UpdateDocumentsControlCapabilitiesDto,
+    dto: UpdateDocumentsControlPermissionsDto,
     updatedByUserId?: string,
   ): Promise<UserWithRoles> {
     const existingUser = await this.prisma.user.findUnique({
@@ -2240,22 +2248,55 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
-        courierManagementEnabled: dto.courierManagementEnabled,
+    const targetKeys = documentsControlTogglesToPermissionKeys({
+      originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+      courierManagementEnabled: dto.courierManagementEnabled,
+    });
+
+    const documentsControlPermissions = await this.prisma.permission.findMany({
+      where: {
+        key: { in: [...DOCUMENTS_CONTROL_PERMISSION_KEYS] },
       },
+      select: { id: true, key: true },
+    });
+
+    const documentsControlPermissionIds = documentsControlPermissions.map(
+      (p) => p.id,
+    );
+    const targetPermissionIds = documentsControlPermissions
+      .filter((p) => targetKeys.includes(p.key as (typeof targetKeys)[number]))
+      .map((p) => p.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userPermission.deleteMany({
+        where: {
+          userId,
+          permissionId: { in: documentsControlPermissionIds },
+        },
+      });
+
+      if (targetPermissionIds.length > 0) {
+        await tx.userPermission.createMany({
+          data: targetPermissionIds.map((permissionId) => ({
+            userId,
+            permissionId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { updatedAt: new Date() },
+      });
     });
 
     this.rbacUtil.clearUserCache(userId);
     const { roles, permissions, userVersion } =
       await this.rbacUtil.getUserRolesAndPermissions(userId);
 
-    const capabilityPayload = {
+    const permissionsPayload = {
       userId,
-      originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
-      courierManagementEnabled: dto.courierManagementEnabled,
       updatedAt: new Date().toISOString(),
       roles,
       permissions,
@@ -2264,12 +2305,12 @@ export class UsersService {
 
     await this.notificationsGateway.emitToUser(
       userId,
-      DOCUMENTS_CONTROL_CAPABILITIES_SOCKET_EVENT,
-      capabilityPayload,
+      DOCUMENTS_CONTROL_PERMISSIONS_SOCKET_EVENT,
+      permissionsPayload,
     );
     await this.notificationsGateway.emitToUser(userId, 'data:sync', {
-      type: DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE,
-      ...capabilityPayload,
+      type: DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
+      ...permissionsPayload,
     });
 
     if (updatedByUserId) {
@@ -2280,8 +2321,9 @@ export class UsersService {
         {
           originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
           courierManagementEnabled: dto.courierManagementEnabled,
+          permissionKeys: targetKeys,
         },
-        { action: 'documents_control_capabilities_updated' },
+        { action: 'documents_control_permissions_updated' },
       );
     }
 

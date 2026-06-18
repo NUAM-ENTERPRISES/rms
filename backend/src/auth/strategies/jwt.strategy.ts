@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { assertUserNotBlocked } from '../assert-user-not-blocked';
-import { applyDocumentsControlCapabilityPermissions } from '../rbac/documents-control-permissions.util';
+import { collectEffectivePermissions } from '../rbac/documents-control-permissions.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -41,6 +41,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             },
           },
         },
+        userPermissions: {
+          include: {
+            permission: true,
+          },
+        },
       },
     });
 
@@ -50,16 +55,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     assertUserNotBlocked(user);
 
-    // Extract roles and permissions
     const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = applyDocumentsControlCapabilityPermissions(
-      user.userRoles.flatMap((ur) =>
-        ur.role.rolePermissions.map((rp) => rp.permission.key),
-      ),
-      {
-        originalDocumentIntakeEnabled: user.originalDocumentIntakeEnabled,
-        courierManagementEnabled: user.courierManagementEnabled,
-      },
+    const rolePermissionKeys = user.userRoles.flatMap((ur) =>
+      ur.role.rolePermissions.map((rp) => rp.permission.key),
+    );
+    const directPermissionKeys = user.userPermissions.map(
+      (up) => up.permission.key,
+    );
+    const permissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
     );
 
     return {

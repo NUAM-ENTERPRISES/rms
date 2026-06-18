@@ -3,24 +3,22 @@ import { updateUserAuthorization } from "@/features/auth/authSlice";
 import { usersApi } from "@/features/admin/api";
 import type { NotificationHandlerProps } from "./types";
 
-export const DOCUMENTS_CONTROL_CAPABILITIES_SOCKET_EVENT =
-  "user:documents-control-capabilities-changed";
+export const DOCUMENTS_CONTROL_PERMISSIONS_SOCKET_EVENT =
+  "user:documents-control-permissions-changed";
 
-export const DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE =
-  "DocumentsControlCapabilitiesUpdated";
+export const DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE =
+  "DocumentsControlPermissionsUpdated";
 
-export interface DocumentsControlCapabilitiesChangedPayload {
+export interface DocumentsControlPermissionsChangedPayload {
   userId: string;
-  originalDocumentIntakeEnabled: boolean;
-  courierManagementEnabled: boolean;
   updatedAt: string;
   roles: string[];
   permissions: string[];
   userVersion: number;
 }
 
-function applyDocumentsControlCapabilitiesToAuth(
-  payload: DocumentsControlCapabilitiesChangedPayload,
+function applyDocumentsControlPermissionsToAuth(
+  payload: DocumentsControlPermissionsChangedPayload,
   dispatch: AppDispatch,
   getState: () => RootState,
 ): void {
@@ -40,40 +38,40 @@ function applyDocumentsControlCapabilitiesToAuth(
 }
 
 /** Direct socket event — apply merged permissions immediately for sidebar/nav. */
-export function handleDocumentsControlCapabilitiesChanged(
-  payload: DocumentsControlCapabilitiesChangedPayload,
+export function handleDocumentsControlPermissionsChanged(
+  payload: DocumentsControlPermissionsChangedPayload,
   dispatch: AppDispatch,
   getState: () => RootState,
 ): void {
-  applyDocumentsControlCapabilitiesToAuth(payload, dispatch, getState);
+  applyDocumentsControlPermissionsToAuth(payload, dispatch, getState);
 }
 
-/** data:sync fallback for the same capability update. */
-export function handleDocumentsControlCapabilitiesSync(
-  payload: DocumentsControlCapabilitiesChangedPayload & { type?: string },
+/** data:sync fallback for the same permission update. */
+export function handleDocumentsControlPermissionsSync(
+  payload: DocumentsControlPermissionsChangedPayload & { type?: string },
   dispatch: AppDispatch,
   getState: () => RootState,
 ): boolean {
-  if (payload?.type !== DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE) {
+  if (payload?.type !== DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE) {
     return false;
   }
 
-  applyDocumentsControlCapabilitiesToAuth(payload, dispatch, getState);
+  applyDocumentsControlPermissionsToAuth(payload, dispatch, getState);
   return true;
 }
 
 /** Optional bell notification path if backend sends notification:new later. */
-export function handleDocumentsControlCapabilitiesNotifications({
+export function handleDocumentsControlPermissionsNotifications({
   notification,
   dispatch,
   getState,
 }: NotificationHandlerProps & { getState?: () => RootState }): boolean {
-  if (notification.type !== DOCUMENTS_CONTROL_CAPABILITIES_SYNC_TYPE) {
+  if (notification.type !== DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE) {
     return false;
   }
 
   const meta = notification.meta as
-    | Partial<DocumentsControlCapabilitiesChangedPayload>
+    | Partial<DocumentsControlPermissionsChangedPayload>
     | undefined;
 
   if (
@@ -83,11 +81,9 @@ export function handleDocumentsControlCapabilitiesNotifications({
     meta.roles &&
     meta.userVersion !== undefined
   ) {
-    applyDocumentsControlCapabilitiesToAuth(
+    applyDocumentsControlPermissionsToAuth(
       {
         userId: meta.userId,
-        originalDocumentIntakeEnabled: meta.originalDocumentIntakeEnabled ?? false,
-        courierManagementEnabled: meta.courierManagementEnabled ?? false,
         updatedAt: meta.updatedAt ?? new Date().toISOString(),
         roles: meta.roles,
         permissions: meta.permissions,
