@@ -45,7 +45,9 @@ RUN npm ci
 COPY . .
 
 RUN npx prisma generate
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
+RUN test -f dist/main.js
 
 # ── Prod: minimal runtime image ─────────────────────────────────────────────
 FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS prod
