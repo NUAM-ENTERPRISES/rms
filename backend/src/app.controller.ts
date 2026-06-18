@@ -36,7 +36,7 @@ export class AppController {
       console.error('Database test failed:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Database connection failed',
       };
     }

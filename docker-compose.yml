@@ -37,7 +37,11 @@ services:
       context: ./backend
       target: dev
     restart: unless-stopped
+    # backend/.env = your existing dev secrets (Spaces, WhatsApp, SMTP, etc.)
+    # .env = optional Docker overrides (POSTGRES_*, JWT); loaded second so it can override
+    # environment block below always wins for DATABASE_URL / REDIS_* (container hostnames)
     env_file:
+      - backend/.env
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-affiniks_rms}?schema=public
@@ -75,6 +79,7 @@ services:
     environment:
       VITE_API_URL: http://localhost:3000/api/v1
       VITE_WS_URL: http://localhost:3000
+      VITE_INTRO_VIDEO_DIRECT_UPLOAD: "false"
     ports:
       - "5173:5173"
     volumes:
