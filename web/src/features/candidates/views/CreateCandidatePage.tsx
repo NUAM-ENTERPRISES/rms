@@ -154,6 +154,7 @@ export default function CreateCandidatePage() {
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [passportDuplicate, setPassportDuplicate] = useState(false);
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
 
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
@@ -211,6 +212,8 @@ export default function CreateCandidatePage() {
       dataFlow: false,
       eligibility: false,
       eligibilityNumber: "",
+      eligibilityIssuedDate: "",
+      eligibilityExpiryDate: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
@@ -383,6 +386,11 @@ export default function CreateCandidatePage() {
         toast.error(
           "A candidate with this passport number already exists. Use the existing record.",
         );
+        return;
+      }
+
+      if (data.eligibility && !eligibilityLetterFile) {
+        toast.error("Eligibility letter upload is required when eligibility is enabled");
         return;
       }
 
@@ -665,6 +673,50 @@ export default function CreateCandidatePage() {
           }
         }
 
+        if (candidateId && data.eligibility && eligibilityLetterFile) {
+          try {
+            const formData = new FormData();
+            formData.append("file", eligibilityLetterFile);
+            formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+            const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+            const uploadData: any = (uploadResult as any).data;
+            const uploadedDocument =
+              uploadData?.document && uploadData.document.id
+                ? uploadData.document
+                : uploadData?.id
+                  ? uploadData
+                  : null;
+
+            const documentPayload = {
+              candidateId,
+              docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+              fileName: uploadData.fileName,
+              fileUrl: uploadData.fileUrl,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              documentNumber: data.eligibilityNumber?.trim(),
+              issuedAt: data.eligibilityIssuedDate
+                ? new Date(data.eligibilityIssuedDate).toISOString()
+                : undefined,
+              expiryDate: data.eligibilityExpiryDate
+                ? new Date(data.eligibilityExpiryDate).toISOString()
+                : undefined,
+            };
+
+            if (uploadedDocument?.id) {
+              await updateDocument({
+                id: uploadedDocument.id,
+                ...documentPayload,
+              }).unwrap();
+            } else {
+              await createDocument(documentPayload).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility letter upload failed:", uploadError);
+            toast.warning("Candidate created but eligibility letter upload failed");
+          }
+        }
+
         toast.success("Candidate created successfully!");
         navigate(candidatesHomePath);
       }
@@ -738,6 +790,8 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            eligibilityLetterFile={eligibilityLetterFile}
+            onEligibilityLetterFileChange={setEligibilityLetterFile}
           />
         );
       default:
@@ -896,6 +950,9 @@ export default function CreateCandidatePage() {
         dataFlow: form.getValues("dataFlow"),
         eligibility: form.getValues("eligibility"),
         eligibilityNumber: form.getValues("eligibilityNumber"),
+        eligibilityIssuedDate: form.getValues("eligibilityIssuedDate"),
+        eligibilityExpiryDate: form.getValues("eligibilityExpiryDate"),
+        eligibilityLetterFileName: eligibilityLetterFile?.name,
         religionName: religions.find(
           (religion) => religion.id === form.getValues("religionId"),
         )?.name,

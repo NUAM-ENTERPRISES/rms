@@ -22,6 +22,7 @@ export type BulkSendCsvColumnId =
   | 'scfhsIssueDate'
   | 'scfhsExpiryDate'
   | 'eligibilityNumber'
+  | 'eligibilityIssueDate'
   | 'eligibilityExpiryDate'
   | 'currentLocation'
   | 'contactNumber'
@@ -61,6 +62,7 @@ export const OPTIONAL_CSV_COLUMNS: BulkSendCsvColumnDefinition[] = [
   { id: 'scfhsIssueDate', label: 'SCFHS Issue Date' },
   { id: 'scfhsExpiryDate', label: 'SCFHS Expiry Date' },
   { id: 'eligibilityNumber', label: 'Eligibility Number' },
+  { id: 'eligibilityIssueDate', label: 'Eligibility Issue Date' },
   { id: 'eligibilityExpiryDate', label: 'Eligibility Expiry Date' },
   { id: 'currentLocation', label: 'Current Location' },
   { id: 'contactNumber', label: 'Contact Number' },

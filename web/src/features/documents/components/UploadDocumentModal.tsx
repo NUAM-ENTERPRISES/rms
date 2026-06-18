@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import {
   getAllowedFormatsString,
   getDocumentTypeConfig,
+  getDocumentNumberLabel,
+  isEligibilityLetterType,
   type DocumentType,
 } from "@/constants/document-types";
 import {
@@ -29,7 +31,12 @@ import {
 interface UploadDocumentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpload: (file: File, meta: { docName?: string }) => Promise<void>;
+  onUpload: (file: File, meta: {
+    docName?: string;
+    documentNumber?: string;
+    issuedAt?: string;
+    expiryDate?: string;
+  }) => Promise<void>;
   projectTitle: string;
   roleDesignation: string;
   docType: string;
@@ -43,6 +50,10 @@ interface UploadDocumentModalProps {
   variant?: "upload" | "reupload";
   /** Current file name being replaced (re-upload only). */
   previousFileName?: string | null;
+  /** Prefill eligibility number when uploading eligibility letter. */
+  initialEligibilityNumber?: string | null;
+  initialIssuedAt?: string | null;
+  initialExpiryDate?: string | null;
 }
 
 export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
@@ -58,12 +69,19 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
   isUploading = false,
   variant = "upload",
   previousFileName,
+  initialEligibilityNumber,
+  initialIssuedAt,
+  initialExpiryDate,
 }) => {
   const [uploadFile, setUploadFile] = React.useState<File | null>(null);
   const [docName, setDocName] = React.useState("");
+  const [documentNumber, setDocumentNumber] = React.useState("");
+  const [issuedDate, setIssuedDate] = React.useState("");
+  const [expiryDate, setExpiryDate] = React.useState("");
   const [fileError, setFileError] = React.useState<string | null>(null);
   const [isPreparing, setIsPreparing] = React.useState(false);
   const isReupload = variant === "reupload";
+  const isEligibilityDoc = isEligibilityLetterType(docType);
   const typeDisplay = docTypeLabel?.trim() || docType;
   const docConfig = docType
     ? getDocumentTypeConfig(docType as DocumentType)
@@ -98,13 +116,38 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
       toast.error("Please select a file to upload");
       return;
     }
+    if (isEligibilityDoc) {
+      if (!documentNumber.trim()) {
+        toast.error("Eligibility number is required");
+        return;
+      }
+      if (!issuedDate) {
+        toast.error("Eligibility issued date is required");
+        return;
+      }
+      if (!expiryDate) {
+        toast.error("Eligibility expiry date is required");
+        return;
+      }
+      const issued = new Date(issuedDate);
+      const expiry = new Date(expiryDate);
+      if (Number.isNaN(issued.getTime()) || Number.isNaN(expiry.getTime()) || expiry <= issued) {
+        toast.error("Eligibility expiry date must be after the issued date");
+        return;
+      }
+    }
     setIsPreparing(true);
     try {
       const { file: prepared } = await prepareDocumentFileForUpload(
         uploadFile,
         docType
       );
-      await onUpload(prepared, { docName: docName.trim() || undefined });
+      await onUpload(prepared, {
+        docName: docName.trim() || undefined,
+        documentNumber: documentNumber.trim() || undefined,
+        issuedAt: issuedDate || undefined,
+        expiryDate: expiryDate || undefined,
+      });
     } catch {
       // prepareDocumentFileForUpload already toasts
     } finally {
@@ -112,13 +155,29 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
     }
   };
 
+  const formatDateForInput = (value?: string | null) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().slice(0, 10);
+  };
+
   React.useEffect(() => {
     if (!isOpen) {
       setUploadFile(null);
       setDocName("");
+      setDocumentNumber("");
+      setIssuedDate("");
+      setExpiryDate("");
       setFileError(null);
+      return;
     }
-  }, [isOpen]);
+    if (isEligibilityDoc) {
+      setDocumentNumber(initialEligibilityNumber?.trim() || "");
+      setIssuedDate(formatDateForInput(initialIssuedAt));
+      setExpiryDate(formatDateForInput(initialExpiryDate));
+    }
+  }, [isOpen, isEligibilityDoc, initialEligibilityNumber, initialIssuedAt, initialExpiryDate]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -232,6 +291,44 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
             </p>
           </div>
 
+          {isEligibilityDoc ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2 sm:col-span-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {getDocumentNumberLabel(docType)} *
+                </Label>
+                <Input
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  placeholder="Enter eligibility number"
+                  className="h-9"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Issued Date *
+                </Label>
+                <Input
+                  type="date"
+                  value={issuedDate}
+                  onChange={(e) => setIssuedDate(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Expiry Date *
+                </Label>
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+            </div>
+          ) : null}
+
           {isReupload && previousFileName ? (
             <div className="rounded-lg border border-dashed border-amber-200/90 bg-amber-50/50 px-3 py-2.5 text-sm">
               <p className="text-[10px] uppercase font-bold tracking-wider text-amber-900/70">
@@ -335,7 +432,14 @@ export const UploadDocumentModal: React.FC<UploadDocumentModalProps> = ({
           <Button
             type="button"
             onClick={handleUpload}
-            disabled={!uploadFile || isUploading || isPreparing || !!fileError}
+            disabled={
+              !uploadFile ||
+              isUploading ||
+              isPreparing ||
+              !!fileError ||
+              (isEligibilityDoc &&
+                (!documentNumber.trim() || !issuedDate || !expiryDate))
+            }
             className={cn(
               "w-full sm:w-auto sm:min-w-[140px]",
               isReupload && "bg-amber-600 text-white hover:bg-amber-700"

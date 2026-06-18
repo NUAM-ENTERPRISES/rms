@@ -29,6 +29,7 @@ import { useAppSelector } from "@/app/hooks";
 import { useCan, useHasRole } from "@/hooks/useCan";
 import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import {
   useGetCandidateByIdQuery,
   useGetDocumentsQuery,
@@ -720,6 +721,7 @@ export default function CandidateDetailPage() {
           <CandidateDocuments
             candidateId={id!}
             candidatePassportNumber={candidate?.passportNumber}
+            candidateEligibilityNumber={candidate?.eligibilityNumber}
             initialUploadDocType={pendingUploadDocType}
             onInitialUploadDocTypeHandled={() => setPendingUploadDocType(null)}
           />
@@ -801,9 +803,7 @@ export default function CandidateDetailPage() {
                   id: uploadedDocument.id,
                   docName: desiredDocName || undefined,
                   documentNumber: meta.documentNumber,
-                  expiryDate: meta.expiryDate
-                    ? new Date(meta.expiryDate).toISOString()
-                    : undefined,
+                  expiryDate: DateUtils.toApiDate(meta.expiryDate),
                   notes: meta.notes,
                 }).unwrap();
               } else {
@@ -817,7 +817,7 @@ export default function CandidateDetailPage() {
                   mimeType: uploadData.mimeType,
                   notes: meta.notes,
                   documentNumber: meta.documentNumber,
-                  expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+                  expiryDate: DateUtils.toApiDate(meta.expiryDate),
                   roleCatalogId: meta.roleCatalogId,
                   workExperienceId: meta.workExperienceId,
                 }).unwrap();

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { DepartmentSelect, JobTitleSelect } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
-import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, getAllowedFormatsString, isPassportDocumentType } from "@/constants/document-types";
+import { DOCUMENT_TYPE, DOCUMENT_TYPE_CONFIG, getAllowedFormatsString, getDocumentNumberLabel, isEligibilityLetterType, isPassportDocumentType } from "@/constants/document-types";
 import {
   buildAcceptAttribute,
   effectiveMaxMB,
@@ -42,11 +42,19 @@ interface ExistingPassportDocument {
   expiryDate?: string | null;
 }
 
+interface ExistingEligibilityDocument {
+  documentNumber?: string | null;
+  issuedAt?: string | null;
+  expiryDate?: string | null;
+}
+
 interface Props {
   isOpen: boolean;
   initialDocType?: string;
   initialWorkExperienceId?: string;
   existingPassportDocument?: ExistingPassportDocument | null;
+  initialEligibilityNumber?: string | null;
+  existingEligibilityDocument?: ExistingEligibilityDocument | null;
   onClose: () => void;
   onUpload: (file: File, meta: {
     docType: string;
@@ -54,6 +62,7 @@ interface Props {
     workExperienceId?: string;
     docName?: string;
     documentNumber?: string;
+    issuedAt?: string;
     expiryDate?: string;
     notes?: string;
   }) => Promise<void> | void;
@@ -63,7 +72,7 @@ interface Props {
   layerClassName?: string;
 }
 
-const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, onClose, onUpload, isUploading, workExperiences, layerClassName }) => {
+const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType, initialWorkExperienceId, existingPassportDocument, initialEligibilityNumber, existingEligibilityDocument, onClose, onUpload, isUploading, workExperiences, layerClassName }) => {
   const [docType, setDocType] = React.useState<string>("");
   const [docTypeFilter, setDocTypeFilter] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
@@ -72,6 +81,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
   const [previewType, setPreviewType] = React.useState<string>("");
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [documentNumber, setDocumentNumber] = React.useState("");
+  const [issuedDate, setIssuedDate] = React.useState("");
   const [expiryDate, setExpiryDate] = React.useState("");
   const [notes, setNotes] = React.useState("");
   const [docName, setDocName] = React.useState("");
@@ -86,17 +96,21 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     EMPLOYMENT_DOC_TYPES.has(docType as any) && workExperiences && workExperiences.length > 0;
 
   const isPassportDoc = isPassportDocumentType(docType);
+  const isEligibilityDoc = isEligibilityLetterType(docType);
+  const requiresMetadata = isPassportDoc || isEligibilityDoc;
 
-  const formatExpiryForInput = (value?: string | null) => {
+  const formatDateForInput = (value?: string | null) => {
     if (!value) return "";
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return "";
     return parsed.toISOString().slice(0, 10);
   };
 
-  const isPassportFormValid =
-    !isPassportDoc ||
-    (documentNumber.trim().length > 0 && expiryDate.trim().length > 0);
+  const isMetadataFormValid =
+    !requiresMetadata ||
+    (documentNumber.trim().length > 0 &&
+      expiryDate.trim().length > 0 &&
+      (!isEligibilityDoc || issuedDate.trim().length > 0));
 
   const requiresRole =
     docType === DOCUMENT_TYPE.RESUME ||
@@ -105,15 +119,24 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
   const isUploadDisabled =
     isUploading ||
     isPreparing ||
-    !isPassportFormValid ||
+    !isMetadataFormValid ||
     (requiresRole && !roleCatalogId) ||
     !!fileError;
 
   const uploadDisabledReason = React.useMemo(() => {
     if (isUploading) return undefined;
-    if (isPassportDoc) {
-      if (!documentNumber.trim()) return "Please add passport number";
-      if (!expiryDate.trim()) return "Please add passport expiry date";
+    if (requiresMetadata) {
+      if (!documentNumber.trim()) {
+        return `Please add ${getDocumentNumberLabel(docType).toLowerCase()}`;
+      }
+      if (isEligibilityDoc && !issuedDate.trim()) {
+        return "Please add eligibility issued date";
+      }
+      if (!expiryDate.trim()) {
+        return isPassportDoc
+          ? "Please add passport expiry date"
+          : "Please add expiry date";
+      }
     }
     if (requiresRole && !roleCatalogId) {
       return "Please select a role for this document";
@@ -121,8 +144,11 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
     return undefined;
   }, [
     isUploading,
+    requiresMetadata,
     isPassportDoc,
+    isEligibilityDoc,
     documentNumber,
+    issuedDate,
     expiryDate,
     requiresRole,
     roleCatalogId,
@@ -147,6 +173,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       setPreviewType("");
       setPreviewOpen(false);
       setDocumentNumber("");
+      setIssuedDate("");
       setExpiryDate("");
       setNotes("");
       setDocName("");
@@ -165,10 +192,19 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         existingPassportDocument
       ) {
         setDocumentNumber(existingPassportDocument.documentNumber?.trim() || "");
-        setExpiryDate(formatExpiryForInput(existingPassportDocument.expiryDate));
+        setExpiryDate(formatDateForInput(existingPassportDocument.expiryDate));
+      }
+      if (isEligibilityLetterType(initialDocType)) {
+        setDocumentNumber(
+          existingEligibilityDocument?.documentNumber?.trim() ||
+            initialEligibilityNumber?.trim() ||
+            "",
+        );
+        setIssuedDate(formatDateForInput(existingEligibilityDocument?.issuedAt));
+        setExpiryDate(formatDateForInput(existingEligibilityDocument?.expiryDate));
       }
     }
-  }, [isOpen, initialDocType, existingPassportDocument]);
+  }, [isOpen, initialDocType, existingPassportDocument, existingEligibilityDocument, initialEligibilityNumber]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -252,6 +288,27 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
       }
     }
 
+    if (isEligibilityDoc) {
+      if (!documentNumber.trim()) {
+        toast.error("Eligibility number is required");
+        return;
+      }
+      if (!issuedDate) {
+        toast.error("Eligibility issued date is required");
+        return;
+      }
+      if (!expiryDate) {
+        toast.error("Eligibility expiry date is required");
+        return;
+      }
+      const issued = new Date(issuedDate);
+      const expiry = new Date(expiryDate);
+      if (Number.isNaN(issued.getTime()) || Number.isNaN(expiry.getTime()) || expiry <= issued) {
+        toast.error("Eligibility expiry date must be after the issued date");
+        return;
+      }
+    }
+
     setIsPreparing(true);
     try {
       const { file: prepared } = await prepareDocumentFileForUpload(
@@ -264,6 +321,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
         workExperienceId: selectedWorkExperienceId ?? initialWorkExperienceId,
         docName: docName || undefined,
         documentNumber: documentNumber || undefined,
+        issuedAt: issuedDate || undefined,
         expiryDate: expiryDate || undefined,
         notes: notes || undefined,
       });
@@ -322,9 +380,19 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                 setRoleLabel("");
                 if (isPassportDocumentType(v) && existingPassportDocument) {
                   setDocumentNumber(existingPassportDocument.documentNumber?.trim() || "");
-                  setExpiryDate(formatExpiryForInput(existingPassportDocument.expiryDate));
-                } else if (!isPassportDocumentType(v)) {
+                  setExpiryDate(formatDateForInput(existingPassportDocument.expiryDate));
+                  setIssuedDate("");
+                } else if (isEligibilityLetterType(v)) {
+                  setDocumentNumber(
+                    existingEligibilityDocument?.documentNumber?.trim() ||
+                      initialEligibilityNumber?.trim() ||
+                      "",
+                  );
+                  setIssuedDate(formatDateForInput(existingEligibilityDocument?.issuedAt));
+                  setExpiryDate(formatDateForInput(existingEligibilityDocument?.expiryDate));
+                } else {
                   setDocumentNumber("");
+                  setIssuedDate("");
                   setExpiryDate("");
                 }
               }}>
@@ -413,29 +481,44 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
           <div className="grid grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 sm:gap-y-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">
-                {isPassportDoc ? "Passport Number" : "Document Number"}
-                {isPassportDoc ? " *" : ""}
+                {getDocumentNumberLabel(docType)}
+                {requiresMetadata ? " *" : ""}
               </Label>
               <Input
                 value={documentNumber}
                 onChange={(e) => setDocumentNumber(e.target.value)}
-                placeholder={isPassportDoc ? "e.g., A1234567" : "Optional"}
+                placeholder={isPassportDoc ? "e.g., A1234567" : isEligibilityDoc ? "Enter eligibility number" : "Optional"}
                 className="h-9"
-                required={isPassportDoc}
+                required={requiresMetadata}
               />
             </div>
+
+            {isEligibilityDoc ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  Issued Date *
+                </Label>
+                <Input
+                  type="date"
+                  value={issuedDate}
+                  onChange={(e) => setIssuedDate(e.target.value)}
+                  className="h-9"
+                  required
+                />
+              </div>
+            ) : null}
 
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">
                 {isPassportDoc ? "Passport Expiry Date" : "Expiry Date"}
-                {isPassportDoc ? " *" : ""}
+                {requiresMetadata ? " *" : ""}
               </Label>
               <Input
                 type="date"
                 value={expiryDate}
                 onChange={(e) => setExpiryDate(e.target.value)}
                 className="h-9"
-                required={isPassportDoc}
+                required={requiresMetadata}
               />
             </div>
           </div>
@@ -540,7 +623,7 @@ const CandidateUploadDocumentModal: React.FC<Props> = ({ isOpen, initialDocType,
                       >
                         {isUploading || isPreparing
                           ? "Uploading..."
-                          : isPassportDoc
+                          : requiresMetadata
                             ? "Upload & Save"
                             : "Upload"}
                       </Button>

@@ -68,14 +68,23 @@ export class CreateDocumentDto {
 
   @ApiPropertyOptional({
     description: 'Expiry date for documents with expiration',
-    example: '2025-12-31T00:00:00.000Z',
+    example: '2025-12-31',
   })
   @IsOptional()
   @IsDateString()
   expiryDate?: string;
 
   @ApiPropertyOptional({
-    description: 'Document number (e.g., passport number)',
+    description: 'Issue date for documents with issuance date (e.g., eligibility letter)',
+    example: '2024-01-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  issuedAt?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Document number (e.g., passport number). For eligibility_letter, this is the eligibility number.',
     example: 'A12345678',
   })
   @IsOptional()

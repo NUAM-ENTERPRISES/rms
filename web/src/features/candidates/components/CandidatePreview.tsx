@@ -60,6 +60,9 @@ interface CandidatePreviewProps {
     dataFlow?: boolean;
     eligibility?: boolean;
     eligibilityNumber?: string;
+    eligibilityIssuedDate?: string;
+    eligibilityExpiryDate?: string;
+    eligibilityLetterFileName?: string;
     religionName?: string;
   };
   onConfirm: () => void;
@@ -692,6 +695,36 @@ export default function CandidatePreview({
                   </label>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     {candidateData.eligibilityNumber}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityIssuedDate ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Issued Date
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityIssuedDate)}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityExpiryDate ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Expiry Date
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityExpiryDate)}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityLetterFileName ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Letter
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.eligibilityLetterFileName}
                   </p>
                 </div>
               ) : null}

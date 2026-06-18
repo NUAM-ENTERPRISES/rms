@@ -851,7 +851,8 @@ model Document {
   deletedAt DateTime?
 
   documentNumber   String?
-  expiryDate       DateTime?
+  issuedAt         DateTime? @db.Date
+  expiryDate       DateTime? @db.Date
   fileSize         Int?
   mimeType         String?
   roleCatalogId    String?

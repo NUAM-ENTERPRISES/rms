@@ -143,6 +143,7 @@ import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
+import { DateUtils } from "@/shared/utils/date";
 import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
@@ -629,9 +630,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           id: uploadedDocument.id,
           docName: desiredDocName || undefined,
           documentNumber: meta.documentNumber,
-          expiryDate: meta.expiryDate
-            ? new Date(meta.expiryDate).toISOString()
-            : undefined,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
         }).unwrap();
       } else {
@@ -644,7 +643,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
           documentNumber: meta.documentNumber,
-          expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
           roleCatalogId: meta.roleCatalogId || "",
           workExperienceId: meta.workExperienceId,

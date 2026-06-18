@@ -34,6 +34,7 @@ export interface BulkSendCsvProfile {
   scfhsIssueDate: string;
   scfhsExpiryDate: string;
   eligibilityNumber: string;
+  eligibilityIssueDate: string;
   eligibilityExpiryDate: string;
   currentLocation: string;
   contactNumber: string;
@@ -84,6 +85,7 @@ function findDocumentByTypes(
   documents: Array<{
     docType: string;
     documentNumber?: string | null;
+    issuedAt?: Date | string | null;
     expiryDate?: Date | string | null;
     verifiedAt?: Date | string | null;
     createdAt?: Date | string | null;
@@ -100,6 +102,7 @@ function findProcessingStep(
     processingSteps?: Array<{
       template?: { key?: string | null } | null;
       eligibilityNumber?: string | null;
+      eligibilityIssuedAt?: Date | string | null;
       eligibilityValidAt?: Date | string | null;
       prometricPassedAt?: Date | string | null;
       prometricValidAt?: Date | string | null;
@@ -251,6 +254,7 @@ export function mapCandidateProjectToBulkSendCsvProfile(
       documents?: Array<{
         docType: string;
         documentNumber?: string | null;
+        issuedAt?: Date | string | null;
         expiryDate?: Date | string | null;
         verifiedAt?: Date | string | null;
         createdAt?: Date | string | null;
@@ -283,6 +287,10 @@ export function mapCandidateProjectToBulkSendCsvProfile(
   const documents = (candidate.documents ?? []).filter((doc) => !doc.isDeleted);
   const workExperiences = candidate.workExperiences ?? [];
   const scfhsDoc = findDocumentByTypes(documents, SCFHS_DOC_TYPES);
+  const eligibilityDoc = findDocumentByTypes(
+    documents,
+    new Set([DOCUMENT_TYPE.ELIGIBILITY_LETTER]),
+  );
   const projectProcessingTasks = (candidate.processingTasks ?? []).filter(
     (task) => !cp.projectId || task.projectId === cp.projectId,
   );
@@ -345,9 +353,15 @@ export function mapCandidateProjectToBulkSendCsvProfile(
       formatDate(councilStep?.councilValidAt),
     eligibilityNumber:
       candidate.eligibilityNumber?.trim() ||
+      eligibilityDoc?.documentNumber?.trim() ||
       eligibilityStep?.eligibilityNumber?.trim() ||
       '',
-    eligibilityExpiryDate: formatDate(eligibilityStep?.eligibilityValidAt),
+    eligibilityIssueDate:
+      formatDate(eligibilityDoc?.issuedAt) ||
+      formatDate(eligibilityStep?.eligibilityIssuedAt),
+    eligibilityExpiryDate:
+      formatDate(eligibilityDoc?.expiryDate) ||
+      formatDate(eligibilityStep?.eligibilityValidAt),
     currentLocation: formatCurrentLocation(candidate),
     contactNumber: formatContactNumber(
       candidate.countryCode,

@@ -17,6 +17,7 @@ import {
   PROCESSING_STEP_SECTOR_MISMATCH_REASON,
 } from './processing-sector-steps';
 import { ADDRESS_TYPE_LABELS } from '../courier-shipments/constants/shipment-types';
+import { parseDocumentDate } from '../documents/utils/document-date.util';
 
 const COLLECTION_TYPE_LABELS: Record<string, string> = {
   direct: 'Direct',
@@ -2715,6 +2716,7 @@ export class ProcessingService {
           email: pc.candidate?.email || null,
           mobileNumber: pc.candidate?.mobileNumber || null,
           countryCode: pc.candidate?.countryCode || null,
+          eligibilityNumber: pc.candidate?.eligibilityNumber || null,
         },
         project: {
           id: pc.project?.id || null,
@@ -3986,7 +3988,7 @@ export class ProcessingService {
         fileUrl,
         fileSize,
         mimeType,
-        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+        expiryDate: parseDocumentDate(expiryDate) ?? undefined,
         documentNumber,
         notes,
         roleCatalogId: roleCatalogId || oldDocument.roleCatalogId || null,

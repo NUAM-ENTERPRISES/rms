@@ -38,6 +38,7 @@ import {
   normalizePassportNumber,
   resolvePassportNumberForCandidate,
 } from './utils/passport-number.util';
+import { syncEligibilityLetterDocumentNumberFromCandidate } from './utils/eligibility-number.util';
 import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
@@ -3463,7 +3464,16 @@ export class CandidatesService {
         },
         documents: {
           where: { isDeleted: false },
-          select: { docType: true, documentNumber: true },
+          select: {
+            id: true,
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+            documentNumber: true,
+            issuedAt: true,
+            expiryDate: true,
+            createdAt: true,
+          },
         },
         statusHistories: {
           orderBy: { statusUpdatedAt: 'desc' },
@@ -3535,6 +3545,7 @@ export class CandidatesService {
 
     return {
       ...base,
+      documents: documents ?? [],
       passportNumber: resolvePassportNumberForCandidate({
         passportNumber: candidate.passportNumber,
         documents: documents ?? [],
@@ -3920,6 +3931,17 @@ export class CandidatesService {
       data: updateData,
       include: candidateUpdateInclude,
     });
+
+    if (
+      resolvedEligibility === true &&
+      resolvedEligibilityNumber?.trim()
+    ) {
+      await syncEligibilityLetterDocumentNumberFromCandidate(
+        this.prisma,
+        id,
+        resolvedEligibilityNumber,
+      );
+    }
 
     if (declaredIdsPayload !== undefined && finalAgentIdMerged) {
       await this.prisma.$transaction(async (tx) => {

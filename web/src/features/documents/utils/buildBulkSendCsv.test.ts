@@ -34,6 +34,7 @@ const sampleProfile: BulkSendCsvProfile = {
   scfhsIssueDate: '01 Jan 2024',
   scfhsExpiryDate: '01 Jan 2027',
   eligibilityNumber: 'ELIG-1',
+  eligibilityIssueDate: '01 Jan 2024',
   eligibilityExpiryDate: '31 Dec 2026',
   currentLocation: 'Riyadh',
   contactNumber: '+966 501234567',
@@ -44,13 +45,14 @@ const sampleProfile: BulkSendCsvProfile = {
 
 describe('buildBulkSendCsv', () => {
   it('includes mandatory columns and selected optional columns only', () => {
-    const columnIds = resolveSelectedColumnIds(['emailId', 'gccExperience']);
+    const columnIds = resolveSelectedColumnIds(['emailId', 'gccExperience', 'eligibilityIssueDate']);
     const { headers } = profilesToGridRows([sampleProfile], columnIds);
 
     expect(headers).toContain('Serial No');
     expect(headers).toContain('Candidate Full Name');
     expect(headers).toContain('Email ID');
     expect(headers).toContain('GCC Experience');
+    expect(headers).toContain('Eligibility Issue Date');
     expect(headers).not.toContain('Mumaris ID');
   });
 

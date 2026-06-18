@@ -330,6 +330,9 @@ export const DOCUMENT_TYPE_META: Record<
       | 'other';
     hasExpiry: boolean;
     expiryRequired: boolean;
+    hasIssueDate?: boolean;
+    issueRequired?: boolean;
+    numberFieldLabel?: string;
     maxSizeMB: number;
     allowedFormats: string[];
     commonlyRequired: boolean;
@@ -653,7 +656,10 @@ export const DOCUMENT_TYPE_META: Record<
     description: 'Document indicating project eligibility',
     category: 'verification',
     hasExpiry: true,
-    expiryRequired: false,
+    expiryRequired: true,
+    hasIssueDate: true,
+    issueRequired: true,
+    numberFieldLabel: 'Eligibility Number',
     maxSizeMB: 5,
     allowedFormats: ['pdf', 'jpg', 'jpeg', 'png'],
     commonlyRequired: false,
@@ -1133,6 +1139,21 @@ export const PASSPORT_DOCUMENT_TYPES = [
 
 export function isPassportDocumentType(docType: string): boolean {
   return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
+}
+
+export function isEligibilityLetterType(docType: string): boolean {
+  return docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER;
+}
+
+export function getDocumentNumberLabel(docType: string): string {
+  if (isPassportDocumentType(docType)) {
+    return 'Passport Number';
+  }
+  if (isEligibilityLetterType(docType)) {
+    return 'Eligibility Number';
+  }
+  const meta = DOCUMENT_TYPE_META[docType as DocumentType];
+  return meta?.numberFieldLabel ?? 'Document Number';
 }
 
 /** Formats supported when building a unified client PDF (pdf-lib). */

@@ -32,6 +32,30 @@ export class DateUtils {
   }
 
   /**
+   * Normalize a calendar date for document API fields (issuedAt, expiryDate).
+   * Returns YYYY-MM-DD without timezone conversion.
+   */
+  static toApiDate(value?: string | Date | null): string | undefined {
+    if (!value) return undefined;
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      const dateOnly = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
+      if (dateOnly) return dateOnly[1];
+
+      const parsed = parseISO(trimmed);
+      if (!isValid(parsed)) return undefined;
+      return format(parsed, "yyyy-MM-dd");
+    }
+
+    if (value instanceof Date && isValid(value)) {
+      return format(value, "yyyy-MM-dd");
+    }
+
+    return undefined;
+  }
+
+  /**
    * Format date and time
    */
   static formatDateTime(dateString?: string): string {

@@ -79,6 +79,7 @@ import {
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 import { toast } from "sonner";
+import { DateUtils } from "@/shared/utils/date";
 import { FlagIcon } from "@/shared";
 
 const CandidateUploadDocumentModal = React.lazy(
@@ -327,9 +328,7 @@ const RecruiterDocsPage: React.FC = () => {
           id: uploadedDocument.id,
           docName: desiredDocName,
           documentNumber: meta.documentNumber,
-          expiryDate: meta.expiryDate
-            ? new Date(meta.expiryDate).toISOString()
-            : undefined,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
         }).unwrap();
       } else {
@@ -342,9 +341,7 @@ const RecruiterDocsPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
           documentNumber: meta.documentNumber,
-          expiryDate: meta.expiryDate
-            ? new Date(meta.expiryDate).toISOString()
-            : undefined,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
           roleCatalogId: meta.roleCatalogId,
           workExperienceId: meta.workExperienceId,

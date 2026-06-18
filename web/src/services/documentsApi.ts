@@ -18,6 +18,7 @@ export interface Document {
   rejectedBy?: string;
   rejectedAt?: string;
   expiryDate?: string;
+  issuedAt?: string;
   notes?: string;
   rejectionReason?: string;
   documentNumber?: string;
@@ -191,6 +192,7 @@ export interface CreateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
@@ -202,6 +204,7 @@ export interface UpdateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;

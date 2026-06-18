@@ -119,6 +119,31 @@ describe('mapCandidateProjectToBulkSendCsvProfile', () => {
     expect(profile.eligibilityNumber).toBe('');
   });
 
+  it('falls back to eligibility letter document metadata', () => {
+    const profile = mapCandidateProjectToBulkSendCsvProfile({
+      ...baseCandidateProject,
+      candidate: {
+        ...baseCandidateProject.candidate,
+        eligibilityNumber: undefined,
+        documents: [
+          ...baseCandidateProject.candidate.documents,
+          {
+            docType: 'eligibility_letter',
+            documentNumber: 'DOC-ELIG-9',
+            issuedAt: new Date('2024-03-01'),
+            expiryDate: new Date('2026-03-01'),
+            isDeleted: false,
+          },
+        ],
+        processingTasks: [],
+      },
+    });
+
+    expect(profile.eligibilityNumber).toBe('DOC-ELIG-9');
+    expect(profile.eligibilityIssueDate).toContain('2024');
+    expect(profile.eligibilityExpiryDate).toContain('2026');
+  });
+
   it('falls back to addressCountryCode when address country name is missing', () => {
     const profile = mapCandidateProjectToBulkSendCsvProfile({
       ...baseCandidateProject,

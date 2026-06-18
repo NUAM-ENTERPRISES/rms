@@ -11,6 +11,8 @@ const baseValid = {
   dataFlow: false,
   eligibility: false,
   eligibilityNumber: "",
+  eligibilityIssuedDate: "",
+  eligibilityExpiryDate: "",
   religionId: "",
 };
 
@@ -75,7 +77,7 @@ describe("createCandidateFormSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires eligibility number when eligibility is enabled", () => {
+  it("requires eligibility fields when eligibility is enabled", () => {
     const schema = buildCreateCandidateSchema({ isAgentCoordinator: false });
     const missingNumber = schema.safeParse({
       ...baseValid,
@@ -83,16 +85,42 @@ describe("createCandidateFormSchema", () => {
       mobileNumber: "9876543210",
       eligibility: true,
       eligibilityNumber: "",
+      eligibilityIssuedDate: "2024-01-01",
+      eligibilityExpiryDate: "2025-01-01",
     });
     expect(missingNumber.success).toBe(false);
 
-    const withNumber = schema.safeParse({
+    const missingDates = schema.safeParse({
       ...baseValid,
       countryCode: "+91",
       mobileNumber: "9876543210",
       eligibility: true,
       eligibilityNumber: "ELIG-123",
+      eligibilityIssuedDate: "",
+      eligibilityExpiryDate: "",
     });
-    expect(withNumber.success).toBe(true);
+    expect(missingDates.success).toBe(false);
+
+    const invalidRange = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "ELIG-123",
+      eligibilityIssuedDate: "2025-01-01",
+      eligibilityExpiryDate: "2024-01-01",
+    });
+    expect(invalidRange.success).toBe(false);
+
+    const withAllFields = schema.safeParse({
+      ...baseValid,
+      countryCode: "+91",
+      mobileNumber: "9876543210",
+      eligibility: true,
+      eligibilityNumber: "ELIG-123",
+      eligibilityIssuedDate: "2024-01-01",
+      eligibilityExpiryDate: "2025-01-01",
+    });
+    expect(withAllFields.success).toBe(true);
   });
 });

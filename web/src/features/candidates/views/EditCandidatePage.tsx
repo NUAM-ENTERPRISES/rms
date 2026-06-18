@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck } from "lucide-react";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck, Upload } from "lucide-react";
 import {
   CountryCodeSelect,
   MultiCountrySelect,
@@ -35,7 +35,10 @@ import {
   useGetCandidateByIdQuery,
   useGetProfessionTypesQuery,
   useUpdateCandidateMutation,
+  useUploadDocumentMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE, getAllowedFormatsString } from "@/constants/document-types";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -87,6 +90,8 @@ const updateCandidateSchema = z.object({
   dataFlow: z.boolean().optional(),
   eligibility: z.boolean().optional(),
   eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+  eligibilityIssuedDate: z.string().optional().or(z.literal("")),
+  eligibilityExpiryDate: z.string().optional().or(z.literal("")),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -113,6 +118,39 @@ const updateCandidateSchema = z.object({
       path: ["eligibilityNumber"],
     });
   }
+  if (data.eligibility && !data.eligibilityIssuedDate?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility issued date is required when eligibility is enabled",
+      path: ["eligibilityIssuedDate"],
+    });
+  }
+  if (data.eligibility && !data.eligibilityExpiryDate?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility expiry date is required when eligibility is enabled",
+      path: ["eligibilityExpiryDate"],
+    });
+  }
+  if (
+    data.eligibility &&
+    data.eligibilityIssuedDate?.trim() &&
+    data.eligibilityExpiryDate?.trim()
+  ) {
+    const issued = new Date(data.eligibilityIssuedDate);
+    const expiry = new Date(data.eligibilityExpiryDate);
+    if (
+      !Number.isNaN(issued.getTime()) &&
+      !Number.isNaN(expiry.getTime()) &&
+      expiry <= issued
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Eligibility expiry date must be after the issued date",
+        path: ["eligibilityExpiryDate"],
+      });
+    }
+  }
 });
 
 type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
@@ -134,11 +172,36 @@ export default function EditCandidatePage() {
     useUpdateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
 
   const candidate = candidateData;
+
+  const existingEligibilityDocument = useMemo(() => {
+    const docs = (candidate as { documents?: Array<{
+      id: string;
+      docType: string;
+      fileName?: string;
+      issuedAt?: string | null;
+      expiryDate?: string | null;
+      isDeleted?: boolean;
+    }> })?.documents ?? [];
+    return docs
+      .filter(
+        (doc) =>
+          doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER && !doc.isDeleted,
+      )
+      .sort(
+        (a, b) =>
+          new Date((b as { createdAt?: string }).createdAt ?? 0).getTime() -
+          new Date((a as { createdAt?: string }).createdAt ?? 0).getTime(),
+      )[0];
+  }, [candidate]);
 
   // Form
   const form = useForm<UpdateCandidateFormData>({
@@ -240,6 +303,12 @@ export default function EditCandidatePage() {
         dataFlow: candidate.dataFlow ?? false,
         eligibility: candidate.eligibility ?? false,
         eligibilityNumber: candidate.eligibilityNumber || "",
+        eligibilityIssuedDate: existingEligibilityDocument?.issuedAt
+          ? new Date(existingEligibilityDocument.issuedAt).toISOString().split("T")[0]
+          : "",
+        eligibilityExpiryDate: existingEligibilityDocument?.expiryDate
+          ? new Date(existingEligibilityDocument.expiryDate).toISOString().split("T")[0]
+          : "",
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -248,7 +317,7 @@ export default function EditCandidatePage() {
         referralDescription: candidate.referralDescription || "",
       });
     }
-  }, [candidate, form]);
+  }, [candidate, form, existingEligibilityDocument]);
 
   // Permission check
   if (!canWriteCandidates) {
@@ -316,6 +385,15 @@ export default function EditCandidatePage() {
   // Form submission
   const onSubmit = async (data: UpdateCandidateFormData) => {
     try {
+      if (
+        data.eligibility &&
+        !eligibilityLetterFile &&
+        !existingEligibilityDocument
+      ) {
+        toast.error("Eligibility letter upload is required when eligibility is enabled");
+        return;
+      }
+
       // Build payload using the backend's preferred fields.
       // The API rejects a top-level `name` property in updates in newer versions
       // (it expects `firstName` / `lastName`), so we split the single `name`
@@ -412,6 +490,66 @@ export default function EditCandidatePage() {
           } catch (uploadError: any) {
             console.error("Profile image upload failed:", uploadError);
             toast.warning("Candidate updated but profile image upload failed");
+          }
+        }
+
+        if (data.eligibility) {
+          const issuedAt = data.eligibilityIssuedDate
+            ? new Date(data.eligibilityIssuedDate).toISOString()
+            : undefined;
+          const expiryDate = data.eligibilityExpiryDate
+            ? new Date(data.eligibilityExpiryDate).toISOString()
+            : undefined;
+          const documentNumber = data.eligibilityNumber?.trim();
+
+          try {
+            if (eligibilityLetterFile) {
+              const formData = new FormData();
+              formData.append("file", eligibilityLetterFile);
+              formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+              const uploadResult = await uploadDocument({
+                candidateId: id!,
+                formData,
+              }).unwrap();
+              const uploadData: any = (uploadResult as any).data;
+              const uploadedDocument =
+                uploadData?.document && uploadData.document.id
+                  ? uploadData.document
+                  : uploadData?.id
+                    ? uploadData
+                    : null;
+
+              const documentPayload = {
+                candidateId: id!,
+                docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+                fileName: uploadData.fileName,
+                fileUrl: uploadData.fileUrl,
+                fileSize: uploadData.fileSize,
+                mimeType: uploadData.mimeType,
+                documentNumber,
+                issuedAt,
+                expiryDate,
+              };
+
+              if (uploadedDocument?.id) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  ...documentPayload,
+                }).unwrap();
+              } else {
+                await createDocument(documentPayload).unwrap();
+              }
+            } else if (existingEligibilityDocument?.id) {
+              await updateDocument({
+                id: existingEligibilityDocument.id,
+                documentNumber,
+                issuedAt,
+                expiryDate,
+              }).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility document update failed:", uploadError);
+            toast.warning("Candidate updated but eligibility document save failed");
           }
         }
 
@@ -1053,27 +1191,110 @@ export default function EditCandidatePage() {
                   </div>
 
                   {form.watch("eligibility") ? (
-                    <div className="space-y-2 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
-                      <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
-                        Eligibility Number
-                      </FormLabel>
-                      <Controller
-                        name="eligibilityNumber"
-                        control={form.control}
-                        render={({ field }) => (
-                          <Input
-                            {...field}
-                            id="eligibilityNumber"
-                            placeholder="Enter eligibility number"
-                            className="h-11 bg-white border-slate-200"
+                    <div className="space-y-4 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
+                      <div className="space-y-2">
+                        <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                          Eligibility Number
+                        </FormLabel>
+                        <Controller
+                          name="eligibilityNumber"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="eligibilityNumber"
+                              placeholder="Enter eligibility number"
+                              className="h-11 bg-white border-slate-200"
+                            />
+                          )}
+                        />
+                        {form.formState.errors.eligibilityNumber?.message ? (
+                          <p className="text-sm text-red-600">
+                            {form.formState.errors.eligibilityNumber.message as string}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="eligibilityIssuedDate" className="text-slate-700 font-medium">
+                            Issued Date
+                          </FormLabel>
+                          <Controller
+                            name="eligibilityIssuedDate"
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="eligibilityIssuedDate"
+                                type="date"
+                                className="h-11 bg-white border-slate-200"
+                              />
+                            )}
                           />
-                        )}
-                      />
-                      {form.formState.errors.eligibilityNumber?.message ? (
-                        <p className="text-sm text-red-600">
-                          {form.formState.errors.eligibilityNumber.message as string}
+                          {form.formState.errors.eligibilityIssuedDate?.message ? (
+                            <p className="text-sm text-red-600">
+                              {form.formState.errors.eligibilityIssuedDate.message as string}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="eligibilityExpiryDate" className="text-slate-700 font-medium">
+                            Expiry Date
+                          </FormLabel>
+                          <Controller
+                            name="eligibilityExpiryDate"
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="eligibilityExpiryDate"
+                                type="date"
+                                className="h-11 bg-white border-slate-200"
+                              />
+                            )}
+                          />
+                          {form.formState.errors.eligibilityExpiryDate?.message ? (
+                            <p className="text-sm text-red-600">
+                              {form.formState.errors.eligibilityExpiryDate.message as string}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <FormLabel
+                          htmlFor="eligibilityLetterFile"
+                          className="text-slate-700 font-medium flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4 text-emerald-600" />
+                          Eligibility Letter
+                        </FormLabel>
+                        <Input
+                          id="eligibilityLetterFile"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="h-11 bg-white border-slate-200 cursor-pointer"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] ?? null;
+                            setEligibilityLetterFile(file);
+                            event.target.value = "";
+                          }}
+                        />
+                        <p className="text-xs text-slate-500">
+                          Allowed: {getAllowedFormatsString(DOCUMENT_TYPE.ELIGIBILITY_LETTER)}
                         </p>
-                      ) : null}
+                        {eligibilityLetterFile ? (
+                          <p className="text-sm text-slate-700">
+                            Selected: {eligibilityLetterFile.name}
+                          </p>
+                        ) : existingEligibilityDocument?.fileName ? (
+                          <p className="text-sm text-slate-600">
+                            Current file: {existingEligibilityDocument.fileName}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   ) : null}
                 </div>

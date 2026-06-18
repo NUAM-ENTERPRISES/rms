@@ -49,7 +49,10 @@ import { UploadService } from '../upload/upload.service';
 import { getEffectiveMaxBytes } from '../upload/upload.constants';
 import { GoogleDriveService } from '../google-drive/google-drive.service';
 import { validatePassportDocumentFields } from './utils/passport-document.util';
+import { validateEligibilityDocumentFields } from './utils/eligibility-document.util';
+import { parseDocumentDate } from './utils/document-date.util';
 import { syncCandidatePassportNumberFromDocument } from '../candidates/utils/passport-number.util';
+import { syncCandidateEligibilityNumberFromDocument } from '../candidates/utils/eligibility-number.util';
 import {
   computeDocumentRepositoryCompletion,
   getDocumentRepositorySlots,
@@ -419,6 +422,11 @@ export class DocumentsService {
       documentNumber: createDocumentDto.documentNumber,
       expiryDate: createDocumentDto.expiryDate,
     });
+    validateEligibilityDocumentFields(createDocumentDto.docType, {
+      documentNumber: createDocumentDto.documentNumber,
+      issuedAt: createDocumentDto.issuedAt,
+      expiryDate: createDocumentDto.expiryDate,
+    });
 
     const explicitRoleCatalogId =
       createDocumentDto.roleCatalog ||
@@ -491,9 +499,8 @@ export class DocumentsService {
         fileUrl: createDocumentDto.fileUrl,
         fileSize: createDocumentDto.fileSize,
         mimeType: createDocumentDto.mimeType,
-        expiryDate: createDocumentDto.expiryDate
-          ? new Date(createDocumentDto.expiryDate)
-          : null,
+        expiryDate: parseDocumentDate(createDocumentDto.expiryDate) ?? null,
+        issuedAt: parseDocumentDate(createDocumentDto.issuedAt) ?? null,
         documentNumber: createDocumentDto.documentNumber,
         notes: createDocumentDto.notes,
         roleCatalogId: resolvedRoleCatalogId,
@@ -531,6 +538,12 @@ export class DocumentsService {
     });
 
     await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      createDocumentDto.candidateId,
+      createDocumentDto.docType,
+      createDocumentDto.documentNumber,
+    );
+    await syncCandidateEligibilityNumberFromDocument(
       this.prisma,
       createDocumentDto.candidateId,
       createDocumentDto.docType,
@@ -778,9 +791,18 @@ export class DocumentsService {
       updateDocumentDto.expiryDate !== undefined
         ? updateDocumentDto.expiryDate
         : existingDocument.expiryDate;
+    const mergedIssuedAt =
+      updateDocumentDto.issuedAt !== undefined
+        ? updateDocumentDto.issuedAt
+        : existingDocument.issuedAt;
 
     validatePassportDocumentFields(docType, {
       documentNumber: mergedDocumentNumber,
+      expiryDate: mergedExpiryDate,
+    });
+    validateEligibilityDocumentFields(docType, {
+      documentNumber: mergedDocumentNumber,
+      issuedAt: mergedIssuedAt,
       expiryDate: mergedExpiryDate,
     });
 
@@ -793,9 +815,14 @@ export class DocumentsService {
         fileUrl: updateDocumentDto.fileUrl,
         fileSize: updateDocumentDto.fileSize,
         mimeType: updateDocumentDto.mimeType,
-        expiryDate: updateDocumentDto.expiryDate
-          ? new Date(updateDocumentDto.expiryDate)
-          : undefined,
+        expiryDate:
+          updateDocumentDto.expiryDate !== undefined
+            ? parseDocumentDate(updateDocumentDto.expiryDate)
+            : undefined,
+        issuedAt:
+          updateDocumentDto.issuedAt !== undefined
+            ? parseDocumentDate(updateDocumentDto.issuedAt)
+            : undefined,
         documentNumber: updateDocumentDto.documentNumber,
         notes: updateDocumentDto.notes,
         roleCatalogId:
@@ -831,6 +858,12 @@ export class DocumentsService {
     });
 
     await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      existingDocument.candidateId,
+      docType,
+      mergedDocumentNumber,
+    );
+    await syncCandidateEligibilityNumberFromDocument(
       this.prisma,
       existingDocument.candidateId,
       docType,
@@ -2012,9 +2045,15 @@ export class DocumentsService {
     const resolvedDocumentNumber =
       reuploadDto.documentNumber?.trim() || document.documentNumber;
     const resolvedExpiryDate = reuploadDto.expiryDate ?? document.expiryDate;
+    const resolvedIssuedAt = reuploadDto.issuedAt ?? document.issuedAt;
 
     validatePassportDocumentFields(document.docType, {
       documentNumber: resolvedDocumentNumber,
+      expiryDate: resolvedExpiryDate,
+    });
+    validateEligibilityDocumentFields(document.docType, {
+      documentNumber: resolvedDocumentNumber,
+      issuedAt: resolvedIssuedAt,
       expiryDate: resolvedExpiryDate,
     });
 
@@ -2050,9 +2089,18 @@ export class DocumentsService {
           fileUrl: reuploadDto.fileUrl,
           fileSize: reuploadDto.fileSize,
           mimeType: reuploadDto.mimeType,
-          expiryDate: reuploadDto.expiryDate
-            ? new Date(reuploadDto.expiryDate)
-            : document.expiryDate ?? undefined,
+          expiryDate:
+            reuploadDto.expiryDate !== undefined
+              ? (parseDocumentDate(reuploadDto.expiryDate) ??
+                document.expiryDate ??
+                undefined)
+              : (document.expiryDate ?? undefined),
+          issuedAt:
+            reuploadDto.issuedAt !== undefined
+              ? (parseDocumentDate(reuploadDto.issuedAt) ??
+                document.issuedAt ??
+                undefined)
+              : (document.issuedAt ?? undefined),
           documentNumber: resolvedDocumentNumber,
           notes: reuploadDto.notes,
           status: DOCUMENT_STATUS.RESUBMITTED,
@@ -2110,6 +2158,12 @@ export class DocumentsService {
     });
 
     await syncCandidatePassportNumberFromDocument(
+      this.prisma,
+      document.candidateId,
+      document.docType,
+      resolvedDocumentNumber,
+    );
+    await syncCandidateEligibilityNumberFromDocument(
       this.prisma,
       document.candidateId,
       document.docType,
@@ -3424,6 +3478,9 @@ export class DocumentsService {
               status: true,
               uploadedBy: true,
               createdAt: true,
+              documentNumber: true,
+              issuedAt: true,
+              expiryDate: true,
             },
           },
         },
@@ -6330,6 +6387,7 @@ export class DocumentsService {
               select: {
                 docType: true,
                 documentNumber: true,
+                issuedAt: true,
                 expiryDate: true,
                 verifiedAt: true,
                 createdAt: true,
@@ -6344,6 +6402,7 @@ export class DocumentsService {
                   select: {
                     status: true,
                     eligibilityNumber: true,
+                    eligibilityIssuedAt: true,
                     eligibilityValidAt: true,
                     prometricPassedAt: true,
                     prometricValidAt: true,

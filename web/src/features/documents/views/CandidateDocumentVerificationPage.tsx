@@ -59,23 +59,19 @@ import {
 } from "@/features/documents";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
 import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
-import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
+import {
+  DOCUMENT_TYPE,
+  DOCUMENT_TYPE_CONFIG,
+  isEligibilityLetterType,
+} from "@/constants/document-types";
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
 import {
-  buildAcceptAttribute,
-  effectiveMaxMB,
   getUploadErrorMessage,
-  validateDocumentFile,
-  prepareDocumentFileForUpload,
 } from "@/lib/document-upload";
-import {
-  getAllowedFormatsString,
-  type DocumentType,
-} from "@/constants/document-types";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
 import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
@@ -97,6 +93,7 @@ import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import { Link2 } from "lucide-react";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
@@ -120,6 +117,59 @@ function formatPhoneForLink(c: {
 
 function isRejectedDocumentStatus(displayedStatus: string | undefined): boolean {
   return displayedStatus === "rejected";
+}
+
+function formatEligibilityDate(value?: string | Date | null): string {
+  if (!value) return "—";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  const raw = String(value);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+    return localDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+type EligibilityDocumentLike = {
+  docType?: string;
+  documentNumber?: string | null;
+  issuedAt?: string | Date | null;
+  expiryDate?: string | Date | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  createdAt?: string;
+};
+
+function resolveLatestEligibilityDocument(
+  documents: EligibilityDocumentLike[] | undefined,
+): EligibilityDocumentLike | null {
+  if (!documents?.length) return null;
+  const eligibilityDocs = documents
+    .filter((doc) => doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? 0).getTime() -
+        new Date(a.createdAt ?? 0).getTime(),
+    );
+  return eligibilityDocs[0] ?? null;
 }
 
 export default function CandidateDocumentVerificationPage() {
@@ -177,8 +227,6 @@ export default function CandidateDocumentVerificationPage() {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
-  console.log('isGeneratingPDF state:', isGeneratingPDF);
-
   // API Queries
   const {
     data: projectResponse,
@@ -284,8 +332,6 @@ export default function CandidateDocumentVerificationPage() {
     useReuseIntroductionVideoMutation();
   const [reuploadIntroductionVideo, { isLoading: isReuploadingIntroVideo }] =
     useReuploadIntroductionVideoMutation();
-  console.log('isReuploading state:', isReuploading);
-
     // Project-related refetch helpers so we can trigger live updates elsewhere
     const { refetch: refetchProject } = useGetProjectQuery(selectedProject?.project?.id || "", {
       skip: !selectedProject?.project?.id,
@@ -307,6 +353,34 @@ export default function CandidateDocumentVerificationPage() {
   const introductionVideoRequired = requirementsData?.data?.introductionVideoRequired ?? false;
   const introductionVideo = requirementsData?.data?.introductionVideo || null;
   const summary = requirementsData?.data?.summary || {};
+
+  const eligibilitySummary = useMemo(() => {
+    const verificationDoc = verifications.find(
+      (v: { document?: EligibilityDocumentLike }) =>
+        v.document?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+    )?.document;
+    const candidateDoc = resolveLatestEligibilityDocument(
+      (candidate as { documents?: EligibilityDocumentLike[] })?.documents,
+    );
+
+    return {
+      show: Boolean(
+        (candidate as { eligibility?: boolean })?.eligibility ||
+          verificationDoc ||
+          candidateDoc ||
+          (candidate as { eligibilityNumber?: string | null })?.eligibilityNumber,
+      ),
+      number:
+        (candidate as { eligibilityNumber?: string | null })?.eligibilityNumber?.trim() ||
+        verificationDoc?.documentNumber?.trim() ||
+        candidateDoc?.documentNumber?.trim() ||
+        null,
+      issuedAt: verificationDoc?.issuedAt ?? candidateDoc?.issuedAt ?? null,
+      expiryDate: verificationDoc?.expiryDate ?? candidateDoc?.expiryDate ?? null,
+      fileUrl: verificationDoc?.fileUrl ?? candidateDoc?.fileUrl ?? null,
+      fileName: verificationDoc?.fileName ?? candidateDoc?.fileName ?? null,
+    };
+  }, [verifications, candidate]);
 
   const uploadDocTypeLabel = useMemo(() => {
     if (!uploadDocType) return undefined;
@@ -627,7 +701,12 @@ export default function CandidateDocumentVerificationPage() {
   // Handle document upload / reupload
   const handleUploadDocument = async (
     file: File,
-    meta?: { docName?: string },
+    meta?: {
+      docName?: string;
+      documentNumber?: string;
+      issuedAt?: string;
+      expiryDate?: string;
+    },
   ) => {
     if (!uploadDocType || !candidateId || !selectedProjectId) return;
 
@@ -674,6 +753,9 @@ export default function CandidateDocumentVerificationPage() {
           fileUrl,
           fileSize,
           mimeType,
+          documentNumber: meta?.documentNumber?.trim() || undefined,
+          issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+          expiryDate: DateUtils.toApiDate(meta?.expiryDate),
         }).unwrap();
 
         toast.success("Document re-uploaded successfully!");
@@ -687,6 +769,9 @@ export default function CandidateDocumentVerificationPage() {
           fileSize,
           mimeType,
           roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
+          documentNumber: meta?.documentNumber?.trim() || undefined,
+          issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+          expiryDate: DateUtils.toApiDate(meta?.expiryDate),
         }).unwrap();
 
         await reuseDocument({
@@ -1096,6 +1181,61 @@ export default function CandidateDocumentVerificationPage() {
               </div>
             </div>
 
+            {eligibilitySummary.show ? (
+              <div className="px-4 py-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-400">Eligibility Number</p>
+                    <p className="font-semibold text-slate-700 truncate">
+                      {eligibilitySummary.number || "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-slate-400">Eligibility Issued</p>
+                    <p className="font-semibold text-slate-700">
+                      {formatEligibilityDate(eligibilitySummary.issuedAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-slate-400">Eligibility Expiry</p>
+                    <p className="font-semibold text-slate-700">
+                      {formatEligibilityDate(eligibilitySummary.expiryDate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileCheck className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-400">Eligibility Letter</p>
+                    {eligibilitySummary.fileUrl ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 hover:underline truncate max-w-full text-left"
+                        onClick={() =>
+                          handleOpenPDF(
+                            eligibilitySummary.fileUrl!,
+                            eligibilitySummary.fileName || "Eligibility Letter",
+                          )
+                        }
+                      >
+                        <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        View detail
+                      </button>
+                    ) : (
+                      <p className="font-semibold text-slate-500">Not uploaded</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             {candidate.skills && candidate.skills.length > 0 && (
               <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
                 <div className="flex items-center gap-2 mb-2">
@@ -1335,6 +1475,7 @@ export default function CandidateDocumentVerificationPage() {
                 <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50">
                   <TableHead className="font-bold text-slate-700">Document Type</TableHead>
                   <TableHead className="font-bold text-slate-700 w-[150px]">Status</TableHead>
+                  
                   <TableHead className="font-bold text-slate-700">Submitted Document</TableHead>
                   <TableHead className="font-bold text-slate-700 text-right">Actions</TableHead>
                 </TableRow>
@@ -1395,6 +1536,8 @@ export default function CandidateDocumentVerificationPage() {
                           </div>
                         )}
                       </TableCell>
+
+                      
 
                       <TableCell>
                         {verification ? (
@@ -1729,6 +1872,23 @@ export default function CandidateDocumentVerificationPage() {
           isUploading={isUploading || isCreating || isReuploading}
           variant={isReuploadMode ? "reupload" : "upload"}
           previousFileName={reuploadMeta?.previousFileName}
+          initialEligibilityNumber={
+            isEligibilityLetterType(uploadDocType)
+              ? (candidate as { eligibilityNumber?: string })?.eligibilityNumber
+              : undefined
+          }
+          initialIssuedAt={
+            isEligibilityLetterType(uploadDocType)
+              ? verifications.find((v: any) => v.document.docType === uploadDocType)
+                  ?.document?.issuedAt
+              : undefined
+          }
+          initialExpiryDate={
+            isEligibilityLetterType(uploadDocType)
+              ? verifications.find((v: any) => v.document.docType === uploadDocType)
+                  ?.document?.expiryDate
+              : undefined
+          }
         />
 
         <LinkExistingDocumentModal

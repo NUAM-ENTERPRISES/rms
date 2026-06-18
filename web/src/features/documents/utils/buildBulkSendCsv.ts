@@ -28,6 +28,7 @@ export interface BulkSendCsvProfile {
   scfhsIssueDate: string;
   scfhsExpiryDate: string;
   eligibilityNumber: string;
+  eligibilityIssueDate: string;
   eligibilityExpiryDate: string;
   currentLocation: string;
   contactNumber: string;
@@ -68,6 +69,7 @@ const PROFILE_FIELD_BY_COLUMN: Record<
   scfhsIssueDate: 'scfhsIssueDate',
   scfhsExpiryDate: 'scfhsExpiryDate',
   eligibilityNumber: 'eligibilityNumber',
+  eligibilityIssueDate: 'eligibilityIssueDate',
   eligibilityExpiryDate: 'eligibilityExpiryDate',
   currentLocation: 'currentLocation',
   contactNumber: 'contactNumber',

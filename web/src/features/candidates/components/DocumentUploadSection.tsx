@@ -208,6 +208,8 @@ interface DocumentUploadSectionProps {
   onInitialUploadDocTypeHandled?: () => void;
   /** Passport stored on the candidate record (e.g. AC create) before a passport doc exists. */
   candidatePassportNumber?: string | null;
+  /** Eligibility number from candidate record for prefill on eligibility letter upload. */
+  candidateEligibilityNumber?: string | null;
 }
 
 const DOCUMENT_NAME_MAX_LENGTH = 40;
@@ -264,6 +266,7 @@ export function DocumentUploadSection({
   initialUploadDocType,
   onInitialUploadDocTypeHandled,
   candidatePassportNumber,
+  candidateEligibilityNumber,
 }: DocumentUploadSectionProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadModalDocType, setUploadModalDocType] = useState<
@@ -314,6 +317,20 @@ export function DocumentUploadSection({
   const completion = getCandidateProfileCompletion(completionDocs);
   const repositorySlots = getDocumentRepositorySlots(completionDocs);
   const passportDocument = getPassportDocument(completionDocs);
+  const eligibilityDocument = React.useMemo(
+    () =>
+      (completionDocs || [])
+        .filter(
+          (doc: any) =>
+            doc?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER && !doc?.isDeleted,
+        )
+        .sort(
+          (a: any, b: any) =>
+            new Date(b?.createdAt ?? 0).getTime() -
+            new Date(a?.createdAt ?? 0).getTime(),
+        )[0],
+    [completionDocs],
+  );
   const storedPassportNumber = candidatePassportNumber?.trim() || null;
   const passportDocNumber = passportDocument?.documentNumber?.trim() || null;
   const displayedPassportNumber = passportDocNumber || storedPassportNumber;
@@ -523,6 +540,7 @@ export function DocumentUploadSection({
       docType: string;
       docName?: string;
       documentNumber?: string;
+      issuedAt?: string;
       expiryDate?: string;
       notes?: string;
       roleCatalogId?: string;
@@ -536,9 +554,8 @@ export function DocumentUploadSection({
         id: uploadedDocument.id,
         docName: desiredDocName || undefined,
         documentNumber: meta.documentNumber,
-        expiryDate: meta.expiryDate
-          ? new Date(meta.expiryDate).toISOString()
-          : undefined,
+        issuedAt: DateUtils.toApiDate(meta.issuedAt),
+        expiryDate: DateUtils.toApiDate(meta.expiryDate),
         notes: meta.notes,
       }).unwrap();
       return;
@@ -553,9 +570,8 @@ export function DocumentUploadSection({
       fileSize: uploadData.fileSize,
       mimeType: uploadData.mimeType,
       documentNumber: meta.documentNumber,
-      expiryDate: meta.expiryDate
-        ? new Date(meta.expiryDate).toISOString()
-        : undefined,
+      issuedAt: DateUtils.toApiDate(meta.issuedAt),
+      expiryDate: DateUtils.toApiDate(meta.expiryDate),
       notes: meta.notes,
       roleCatalogId: meta.roleCatalogId,
       workExperienceId: meta.workExperienceId,
@@ -801,6 +817,7 @@ export function DocumentUploadSection({
               </TableHead>
               <TableHead className="font-semibold text-slate-700">Type</TableHead>
               <TableHead className="font-semibold text-slate-700">Status</TableHead>
+              <TableHead className="font-semibold text-slate-700">Issued Date</TableHead>
               <TableHead className="font-semibold text-slate-700">Expiry Date</TableHead>
               <TableHead className="font-semibold text-slate-700">Uploaded</TableHead>
               <TableHead className="font-semibold text-slate-700">Activity</TableHead>
@@ -825,7 +842,9 @@ export function DocumentUploadSection({
                       />
                       {doc.documentNumber && (
                         <p className="truncate text-sm text-slate-600">
-                          #{doc.documentNumber}
+                          {doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER
+                            ? `Eligibility #${doc.documentNumber}`
+                            : `#${doc.documentNumber}`}
                         </p>
                       )}
                     </div>
@@ -853,6 +872,17 @@ export function DocumentUploadSection({
                     {getStatusIcon(doc.status)}
                     {getStatusBadge(doc.status)}
                   </div>
+                </TableCell>
+
+                <TableCell className="text-slate-700">
+                  {doc.issuedAt ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" />
+                      {DateUtils.formatDate(doc.issuedAt)}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
                 </TableCell>
 
                 <TableCell className="text-slate-700">
@@ -971,6 +1001,8 @@ export function DocumentUploadSection({
       isOpen={showUploadModal}
       initialDocType={uploadModalDocType}
       existingPassportDocument={passportDocument}
+      initialEligibilityNumber={candidateEligibilityNumber}
+      existingEligibilityDocument={eligibilityDocument}
       onClose={closeUploadModal}
       onUpload={async (file: File, meta: any) => {
         try {
@@ -1063,7 +1095,7 @@ export function DocumentUploadSection({
           await updateDocument({
             id: editPassportDoc.id,
             documentNumber,
-            expiryDate: new Date(expiryDate).toISOString(),
+            expiryDate: DateUtils.toApiDate(expiryDate),
           }).unwrap();
           toast.success("Passport details updated");
           setEditPassportDoc(null);
