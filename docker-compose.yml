@@ -1,5 +1,7 @@
 # Default: local development (hot reload).
 # Production: docker compose -f docker-compose.prod.yml --env-file backend/.env up -d --build
 
+name: rms-dev
+
 include:
   - docker-compose.dev.yml
