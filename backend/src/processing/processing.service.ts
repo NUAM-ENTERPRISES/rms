@@ -2702,9 +2702,27 @@ export class ProcessingService {
 
     const step = elStep ? (() => { const { documents, ...rest } = elStep as any; return rest; })() : null;
 
+    const eligibilityLetterDocument = await this.prisma.document.findFirst({
+      where: {
+        candidateId: pc.candidate.id,
+        isDeleted: false,
+        docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        fileName: true,
+        fileUrl: true,
+        mimeType: true,
+        documentNumber: true,
+        expiryDate: true,
+      },
+    });
+
     return {
       isEligibilityCompleted,
       step,
+      candidateEligibilityLetter: eligibilityLetterDocument,
       processingCandidate: {
         id: pc.id,
         processingStatus: pc.processingStatus,
@@ -2715,6 +2733,10 @@ export class ProcessingService {
           email: pc.candidate?.email || null,
           mobileNumber: pc.candidate?.mobileNumber || null,
           countryCode: pc.candidate?.countryCode || null,
+          eligibility: pc.candidate?.eligibility ?? null,
+          eligibilityNumber: pc.candidate?.eligibilityNumber ?? null,
+          eligibilityIssuedAt: pc.candidate?.eligibilityIssuedAt ?? null,
+          eligibilityExpiryAt: pc.candidate?.eligibilityExpiryAt ?? null,
         },
         project: {
           id: pc.project?.id || null,

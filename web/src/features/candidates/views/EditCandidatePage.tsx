@@ -41,7 +41,6 @@ import {
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { EligibilityDetailsSection } from "@/features/candidates/components/EligibilityDetailsSection";
-import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -179,11 +178,6 @@ export default function EditCandidatePage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
   const [eligibilityLetterFileError, setEligibilityLetterFileError] = useState<string | null>(null);
-  const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
-  const [previewDocument, setPreviewDocument] = useState<{
-    fileUrl: string;
-    fileName: string;
-  } | null>(null);
 
   const { data: eligibilityDocsData } = useGetDocumentsQuery(
     {
@@ -1195,13 +1189,10 @@ export default function EditCandidatePage() {
                               id: existingEligibilityLetter.id,
                               fileName: existingEligibilityLetter.fileName,
                               fileUrl: existingEligibilityLetter.fileUrl,
+                              mimeType: existingEligibilityLetter.mimeType,
                             }
                           : null
                       }
-                      onViewExistingLetter={(fileUrl, fileName) => {
-                        setPreviewDocument({ fileUrl, fileName });
-                        setIsPDFViewerOpen(true);
-                      }}
                       letterFileError={eligibilityLetterFileError}
                     />
                   ) : null}
@@ -1241,16 +1232,6 @@ export default function EditCandidatePage() {
           </div>
         </form>
       </div>
-
-      <PDFViewer
-        fileUrl={previewDocument?.fileUrl ?? ""}
-        fileName={previewDocument?.fileName ?? "Eligibility Letter"}
-        isOpen={isPDFViewerOpen}
-        onClose={() => {
-          setIsPDFViewerOpen(false);
-          setPreviewDocument(null);
-        }}
-      />
     </div>
   );
 }

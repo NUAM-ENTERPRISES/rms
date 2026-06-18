@@ -8,7 +8,7 @@ import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, 
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { format } from "date-fns";
+import { format, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
 import { getUploadErrorMessage } from "@/lib/document-upload";
@@ -25,6 +25,7 @@ import {
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
@@ -98,6 +99,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
 
   const activeStep = data?.step;
   const candidate = data?.processingCandidate;
+  const candidateProfile = candidate?.candidate;
 
   const requiredDocuments: any[] = data?.requiredDocuments || [];
   const uploads: any[] = data?.uploads || [];
@@ -119,6 +121,56 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
 
   const candidateDocs = data?.candidateDocuments || [];
   const processingDocs = data?.processing_documents || [];
+
+  const resolvedEligibilityMetadata = useMemo(() => {
+    const eligibilityLetterDoc =
+      data?.candidateEligibilityLetter ||
+      candidateDocs.find(
+        (doc: { docType?: string }) => doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+      );
+
+    const parseApiDate = (value?: string | Date | null) => {
+      if (!value) return undefined;
+      const parsed = value instanceof Date ? value : new Date(value);
+      return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+    };
+
+    const stepIssued = parseApiDate(activeStep?.eligibilityIssuedAt);
+    const stepValid = parseApiDate(activeStep?.eligibilityValidAt);
+    const stepNumber = activeStep?.eligibilityNumber?.trim() || "";
+    const stepDuration = activeStep?.eligibilityDuration?.trim() || "";
+
+    const issued =
+      stepIssued || parseApiDate(candidateProfile?.eligibilityIssuedAt);
+    const valid =
+      stepValid ||
+      parseApiDate(candidateProfile?.eligibilityExpiryAt) ||
+      parseApiDate(eligibilityLetterDoc?.expiryDate);
+    const number =
+      stepNumber ||
+      candidateProfile?.eligibilityNumber?.trim() ||
+      eligibilityLetterDoc?.documentNumber?.trim() ||
+      "";
+
+    let duration = stepDuration;
+    if (!duration && issued && valid) {
+      const months = differenceInMonths(valid, issued);
+      if (months > 0) {
+        duration = `${months} month${months === 1 ? "" : "s"}`;
+      }
+    }
+
+    return {
+      issued,
+      valid,
+      duration,
+      number,
+      stepIssued,
+      stepValid,
+      stepDuration,
+      stepNumber,
+    };
+  }, [activeStep, candidateProfile, candidateDocs, data?.candidateEligibilityLetter]);
 
   const candidateDocsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -510,22 +562,27 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const certificateButtonLabel = initialHasEligibilityCertificate ? "Update Certificate Info" : "Save Certificate Info";
 
   useEffect(() => {
-    if (!activeStep) return;
-    const issued = activeStep.eligibilityIssuedAt ? new Date(activeStep.eligibilityIssuedAt) : undefined;
-    const valid = activeStep.eligibilityValidAt ? new Date(activeStep.eligibilityValidAt) : undefined;
-    const duration = activeStep.eligibilityDuration || "";
-    const number = activeStep.eligibilityNumber || "";
+    const {
+      issued,
+      valid,
+      duration,
+      number,
+      stepIssued,
+      stepValid,
+      stepDuration,
+      stepNumber,
+    } = resolvedEligibilityMetadata;
 
     setEligibilityIssuedDate(issued);
     setEligibilityValidDate(valid);
     setEligibilityDuration(duration);
     setEligibilityNumber(number);
 
-    setInitialEligibilityIssuedDate(issued);
-    setInitialEligibilityValidDate(valid);
-    setInitialEligibilityDuration(duration);
-    setInitialEligibilityNumber(number);
-  }, [activeStep]);
+    setInitialEligibilityIssuedDate(stepIssued);
+    setInitialEligibilityValidDate(stepValid);
+    setInitialEligibilityDuration(stepDuration);
+    setInitialEligibilityNumber(stepNumber);
+  }, [resolvedEligibilityMetadata]);
 
   const saveEligibilityMetadata = async () => {
     if (!activeStep?.id) {

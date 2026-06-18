@@ -165,6 +165,8 @@ export default function CandidateDocumentVerificationPage() {
   const [selectedDocument, setSelectedDocument] = useState<{
     fileUrl: string;
     fileName: string;
+    isPdf: boolean;
+    cacheKey?: string;
   } | null>(null);
 
   // Confirmation dialog state
@@ -716,10 +718,19 @@ export default function CandidateDocumentVerificationPage() {
     }
   };
 
-  // Open a PDF in the viewer
-  const handleOpenPDF = (fileUrl: string, fileName: string) => {
-    setSelectedDocument({ fileUrl, fileName });
-    setIsPDFViewerOpen(true);
+  // Open a document in the viewer (PDF or image)
+  const handleOpenDocument = (
+    fileUrl: string,
+    fileName: string,
+    mimeType?: string | null,
+    cacheKey?: string,
+  ) => {
+    const isPdf =
+      mimeType === "application/pdf" ||
+      fileName.toLowerCase().endsWith(".pdf") ||
+      fileUrl.toLowerCase().includes(".pdf");
+    setSelectedDocument({ fileUrl, fileName, isPdf, cacheKey });
+    setIsPDFViewerOpen(isPdf);
   };
 
   // Handle complete verification
@@ -1153,14 +1164,17 @@ export default function CandidateDocumentVerificationPage() {
                         <Button
                           type="button"
                           variant="link"
-                          className="h-auto p-0 text-xs font-semibold text-blue-600"
+                          className="h-auto gap-1.5 p-0 text-xs font-semibold text-blue-600"
                           onClick={() =>
-                            handleOpenPDF(
+                            handleOpenDocument(
                               eligibilityLetterDoc.fileUrl,
                               eligibilityLetterDoc.fileName,
+                              eligibilityLetterDoc.mimeType,
+                              eligibilityLetterDoc.id,
                             )
                           }
                         >
+                          <Eye className="h-3.5 w-3.5" />
                           View letter
                         </Button>
                       ) : (
@@ -1479,7 +1493,7 @@ export default function CandidateDocumentVerificationPage() {
                               {verification.document.fileName}
                             </span>
                             <div className="flex gap-1 flex-shrink-0">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDocument(verification.document.fileUrl, verification.document.fileName, verification.document.mimeType, verification.document.id)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </div>
@@ -1828,16 +1842,42 @@ export default function CandidateDocumentVerificationPage() {
         <PDFViewer
           fileUrl={selectedDocument?.fileUrl || ""}
           fileName={selectedDocument?.fileName || "Document"}
-          isOpen={isPDFViewerOpen}
+          isOpen={isPDFViewerOpen && !!selectedDocument?.isPdf}
           onClose={() => {
             setIsPDFViewerOpen(false);
             setSelectedDocument(null);
           }}
+          cacheKey={selectedDocument?.cacheKey}
           showDownload={true}
           showZoomControls={true}
           showRotationControls={true}
           showFullscreenToggle={true}
         />
+
+        {selectedDocument && !selectedDocument.isPdf ? (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
+            onClick={() => setSelectedDocument(null)}
+          >
+            <div
+              className="relative max-w-3xl w-full mx-4"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setSelectedDocument(null)}
+                className="absolute -top-10 right-0 text-white hover:text-slate-300 text-sm font-medium"
+              >
+                Close
+              </button>
+              <img
+                src={selectedDocument.fileUrl}
+                alt={selectedDocument.fileName}
+                className="w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+          </div>
+        ) : null}
 
         {videoPreview && (
           <VideoPlayerModal
@@ -2014,7 +2054,9 @@ export default function CandidateDocumentVerificationPage() {
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
           candidateProjectMapId={candidateProjectMapId}
-          onViewDocument={handleOpenPDF}
+          onViewDocument={(fileUrl, fileName) =>
+            handleOpenDocument(fileUrl, fileName)
+          }
           onMergeStart={() => setIsGeneratingPDF(true)}
           onMergeEnd={() => setIsGeneratingPDF(false)}
         />
