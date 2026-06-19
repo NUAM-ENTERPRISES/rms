@@ -227,6 +227,8 @@ export const projectsApi = createApi({
 
 ## 🚀 Deployment
 
+- **[Docker Setup Guide](DOCKER_SETUP.md)**: Local dev and production container workflows
+
 ### Frontend (Vercel)
 
 - **Feature Branches**: Preview deployments
