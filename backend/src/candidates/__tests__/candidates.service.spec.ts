@@ -112,6 +112,7 @@ describe('CandidatesService', () => {
   const mockCandidateListFilterService: any = {
     applyCreatedAtFilter: jest.fn(),
     applySearchFilter: jest.fn(),
+    applyCrmStatusNameFilter: jest.fn(async () => undefined),
     applyAdvancedListFilters: jest.fn((where: any, query: any) => {
       if (query.minAge == null && query.maxAge == null) return;
       const now = new Date();
@@ -661,6 +662,30 @@ describe('CandidatesService', () => {
           }),
         }),
       );
+    });
+
+    it('should not include projects in findAll list query', async () => {
+      prismaService.candidate.count.mockResolvedValue(0);
+      prismaService.candidate.groupBy.mockResolvedValue([]);
+      prismaService.candidateStatus.findMany.mockResolvedValue([
+        { id: 1, statusName: 'Untouched' },
+        { id: 2, statusName: 'Interested' },
+      ]);
+      prismaService.candidate.findMany.mockResolvedValue([
+        {
+          id: 'candidate123',
+          recruiterAssignments: [],
+          statusHistories: [],
+          documents: [],
+          workExperiences: [],
+        },
+      ] as any);
+
+      await service.findAll({ page: 1, limit: 10, roles: ['Manager'] });
+
+      const findManyCall = prismaService.candidate.findMany.mock.calls[0][0];
+      expect(findManyCall.include).toBeDefined();
+      expect(findManyCall.include.projects).toBeUndefined();
     });
 
     it.skip('should apply createdAt date range filter and expand same-day ranges', async () => {

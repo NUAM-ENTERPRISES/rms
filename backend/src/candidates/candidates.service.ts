@@ -1293,19 +1293,6 @@ export class CandidatesService {
             status: { select: { id: true, statusName: true } },
           },
         },
-        projects: {
-          take: 5,
-          select: {
-            id: true,
-            projectId: true,
-            project: {
-              select: {
-                id: true,
-                title: true,
-              }
-            }
-          }
-        },
         workExperiences: {
           take: 1,
           orderBy: { startDate: 'desc' },
