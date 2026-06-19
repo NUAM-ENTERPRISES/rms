@@ -89,31 +89,6 @@ export const navigationConfig: NavItem[] = [
     hiddenForRoles: ["Manager", "System Admin", "Processing Manager"],
   },
   {
-    id: "document-management",
-    label: "Document Management",
-    icon: FileText,
-    roles: ["Manager", "System Admin", "Processing Manager"],
-    activePathPatterns: ["^/original-documents", "^/courier-management"],
-    children: [
-      {
-        id: "document-management-intake",
-        label: "Original Document Intake",
-        path: "/original-documents",
-        permissions: ["read:original_document_intake"],
-        roles: ["Manager", "System Admin", "Processing Manager"],
-        matchRolesOrPermissions: true,
-      },
-      {
-        id: "document-management-courier",
-        label: "Courier Management",
-        path: "/courier-management",
-        permissions: ["read:courier_management"],
-        roles: ["Manager", "System Admin", "Processing Manager"],
-        matchRolesOrPermissions: true,
-      },
-    ],
-  },
-  {
     id: "processing-dashboard",
     label: "Dashboard",
     path: "/",
@@ -396,12 +371,13 @@ export const navigationConfig: NavItem[] = [
   },
   {
     id: "documents",
-    label: "Documents",
+    label: "Document Management",
     icon: FileText,
     permissions: ["read:documents"],
     activePathPatterns: [
       "^/documents/",
       "^/original-documents",
+      "^/courier-management",
       "^/candidates/[^/]+/documents/",
     ],
     hiddenForRoles: [
@@ -427,7 +403,14 @@ export const navigationConfig: NavItem[] = [
         permissions: ["read:original_document_intake"],
         roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
         matchRolesOrPermissions: true,
-        hiddenForRoles: ["Manager", "System Admin", "Processing Manager"],
+      },
+      {
+        id: "courier-management",
+        label: "Courier Management",
+        path: "/courier-management",
+        permissions: ["read:courier_management"],
+        roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
+        matchRolesOrPermissions: true,
       },
     ],
   },

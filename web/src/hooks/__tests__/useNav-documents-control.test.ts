@@ -36,16 +36,12 @@ describe("useNav documents control behavior", () => {
     expect(courier).toBeDefined();
   });
 
-  it("exposes Document Management group for Manager, System Admin, and Processing Manager", () => {
+  it("does not expose a separate document-management parent group", () => {
     const documentManagement = navigationConfig.find(
       (item) => item.id === "document-management",
     );
 
-    expect(documentManagement?.roles).toEqual(DOCUMENT_MANAGEMENT_ROLES);
-    expect(documentManagement?.children?.map((child) => child.id)).toEqual([
-      "document-management-intake",
-      "document-management-courier",
-    ]);
+    expect(documentManagement).toBeUndefined();
   });
 
   it("keeps Operations dashboard separate from documents control items", () => {

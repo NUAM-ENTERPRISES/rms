@@ -28,41 +28,38 @@ describe("navigationConfig documents control items", () => {
     expect(courier?.roles).toBeUndefined();
   });
 
-  it("groups intake and courier under Document Management for leadership roles", () => {
-    const documentManagement = navigationConfig.find(
-      (item) => item.id === "document-management",
-    );
+  it("groups intake and courier under Document Management section for leadership roles", () => {
+    const documents = navigationConfig.find((item) => item.id === "documents");
 
-    expect(documentManagement).toMatchObject({
+    expect(documents).toMatchObject({
       label: "Document Management",
-      roles: DOCUMENT_MANAGEMENT_ROLES,
-      activePathPatterns: ["^/original-documents", "^/courier-management"],
+      permissions: ["read:documents"],
     });
-    expect(documentManagement?.children).toHaveLength(2);
-    expect(documentManagement?.children?.[0]).toMatchObject({
-      id: "document-management-intake",
+    expect(documents?.activePathPatterns).toEqual(
+      expect.arrayContaining(["^/original-documents", "^/courier-management"]),
+    );
+    expect(documents?.children?.map((child) => child.id)).toEqual([
+      "document-verification",
+      "original-document-intake",
+      "courier-management",
+    ]);
+    expect(
+      documents?.children?.find((child) => child.id === "original-document-intake"),
+    ).toMatchObject({
       label: "Original Document Intake",
       path: "/original-documents",
       permissions: ["read:original_document_intake"],
-      roles: DOCUMENT_MANAGEMENT_ROLES,
+      roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
       matchRolesOrPermissions: true,
     });
-    expect(documentManagement?.children?.[1]).toMatchObject({
-      id: "document-management-courier",
+    expect(
+      documents?.children?.find((child) => child.id === "courier-management"),
+    ).toMatchObject({
       label: "Courier Management",
       path: "/courier-management",
       permissions: ["read:courier_management"],
-      roles: DOCUMENT_MANAGEMENT_ROLES,
+      roles: ["CEO", "Director", "Manager", "Processing Manager", "System Admin"],
       matchRolesOrPermissions: true,
     });
-  });
-
-  it("hides duplicate intake under Documents for Document Management roles", () => {
-    const documents = navigationConfig.find((item) => item.id === "documents");
-    const intakeChild = documents?.children?.find(
-      (child) => child.id === "original-document-intake",
-    );
-
-    expect(intakeChild?.hiddenForRoles).toEqual(DOCUMENT_MANAGEMENT_ROLES);
   });
 });
