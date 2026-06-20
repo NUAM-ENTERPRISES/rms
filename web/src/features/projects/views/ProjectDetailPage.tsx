@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/select";
 import {
   Edit,
-  Trash2,
   Calendar,
   Building2,
   Target,
@@ -42,9 +41,17 @@ import {
   ClipboardCheck,
   Activity,
   RefreshCcw,
+  UserRoundSearch,
+  History,
+  Pencil,
 } from "lucide-react";
+import { ProjectStatus, type ProjectStatusType } from "@/entities/project/constants";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
+import RequestAgentCandidatesModal from "@/features/projects/components/RequestAgentCandidatesModal";
+import AgentCandidateRequestHistoryModal from "@/features/projects/components/AgentCandidateRequestHistoryModal";
+import RoleFillSummaryCard from "@/features/projects/components/RoleFillSummaryCard";
 import {
   useGetProjectQuery,
   useDeleteProjectMutation,
@@ -57,15 +64,33 @@ import {
   useCheckBulkCandidateEligibilityQuery,
   useBulkAssignToProjectMutation,
   useBulkSendForScreeningMutation,
+  useCreateAgentCandidateRequestMutation,
 } from "@/features/projects";
 import { usersApi } from "@/features/admin/api";
 import { useGetConsolidatedCandidatesQuery } from "@/features/candidates";
 import ProjectCandidatesBoard from "@/features/projects/components/ProjectCandidatesBoard";
+import { PipelineStatusDotLegend } from "@/features/projects/components/PipelineStatusDotLegend";
 import ProcessingCandidatesTab from "@/features/projects/components/ProcessingCandidatesTab";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useIsAgentCoordinator } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { ProjectCountryCell } from "@/components/molecules/domain";
+import { FlagIcon } from "@/shared";
 import { LoadingSpinner } from "@/components/molecules/LoadingSpinner";
+import {
+  getConfigValueBadge,
+  getProjectStatusBadge,
+  normalizeProjectStatusKey,
+  statusBadgeClassNames,
+} from "@/features/projects/constants/statusBadges";
+import { ChangeProjectStatusDialog } from "@/features/projects/components/ChangeProjectStatusDialog";
+import { canUpdateProjectStatus } from "@/config/role-capabilities";
+import { cn } from "@/lib/utils";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  getProcessingBlockReasonForCandidate,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 // Helper function to format date
 const formatDate = (dateString?: string) => {
@@ -98,6 +123,16 @@ const getMinimalScoreBadgeClass = (score?: number) => {
   if (score >= 80) return "bg-blue-50 text-blue-700";
   if (score >= 70) return "bg-amber-50 text-amber-700";
   return "bg-red-50 text-red-700";
+};
+
+const toProjectStatusType = (status?: string | null): ProjectStatusType => {
+  const key = normalizeProjectStatusKey(status);
+  if (key === ProjectStatus.ON_HOLD) return ProjectStatus.ON_HOLD;
+  if (key === ProjectStatus.COMPLETED) return ProjectStatus.COMPLETED;
+  if (key === ProjectStatus.CANCELLED || key === "inactive") {
+    return ProjectStatus.CANCELLED;
+  }
+  return ProjectStatus.IN_PROGRESS;
 };
 
 // Format a single work experience item for display. Some records use
@@ -144,6 +179,8 @@ export default function ProjectDetailPage() {
   // Permissions
   const canManageProjects = useCan("manage:projects");
   const canReadProjects = useCan("read:projects");
+  const canChangeProjectStatus = canUpdateProjectStatus(user?.roles);
+  const isAgentCoordinator = useIsAgentCoordinator();
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
@@ -154,9 +191,19 @@ export default function ProjectDetailPage() {
     error,
     refetch: refetchProject,
   } = useGetProjectQuery(projectId!, {
-    refetchOnFocus: false,
-    refetchOnMountOrArgChange: false,
+    refetchOnFocus: true,
+    refetchOnMountOrArgChange: true,
   });
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
+
+  const ensurePipelineOpen = (): boolean => {
+    if (pipelineOpen) return true;
+    toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+    return false;
+  };
   const [deleteProject, { isLoading: isDeleting }] = useDeleteProjectMutation();
 
   // Board filters
@@ -165,6 +212,7 @@ export default function ProjectDetailPage() {
   const [nominatedPage, setNominatedPage] = useState(1);
 
   const [showDetails, setShowDetails] = useState(false);
+  const [showStatusDialog, setShowStatusDialog] = useState(false);
 
   // Get eligible candidates
   const { data: eligibleResponse, refetch: refetchEligible } = useGetEligibleCandidatesQuery({
@@ -174,6 +222,7 @@ export default function ProjectDetailPage() {
       selectedRoleCatalogId !== "all" ? selectedRoleCatalogId : undefined,
     limit: 10,
   }, {
+    skip: !projectId || !pipelineOpen,
     refetchOnFocus: false,
     refetchOnMountOrArgChange: false,
   });
@@ -232,6 +281,8 @@ export default function ProjectDetailPage() {
       useSendForScreeningMutation();
   const [assignToProject, { isLoading: isAssigning }] =
     useAssignToProjectMutation();
+  const [createAgentCandidateRequest, { isLoading: isRequestingAgentCandidates }] =
+    useCreateAgentCandidateRequestMutation();
 
   const handleRefreshAll = async () => {
     try {
@@ -338,14 +389,14 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
     isRoleEditable?: boolean;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
     isRoleEditable: true,
   });
@@ -372,13 +423,13 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
   });
 
@@ -386,13 +437,13 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
   });
 
@@ -403,6 +454,8 @@ export default function ProjectDetailPage() {
     isOpen: false,
     candidateIds: [],
   });
+  const [showAgentRequestModal, setShowAgentRequestModal] = useState(false);
+  const [showAgentRequestHistory, setShowAgentRequestHistory] = useState(false);
 
   const [bulkScreeningState, setBulkScreeningState] = useState<{
     isOpen: boolean;
@@ -421,7 +474,8 @@ export default function ProjectDetailPage() {
   const { data: usersData } = usersApi.useGetUsersQuery(
     { 
       limit: 10,
-      roles: ['Screening Trainer']
+      roles: ['Screening Trainer'],
+      accountStatus: 'ACTIVE',
     }, 
     { 
       skip: !isBulkScreeningModalOpen && !isDirectScreeningModalOpen,
@@ -455,6 +509,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     // Try to find nominated candidate to prefill nominatedRole if present
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -466,7 +521,8 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: nominatedRoleId || projectData?.data?.rolesNeeded?.[0]?.id,
+      roleNeededId:
+        nominatedRoleId || projectData?.data?.rolesNeeded?.[0]?.id || "",
       notes: "",
       // If already has nominatedRole, don't allow editing until user confirms
       isRoleEditable: nominatedRoleId ? false : true,
@@ -477,6 +533,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setInterviewConfirm({
       isOpen: true,
       candidateId,
@@ -500,7 +557,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
     } catch (error: any) {
@@ -633,6 +690,7 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     // Find the candidate to determine top matched role
     const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
       (c) => (c.candidateId || c.id) === candidateId
@@ -662,7 +720,7 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: bestRoleNeededId,
+      roleNeededId: bestRoleNeededId ?? "",
       notes: "",
     });
   };
@@ -671,11 +729,12 @@ export default function ProjectDetailPage() {
     candidateId: string,
     candidateName: string
   ) => {
+    if (!ensurePipelineOpen()) return;
     setScreeningConfirm({
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id ?? "",
       notes: "",
     });
   };
@@ -695,6 +754,19 @@ export default function ProjectDetailPage() {
   }, [screeningEligibilityResponse, screeningConfirm.candidateId]);
 
   const handleAssignToProject = async () => {
+    if (
+      assignEligibilityData?.isEligible === false ||
+      assignEligibilityData?.roleEligibility?.every((r) => !r.isEligible)
+    ) {
+      const reasons = assignEligibilityData?.roleEligibility?.flatMap((r) => r.reasons || []) || [];
+      toast.error(
+        reasons.length > 0
+          ? reasons.join(' ')
+          : 'Candidate is not eligible to be assigned to this project.',
+      );
+      return;
+    }
+
     try {
       await assignToProject({
         candidateId: assignConfirm.candidateId,
@@ -708,7 +780,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
     } catch (error: any) {
@@ -803,7 +875,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
       try {
@@ -819,6 +891,25 @@ export default function ProjectDetailPage() {
 
   const handleViewCandidate = (candidateId: string) => {
     navigate(`/candidates/${candidateId}`);
+  };
+
+  const handleCreateAgentCandidateRequest = async (payload: {
+    items: Array<{ roleNeededId: string; requestedCount: number }>;
+    notes?: string;
+  }) => {
+    try {
+      await createAgentCandidateRequest({
+        projectId: projectId!,
+        items: payload.items,
+        notes: payload.notes,
+      }).unwrap();
+      toast.success("Agent candidate request sent successfully");
+    } catch (requestError: any) {
+      toast.error(
+        requestError?.data?.message || "Failed to send agent candidate request"
+      );
+      throw requestError;
+    }
   };
 
   const handleBoardSearchChange = (value: string) => {
@@ -950,6 +1041,32 @@ export default function ProjectDetailPage() {
     ? project.documentRequirements
     : [];
 
+  const totalPositions = project.rolesNeeded.reduce(
+    (sum: number, role: { quantity?: number }) => sum + (role.quantity ?? 0),
+    0
+  );
+  const daysUntilDeadline = (() => {
+    if (!project.deadline) return null;
+    const deadline = new Date(project.deadline);
+    if (Number.isNaN(deadline.getTime())) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deadline.setHours(0, 0, 0, 0);
+    const diffMs = deadline.getTime() - today.getTime();
+    return Math.ceil(diffMs / 86400000);
+  })();
+  const projectStatusBadge = getProjectStatusBadge(project.status);
+  const isDeadlineOverdue =
+    daysUntilDeadline !== null && daysUntilDeadline < 0;
+  const isDeadlineDueToday =
+    daysUntilDeadline !== null && daysUntilDeadline === 0;
+  const isDeadlineUrgent =
+    daysUntilDeadline !== null &&
+    daysUntilDeadline > 0 &&
+    daysUntilDeadline <= 14;
+  const showDeadlineBlink =
+    isDeadlineOverdue || isDeadlineDueToday || isDeadlineUrgent;
+
   // Access control
   if (!canReadProjects) {
     return (
@@ -976,67 +1093,155 @@ export default function ProjectDetailPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full mx-auto space-y-6">
         {/* Header */}
-        <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden ring-1 ring-slate-200/50">
-          <CardContent className="p-5 lg:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-              {/* Left Side — Title + Status + Country */}
-              <div className="flex items-start gap-4 flex-1 min-w-0">
-                {/* Country flag */}
-                <div className="flex-shrink-0 mt-1">
-                  <ProjectCountryCell
-                    countryCode={project.countryCode}
-                    countryName={project.country?.name}
-                    size="2xl"
-                    fallbackText="—"
-                    className="shadow-md ring-3 ring-white/90 rounded-full"
-                  />
+        <Card className="relative border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden ring-1 ring-slate-200/60">
+          <div
+            className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500"
+            aria-hidden
+          />
+
+          <CardContent className="relative px-3.5 py-3 lg:px-4 lg:py-3.5">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div
+                  className="flex-shrink-0"
+                  title={project.country?.name || project.countryCode || undefined}
+                >
+                  {project.countryCode ? (
+                    <FlagIcon
+                      countryCode={project.countryCode}
+                      size="2xl"
+                      className="!h-11 !w-[4.25rem] !min-w-0 rounded sm:!h-12 sm:!w-[4.75rem]"
+                      aria-label={`Flag of ${project.country?.name || project.countryCode}`}
+                    />
+                  ) : (
+                    <span className="text-xs font-medium text-slate-400">—</span>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <h1 className="text-xl lg:text-2xl font-extrabold text-slate-900 leading-tight tracking-tight truncate">
+
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h1 className="truncate text-base font-bold leading-tight text-slate-900 lg:text-lg">
                       {project.title}
                     </h1>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 ${
-                        project.status === 'active'
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : project.status === 'completed'
-                          ? 'border-blue-200 bg-blue-50 text-blue-700'
-                          : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}
+                      className={statusBadgeClassNames(
+                        projectStatusBadge,
+                        "shrink-0 py-0"
+                      )}
                     >
-                      {project.status}
+                      <span
+                        className={cn(
+                          "mr-1 inline-block h-1 w-1 rounded-full",
+                          project.status?.toLowerCase() === "active"
+                            ? "bg-emerald-500"
+                            : project.status?.toLowerCase() === ProjectStatus.CANCELLED
+                              ? "bg-red-500"
+                              : project.status?.toLowerCase() === ProjectStatus.ON_HOLD
+                                ? "bg-amber-500"
+                                : project.status?.toLowerCase() === ProjectStatus.COMPLETED
+                                  ? "bg-blue-500"
+                                  : "bg-slate-400"
+                        )}
+                        aria-hidden
+                      />
+                      {projectStatusBadge.label}
                     </Badge>
+                    {canChangeProjectStatus && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowStatusDialog(true)}
+                        className="h-7 w-7 shrink-0 rounded-md p-0 text-slate-500 hover:bg-slate-100 hover:text-blue-700"
+                        aria-label="Update project status"
+                      >
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-slate-500">
+
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
+                    {project.country?.name && (
+                      <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
+                        <MapPin className="h-3 w-3 text-indigo-500" aria-hidden />
+                        {project.country.name}
+                      </span>
+                    )}
                     {project.client && (
-                      <span className="flex items-center gap-1.5 font-medium">
-                        <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <Building2 className="h-3 w-3 text-slate-400" aria-hidden />
                         {project.client.name}
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                      Due {formatDate(project.deadline)}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-medium",
+                        (isDeadlineOverdue || isDeadlineDueToday) &&
+                          "animate-project-deadline-blink-urgent border-red-200 bg-red-50 text-red-700",
+                        isDeadlineUrgent &&
+                          "animate-project-deadline-blink border-amber-200 bg-amber-50 text-amber-800",
+                        !showDeadlineBlink && "border-transparent text-slate-500"
+                      )}
+                      role={showDeadlineBlink ? "status" : undefined}
+                      aria-live={showDeadlineBlink ? "polite" : undefined}
+                    >
+                      <Calendar
+                        className={cn(
+                          "h-3 w-3 shrink-0",
+                          isDeadlineOverdue || isDeadlineDueToday
+                            ? "text-red-500"
+                            : isDeadlineUrgent
+                              ? "text-amber-500"
+                              : "text-slate-400"
+                        )}
+                        aria-hidden
+                      />
+                      <span>
+                        Due {formatDate(project.deadline)}
+                        {daysUntilDeadline !== null && (
+                          <span
+                            className={cn(
+                              "ml-0.5 font-bold",
+                              (isDeadlineOverdue || isDeadlineDueToday) &&
+                                "text-red-600"
+                            )}
+                          >
+                            (
+                            {isDeadlineOverdue
+                              ? "overdue"
+                              : `${Math.max(0, daysUntilDeadline)}d`}
+                            )
+                          </span>
+                        )}
+                      </span>
                     </span>
-                    <span className="flex items-center gap-1.5">
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                      {project.rolesNeeded.reduce((s: number, r: any) => s + r.quantity, 0)} positions
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <Briefcase className="h-3 w-3 text-slate-400" aria-hidden />
+                      {totalPositions}{" "}
+                      {totalPositions === 1 ? "position" : "positions"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 font-medium">
+                      <Layers className="h-3 w-3 text-slate-400" aria-hidden />
+                      {project.rolesNeeded.length}{" "}
+                      {project.rolesNeeded.length === 1 ? "role" : "roles"}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Side — Action Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div
+                className="flex items-center gap-1.5 self-start rounded-lg border border-slate-200/80 bg-slate-50/80 p-1 sm:self-center"
+                role="toolbar"
+                aria-label="Project actions"
+              >
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDetails(true)}
-                  className="text-slate-500 hover:text-blue-600 font-medium h-9 px-3 text-xs"
+                  className="h-7 rounded-md px-2 text-[11px] font-medium text-slate-600 hover:bg-white hover:text-blue-700"
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />
+                  <FileText className="mr-1 h-3 w-3" aria-hidden />
                   Details
                 </Button>
                 <Button
@@ -1044,29 +1249,49 @@ export default function ProjectDetailPage() {
                   size="sm"
                   onClick={handleRefreshAll}
                   disabled={isLoading || isLoadingCandidates}
-                  className="text-slate-500 hover:text-blue-600 font-medium h-9 w-9 p-0"
-                  title="Refresh all data"
+                  className="h-7 w-7 rounded-md p-0 text-slate-600 hover:bg-white hover:text-blue-700"
+                  aria-label="Refresh all project data"
                 >
                   <RefreshCcw
-                    className={`h-3.5 w-3.5 ${
-                      isLoading || isLoadingCandidates ? "animate-spin" : ""
-                    }`}
+                    className={cn(
+                      "h-3 w-3",
+                      (isLoading || isLoadingCandidates) && "animate-spin"
+                    )}
+                    aria-hidden
                   />
                 </Button>
                 {canManageProjects && !isProcessingExecutive && (
-                  <>
-                    <div className="w-px h-6 bg-slate-200" />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      className="font-semibold h-9 text-xs border-slate-200 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                    >
-                      <Edit className="h-3.5 w-3.5 mr-1.5" />
-                      Edit
-                    </Button>
-                   
-                  </>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAgentRequestModal(true)}
+                    className="h-7 rounded-md border-indigo-200 bg-indigo-50 px-2 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800"
+                  >
+                    <UserRoundSearch className="mr-1 h-3 w-3" aria-hidden />
+                    Request Agents
+                  </Button>
+                )}
+                {isAgentCoordinator && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAgentRequestHistory(true)}
+                    className="h-7 rounded-md border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-600 hover:bg-slate-50 hover:border-slate-300 hover:text-slate-800"
+                  >
+                    <History className="mr-1 h-3 w-3" aria-hidden />
+                    Agent Requests
+                  </Button>
+                )}
+                {canManageProjects && !isProcessingExecutive && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => navigate(`/projects/${project.id}/edit`)}
+                    className="h-7 rounded-md bg-blue-600 px-2 text-[11px] font-semibold text-white hover:bg-blue-700"
+                  >
+                    <Edit className="mr-1 h-3 w-3" aria-hidden />
+                    Edit
+                  </Button>
                 )}
               </div>
             </div>
@@ -1079,7 +1304,9 @@ export default function ProjectDetailPage() {
             {isProcessingExecutive ? (
               <ProcessingCandidatesTab projectId={projectId!} />
             ) : (
-              <ProjectCandidatesBoard
+              <div className="space-y-2">
+                <PipelineStatusDotLegend />
+                <ProjectCandidatesBoard
                 projectId={projectId!}
                 project={project}
                 nominatedCandidates={projectCandidates}
@@ -1102,12 +1329,14 @@ export default function ProjectDetailPage() {
                 onSendForScreening={(candidateId, candidateName) =>
                   showScreeningConfirmation(candidateId, candidateName)
                 }
-                onBulkAssign={(candidateIds) =>
-                  setBulkAssignState({ isOpen: true, candidateIds })
-                }
-                onBulkSendForScreening={(candidateIds) =>
-                  setBulkScreeningState({ isOpen: true, candidateIds })
-                }
+                onBulkAssign={(candidateIds) => {
+                  if (!ensurePipelineOpen()) return;
+                  setBulkAssignState({ isOpen: true, candidateIds });
+                }}
+                onBulkSendForScreening={(candidateIds) => {
+                  if (!ensurePipelineOpen()) return;
+                  setBulkScreeningState({ isOpen: true, candidateIds });
+                }}
                 nominatedPage={nominatedPage}
                 nominatedTotal={projectCandidatesData?.data?.pagination?.total}
                 nominatedTotalPages={projectCandidatesData?.data?.pagination?.totalPages}
@@ -1115,6 +1344,7 @@ export default function ProjectDetailPage() {
                 requiredScreening={projectRequiredScreening}
                 hideContactInfo={projectHideContactInfo}
               />
+              </div>
             )}
           </div>
 
@@ -1171,6 +1401,11 @@ export default function ProjectDetailPage() {
               ))}
             </div>
 
+            {/* Role Fill Summary — Agent Coordinator only */}
+            {isAgentCoordinator && (
+              <RoleFillSummaryCard projectId={project.id} />
+            )}
+
             {/* Project Overview Card */}
             <Card className="border-0 shadow-md bg-white/95 backdrop-blur-sm rounded-xl overflow-hidden">
               <CardContent className="p-0">
@@ -1200,18 +1435,32 @@ export default function ProjectDetailPage() {
                 <div className="px-3.5 py-2.5 space-y-1">
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Configuration</p>
                   {[
-                    { icon: User, color: "text-indigo-500", label: "Creator", value: project.creator.name },
-                    { icon: Building2, color: "text-orange-500", label: "Type", value: project.projectType === "ministry" ? "Government" : "Private" },
-                    { icon: FileText, color: "text-cyan-500", label: "Resume", value: projectResumeEditable ? "Editable" : "Fixed" },
-                    { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—" },
-                    { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible" },
+                    { icon: User, color: "text-indigo-500", label: "Creator", value: project.creator.name, isStatus: false },
+                    { icon: Building2, color: "text-orange-500", label: "Type", value: project.projectType === "ministry" ? "Government" : "Private", isStatus: true },
+                    { icon: FileText, color: "text-cyan-500", label: "Resume", value: projectResumeEditable ? "Editable" : "Fixed", isStatus: true },
+                    { icon: User, color: "text-pink-500", label: "Grooming", value: projectGroomingRequirement?.[0]?.toUpperCase() || "—", isStatus: true },
+                    { icon: Target, color: "text-red-500", label: "Contact", value: projectHideContactInfo ? "Hidden" : "Visible", isStatus: true },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between gap-2 py-1 hover:bg-slate-50/80 rounded-md px-1.5 -mx-1 transition-colors">
                       <div className="flex items-center gap-2 min-w-0">
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
                         <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                      {item.isStatus ? (
+                        <Badge
+                          variant="outline"
+                          className={statusBadgeClassNames(
+                            getConfigValueBadge(item.value),
+                            "max-w-[50%] truncate normal-case tracking-normal"
+                          )}
+                        >
+                          {item.value}
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">
+                          {item.value}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1231,7 +1480,15 @@ export default function ProjectDetailPage() {
                         <item.icon className={`h-3.5 w-3.5 ${item.color} flex-shrink-0`} />
                         <span className="text-[11px] text-slate-500 font-medium">{item.label}</span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-800 text-right truncate max-w-[50%]">{item.value}</span>
+                      <Badge
+                        variant="outline"
+                        className={statusBadgeClassNames(
+                          getConfigValueBadge(item.value),
+                          "max-w-[55%] truncate normal-case tracking-normal"
+                        )}
+                      >
+                        {item.value}
+                      </Badge>
                     </div>
                   ))}
                 </div>
@@ -1479,6 +1736,31 @@ export default function ProjectDetailPage() {
         />
       </Suspense>
 
+      <RequestAgentCandidatesModal
+        isOpen={showAgentRequestModal}
+        onClose={() => setShowAgentRequestModal(false)}
+        projectId={project.id}
+        projectTitle={project.title}
+        projectRoles={project.rolesNeeded}
+        isSubmitting={isRequestingAgentCandidates}
+        onSubmit={handleCreateAgentCandidateRequest}
+      />
+
+      <AgentCandidateRequestHistoryModal
+        isOpen={showAgentRequestHistory}
+        onClose={() => setShowAgentRequestHistory(false)}
+        projectId={project.id}
+        projectTitle={project.title}
+      />
+
+      <ChangeProjectStatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        projectId={project.id}
+        projectTitle={project.title}
+        currentStatus={toProjectStatusType(project.status)}
+      />
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmationDialog
         isOpen={showDeleteConfirm}
@@ -1511,7 +1793,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
           })
         }
@@ -1559,13 +1841,13 @@ export default function ProjectDetailPage() {
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
-        className="sm:max-w-2xl"
+        className="sm:max-w-3xl"
         onClose={() =>
           setVerifyConfirm({
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
             isRoleEditable: true,
           })
@@ -1579,82 +1861,15 @@ export default function ProjectDetailPage() {
               verification? This will notify the verification team.
             </p>
 
-            {/* Candidate Details */}
-            {(() => {
-              const candidate = [...projectCandidates, ...eligibleCandidates, ...allCandidates].find(
-                (c) => (c.candidateId || c.id) === verifyConfirm.candidateId
-              );
-              if (!candidate) return null;
-              return (
-                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                  {/* Match score summary */}
-                  <MatchScoreSummary candidate={candidate} />
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
-                  <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                    {/* Education column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
-                      <div className="space-y-1">
-                        {(candidate.qualifications || candidate.candidateQualifications) && (candidate.qualifications || candidate.candidateQualifications).length > 0 ? (
-                          (candidate.qualifications || candidate.candidateQualifications).map((qual: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
-                              {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
-                              {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
-                            </p>
-                          ))
-                        ) : (
-                          <p className="text-xs text-slate-500">No education details</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Experience column */}
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
-                      <div className="space-y-1">
-                        {candidate.workExperiences && candidate.workExperiences.length > 0 ? (
-                          candidate.workExperiences.map((exp: any, idx: number) => (
-                            <p key={idx} className="text-xs text-slate-700">
-                              {formatWorkExperienceEntry(exp)}
-                            </p>
-                          ))
-                        ) : candidate.candidateExperience ? (
-                          <p className="text-xs text-slate-700">{candidate.candidateExperience} yrs</p>
-                        ) : (
-                          <p className="text-xs text-slate-500">No experience details</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {/* Role match scores */}
-                  {candidate.roleMatches && candidate.roleMatches.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
-                      <div className="flex flex-wrap gap-2">
-                        {candidate.roleMatches.map((rm: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
-                          >
-                            <span className="text-xs text-slate-700 max-w-[160px] truncate">
-                              {rm.designation || "Role"}
-                            </span>
-                            <span
-                              className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
-                            >
-                              {rm.score ?? "-"}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {/* Candidate profile (match scores, education, experience) — hidden in verification modal; use document checklist instead */}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
@@ -1963,7 +2178,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
           })
         }
@@ -1975,6 +2190,21 @@ export default function ProjectDetailPage() {
               Are you sure you want to assign {assignConfirm.candidateName} to
               this project?
             </p>
+
+            {(() => {
+              const processingBlockReason = getProcessingBlockReasonForCandidate({
+                eligibilityData: assignEligibilityData,
+                projectId: projectId!,
+                projectTitle: project?.title,
+                context: "assign",
+              });
+              if (!processingBlockReason) return null;
+              return (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">
+                  {processingBlockReason.fullMessage}
+                </div>
+              );
+            })()}
 
             {/* Candidate Details */}
             {(() => {
@@ -2144,6 +2374,14 @@ export default function ProjectDetailPage() {
         confirmText="Assign to Project"
         cancelText="Cancel"
         isLoading={isAssigning}
+        confirmDisabled={Boolean(
+          getProcessingBlockReasonForCandidate({
+            eligibilityData: assignEligibilityData,
+            projectId: projectId!,
+            projectTitle: project?.title,
+            context: "assign",
+          }),
+        )}
         variant="default"
         icon={
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

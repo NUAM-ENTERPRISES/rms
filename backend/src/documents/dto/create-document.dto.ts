@@ -68,14 +68,23 @@ export class CreateDocumentDto {
 
   @ApiPropertyOptional({
     description: 'Expiry date for documents with expiration',
-    example: '2025-12-31T00:00:00.000Z',
+    example: '2025-12-31',
   })
   @IsOptional()
   @IsDateString()
   expiryDate?: string;
 
   @ApiPropertyOptional({
-    description: 'Document number (e.g., passport number)',
+    description: 'Issue date for documents with issuance date (e.g., eligibility letter)',
+    example: '2024-01-15',
+  })
+  @IsOptional()
+  @IsDateString()
+  issuedAt?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Document number (e.g., passport number). For eligibility_letter, this is the eligibility number.',
     example: 'A12345678',
   })
   @IsOptional()
@@ -91,7 +100,8 @@ export class CreateDocumentDto {
   notes?: string;
 
   @ApiPropertyOptional({
-    description: 'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility)',
+    description:
+      'Role Catalog ID (accepted as `roleCatalog`; `roleCatalogId` and common typo `roleCatelogId` supported for backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()
@@ -99,7 +109,8 @@ export class CreateDocumentDto {
   roleCatalog?: string;
 
   @ApiPropertyOptional({
-    description: 'Alias for `roleCatalog` - optional role catalog id as `roleCatalogId` key (backward compatibility)',
+    description:
+      'Alias for `roleCatalog` - optional role catalog id as `roleCatalogId` key (backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()
@@ -107,7 +118,8 @@ export class CreateDocumentDto {
   roleCatalogId?: string;
 
   @ApiPropertyOptional({
-    description: 'Common frontend typo alias: `roleCatelogId` (backward compatibility)',
+    description:
+      'Common frontend typo alias: `roleCatelogId` (backward compatibility). Required when `docType` is `resume` or `cv`.',
     example: 'rc_123abc',
   })
   @IsOptional()

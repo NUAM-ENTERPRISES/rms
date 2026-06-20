@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmationDialog } from "@/components/ui";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import {
   useGetNominatedCandidatesQuery,
   useSendForVerificationMutation,
@@ -21,6 +22,12 @@ import {
   useGetProjectQuery,
 } from "@/features/projects";
 import CandidateCard from "./CandidateCard";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 interface SubmittedCandidatesSectionProps {
   projectId: string;
@@ -51,6 +58,11 @@ export default function SubmittedCandidatesSection({
   }>({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" });
 
   const { data: projectData } = useGetProjectQuery(projectId);
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
 
   // Fetch project statuses from API
   const { data: statusesData } = useGetCandidateProjectStatusesQuery();
@@ -96,6 +108,10 @@ export default function SubmittedCandidatesSection({
     candidateId: string,
     candidateName: string
   ) => {
+    if (!pipelineOpen) {
+      toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+      return;
+    }
     setVerifyConfirm({
       isOpen: true,
       candidateId,
@@ -173,6 +189,23 @@ export default function SubmittedCandidatesSection({
           </p>
         </div>
 
+        {deadlineNoticeMessage ? (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 mb-4"
+            role="status"
+          >
+            {deadlineNoticeMessage}
+          </div>
+        ) : null}
+        {!pipelineOpen && pipelineClosureMessage ? (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4"
+            role="status"
+          >
+            {pipelineClosureMessage}
+          </div>
+        ) : null}
+
         {/* Search and Filter */}
         <div className="space-y-2 mb-4">
           <div className="relative">
@@ -223,7 +256,16 @@ export default function SubmittedCandidatesSection({
             if (!projectStatus) projectStatus = "nominated";
 
             // Only show verify button if status is 'nominated'
-            const canSendForVerification = projectStatus.toLowerCase() === "nominated";
+            const mainStatusName =
+              candidate.mainStatus?.name ||
+              candidate.projectMainStatus?.name ||
+              undefined;
+            const isPipelineBlocked = isCandidateProjectPipelineBlocked(mainStatusName);
+
+            const canSendForVerification =
+              pipelineOpen &&
+              projectStatus.toLowerCase() === "nominated" &&
+              !isPipelineBlocked;
 
             // Use candidateId if it exists, otherwise use id
             const actualCandidateId = candidate.candidateId || candidate.id;
@@ -295,6 +337,7 @@ export default function SubmittedCandidatesSection({
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
+        className="sm:max-w-3xl"
         onClose={() =>
           setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })
         }
@@ -303,6 +346,14 @@ export default function SubmittedCandidatesSection({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

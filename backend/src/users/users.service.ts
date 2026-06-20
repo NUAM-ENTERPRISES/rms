@@ -1,12 +1,15 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
-import { SessionAvailability } from '@prisma/client';
+import { SessionAvailability, UserAccountStatus } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { AuditService } from '../common/audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,7 +18,13 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import * as argon2 from 'argon2';
 import * as bcrypt from 'bcrypt';
-import { UserWithRoles, PaginatedUsers } from './types';
+import {
+  UserWithRoles,
+  PaginatedUsers,
+  PaginatedAccountStatusHistory,
+} from './types';
+import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
+import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
 import { UploadService } from '../upload/upload.service';
 import {
   assertPhysicalAddressConsistent,
@@ -23,15 +32,39 @@ import {
 } from '../common/address/assert-physical-address';
 import { LanguageProficiency } from '@prisma/client';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { BLOCKED_ACCOUNT_MESSAGE } from '../auth/assert-user-not-blocked';
+import {
+  ACCOUNT_STATUS_SOCKET_EVENT,
+  ACCOUNT_STATUS_NOTIFICATION_TYPE,
+  getAccountStatusNotificationContent,
+} from './account-status-notifications';
+import {
+  DOCUMENTS_CONTROL_PERMISSIONS_SOCKET_EVENT,
+  DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
+} from './documents-control-permissions-notifications';
+import {
+  DOCUMENTS_CONTROL_PERMISSION_KEYS,
+  documentsControlPermissionKeysToToggles,
+  documentsControlTogglesToPermissionKeys,
+  collectEffectivePermissions,
+} from '../auth/rbac/documents-control-permissions.util';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 import { ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  resolveUserListAccountStatusFilter,
+  withActiveAccountStatus,
+} from './user-account-status.filter';
 
 /** Default idle threshold — overridden at runtime by SESSION_SETTINGS config */
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   private idleThresholdMs = DEFAULT_IDLE_THRESHOLD_MS;
 
   constructor(
@@ -39,7 +72,10 @@ export class UsersService {
     private readonly auditService: AuditService,
     private readonly uploadService: UploadService,
     private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
     private readonly systemConfigService: SystemConfigService,
+    private readonly rbacUtil: RbacUtil,
   ) {}
 
   async onModuleInit() {
@@ -102,6 +138,16 @@ export class UsersService {
     createUserDto: CreateUserDto,
     createdByUserId?: string,
   ): Promise<UserWithRoles> {
+    if (createUserDto.employeeCode) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: createUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     // Check for existing phone number + country code combination
     const existingPhone = await this.prisma.user.findUnique({
       where: {
@@ -130,6 +176,8 @@ export class UsersService {
       addressStateId: createUserDto.addressStateId ?? null,
     });
 
+    await this.assertValidProfessionTypeIds(createUserDto.professionTypeIds);
+
     const hashedPassword = await argon2.hash(createUserDto.password);
 
     // Create user with role assignments in a transaction
@@ -137,6 +185,7 @@ export class UsersService {
       // Create the user
       const newUser = await tx.user.create({
         data: {
+          employeeCode: createUserDto.employeeCode,
           email: createUserDto.email,
           name: createUserDto.name,
           password: hashedPassword,
@@ -177,22 +226,17 @@ export class UsersService {
         }
       }
 
+      await tx.userProfessionScope.createMany({
+        data: createUserDto.professionTypeIds.map((professionTypeId) => ({
+          userId: newUser.id,
+          professionTypeId,
+        })),
+      });
+
       // Return user with roles
       return await tx.user.findUnique({
         where: { id: newUser.id },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-          },
-        },
+        include: this.userDetailIncludes(),
       });
     });
 
@@ -222,7 +266,10 @@ export class UsersService {
     return userWithoutPassword as UserWithRoles;
   }
 
-  async findAll(query: QueryUsersDto): Promise<PaginatedUsers> {
+  async findAll(
+    query: QueryUsersDto,
+    options?: { listAllAccountStatuses?: boolean },
+  ): Promise<PaginatedUsers> {
     const {
       search,
       page = 1,
@@ -230,10 +277,16 @@ export class UsersService {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       roles,
+      accountStatus,
     } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = {
+      ...resolveUserListAccountStatusFilter({
+        listAllAccountStatuses: options?.listAllAccountStatuses ?? false,
+        accountStatus,
+      }),
+    };
 
     if (search) {
       where.OR = [
@@ -284,6 +337,11 @@ export class UsersService {
             country: { select: { code: true, name: true } },
           },
         },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
       },
     });
 
@@ -331,6 +389,16 @@ export class UsersService {
             country: { select: { code: true, name: true } },
           },
         },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
+        userPermissions: {
+          include: {
+            permission: { select: { key: true } },
+          },
+        },
       },
     });
 
@@ -340,6 +408,196 @@ export class UsersService {
 
     const { password, ...userWithoutPassword } = user;
     return this.transformUserData(userWithoutPassword) as UserWithRoles;
+  }
+
+  async updateAccountStatus(
+    userId: string,
+    dto: UpdateUserAccountStatusDto,
+    actorId: string,
+  ): Promise<UserWithRoles> {
+    if (userId === actorId) {
+      throw new BadRequestException('You cannot change your own account status');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, accountStatus: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    if (existing.accountStatus === dto.status) {
+      throw new BadRequestException(
+        `User is already ${dto.status.toLowerCase()}`,
+      );
+    }
+
+    const remarks = dto.remarks.trim();
+    if (remarks.length < 3) {
+      throw new BadRequestException(
+        'Remarks are required and must be at least 3 characters',
+      );
+    }
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userAccountStatusHistory.create({
+        data: {
+          userId,
+          previousStatus: existing.accountStatus,
+          newStatus: dto.status,
+          remarks,
+          changedById: actorId,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          accountStatus: dto.status,
+          accountStatusUpdatedAt: now,
+        },
+      });
+    });
+
+    if (dto.status === UserAccountStatus.BLOCKED) {
+      await this.revokeUserAuthSessions(userId);
+      await this.notificationsGateway.emitToUser(userId, 'account:blocked', {
+        message: BLOCKED_ACCOUNT_MESSAGE,
+      });
+    } else {
+      await this.notifyAccountStatusChange(
+        userId,
+        existing.accountStatus,
+        dto.status,
+        now,
+      );
+    }
+
+    await this.auditService.logUserAction(
+      'status_change',
+      actorId,
+      userId,
+      {
+        previousStatus: existing.accountStatus,
+        newStatus: dto.status,
+        remarks,
+      },
+      { action: 'account_status_changed' },
+    );
+
+    return this.findOne(userId);
+  }
+
+  async getAccountStatusHistory(
+    userId: string,
+    query: QueryAccountStatusHistoryDto,
+  ): Promise<PaginatedAccountStatusHistory> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where = { userId };
+
+    const [total, rows] = await Promise.all([
+      this.prisma.userAccountStatusHistory.count({ where }),
+      this.prisma.userAccountStatusHistory.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          changedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              employeeCode: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        previousStatus: row.previousStatus,
+        newStatus: row.newStatus,
+        remarks: row.remarks,
+        createdAt: row.createdAt,
+        changedBy: row.changedBy,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 0,
+    };
+  }
+
+  private async notifyAccountStatusChange(
+    userId: string,
+    previousStatus: UserAccountStatus,
+    newStatus: UserAccountStatus,
+    changedAt: Date,
+  ): Promise<void> {
+    const content = getAccountStatusNotificationContent(newStatus);
+    if (!content) {
+      return;
+    }
+
+    const payload = {
+      accountStatus: newStatus,
+      previousStatus,
+      message: content.message,
+      updatedAt: changedAt.toISOString(),
+    };
+
+    await this.notificationsGateway.emitToUser(
+      userId,
+      ACCOUNT_STATUS_SOCKET_EVENT,
+      payload,
+    );
+
+    try {
+      await this.notificationsService.createNotification({
+        userId,
+        type: ACCOUNT_STATUS_NOTIFICATION_TYPE,
+        title: content.title,
+        message: content.message,
+        link: '/profile',
+        meta: payload,
+        idemKey: `account_status:${userId}:${newStatus}:${changedAt.getTime()}`,
+      });
+    } catch (error) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.warn(
+        `Account status socket sent but notification persist failed: ${err.message}`,
+      );
+    }
+  }
+
+  private async revokeUserAuthSessions(userId: string): Promise<void> {
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    await this.prisma.userSession.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false },
+    });
   }
 
   async update(
@@ -373,13 +631,34 @@ export class UsersService {
       }
     }
 
+    if (
+      updateUserDto.employeeCode &&
+      updateUserDto.employeeCode !== existingUser.employeeCode
+    ) {
+      const existing = await this.prisma.user.findUnique({
+        where: { employeeCode: updateUserDto.employeeCode },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('User with this employee code already exists');
+      }
+    }
+
     const updateData: any = { ...updateUserDto };
     if (updateUserDto.dateOfBirth) {
       updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
     }
 
+    if (updateUserDto.employeeCode !== undefined) {
+      updateData.employeeCode = updateUserDto.employeeCode || null;
+    }
+
+    if (updateUserDto.professionTypeIds !== undefined) {
+      await this.assertValidProfessionTypeIds(updateUserDto.professionTypeIds);
+    }
+
     // Handle role assignment if provided
-    const { roleIds, ...userUpdateData } = updateData;
+    const { roleIds, professionTypeIds, ...userUpdateData } = updateData;
 
     // Update user with role assignments in a transaction
     const user = await this.prisma.$transaction(async (tx) => {
@@ -417,22 +696,22 @@ export class UsersService {
         }
       }
 
+      if (professionTypeIds !== undefined) {
+        await tx.userProfessionScope.deleteMany({ where: { userId: id } });
+        if (professionTypeIds.length > 0) {
+          await tx.userProfessionScope.createMany({
+            data: professionTypeIds.map((professionTypeId: string) => ({
+              userId: id,
+              professionTypeId,
+            })),
+          });
+        }
+      }
+
       // Return user with roles
       return await (tx as any).user.findUnique({
         where: { id },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  id: true,
-                  name: true,
-                  description: true,
-                },
-              },
-            },
-          },
-        },
+        include: this.userDetailIncludes(),
       });
     });
 
@@ -444,7 +723,7 @@ export class UsersService {
         'update',
         updatedByUserId,
         user.id,
-        { ...userUpdateData, roleIds },
+        { ...userUpdateData, roleIds, professionTypeIds },
         { action: 'user_updated' },
       );
     }
@@ -554,33 +833,9 @@ export class UsersService {
   }
 
   async getUserPermissions(userId: string): Promise<string[]> {
-    const userRoles = await (this.prisma as any).userRole.findMany({
-      where: { userId },
-      include: {
-        role: {
-          include: {
-            rolePermissions: {
-              include: {
-                permission: {
-                  select: {
-                    key: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const permissions = new Set<string>();
-    for (const userRole of userRoles) {
-      for (const rolePermission of userRole.role.rolePermissions) {
-        permissions.add(rolePermission.permission.key);
-      }
-    }
-
-    return Array.from(permissions);
+    const { permissions } =
+      await this.rbacUtil.getUserRolesAndPermissions(userId);
+    return permissions;
   }
 
   /**
@@ -591,6 +846,49 @@ export class UsersService {
     return this.uploadService.getFileUrl(relativePath);
   }
 
+  private userDetailIncludes() {
+    return {
+      userRoles: {
+        include: {
+          role: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+        },
+      },
+      userProfessionScopes: {
+        include: {
+          professionType: { select: { id: true, name: true, label: true } },
+        },
+      },
+    };
+  }
+
+  private async assertValidProfessionTypeIds(
+    professionTypeIds: string[],
+  ): Promise<void> {
+    const uniqueIds = [...new Set(professionTypeIds)];
+    if (uniqueIds.length !== professionTypeIds.length) {
+      throw new BadRequestException(
+        'Duplicate profession type IDs are not allowed',
+      );
+    }
+
+    const types = await this.prisma.professionType.findMany({
+      where: { id: { in: uniqueIds }, isActive: true },
+      select: { id: true },
+    });
+
+    if (types.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'One or more profession type IDs are invalid or inactive',
+      );
+    }
+  }
+
   /**
    * Transform user data to include full profile image URL
    */
@@ -598,9 +896,19 @@ export class UsersService {
     if (user.profileImage) {
       user.profileImage = this.getProfileImageUrl(user.profileImage);
     }
+
+    const directPermissionKeys = (user.userPermissions ?? []).map(
+      (up: { permission: { key: string } }) => up.permission.key,
+    );
+    user.documentsControlAccess = documentsControlPermissionKeysToToggles(
+      directPermissionKeys,
+    );
+    delete user.userPermissions;
+
     return user;
   }
 
+  // Get user profile with profession scopes, languages, and country coverage
   async getUserProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -618,6 +926,26 @@ export class UsersService {
             },
           },
         },
+        userProfessionScopes: {
+          include: {
+            professionType: { select: { id: true, name: true, label: true } },
+          },
+        },
+        userLanguages: {
+          include: {
+            language: { select: { code: true, name: true } },
+          },
+        },
+        userCountryCoverages: {
+          include: {
+            country: { select: { code: true, name: true } },
+          },
+        },
+        userPermissions: {
+          include: {
+            permission: true,
+          },
+        },
       },
     });
 
@@ -630,8 +958,15 @@ export class UsersService {
 
     // Extract roles and permissions
     const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
+    const rolePermissionKeys = user.userRoles.flatMap((ur) =>
       ur.role.rolePermissions.map((rp) => rp.permission.key),
+    );
+    const directPermissionKeys = user.userPermissions.map(
+      (up) => up.permission.key,
+    );
+    const permissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
     );
 
     // Format profile data
@@ -639,6 +974,7 @@ export class UsersService {
       id: user.id,
       name: user.name,
       email: user.email,
+      employeeCode: (user as any).employeeCode ?? null,
       mobileNumber: user.mobileNumber,
       countryCode: user.countryCode,
       dateOfBirth: user.dateOfBirth,
@@ -664,6 +1000,11 @@ export class UsersService {
         language: 'en',
       },
       stats,
+      accountStatus: user.accountStatus,
+      accountStatusUpdatedAt: user.accountStatusUpdatedAt,
+      userProfessionScopes: (user as any).userProfessionScopes ?? [],
+      userLanguages: (user as any).userLanguages ?? [],
+      userCountryCoverages: (user as any).userCountryCoverages ?? [],
     };
 
     return profile;
@@ -1119,7 +1460,7 @@ export class UsersService {
 
     // Get all users with Recruiter role
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -1127,7 +1468,7 @@ export class UsersService {
             },
           },
         },
-      },
+      }),
       select: {
         id: true,
         name: true,
@@ -1888,6 +2229,101 @@ export class UsersService {
         userId,
         { recruiterCapabilities: 'replaced' },
         { action: 'recruiter_capabilities_updated' },
+      );
+    }
+
+    return this.findOne(userId);
+  }
+
+  async updateDocumentsControlPermissions(
+    userId: string,
+    dto: UpdateDocumentsControlPermissionsDto,
+    updatedByUserId?: string,
+  ): Promise<UserWithRoles> {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const targetKeys = documentsControlTogglesToPermissionKeys({
+      originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+      courierManagementEnabled: dto.courierManagementEnabled,
+    });
+
+    const documentsControlPermissions = await this.prisma.permission.findMany({
+      where: {
+        key: { in: [...DOCUMENTS_CONTROL_PERMISSION_KEYS] },
+      },
+      select: { id: true, key: true },
+    });
+
+    const documentsControlPermissionIds = documentsControlPermissions.map(
+      (p) => p.id,
+    );
+    const targetPermissionIds = documentsControlPermissions
+      .filter((p) => targetKeys.includes(p.key as (typeof targetKeys)[number]))
+      .map((p) => p.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.userPermission.deleteMany({
+        where: {
+          userId,
+          permissionId: { in: documentsControlPermissionIds },
+        },
+      });
+
+      if (targetPermissionIds.length > 0) {
+        await tx.userPermission.createMany({
+          data: targetPermissionIds.map((permissionId) => ({
+            userId,
+            permissionId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { updatedAt: new Date() },
+      });
+    });
+
+    this.rbacUtil.clearUserCache(userId);
+    const { roles, permissions, userVersion } =
+      await this.rbacUtil.getUserRolesAndPermissions(userId);
+
+    const permissionsPayload = {
+      userId,
+      updatedAt: new Date().toISOString(),
+      roles,
+      permissions,
+      userVersion,
+    };
+
+    await this.notificationsGateway.emitToUser(
+      userId,
+      DOCUMENTS_CONTROL_PERMISSIONS_SOCKET_EVENT,
+      permissionsPayload,
+    );
+    await this.notificationsGateway.emitToUser(userId, 'data:sync', {
+      type: DOCUMENTS_CONTROL_PERMISSIONS_SYNC_TYPE,
+      ...permissionsPayload,
+    });
+
+    if (updatedByUserId) {
+      await this.auditService.logUserAction(
+        'update',
+        updatedByUserId,
+        userId,
+        {
+          originalDocumentIntakeEnabled: dto.originalDocumentIntakeEnabled,
+          courierManagementEnabled: dto.courierManagementEnabled,
+          permissionKeys: targetKeys,
+        },
+        { action: 'documents_control_permissions_updated' },
       );
     }
 

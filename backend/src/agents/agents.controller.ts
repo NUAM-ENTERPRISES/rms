@@ -14,6 +14,7 @@ import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
 import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
+import { QueryAgentInterviewPassedCandidatesDto } from './dto/query-agent-interview-passed-candidates.dto';
 import { QueryAgentProjectsDto } from './dto/query-agent-projects.dto';
 import { LinkAgentProjectsDto } from './dto/link-agent-projects.dto';
 import { UpdateAgentProjectDto } from './dto/update-agent-project.dto';
@@ -118,6 +119,45 @@ export class AgentsController {
   @ApiResponse({ status: 403, description: 'Forbidden — missing read:agents' })
   findAll(@Query() query: QueryAgentsDto) {
     return this.agentsService.findAll(query);
+  }
+
+  @Get(':id/candidate-stats')
+  @Permissions('read:agents')
+  @ApiOperation({
+    summary: 'Get agent candidate stats',
+    description:
+      'Returns total candidates, interview-passed candidates (from project status history), and linked project counts.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Agent ID (cuid)',
+    example: 'clxxxxxxxx',
+  })
+  @ApiResponse({ status: 200, description: 'Stats retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Agent not found' })
+  getAgentCandidateStats(@Param('id') id: string) {
+    return this.agentsService.getAgentCandidateStats(id);
+  }
+
+  @Get(':id/candidates/interview-passed')
+  @Permissions('read:agents')
+  @ApiOperation({
+    summary: 'List interview-passed candidates for an agent',
+    description:
+      'Returns candidates who have an interview_passed entry in candidate_project_status_history for at least one project.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Agent ID (cuid)',
+    example: 'clxxxxxxxx',
+  })
+  @ApiResponse({ status: 200, description: 'Interview passed candidates retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Agent not found' })
+  getAgentInterviewPassedCandidates(
+    @Param('id') id: string,
+    @Query() query: QueryAgentInterviewPassedCandidatesDto,
+  ) {
+    return this.agentsService.getAgentInterviewPassedCandidates(id, query);
   }
 
   @Get(':id/candidates')

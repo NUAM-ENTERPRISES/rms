@@ -1,13 +1,17 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { useGetCandidateProcessingDetailsQuery, useGetCandidateDocumentsQuery } from "@/features/processing/data/processing.endpoints";
+import {
+  useGetCandidateProcessingDetailsQuery,
+  useGetCandidateDocumentsQuery,
+  useGetPendingProcessingStatusChangeRequestForCandidateQuery,
+  useGetLatestReviewedProcessingStatusChangeRequestQuery,
+} from "@/features/processing/data/processing.endpoints";
 import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2, FileCheck } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   ProcessingCandidateHeader,
@@ -16,6 +20,8 @@ import {
   AssignmentCard,
   ProcessingStepsCard,
   ProcessingHistoryModal,
+  DocumentCollectionHistoryModal,
+  CourierHistoryModal,
   DocumentVerificationCard,
   ProcessingOfferLetterModal,
   DataFlowModal,
@@ -33,11 +39,34 @@ import {
   EditFileNumberModal,
 } from "./components";
 import DocumentReceivedModal from "./components/DocumentReceivedModal";
+import ManageStepDocumentsModal from "@/features/processing/components/ManageStepDocumentsModal";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
+import { useCan } from "@/hooks/useCan";
+import { Can } from "@/components/auth/Can";
+import { ReviewStatusChangeRequestModal } from "@/features/candidates/components/ReviewStatusChangeRequestModal";
+import type {
+  PendingStatusChangeRequest,
+  ReviewedStatusChangeRequest,
+} from "@/features/candidates/api";
+import { ProcessingStatusChangeOutcomeBanner } from "@/features/processing/components/ProcessingStatusChangeOutcomeBanner";
+import { UpdateProcessingStatusModal } from "@/features/processing/components/UpdateProcessingStatusModal";
+import { PreviousProcessingProjectsModal } from "@/features/processing/components/PreviousProcessingProjectsModal";
+import { useAppSelector } from "@/app/hooks";
+import { ProcessingActionLockProvider } from "@/features/processing/context/ProcessingActionLockContext";
+import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
+import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 
 export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
+  const [showPreviousProjectsModal, setShowPreviousProjectsModal] = useState(false);
+  const { user } = useAppSelector((state) => state.auth);
+  const canReviewProcessingRequests =
+    user?.roles?.some((role) => ["Manager", "Processing Manager"].includes(role)) ?? false;
+  const canDirectApplyStatusChange = canDirectApplyProcessingStatusChange(user?.roles);
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
@@ -52,7 +81,11 @@ export default function ProcessingCandidateDetailsPage() {
   const [showDataFlowModal, setShowDataFlowModal] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [showDocumentReceivedModal, setShowDocumentReceivedModal] = useState(false);
+  const [showManageStepDocsModal, setShowManageStepDocsModal] = useState(false);
+  const [manageStepDocsKey, setManageStepDocsKey] = useState<string>("");
+  const [manageStepDocsLabel, setManageStepDocsLabel] = useState<string>("");
   const [showEditFileNumberModal, setShowEditFileNumberModal] = useState(false);
+  const canManageStepDocs = useCan("write:processing");
 
   const { data: apiResponse, isLoading, error, refetch: refetchCandidateDetails } = useGetCandidateProcessingDetailsQuery(processingId || "", {
     skip: !processingId,
@@ -62,6 +95,37 @@ export default function ProcessingCandidateDetailsPage() {
   const { data: processingSteps = [], isLoading: isLoadingSteps, refetch: refetchProcessingSteps } = useGetProcessingStepsQuery(processingId || "", {
     skip: !processingId,
   });
+
+  const { data: pendingRequestResponse, refetch: refetchPendingRequest } =
+    useGetPendingProcessingStatusChangeRequestForCandidateQuery(processingId || "", {
+      skip: !processingId,
+    });
+
+  const { data: latestReviewedResponse, refetch: refetchLatestReviewed } =
+    useGetLatestReviewedProcessingStatusChangeRequestQuery(processingId || "", {
+      skip: !processingId,
+    });
+
+  const pendingRequest = pendingRequestResponse?.data as PendingStatusChangeRequest | null | undefined;
+  const pendingRequestSubmittedAt = useMemo(
+    () => formatProcessingStatusChangeRequestDate(pendingRequest?.createdAt),
+    [pendingRequest?.createdAt],
+  );
+  const latestReviewed = latestReviewedResponse?.data as
+    | ReviewedStatusChangeRequest
+    | null
+    | undefined;
+
+  const outcomeRequestId = searchParams.get("actionOutcome");
+  const reviewRequestId = searchParams.get("reviewRequest");
+  const highlightedReview =
+    reviewRequestId && pendingRequest?.id === reviewRequestId
+      ? pendingRequest
+      : pendingRequest;
+  const outcomeReview: ReviewedStatusChangeRequest | null | undefined =
+    outcomeRequestId && latestReviewed?.id === outcomeRequestId
+      ? latestReviewed
+      : latestReviewed;
 
   // --- New: paginated documents and history ---
   const [docsPage, setDocsPage] = useState(1);
@@ -78,6 +142,37 @@ export default function ProcessingCandidateDetailsPage() {
 
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  const showOutcomeBanner =
+    !!outcomeReview &&
+    (outcomeReview.status === "approved" || outcomeReview.status === "rejected") &&
+    !pendingRequest;
+
+  const showUpdateStatusButton =
+    !pendingRequest &&
+    (data?.processingStatus === "cancelled" || data?.processingStatus === "on_hold");
+
+  const getPendingRequestTitle = (requestType?: string) => {
+    switch (requestType) {
+      case "processing_cancel":
+        return "Cancellation request pending approval";
+      case "processing_hold":
+        return "Hold request pending approval";
+      case "processing_reactivate":
+        return "Reactivation request pending approval";
+      default:
+        return "Status change request pending approval";
+    }
+  };
+
+  const refetchStatusChangeData = async () => {
+    await Promise.all([
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
+      refetchCandidateDetails(),
+      refetchProcessingSteps(),
+    ]);
+  };
 
   // Map paginated documents to UI shape expected by DocumentVerificationCard
   const docsTotal = docsResponse?.data?.pagination?.total || 0;
@@ -99,10 +194,15 @@ export default function ProcessingCandidateDetailsPage() {
     },
   }));
 
+  useEffect(() => {
+    if (reviewRequestId && pendingRequest && canReviewProcessingRequests) {
+      setShowReviewModal(true);
+    }
+  }, [reviewRequestId, pendingRequest, canReviewProcessingRequests]);
+
   // Reset paging when processing id changes
   useEffect(() => {
     setDocsPage(1);
-    // history page is managed within the modal; signal it to refresh/reset when processing id changes
     setHistoryRefreshKey((k) => k + 1);
   }, [effectiveProcessingId]);
 
@@ -112,9 +212,29 @@ export default function ProcessingCandidateDetailsPage() {
       refetchCandidateDetails(),
       refetchProcessingSteps(),
       refetchCandidateDocuments(),
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
     ]);
     // signal the history modal to refresh if it's open
     setHistoryRefreshKey((k) => k + 1);
+  };
+
+  const handleReviewed = async () => {
+    await Promise.all([
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
+      refetchCandidateDetails(),
+      refetchProcessingSteps(),
+    ]);
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.delete("reviewRequest");
+        next.delete("actionOutcome");
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   // Backwards compatible HRD handler
@@ -123,9 +243,13 @@ export default function ProcessingCandidateDetailsPage() {
   const handleEligibilityComplete = handleStepComplete;
 
   // Extract offer letter status from the paginated documents
-  const { offerLetterStatus, offerLetterVerification } = useMemo(() => {
+  const { offerLetterStatus, offerLetterVerification, offerLetterUploadedByName } = useMemo(() => {
     const verifications = (docsResponse?.data?.items || []) as any[];
     const offerLetterDoc = verifications.find((v) => v.document?.docType === "offer_letter");
+
+    const getUploaderLabel = (
+      uploadedByUser?: { name?: string; email?: string } | null,
+    ) => uploadedByUser?.name || uploadedByUser?.email || null;
 
     // If not found in paginated documents, fall back to processing steps payload which may contain offerLetters
     if (!offerLetterDoc) {
@@ -154,6 +278,7 @@ export default function ProcessingCandidateDetailsPage() {
                 fileName: candidateDoc.fileName,
                 fileUrl: candidateDoc.fileUrl,
                 uploadedBy: candidateDoc.uploadedBy || "",
+                uploadedByUser: candidateDoc.uploadedByUser || null,
                 verifiedBy: null,
                 status: verification.status,
                 notes: null,
@@ -181,6 +306,7 @@ export default function ProcessingCandidateDetailsPage() {
             receivedAt: verification?.offerLetterReceivedAt || candidateDoc.uploadedAt || null,
           } as OfferLetterStatus,
           offerLetterVerification: constructedVerification,
+          offerLetterUploadedByName: getUploaderLabel(candidateDoc.uploadedByUser),
         };
       }
 
@@ -190,6 +316,7 @@ export default function ProcessingCandidateDetailsPage() {
           status: "not_uploaded" as const,
         } as OfferLetterStatus,
         offerLetterVerification: null,
+        offerLetterUploadedByName: null,
       };
     }
 
@@ -207,13 +334,9 @@ export default function ProcessingCandidateDetailsPage() {
         ...offerLetterDoc,
         offerLetterReceivedAt: offerLetterDoc.offerLetterReceivedAt || offerLetterDoc.document?.offerLetterReceivedAt || offerLetterDoc.document?.createdAt || null,
       } as any,
+      offerLetterUploadedByName: getUploaderLabel(offerLetterDoc.document?.uploadedByUser),
     };
-  }, [docsResponse?.data?.items, processingSteps]);
-
-  // If processing was cancelled, find the most recent cancellation history entry to show the reason
-  // We intentionally avoid fetching history on page load. The history modal fetches history when opened.
-  // Keep a typed placeholder for cancellation entry so TypeScript is happy — we fetch details from history modal when needed.
-  const cancellationEntry: { notes?: string; createdAt?: string; changedBy?: { name?: string } } | null = null;
+  }, [docsResponse?.data?.items, processingSteps, data?.candidate?.id]);
 
   if (isLoading || isLoadingSteps) {
     return (
@@ -254,6 +377,10 @@ export default function ProcessingCandidateDetailsPage() {
   }
 
   return (
+    <ProcessingActionLockProvider
+      pendingRequest={pendingRequest}
+      processingStatus={data.processingStatus}
+    >
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Header */}
@@ -263,13 +390,86 @@ export default function ProcessingCandidateDetailsPage() {
           role={data.role}
           processingStatus={data.processingStatus}
           processingId={data.id}
-          fileNumber={data.fileNumber}
-          onEditFileNumber={() => setShowEditFileNumberModal(true)}
+          fileNumber={data.fileNumber ?? null}
           recruiter={data.candidateProjectMap?.recruiter}
+          originalDocumentCollection={data.originalDocumentCollection ?? null}
+          documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
+          onOpenPreviousProjects={() => setShowPreviousProjectsModal(true)}
         />
 
-        {/* If processing is cancelled, show a clear banner with cancellation reason */}
-        {data.processingStatus === "cancelled" && (
+        <PreviousProcessingProjectsModal
+          open={showPreviousProjectsModal}
+          onOpenChange={setShowPreviousProjectsModal}
+          candidateId={data.candidate.id}
+          currentProcessingId={data.id}
+          candidateName={`${data.candidate.firstName} ${data.candidate.lastName}`}
+        />
+
+        {pendingRequest && (
+          <Card className="w-full border-0 shadow-lg bg-orange-100 border-l-4 border-l-orange-400 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="h-10 w-10 rounded-full bg-orange-200 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-orange-800">
+                    {getPendingRequestTitle(pendingRequest.requestType)}
+                  </h3>
+                  <p className="text-sm text-slate-700 mt-1">{pendingRequest.reason}</p>
+                  {pendingRequestSubmittedAt && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Request sent {pendingRequestSubmittedAt}
+                      {pendingRequest.requester?.name
+                        ? ` by ${pendingRequest.requester.name}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {canReviewProcessingRequests && (
+                <Button
+                  size="sm"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  onClick={() => setShowReviewModal(true)}
+                >
+                  Review Request
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {showOutcomeBanner && outcomeReview ? (
+          <ProcessingStatusChangeOutcomeBanner request={outcomeReview} />
+        ) : null}
+
+        {showUpdateStatusButton ? (
+          <Card className="w-full border-0 shadow-lg bg-white p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Processing status update
+                </h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  {canDirectApplyStatusChange
+                    ? "Change hold, reactivation, or cancellation directly."
+                    : "Request hold, reactivation, or cancellation for manager approval."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                className="bg-violet-600 hover:bg-violet-700 shrink-0"
+                onClick={() => setShowUpdateStatusModal(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Update Processing Status
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
+        {data.processingStatus === "cancelled" && !showOutcomeBanner ? (
           <Card className="w-full border-0 shadow-lg bg-rose-50 p-4">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center">
@@ -277,14 +477,13 @@ export default function ProcessingCandidateDetailsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-rose-700">Processing Cancelled</h3>
-                <p className="text-sm text-slate-700 mt-1">{(cancellationEntry as any)?.notes || "No reason provided"}</p>
-                {(cancellationEntry as any)?.createdAt && (
-                  <div className="text-xs text-slate-400 mt-2">Cancelled by {(cancellationEntry as any)?.changedBy?.name || "System"} on {format(new Date((cancellationEntry as any).createdAt), "PPP p")}</div>
-                )}
+                <p className="text-sm text-slate-700 mt-1">
+                  This candidate&apos;s processing has been cancelled.
+                </p>
               </div>
             </div>
           </Card>
-        )}
+        ) : null}
 
         {/* Main Content Grid - More Compact */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-12">
@@ -294,12 +493,12 @@ export default function ProcessingCandidateDetailsPage() {
             <ProcessingStepsCard
               steps={processingSteps}
               maxHeight="450px"
+              processingStatus={data.processingStatus}
               offerLetterStatus={offerLetterStatus}
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
               onOpenHire={() => setShowHireModal(true)}
               isHired={data?.candidateProjectMap?.subStatus?.name === "hired"}
-              fileNumber={data.fileNumber}
-              onEditFileNumber={() => setShowEditFileNumberModal(true)}
+              lockerFileNumber={data.originalDocumentCollection?.lockerFileNumber ?? null}
               onStepClick={(stepKey) => {
                 const k = String(stepKey || "").replace(/[_-]/g, "").toLowerCase();
                 if (k === "hrd") {
@@ -366,6 +565,16 @@ export default function ProcessingCandidateDetailsPage() {
                   return;
                 }
               }}
+              canManageStepDocs={canManageStepDocs}
+              onManageStepDocs={(stepKey) => {
+                if (!canManageStepDocs) return;
+                const step = (processingSteps || []).find(
+                  (s: any) => s.template?.key === stepKey,
+                );
+                setManageStepDocsKey(stepKey);
+                setManageStepDocsLabel(step?.template?.label || stepKey);
+                setShowManageStepDocsModal(true);
+              }}
             />
 
             {/* Project Info Card - Below Steps */}
@@ -428,13 +637,15 @@ export default function ProcessingCandidateDetailsPage() {
             {/* History Modal Button + Processing Notes stacked */}
             <div className="flex flex-col gap-3">
               <ProcessingHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
+              <DocumentCollectionHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
+              <CourierHistoryModal processingId={data.id} refreshKey={historyRefreshKey} />
               
               {data.notes && (
-                <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-amber-50 to-orange-50 border-l-4 border-l-amber-400 p-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">
+                <Card className="w-full border-0 shadow-lg bg-gradient-to-br from-violet-50 to-indigo-50 border-l-4 border-l-violet-400 p-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-700 mb-1">
                     Notes
                   </h4>
-                  <p className="text-xs text-amber-900 font-medium leading-relaxed line-clamp-3">
+                  <p className="text-xs text-violet-900 font-medium leading-relaxed line-clamp-3">
                     {data.notes}
                   </p>
                 </Card>
@@ -457,7 +668,10 @@ export default function ProcessingCandidateDetailsPage() {
         projectTitle={data.project?.title || ""}
         roleCatalogId={data.role?.roleCatalogId || ""}
         roleDesignation={data.role?.designation || ""}
+        processingId={data.id}
+        onComplete={handleStepComplete}
         documentVerification={offerLetterVerification as DocumentVerification | null}
+        uploadedByName={offerLetterUploadedByName}
         isVerifying={isVerifying}
         onVerify={async (verifyData) => {
           try {
@@ -640,6 +854,45 @@ export default function ProcessingCandidateDetailsPage() {
         processingId={data.id}
         initialFileNumber={data.fileNumber}
       />
+
+      <ManageStepDocumentsModal
+        isOpen={showManageStepDocsModal}
+        onClose={() => setShowManageStepDocsModal(false)}
+        processingId={data.id}
+        stepKey={manageStepDocsKey}
+        stepLabel={manageStepDocsLabel}
+      />
+
+      <UpdateProcessingStatusModal
+        isOpen={showUpdateStatusModal}
+        onClose={() => setShowUpdateStatusModal(false)}
+        processingId={data.id}
+        processingStatus={data.processingStatus}
+        stepKey={data.step}
+        onSubmitted={refetchStatusChangeData}
+      />
+
+      {highlightedReview && data?.candidate && data?.project && (
+        <ReviewStatusChangeRequestModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          request={highlightedReview}
+          candidateId={data.candidate.id}
+          projectId={data.project.id}
+          candidateProjectMapId={data.candidateProjectMap?.id}
+          projectTitle={data.project.title}
+          countryName={
+            data.project.country && typeof data.project.country === "object"
+              ? data.project.country.name
+              : data.project.country ?? undefined
+          }
+          stepKey={highlightedReview.stepKey}
+          processingStatus={data.processingStatus}
+          currentStatus={data.processingStatus}
+          onReviewed={handleReviewed}
+        />
+      )}
     </div>
+    </ProcessingActionLockProvider>
   );
 }

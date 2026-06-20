@@ -56,6 +56,55 @@ export const CANDIDATE_PROJECT_STATUS = {
 export type CandidateProjectStatus =
   (typeof CANDIDATE_PROJECT_STATUS)[keyof typeof CANDIDATE_PROJECT_STATUS];
 
+/**
+ * Screening + training sub-statuses (under main stage `interview` in DB).
+ * MUST match backend: backend/src/common/constants/statuses.ts
+ */
+export const SCREENING_TRAINING_SUB_STATUS_NAMES = [
+  "screening_assigned",
+  "screening_scheduled",
+  "screening_completed",
+  "screening_passed",
+  "screening_failed",
+  "screening_needs_training",
+  "screening_on_hold",
+  "training_assigned",
+  "training_scheduled",
+  "training_in_progress",
+  "training_completed",
+  "ready_for_reassessment",
+] as const;
+
+export type ScreeningTrainingSubStatusName =
+  (typeof SCREENING_TRAINING_SUB_STATUS_NAMES)[number];
+
+/**
+ * Client interview sub-statuses (shortlist + client interview rounds).
+ * MUST match backend: backend/src/common/constants/statuses.ts
+ */
+export const CLIENT_INTERVIEW_SUB_STATUS_NAMES = [
+  "shortlisted",
+  "not_shortlisted",
+  "interview_assigned",
+  "interview_scheduled",
+  "interview_rescheduled",
+  "interview_completed",
+  "interview_passed",
+  "interview_failed",
+  "interview_backout",
+  "interview_selected",
+] as const;
+
+export type ClientInterviewSubStatusName =
+  (typeof CLIENT_INTERVIEW_SUB_STATUS_NAMES)[number];
+
+export const TRAINING_SUB_STATUS_NAMES = [
+  "training_assigned",
+  "training_scheduled",
+  "training_in_progress",
+  "training_completed",
+] as const;
+
 // ==================== STATUS UI CONFIGURATION ====================
 
 /**
@@ -335,6 +384,7 @@ export const CANDIDATE_STATUS = {
   FUTURE: "future",
   ON_HOLD: "on_hold",
   RNR: "rnr", // Ringing No Response
+  CALL_BACK: "call_back",
 
   // Qualification status
   QUALIFIED: "qualified",
@@ -433,10 +483,18 @@ export const CANDIDATE_STATUS_CONFIG: Record<
   },
   [CANDIDATE_STATUS.RNR]: {
     label: "RNR",
-    description: "Ringing No Response - requires CRE handling",
+    description: "Ringing No Response - requires Operations handling",
     color: "red",
     badgeClass: "bg-red-50 text-red-700 border-red-200",
     icon: "PhoneOff",
+    priority: "urgent",
+  },
+  [CANDIDATE_STATUS.CALL_BACK]: {
+    label: "Call Back",
+    description: "Scheduled callback with the candidate",
+    color: "blue",
+    badgeClass: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    icon: "Phone",
     priority: "urgent",
   },
   [CANDIDATE_STATUS.QUALIFIED]: {
@@ -568,6 +626,323 @@ export const INTERVIEW_OUTCOME = {
 
 export type InterviewOutcome =
   (typeof INTERVIEW_OUTCOME)[keyof typeof INTERVIEW_OUTCOME];
+
+// ==================== PROJECT BOARD STATUS BADGE (API strings) ====================
+
+export type ProjectCandidateStatusBadge = {
+  label: string;
+  badgeClass: string;
+};
+
+const DEFAULT_PROJECT_STATUS_BADGE: ProjectCandidateStatusBadge = {
+  label: "Unknown",
+  badgeClass: "bg-slate-50 text-slate-700 border-slate-200",
+};
+
+function normalizeProjectStatusKey(statusRaw: string) {
+  const trimmed = statusRaw.trim();
+  const lower = trimmed.toLowerCase();
+  return {
+    raw: trimmed,
+    lower,
+    underscored: lower.replace(/[\s-]+/g, "_"),
+    compact: lower.replace(/[\s_-]+/g, ""),
+  };
+}
+
+function humanizeProjectStatus(statusRaw: string): string {
+  return statusRaw
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+type StatusPattern = {
+  match: (underscored: string, compact: string, lower: string) => boolean;
+  label: string;
+  badgeClass: string;
+};
+
+function resolveCandidateGlobalStatusBadge(
+  underscored: string,
+  lower: string,
+  compact: string
+): ProjectCandidateStatusBadge | null {
+  if (underscored in CANDIDATE_STATUS_CONFIG) {
+    const cfg = CANDIDATE_STATUS_CONFIG[underscored as CandidateStatus];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  for (const cfg of Object.values(CANDIDATE_STATUS_CONFIG)) {
+    if (cfg.label.toLowerCase() === lower) {
+      return { label: cfg.label, badgeClass: cfg.badgeClass };
+    }
+  }
+
+  if (
+    compact === "noteligible" ||
+    lower.includes("not eligible") ||
+    lower === "ineligible"
+  ) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.NOT_ELIGIBLE];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "notinterested" || lower.includes("not interested")) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.NOT_INTERESTED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "interested" || lower === "interested") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.INTERESTED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "untouched" || lower === "untouched") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.UNTOUCHED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "qualified" || lower === "qualified") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.QUALIFIED];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (underscored === "rnr" || lower === "rnr") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.RNR];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "callback" || lower === "call back" || underscored === "call_back") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.CALL_BACK];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (compact === "otherenquiry" || lower.includes("other enquiry")) {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.OTHER_ENQUIRY];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  if (underscored === "future" || lower === "future") {
+    const cfg = CANDIDATE_STATUS_CONFIG[CANDIDATE_STATUS.FUTURE];
+    return { label: cfg.label, badgeClass: cfg.badgeClass };
+  }
+
+  return null;
+}
+
+/** Ordered patterns — first match wins (sub-status names, labels, partials). */
+const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
+  {
+    match: (u, c) =>
+      u.startsWith("rejected_") ||
+      u === "rejected_documents" ||
+      c.includes("reject"),
+    label: "Rejected",
+    badgeClass: "bg-red-50 text-red-800 border-red-200",
+  },
+  {
+    match: (u) => u.includes("processing_cancelled"),
+    label: "Cancelled",
+    badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("screening_failed") ||
+      u.includes("interview_failed") ||
+      (u.includes("failed") && !l.includes("passed")),
+    label: "Failed",
+    badgeClass: "bg-red-50 text-red-800 border-red-200",
+  },
+  {
+    match: (u, c) =>
+      u === "documents_verified" || c === "documentsverified",
+    label: "Documents Verified",
+    badgeClass: "bg-purple-50 text-purple-800 border-purple-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("verification") ||
+      l.includes("verifying") ||
+      c.includes("verification"),
+    label: "Verifying",
+    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
+  },
+  {
+    match: (u, c, l) =>
+      u === "pending_documents" ||
+      u.includes("pending_document") ||
+      l.includes("pending doc") ||
+      c === "pendingdocuments",
+    label: "Pending Documents",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("documents_submitted") ||
+      l.includes("submitted") && l.includes("doc"),
+    label: "Documents Submitted",
+    badgeClass: "bg-orange-50 text-orange-800 border-orange-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("client_revision") ||
+      u.includes("re_submission") ||
+      l.includes("revision"),
+    label: "Revision",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("submitted_to_client") ||
+      (l.includes("submitted") && l.includes("client")),
+    label: "Submitted to Client",
+    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.startsWith("training_") ||
+      u.includes("trainer_") ||
+      l.includes("training"),
+    label: "Training",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.startsWith("screening_") ||
+      (l.includes("screening") && !l.includes("shortlisted")),
+    label: "Screening",
+    badgeClass: "bg-violet-50 text-violet-800 border-violet-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("interview_passed") ||
+      u.includes("screening_passed") ||
+      l.includes("passed"),
+    label: "Passed",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("interview_scheduled") ||
+      u.includes("screening_scheduled") ||
+      l.includes("scheduled"),
+    label: "Scheduled",
+    badgeClass: "bg-indigo-50 text-indigo-800 border-indigo-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.startsWith("interview_") ||
+      (l.includes("interview") && !l.includes("coordinator")),
+    label: "Interview",
+    badgeClass: "bg-violet-50 text-violet-800 border-violet-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.includes("shortlisted") || l.includes("shortlisted"),
+    label: "Shortlisted",
+    badgeClass: "bg-cyan-50 text-cyan-800 border-cyan-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.startsWith("processing_") ||
+      u === "processing" ||
+      u.includes("transfered_to_processing") ||
+      l.includes("processing") ||
+      l.includes("in progress"),
+    label: "Processing",
+    badgeClass: "bg-blue-50 text-blue-800 border-blue-200",
+  },
+  {
+    match: (u, c, l) =>
+      u === "hired" || u.includes("ready_for_final") || l.includes("hired"),
+    label: "Hired",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  },
+  {
+    match: (u, c, l) =>
+      u === "selected" ||
+      u.includes("interview_selected") ||
+      l === "selected",
+    label: "Selected",
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  },
+  {
+    match: (u, c, l) =>
+      u === "approved" || l === "approved",
+    label: "Approved",
+    badgeClass: "bg-green-50 text-green-800 border-green-200",
+  },
+  {
+    match: (u, c, l) =>
+      u.startsWith("nominated") ||
+      u === "nominated_initial" ||
+      l.includes("nominated"),
+    label: "Nominated",
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+  },
+  {
+    match: (u, c, l) => u === "on_hold" || l.includes("on hold"),
+    label: "On Hold",
+    badgeClass: "bg-yellow-50 text-yellow-800 border-yellow-200",
+  },
+  {
+    match: (u, c, l) => u === "withdrawn" || l.includes("withdrawn"),
+    label: "Withdrawn",
+    badgeClass: "bg-slate-100 text-slate-700 border-slate-200",
+  },
+];
+
+/**
+ * Resolve API status strings (name, label, or mixed) to badge label + Tailwind classes.
+ * Used on ProjectCandidatesBoard cards and anywhere project sub-status is shown.
+ */
+export function resolveProjectCandidateStatusDisplay(
+  statusRaw?: string
+): ProjectCandidateStatusBadge {
+  if (!statusRaw?.trim()) {
+    return { ...DEFAULT_PROJECT_STATUS_BADGE, label: "—" };
+  }
+
+  const { raw, lower, underscored, compact } = normalizeProjectStatusKey(statusRaw);
+
+  const globalStatus = resolveCandidateGlobalStatusBadge(underscored, lower, compact);
+  if (globalStatus) {
+    return globalStatus;
+  }
+
+  if (underscored === "not_in_project" || compact === "notinproject") {
+    return {
+      label: "Not in Project",
+      badgeClass: "bg-slate-50 text-slate-600 border-slate-200",
+    };
+  }
+
+  if (underscored in CANDIDATE_PROJECT_STATUS_CONFIG) {
+    const config = getStatusConfig(underscored as CandidateProjectStatus);
+    return { label: config.label, badgeClass: config.badgeClass };
+  }
+
+  for (const config of Object.values(CANDIDATE_PROJECT_STATUS_CONFIG)) {
+    if (config.label.toLowerCase() === lower) {
+      return { label: config.label, badgeClass: config.badgeClass };
+    }
+  }
+
+  for (const pattern of PROJECT_STATUS_PATTERNS) {
+    if (pattern.match(underscored, compact, lower)) {
+      const label =
+        pattern.label === "Unknown" ? humanizeProjectStatus(raw) : pattern.label;
+      return { label, badgeClass: pattern.badgeClass };
+    }
+  }
+
+  return {
+    label: humanizeProjectStatus(raw),
+    badgeClass: DEFAULT_PROJECT_STATUS_BADGE.badgeClass,
+  };
+}
 
 // ==================== HELPER FUNCTIONS ====================
 

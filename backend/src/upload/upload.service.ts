@@ -2,28 +2,42 @@ import {
   Injectable,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
+  OnModuleInit,
 } from '@nestjs/common';
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
+  PutBucketCorsCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import { PrismaService } from '../database/prisma.service';
+import { UploadCompressionService } from './upload-compression.service';
+import {
+  getEffectiveMaxMB,
+  getEffectiveMaxBytes,
+} from './upload.constants';
+import { DOCUMENT_TYPE_META } from '../common/constants/document-types';
 
 export interface UploadResult {
   fileUrl: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
+  /** Set when the server compressed the file before storage. */
+  compressionApplied?: boolean;
+  originalFileSize?: number;
 }
 
 @Injectable()
-export class UploadService {
+export class UploadService implements OnModuleInit {
+  private readonly logger = new Logger(UploadService.name);
   private s3Client: S3Client;
   private bucketName: string;
   private region: string;
@@ -33,6 +47,7 @@ export class UploadService {
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
+    private uploadCompressionService: UploadCompressionService,
   ) {
     // DigitalOcean Spaces configuration
     this.bucketName = this.configService.get<string>('DO_SPACES_BUCKET') || '';
@@ -56,6 +71,60 @@ export class UploadService {
       },
       forcePathStyle: true,
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.syncSpacesCorsConfiguration();
+  }
+
+  private async syncSpacesCorsConfiguration(): Promise<void> {
+    if (this.configService.get<string>('DO_SPACES_SYNC_CORS') !== 'true') {
+      return;
+    }
+
+    const corsOrigin = this.configService.get<string>('CORS_ORIGIN');
+    if (!corsOrigin?.trim()) {
+      this.logger.warn(
+        'DO_SPACES_SYNC_CORS is enabled but CORS_ORIGIN is empty; skipping Spaces CORS sync',
+      );
+      return;
+    }
+
+    const allowedOrigins = corsOrigin
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+
+    if (allowedOrigins.length === 0) {
+      return;
+    }
+
+    try {
+      await this.s3Client.send(
+        new PutBucketCorsCommand({
+          Bucket: this.bucketName,
+          CORSConfiguration: {
+            CORSRules: [
+              {
+                AllowedHeaders: ['*'],
+                AllowedMethods: ['GET', 'PUT', 'HEAD', 'POST'],
+                AllowedOrigins: allowedOrigins,
+                ExposeHeaders: ['ETag'],
+                MaxAgeSeconds: 3600,
+              },
+            ],
+          },
+        }),
+      );
+
+      this.logger.log(
+        `Synced DigitalOcean Spaces CORS for origins: ${allowedOrigins.join(', ')}`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown Spaces CORS error';
+      this.logger.warn(`Failed to sync DigitalOcean Spaces CORS: ${message}`);
+    }
   }
 
   /**
@@ -190,19 +259,86 @@ export class UploadService {
     }
   }
 
+  getIntroductionVideoFolder(candidateId: string): string {
+    // Unconfirmed presigned uploads under this prefix can be cleaned up via
+    // a DigitalOcean Spaces lifecycle rule (e.g. delete after 24 hours).
+    return `candidates/introduction-videos/${candidateId}`;
+  }
+
+  getIntroductionVideoStorageKey(
+    candidateId: string,
+    storageFileName: string,
+  ): string {
+    return `${this.getIntroductionVideoFolder(candidateId)}/${storageFileName}`;
+  }
+
+  getPublicUrlForKey(key: string): string {
+    return this.cdnUrl
+      ? `${this.cdnUrl}/${key}`
+      : `${this.endpoint}/${this.bucketName}/${key}`;
+  }
+
+  extractKeyFromUrl(fileUrl: string): string {
+    if (this.cdnUrl && fileUrl.startsWith(this.cdnUrl)) {
+      return fileUrl.replace(`${this.cdnUrl}/`, '');
+    }
+
+    return fileUrl.replace(`${this.endpoint}/${this.bucketName}/`, '');
+  }
+
+  async createPresignedPutUrl(
+    key: string,
+    mimeType: string,
+    expiresIn = 3600,
+  ): Promise<string> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ACL: 'public-read',
+        ContentType: mimeType,
+        CacheControl: 'max-age=31536000',
+      });
+
+      return await getSignedUrl(this.s3Client, command, { expiresIn });
+    } catch (error) {
+      console.error('Presigned PUT URL error:', error);
+      throw new InternalServerErrorException(
+        'Failed to generate presigned upload URL',
+      );
+    }
+  }
+
+  async headObject(
+    key: string,
+  ): Promise<{ contentLength: number; contentType?: string }> {
+    try {
+      const response = await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucketName,
+          Key: key,
+        }),
+      );
+
+      return {
+        contentLength: response.ContentLength ?? 0,
+        contentType: response.ContentType,
+      };
+    } catch (error) {
+      console.error('HeadObject error:', error);
+      throw new BadRequestException(
+        'Uploaded file was not found in storage. Please upload again.',
+      );
+    }
+  }
+
   /**
    * Delete file from DigitalOcean Spaces
    * @param fileUrl - Full URL of the file to delete
    */
   async deleteFile(fileUrl: string): Promise<void> {
     try {
-      // Extract key from URL
-      let key: string;
-      if (this.cdnUrl && fileUrl.startsWith(this.cdnUrl)) {
-        key = fileUrl.replace(`${this.cdnUrl}/`, '');
-      } else {
-        key = fileUrl.replace(`${this.endpoint}/${this.bucketName}/`, '');
-      }
+      const key = this.extractKeyFromUrl(fileUrl);
 
       const command = new DeleteObjectCommand({
         Bucket: this.bucketName,
@@ -417,9 +553,58 @@ export class UploadService {
       'text/csv',
       'application/vnd.ms-excel',
       'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
+    const maxSizeMB = getEffectiveMaxMB(docType);
+    const targetMaxBytes = getEffectiveMaxBytes(docType);
+    const meta =
+      DOCUMENT_TYPE_META[docType as keyof typeof DOCUMENT_TYPE_META];
+    const originalFileSize = file.size;
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      targetMaxBytes,
+      meta?.displayName ?? docType,
+    );
     const folder = `candidates/documents/${candidateId}/${docType}`;
-    return this.uploadFile(file, folder, allowedMimeTypes, 20);
+    const safeDocType = docType.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).slice(2, 8);
+    const extension =
+      prepared.originalname.split(".").pop() ||
+      file.originalname.split(".").pop() ||
+      "bin";
+    const customFileName = `${safeDocType}_${timestamp}_${randomSuffix}.${extension}`;
+    const uploadResult = await this.uploadFile(
+      prepared,
+      folder,
+      allowedMimeTypes,
+      maxSizeMB,
+      customFileName,
+    );
+    if (prepared.size < originalFileSize) {
+      uploadResult.compressionApplied = true;
+      uploadResult.originalFileSize = originalFileSize;
+    }
+    return uploadResult;
+  }
+
+  /**
+   * Upload candidate introduction video (videos only, max 100MB)
+   */
+  async uploadIntroductionVideo(
+    file: Express.Multer.File,
+    candidateId: string,
+    customFileName?: string,
+  ): Promise<UploadResult> {
+    const allowedMimeTypes = [
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+      'video/x-msvideo',
+    ];
+    const folder = `candidates/introduction-videos/${candidateId}`;
+    return this.uploadFile(file, folder, allowedMimeTypes, 100, customFileName);
   }
 
   /**
@@ -430,8 +615,20 @@ export class UploadService {
     file: Express.Multer.File,
     candidateId: string,
     roleCatalogId?: string,
+    docName?: string,
   ): Promise<UploadResult> {
     const allowedMimeTypes = ['application/pdf'];
+    const docType = 'resume';
+    const maxSizeMB = getEffectiveMaxMB(docType);
+    const targetMaxBytes = getEffectiveMaxBytes(docType);
+    const meta =
+      DOCUMENT_TYPE_META[docType as keyof typeof DOCUMENT_TYPE_META];
+    const originalFileSize = file.size;
+    const prepared = await this.uploadCompressionService.prepareFile(
+      file,
+      targetMaxBytes,
+      meta?.displayName ?? 'Resume',
+    );
     const folder = `candidates/resumes/${candidateId}`;
 
     // Get candidate details for naming
@@ -444,40 +641,52 @@ export class UploadService {
       throw new Error(`Candidate with ID ${candidateId} not found`);
     }
 
-    // Generate filename with candidate name and current date
-    const candidateName =
-      `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
-    const currentDate = new Date();
-    const dateStr = currentDate
-      .toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-      .replace(/\s+/g, '_')
-      .toUpperCase();
-
-    const originalExtension = file.originalname.split('.').pop() || 'pdf';
-    const newFileName = `${candidateName}_${dateStr}.${originalExtension}`;
+    // NOTE: Temporarily using the original uploaded file name directly.
+    // Custom resume file naming is intentionally commented out as requested.
+    //
+    // const candidateName =
+    //   `${candidate.firstName}_${candidate.lastName}`.replace(/\s+/g, '_');
+    // const currentDate = new Date();
+    // const dateStr = currentDate
+    //   .toLocaleDateString('en-GB', {
+    //     day: '2-digit',
+    //     month: 'short',
+    //     year: 'numeric',
+    //   })
+    //   .replace(/\s+/g, '_')
+    //   .toUpperCase();
+    // const timeStr = [
+    //   String(currentDate.getHours()).padStart(2, '0'),
+    //   String(currentDate.getMinutes()).padStart(2, '0'),
+    //   String(currentDate.getSeconds()).padStart(2, '0'),
+    // ].join('');
+    // const originalExtension = file.originalname.split('.').pop() || 'pdf';
+    // const newFileName = `${candidateName}_${dateStr}_${timeStr}.${originalExtension}`;
+    const newFileName = file.originalname;
 
     // Upload file with custom name
     const uploadResult = await this.uploadFile(
-      file,
+      prepared,
       folder,
       allowedMimeTypes,
-      10,
+      maxSizeMB,
       newFileName,
     );
+    if (prepared.size < originalFileSize) {
+      uploadResult.compressionApplied = true;
+      uploadResult.originalFileSize = originalFileSize;
+    }
 
     // Save to Document model
     await this.prisma.document.create({
       data: {
         candidateId,
         docType: 'resume',
+        docName: docName || null,
         fileName: newFileName,
         fileUrl: uploadResult.fileUrl,
-        fileSize: file.size,
-        mimeType: file.mimetype,
+        fileSize: uploadResult.fileSize,
+        mimeType: uploadResult.mimeType,
         roleCatalogId: roleCatalogId || null,
         uploadedBy: 'system', // TODO: Get from auth context
         status: 'pending',

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { collectEffectivePermissions } from './documents-control-permissions.util';
 
 interface UserRolesAndPermissions {
   roles: string[];
@@ -51,26 +52,45 @@ export class RbacUtil {
       select: { teamId: true },
     });
 
+    const userPermissions = await this.prisma.userPermission.findMany({
+      where: { userId },
+      include: {
+        permission: {
+          select: { key: true },
+        },
+      },
+    });
+
     const roles = userRoles.map((ur) => ur.role.name);
-    const permissions = new Set<string>();
+    const rolePermissionKeys = new Set<string>();
     const teamIds = userTeams.map((ut) => ut.teamId);
 
     // Collect all permissions from user's roles
     for (const userRole of userRoles) {
       for (const rolePermission of userRole.role.rolePermissions) {
-        permissions.add(rolePermission.permission.key);
+        rolePermissionKeys.add(rolePermission.permission.key);
       }
     }
 
-    // Get user's updatedAt for version tracking
+    const directPermissionKeys = userPermissions.map(
+      (up) => up.permission.key,
+    );
+
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { updatedAt: true },
+      select: {
+        updatedAt: true,
+      },
     });
+
+    const mergedPermissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
+    );
 
     const result: UserRolesAndPermissions = {
       roles,
-      permissions: Array.from(permissions),
+      permissions: mergedPermissions,
       teamIds,
       userVersion: user?.updatedAt.getTime() || Date.now(),
     };

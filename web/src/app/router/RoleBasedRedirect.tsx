@@ -2,8 +2,13 @@ import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 import { useAppSelector } from "@/app/hooks";
+import { isAgentCoordinatorRole, isOperationsRole, ROLE_NAMES } from "@/config/role-names";
 
-const CREDashboardPage = lazy(() => import("@/pages/CREDashboardPage"));
+const ProjectCoordinatorDashboardPage = lazy(
+  () => import("@/features/project-coordinator-dashboard/views/ProjectCoordinatorDashboardPage")
+);
+
+const OperationsDashboardPage = lazy(() => import("@/pages/OperationsDashboardPage"));
 const AdminDashboardPage = lazy(
   () => import("@/features/admin-dashboard/views/AdminDashboardPage")
 );
@@ -23,10 +28,10 @@ const ProcessingDashboardPage = lazy(
 export function RoleBasedRedirect() {
   const { user } = useAppSelector((state) => state.auth);
 
-  if (user?.roles.some((role) => role === "CRE")) {
+  if (user?.roles.some((role) => isOperationsRole(role))) {
     return (
       <AppLayout>
-        <CREDashboardPage />
+        <OperationsDashboardPage />
       </AppLayout>
     );
   }
@@ -37,6 +42,10 @@ export function RoleBasedRedirect() {
         <ProcessingDashboardPage />
       </AppLayout>
     );
+  }
+
+  if (user?.roles.some((role) => role === "Processing Manager")) {
+    return <Navigate to="/processing-admin" replace />;
   }
 
   if (
@@ -51,10 +60,22 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))) {
+  if (
+    user?.roles.some((role) =>
+      ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+    )
+  ) {
     return (
       <AppLayout>
         <AdminDashboardPage />
+      </AppLayout>
+    );
+  }
+
+  if (user?.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR)) {
+    return (
+      <AppLayout>
+        <ProjectCoordinatorDashboardPage />
       </AppLayout>
     );
   }
@@ -75,7 +96,19 @@ export function RoleBasedRedirect() {
     );
   }
 
-  if (user?.roles.includes("Client Coordinator")) {
+  if (user?.roles.includes("Documents Control Executive")) {
+    return <Navigate to="/original-documents" replace />;
+  }
+
+  if (user?.permissions.includes("read:original_document_intake")) {
+    return <Navigate to="/original-documents" replace />;
+  }
+
+  if (user?.permissions.includes("read:courier_management")) {
+    return <Navigate to="/courier-management" replace />;
+  }
+
+  if (user?.roles.some(isAgentCoordinatorRole)) {
     return <Navigate to="/agents" replace />;
   }
 

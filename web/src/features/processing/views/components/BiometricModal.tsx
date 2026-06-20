@@ -14,12 +14,16 @@ const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetBiometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { useGetBiometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface BiometricModalProps {
@@ -32,6 +36,7 @@ interface BiometricModalProps {
 
 
 export function BiometricModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: BiometricModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetBiometricRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -44,10 +49,6 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
   const [updateStepStatus, { isLoading: isUpdatingBiometric }] = useUpdateStepStatusMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
 
   // Biometric submission date state
   const [biometricSubmissionDate, setBiometricSubmissionDate] = useState<Date | undefined>(undefined);
@@ -433,29 +434,6 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
     }
   };
 
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return;
-    }
-
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-
-      if (onComplete) {
-        await onComplete();
-      }
-
-      onClose();
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || err?.error || "Failed to cancel step");
-    }
-  };
-
   const handleSubmitBiometricDate = async (date?: Date): Promise<boolean> => {
     if (!activeStep?.id) {
       toast.error("No active step found");
@@ -575,6 +553,8 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
           ) : (
             <div className="space-y-4">
 
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="w-full border-0 shadow-sm bg-rose-50 p-3">
                   <div className="flex items-start gap-3">
@@ -629,15 +609,18 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                           {/* Move edit to right edge and apply a circular 'nice' style */}
                           {!isBiometricCompleted && !isStepCancelled && (
                             <div className="flex items-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
-                                onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
-                                title="Edit submission date"
-                              >
-                                <Edit2 className="h-4 w-4 text-slate-700" />
-                              </Button>
+                              <LockedProcessingActionButton forceDisabled={isLocked}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 rounded-full bg-white hover:bg-slate-50 border border-slate-100 shadow-sm"
+                                  disabled={isLocked}
+                                  onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }}
+                                  title="Edit submission date"
+                                >
+                                  <Edit2 className="h-4 w-4 text-slate-700" />
+                                </Button>
+                              </LockedProcessingActionButton>
                             </div>
                           )}
                         </div>
@@ -647,7 +630,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                             value={biometricSubmissionDate}
                             onChange={setBiometricSubmissionDate}
                             placeholder="Pick date and time"
-                            disabled={isBiometricCompleted}
+                            disabled={isBiometricCompleted || isLocked}
                             className="w-full sm:min-w-[220px] h-8"
                             compact
                           />
@@ -668,19 +651,21 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                     <div className="flex items-center">
                       {/* Only show submit button when no submittedAt present and when step is not cancelled */}
                       {!activeStep?.submittedAt && !isStepCancelled && (
-                        <Button
-                          size="sm"
-                          onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !biometricSubmissionDate || isBiometricCompleted || isStepCancelled}
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          {isSubmittingDate ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                          ) : (
-                            <Send className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Submit Date
-                        </Button>
+                        <LockedProcessingActionButton forceDisabled={isLocked}>
+                          <Button
+                            size="sm"
+                            onClick={() => setSubmitConfirmOpen(true)}
+                            disabled={isSubmittingDate || !biometricSubmissionDate || isBiometricCompleted || isStepCancelled || isLocked}
+                            className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            {isSubmittingDate ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Submit Date
+                          </Button>
+                        </LockedProcessingActionButton>
                       )}
                     </div>
                   </div>
@@ -705,7 +690,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                         value={biometricDate}
                         onChange={setBiometricDate}
                         placeholder="Pick biometric date"
-                        disabled={isBiometricCompleted || isStepCancelled}
+                        disabled={isBiometricCompleted || isStepCancelled || isLocked}
                         compact
                       />
                     </div>
@@ -715,7 +700,7 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                         value={biometricLocation}
                         onChange={(e) => setBiometricLocation(e.target.value)}
                         placeholder="Enter location"
-                        disabled={isBiometricCompleted || isStepCancelled}
+                        disabled={isBiometricCompleted || isStepCancelled || isLocked}
                         className="h-8"
                       />
                     </div>
@@ -723,14 +708,16 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
                   {showSaveBiometricButton && (
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveBiometricMetadata}
-                        disabled={isUpdatingBiometric || isBiometricCompleted || isStepCancelled}
-                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
-                      >
-                        {isUpdatingBiometric ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Biometric Details'}
-                      </Button>
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveBiometricMetadata}
+                          disabled={isUpdatingBiometric || isBiometricCompleted || isStepCancelled || isLocked}
+                          className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                        >
+                          {isUpdatingBiometric ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Biometric Details'}
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
                 </div>
@@ -738,8 +725,20 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b">
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isBiometricCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Biometric"
+                      disabled={isVerifying}
+                    />
+                  )}
                 </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
@@ -823,46 +822,55 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                                 <>
                                   {/* Re-upload only when candidate doc is in pending state */}
                                   {candidateDoc?.status === 'pending' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        candidateDoc?.id,
-                                        candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          candidateDoc?.id,
+                                          candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {/* Upload only when there is no candidate doc */}
                                   {!candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {/* Show Verify only when a candidate document exists (and there's no processing doc) */}
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      Verify
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        disabled={isLocked}
+                                        onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
                                 </>
                               ) : (
@@ -872,22 +880,25 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                                   ) : (
                                     <>
                                       <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">In processing</div>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                                        onClick={() => handleUploadClick(
-                                          req.docType,
-                                          req.label,
-                                          candidate?.role?.roleCatalog?.id,
-                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                          processingDoc.id,
-                                          candidateProjectMapId
-                                        )}
-                                      >
-                                        <RefreshCw className="h-3 w-3 mr-1" />
-                                        Re-upload
-                                      </Button>
+                                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                                          disabled={isLocked}
+                                          onClick={() => handleUploadClick(
+                                            req.docType,
+                                            req.label,
+                                            candidate?.role?.roleCatalog?.id,
+                                            candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                            processingDoc.id,
+                                            candidateProjectMapId
+                                          )}
+                                        >
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Re-upload
+                                        </Button>
+                                      </LockedProcessingActionButton>
                                     </>
                                   )}
                                 </div>
@@ -924,15 +935,26 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
               </Button>
 
               {!isBiometricCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
-                </Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isBiometricCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isBiometricCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Biometric Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Biometric Complete
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 // Show contextual tooltip when disabled: prefer verification requirement, then submission date
                 !allVerified ? (
@@ -975,9 +997,9 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
                   <Button
                     size="sm"
                     onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete || isLocked}
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete}
+                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Biometric Complete'}
                   </Button>
@@ -1038,16 +1060,6 @@ export function BiometricModal({ isOpen, onClose, processingId, candidateProject
             return ok;
           }}
           isSubmitting={isSubmittingDate}
-        />
-      </React.Suspense>
-
-      {/* Confirm Cancel Step Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          onConfirm={handleConfirmCancel}
-          isCancelling={isCancelling}
         />
       </React.Suspense>
 

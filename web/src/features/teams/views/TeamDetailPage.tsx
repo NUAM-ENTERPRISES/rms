@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -73,7 +74,7 @@ export default function TeamDetailPage() {
   const stats = teamStats || {
     totalMembers: Array.isArray(teamMembers) ? teamMembers.length : 0,
     activeProjects: Array.isArray(teamProjects)
-      ? teamProjects.filter((p) => p.status === "active").length
+      ? teamProjects.filter((p) => p.status === ProjectStatus.IN_PROGRESS).length
       : 0,
     totalCandidates: Array.isArray(teamCandidates) ? teamCandidates.length : 0,
     averageSuccessRate: 0,
@@ -82,7 +83,13 @@ export default function TeamDetailPage() {
     completionRate: 0,
     totalProjects: Array.isArray(teamProjects) ? teamProjects.length : 0,
     completedProjects: Array.isArray(teamProjects)
-      ? teamProjects.filter((p) => p.status === "completed").length
+      ? teamProjects.filter((p) => p.status === ProjectStatus.COMPLETED).length
+      : 0,
+    onHoldProjects: Array.isArray(teamProjects)
+      ? teamProjects.filter((p) => p.status === ProjectStatus.ON_HOLD).length
+      : 0,
+    cancelledProjects: Array.isArray(teamProjects)
+      ? teamProjects.filter((p) => p.status === ProjectStatus.CANCELLED).length
       : 0,
   };
 

@@ -23,14 +23,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CountryCodeSelect, SelectAgent, PhysicalAddressFields } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  PhysicalAddressFields,
+  ProfessionTypeSelect,
+  SelectAgent,
+} from "@/components/molecules";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useGetAgentProjectsQuery } from "@/features/agents/api";
+import { useLookupCandidateByPassportQuery } from "@/features/candidates/api";
+import { PassportLookupHint } from "@/features/candidates/components/PassportLookupHint";
 import { useDebounce } from "@/hooks";
 import { SKIN_TONES, SMARTNESS_LEVELS, CANDIDATE_SOURCES, LANGUAGE_PROFICIENCY_LEVELS } from "@/constants/candidate-constants";
+import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 import { ProfileImageUpload } from "@/components/molecules/ProfileImageUpload";
 import {
   User,
@@ -50,6 +58,7 @@ import {
   ChevronRight,
   Loader2,
   Search,
+  BookUser,
 } from "lucide-react";
 
 const LINKED_PROJECTS_PAGE_SIZE = 8;
@@ -307,8 +316,12 @@ interface PersonalInformationStepProps {
   setSelectedImage: (image: File | null) => void;
   uploadingImage: boolean;
   isLoading: boolean;
-  /** Client Coordinator pipeline: source is always agent */
+  /** Agent Coordinator pipeline: source is always agent */
   lockSourceToAgent?: boolean;
+  /** Show passport field with live duplicate lookup */
+  showPassportField?: boolean;
+  /** Called when passport lookup finds an existing candidate */
+  onPassportDuplicateChange?: (isDuplicate: boolean) => void;
   /** Used to clear declaredProjectIds when agent selection changes */
   setValue?: UseFormSetValue<CreateCandidateFormData>;
 }
@@ -321,8 +334,36 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
   uploadingImage,
   isLoading,
   lockSourceToAgent = false,
+  showPassportField = false,
+  onPassportDuplicateChange,
   setValue,
 }) => {
+  const passportNumber = useWatch({ control, name: "passportNumber" }) as
+    | string
+    | undefined;
+  const debouncedPassport = useDebounce(passportNumber ?? "", 400);
+  const passportLookupEnabled =
+    showPassportField && debouncedPassport.trim().length >= 3;
+
+  const { data: systemConfig } = useGetSystemConfigQuery("religions");
+  const religions = systemConfig?.data?.constants?.religions ?? [];
+
+  const {
+    data: passportLookup,
+    isFetching: passportLookupFetching,
+    isError: passportLookupError,
+  } = useLookupCandidateByPassportQuery(
+    { passportNumber: debouncedPassport.trim() },
+    { skip: !passportLookupEnabled },
+  );
+
+  const passportDuplicate = Boolean(
+    passportLookupEnabled && passportLookup?.found,
+  );
+
+  useEffect(() => {
+    onPassportDuplicateChange?.(passportDuplicate);
+  }, [passportDuplicate, onPassportDuplicateChange]);
   const source = useWatch({
     control,
     name: "source",
@@ -462,11 +503,51 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               )}
             </div>
 
+            {showPassportField ? (
+              <div className="space-y-2 md:col-span-2">
+                <Label
+                  htmlFor="passportNumber"
+                  className="text-slate-700 font-medium flex items-center gap-2"
+                >
+                  <BookUser className="h-4 w-4 text-slate-500" aria-hidden />
+                  Passport Number *
+                </Label>
+                <Controller
+                  name="passportNumber"
+                  control={control}
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="passportNumber"
+                      autoComplete="off"
+                      placeholder="e.g., A1234567"
+                      className="h-11 bg-white border-slate-200"
+                      aria-describedby="passport-lookup-hint"
+                    />
+                  )}
+                />
+                {errors.passportNumber && (
+                  <p className="text-sm text-red-600">
+                    {errors.passportNumber.message as string}
+                  </p>
+                )}
+                <div id="passport-lookup-hint">
+                  <PassportLookupHint
+                    passportInput={passportNumber ?? ""}
+                    debouncedPassport={debouncedPassport}
+                    isFetching={passportLookupFetching}
+                    lookup={passportLookup}
+                    isError={passportLookupError}
+                  />
+                </div>
+              </div>
+            ) : null}
+
             {/* Contact Number */}
             <div className="space-y-2">
               <Label className="text-slate-700 font-medium flex items-center gap-2">
                 <Phone className="h-4 w-4 text-slate-500" />
-                Contact Number *
+                Contact Number{lockSourceToAgent ? " (optional)" : " *"}
               </Label>
               <div className="flex gap-2">
                 <div className="w-32 flex-shrink-0">
@@ -503,6 +584,35 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
               {errors.mobileNumber && (
                 <p className="text-sm text-red-600">
                   {errors.mobileNumber.message as string}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="alternatePhone"
+                className="text-slate-700 font-medium flex items-center gap-2"
+              >
+                <Phone className="h-4 w-4 text-slate-500" />
+                Alternate phone (optional)
+              </Label>
+              <Controller
+                name="alternatePhone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="alternatePhone"
+                    type="tel"
+                    placeholder="9876543211"
+                    disabled={isLoading}
+                    className="h-11 bg-white border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  />
+                )}
+              />
+              {errors.alternatePhone && (
+                <p className="text-sm text-red-600">
+                  {errors.alternatePhone.message as string}
                 </p>
               )}
             </div>
@@ -597,6 +707,22 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                   {errors.gender.message as string}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Controller
+                name="professionTypeId"
+                control={control}
+                render={({ field }) => (
+                  <ProfessionTypeSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                    required
+                    error={errors.professionTypeId?.message as string}
+                  />
+                )}
+              />
             </div>
 
             {setValue ? (
@@ -871,6 +997,36 @@ export const PersonalInformationStep: React.FC<PersonalInformationStepProps> = (
                       {SMARTNESS_LEVELS.map((level) => (
                         <SelectItem key={level} value={level}>
                           {level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Religion */}
+            <div className="space-y-2">
+              <Label htmlFor="religionId" className="text-slate-700 font-medium flex items-center gap-2">
+                <BookUser className="h-4 w-4 text-slate-500" />
+                Religion
+              </Label>
+              <Controller
+                name="religionId"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ""}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className="h-11 bg-white border-slate-200">
+                      <SelectValue placeholder="Select religion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {religions.map((religion) => (
+                        <SelectItem key={religion.id} value={religion.id}>
+                          {religion.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

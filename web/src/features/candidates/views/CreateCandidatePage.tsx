@@ -1,13 +1,12 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  createCandidateSchema,
+  buildCreateCandidateSchema,
   type CreateCandidateFormData,
 } from "@/features/candidates/createCandidateFormSchema";
 import { toast } from "sonner";
-import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -22,7 +21,11 @@ import {
   ArrowRight,
   Save,
 } from "lucide-react";
-import { useCreateCandidateMutation, useUploadDocumentMutation } from "@/features/candidates";
+import {
+  useCreateCandidateMutation,
+  useGetProfessionTypesQuery,
+  useUploadDocumentMutation,
+} from "@/features/candidates";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
@@ -39,6 +42,8 @@ import {
   ChecklistStep,
 } from "../components/steps";
 import { SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
+import { ROLE_NAMES } from "@/config/role-names";
+import { useGetSystemConfigQuery } from "@/shared/hooks/useSystemConfig";
 
 // ==================== WORK EXPERIENCE TYPES ====================
 
@@ -103,8 +108,16 @@ export default function CreateCandidatePage() {
     useCan("write:candidates") || useCan("manage:candidates");
   const { hasRole } = usePermissions();
   const isRecruiter = hasRole("Recruiter");
-  const isCRE = hasRole("CRE");
-  const isClientCoordinator = hasRole("Client Coordinator");
+  const isOperations = hasRole(ROLE_NAMES.OPERATIONS) || hasRole("CRE");
+  const isAgentCoordinator = hasRole(ROLE_NAMES.AGENT_COORDINATOR);
+  const { data: systemConfig } = useGetSystemConfigQuery("religions");
+  const religions = systemConfig?.data?.constants?.religions ?? [];
+
+  const candidatesHomePath = isAgentCoordinator
+    ? "/agents"
+    : isOperations
+      ? "/operations-dashboard"
+      : "/candidates";
 
   // API
   const [createCandidate, { isLoading }] = useCreateCandidateMutation();
@@ -120,6 +133,7 @@ export default function CreateCandidatePage() {
   
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [preferredRoleLabels, setPreferredRoleLabels] = useState<Record<string, string>>({});
   const [workExperiences, setWorkExperiences] = useState<WorkExperience[]>([]);
   const [newWorkExperience, setNewWorkExperience] = useState<Omit<WorkExperience, "id">>({
     companyName: "",
@@ -139,25 +153,38 @@ export default function CreateCandidatePage() {
   const [newSkill, setNewSkill] = useState("");
   const [editingExperienceId, setEditingExperienceId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [passportDuplicate, setPassportDuplicate] = useState(false);
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
 
   const [qualifications, setQualifications] = useState<CandidateQualification[]>([]);
 
+  const candidateSchema = useMemo(
+    () => buildCreateCandidateSchema({ isAgentCoordinator }),
+    [isAgentCoordinator],
+  );
+
+  const handlePassportDuplicateChange = useCallback((isDuplicate: boolean) => {
+    setPassportDuplicate(isDuplicate);
+  }, []);
+
   // Form
   const form = useForm<CreateCandidateFormData>({
-    resolver: zodResolver(createCandidateSchema),
+    resolver: zodResolver(candidateSchema),
     mode: "onChange",
     reValidateMode: "onChange",
+    shouldUnregister: false,
     defaultValues: {
       firstName: "",
       lastName: "",
-      countryCode: "+91",
+      countryCode: isAgentCoordinator ? "" : "+91",
       mobileNumber: "",
+      passportNumber: "",
       email: "",
-      source: (isCRE
+      source: (isOperations
         ? "direct_enquiry"
         : isRecruiter
           ? "referral"
-          : isClientCoordinator
+          : isAgentCoordinator
             ? "agent"
             : "manual") as any,
       agentId: "",
@@ -172,26 +199,43 @@ export default function CreateCandidatePage() {
       addressCountryCode: "",
       addressStateId: "",
       address: "",
+      addressPincode: "",
+      alternatePhone: "",
       // physical information defaults
       height: undefined,
       weight: undefined,
       skinTone: "",
       languageProficiency: "",
       smartness: "",
+      religionId: "",
       licensingExam: "",
       dataFlow: false,
       eligibility: false,
+      eligibilityNumber: "",
+      eligibilityIssuedDate: "",
+      eligibilityExpiryDate: "",
       highestEducation: "",
       university: "",
       graduationYear: undefined,
       gpa: undefined,
       qualifications: [],
+      professionTypeId: "",
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: [],
       facilityPreferences: [],
+      preferredRoles: [],
     },
   });
+
+  const professionTypeId = form.watch("professionTypeId");
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionTypeName = useMemo(
+    () =>
+      professionTypesData?.professionTypes.find((type) => type.id === professionTypeId)
+        ?.name,
+    [professionTypeId, professionTypesData?.professionTypes],
+  );
 
   // Preselect agent when coming from Agent screens
   useEffect(() => {
@@ -219,9 +263,9 @@ export default function CreateCandidatePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => navigate("/candidates")} variant="outline">
+            <Button onClick={() => navigate(candidatesHomePath)} variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Candidates
+              {isOperations ? "Back to Operations Dashboard" : isAgentCoordinator ? "Back to Agents" : "Back to Candidates"}
             </Button>
           </CardContent>
         </Card>
@@ -234,11 +278,13 @@ export default function CreateCandidatePage() {
     const step1Fields = [
       "firstName",
       "lastName",
-      "countryCode",
-      "mobileNumber",
+      ...(isAgentCoordinator
+        ? ["passportNumber", "countryCode", "mobileNumber"]
+        : ["countryCode", "mobileNumber"]),
       "source",
       "agentId",
       "gender",
+      "professionTypeId",
       "height",
       "weight",
       "skinTone",
@@ -246,6 +292,13 @@ export default function CreateCandidatePage() {
       "languageProficiency",
     ];
     const isValid = await form.trigger(step1Fields as any);
+
+    if (isValid && isAgentCoordinator && passportDuplicate) {
+      toast.error(
+        "A candidate with this passport number already exists. Use the existing record.",
+      );
+      return false;
+    }
     
     if (isValid) {
       if (!completedSteps.includes(1)) {
@@ -261,8 +314,9 @@ export default function CreateCandidatePage() {
       "expectedSalary",
       "preferredCountries",
       "facilityPreferences",
+      "preferredRoles",
       "sectorType",
-      "visaType"
+      "visaType",
     ];
     const isValid = await form.trigger(step2Fields as any);
     
@@ -313,22 +367,54 @@ export default function CreateCandidatePage() {
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    if (isAgentCoordinator && passportDuplicate) {
+      toast.error(
+        "A candidate with this passport number already exists. Use the existing record.",
+      );
+      return;
+    }
+    const step1Ok = await validateStep1();
+    if (!step1Ok) return;
     setShowPreview(true);
   };
 
   // Form submission
   const onSubmit = async (data: CreateCandidateFormData) => {
     try {
+      if (isAgentCoordinator && passportDuplicate) {
+        toast.error(
+          "A candidate with this passport number already exists. Use the existing record.",
+        );
+        return;
+      }
+
+      if (data.eligibility && !eligibilityLetterFile) {
+        toast.error("Eligibility letter upload is required when eligibility is enabled");
+        return;
+      }
+
       const payload: any = {
         firstName: data.firstName,
         lastName: data.lastName,
-        countryCode: data.countryCode,
-        mobileNumber: data.mobileNumber,
         source: data.source || "manual",
         gender: data.gender,
         dateOfBirth: data.dateOfBirth,
       };
+
+      const cc = data.countryCode?.trim();
+      const mn = data.mobileNumber?.trim();
+      if (cc && mn) {
+        payload.countryCode = cc;
+        payload.mobileNumber = mn;
+      }
+
+      if (isAgentCoordinator) {
+        const passport = data.passportNumber?.trim();
+        if (passport) {
+          payload.passportNumber = passport;
+        }
+      }
 
       // Add optional fields only if they have values
       if (data.email && data.email.trim()) {
@@ -361,6 +447,19 @@ export default function CreateCandidatePage() {
       if (data.address?.trim()) {
         payload.address = data.address.trim();
       }
+      const addressPincode = (
+        data.addressPincode ??
+        form.getValues("addressPincode") ??
+        ""
+      ).trim();
+      if (addressPincode) {
+        payload.addressPincode = addressPincode;
+      }
+      if (data.alternatePhone?.trim()) {
+        payload.alternatePhone = data.alternatePhone.trim();
+      }
+
+      payload.professionTypeId = data.professionTypeId;
 
       // Preference fields
       if (data.expectedSalary !== undefined) payload.expectedMinSalary = data.expectedSalary;
@@ -371,6 +470,9 @@ export default function CreateCandidatePage() {
       }
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
+      }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
       }
 
       // Educational qualifications (legacy fields)
@@ -396,6 +498,9 @@ export default function CreateCandidatePage() {
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
       }
+      if (data.preferredRoles && data.preferredRoles.length > 0) {
+        payload.preferredRoles = data.preferredRoles;
+      }
 
       // Multiple qualifications
       if (qualifications && qualifications.length > 0) {
@@ -406,6 +511,7 @@ export default function CreateCandidatePage() {
           gpa: qual.gpa,
           isCompleted: qual.isCompleted,
           notes: qual.notes,
+          ...(qual.countryCode?.trim() && { countryCode: qual.countryCode.trim() }),
         }));
       }
 
@@ -425,12 +531,18 @@ export default function CreateCandidatePage() {
       if (data.smartness) {
         payload.smartness = data.smartness;
       }
+      if (data.religionId) {
+        payload.religionId = data.religionId;
+      }
       if (data.licensingExam) {
         payload.licensingExam = data.licensingExam;
       }
       // dataFlow and eligibility default false but send anyway
       payload.dataFlow = data.dataFlow;
       payload.eligibility = data.eligibility;
+      if (data.eligibility && data.eligibilityNumber?.trim()) {
+        payload.eligibilityNumber = data.eligibilityNumber.trim();
+      }
 
       // Work experiences
       if (workExperiences && workExperiences.length > 0) {
@@ -446,6 +558,9 @@ export default function CreateCandidatePage() {
             description: expData.description || undefined,
             salary: expData.salary || undefined,
             location: expData.location || undefined,
+            ...(expData.countryCode?.trim() && {
+              countryCode: expData.countryCode.trim(),
+            }),
             skills:
               expData.skills && expData.skills.length > 0
                 ? expData.skills
@@ -558,8 +673,52 @@ export default function CreateCandidatePage() {
           }
         }
 
+        if (candidateId && data.eligibility && eligibilityLetterFile) {
+          try {
+            const formData = new FormData();
+            formData.append("file", eligibilityLetterFile);
+            formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+            const uploadResult = await uploadDocument({ candidateId, formData }).unwrap();
+            const uploadData: any = (uploadResult as any).data;
+            const uploadedDocument =
+              uploadData?.document && uploadData.document.id
+                ? uploadData.document
+                : uploadData?.id
+                  ? uploadData
+                  : null;
+
+            const documentPayload = {
+              candidateId,
+              docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+              fileName: uploadData.fileName,
+              fileUrl: uploadData.fileUrl,
+              fileSize: uploadData.fileSize,
+              mimeType: uploadData.mimeType,
+              documentNumber: data.eligibilityNumber?.trim(),
+              issuedAt: data.eligibilityIssuedDate
+                ? new Date(data.eligibilityIssuedDate).toISOString()
+                : undefined,
+              expiryDate: data.eligibilityExpiryDate
+                ? new Date(data.eligibilityExpiryDate).toISOString()
+                : undefined,
+            };
+
+            if (uploadedDocument?.id) {
+              await updateDocument({
+                id: uploadedDocument.id,
+                ...documentPayload,
+              }).unwrap();
+            } else {
+              await createDocument(documentPayload).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility letter upload failed:", uploadError);
+            toast.warning("Candidate created but eligibility letter upload failed");
+          }
+        }
+
         toast.success("Candidate created successfully!");
-        navigate(isClientCoordinator ? "/agents" : "/candidates");
+        navigate(candidatesHomePath);
       }
     } catch (error: any) {
       console.error("Error creating candidate:", error);
@@ -589,7 +748,9 @@ export default function CreateCandidatePage() {
             setSelectedImage={setSelectedImage}
             uploadingImage={uploadingImage}
             isLoading={isLoading}
-            lockSourceToAgent={isClientCoordinator}
+            lockSourceToAgent={isAgentCoordinator}
+            showPassportField={isAgentCoordinator}
+            onPassportDuplicateChange={handlePassportDuplicateChange}
             setValue={form.setValue}
           />
         );
@@ -599,6 +760,8 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            professionTypeName={selectedProfessionTypeName}
+            onPreferredRoleLabelsChange={setPreferredRoleLabels}
           />
         );
       case 3:
@@ -627,6 +790,8 @@ export default function CreateCandidatePage() {
             control={form.control}
             errors={form.formState.errors}
             isLoading={isLoading}
+            eligibilityLetterFile={eligibilityLetterFile}
+            onEligibilityLetterFileChange={setEligibilityLetterFile}
           />
         );
       default:
@@ -672,7 +837,7 @@ export default function CreateCandidatePage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate("/candidates")}
+            onClick={() => navigate(candidatesHomePath)}
             disabled={isLoading || uploadingImage}
             className="min-w-[120px] border-slate-300"
           >
@@ -744,7 +909,11 @@ export default function CreateCandidatePage() {
       candidateData={{
         firstName: form.getValues("firstName"),
         lastName: form.getValues("lastName"),
-        contact: `${form.getValues("countryCode")}${form.getValues("mobileNumber")}`,
+        contact: (() => {
+          const mn = form.getValues("mobileNumber")?.trim();
+          const cc = form.getValues("countryCode")?.trim();
+          return mn && cc ? `${cc}${mn}` : mn ? mn : "";
+        })(),
         email: form.getValues("email"),
         source: form.getValues("source"),
         gender: form.getValues("gender"),
@@ -760,9 +929,16 @@ export default function CreateCandidatePage() {
         gpa: form.getValues("gpa"),
         qualifications,
         workExperiences,
+        professionTypeId: form.getValues("professionTypeId"),
+        professionTypeLabel:
+          professionTypesData?.professionTypes.find(
+            (type) => type.id === form.getValues("professionTypeId"),
+          )?.label,
         expectedSalary: form.getValues("expectedSalary") ?? undefined,
         preferredCountries: form.getValues("preferredCountries"),
         facilityPreferences: form.getValues("facilityPreferences"),
+        preferredRoles: form.getValues("preferredRoles"),
+        preferredRoleLabels,
         sectorType: form.getValues("sectorType"),
         visaType: form.getValues("visaType"),
         skinTone: form.getValues("skinTone"),
@@ -773,6 +949,13 @@ export default function CreateCandidatePage() {
         licensingExam: form.getValues("licensingExam"),
         dataFlow: form.getValues("dataFlow"),
         eligibility: form.getValues("eligibility"),
+        eligibilityNumber: form.getValues("eligibilityNumber"),
+        eligibilityIssuedDate: form.getValues("eligibilityIssuedDate"),
+        eligibilityExpiryDate: form.getValues("eligibilityExpiryDate"),
+        eligibilityLetterFileName: eligibilityLetterFile?.name,
+        religionName: religions.find(
+          (religion) => religion.id === form.getValues("religionId"),
+        )?.name,
       }}
       onConfirm={handlePreviewConfirm}
       onCancel={handlePreviewCancel}

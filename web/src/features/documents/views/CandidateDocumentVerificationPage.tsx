@@ -1,16 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,12 +21,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   FileText,
   CheckCircle,
   XCircle,
@@ -44,8 +31,6 @@ import {
   Upload,
   ArrowLeft,
   FileIcon,
-  FileX,
-  CheckCircle2,
   Briefcase,
   Users,
   FileCheck,
@@ -57,8 +42,10 @@ import {
   Cake,
   Code,
   Send,
+  Video,
 } from "lucide-react";
 import { CANDIDATE_PROJECT_STATUS } from "@/constants/statuses";
+import { ProjectStatus, ProjectStatusType } from "@/entities/project/constants";
 import {
   useGetCandidateProjectRequirementsQuery,
   useGetMatchmakingProcessQuery,
@@ -70,25 +57,120 @@ import {
   useRequestResubmissionMutation,
   useReuploadDocumentationDocumentMutation as useReuploadDocumentMutation,
 } from "@/features/documents";
+import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
+import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
+import {
+  DOCUMENT_TYPE,
+  DOCUMENT_TYPE_CONFIG,
+  isEligibilityLetterType,
+} from "@/constants/document-types";
 import { useGetProjectQuery } from "@/features/projects";
 import { useGetCandidateByIdQuery } from "@/features/candidates";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCan } from "@/hooks/useCan";
 import { toast } from "sonner";
+import {
+  getUploadErrorMessage,
+} from "@/lib/document-upload";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
+import { VerificationDocumentActions } from "@/components/molecules/VerificationDocumentActions";
+import {
+  useUploadIntroductionVideoMutation,
+  useReuseIntroductionVideoMutation,
+  useReuploadIntroductionVideoMutation,
+} from "@/features/introduction-videos/api";
+import { VerificationDocumentStatusBadge } from "@/components/molecules/VerificationDocumentStatusBadge";
 import { MergeVerifiedModal } from "../components/MergeVerifiedModal";
 import { SendToClientModal } from "../components/SendToClientModal";
 import { RequestClientRevisionModal } from "../components/RequestClientRevisionModal";
+import { MissingDocumentActions } from "../components/MissingDocumentActions";
 // import { EligibilityRequirements } from "@/components/molecules/EligibilityRequirements";
 import { MatchmakingProcess } from "@/components/molecules/MatchmakingProcess";
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import { Link2 } from "lucide-react";
 import ImageViewer from "@/components/molecules/ImageViewer";
 import { ScreeningDetailsCard } from "../components/ScreeningDetailsCard";
+import { FaWhatsapp } from "react-icons/fa";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
+function formatPhoneForLink(c: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const raw = `${c.countryCode ?? ""}${c.mobileNumber ?? c.contact ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
+
+function isRejectedDocumentStatus(displayedStatus: string | undefined): boolean {
+  return displayedStatus === "rejected";
+}
+
+function formatEligibilityDate(value?: string | Date | null): string {
+  if (!value) return "—";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  const raw = String(value);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+    return localDate.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "—";
+  return parsed.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+type EligibilityDocumentLike = {
+  docType?: string;
+  documentNumber?: string | null;
+  issuedAt?: string | Date | null;
+  expiryDate?: string | Date | null;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  createdAt?: string;
+};
+
+function resolveLatestEligibilityDocument(
+  documents: EligibilityDocumentLike[] | undefined,
+): EligibilityDocumentLike | null {
+  if (!documents?.length) return null;
+  const eligibilityDocs = documents
+    .filter((doc) => doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? 0).getTime() -
+        new Date(a.createdAt ?? 0).getTime(),
+    );
+  return eligibilityDocs[0] ?? null;
+}
 
 export default function CandidateDocumentVerificationPage() {
   const { candidateId, projectId: routeProjectId } = useParams<{
@@ -106,11 +188,10 @@ export default function CandidateDocumentVerificationPage() {
   );
   const [showReuseDialog, setShowReuseDialog] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [selectedDocumentType, setSelectedDocumentType] = useState<string>("");
   const [verificationNotes, setVerificationNotes] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadDocType, setUploadDocType] = useState<string>("");
-  // (no reupload optimistic state) we keep uploads simple — user can replace files
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [reuploadMeta, setReuploadMeta] = useState<{ previousFileName: string } | null>(null);
   const [isBulkConfirmationOpen, setIsBulkConfirmationOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"verify" | "reject" | null>(null);
   const [bulkNotes, setBulkNotes] = useState("");
@@ -123,9 +204,14 @@ export default function CandidateDocumentVerificationPage() {
   const [selectedResubmitVerification, setSelectedResubmitVerification] = useState<any>(null);
   const [isReuploadMode, setIsReuploadMode] = useState(false);
   const [reuploadDocId, setReuploadDocId] = useState<string | null>(null);
+  const [showIntroVideoUploadDialog, setShowIntroVideoUploadDialog] = useState(false);
+  const [showIntroVideoReuseDialog, setShowIntroVideoReuseDialog] = useState(false);
+  const [isIntroVideoReuploadMode, setIsIntroVideoReuploadMode] = useState(false);
+  const [introVideoUploadProgress, setIntroVideoUploadProgress] = useState(0);
 
   // PDF Viewer state
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
+  const [videoPreview, setVideoPreview] = useState<{ fileUrl: string; fileName: string } | null>(null);
   const [selectedDocument, setSelectedDocument] = useState<{
     fileUrl: string;
     fileName: string;
@@ -141,8 +227,6 @@ export default function CandidateDocumentVerificationPage() {
   const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
-  console.log('isGeneratingPDF state:', isGeneratingPDF);
-
   // API Queries
   const {
     data: projectResponse,
@@ -160,6 +244,20 @@ export default function CandidateDocumentVerificationPage() {
     skip: !candidateId,
   });
 
+  const hideContactInfo = projectResponse?.data?.hideContactInfo ?? false;
+  const candidatePhoneDigits = useMemo(
+    () => (candidate && !hideContactInfo ? formatPhoneForLink(candidate) : null),
+    [candidate, hideContactInfo],
+  );
+  const candidatePhoneDisplay = useMemo(() => {
+    if (!candidate || hideContactInfo) return null;
+    const code = candidate.countryCode
+      ? `+${String(candidate.countryCode).replace(/^\+/, "")} `
+      : "";
+    const number = candidate.mobileNumber || candidate.contact;
+    return number ? `${code}${number}`.trim() : null;
+  }, [candidate, hideContactInfo]);
+
   // this query provides a `DocumentVerification` tag scoped to the candidate
   // (see api slice). the socket provider invalidates that tag when a document
   // is verified/rejected, so the hook will automatically refetch and update
@@ -167,7 +265,12 @@ export default function CandidateDocumentVerificationPage() {
   const { data: requirementsData, isLoading: requirementsLoading, refetch: refetchRequirements } =
     useGetCandidateProjectRequirementsQuery(
       { candidateId: candidateId!, projectId: selectedProjectId },
-      { skip: !selectedProjectId }
+      {
+        skip: !selectedProjectId,
+        refetchOnMountOrArgChange: true,
+        refetchOnFocus: true,
+        refetchOnReconnect: true,
+      },
     );
 
   // selectedProject should be the candidateProject mapping object.
@@ -185,7 +288,10 @@ export default function CandidateDocumentVerificationPage() {
     project: projectResponse.data,
     subStatus: apiCandidateProject?.subStatus || (candidateProjectMapping as any)?.subStatus,
     // Add compatibility for roleNeeded if missing
-    roleNeeded: (candidateProjectMapping as any)?.roleNeeded || projectResponse.data.rolesNeeded?.[0], 
+    roleNeeded:
+      apiCandidateProject?.roleNeeded ||
+      (candidateProjectMapping as any)?.roleNeeded ||
+      undefined, 
     // Add compatibility for firstName/lastName if only name is present
     candidate: candidateProjectMapping?.candidate ? {
       ...candidateProjectMapping.candidate,
@@ -220,8 +326,12 @@ export default function CandidateDocumentVerificationPage() {
     useRequestResubmissionMutation();
   const [reuploadDocument, { isLoading: isReuploading }] =
     useReuploadDocumentMutation();
-  console.log('isReuploading state:', isReuploading);
-
+  const [uploadIntroductionVideo, { isLoading: isUploadingIntroVideo }] =
+    useUploadIntroductionVideoMutation();
+  const [reuseIntroductionVideo, { isLoading: isReusingIntroVideo }] =
+    useReuseIntroductionVideoMutation();
+  const [reuploadIntroductionVideo, { isLoading: isReuploadingIntroVideo }] =
+    useReuploadIntroductionVideoMutation();
     // Project-related refetch helpers so we can trigger live updates elsewhere
     const { refetch: refetchProject } = useGetProjectQuery(selectedProject?.project?.id || "", {
       skip: !selectedProject?.project?.id,
@@ -240,9 +350,81 @@ export default function CandidateDocumentVerificationPage() {
 
   const requirements = requirementsData?.data?.requirements || [];
   const verifications = requirementsData?.data?.verifications || [];
-  const allCandidateDocuments =
-    requirementsData?.data?.allCandidateDocuments || [];
+  const introductionVideoRequired = requirementsData?.data?.introductionVideoRequired ?? false;
+  const introductionVideo = requirementsData?.data?.introductionVideo || null;
   const summary = requirementsData?.data?.summary || {};
+
+  const eligibilitySummary = useMemo(() => {
+    const verificationDoc = verifications.find(
+      (v: { document?: EligibilityDocumentLike }) =>
+        v.document?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+    )?.document;
+    const candidateDoc = resolveLatestEligibilityDocument(
+      (candidate as { documents?: EligibilityDocumentLike[] })?.documents,
+    );
+
+    return {
+      show: Boolean(
+        (candidate as { eligibility?: boolean })?.eligibility ||
+          verificationDoc ||
+          candidateDoc ||
+          (candidate as { eligibilityNumber?: string | null })?.eligibilityNumber,
+      ),
+      number:
+        (candidate as { eligibilityNumber?: string | null })?.eligibilityNumber?.trim() ||
+        verificationDoc?.documentNumber?.trim() ||
+        candidateDoc?.documentNumber?.trim() ||
+        null,
+      issuedAt: verificationDoc?.issuedAt ?? candidateDoc?.issuedAt ?? null,
+      expiryDate: verificationDoc?.expiryDate ?? candidateDoc?.expiryDate ?? null,
+      fileUrl: verificationDoc?.fileUrl ?? candidateDoc?.fileUrl ?? null,
+      fileName: verificationDoc?.fileName ?? candidateDoc?.fileName ?? null,
+    };
+  }, [verifications, candidate]);
+
+  const uploadDocTypeLabel = useMemo(() => {
+    if (!uploadDocType) return undefined;
+    return DOCUMENT_TYPE_CONFIG[uploadDocType as keyof typeof DOCUMENT_TYPE_CONFIG]
+      ?.displayName;
+  }, [uploadDocType]);
+
+  const resetUploadDialogState = useCallback(() => {
+    setUploadDocType("");
+    setSelectedRequirement(null);
+    setIsReuploadMode(false);
+    setReuploadDocId(null);
+    setReuploadMeta(null);
+  }, []);
+
+  const openRejectedDocLinkExisting = useCallback(
+    (verification: any, requirement: any) => {
+      setSelectedRequirement(requirement);
+      setUploadDocType(verification.document.docType);
+      setIsReuploadMode(false);
+      setReuploadDocId(null);
+      setReuploadMeta(null);
+      setShowReuseDialog(true);
+    },
+    [],
+  );
+
+  const openRejectedDocReupload = useCallback((verification: any, requirement: any) => {
+    setSelectedRequirement(requirement);
+    setUploadDocType(verification.document.docType);
+    setIsReuploadMode(true);
+    setReuploadDocId(verification.document.id);
+    setReuploadMeta({ previousFileName: verification.document.fileName });
+    setShowUploadDialog(true);
+  }, []);
+
+  const openMissingDocUpload = useCallback((requirement: any) => {
+    setSelectedRequirement(requirement);
+    setUploadDocType(requirement.docType);
+    setIsReuploadMode(false);
+    setReuploadDocId(null);
+    setReuploadMeta(null);
+    setShowUploadDialog(true);
+  }, []);
 
   // Documents that are verified and have a file URL
   const verifiedDocuments = (verifications || [])
@@ -403,22 +585,84 @@ export default function CandidateDocumentVerificationPage() {
   };
 
   // Handle document reuse
-  const handleReuseDocument = async () => {
-    if (!selectedDocumentType) return;
+  const handleReuseDocument = async (documentId: string) => {
+    if (!documentId || !selectedProjectId) return;
 
     try {
       await reuseDocument({
-        documentId: selectedDocumentType,
+        documentId,
         projectId: selectedProjectId,
         roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
       toast.success("Document linked successfully!");
       setShowReuseDialog(false);
-      setSelectedDocumentType("");
-      // Ensure UI updates immediately
+      resetUploadDialogState();
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
+    }
+  };
+
+  const handleIntroVideoUpload = async ({
+    file,
+    remarks,
+  }: {
+    file: File;
+    remarks?: string;
+  }) => {
+    if (!candidateId || !selectedProjectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      setIntroVideoUploadProgress(0);
+      if (isIntroVideoReuploadMode && introductionVideo) {
+        await reuploadIntroductionVideo({
+          candidateId,
+          projectId: selectedProjectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video re-uploaded successfully");
+      } else {
+        await uploadIntroductionVideo({
+          candidateId,
+          projectId: selectedProjectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video uploaded successfully");
+      }
+      setShowIntroVideoUploadDialog(false);
+      setIsIntroVideoReuploadMode(false);
+      setIntroVideoUploadProgress(0);
+      refetchRequirements();
+    } catch (error: any) {
+      setIntroVideoUploadProgress(0);
+      toast.error(error?.data?.message || "Failed to upload introduction video");
+    }
+  };
+
+  const handleIntroVideoReuse = async (documentId: string) => {
+    if (!candidateId || !selectedProjectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      await reuseIntroductionVideo({
+        candidateId,
+        projectId: selectedProjectId,
+        documentId,
+      }).unwrap();
+      toast.success("Introduction video linked successfully");
+      setShowIntroVideoReuseDialog(false);
+      refetchRequirements();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to link introduction video");
     }
   };
 
@@ -454,29 +698,46 @@ export default function CandidateDocumentVerificationPage() {
     }
   };
 
-  // Handle document upload
-  const handleUploadDocument = async () => {
-    if (!uploadFile || !uploadDocType) return;
+  // Handle document upload / reupload
+  const handleUploadDocument = async (
+    file: File,
+    meta?: {
+      docName?: string;
+      documentNumber?: string;
+      issuedAt?: string;
+      expiryDate?: string;
+    },
+  ) => {
+    if (!uploadDocType || !candidateId || !selectedProjectId) return;
 
     try {
-      // Step 1: Upload the file to S3
       const formData = new FormData();
-      formData.append("file", uploadFile);
+      formData.append("file", file);
       formData.append("docType", uploadDocType);
 
+      const roleCatalogId = selectedProject?.roleNeeded?.roleCatalog?.id;
+      if (roleCatalogId) {
+        formData.append("roleCatalogId", roleCatalogId);
+      }
+
       const uploadResult = await uploadDocument({
-        candidateId: candidateId!,
+        candidateId,
         formData,
       }).unwrap();
 
-      // Step 2: Create Document record in database
-      // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
-      const uploadData: any = (uploadResult && (uploadResult as any).data) ? (uploadResult as any).data : uploadResult;
+      const uploadData: any =
+        uploadResult && (uploadResult as any).data
+          ? (uploadResult as any).data
+          : uploadResult;
 
-      const fileName = typeof uploadData?.fileName === "string" ? uploadData.fileName : undefined;
-      const fileUrl = typeof uploadData?.fileUrl === "string" ? uploadData.fileUrl : undefined;
-      const fileSize = typeof uploadData?.fileSize === "number" ? uploadData.fileSize : undefined;
-      const mimeType = typeof uploadData?.mimeType === "string" ? uploadData.mimeType : undefined;
+      const fileName =
+        typeof uploadData?.fileName === "string" ? uploadData.fileName : undefined;
+      const fileUrl =
+        typeof uploadData?.fileUrl === "string" ? uploadData.fileUrl : undefined;
+      const fileSize =
+        typeof uploadData?.fileSize === "number" ? uploadData.fileSize : undefined;
+      const mimeType =
+        typeof uploadData?.mimeType === "string" ? uploadData.mimeType : undefined;
 
       if (!fileName || !fileUrl) {
         toast.error("Upload failed: missing fileName or fileUrl from upload response");
@@ -484,29 +745,35 @@ export default function CandidateDocumentVerificationPage() {
       }
 
       if (isReuploadMode && reuploadDocId) {
-        // Handle Reupload versioning logic
         await reuploadDocument({
           documentId: reuploadDocId,
           candidateProjectMapId: candidateProjectMapId || "",
+          docName: meta?.docName?.trim() || undefined,
           fileName,
           fileUrl,
           fileSize,
           mimeType,
-        }).unwrap();
-        toast.success("Document re-uploaded successfully!");
-      } else {
-        // Step 2: Create Document record in database
-        const documentData = await createDocument({
-          candidateId: candidateId!,
-          docType: uploadDocType,
-          fileName,
-          fileUrl,
-          fileSize,
-          mimeType,
-          roleCatalogId: uploadDocType.toLowerCase() === "resume" ? (selectedProject?.roleNeeded?.roleCatalog?.id || "") : undefined,
+          documentNumber: meta?.documentNumber?.trim() || undefined,
+          issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+          expiryDate: DateUtils.toApiDate(meta?.expiryDate),
         }).unwrap();
 
-        // Step 3: Link the document to the current project
+        toast.success("Document re-uploaded successfully!");
+      } else {
+        const documentData = await createDocument({
+          candidateId,
+          docType: uploadDocType,
+          docName: meta?.docName?.trim() || undefined,
+          fileName,
+          fileUrl,
+          fileSize,
+          mimeType,
+          roleCatalogId: selectedProject?.roleNeeded?.roleCatalog?.id || "",
+          documentNumber: meta?.documentNumber?.trim() || undefined,
+          issuedAt: DateUtils.toApiDate(meta?.issuedAt),
+          expiryDate: DateUtils.toApiDate(meta?.expiryDate),
+        }).unwrap();
+
         await reuseDocument({
           documentId: documentData.data.id,
           projectId: selectedProjectId,
@@ -517,15 +784,10 @@ export default function CandidateDocumentVerificationPage() {
       }
 
       setShowUploadDialog(false);
-      setUploadFile(null);
-      setUploadDocType("");
-      setIsReuploadMode(false);
-      setReuploadDocId(null);
-      // keep existing verification status intact when replacing the file
-      // Ensure UI updates immediately
+      resetUploadDialogState();
       refetchRequirements();
     } catch (error) {
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
@@ -694,27 +956,7 @@ export default function CandidateDocumentVerificationPage() {
     setSelectedVerification(null);
   };
 
-  // Get document status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "verified":
-        return <Badge className="bg-green-500 text-white font-semibold whitespace-nowrap">Verified</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-500 text-white font-semibold whitespace-nowrap">Rejected</Badge>;
-      case "resubmission_required":
-        return <Badge className="bg-amber-500 text-white font-semibold text-center leading-tight py-1">Waiting for re-submission</Badge>;
-      case "resubmitted":
-        return <Badge className="bg-blue-500 text-white font-semibold whitespace-nowrap">Resubmitted</Badge>;
-      case "pending":
-        return <Badge variant="outline" className="whitespace-nowrap">Pending</Badge>;
-      default:
-        // Handle backend-style names like "client_revision_requested" if passed here
-        if (status === "client_revision_requested") {
-          return <Badge className="bg-orange-500 text-white font-semibold whitespace-nowrap">Revision Req.</Badge>;
-        }
-        return <Badge variant="outline" className="whitespace-nowrap">Unknown</Badge>;
-    }
-  };
+  // Get document status badge — use VerificationDocumentStatusBadge component in JSX
 
   if (projectsLoading || candidateLoading) {
     return (
@@ -770,9 +1012,15 @@ export default function CandidateDocumentVerificationPage() {
                   <h2 className="text-lg font-bold text-slate-900">
                     {candidate.firstName} {candidate.lastName}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Candidate ID: {candidate.id}
-                  </p>
+                  {candidate.candidateCode ? (
+                    <div className="mt-1 inline-flex rounded-md bg-red-50 px-2 py-0.5 text-xs font-mono font-bold text-red-700 border border-red-200">
+                      {candidate.candidateCode}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500">
+                      Candidate ID: {candidate.id}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -824,13 +1072,69 @@ export default function CandidateDocumentVerificationPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-slate-400" />
-                <div>
-                  <p className="text-slate-400">Phone</p>
-                  <p className="font-semibold text-slate-700">
-                    {candidate.countryCode && `+${candidate.countryCode} `}
-                    {candidate.mobileNumber || candidate.contact || "N/A"}
-                  </p>
+                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-slate-400">Contact</p>
+                  {hideContactInfo ? (
+                    <p className="font-semibold text-slate-500">Hidden</p>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <p className="font-semibold text-slate-700 truncate max-w-[120px]">
+                        {candidatePhoneDisplay || "N/A"}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 hover:text-green-700"
+                                disabled={!candidatePhoneDigits}
+                                aria-label={`WhatsApp ${candidate.firstName ?? "candidate"}`}
+                                onClick={() => {
+                                  if (candidatePhoneDigits) {
+                                    window.open(
+                                      `https://wa.me/${candidatePhoneDigits}`,
+                                      "_blank",
+                                    );
+                                  }
+                                }}
+                              >
+                                <FaWhatsapp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">WhatsApp</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                disabled={!candidatePhoneDigits}
+                                aria-label={`Call ${candidate.firstName ?? "candidate"}`}
+                                onClick={() => {
+                                  if (candidatePhoneDigits) {
+                                    window.location.href = `tel:${candidatePhoneDigits}`;
+                                  }
+                                }}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">Call</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -876,6 +1180,61 @@ export default function CandidateDocumentVerificationPage() {
                 </div>
               </div>
             </div>
+
+            {eligibilitySummary.show ? (
+              <div className="px-4 py-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-400">Eligibility Number</p>
+                    <p className="font-semibold text-slate-700 truncate">
+                      {eligibilitySummary.number || "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-slate-400">Eligibility Issued</p>
+                    <p className="font-semibold text-slate-700">
+                      {formatEligibilityDate(eligibilitySummary.issuedAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-slate-400">Eligibility Expiry</p>
+                    <p className="font-semibold text-slate-700">
+                      {formatEligibilityDate(eligibilitySummary.expiryDate)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FileCheck className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-slate-400">Eligibility Letter</p>
+                    {eligibilitySummary.fileUrl ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-800 hover:underline truncate max-w-full text-left"
+                        onClick={() =>
+                          handleOpenPDF(
+                            eligibilitySummary.fileUrl!,
+                            eligibilitySummary.fileName || "Eligibility Letter",
+                          )
+                        }
+                      >
+                        <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        View detail
+                      </button>
+                    ) : (
+                      <p className="font-semibold text-slate-500">Not uploaded</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             {candidate.skills && candidate.skills.length > 0 && (
               <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
@@ -934,8 +1293,10 @@ export default function CandidateDocumentVerificationPage() {
               <div className="flex items-center gap-2">
                 <Badge className={cn(
                   "text-xs font-semibold",
-                  projectResponse.data.status === "active" ? "bg-green-100 text-green-700" :
-                  projectResponse.data.status === "completed" ? "bg-blue-100 text-blue-700" :
+                  projectResponse.data.status === ProjectStatus.IN_PROGRESS ? "bg-green-100 text-green-700" :
+                  projectResponse.data.status === ProjectStatus.COMPLETED ? "bg-blue-100 text-blue-700" :
+                  projectResponse.data.status === ProjectStatus.CANCELLED ? "bg-rose-100 text-rose-700" :
+                  projectResponse.data.status === ProjectStatus.ON_HOLD ? "bg-amber-100 text-amber-700" :
                   "bg-slate-100 text-slate-700"
                 )}>
                   {projectResponse.data.status}
@@ -1114,6 +1475,7 @@ export default function CandidateDocumentVerificationPage() {
                 <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50">
                   <TableHead className="font-bold text-slate-700">Document Type</TableHead>
                   <TableHead className="font-bold text-slate-700 w-[150px]">Status</TableHead>
+                  
                   <TableHead className="font-bold text-slate-700">Submitted Document</TableHead>
                   <TableHead className="font-bold text-slate-700 text-right">Actions</TableHead>
                 </TableRow>
@@ -1142,7 +1504,40 @@ export default function CandidateDocumentVerificationPage() {
                         </div>
                       </TableCell>
 
-                      <TableCell>{verification ? getStatusBadge(displayedStatus as string) : <Badge variant="outline">Not Submitted</Badge>}</TableCell>
+                      <TableCell>
+                        {verification ? (
+                          <VerificationDocumentStatusBadge
+                            status={displayedStatus as string}
+                            rejectionReason={verification.rejectionReason}
+                          />
+                        ) : (
+                          <div className="flex flex-col gap-1 max-w-[220px]">
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold w-fit"
+                            >
+                              Missing
+                            </Badge>
+                            {requirement.uploadRequested ? (
+                              <>
+                                <Badge
+                                  variant="outline"
+                                  className="border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-medium w-fit"
+                                >
+                                  Requested from recruiter
+                                </Badge>
+                                {requirement.uploadRequestReason ? (
+                                  <p className="text-[11px] leading-snug text-slate-600 italic line-clamp-3">
+                                    Reason: {requirement.uploadRequestReason}
+                                  </p>
+                                ) : null}
+                              </>
+                            ) : null}
+                          </div>
+                        )}
+                      </TableCell>
+
+                      
 
                       <TableCell>
                         {verification ? (
@@ -1154,22 +1549,6 @@ export default function CandidateDocumentVerificationPage() {
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenPDF(verification.document.fileUrl, verification.document.fileName)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {(displayedStatus !== "verified" || selectedProject?.subStatus?.name === "client_revision_requested") && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" 
-                                  onClick={() => { 
-                                    setUploadDocType(verification.document.docType); 
-                                    setIsReuploadMode(true);
-                                    setReuploadDocId(verification.document.id);
-                                    setShowUploadDialog(true); 
-                                    setUploadFile(null); 
-                                  }}
-                                >
-                                  <RefreshCw className="h-4 w-4" />
-                                </Button>
-                              )}
                             </div>
                           </div>
                         ) : (
@@ -1178,125 +1557,212 @@ export default function CandidateDocumentVerificationPage() {
                       </TableCell>
 
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {summary.isDocumentationReviewed && selectedProject?.subStatus?.name !== "client_revision_requested" ? (
-                            <Badge className={cn(
-                              "font-semibold text-xs",
-                              summary.documentationStatus === "Documents Verified" || summary.documentationStatus === "Document verified"
-                                ? "bg-green-500 text-white"
-                                : summary.documentationStatus === "Documents Rejected" || summary.documentationStatus === "Document rejected"
-                                ? "bg-red-500 text-white"
-                                : "bg-slate-100 text-slate-700"
-                            )}>{summary.documentationStatus || "Reviewed"}</Badge>
-                          ) : verification ? (
-                            <>
-                              {canVerifyDocuments && displayedStatus === "pending" && (
-                                <div className="flex gap-2">
-                                  <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
-                                    <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
-                                    <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                  </Button>
-                                </div>
-                              )}
-                              {canVerifyDocuments && displayedStatus === "verified" && (
-                                <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("reject"); setIsConfirmationOpen(true); }}>
-                                  <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                </Button>
-                              )}
-                              {canVerifyDocuments && (displayedStatus === "rejected" || displayedStatus === "resubmission_required" || displayedStatus === "resubmitted") && (
-                                <div className="flex gap-2">
-                                  {displayedStatus === "resubmission_required" ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <div className="flex gap-2">
-                                            <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" disabled>
-                                              <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                            </Button>
-                                            <Button size="sm" variant="outline" className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" disabled>
-                                              <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                            </Button>
-                                          </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Please wait for resubmission of the document</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <>
-                                      <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white px-3" onClick={() => { setSelectedVerification(verification); setConfirmationAction("verify"); setIsConfirmationOpen(true); }}>
-                                        <CheckCircle className="h-3.5 w-3.5 mr-1.5" /> Verify
-                                      </Button>
-                                      {displayedStatus === "resubmitted" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-red-600 text-red-600 hover:bg-red-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedVerification(verification); 
-                                            setConfirmationAction("reject"); 
-                                            setIsConfirmationOpen(true); 
-                                          }}
-                                        >
-                                          <XCircle className="h-3.5 w-3.5 mr-1.5" /> Reject
-                                        </Button>
-                                      )}
-                                      {canRequestResubmission && displayedStatus === "rejected" && (
-                                        <Button 
-                                          size="sm" 
-                                          variant="outline" 
-                                          className="h-8 border-blue-600 text-blue-600 hover:bg-blue-50 px-3" 
-                                          onClick={() => { 
-                                            setSelectedResubmitVerification(verification); 
-                                            setIsResubmitDialogOpen(true); 
-                                          }}
-                                        >
-                                          <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Resubmit
-                                        </Button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setShowReuseDialog(true);
-                              }}
-                            >
-                              Link
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
-                              onClick={() => {
-                                setUploadDocType(requirement.docType);
-                                setIsReuploadMode(false);
-                                setReuploadDocId(null);
-                                setUploadFile(null);
-                                setShowUploadDialog(true);
-                              }}
-                            >
-                              <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
-                            </Button>
-                          </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <VerificationDocumentActions
+                            verification={verification}
+                            displayedStatus={displayedStatus as string}
+                            canVerifyDocuments={canVerifyDocuments}
+                            canRequestResubmission={canRequestResubmission}
+                            isDocumentationReviewed={summary.isDocumentationReviewed}
+                            documentationStatus={summary.documentationStatus}
+                            isClientRevisionRequested={
+                              selectedProject?.subStatus?.name === "client_revision_requested"
+                            }
+                            onVerify={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("verify");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onReject={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("reject");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onRequestResubmission={(v) => {
+                              setSelectedResubmitVerification(v);
+                              setIsResubmitDialogOpen(true);
+                            }}
+                            emptyActions={
+                              !verification && canVerifyDocuments ? (
+                                <MissingDocumentActions
+                                  requirement={requirement}
+                                  candidateProjectMapId={candidateProjectMapId || ""}
+                                  roleCatalogId={
+                                    selectedProject?.roleNeeded?.roleCatalog?.id
+                                  }
+                                  canRequest={canRequestResubmission}
+                                  canUpload={canVerifyDocuments}
+                                  onUpload={() => openMissingDocUpload(requirement)}
+                                  onRequested={refetchRequirements}
+                                />
+                              ) : undefined
+                            }
+                          />
+                          {isRejectedDocumentStatus(displayedStatus) && verification && (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-violet-600 hover:bg-violet-50"
+                                onClick={() =>
+                                  openRejectedDocLinkExisting(verification, requirement)
+                                }
+                              >
+                                <Link2 className="h-4 w-4 mr-2" />
+                                Add Existing
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:bg-primary/10"
+                                onClick={() =>
+                                  openRejectedDocReupload(verification, requirement)
+                                }
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Reupload
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </TableCell> 
                     </TableRow>
                   );
                 })}
+
+                {introductionVideoRequired && (() => {
+                  const verification = introductionVideo;
+                  const displayedStatus = verification
+                    ? localStatuses[verification.id] ?? verification.status
+                    : undefined;
+
+                  return (
+                    <TableRow key="introduction-video" className="hover:bg-white/70 transition">
+                      <TableCell className="py-5">
+                        <div className="flex items-center gap-3">
+                          <Video className="h-6 w-6 text-violet-500 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800 truncate">
+                                Introduction Video
+                              </span>
+                              <Badge className="bg-red-500/20 text-red-700 text-[10px] font-bold px-1.5 py-0 h-4 flex-shrink-0">
+                                REQ
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                              Candidate introduction video for this project
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        {verification ? (
+                          <VerificationDocumentStatusBadge
+                            status={displayedStatus as string}
+                            rejectionReason={verification.rejectionReason}
+                          />
+                        ) : (
+                          <Badge variant="outline">Not Submitted</Badge>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
+                        {verification?.document ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-slate-700 truncate max-w-[120px]">
+                              {verification.document.fileName}
+                            </span>
+                            <div className="flex gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  setVideoPreview({
+                                    fileUrl: verification.document.fileUrl,
+                                    fileName: verification.document.fileName,
+                                  })
+                                }
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              {isRejectedDocumentStatus(displayedStatus) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  title="Re-upload video"
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(true);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 italic text-xs">No video</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <VerificationDocumentActions
+                            verification={verification}
+                            displayedStatus={displayedStatus as string}
+                            canVerifyDocuments={canVerifyDocuments}
+                            canRequestResubmission={canRequestResubmission}
+                            isDocumentationReviewed={summary.isDocumentationReviewed}
+                            documentationStatus={summary.documentationStatus}
+                            isClientRevisionRequested={
+                              selectedProject?.subStatus?.name === "client_revision_requested"
+                            }
+                            onVerify={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("verify");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onReject={(v) => {
+                              setSelectedVerification(v);
+                              setConfirmationAction("reject");
+                              setIsConfirmationOpen(true);
+                            }}
+                            onRequestResubmission={(v) => {
+                              setSelectedResubmitVerification(v);
+                              setIsResubmitDialogOpen(true);
+                            }}
+                            emptyActions={
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3"
+                                  onClick={() => setShowIntroVideoReuseDialog(true)}
+                                >
+                                  Link
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-8 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(false);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  <Upload className="h-3.5 w-3.5 mr-1.5" /> Upload
+                                </Button>
+                              </>
+                            }
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })()}
               </TableBody>
             </Table>
           </div>
@@ -1386,158 +1852,61 @@ export default function CandidateDocumentVerificationPage() {
           />
         )}
 
-        {/* Document Reuse Dialog */}
-       <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-  <DialogContent className="sm:max-w-md p-0 overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
-    {/* Elegant Header */}
-    <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-violet-600 to-purple-600 text-white">
-      <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-        <div className="p-2.5 bg-white/20 backdrop-blur rounded-xl">
-          <Link2 className="w-6 h-6" />
-        </div>
-        Link Existing Document
-      </DialogTitle>
-      <DialogDescription className="text-white/90 mt-2 text-base">
-        Select an existing document to link to this project.
-      </DialogDescription>
-    </DialogHeader>
+        <UploadDocumentModal
+          isOpen={showUploadDialog}
+          onClose={() => {
+            setShowUploadDialog(false);
+            resetUploadDialogState();
+          }}
+          onUpload={handleUploadDocument}
+          projectTitle={projectResponse?.data?.title || "Project"}
+          roleDesignation={
+            selectedProject?.roleNeeded?.designation ||
+            projectResponse?.data?.rolesNeeded?.[0]?.designation ||
+            "N/A"
+          }
+          docType={uploadDocType}
+          docTypeLabel={uploadDocTypeLabel}
+          docTypeDescription={selectedRequirement?.description}
+          isMandatory={selectedRequirement?.mandatory}
+          isUploading={isUploading || isCreating || isReuploading}
+          variant={isReuploadMode ? "reupload" : "upload"}
+          previousFileName={reuploadMeta?.previousFileName}
+          initialEligibilityNumber={
+            isEligibilityLetterType(uploadDocType)
+              ? (candidate as { eligibilityNumber?: string })?.eligibilityNumber
+              : undefined
+          }
+          initialIssuedAt={
+            isEligibilityLetterType(uploadDocType)
+              ? verifications.find((v: any) => v.document.docType === uploadDocType)
+                  ?.document?.issuedAt
+              : undefined
+          }
+          initialExpiryDate={
+            isEligibilityLetterType(uploadDocType)
+              ? verifications.find((v: any) => v.document.docType === uploadDocType)
+                  ?.document?.expiryDate
+              : undefined
+          }
+        />
 
-    {/* Body - Clean & Modern */}
-    <div className="p-6 pt-2 bg-white/95 backdrop-blur-xl">
-      <div className="space-y-5">
-        <div>
-          <Label className="text-sm font-semibold text-slate-700 flex items-center gap-2 mb-3">
-            <FileText className="w-4 h-4 text-violet-600" />
-            Available Documents
-          </Label>
-
-          <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-            <SelectTrigger className="h-12 rounded-xl border-slate-200 bg-white/70 shadow-sm focus:ring-4 focus:ring-violet-500/30 transition-all">
-              <SelectValue placeholder="Choose a document" />
-            </SelectTrigger>
-
-            <SelectContent className="rounded-xl border border-slate-200 bg-white/95 backdrop-blur-md shadow-xl">
-              {allCandidateDocuments.length === 0 ? (
-                <div className="py-8 text-center">
-                  <FileX className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm text-slate-500">No documents available</p>
-                </div>
-              ) : (
-                allCandidateDocuments.map((doc: any) => (
-                  <SelectItem key={doc.id} value={doc.id} className="py-3 cursor-pointer">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 p-2 bg-gradient-to-br from-violet-100 to-purple-100 rounded-lg">
-                        <FileText className="w-4 h-4 text-violet-700" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-800">{doc.docType}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{doc.fileName}</p>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Optional: Visual confirmation when selected */}
-        {selectedDocumentType && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2 text-sm font-medium text-emerald-700 bg-emerald-50/80 px-4 py-2.5 rounded-lg border border-emerald-200/50"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Document selected and ready to link
-          </motion.div>
-        )}
-      </div>
-    </div>
-
-    {/* Footer - Clean & Balanced */}
-    <DialogFooter className="p-6 pt-4 bg-gradient-to-t from-slate-50 to-transparent border-t border-slate-200/60">
-      <Button
-        variant="outline"
-        onClick={() => setShowReuseDialog(false)}
-        className="h-11 px-6 rounded-xl font-medium border-slate-300 hover:bg-slate-50"
-      >
-        Cancel
-      </Button>
-      <Button
-        onClick={handleReuseDocument}
-        disabled={!selectedDocumentType || isReusing}
-        className="h-11 px-6 rounded-xl font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-purple-500/30 disabled:opacity-60 transition-all"
-      >
-        {isReusing ? (
-          <>
-            <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-            Linking...
-          </>
-        ) : (
-          <>
-            <Link2 className="h-4 w-4 mr-2" />
-            Link Document
-          </>
-        )}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-        {/* Document Upload Dialog */}
-        <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Upload New Document</DialogTitle>
-              <DialogDescription>
-                Upload a new document for this candidate and link it to the
-                current project.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Document Type</Label>
-                <div className="mt-1.5 px-3 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm font-semibold text-slate-700 capitalize">
-                  {uploadDocType ? uploadDocType.replace(/_/g, ' ') : 'None'}
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">File</Label>
-                <Input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.webp"
-                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="cursor-pointer"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Supported formats: PDF, JPG, PNG, WEBP (max 10MB)
-                </p>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowUploadDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUploadDocument}
-                disabled={
-                  !uploadFile || !uploadDocType || isUploading || isCreating
-                }
-              >
-                {isUploading || isCreating ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Upload className="h-4 w-4 mr-2" />
-                )}
-                Upload Document
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <LinkExistingDocumentModal
+          isOpen={showReuseDialog}
+          onClose={() => {
+            setShowReuseDialog(false);
+            resetUploadDialogState();
+          }}
+          candidateId={candidateId || ""}
+          docType={uploadDocType}
+          roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          roleLabel={
+            selectedProject?.roleNeeded?.designation ||
+            selectedProject?.roleNeeded?.roleCatalog?.label
+          }
+          isLinking={isReusing}
+          onConfirm={handleReuseDocument}
+        />
 
         {/* PDF Viewer */}
         <PDFViewer
@@ -1553,6 +1922,41 @@ export default function CandidateDocumentVerificationPage() {
           showRotationControls={true}
           showFullscreenToggle={true}
         />
+
+        {videoPreview && (
+          <VideoPlayerModal
+            isOpen={!!videoPreview}
+            onClose={() => setVideoPreview(null)}
+            fileUrl={videoPreview.fileUrl}
+            fileName={videoPreview.fileName}
+            title="Introduction Video"
+          />
+        )}
+
+        <IntroductionVideoUploadModal
+          isOpen={showIntroVideoUploadDialog}
+          onClose={() => {
+            setShowIntroVideoUploadDialog(false);
+            setIsIntroVideoReuploadMode(false);
+            setIntroVideoUploadProgress(0);
+          }}
+          onSubmit={handleIntroVideoUpload}
+          isSubmitting={isUploadingIntroVideo || isReuploadingIntroVideo}
+          uploadProgress={introVideoUploadProgress}
+          variant={isIntroVideoReuploadMode ? "reupload" : "upload"}
+          idPrefix="documentation-intro-video"
+        />
+
+        {candidateId && selectedProjectId ? (
+          <IntroductionVideoReuseModal
+            isOpen={showIntroVideoReuseDialog}
+            onClose={() => setShowIntroVideoReuseDialog(false)}
+            candidateId={candidateId}
+            excludeProjectId={selectedProjectId}
+            onReuse={handleIntroVideoReuse}
+            isReusing={isReusingIntroVideo}
+          />
+        ) : null}
 
         {/* Confirmation Dialog */}
         <ConfirmationDialog
@@ -1693,6 +2097,7 @@ export default function CandidateDocumentVerificationPage() {
           candidateId={candidateId!}
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          candidateProjectMapId={candidateProjectMapId}
           onViewDocument={handleOpenPDF}
           onMergeStart={() => setIsGeneratingPDF(true)}
           onMergeEnd={() => setIsGeneratingPDF(false)}
@@ -1705,6 +2110,7 @@ export default function CandidateDocumentVerificationPage() {
           candidateId={candidateId!}
           projectId={selectedProjectId}
           roleCatalogId={selectedProject?.roleNeeded?.roleCatalog?.id}
+          candidateProjectMapId={candidateProjectMapId}
           documents={verifiedDocuments}
           clientData={projectResponse?.data?.client}
           candidateName={`${candidate?.firstName} ${candidate?.lastName}`}

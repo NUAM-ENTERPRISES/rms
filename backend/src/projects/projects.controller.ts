@@ -11,6 +11,7 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,7 +28,13 @@ import { QueryProjectsDto } from './dto/query-projects.dto';
 import { QueryProjectPickerDto } from './dto/query-project-picker.dto';
 import { QueryNominatedCandidatesDto } from './dto/query-nominated-candidates.dto';
 import { AssignCandidateDto } from './dto/assign-candidate.dto';
+import { CreateAgentCandidateRequestDto } from './dto/create-agent-candidate-request.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
+import { Roles } from '../auth/rbac/roles.decorator';
+import { RolesGuard } from '../auth/rbac/roles.guard';
+import { PROJECT_STATUS_UPDATE_ROLES } from '../common/constants/role-ids';
+import { isProjectCoordinator } from '../common/scoping/project-coordinator-scope.util';
+import { UpdateProjectLifecycleStatusDto } from './dto/update-project-lifecycle-status.dto';
 import {
   ProjectWithRelations,
   PaginatedProjects,
@@ -204,6 +211,13 @@ export class ProjectsController {
     example: 10,
   })
   @ApiQuery({
+    name: 'isUrgent',
+    required: false,
+    description:
+      'When true, return only active projects with deadlines in the next 7 calendar days',
+    schema: { type: 'boolean' },
+  })
+  @ApiQuery({
     name: 'summary',
     required: false,
     description:
@@ -296,12 +310,16 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryProjectsDto): Promise<{
+  async findAll(@Query() query: QueryProjectsDto, @Request() req): Promise<{
     success: boolean;
     data: PaginatedProjects | PaginatedProjectSummaryList;
     message: string;
   }> {
-    const result = await this.projectsService.findAll(query);
+    const scopedQuery = { ...query };
+    if (isProjectCoordinator(req.user.roles)) {
+      scopedQuery.createdBy = req.user.id;
+    }
+    const result = await this.projectsService.findAll(scopedQuery);
     return {
       success: true,
       data: result,
@@ -327,25 +345,24 @@ export class ProjectsController {
           type: 'object',
           properties: {
             totalProjects: { type: 'number', example: 150 },
-            activeProjects: { type: 'number', example: 100 },
+            inProgressProjects: { type: 'number', example: 100 },
             completedProjects: { type: 'number', example: 40 },
+            onHoldProjects: { type: 'number', example: 5 },
             cancelledProjects: { type: 'number', example: 10 },
             projectsByStatus: {
               type: 'object',
               properties: {
-                active: { type: 'number' },
-                completed: { type: 'number' },
-                cancelled: { type: 'number' },
+                IN_PROGRESS: { type: 'number' },
+                COMPLETED: { type: 'number' },
+                ON_HOLD: { type: 'number' },
+                CANCELLED: { type: 'number' },
               },
             },
             projectsByClient: {
               type: 'object',
               additionalProperties: { type: 'number' },
             },
-            upcomingDeadlines: {
-              type: 'array',
-              items: { type: 'object' },
-            },
+            urgentProjectsCount: { type: 'number', example: 3 },
           },
         },
         message: {
@@ -359,12 +376,15 @@ export class ProjectsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async getStats(): Promise<{
+  async getStats(@Request() req): Promise<{
     success: boolean;
     data: ProjectStats;
     message: string;
   }> {
-    const stats = await this.projectsService.getProjectStats();
+    const scopedUserId = isProjectCoordinator(req.user.roles)
+      ? req.user.id
+      : undefined;
+    const stats = await this.projectsService.getProjectStats(scopedUserId);
     return {
       success: true,
       data: stats,
@@ -469,6 +489,56 @@ export class ProjectsController {
     };
   }
 
+  @Get(':id/role-fill-summary')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'Get per-role candidate fill summary for a project',
+    description:
+      'Returns how many candidates each role has received vs. the target quantity. Scoped to the requesting user for Agent Coordinators.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiResponse({ status: 200, description: 'Role fill summary data' })
+  async getProjectRoleFillSummary(
+    @Param('id') projectId: string,
+    @Request() req,
+  ) {
+    const result = await this.projectsService.getProjectRoleFillSummary(
+      projectId,
+      req.user.id,
+      req.user.roles,
+    );
+    return { success: true, ...result };
+  }
+
+  @Get('agent-candidate-requests')
+  @Permissions('read:projects')
+  @ApiOperation({
+    summary: 'List all agent candidate requests',
+    description:
+      'Returns paginated agent candidate requests with project, requester and role details. Intended for Agent Coordinators.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    description: 'Filter by request status',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of agent candidate requests' })
+  async getAgentCandidateRequests(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Query('status') status?: string,
+  ) {
+    const data = await this.projectsService.getAgentCandidateRequests({
+      page: +page,
+      limit: +limit,
+      status,
+    });
+    return { success: true, ...data };
+  }
+
   @Get(':id')
   @Permissions('read:projects')
   @ApiOperation({
@@ -556,6 +626,49 @@ export class ProjectsController {
       success: true,
       data: project,
       message: 'Project retrieved successfully',
+    };
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles(...PROJECT_STATUS_UPDATE_ROLES)
+  @ApiOperation({
+    summary: 'Update project lifecycle status',
+    description:
+      'Change the lifecycle status of a project. Restricted to admin, manager, and project coordinator roles.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Project status updated successfully',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Insufficient role or project ownership',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectLifecycleStatusDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: ProjectWithRelations;
+    message: string;
+  }> {
+    const project = await this.projectsService.updateStatus(
+      id,
+      dto,
+      req.user.id,
+      req.user.roles ?? [],
+    );
+    return {
+      success: true,
+      data: project,
+      message: 'Project status updated successfully',
     };
   }
 
@@ -713,7 +826,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get nominated candidates for a project',
     description:
-      'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters and Client Coordinators see only nominated rows tied to them (assigned recruiter / active recruiter assignment); leadership roles see all.',
+      'Retrieve candidates added to a project (nominated = in candidate_projects table) with match scores, search, pagination, and status filtering. Recruiters and Agent Coordinators see only nominated rows tied to them (assigned recruiter / active recruiter assignment); leadership roles see all.',
   })
   @ApiParam({ name: 'id', description: 'Project ID', example: 'project123' })
   @ApiQuery({
@@ -1009,7 +1122,7 @@ export class ProjectsController {
   @ApiOperation({
     summary: 'Get eligible candidates for a project',
     description:
-      'Retrieve candidates who match project requirements and are not yet nominated. Recruiters and Client Coordinators see only their assigned candidates; managers and comparable leadership roles see all.',
+      'Retrieve candidates who match project requirements and are not yet nominated. Recruiters and Agent Coordinators see only their assigned candidates; managers and comparable leadership roles see all.',
   })
   @ApiParam({
     name: 'id',
@@ -1319,6 +1432,65 @@ export class ProjectsController {
       success: true,
       data: result,
       message: 'Document verification completed successfully',
+    };
+  }
+
+  @Get(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects', 'read:projects')
+  @ApiOperation({
+    summary: 'List agent candidate request history for a project',
+    description: 'Returns all agent candidate requests made for this project, newest first.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
+  @ApiResponse({ status: 200, description: 'Paginated request history' })
+  async getProjectAgentCandidateRequests(
+    @Param('id') projectId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    const data = await this.projectsService.getProjectAgentCandidateRequests(
+      projectId,
+      { page: +page, limit: +limit },
+    );
+    return { success: true, ...data };
+  }
+
+  @Post(':id/agent-candidate-requests')
+  @Permissions('manage:projects', 'write:projects')
+  @ApiOperation({
+    summary: 'Create agent candidate request for a project',
+    description:
+      'Managers can request additional agent-sourced candidates by role and quantity.',
+  })
+  @ApiParam({ name: 'id', description: 'Project ID', example: 'proj_123abc' })
+  @ApiResponse({
+    status: 201,
+    description: 'Agent candidate request created successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request payload or project-role mismatch',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Project not found',
+  })
+  async createAgentCandidateRequest(
+    @Param('id') projectId: string,
+    @Body() dto: CreateAgentCandidateRequestDto,
+    @Request() req,
+  ) {
+    const data = await this.projectsService.createAgentCandidateRequest(
+      projectId,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data,
+      message: 'Agent candidate request created successfully',
     };
   }
 }

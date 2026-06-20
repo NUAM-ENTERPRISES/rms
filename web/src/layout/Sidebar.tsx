@@ -4,6 +4,7 @@ import { ChevronLeft, Sparkles } from "lucide-react";
 import { useNav } from "@/hooks/useNav";
 import { NavItem } from "@/config/nav";
 import { cn } from "@/lib/utils";
+import { isNavGroupActive, isNavItemActive } from "@/utils/nav-active";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -37,6 +38,13 @@ const getIconColor = (itemId: string) => {
         "group-hover:bg-emerald-500/15 dark:group-hover:bg-emerald-500/25 group-hover:text-emerald-700 dark:group-hover:text-emerald-300",
     },
     candidates: {
+      bg: "bg-indigo-500/10 dark:bg-indigo-500/20",
+      text: "text-indigo-600 dark:text-indigo-400",
+      border: "border-indigo-500/30 dark:border-indigo-500/40",
+      hover:
+        "group-hover:bg-indigo-500/15 dark:group-hover:bg-indigo-500/25 group-hover:text-indigo-700 dark:group-hover:text-indigo-300",
+    },
+    "follow-up": {
       bg: "bg-indigo-500/10 dark:bg-indigo-500/20",
       text: "text-indigo-600 dark:text-indigo-400",
       border: "border-indigo-500/30 dark:border-indigo-500/40",
@@ -147,12 +155,10 @@ function NavItemComponent({
   const location = useLocation();
 
   const hasChildren = item.children && item.children.length > 0;
-  const isActive = location.pathname === item.path;
-  const isChildActive =
-    hasChildren &&
-    item.children?.some(
-      (child) => child.path && location.pathname.startsWith(child.path)
-    );
+  const isActive = item.path
+    ? isNavItemActive(location.pathname, item)
+    : false;
+  const isChildActive = hasChildren && isNavGroupActive(location.pathname, item);
   const isCurrentlyActive = isActive || isChildActive;
 
   // Initialize expansion based on whether any child is active so that
@@ -183,7 +189,7 @@ function NavItemComponent({
       )}
     >
       <div className="flex items-center gap-2.5">
-        {item.icon && (
+        {item.icon && depth === 0 && (
           <div
             className={cn(
               "flex items-center justify-center rounded-lg transition-all duration-300 shadow-sm",

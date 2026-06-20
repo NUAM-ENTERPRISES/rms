@@ -10,12 +10,17 @@ import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { useGetTicketRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TicketModalProps {
@@ -27,6 +32,7 @@ interface TicketModalProps {
 }
 
 export function TicketModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: TicketModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetTicketRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -37,10 +43,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
 
   const [updateStepStatus, { isLoading: isUpdatingTicket }] = useUpdateStepStatusMutation();
 
@@ -334,7 +336,7 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
       await refetch();
     } catch (err: any) {
       console.error("Ticket upload error", err);
-      toast.error(err?.data?.message || "Failed to upload and attach document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 
@@ -391,29 +393,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
       console.error("Mark Ticket complete failed", err);
       const msg = err?.data?.message || err?.error || "Failed to complete Ticket step";
       toast.error(msg);
-    }
-  };
-
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return;
-    }
-
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-
-      if (onComplete) {
-        await onComplete();
-      }
-
-      onClose();
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || err?.error || "Failed to cancel step");
     }
   };
 
@@ -498,6 +477,8 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
           ) : (
             <div className="space-y-4">
 
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="w-full border-0 shadow-sm bg-rose-50 p-3">
                   <div className="flex items-start gap-3">
@@ -542,7 +523,7 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                       value={ticketDate}
                       onChange={setTicketDate}
                       placeholder="Pick ticket date"
-                      disabled={isTicketCompleted || isStepCancelled}
+                      disabled={isTicketCompleted || isStepCancelled || isLocked}
                       compact
                     />
                   </div>
@@ -553,7 +534,7 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                       value={flightTime}
                       onChange={setFlightTime}
                       placeholder="Pick flight date & time"
-                      disabled={isTicketCompleted || isStepCancelled}
+                      disabled={isTicketCompleted || isStepCancelled || isLocked}
                       compact
                     />
                   </div>
@@ -565,21 +546,23 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                       value={airportLocation}
                       onChange={(e) => setAirportLocation(e.target.value)}
                       placeholder="Enter airport location"
-                      disabled={isTicketCompleted || isStepCancelled}
+                      disabled={isTicketCompleted || isStepCancelled || isLocked}
                       className="w-full h-8 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
 
                   {showSaveTicketButton && (
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveTicketMetadata}
-                        disabled={isUpdatingTicket || isTicketCompleted || isStepCancelled}
-                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
-                      >
-                        {isUpdatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Ticket Details'}
-                      </Button>
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveTicketMetadata}
+                          disabled={isUpdatingTicket || isTicketCompleted || isStepCancelled || isLocked}
+                          className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                        >
+                          {isUpdatingTicket ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Ticket Details'}
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
                 </div>
@@ -587,8 +570,20 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b">
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isTicketCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Ticket"
+                      disabled={isVerifying}
+                    />
+                  )}
                 </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
@@ -670,44 +665,53 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                               {!hasProcessing ? (
                                 <>
                                   {candidateDoc?.status === 'pending' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        candidateDoc?.id,
-                                        candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          candidateDoc?.id,
+                                          candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {!candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      Verify
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        disabled={isLocked}
+                                        onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
                                 </>
                               ) : (
@@ -717,22 +721,25 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                                   ) : (
                                     <>
                                       <div className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">In processing</div>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-                                        onClick={() => handleUploadClick(
-                                          req.docType,
-                                          req.label,
-                                          candidate?.role?.roleCatalog?.id,
-                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                          processingDoc.id,
-                                          candidateProjectMapId
-                                        )}
-                                      >
-                                        <RefreshCw className="h-3 w-3 mr-1" />
-                                        Re-upload
-                                      </Button>
+                                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-8 text-xs border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                                          disabled={isLocked}
+                                          onClick={() => handleUploadClick(
+                                            req.docType,
+                                            req.label,
+                                            candidate?.role?.roleCatalog?.id,
+                                            candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                            processingDoc.id,
+                                            candidateProjectMapId
+                                          )}
+                                        >
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Re-upload
+                                        </Button>
+                                      </LockedProcessingActionButton>
                                     </>
                                   )}
                                 </div>
@@ -769,15 +776,26 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
               </Button>
 
               {!isTicketCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
-                </Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isTicketCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isTicketCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Ticket Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Ticket Complete
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 !allVerified ? (
                   <TooltipProvider>
@@ -798,9 +816,9 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
                   <Button
                     size="sm"
                     onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete || isLocked}
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete}
+                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Ticket Complete'}
                   </Button>
@@ -833,16 +851,6 @@ export function TicketModal({ isOpen, onClose, processingId, candidateProjectMap
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
-        />
-      </React.Suspense>
-
-      {/* Confirm Cancel Step Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          onConfirm={handleConfirmCancel}
-          isCancelling={isCancelling}
         />
       </React.Suspense>
 

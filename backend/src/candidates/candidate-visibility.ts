@@ -11,10 +11,30 @@ export const ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES = [
   'Admin',
   'SuperAdmin',
   'System Admin',
-  'Client Coordinator',
+  'Agent Coordinator',
+] as const;
+
+/** Leadership / admin roles that may view Operations call history for any candidate. */
+export const ROLES_THAT_VIEW_OPERATIONS_CALL_HISTORY = [
+  'CEO',
+  'Director',
+  'Manager',
+  'Team Head',
+  'Team Lead',
+  'Recruiter Manager',
+  'Admin',
+  'SuperAdmin',
+  'System Admin',
 ] as const;
 
 export function canSeeAgentSourcedCandidates(roles: string[]): boolean {
   const allowed = ROLES_THAT_SEE_AGENT_SOURCED_CANDIDATES as readonly string[];
+  return roles.some((r) => allowed.includes(r));
+}
+
+export function hasElevatedOperationsCallHistoryAccess(
+  roles: string[],
+): boolean {
+  const allowed = ROLES_THAT_VIEW_OPERATIONS_CALL_HISTORY as readonly string[];
   return roles.some((r) => allowed.includes(r));
 }

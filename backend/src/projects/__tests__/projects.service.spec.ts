@@ -10,8 +10,12 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { OutboxService } from '../../notifications/outbox.service';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
+import { ProjectDeadlineAutoCompleteService } from '../project-deadline-auto-complete.service';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -26,6 +30,7 @@ describe('ProjectsService', () => {
       delete: jest.fn(),
       count: jest.fn(),
       groupBy: jest.fn(),
+      updateMany: jest.fn(),
     },
     // client methods
     team: {
@@ -44,6 +49,10 @@ describe('ProjectsService', () => {
       findMany: jest.fn(),
       findFirst: jest.fn(),
       count: jest.fn(),
+    },
+    agentCandidateRequest: {
+      create: jest.fn(),
+      findFirst: jest.fn(),
     },
     roleNeeded: {
       create: jest.fn(),
@@ -89,6 +98,16 @@ describe('ProjectsService', () => {
           provide: NotificationsGateway,
           useValue: { emitToUser: jest.fn(), emitToUsers: jest.fn() },
         },
+        {
+          provide: OutboxService,
+          useValue: { publishAgentCandidateRequestCreated: jest.fn() },
+        },
+        {
+          provide: ProjectDeadlineAutoCompleteService,
+          useValue: {
+            autoCompleteExpiredProjects: jest.fn().mockResolvedValue(0),
+          },
+        },
       ],
     }).compile();
 
@@ -105,7 +124,7 @@ describe('ProjectsService', () => {
       clientId: 'client123',
       title: 'Test Project',
       description: 'Test Description',
-      status: 'active',
+      status: 'IN_PROGRESS',
       teamId: 'team123',
       rolesNeeded: [
         {
@@ -148,24 +167,26 @@ describe('ProjectsService', () => {
       const result = await service.create(createProjectDto, 'user123');
 
       expect(result).toEqual(mockProject);
-      expect(prismaService.project.create).toHaveBeenCalledWith({
-        data: {
-          clientId: 'client123',
-          title: 'Test Project',
-          description: 'Test Description',
-          deadline: null,
-          status: 'active',
-          createdBy: 'user123',
-          teamId: 'team123',
-          countryCode: null,
-          projectType: 'private',
-          resumeEditable: true,
-          groomingRequired: 'formal',
-          hideContactInfo: true,
-          requiredScreening: false,
-          priority: 'medium',
-        },
-      });
+      expect(prismaService.project.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            clientId: 'client123',
+            title: 'Test Project',
+            description: 'Test Description',
+            deadline: null,
+            status: 'IN_PROGRESS',
+            createdBy: 'user123',
+            teamId: 'team123',
+            countryCode: null,
+            projectType: 'private',
+            resumeEditable: true,
+            groomingRequired: 'formal',
+            hideContactInfo: true,
+            requiredScreening: false,
+            priority: 'medium',
+          }),
+        }),
+      );
 
       expect(prismaService.roleNeeded.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -267,6 +288,35 @@ describe('ProjectsService', () => {
       );
     });
 
+    it('should apply isUrgent filter for overdue and upcoming deadline window', async () => {
+      prismaService.project.count.mockResolvedValue(2);
+      prismaService.project.findMany.mockResolvedValue(mockProjects as any);
+
+      await service.findAll({ isUrgent: true, page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'IN_PROGRESS',
+            AND: [
+              { deadline: { not: null } },
+              {
+                OR: [
+                  { deadline: { lt: expect.any(Date) } },
+                  {
+                    deadline: {
+                      gte: expect.any(Date),
+                      lte: expect.any(Date),
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
     it('should return summary rows when summary=true', async () => {
       const created = new Date('2026-01-15T10:00:00.000Z');
       const deadline = new Date('2026-06-01T00:00:00.000Z');
@@ -275,7 +325,7 @@ describe('ProjectsService', () => {
           id: 'proj-1',
           title: 'Nursing',
           deadline,
-          status: 'active',
+          status: 'IN_PROGRESS',
           priority: 'high',
           createdAt: created,
           projectType: 'private',
@@ -297,7 +347,7 @@ describe('ProjectsService', () => {
         id: 'proj-1',
         title: 'Nursing',
         deadline: deadline.toISOString(),
-        status: 'active',
+        status: 'IN_PROGRESS',
         priority: 'high',
         createdAt: created.toISOString(),
         projectType: 'private',
@@ -319,6 +369,44 @@ describe('ProjectsService', () => {
         }),
       );
     });
+
+    it('should exclude expired active projects from active status results', async () => {
+      prismaService.project.count.mockResolvedValue(0);
+      prismaService.project.findMany.mockResolvedValue([]);
+
+      await service.findAll({ status: 'IN_PROGRESS', page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'IN_PROGRESS',
+            AND: [
+              {
+                OR: [
+                  { deadline: null },
+                  { deadline: { gte: expect.any(Date) } },
+                ],
+              },
+            ],
+          }),
+        }),
+      );
+    });
+
+    it('should only return explicitly completed projects when status is completed', async () => {
+      prismaService.project.count.mockResolvedValue(1);
+      prismaService.project.findMany.mockResolvedValue(mockProjects as any);
+
+      await service.findAll({ status: 'COMPLETED', page: 1, limit: 10 });
+
+      expect(prismaService.project.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'COMPLETED',
+          }),
+        }),
+      );
+    });
   });
 
   describe('findPickerList', () => {
@@ -328,7 +416,7 @@ describe('ProjectsService', () => {
         {
           id: 'p1',
           title: 'Alpha',
-          status: 'active',
+          status: 'IN_PROGRESS',
           deadline,
           client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
         },
@@ -348,7 +436,7 @@ describe('ProjectsService', () => {
       expect(result.projects[0]).toEqual({
         id: 'p1',
         title: 'Alpha',
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: deadline.toISOString(),
         client: { id: 'c1', name: 'Client A', type: 'DIRECT_CLIENT' },
       });
@@ -374,7 +462,7 @@ describe('ProjectsService', () => {
       expect(prismaService.project.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            status: 'active',
+            status: 'IN_PROGRESS',
             title: { contains: 'nursing', mode: 'insensitive' },
           },
         }),
@@ -386,6 +474,8 @@ describe('ProjectsService', () => {
     it('getEligibleCandidates should return candidate when search matches qualification shortName/name/field/university', async () => {
       const project = {
         id: 'proj-1',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
         licensingExam: null,
         eligibility: false,
         rolesNeeded: [
@@ -452,9 +542,11 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('getEligibleCandidates applies recruiterAssignments filter for Client Coordinator', async () => {
+    it('getEligibleCandidates applies recruiterAssignments filter for Agent Coordinator', async () => {
       const project = {
         id: 'proj-1',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
         rolesNeeded: [
           {
             id: 'r1',
@@ -471,7 +563,7 @@ describe('ProjectsService', () => {
       prismaService.project.findUnique.mockResolvedValue(project);
       prismaService.candidate.findMany = jest.fn().mockResolvedValue([]);
 
-      await service.getEligibleCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+      await service.getEligibleCandidates('proj-1', 'cc-user', [ROLE_NAMES.AGENT_COORDINATOR], { page: 1, limit: 10 });
 
       expect(prismaService.candidate.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -484,13 +576,13 @@ describe('ProjectsService', () => {
       );
     });
 
-    it('getNominatedCandidates scopes to user for Client Coordinator', async () => {
+    it('getNominatedCandidates scopes to user for Agent Coordinator', async () => {
       const project = { id: 'proj-1', rolesNeeded: [] } as any;
       prismaService.project.findUnique.mockResolvedValue(project);
       prismaService.candidateProjects.count = jest.fn().mockResolvedValue(0);
       prismaService.candidateProjects.findMany = jest.fn().mockResolvedValue([]);
 
-      await service.getNominatedCandidates('proj-1', 'cc-user', ['Client Coordinator'], { page: 1, limit: 10 });
+      await service.getNominatedCandidates('proj-1', 'cc-user', [ROLE_NAMES.AGENT_COORDINATOR], { page: 1, limit: 10 });
 
       const findWhere = (prismaService.candidateProjects.findMany as jest.Mock).mock.calls[0][0]?.where;
       expect(findWhere.projectId).toBe('proj-1');
@@ -539,13 +631,12 @@ describe('ProjectsService', () => {
   describe('update', () => {
     const updateProjectDto: UpdateProjectDto = {
       title: 'Updated Project',
-      status: 'completed',
     };
 
     const mockProject = {
       id: 'project123',
       title: 'Updated Project',
-      status: 'completed',
+      status: 'IN_PROGRESS',
       client: { id: 'client123', name: 'Test Client' },
       creator: { id: 'user123', name: 'Test User' },
       team: { id: 'team123', name: 'Test Team' },
@@ -554,9 +645,13 @@ describe('ProjectsService', () => {
     };
 
     it('should update a project successfully', async () => {
-      prismaService.project.findUnique.mockResolvedValue({
-        id: 'project123',
-      } as any);
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          rolesNeeded: [],
+          candidateProjects: [],
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
       prismaService.project.update.mockResolvedValue(mockProject as any);
 
       const result = await service.update(
@@ -570,7 +665,31 @@ describe('ProjectsService', () => {
         where: { id: 'project123' },
         data: {
           title: 'Updated Project',
-          status: 'completed',
+        },
+        include: expect.any(Object),
+      });
+    });
+
+    it('should not persist status via general update endpoint', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          rolesNeeded: [],
+          candidateProjects: [],
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
+
+      await service.update(
+        'project123',
+        { title: 'Updated Project', status: 'COMPLETED' } as UpdateProjectDto,
+        'user123',
+      );
+
+      expect(prismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project123' },
+        data: {
+          title: 'Updated Project',
         },
         include: expect.any(Object),
       });
@@ -581,6 +700,120 @@ describe('ProjectsService', () => {
 
       await expect(
         service.update('project123', updateProjectDto, 'user123'),
+      ).rejects.toThrow(
+        new NotFoundException('Project with ID project123 not found'),
+      );
+    });
+  });
+
+  describe('updateStatus', () => {
+    const mockProject = {
+      id: 'project123',
+      title: 'Test Project',
+      status: 'ON_HOLD',
+      createdBy: 'user123',
+      client: { id: 'client123', name: 'Test Client' },
+      creator: { id: 'user123', name: 'Test User' },
+      team: null,
+      rolesNeeded: [],
+      documentRequirements: [],
+    };
+
+    it('should update project status successfully', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
+
+      const result = await service.updateStatus(
+        'project123',
+        { status: 'ON_HOLD' },
+        'user123',
+        ['Manager'],
+      );
+
+      expect(result.status).toBe('ON_HOLD');
+      expect(prismaService.project.update).toHaveBeenCalledWith({
+        where: { id: 'project123' },
+        data: { status: 'ON_HOLD' },
+      });
+    });
+
+    it('should return project unchanged when status is the same', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+
+      const result = await service.updateStatus(
+        'project123',
+        { status: 'IN_PROGRESS' },
+        'user123',
+        ['Manager'],
+      );
+
+      expect(result).toEqual(mockProject);
+      expect(prismaService.project.update).not.toHaveBeenCalled();
+    });
+
+    it('should forbid project coordinator updating another users project', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project123',
+        status: 'IN_PROGRESS',
+        createdBy: 'other-user',
+        title: 'Test Project',
+      } as any);
+
+      await expect(
+        service.updateStatus(
+          'project123',
+          { status: 'ON_HOLD' },
+          'user123',
+          ['Project Coordinator'],
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow project coordinator to update own project', async () => {
+      prismaService.project.findUnique
+        .mockResolvedValueOnce({
+          id: 'project123',
+          status: 'IN_PROGRESS',
+          createdBy: 'user123',
+          title: 'Test Project',
+        } as any)
+        .mockResolvedValueOnce(mockProject as any);
+      prismaService.project.update.mockResolvedValue(mockProject as any);
+
+      await service.updateStatus(
+        'project123',
+        { status: 'ON_HOLD' },
+        'user123',
+        ['Project Coordinator'],
+      );
+
+      expect(prismaService.project.update).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when project does not exist', async () => {
+      prismaService.project.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateStatus(
+          'project123',
+          { status: 'ON_HOLD' },
+          'user123',
+          ['Manager'],
+        ),
       ).rejects.toThrow(
         new NotFoundException('Project with ID project123 not found'),
       );
@@ -636,6 +869,8 @@ describe('ProjectsService', () => {
     it('should assign candidate to project successfully', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
@@ -693,6 +928,8 @@ describe('ProjectsService', () => {
     it('should throw NotFoundException when candidate does not exist', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue(null);
 
@@ -706,6 +943,8 @@ describe('ProjectsService', () => {
     it('should throw BadRequestException when agent-sourced candidate lacks AgentProject link', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
@@ -723,6 +962,8 @@ describe('ProjectsService', () => {
     it('should throw ConflictException when candidate is already assigned', async () => {
       prismaService.project.findUnique.mockResolvedValue({
         id: 'project123',
+        status: 'IN_PROGRESS',
+        deadline: new Date('2030-01-01'),
       } as any);
       prismaService.candidate.findUnique.mockResolvedValue({
         id: 'candidate123',
@@ -795,9 +1036,11 @@ describe('ProjectsService', () => {
     it('should return project statistics', async () => {
       prismaService.project.count
         .mockResolvedValueOnce(100) // total
-        .mockResolvedValueOnce(60) // active
+        .mockResolvedValueOnce(60) // in progress
         .mockResolvedValueOnce(30) // completed
-        .mockResolvedValueOnce(10); // cancelled
+        .mockResolvedValueOnce(5) // on hold
+        .mockResolvedValueOnce(10) // cancelled
+        .mockResolvedValueOnce(5); // urgent
 
       prismaService.project.groupBy.mockResolvedValue([
         { clientId: 'client123', _count: { clientId: 50 } },
@@ -815,20 +1058,125 @@ describe('ProjectsService', () => {
 
       expect(result).toEqual({
         totalProjects: 100,
-        activeProjects: 60,
+        inProgressProjects: 60,
         completedProjects: 30,
+        onHoldProjects: 5,
         cancelledProjects: 10,
         projectsByStatus: {
-          active: 60,
-          completed: 30,
-          cancelled: 10,
+          IN_PROGRESS: 60,
+          COMPLETED: 30,
+          ON_HOLD: 5,
+          CANCELLED: 10,
         },
         projectsByClient: {
           client123: { count: 50, name: 'Client client123' },
           client456: { count: 50, name: 'Client client456' },
         },
-        upcomingDeadlines: [],
+        urgentProjectsCount: 5,
       });
+    });
+  });
+
+  describe('createAgentCandidateRequest', () => {
+    it('creates request with valid project roles and publishes outbox event', async () => {
+      const outboxService = (service as any).outboxService as {
+        publishAgentCandidateRequestCreated: jest.Mock;
+      };
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        title: 'ICU Staffing',
+        rolesNeeded: [
+          { id: 'role-1', designation: 'Emergency Nurse', quantity: 5 },
+          { id: 'role-2', designation: 'ICU Nurse', quantity: 5 },
+        ],
+      });
+      prismaService.agentCandidateRequest.create.mockResolvedValue({
+        id: 'req-1',
+        notes: 'Urgent requirement',
+        items: [{ id: 'i1', roleNeededId: 'role-1', requestedCount: 2 }],
+      });
+
+      const result = await service.createAgentCandidateRequest(
+        'project-1',
+        {
+          items: [{ roleNeededId: 'role-1', requestedCount: 2 }],
+          notes: 'Urgent requirement',
+        },
+        'user-1',
+      );
+
+      expect(prismaService.agentCandidateRequest.create).toHaveBeenCalled();
+      expect(outboxService.publishAgentCandidateRequestCreated).toHaveBeenCalled();
+      expect(result.id).toBe('req-1');
+    });
+
+    it('throws when request contains a role outside project roles', async () => {
+      prismaService.project.findUnique.mockResolvedValue({
+        id: 'project-1',
+        title: 'ICU Staffing',
+        rolesNeeded: [{ id: 'role-1', designation: 'Emergency Nurse', quantity: 5 }],
+      });
+
+      await expect(
+        service.createAgentCandidateRequest(
+          'project-1',
+          {
+            items: [{ roleNeededId: 'role-x', requestedCount: 2 }],
+          },
+          'user-1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getProjectRoleFillSummary', () => {
+    it('returns only roles from the latest request, not older requests', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue({
+        items: [
+          {
+            roleNeededId: 'role-emergency',
+            requestedCount: 5,
+            roleNeeded: {
+              designation: 'Emergency Staff Nurse',
+              priority: 'high',
+            },
+          },
+        ],
+      });
+      prismaService.candidateProjects.count.mockResolvedValue(2);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        roleNeededId: 'role-emergency',
+        designation: 'Emergency Staff Nurse',
+        targetCount: 5,
+        filledCount: 2,
+      });
+      expect(prismaService.agentCandidateRequest.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { projectId: 'project-1' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      );
+    });
+
+    it('returns empty data when no requests exist', async () => {
+      prismaService.agentCandidateRequest.findFirst.mockResolvedValue(null);
+
+      const result = await service.getProjectRoleFillSummary(
+        'project-1',
+        'ac-user',
+        [ROLE_NAMES.AGENT_COORDINATOR],
+      );
+
+      expect(result.data).toEqual([]);
+      expect(result.summary).toEqual({ totalFilled: 0, totalTarget: 0 });
     });
   });
 });

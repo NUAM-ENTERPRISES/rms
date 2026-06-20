@@ -84,6 +84,14 @@ const createUserFieldsShape = {
     .min(2, "Name must be at least 2 characters long")
     .max(100, "Name cannot exceed 100 characters"),
 
+  employeeCode: z
+    .string()
+    .min(1, "Employee code is required")
+    .regex(
+      /^AFFEMP\d{2}\d{4}$/,
+      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
+    ),
+
   email: z
     .string()
     .email("Please provide a valid email address")
@@ -130,6 +138,13 @@ const createUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+
+  originalDocumentIntakeEnabled: z.boolean().default(false),
+  courierManagementEnabled: z.boolean().default(false),
+
+  professionTypeIds: z
+    .array(z.string())
+    .min(1, "Select at least one profession type"),
 };
 
 /** When `isRecruiterRole` is true, recruiter language & country rows are validated (mirrors backend rules). */
@@ -172,6 +187,15 @@ const updateUserFieldsShape = {
     .max(100, "Name cannot exceed 100 characters")
     .optional(),
 
+  employeeCode: z
+    .string()
+    .regex(
+      /^AFFEMP\d{2}\d{4}$/,
+      "Employee code must match format AFFEMP01YYYY (e.g., AFFEMP012026)"
+    )
+    .optional()
+    .or(z.literal("")),
+
   email: z
     .string()
     .email("Please provide a valid email address")
@@ -200,6 +224,13 @@ const updateUserFieldsShape = {
 
   recruiterLanguages: z.array(recruiterLanguageRowSchema).default([]),
   recruiterCountryCoverages: z.array(recruiterCountryRowSchema).default([]),
+
+  originalDocumentIntakeEnabled: z.boolean().default(false),
+  courierManagementEnabled: z.boolean().default(false),
+
+  professionTypeIds: z
+    .array(z.string())
+    .min(1, "Select at least one profession type"),
 };
 
 /** When true, validates recruiter language / country rows (Recruiter & Manager forms). */
@@ -235,6 +266,7 @@ export type UpdateUserFormData = z.infer<ReturnType<typeof buildUpdateUserSchema
 // Default values for new user form
 export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   name: "",
+  employeeCode: "",
   email: "",
   password: "",
   confirmPassword: "",
@@ -247,11 +279,13 @@ export const defaultCreateUserValues: Partial<CreateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  professionTypeIds: [],
 };
 
 // Default values for update user form
 export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   name: "",
+  employeeCode: "",
   email: "",
   countryCode: "",
   mobileNumber: "",
@@ -262,4 +296,5 @@ export const defaultUpdateUserValues: Partial<UpdateUserFormData> = {
   address: "",
   recruiterLanguages: [],
   recruiterCountryCoverages: [],
+  professionTypeIds: [],
 };

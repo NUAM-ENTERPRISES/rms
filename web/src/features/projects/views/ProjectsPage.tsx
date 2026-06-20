@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,24 +8,22 @@ import {
 } from "@/features/projects";
 import ProjectStats from "@/components/organisms/ProjectStats";
 import ProjectGrid from "@/components/organisms/ProjectGrid";
+import { ProjectFilters } from "@/components/molecules";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { Project } from "@/features/projects";
-import { Plus, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Plus } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const projectsListRef = useRef<HTMLDivElement>(null);
   const canReadProjects = useCan("read:projects");
   const canCreateProject = useCan(["manage:projects", "write:projects"]);
   const { user } = useAppSelector((state) => state.auth);
   const isProcessingExecutive =
     user?.roles?.some?.((role) => role === "Processing Executive") ?? false;
 
-  // State for search
-  const [searchFocused, setSearchFocused] = useState(false);
-
-  // State for filters and pagination
   const [filters, setFilters] = useState<QueryProjectsRequest>({
     page: 1,
     limit: 12,
@@ -36,10 +34,10 @@ export default function ProjectsPage() {
     isUrgent: undefined,
     clientId: undefined,
     teamId: undefined,
-    countryCode: undefined,
+    deadlineFrom: undefined,
+    deadlineTo: undefined,
   });
 
-  // RTK Query hooks
   const {
     data: projectsData,
     isLoading: projectsLoading,
@@ -52,13 +50,11 @@ export default function ProjectsPage() {
     error: statsError,
   } = useGetProjectStatsQuery();
 
-  // Handle stats selection
   const handleStatsSelect = (statFilters: {
     status?: string;
     isUrgent?: boolean;
     priority?: string;
   }) => {
-    // If empty filter (Total Projects), reset all filters except search and pagination
     if (Object.keys(statFilters).length === 0) {
       setFilters((prev) => ({
         page: 1,
@@ -66,57 +62,75 @@ export default function ProjectsPage() {
         sortBy: prev.sortBy,
         sortOrder: prev.sortOrder,
         search: prev.search,
+        clientId: prev.clientId,
+        teamId: prev.teamId,
+        deadlineFrom: prev.deadlineFrom,
+        deadlineTo: prev.deadlineTo,
+        priority: prev.priority,
       }));
-    } else {
-      // Set new filters, clearing conflicting ones
-      setFilters((prev) => ({
-        page: 1,
-        limit: prev.limit,
-        sortBy: prev.sortBy,
-        sortOrder: prev.sortOrder,
-        search: prev.search,
-        status: statFilters.status as any,
-        isUrgent: statFilters.isUrgent,
-        priority: statFilters.priority as any,
-        // Clear other filters that might conflict
-        clientId: undefined,
-        teamId: undefined,
-        countryCode: undefined,
-      }));
+      projectsListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
     }
+
+    setFilters((prev) => ({
+      page: 1,
+      limit: prev.limit,
+      sortBy: prev.sortBy,
+      sortOrder: prev.sortOrder,
+      search: prev.search,
+      clientId: prev.clientId,
+      teamId: prev.teamId,
+      deadlineFrom: prev.deadlineFrom,
+      deadlineTo: prev.deadlineTo,
+      status: undefined,
+      isUrgent: undefined,
+      priority: undefined,
+      ...(statFilters.status !== undefined && {
+        status: statFilters.status as QueryProjectsRequest["status"],
+      }),
+      ...(statFilters.isUrgent !== undefined && {
+        isUrgent: statFilters.isUrgent,
+      }),
+      ...(statFilters.priority !== undefined && {
+        priority: statFilters.priority as QueryProjectsRequest["priority"],
+      }),
+    }));
+
+    projectsListRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // Get active filter label
   const getActiveFilterLabel = () => {
     if (filters.isUrgent) return "Urgent Deadlines";
-    if (filters.status === "active") return "Active Projects";
-    if (filters.status === "completed") return "Completed Projects";
-    if (filters.status === "cancelled") return "Cancelled Projects";
+    if (filters.status === ProjectStatus.IN_PROGRESS) return "In Progress Projects";
+    if (filters.status === ProjectStatus.COMPLETED) return "Completed Projects";
+    if (filters.status === ProjectStatus.ON_HOLD) return "On Hold Projects";
+    if (filters.status === ProjectStatus.CANCELLED) return "Cancelled Projects";
+    if (filters.clientId) return "Filtered by Client";
+    if (filters.teamId) return "Filtered by Team";
+    if (filters.priority) return `${filters.priority} Priority Projects`;
+    if (filters.deadlineFrom || filters.deadlineTo) return "Deadline Range";
     return "Total Projects";
   };
 
-  // Handle page changes
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  // Handle project actions
   const handleViewProject = (project: Project) => {
     navigate(`/projects/${project.id}`);
   };
 
-  // Error handling
   if (projectsError || statsError) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               {canReadProjects
                 ? "Error Loading Projects"
                 : "Project Access Limited"}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               {canReadProjects
                 ? "There was an error loading the projects. Please try again later."
                 : "You have limited access to project information. Contact your administrator for full access."}
@@ -144,61 +158,45 @@ export default function ProjectsPage() {
               className="px-0"
               onSelect={handleStatsSelect}
               activeFilter={{
-                status: filters.status,
-                isUrgent: filters.isUrgent,
-                priority: filters.priority,
+                ...(filters.status !== undefined && { status: filters.status }),
+                ...(filters.isUrgent !== undefined && {
+                  isUrgent: filters.isUrgent,
+                }),
+                ...(filters.priority !== undefined && {
+                  priority: filters.priority,
+                }),
               }}
             />
           )}
 
         {canReadProjects && (
-          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/50">
+          <div className="rounded-3xl border border-border/60 bg-card shadow-lg shadow-muted/30">
             <div className="p-5">
-              {/* Search Bar */}
-              <div className="relative group">
-                <div
-                  className={`absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none transition-all duration-300 ${
-                    searchFocused ? "text-blue-600" : "text-gray-400"
-                  }`}
-                >
-                  <Search
-                    className={`h-5 w-5 transition-transform duration-300 ${
-                      searchFocused ? "scale-110" : "scale-100"
-                    }`}
-                  />
-                </div>
-                <Input
-                  placeholder="Search projects by title, description, or client..."
-                  value={filters.search || ""}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value, page: 1 }))}
-                  onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  className="pl-14 h-14 text-base border-0 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 focus:from-white focus:to-white focus:ring-2 focus:ring-blue-500/30 focus:shadow-lg transition-all duration-300 rounded-2xl shadow-sm hover:shadow-md"
-                />
-                <div
-                  className={`absolute inset-0 rounded-2xl transition-all duration-300 pointer-events-none ${
-                    searchFocused ? "ring-2 ring-blue-500/20" : ""
-                  }`}
-                />
-              </div>
+              <ProjectFilters
+                filters={filters}
+                onFiltersChange={setFilters}
+              />
             </div>
           </div>
         )}
 
         {canReadProjects ? (
-          <div className="rounded-3xl border border-white/60 bg-white/95 shadow-lg shadow-slate-200/60">
-            <div className="flex flex-col gap-2 border-b border-slate-100/80 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            ref={projectsListRef}
+            className="rounded-3xl border border-border/60 bg-card shadow-lg shadow-muted/30"
+          >
+            <div className="flex flex-col gap-2 border-b border-border p-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
                   Project roster
                 </p>
-                <h2 className="text-xl font-semibold text-slate-900">
+                <h2 className="text-xl font-semibold text-foreground">
                   {getActiveFilterLabel()}
                 </h2>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 {projectsData?.data && (
-                  <span className="text-sm text-slate-500">
+                  <span className="text-sm text-muted-foreground">
                     {projectsData.data.pagination.total}{" "}
                     {projectsData.data.pagination.total === 1
                       ? "project"
@@ -229,11 +227,11 @@ export default function ProjectsPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white/90 p-8 text-center shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">
+          <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center shadow-sm">
+            <h2 className="text-lg font-semibold text-foreground">
               Project access limited
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               You don&apos;t have permission to view project details. Contact
               your administrator to request access.
             </p>

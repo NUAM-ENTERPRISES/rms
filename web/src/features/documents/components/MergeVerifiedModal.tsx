@@ -11,17 +11,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, FileText, RefreshCw, CheckCircle, FileX, Download, Calendar, HardDrive, AlertCircle, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
-import { useGetMergedDocumentQuery, useGetCandidateProjectVerificationsQuery } from "../api";
+import {
+  useGetMergedDocumentQuery,
+  useGetCandidateProjectVerificationsQuery,
+  useGetCandidateProjectRequirementsQuery,
+} from "../api";
 import { PDFViewer } from "@/components/molecules";
 import { formatDistanceToNow } from "date-fns";
 import { Reorder } from "framer-motion";
+import { isPdfMergeableDocument } from "@/constants/document-types";
 
 interface MergeVerifiedModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   candidateId: string;
   projectId: string;
-  roleCatalogId: string;
+  roleCatalogId?: string;
+  candidateProjectMapId?: string;
   onViewDocument: (url: string, name: string) => void;
   onMergeStart?: () => void;
   onMergeEnd?: () => void;
@@ -33,6 +39,7 @@ export function MergeVerifiedModal({
   candidateId,
   projectId,
   roleCatalogId,
+  candidateProjectMapId: candidateProjectMapIdProp,
   onViewDocument,
   onMergeStart,
   onMergeEnd,
@@ -45,45 +52,104 @@ export function MergeVerifiedModal({
   const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
   const token = useAppSelector((state) => state.auth.accessToken);
 
-  // Fetch candidate project verifications with documents
-  const { data: verificationsResponse, isLoading: isLoadingVerifications, error: verificationsError } = useGetCandidateProjectVerificationsQuery(
-    { candidateId, projectId, roleCatalogId, status: 'verified' },
-    { skip: !isOpen || !candidateId || !projectId || !roleCatalogId }
+  const useRoleScopedVerifications = Boolean(isOpen && candidateId && projectId && roleCatalogId);
+  const useRequirementsFallback = Boolean(
+    isOpen && candidateId && projectId && !roleCatalogId,
   );
+
+  const {
+    data: verificationsResponse,
+    isLoading: isLoadingVerifications,
+    error: verificationsError,
+  } = useGetCandidateProjectVerificationsQuery(
+    { candidateId, projectId, roleCatalogId: roleCatalogId!, status: 'verified', limit: 100 },
+    { skip: !useRoleScopedVerifications },
+  );
+
+  const {
+    data: requirementsResponse,
+    isLoading: isLoadingRequirements,
+    error: requirementsError,
+  } = useGetCandidateProjectRequirementsQuery(
+    { candidateId, projectId },
+    { skip: !useRequirementsFallback },
+  );
+
+  const isLoadingVerifiedDocs = useRoleScopedVerifications
+    ? isLoadingVerifications
+    : isLoadingRequirements;
+  const verifiedDocsError = useRoleScopedVerifications
+    ? verificationsError
+    : requirementsError;
 
   // Extract verified documents
   const { verifiedDocuments, activeRoleCatalogId, candidateProjectMapId, candidateName } = useMemo(() => {
-    if (!verificationsResponse?.data) {
-      return { 
-        verifiedDocuments: [], 
-        activeRoleCatalogId: roleCatalogId, 
-        candidateProjectMapId: undefined,
-        candidateName: '' 
+    if (useRoleScopedVerifications && verificationsResponse?.data) {
+      const docs = verificationsResponse.data.verifications
+        .filter((v) => v.status === 'verified' && v.document?.id)
+        .map((v) => v.document)
+        .filter((doc) => isPdfMergeableDocument(doc));
+
+      const candidate = verificationsResponse.data.candidateProject?.candidate;
+      const candidateName = candidate
+        ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim()
+        : '';
+
+      const roleId =
+        verificationsResponse.data.verifications?.[0]?.roleCatalogId ||
+        verificationsResponse.data.candidateProject?.roleNeeded?.roleCatalog?.id ||
+        verificationsResponse.data.roleNeeded?.roleCatalogId ||
+        roleCatalogId;
+
+      return {
+        verifiedDocuments: docs,
+        activeRoleCatalogId: roleId,
+        candidateProjectMapId:
+          candidateProjectMapIdProp || verificationsResponse.data.candidateProject?.id,
+        candidateName,
       };
     }
 
-    const docs = verificationsResponse.data.verifications
-      .filter(v => v.status === 'verified')
-      .map(v => v.document);
+    if (useRequirementsFallback && requirementsResponse?.data) {
+      const docs = (requirementsResponse.data.verifications || [])
+        .filter((v: any) => v.status === 'verified' && v.document?.id)
+        .map((v: any) => v.document)
+        .filter((doc: any) => isPdfMergeableDocument(doc));
 
-    const candidate = verificationsResponse.data.candidateProject?.candidate;
-    const candidateName = candidate 
-      ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim() 
-      : '';
+      const candidate = requirementsResponse.data.candidateProject?.candidate;
+      const candidateName = candidate
+        ? `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim()
+        : '';
 
-    // Get the roleCatalogId from the first verification if available, 
-    // fall back to the one from the candidateProject, then the prop
-    const roleId = verificationsResponse.data.verifications?.[0]?.roleCatalogId || 
-                   verificationsResponse.data.roleNeeded?.roleCatalogId || 
-                   roleCatalogId;
+      const roleId =
+        requirementsResponse.data.candidateProject?.roleNeeded?.roleCatalog?.id ||
+        roleCatalogId;
 
-    return { 
-      verifiedDocuments: docs, 
-      activeRoleCatalogId: roleId,
-      candidateProjectMapId: verificationsResponse.data.candidateProject?.id,
-      candidateName,
+      return {
+        verifiedDocuments: docs,
+        activeRoleCatalogId: roleId,
+        candidateProjectMapId:
+          candidateProjectMapIdProp ||
+          requirementsResponse.data.candidateProject?.id ||
+          requirementsResponse.data.summary?.candidateProjectMapId,
+        candidateName,
+      };
+    }
+
+    return {
+      verifiedDocuments: [],
+      activeRoleCatalogId: roleCatalogId,
+      candidateProjectMapId: candidateProjectMapIdProp,
+      candidateName: '',
     };
-  }, [verificationsResponse, roleCatalogId]);
+  }, [
+    useRoleScopedVerifications,
+    useRequirementsFallback,
+    verificationsResponse,
+    requirementsResponse,
+    roleCatalogId,
+    candidateProjectMapIdProp,
+  ]);
 
   // Sync orderedDocs and selectedDocIds with verifiedDocuments when they are loaded or change
   useEffect(() => {
@@ -297,24 +363,24 @@ export function MergeVerifiedModal({
           <p className="text-blue-100 text-xs mt-0.5">
             {existingMergedDoc 
               ? "A merged document already exists. Download it or regenerate with latest documents."
-              : `Review the ${verifiedDocuments.length} verified documents that will be combined into a single PDF.`
+              : `Review the ${verifiedDocuments.length} verified PDF/image documents that will be combined into a single PDF.`
             }
           </p>
         </DialogHeader>
 
         <div className="px-6 py-4">
           {/* Loading State */}
-          {(isLoadingVerifications || isCheckingMerged) && (
+          {(isLoadingVerifiedDocs || isCheckingMerged) && (
             <div className="flex items-center justify-center py-6">
               <RefreshCw className="h-5 w-5 animate-spin text-blue-500 mr-2" />
               <span className="text-slate-600 text-sm">
-                {isLoadingVerifications ? "Loading verified documents..." : "Checking for existing merged document..."}
+                {isLoadingVerifiedDocs ? "Loading verified documents..." : "Checking for existing merged document..."}
               </span>
             </div>
           )}
 
           {/* Error State */}
-          {verificationsError && !isLoadingVerifications && (
+          {verifiedDocsError && !isLoadingVerifiedDocs && (
             <div className="flex items-center justify-center py-6 px-4">
               <div className="text-center">
                 <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
@@ -324,7 +390,7 @@ export function MergeVerifiedModal({
           )}
 
           {/* Existing Merged Document Card */}
-          {!isLoadingVerifications && !isCheckingMerged && !verificationsError && existingMergedDoc && (
+          {!isLoadingVerifiedDocs && !isCheckingMerged && !verifiedDocsError && existingMergedDoc && (
             <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-emerald-100 rounded-lg">
@@ -356,7 +422,7 @@ export function MergeVerifiedModal({
           )}
 
           {/* Documents Reorderable List */}
-          {!isLoadingVerifications && !verificationsError && (
+          {!isLoadingVerifiedDocs && !verifiedDocsError && (
             <>
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2">

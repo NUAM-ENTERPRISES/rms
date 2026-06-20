@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Briefcase, Save, X } from "lucide-react";
-import { MultiCountrySelect, MultiSelect } from "@/components/molecules";
+import { MultiCountrySelect, MultiSelect, PreferredRoleMultiSelect } from "@/components/molecules";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES } from "@/constants/candidate-constants";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ const jobPreferenceSchema = z.object({
   visaType: z.string().optional(),
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
+  preferredRoles: z.array(z.string()).optional(),
 });
 
 type JobPreferenceFormData = z.infer<typeof jobPreferenceSchema>;
@@ -47,6 +48,9 @@ interface UpdateJobPreferenceModalProps {
     visaType?: string | null;
     preferredCountries?: string[] | null;
     facilityPreferences?: string[] | null;
+    preferredRoles?: string[] | null;
+    preferredRoleLabels?: Record<string, string>;
+    professionTypeName?: string | null;
   };
 }
 
@@ -62,31 +66,33 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<JobPreferenceFormData>({
     resolver: zodResolver(jobPreferenceSchema),
     defaultValues: {
-      expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-      expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
+      expectedSalary: initialData.expectedMinSalary ?? undefined,
       sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
       visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
       preferredCountries: initialData.preferredCountries || [],
       facilityPreferences: initialData.facilityPreferences || [],
+      preferredRoles: initialData.preferredRoles || [],
     },
   });
 
   useEffect(() => {
-    if (isOpen) {
-      reset({
-        expectedMinSalary: initialData.expectedMinSalary ?? undefined,
-        expectedMaxSalary: initialData.expectedMaxSalary ?? undefined,
-        sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
-        visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
-        preferredCountries: initialData.preferredCountries || [],
-        facilityPreferences: initialData.facilityPreferences || [],
-      });
-    }
-  }, [isOpen, initialData, reset]);
+    if (!isOpen) return;
+    reset({
+      expectedSalary: initialData.expectedMinSalary ?? undefined,
+      sectorType: initialData.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
+      visaType: initialData.visaType || VISA_TYPES.NOT_APPLICABLE,
+      preferredCountries: initialData.preferredCountries || [],
+      facilityPreferences: initialData.facilityPreferences || [],
+      preferredRoles: initialData.preferredRoles || [],
+    });
+    // Reset only when the modal opens — not on every parent re-render while editing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, reset]);
 
   const onSubmit = async (data: JobPreferenceFormData) => {
     try {
@@ -97,6 +103,7 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
         visaType: data.visaType,
         preferredCountries: data.preferredCountries,
         facilityPreferences: data.facilityPreferences,
+        preferredRoles: data.preferredRoles,
       }).unwrap();
       toast.success("Job preferences updated successfully");
       onClose();
@@ -216,8 +223,10 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                   <MultiCountrySelect
                     label="Preferred Countries"
                     placeholder="Select countries..."
-                    value={field.value}
-                    onValueChange={field.onChange}
+                    value={field.value ?? []}
+                    onValueChange={(next) =>
+                      setValue("preferredCountries", next, { shouldDirty: true })
+                    }
                     disabled={isLoading}
                     pageSize={20}
                     error={errors.preferredCountries?.message}
@@ -245,10 +254,32 @@ export const UpdateJobPreferenceModal: React.FC<UpdateJobPreferenceModalProps> =
                         label: type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
                       })),
                     ]}
-                    value={field.value}
-                    onValueChange={field.onChange}
+                    value={field.value ?? []}
+                    onValueChange={(next) =>
+                      setValue("facilityPreferences", next, { shouldDirty: true })
+                    }
                     disabled={isLoading}
                     error={errors.facilityPreferences?.message}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Department Preferences */}
+            <div className="md:col-span-2 space-y-2">
+              <Controller
+                name="preferredRoles"
+                control={control}
+                render={({ field }) => (
+                  <PreferredRoleMultiSelect
+                    value={field.value ?? []}
+                    onValueChange={(next) =>
+                      setValue("preferredRoles", next, { shouldDirty: true })
+                    }
+                    optionLabels={initialData.preferredRoleLabels}
+                    professionTypeName={initialData.professionTypeName ?? undefined}
+                    disabled={isLoading}
+                    error={errors.preferredRoles?.message}
                   />
                 )}
               />

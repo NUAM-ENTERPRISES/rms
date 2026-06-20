@@ -6,6 +6,7 @@ import { Bell, Clock, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMarkNotificationRead } from "@/features/notifications/hooks";
 import type { NotificationDto } from "@/features/notifications/data";
+import { resolveNotificationPath } from "@/features/notifications/utils/resolveNotificationPath";
 
 interface NotificationItemProps {
   notification: NotificationDto;
@@ -36,21 +37,9 @@ export default function NotificationItem({
       onMarkAsRead?.();
     }
 
-    // Navigate if link exists
-    if (notification.link) {
-      const candidateId = notification.meta?.candidateId as string | undefined;
-      const link = notification.link;
-
-      if (
-        candidateId &&
-        (link.startsWith('/interviews') || link.startsWith('/candidate-projects'))
-      ) {
-        navigate(`/candidates/${candidateId}`);
-      } else {
-        navigate(link);
-      }
-    } else if (notification.meta?.candidateId) {
-      navigate(`/candidates/${notification.meta.candidateId as string}`);
+    const path = resolveNotificationPath(notification);
+    if (path) {
+      navigate(path);
     }
   };
 

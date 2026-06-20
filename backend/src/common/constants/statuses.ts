@@ -77,6 +77,55 @@ export type CandidateProjectStatus =
   (typeof CANDIDATE_PROJECT_STATUS)[keyof typeof CANDIDATE_PROJECT_STATUS];
 
 /**
+ * Screening + training sub-statuses (under main stage `interview` in DB).
+ * Used to split recruiter dashboard screening workflow from client interview.
+ */
+export const SCREENING_TRAINING_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.SCREENING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_PASSED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_FAILED,
+  CANDIDATE_PROJECT_STATUS.SCREENING_NEEDS_TRAINING,
+  CANDIDATE_PROJECT_STATUS.SCREENING_ON_HOLD,
+  CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+  CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.READY_FOR_REASSESSMENT,
+] as const;
+
+export type ScreeningTrainingSubStatusName =
+  (typeof SCREENING_TRAINING_SUB_STATUS_NAMES)[number];
+
+/**
+ * Client interview sub-statuses (shortlist + client interview rounds).
+ */
+export const CLIENT_INTERVIEW_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.SHORTLISTED,
+  CANDIDATE_PROJECT_STATUS.NOT_SHORTLISTED,
+  'interview_assigned',
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_SCHEDULED,
+  'interview_rescheduled',
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_COMPLETED,
+  CANDIDATE_PROJECT_STATUS.INTERVIEW_PASSED,
+  'interview_failed',
+  'interview_backout',
+  'interview_selected',
+] as const;
+
+export type ClientInterviewSubStatusName =
+  (typeof CLIENT_INTERVIEW_SUB_STATUS_NAMES)[number];
+
+/** Training-only sub-status names for grouped dashboard tile counts. */
+export const TRAINING_SUB_STATUS_NAMES = [
+  CANDIDATE_PROJECT_STATUS.TRAINING_ASSIGNED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_SCHEDULED,
+  CANDIDATE_PROJECT_STATUS.TRAINING_IN_PROGRESS,
+  CANDIDATE_PROJECT_STATUS.TRAINING_COMPLETED,
+] as const;
+
+/**
  * Valid state transitions for Candidate-Project status
  * Enforces workflow rules and prevents invalid transitions
  */
@@ -221,6 +270,221 @@ export const CANDIDATE_PROJECT_STATUS_TRANSITIONS: Record<
   [CANDIDATE_PROJECT_STATUS.REJECTED_SELECTION]: [],
   [CANDIDATE_PROJECT_STATUS.WITHDRAWN]: [],
 };
+
+/** Main statuses that block forward pipeline actions (verification, screening, interview, etc.). */
+export const CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES = [
+  CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  CANDIDATE_PROJECT_STATUS.ON_HOLD,
+] as const;
+
+export type CandidateProjectPipelineBlockedMainStatus =
+  (typeof CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES)[number];
+
+export const CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export const CANDIDATE_PROJECT_STATUS_CHANGE_TARGET_STATUSES = [
+  CANDIDATE_PROJECT_STATUS.WITHDRAWN,
+  CANDIDATE_PROJECT_STATUS.ON_HOLD,
+] as const;
+
+export type CandidateProjectStatusChangeTargetStatus =
+  (typeof CANDIDATE_PROJECT_STATUS_CHANGE_TARGET_STATUSES)[number];
+
+/**
+ * Request types for status change workflow
+ * - block: Any Withdrawn/On Hold request (from active OR already blocked)
+ * - reactivate: Return to last active status
+ */
+export const STATUS_CHANGE_REQUEST_TYPES = {
+  BLOCK: 'block',
+  REACTIVATE: 'reactivate',
+  PROCESSING_CANCEL: 'processing_cancel',
+  PROCESSING_HOLD: 'processing_hold',
+  PROCESSING_REACTIVATE: 'processing_reactivate',
+} as const;
+
+export type StatusChangeRequestType =
+  (typeof STATUS_CHANGE_REQUEST_TYPES)[keyof typeof STATUS_CHANGE_REQUEST_TYPES];
+
+export const PROCESSING_STATUS_CHANGE_TARGET_STATUSES = [
+  'processing_cancelled',
+  'processing_hold',
+  'processing_in_progress',
+] as const;
+
+/** Sub-statuses that block new project assignment and cross-project pipeline actions. */
+export const CANDIDATE_PROJECT_ASSIGNMENT_BLOCKED_SUB_STATUSES = [
+  'processing_in_progress',
+] as const;
+
+export type ProcessingAssignmentConflict = {
+  projectId: string;
+  projectTitle: string;
+} | null;
+
+export function buildProcessingAssignmentBlockMessage(
+  activeProjectTitle: string,
+): string {
+  return `This candidate is being processed on "${activeProjectTitle}". Assign them to another project only after processing is completed, put on hold, or cancelled on that project.`;
+}
+
+export function buildProcessingPipelineBlockMessage(
+  activeProjectTitle: string,
+  currentProjectTitle?: string,
+): string {
+  const suffix = currentProjectTitle
+    ? ` on "${currentProjectTitle}"`
+    : ' on this project';
+  return `Pipeline is paused here because this candidate has Processing In Progress on "${activeProjectTitle}". Complete, hold, or cancel processing there before continuing${suffix}.`;
+}
+
+export function isPipelineBlockedOnProject(
+  conflict: ProcessingAssignmentConflict,
+  targetProjectId: string,
+): boolean {
+  if (!conflict) return false;
+  return conflict.projectId !== targetProjectId;
+}
+
+export type ProcessingStatusChangeTargetStatus =
+  (typeof PROCESSING_STATUS_CHANGE_TARGET_STATUSES)[number];
+
+export const PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST = [
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
+] as const;
+
+export function isProcessingStatusChangeRequestType(
+  requestType: string,
+): boolean {
+  return (
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL ||
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD ||
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE
+  );
+}
+
+const PROCESSING_CANCEL_ALLOWED_STATUSES = ['assigned', 'in_progress', 'on_hold'] as const;
+const PROCESSING_HOLD_ALLOWED_STATUSES = ['assigned', 'in_progress', 'cancelled'] as const;
+const PROCESSING_REACTIVATE_ALLOWED_STATUSES = ['cancelled', 'on_hold'] as const;
+
+export function isProcessingStatusTransitionAllowed(
+  requestType: string,
+  processingStatus: string,
+): boolean {
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
+    return (PROCESSING_CANCEL_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
+    return (PROCESSING_HOLD_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+    return (PROCESSING_REACTIVATE_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  return false;
+}
+
+export function getProcessingStatusChangeActionLabel(requestType: string): string {
+  switch (requestType) {
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL:
+      return 'cancellation';
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD:
+      return 'hold';
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE:
+      return 'reactivation';
+    default:
+      return 'status change';
+  }
+}
+
+export function getProcessingStatusChangeRecruiterNotification(params: {
+  requestType: string;
+  outcome: 'approved' | 'rejected';
+  candidateName: string;
+  projectTitle: string;
+  reviewNotes?: string | null;
+}): { title: string; message: string } {
+  const { requestType, outcome, candidateName, projectTitle, reviewNotes } =
+    params;
+  const remarks = reviewNotes?.trim() ? ` Remarks: ${reviewNotes.trim()}` : '';
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing Cancelled',
+        message: `${candidateName} — processing cancelled for project "${projectTitle}". Please inform the candidate for other details.`,
+      };
+    }
+    return {
+      title: 'Processing Cancellation Rejected',
+      message: `Processing cancellation request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing On Hold',
+        message: `${candidateName} — processing put on hold for project "${projectTitle}". Please review candidate project details.`,
+      };
+    }
+    return {
+      title: 'Processing Hold Rejected',
+      message: `Processing hold request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing Reactivated',
+        message: `${candidateName} — processing reactivated for project "${projectTitle}".`,
+      };
+    }
+    return {
+      title: 'Processing Reactivation Rejected',
+      message: `Processing reactivation request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  return {
+    title:
+      outcome === 'approved'
+        ? 'Processing Status Change Approved'
+        : 'Processing Status Change Rejected',
+    message:
+      outcome === 'approved'
+        ? `Processing status change for ${candidateName} on "${projectTitle}" was approved.${remarks}`
+        : `Processing status change for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+  };
+}
+
+export function buildCandidateProjectNotificationLink(
+  candidateId: string,
+  projectId: string,
+): string {
+  return `/candidate-project/${candidateId}/projects/${projectId}`;
+}
+
+export function isCandidateProjectPipelineBlocked(
+  mainStatusName: string | null | undefined,
+): boolean {
+  if (!mainStatusName) return false;
+  return (CANDIDATE_PROJECT_PIPELINE_BLOCKED_MAIN_STATUSES as readonly string[]).includes(
+    mainStatusName,
+  );
+}
 
 /**
  * Helper to validate if a status transition is allowed
@@ -457,6 +721,7 @@ export const CANDIDATE_STATUS = {
   FUTURE: 'future',
   ON_HOLD: 'on_hold',
   RNR: 'rnr', // Ringing No Response
+  CALL_BACK: 'call_back',
 
   // Qualification status
   QUALIFIED: 'qualified',
@@ -546,10 +811,18 @@ export const CANDIDATE_STATUS_CONFIG: Record<CandidateStatus, StatusConfig> = {
   },
   [CANDIDATE_STATUS.RNR]: {
     label: 'RNR',
-    description: 'Ringing No Response - requires CRE handling',
+    description: 'Ringing No Response - requires Operations handling',
     color: 'red',
     badgeClass: 'bg-red-50 text-red-700 border-red-200',
     icon: 'PhoneOff',
+    priority: 'urgent',
+  },
+  [CANDIDATE_STATUS.CALL_BACK]: {
+    label: 'Call Back',
+    description: 'Scheduled callback with the candidate',
+    color: 'cyan',
+    badgeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    icon: 'Phone',
     priority: 'urgent',
   },
   [CANDIDATE_STATUS.QUALIFIED]: {
@@ -745,6 +1018,7 @@ export function getCandidateStatusPriority(
     [CANDIDATE_STATUS.UNTOUCHED]: 'high',
     [CANDIDATE_STATUS.INTERESTED]: 'high',
     [CANDIDATE_STATUS.RNR]: 'urgent',
+    [CANDIDATE_STATUS.CALL_BACK]: 'urgent',
     [CANDIDATE_STATUS.ON_HOLD]: 'medium',
     [CANDIDATE_STATUS.FUTURE]: 'low',
     [CANDIDATE_STATUS.OTHER_ENQUIRY]: 'medium',

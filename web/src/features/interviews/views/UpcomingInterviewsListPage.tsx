@@ -1,3 +1,4 @@
+import { ProjectStatus } from "@/entities/project/constants";
 import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { useGetUpcomingInterviewsQuery } from "../api";
 import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
+import { ProjectStatus } from "@/entities/project/constants";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import InterviewHistory from "@/components/molecules/InterviewHistory";
 import { useGetInterviewHistoryQuery } from "../api";
@@ -95,7 +97,7 @@ export default function UpcomingInterviewsListPage() {
 
   const { data: projectsData } = useGetProjectsQuery({ 
     limit: 10, 
-    status: "active" 
+    status: ProjectStatus.IN_PROGRESS 
   });
   
   const { data: projectDetails } = useGetProjectQuery(filters.projectId || "", {

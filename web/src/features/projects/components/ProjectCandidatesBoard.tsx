@@ -31,9 +31,21 @@ import {
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
 import { useDebounce } from "@/hooks/useDebounce";
+import { ROLE_NAMES } from "@/config/role-names";
+import { cn } from "@/lib/utils";
 import CandidateCard, {
   CandidateRecord,
 } from "@/features/projects/components/CandidateCard";
+import {
+  getCandidateAssignmentBlockReason,
+  getCandidateStatusLabel,
+  getProcessingBlockReasonForCandidate,
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  isCandidatePositiveForAssignment,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
+import { isRecruiterLockedRnrCandidate } from "@/features/candidates/utils/recruiter-candidate-pipeline.util";
 
 type CandidateColumnType = "nominated" | "eligible" | "all";
 
@@ -51,6 +63,206 @@ type ProjectAssignment = {
     name?: string;
   };
 };
+
+const normalizeRegisteredStatus = (statusRaw: string) => {
+  const raw = (statusRaw || "").toString().trim().toLowerCase();
+  return {
+    raw,
+    underscored: raw.replace(/[\s-]+/g, "_"),
+    compact: raw.replace(/[\s_-]+/g, ""),
+  };
+};
+
+const isRegisteredProcessingStatus = (statusRaw: string) => {
+  const { raw, underscored } = normalizeRegisteredStatus(statusRaw);
+  return (
+    underscored === "processing" ||
+    underscored.startsWith("processing_") ||
+    raw.includes("processing")
+  );
+};
+
+export type PipelineStatusCardAccent = {
+  cardClass: string;
+  isProcessing: boolean;
+};
+
+const isNominatedPipelineStatus = (statusRaw: string) => {
+  const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
+  return (
+    underscored === "nominated" ||
+    underscored.startsWith("nominated_") ||
+    compact.startsWith("nominated") ||
+    raw.includes("nominated")
+  );
+};
+
+/** Card background accents by pipeline / global status (Tailwind tokens only). */
+export const getPipelineStatusCardClass = (
+  statusRaw: string,
+  options?: {
+    columnId?: CandidateColumnType;
+    isAssigned?: boolean;
+    isNominated?: boolean;
+  },
+): PipelineStatusCardAccent => {
+  const { raw, underscored, compact } = normalizeRegisteredStatus(statusRaw);
+  const { columnId, isAssigned, isNominated } = options ?? {};
+
+  const base =
+    "pipeline-status-accent border border-l-0 shadow-sm backdrop-blur-sm transition-colors duration-200";
+
+  // Eligible pool (column or unmatched pre-assignment)
+  if (
+    columnId === "eligible" &&
+    (!raw || !isAssigned)
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  if (!raw) {
+    if (columnId === "nominated" && isAssigned && isNominated) {
+      return {
+        cardClass: cn(
+          base,
+          "bg-purple-100 border-purple-300/80",
+        ),
+        isProcessing: false,
+      };
+    }
+    return { cardClass: "", isProcessing: false };
+  }
+
+  // Deployed
+  if (
+    underscored === "deployed" ||
+    underscored === "hired" ||
+    compact === "deployed" ||
+    raw.includes("deployed")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-green-50 bg-gradient-to-br from-green-50 via-emerald-50 to-emerald-100 border-green-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Processing
+  if (isRegisteredProcessingStatus(statusRaw)) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-orange-50 bg-gradient-to-br from-orange-50 via-amber-50 to-amber-100 border-orange-200/80",
+      ),
+      isProcessing: true,
+    };
+  }
+
+  // Trainer / training
+  if (
+    underscored.startsWith("training_") ||
+    underscored.startsWith("trainer_") ||
+    raw.includes("training") ||
+    raw.includes("trainer")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-stone-100 bg-gradient-to-br from-stone-100 via-amber-50 to-stone-50 border-stone-300/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Interview & screening
+  if (
+    underscored.startsWith("interview_") ||
+    underscored.startsWith("screening_") ||
+    raw.includes("interview") ||
+    raw.includes("screening")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-violet-50 bg-gradient-to-br from-violet-50 via-purple-50 to-purple-100 border-violet-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Documentation & verification
+  if (
+    underscored === "pending_documents" ||
+    underscored === "documents_submitted" ||
+    underscored === "verification_in_progress" ||
+    underscored === "documents_verified" ||
+    underscored.includes("document") ||
+    underscored.includes("verification") ||
+    compact === "pendingdocuments" ||
+    compact === "verificationinprogress"
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-red-50 bg-gradient-to-br from-red-50 via-rose-50 to-rose-100 border-red-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Nominated / profile shortlisting
+  if (isNominatedPipelineStatus(statusRaw) || isNominated) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-purple-100 border-purple-300/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  // Eligible / positive CRM statuses
+  if (
+    underscored === "interested" ||
+    underscored === "qualified" ||
+    underscored === "future" ||
+    underscored === "on_hold" ||
+    raw.includes("eligible")
+  ) {
+    return {
+      cardClass: cn(
+        base,
+        "bg-blue-50 bg-gradient-to-br from-blue-50 via-sky-50 to-sky-100 border-blue-200/80",
+      ),
+      isProcessing: false,
+    };
+  }
+
+  return { cardClass: "", isProcessing: false };
+};
+
+const getCardStatusRaw = (
+  candidate: CandidateRecord,
+  assignmentInfo?: { projectStatus?: string; isAssigned?: boolean },
+) =>
+  (
+    candidate.projectSubStatus?.label ||
+    candidate.projectSubStatus?.name ||
+    candidate.projectSubStatus?.statusName ||
+    candidate.currentProjectStatus?.statusName ||
+    candidate.projectStatus?.statusName ||
+    assignmentInfo?.projectStatus ||
+    getCandidateStatusLabel(candidate) ||
+    ""
+  ).toString();
 
 
 interface ProjectCandidatesBoardProps {
@@ -254,13 +466,15 @@ const buildAssignmentInfo = (
     assignmentFromManager?.mainStatus?.name ||
     candidate.projectMainStatus?.name;
 
+  const candidateGlobalStatus = getCandidateStatusLabel(candidate);
+
   const projectStatusToShow = isAssigned
     ? subStatusLabel ||
       subStatusName ||
       currentProjectStatus ||
       mainStatus ||
       "assigned"
-    : "not_in_project";
+    : candidateGlobalStatus || "not_in_project";
 
   const isNominated =
     isAssigned &&
@@ -328,10 +542,14 @@ const ProjectCandidatesBoard = ({
 }: ProjectCandidatesBoardProps) => {
   const { user } = useAppSelector((state) => state.auth);
   const isRecruiter = user?.roles?.includes("Recruiter") ?? false;
-  const isClientCoordinator = user?.roles?.includes("Client Coordinator") ?? false;
+  const isAgentCoordinator =
+    user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR) ?? false;
   /** Same project-board actions as recruiter: assign, verify, upload docs, bulk assign */
-  const canUseRecruiterPipelineActions = isRecruiter || isClientCoordinator;
+  const canUseRecruiterPipelineActions = isRecruiter || isAgentCoordinator;
   const isInterviewCoordinator = user?.roles?.includes("Interview Coordinator") ?? false;
+  const pipelineOpen = isProjectOpenForPipelineActions(project);
+  const pipelineClosureMessage = getProjectClosureMessage(project);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(project);
 
   const [selectedEligibleIds, setSelectedEligibleIds] = useState<Set<string>>(new Set());
   const [selectedNominatedIds, setSelectedNominatedIds] = useState<Set<string>>(new Set());
@@ -358,7 +576,12 @@ const ProjectCandidatesBoard = ({
     const candidateId = e.dataTransfer.getData("candidateId");
     
     // Only handle drop to "nominated" column
-    if (columnId === "nominated" && candidateId && canUseRecruiterPipelineActions) {
+    if (
+      columnId === "nominated" &&
+      candidateId &&
+      canUseRecruiterPipelineActions &&
+      pipelineOpen
+    ) {
       // Find candidate in eligible or all candidates
       const candidate = [...eligibleCandidates, ...allCandidates].find(
         (c) => (c.candidateId || c.id) === candidateId
@@ -372,7 +595,7 @@ const ProjectCandidatesBoard = ({
 
   const isManager =
     user?.roles?.some((role) =>
-      ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+      ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
     ) ?? false;
 
   const { data: eligibleResponse, isLoading: isLoadingEligible } =
@@ -382,9 +605,10 @@ const ProjectCandidatesBoard = ({
       roleCatalogId: selectedRole !== "all" ? selectedRole : undefined,
       page: eligiblePage,
       limit: PAGE_SIZE,
-    }, { 
+    }, {
+      skip: !pipelineOpen,
       refetchOnFocus: false,
-      refetchOnMountOrArgChange: false
+      refetchOnMountOrArgChange: false,
     });
 
   const consolidatedCandidatesQuery = useGetConsolidatedCandidatesQuery({
@@ -534,11 +758,24 @@ const ProjectCandidatesBoard = ({
         const assignmentInfo = buildAssignmentInfo(candidate, projectId, managerAssignments, assignedToProjectIds);
         const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
         const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-        const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+        const statusLabel = getCandidateStatusLabel(candidate);
+        const isPositiveStatus = isCandidatePositiveForAssignment(statusLabel);
+        const processingBlockReason = getProcessingBlockReasonForCandidate({
+          eligibilityData,
+          projectId,
+          projectTitle: project?.title,
+          context: "assign",
+          isAssignedOnProject: assignmentInfo.isAssigned,
+        });
+        const isNotEligible =
+          !isPositiveStatus ||
+          eligibilityData?.isEligible === false ||
+          !anyRoleEligible ||
+          Boolean(processingBlockReason);
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
-  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions]);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions, project?.title]);
 
   const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
     selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
@@ -578,6 +815,12 @@ const ProjectCandidatesBoard = ({
   const selectableNominatedCandidates = useMemo(() => {
     if (!isInterviewCoordinator) return [];
     return sanitizedNominated.filter((candidate) => {
+      const candidateId = candidate.candidateId || candidate.id || "";
+      const eligibilityData = eligibilityMap.get(candidateId);
+      if (eligibilityData?.pipelineBlockedOnThisProject) {
+        return false;
+      }
+
       const subStatusName =
         candidate.projectSubStatus?.name ||
         candidate.projectSubStatus?.statusName ||
@@ -594,7 +837,7 @@ const ProjectCandidatesBoard = ({
         subStatusName.startsWith("nominated_initial")
       );
     });
-  }, [sanitizedNominated, isInterviewCoordinator]);
+  }, [sanitizedNominated, isInterviewCoordinator, eligibilityMap]);
 
   const toggleSelectAllNominated = () => {
     if (selectedNominatedIds.size === selectableNominatedCandidates.length) {
@@ -646,7 +889,17 @@ const ProjectCandidatesBoard = ({
 
           const candidateWithProject = {
             ...candidate,
-            project: candidate.project || project,
+            project: {
+              ...(candidate.project || project),
+              introductionVideoRequired:
+                project?.introductionVideoRequired ??
+                candidate.project?.introductionVideoRequired ??
+                false,
+              documentRequirements:
+                candidate.project?.documentRequirements ??
+                project?.documentRequirements ??
+                [],
+            },
           };
 
           const subStatusName =
@@ -665,35 +918,71 @@ const ProjectCandidatesBoard = ({
 
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
-          const showVerifyButton = subStatusName === "nominated_initial";
-          const showInterviewButton = subStatusName === "documents_verified";
-          const hasProject = Boolean(candidate.project);
+          const nominatedEligibilityData = eligibilityMap.get(candidateId);
+          const pipelineBlockedByProcessing = Boolean(
+            nominatedEligibilityData?.pipelineBlockedOnThisProject,
+          );
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData: nominatedEligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "pipeline",
+            isAssignedOnProject: true,
+          });
 
-          const actions = (requiredScreening && !isAlreadyInScreening && isInterviewCoordinator)
-            ? [
-                {
-                  label: "Send for Direct Screening",
-                  action: "send_for_screening",
-                  variant: "default" as const,
-                  icon: Send,
-                },
-              ]
-            : [];
+          const showVerifyButton =
+            pipelineOpen &&
+            !pipelineBlockedByProcessing &&
+            subStatusName === "nominated_initial";
+          const showInterviewButton =
+            pipelineOpen &&
+            !pipelineBlockedByProcessing &&
+            subStatusName === "documents_verified";
+
+          const actions =
+            pipelineOpen &&
+            !pipelineBlockedByProcessing &&
+            requiredScreening &&
+            !isAlreadyInScreening &&
+            isInterviewCoordinator
+              ? [
+                  {
+                    label: "Send for Direct Screening",
+                    action: "send_for_screening",
+                    variant: "default" as const,
+                    icon: Send,
+                  },
+                ]
+              : [];
 
           const isSelectable = selectableNominatedCandidates.some(c => (c.candidateId || c.id) === candidateId);
           const isSelected = selectedNominatedIds.has(candidateId);
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "nominated",
+            isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
+          });
 
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
-              className={isSelected ? "ring-1 ring-purple-400/60 bg-purple-50/30" : ""}
+              processingBlockReason={processingBlockReason}
+              pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+              assignmentBlockReason={processingBlockReason?.fullMessage}
+              eligibilityData={nominatedEligibilityData}
+              showProcessingGlance={statusAccent.isProcessing}
+              className={cn(
+                isSelected ? "ring-1 ring-purple-400/60" : "",
+                statusAccent.cardClass,
+              )}
               selected={isSelectable ? isSelected : undefined}
               onSelect={isSelectable ? () => toggleSelectNominated(candidateId) : undefined}
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
-              showAgentName={isClientCoordinator}
+              showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(candidateId)}
               onAction={(id, action) => {
@@ -720,7 +1009,7 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={!hasProject}
+              showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) =>
                 onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)
               }
@@ -732,7 +1021,7 @@ const ProjectCandidatesBoard = ({
               onSendForInterview={(id) =>
                 onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
               }
-              isAlreadyInProject={hasProject}
+              isAlreadyInProject={assignmentInfo.isAssigned}
               eligibilityData={eligibilityMap.get(candidateId)}
             />
           );
@@ -793,29 +1082,68 @@ const ProjectCandidatesBoard = ({
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
           const showInterviewButton =
-            candidate.projectSubStatus?.name === "documents_verified" ||
-            candidate.projectSubStatus?.statusName === "documents_verified";
+            pipelineOpen &&
+            (candidate.projectSubStatus?.name === "documents_verified" ||
+              candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+          const statusLabel = getCandidateStatusLabel(candidate);
+          const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "assign",
+            isAssignedOnProject: assignmentInfo.isAssigned,
+          });
+          const pipelineBlockedByProcessing = Boolean(
+            eligibilityData?.pipelineBlockedOnThisProject,
+          );
+          const isNotEligible =
+            !isPositiveForAssignment ||
+            eligibilityData?.isEligible === false ||
+            !anyRoleEligible ||
+            isRecruiterRnrLocked ||
+            Boolean(processingBlockReason);
+          const assignmentBlockReason =
+            processingBlockReason?.fullMessage ??
+            getCandidateAssignmentBlockReason(
+              statusLabel,
+              { isCREReassigned: candidate.isCREReassigned },
+            );
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
-          const canSelect = !assignmentInfo.isAssigned && !isNotEligible;
+          const canSelect =
+            pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible;
 
           const isSelected = selectedEligibleIds.has(assignmentInfo.candidateId);
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "eligible",
+            isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
+          });
 
           return (
               <CandidateCard
                 key={`eligible-${assignmentInfo.candidateId}`}
-                className={isSelected ? "ring-1 ring-emerald-400/60 bg-emerald-50/30" : ""}
+                assignmentBlockReason={assignmentBlockReason}
+                processingBlockReason={processingBlockReason}
+                pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+                showProcessingGlance={statusAccent.isProcessing}
+                className={cn(
+                  isSelected ? "ring-1 ring-blue-400/60" : "",
+                  statusAccent.cardClass,
+                )}
                 selected={canSelect ? isSelected : undefined}
                 onSelect={canSelect ? () => toggleSelectEligible(assignmentInfo.candidateId) : undefined}
                 candidate={candidateWithProject}
                 projectId={projectId}
                 isRecruiter={canUseRecruiterPipelineActions}
                 hideContactInfo={hideContactInfo}
-                showAgentName={isClientCoordinator}
+                showAgentName={isAgentCoordinator}
                 searchTerm={searchTerm}
                 onView={() => onViewCandidate(assignmentInfo.candidateId)}
                 onAction={(id, action) => {
@@ -834,14 +1162,18 @@ const ProjectCandidatesBoard = ({
                 onVerify={() =>
                   onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
                 }
-                showAssignButton={!assignmentInfo.isAssigned}
+                showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
                 onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
-                onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
+                onDragStart={
+                  pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
+                    ? handleDragStart
+                    : undefined
+                }
                 showSkipDocumentVerification={shouldSkipDocVerification}
                 skipDocumentVerificationMessage={
                   "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
                 }
-                showInterviewButton={showInterviewButton}
+                showInterviewButton={showInterviewButton && !pipelineBlockedByProcessing}
                 onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
                 isAlreadyInProject={assignmentInfo.isAssigned}
                 showDocumentStatus={false}
@@ -915,21 +1247,57 @@ const ProjectCandidatesBoard = ({
             assignmentInfo.shouldSkipDocumentVerification === true
           );
           const showInterviewButton =
-            candidate.projectSubStatus?.name === "documents_verified" ||
-            candidate.projectSubStatus?.statusName === "documents_verified";
+            pipelineOpen &&
+            (candidate.projectSubStatus?.name === "documents_verified" ||
+              candidate.projectSubStatus?.statusName === "documents_verified");
 
           const eligibilityData = eligibilityMap.get(assignmentInfo.candidateId);
           const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
-          const isNotEligible = eligibilityData?.isEligible === false || !anyRoleEligible;
+          const statusLabel = getCandidateStatusLabel(candidate);
+          const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
+          const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "assign",
+            isAssignedOnProject: assignmentInfo.isAssigned,
+          });
+          const pipelineBlockedByProcessing = Boolean(
+            eligibilityData?.pipelineBlockedOnThisProject,
+          );
+          const isNotEligible =
+            !isPositiveForAssignment ||
+            eligibilityData?.isEligible === false ||
+            !anyRoleEligible ||
+            isRecruiterRnrLocked ||
+            Boolean(processingBlockReason);
+          const assignmentBlockReason =
+            processingBlockReason?.fullMessage ??
+            getCandidateAssignmentBlockReason(
+              statusLabel,
+              { isCREReassigned: candidate.isCREReassigned },
+            );
+          const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
+          const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
+            columnId: "all",
+            isAssigned: assignmentInfo.isAssigned,
+            isNominated: assignmentInfo.isNominated,
+          });
 
           return (
             <CandidateCard
               key={`all-${assignmentInfo.candidateId}`}
+              assignmentBlockReason={assignmentBlockReason}
+              processingBlockReason={processingBlockReason}
+              pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+              showProcessingGlance={statusAccent.isProcessing}
+              className={statusAccent.cardClass}
               candidate={candidateWithProject}
               projectId={projectId}
               isRecruiter={canUseRecruiterPipelineActions}
               hideContactInfo={hideContactInfo}
-              showAgentName={isClientCoordinator}
+              showAgentName={isAgentCoordinator}
               searchTerm={searchTerm}
               onView={() => onViewCandidate(assignmentInfo.candidateId)}
               onAction={(id, action) => {
@@ -946,14 +1314,18 @@ const ProjectCandidatesBoard = ({
               onVerify={() =>
                 onVerifyCandidate(assignmentInfo.candidateId, `${candidate.firstName} ${candidate.lastName}`)
               }
-              showAssignButton={!assignmentInfo.isAssigned}
+              showAssignButton={pipelineOpen && !assignmentInfo.isAssigned}
               onAssignToProject={(id) => onAssignCandidate(id, `${candidate.firstName} ${candidate.lastName}`)}
-              onDragStart={(!assignmentInfo.isAssigned && !isNotEligible) ? handleDragStart : undefined}
+              onDragStart={
+                pipelineOpen && !assignmentInfo.isAssigned && !isNotEligible
+                  ? handleDragStart
+                  : undefined
+              }
               showSkipDocumentVerification={shouldSkipDocVerification}
               skipDocumentVerificationMessage={
                 "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
               }
-              showInterviewButton={showInterviewButton}
+              showInterviewButton={showInterviewButton && !pipelineBlockedByProcessing}
               onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}
@@ -991,8 +1363,8 @@ const ProjectCandidatesBoard = ({
   }> = [
     {
       id: "nominated",
-      title: "Registered",
-      subtitle: "Currently cv registered to this project",
+      title: "Profile Shortlisting",
+      subtitle: "Currently cv Shortlisted to this project",
       count: nominatedTotal ?? sanitizedNominated.length,
       content: renderNominatedColumn(),
       ariaLabel: "Nominated candidates column",
@@ -1012,7 +1384,7 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {selectedNominatedIds.size > 0 && requiredScreening && isInterviewCoordinator && (
+          {pipelineOpen && selectedNominatedIds.size > 0 && requiredScreening && isInterviewCoordinator && (
             <Button
               size="sm"
               className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-purple-600 text-white shadow-sm hover:bg-purple-700 transition-colors"
@@ -1033,9 +1405,9 @@ const ProjectCandidatesBoard = ({
       content: renderEligibleColumn(),
       ariaLabel: "Eligible candidates column",
       icon: ShieldCheck,
-      iconClasses: "bg-emerald-100 text-emerald-600",
+      iconClasses: "bg-blue-100 text-blue-600",
       headerExtra: selectableEligibleCandidates.length > 0 ? (
-        <div className="flex items-center justify-between px-4 py-1.5 border-t border-emerald-100/60 bg-emerald-50/40">
+        <div className="flex items-center justify-between px-4 py-1.5 border-t border-blue-100/60 bg-blue-50/40">
           <label
             htmlFor="select-all-eligible"
             className="flex items-center gap-1.5 cursor-pointer select-none"
@@ -1044,7 +1416,7 @@ const ProjectCandidatesBoard = ({
               id="select-all-eligible"
               checked={allSelectableSelected}
               onCheckedChange={toggleSelectAllEligible}
-              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+              className="h-3.5 w-3.5 rounded-[3px] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
             />
             <span className="text-[11px] font-medium text-slate-500">
               {selectedEligibleIds.size > 0
@@ -1052,10 +1424,10 @@ const ProjectCandidatesBoard = ({
                 : `Select all`}
             </span>
           </label>
-          {selectedEligibleIds.size > 0 && (
+          {pipelineOpen && selectedEligibleIds.size > 0 && (
             <Button
               size="sm"
-              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors"
+              className="h-6 gap-1 px-2 text-[11px] font-semibold rounded-md bg-blue-600 text-white shadow-sm hover:bg-blue-700 transition-colors"
               onClick={() => onBulkAssign?.(Array.from(selectedEligibleIds))}
             >
               <UserPlus className="h-3 w-3" />
@@ -1086,12 +1458,28 @@ const ProjectCandidatesBoard = ({
   // Column-specific gradient configs
   const columnGradients: Record<CandidateColumnType, { bg: string; border: string; countBg: string; countText: string }> = {
     nominated: { bg: "bg-gradient-to-br from-amber-50/80 to-orange-50/40", border: "border-amber-100/60", countBg: "bg-amber-100", countText: "text-amber-700" },
-    eligible: { bg: "bg-gradient-to-br from-emerald-50/80 to-green-50/40", border: "border-emerald-100/60", countBg: "bg-emerald-100", countText: "text-emerald-700" },
+    eligible: { bg: "bg-gradient-to-br from-blue-50/80 to-sky-50/40", border: "border-blue-100/60", countBg: "bg-blue-100", countText: "text-blue-700" },
     all: { bg: "bg-gradient-to-br from-sky-50/80 to-blue-50/40", border: "border-sky-100/60", countBg: "bg-sky-100", countText: "text-sky-700" },
   };
 
   return (
     <div className="space-y-5">
+      {deadlineNoticeMessage ? (
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="status"
+        >
+          {deadlineNoticeMessage}
+        </div>
+      ) : null}
+      {!pipelineOpen && pipelineClosureMessage ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {pipelineClosureMessage}
+        </div>
+      ) : null}
       {/* Search & Filter Bar */}
       <div className="flex flex-col lg:flex-row gap-3 lg:items-center bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-slate-100 shadow-sm">
         <div className="relative flex-1">
@@ -1135,33 +1523,33 @@ const ProjectCandidatesBoard = ({
               onDrop={column.id === "nominated" ? (e) => handleDrop(e, column.id) : undefined}
             >
               <CardHeader className="!px-4 !py-3 !pb-2.5 border-b border-slate-100/80">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
-                      aria-hidden="true"
-                    >
-                      <column.icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
+                <div className="flex items-start gap-2.5">
+                  <div
+                    className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${column.iconClasses} shadow-sm`}
+                    aria-hidden="true"
+                  >
+                    <column.icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle
                         id={`column-${column.id}-title`}
-                        className="text-sm font-bold text-slate-800 truncate leading-tight"
+                        className="text-sm font-bold text-slate-800 truncate leading-tight min-w-0 flex-1"
                       >
                         {column.title}
                       </CardTitle>
-                      <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
-                        {column.subtitle}
-                      </p>
+                      <span
+                        className={`text-xs font-bold ${gradient.countText} ${gradient.countBg} px-2.5 py-1 rounded-lg flex-shrink-0 tabular-nums shadow-sm`}
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {column.count}
+                      </span>
                     </div>
+                    <p className="text-[11px] text-slate-400 leading-snug mt-0.5 line-clamp-2">
+                      {column.subtitle}
+                    </p>
                   </div>
-                  <span
-                    className={`text-xs font-bold ${gradient.countText} ${gradient.countBg} px-2.5 py-1 rounded-lg flex-shrink-0 tabular-nums shadow-sm`}
-                    aria-live="polite"
-                    aria-atomic="true"
-                  >
-                    {column.count}
-                  </span>
                 </div>
               </CardHeader>
               {column.headerExtra}

@@ -7,6 +7,25 @@ import {
 } from "@reduxjs/toolkit/query/react";
 import type { RootState } from "@/app/store";
 import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
+import {
+  isBlockedAccountMessage,
+  extractApiErrorMessage,
+  BLOCKED_ACCOUNT_SESSION_KEY,
+  BLOCKED_ACCOUNT_MESSAGE,
+  BLOCKED_ACCOUNT_QUERY_PARAM,
+} from "@/shared/constants/account-status";
+
+function getRequestUrl(args: string | FetchArgs): string {
+  return typeof args === "string" ? args : args.url;
+}
+
+function isAuthEndpoint(url: string): boolean {
+  return (
+    url.includes("/auth/login") ||
+    url.includes("/auth/refresh") ||
+    url.includes("/auth/logout")
+  );
+}
 
 interface RefreshResponse {
   success: boolean;
@@ -83,7 +102,20 @@ function getSharedRefreshPromise(
         api.dispatch(clearCredentials());
         return false;
       }
-      api.dispatch(clearCredentials());
+
+      const refreshErrorMessage = extractApiErrorMessage(
+        refreshResult.error?.data,
+      );
+      if (isBlockedAccountMessage(refreshErrorMessage)) {
+        const message = refreshErrorMessage ?? BLOCKED_ACCOUNT_MESSAGE;
+        api.dispatch(clearCredentials());
+        if (window.location.pathname !== "/login") {
+          sessionStorage.setItem(BLOCKED_ACCOUNT_SESSION_KEY, message);
+          window.location.href = `/login?${BLOCKED_ACCOUNT_QUERY_PARAM}=1`;
+        }
+      } else {
+        api.dispatch(clearCredentials());
+      }
       return false;
     })().finally(() => {
       refreshPromise = null;
@@ -102,6 +134,23 @@ export const baseQueryWithReauth: BaseQueryFn<
   let result = await baseQuery(args, api, extras);
 
   if (result.error && result.error.status === 401) {
+    const requestUrl = getRequestUrl(args);
+    const errorMessage = extractApiErrorMessage(result.error.data);
+
+    if (isBlockedAccountMessage(errorMessage)) {
+      api.dispatch(clearCredentials());
+      const message = errorMessage ?? BLOCKED_ACCOUNT_MESSAGE;
+      if (window.location.pathname !== "/login") {
+        sessionStorage.setItem(BLOCKED_ACCOUNT_SESSION_KEY, message);
+        window.location.href = `/login?${BLOCKED_ACCOUNT_QUERY_PARAM}=1`;
+      }
+      return result;
+    }
+
+    if (isAuthEndpoint(requestUrl)) {
+      return result;
+    }
+
     const ok = await getSharedRefreshPromise(api, extraOptions);
 
     if (ok) {

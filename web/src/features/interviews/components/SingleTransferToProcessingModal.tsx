@@ -83,7 +83,7 @@ export const SingleTransferToProcessingModal: React.FC<SingleTransferToProcessin
   }, [pdfViewerState.isOpen, pdfViewerState.fileUrl]);
 
   const { data: usersResponse, isLoading: isLoadingUsers } = useGetUsersQuery(
-    { limit: 10, roles: ["Processing Executive"] },
+    { limit: 10, roles: ["Processing Executive"], accountStatus: "ACTIVE" },
     { skip: !isOpen }
   );
   const [transfer, { isLoading: isTransferring }] = useTransferToProcessingMutation();

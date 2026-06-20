@@ -1,5 +1,6 @@
 import { baseApi } from "@/app/api/baseApi";
 import { DocumentStatus, DocumentType } from "@/constants";
+import type { BulkSendCsvProfile } from "./utils/buildBulkSendCsv";
 
 // ==================== INTERFACES ====================
 
@@ -22,6 +23,7 @@ export interface Document {
   rejectedBy?: string;
   rejectedAt?: string;
   expiryDate?: string;
+  issuedAt?: string;
   notes?: string;
   rejectionReason?: string;
   documentNumber?: string;
@@ -131,6 +133,7 @@ export interface RecruiterDocumentItem {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email: string;
     mobileNumber: string;
     countryCode: string;
@@ -139,6 +142,7 @@ export interface RecruiterDocumentItem {
   project: {
     id: string;
     title: string;
+    countryCode?: string | null;
     client: {
       name: string;
     } | null;
@@ -170,6 +174,27 @@ export interface RecruiterDocumentItem {
     totalDocsToUpload: number;
     docsPercentage: number;
   };
+  documentChecklist?: {
+    rows: Array<{
+      key: string;
+      docType: string;
+      mandatory: boolean;
+      isUploaded: boolean;
+      fileName?: string | null;
+    }>;
+  };
+  mandatoryDocuments?: {
+    percent: number;
+    uploaded: number;
+    required: number;
+    missingCount: number;
+    slots: Array<{
+      key: string;
+      label: string;
+      satisfied: boolean;
+      uploadDocType?: string;
+    }>;
+  };
   lastAction?: {
     status: string;
     performedBy: string;
@@ -193,11 +218,13 @@ export interface RecruiterDocumentsResponse {
     totalPages: number;
   };
   counts?: {
+    nominated?: number;
     pending: number;
     pendingUpload?: number;
     verified: number;
     rejected: number;
     inScreening?: number;
+    mandatoryDocuments?: number;
   };
 }
 
@@ -210,10 +237,12 @@ export interface RecruiterVerifiedRejectedDocumentsResponse {
     totalPages: number;
   };
   counts: {
+    nominated?: number;
     pending: number;
     verified: number;
     rejected: number;
     inScreening?: number;
+    mandatoryDocuments?: number;
   };
 }
 
@@ -228,6 +257,7 @@ export interface CreateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
@@ -241,6 +271,7 @@ export interface UpdateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
@@ -268,6 +299,7 @@ export interface ReuploadDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
 }
@@ -278,6 +310,7 @@ export interface QueryDocumentsParams {
   status?: string;
   uploadedBy?: string;
   verifiedBy?: string;
+  roleCatalogId?: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -422,6 +455,8 @@ export interface ForwardToClientRequest {
   csvName?: string;
 }
 
+export type { BulkSendCsvProfile } from './utils/buildBulkSendCsv';
+
 export interface BulkForwardToClientRequest {
   recipientEmail: string;
   cc?: string[];
@@ -506,23 +541,16 @@ export interface ForwardingHistoryResponse {
 // ==================== API ====================
 
 export const documentsApi = baseApi.injectEndpoints({
+  overrideExisting: true,
   endpoints: (builder) => ({
     getDocuments: builder.query<
       { success: boolean; data: PaginatedDocuments },
       QueryDocumentsParams | void
     >({
-      query: (params) => {
-        const searchParams = new URLSearchParams();
-        if (params) {
-          Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              searchParams.append(key, String(value));
-            }
-          });
-        }
-        const queryString = searchParams.toString();
-        return `/documents${queryString ? `?${queryString}` : ""}`;
-      },
+      query: (params) => ({
+        url: "/documents",
+        params,
+      }),
       providesTags: ["Document"],
     }),
 
@@ -583,7 +611,15 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: documentData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: (_result, _error, { candidateId }) => [
+        "Document",
+        "DocumentStats",
+        "DocumentSummary",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+        { type: "DocumentVerification", id: candidateId },
+        "DocumentVerification",
+      ],
     }),
 
     updateDocument: builder.mutation<
@@ -624,7 +660,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: verifyData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "RecruiterDocuments", "IntroductionVideo"],
     }),
 
     requestResubmission: builder.mutation<
@@ -636,7 +672,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: requestData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "RecruiterDocuments", "DocumentVerification", "IntroductionVideo"],
     }),
 
     requestClientReupload: builder.mutation<
@@ -649,6 +685,53 @@ export const documentsApi = baseApi.injectEndpoints({
         body: data,
       }),
       invalidatesTags: ["Document", "DocumentSummary", "CandidateProject"],
+    }),
+
+    requestMissingDocumentUpload: builder.mutation<
+      { success: boolean; data: { success: boolean }; message: string },
+      {
+        candidateProjectMapId: string;
+        docType: string;
+        reason: string;
+        roleCatalogId?: string;
+      }
+    >({
+      query: (body) => ({
+        url: `/documents/request-missing-upload`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: [
+        "Document",
+        "DocumentSummary",
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+      ],
+    }),
+
+    requestOfferLetterUpload: builder.mutation<
+      { success: boolean; data: { success: boolean }; message: string },
+      {
+        candidateProjectMapId: string;
+        candidateId: string;
+        reason: string;
+        roleCatalogId?: string;
+      }
+    >({
+      query: ({ candidateId: _candidateId, ...body }) => ({
+        url: `/documents/request-offer-letter-upload`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { candidateId }) => [
+        "Document",
+        "DocumentSummary",
+        "Interview",
+        "Candidate",
+        { type: "Document", id: `offer-letter-requests-${candidateId}` },
+        { type: "Candidate", id: candidateId },
+      ],
     }),
 
     reuploadDocument: builder.mutation<
@@ -672,7 +755,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments", "Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     reuploadDocumentationDocument: builder.mutation<
@@ -684,7 +767,7 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: reuploadData,
       }),
-      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: ["Document", "DocumentStats", "DocumentSummary", "DocumentVerification", "VerificationCandidates", "RecruiterDocuments", "Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     getDocumentStats: builder.query<
@@ -722,6 +805,7 @@ export const documentsApi = baseApi.injectEndpoints({
             rejected?: number;
             verification_in_progress?: number;
             verification_in_progress_document?: number;
+            client_revision_requested?: number;
           };
         };
         message: string;
@@ -735,12 +819,42 @@ export const documentsApi = baseApi.injectEndpoints({
         projectId?: string;
         roleCatalogId?: string;
         screening?: boolean | string;
+        /** Frontend-only flag to isolate RTK cache for dashboard tile counts */
+        forTileCounts?: boolean;
       }
     >({
-      query: (params = {}) => ({
+      query: ({ forTileCounts: _forTileCounts, ...params }) => ({
         url: "/documents/verification-candidates",
         params,
       }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: {
+          counts?: {
+            pending?: number;
+            verified?: number;
+            rejected?: number;
+            client_revision_requested?: number;
+            verification_in_progress_document?: number;
+          };
+          [key: string]: unknown;
+        };
+        message?: string;
+      }) => {
+        if (response?.data?.counts) {
+          const counts = response.data.counts;
+          response.data.counts = {
+            pending: Number(counts.pending ?? 0),
+            verified: Number(counts.verified ?? 0),
+            rejected: Number(counts.rejected ?? 0),
+            client_revision_requested: Number(counts.client_revision_requested ?? 0),
+            verification_in_progress_document: Number(
+              counts.verification_in_progress_document ?? counts.pending ?? 0,
+            ),
+          };
+        }
+        return response;
+      },
       providesTags: ["VerificationCandidates"],
     }),
 
@@ -755,7 +869,7 @@ export const documentsApi = baseApi.injectEndpoints({
             total: number;
             totalPages: number;
           };
-          counts?: { verified?: number; rejected?: number };
+          counts?: { verified?: number; rejected?: number; client_revision_requested?: number };
         };
         message: string;
       },
@@ -828,7 +942,12 @@ export const documentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId, roleCatalogId },
       }),
-      invalidatesTags: ["DocumentVerification", "VerificationCandidates", "RecruiterDocuments"],
+      invalidatesTags: (_result, _error, { projectId }) => [
+        "DocumentVerification",
+        "VerificationCandidates",
+        "RecruiterDocuments",
+        { type: "Project", id: projectId },
+      ],
     }),
 
     completeVerification: builder.mutation<
@@ -962,6 +1081,17 @@ export const documentsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["ForwardingHistory", "VerificationCandidates"],
     }),
+
+    getBulkSendCsvProfiles: builder.mutation<
+      { success: boolean; data: BulkSendCsvProfile[] },
+      { candidateProjectMapIds: string[] }
+    >({
+      query: (body) => ({
+        url: "/documents/bulk-send-csv-profiles",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -996,5 +1126,8 @@ export const {
   useGetForwardingHistoryQuery,
   useForwardToClientMutation,
   useBulkForwardToClientMutation,
+  useGetBulkSendCsvProfilesMutation,
   useRequestClientReuploadMutation,
+  useRequestMissingDocumentUploadMutation,
+  useRequestOfferLetterUploadMutation,
 } = documentsApi;

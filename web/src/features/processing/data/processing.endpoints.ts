@@ -1,5 +1,8 @@
 import { baseApi } from "@/app/api/baseApi";
 import {
+  buildProcessingStatusChangeInvalidationTags,
+} from "@/app/providers/notification-handlers/processing-status-change-handler";
+import {
   ProcessingCandidateSummary,
   ProcessingHistoryEntry,
   ProcessingStepKey,
@@ -20,18 +23,67 @@ type Paginated<T> = {
     page: number;
     limit: number;
     total: number;
-    pages: number;
+    pages?: number;
+    totalPages?: number;
   };
+};
+
+export type CandidateProcessingProjectItem = {
+  id: string;
+  processingStatus: string;
+  joinedAt: string;
+  isCurrent: boolean;
+  project: {
+    id: string;
+    title: string;
+    countryCode?: string | null;
+    country?: {
+      code?: string;
+      name?: string;
+      flag?: string | null;
+      flagName?: string | null;
+    } | null;
+  };
+  role: {
+    id: string;
+    designation: string;
+    roleCatalog?: { name: string } | null;
+  };
+};
+
+export type CandidateProcessingProjectsResponse = {
+  items: CandidateProcessingProjectItem[];
+  pagination: Paginated<CandidateProcessingProjectItem>["pagination"];
+  summary: {
+    totalProjects: number;
+    previousProjectsCount: number;
+    hasPreviousProcessing: boolean;
+  };
+};
+
+export type CandidateProcessingProjectsQuery = {
+  candidateId: string;
+  currentProcessingId?: string;
+  page?: number;
+  limit?: number;
 };
 
 export type ProcessingCandidatesQuery = {
   search?: string;
   projectId?: string;
   roleCatalogId?: string;
-  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all" | "visa_stamped";
+  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold" | "all" | "visa_stamped";
   step?: string;
+  filterType?: "visa_stamped" | "total_processing" | "awaiting_requests";
   page?: number;
   limit?: number;
+  recruiterId?: string;
+  assignedToId?: string;
+  countryCodes?: string;
+  sector?: string;
+  fileNumber?: string;
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 export const processingApi = baseApi.injectEndpoints({
@@ -62,6 +114,7 @@ export const processingApi = baseApi.injectEndpoints({
           in_progress: number;
           completed: number;
           cancelled: number;
+          on_hold: number;
           steps?: Record<string, number>;
         };
         pagination: {
@@ -92,7 +145,9 @@ export const processingApi = baseApi.injectEndpoints({
           in_progress: number;
           completed: number;
           cancelled: number;
+          on_hold: number;
           visa_stamped?: number;
+          pendingStatusChangeRequests?: number;
           steps?: Record<string, number>;
         };
         pagination: {
@@ -102,13 +157,13 @@ export const processingApi = baseApi.injectEndpoints({
           totalPages?: number;
         };
       }>,
-      ProcessingCandidatesQuery & { filterType?: "visa_stamped" | "total_processing" }
+      ProcessingCandidatesQuery & { filterType?: "visa_stamped" | "total_processing" | "awaiting_requests" }
     >({
       query: (params) => ({
         url: "/processing/admin/all-candidates",
         params: params ?? undefined,
       }),
-      providesTags: ["ProcessingSummary"],
+      providesTags: () => [{ type: "ProcessingSummary", id: "LIST" }],
     }),
     getCandidatesToTransfer: builder.query<
       ApiResponse<{
@@ -261,6 +316,7 @@ export const processingApi = baseApi.injectEndpoints({
         roleNeededId: string;
         assignedProcessingTeamUserId: string;
         processingStatus: string;
+        step?: string | null;
         notes?: string;
         createdAt: string;
         updatedAt: string;
@@ -268,6 +324,7 @@ export const processingApi = baseApi.injectEndpoints({
           id: string;
           firstName: string;
           lastName: string;
+          candidateCode?: string | null;
           email?: string;
           mobileNumber?: string;
           countryCode?: string;
@@ -308,8 +365,13 @@ export const processingApi = baseApi.injectEndpoints({
         project: {
           id: string;
           title: string;
-          description?: string | null;
-          country?: string | null;
+          country?: string | {
+            code: string;
+            name: string;
+            region?: string;
+            flag?: string;
+            flagName?: string;
+          } | null;
         };
         role: {
           id: string;
@@ -375,13 +437,31 @@ export const processingApi = baseApi.injectEndpoints({
             order?: number;
           };
         };
+        originalDocumentCollection?: {
+          id: string;
+          status: string;
+          lockerFileNumber?: string | null;
+          mergedDocument?: {
+            id: string;
+            fileName: string;
+            fileUrl: string;
+            mimeType?: string;
+          } | null;
+        } | null;
+        documentReceivedStep?: {
+          status: string;
+          templateKey: string;
+        } | null;
       }>,
       string
     >({
       query: (processingId) => ({
         url: `/processing/candidate-processing-details/${processingId}`,
       }),
-      providesTags: (_, __, id) => [{ type: "Processing", id }],
+      providesTags: (_, __, id) => [
+        { type: "Processing", id },
+        { type: "ProcessingDetails", id },
+      ],
     }),
 
     updateProcessingCandidate: builder.mutation<
@@ -415,6 +495,7 @@ export const processingApi = baseApi.injectEndpoints({
           fileName: string;
           fileUrl: string;
           uploadedBy?: string;
+          uploadedByUser?: { id: string; name: string; email?: string } | null;
           verifiedBy?: string | null;
           status: string;
           createdAt: string;
@@ -461,6 +542,146 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingHistory", id: processingId },
       ],
     }),
+
+    getDocumentCollectionHistoryPaginated: builder.query<
+      ApiResponse<Paginated<{
+        id: string;
+        eventNumber: number;
+        collectionType: string;
+        collectionTypeLabel: string;
+        sourceDetail: string;
+        documentCount: number;
+        lockerFileNumber: string | null;
+        collectionStatus: string;
+        collectedBy: { id: string; name: string } | null;
+        collectedAt: string;
+        hasMergedScan: boolean;
+        mergedFileName: string | null;
+      }>>,
+      { processingId: string; page?: number; limit?: number }
+    >({
+      query: ({ processingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${processingId}/document-collection-history`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingHistory", id: `${processingId}-doc-collection` },
+      ],
+    }),
+
+    getCourierHistoryPaginated: builder.query<
+      ApiResponse<Paginated<{
+        id: string;
+        legNumber: number;
+        purposeType: string;
+        deliveryMode: string;
+        status: string;
+        trackingId: string | null;
+        courierPartner: string | null;
+        documentCount: number;
+        documentTypes: string[];
+        fromAddressLabel: string;
+        toAddressLabel: string;
+        sentAt: string | null;
+        receivedAt: string | null;
+        sentBy: { id: string; name: string } | null;
+      }>>,
+      { processingId: string; page?: number; limit?: number }
+    >({
+      query: ({ processingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${processingId}/courier-history`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingHistory", id: `${processingId}-courier` },
+      ],
+    }),
+
+    createProcessingStatusChangeRequest: builder.mutation<
+      ApiResponse<Record<string, unknown>>,
+      {
+        processingStepId: string;
+        requestType:
+          | "processing_cancel"
+          | "processing_hold"
+          | "processing_reactivate";
+        reason: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/processing/status-change-requests",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (result) => {
+        const data = result?.data as
+          | {
+              processingCandidateId?: string | null;
+              candidateProjectMapId?: string;
+            }
+          | undefined;
+
+        return buildProcessingStatusChangeInvalidationTags({
+          processingCandidateId: data?.processingCandidateId ?? undefined,
+          candidateProjectMapId: data?.candidateProjectMapId,
+        });
+      },
+    }),
+
+    getProcessingStatusUpdateContext: builder.query<
+      ApiResponse<{
+        processingStatus: string;
+        anchorStepId: string;
+        stepKey: string;
+        stepLabel?: string;
+        availableRequestTypes: Array<
+          "processing_cancel" | "processing_hold" | "processing_reactivate"
+        >;
+      }>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-update-context`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
+    }),
+
+    getPendingProcessingStatusChangeRequestForCandidate: builder.query<
+      ApiResponse<Record<string, unknown> | null>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-change-requests/pending`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
+    }),
+
+    getLatestReviewedProcessingStatusChangeRequest: builder.query<
+      ApiResponse<Record<string, unknown> | null>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-change-requests/latest-reviewed`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
+    }),
+
+    getCandidateProcessingProjects: builder.query<
+      ApiResponse<CandidateProcessingProjectsResponse>,
+      CandidateProcessingProjectsQuery
+    >({
+      query: ({ candidateId, currentProcessingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${candidateId}/processing-projects`,
+        params: {
+          currentProcessingId,
+          page,
+          limit,
+        },
+      }),
+      providesTags: (_result, _error, { candidateId }) => [
+        { type: "ProcessingProjects", id: candidateId },
+      ],
+    }),
   }),
 });
 
@@ -479,5 +700,12 @@ export const {
   useGetCandidateHistoryQuery,
   useGetCandidateDocumentsQuery,
   useGetCandidateHistoryPaginatedQuery,
+  useGetDocumentCollectionHistoryPaginatedQuery,
+  useGetCourierHistoryPaginatedQuery,
   useGetCandidateProcessingDetailsQuery,
+  useCreateProcessingStatusChangeRequestMutation,
+  useGetProcessingStatusUpdateContextQuery,
+  useGetPendingProcessingStatusChangeRequestForCandidateQuery,
+  useGetLatestReviewedProcessingStatusChangeRequestQuery,
+  useGetCandidateProcessingProjectsQuery,
 } = processingApi;

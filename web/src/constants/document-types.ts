@@ -23,6 +23,37 @@ export const DOCUMENT_TYPE = {
   MEDICAL_LICENSE: "medical_license",
   REGISTRATION_CERTIFICATE: "registration_certificate",
 
+  // HRD / country-specific documents
+  EXPERIENCE_CERTIFICATE: "experience_certificate",
+  EXPERIENCE_CERTIFICATES: "experience_certificates",
+  SAUDI_PROMETRIC: "saudi_prometric",
+  MOH_PROMETRIC: "moh_prometric",
+  QCHP_PROMETRIC: "qchp_prometric",
+  PROMETRIC_RESULT: "prometric_result",
+  GOOD_STANDING_CERTIFICATE: "good_standing_certificate",
+  PCC: "pcc",
+  PASSPORT_COVER_BIO: "passport_cover_bio",
+  NAME_CHANGE_AFFIDAVIT: "name_change_affidavit",
+  MARRIAGE_CERTIFICATE: "marriage_certificate",
+  BIOMETRIC_ACKNOWLEDGEMENT: "biometric_acknowledgement",
+
+  // Processing — original hardcopy documents (Document Received step)
+  PASSPORT_ORIGINAL: "passport_original",
+  DEGREE_CERTIFICATE_ORIGINAL: "degree_certificate_original",
+  TRANSCRIPT_ORIGINAL: "transcript_original",
+  REGISTRATION_CERTIFICATE_ORIGINAL: "registration_certificate_original",
+  OFFER_LETTER_ORIGINAL: "offer_letter_original",
+  MARRIAGE_CERTIFICATE_ORIGINAL: "marriage_certificate_original",
+  BIRTH_CERTIFICATE_ORIGINAL: "birth_certificate_original",
+  PCC_ORIGINAL: "pcc_original",
+  SSLC_CERTIFICATE_ORIGINAL: "sslc_certificate_original",
+  PLUS_TWO_CERTIFICATE_ORIGINAL: "plus_two_certificate_original",
+  EXPERIENCE_CERTIFICATE_ORIGINAL: "experience_certificate_original",
+  ORIGINAL_DOCUMENTS_BUNDLE: "original_documents_bundle",
+  E_VISA: "e_visa",
+  VISA_STAMP: "visa_stamp",
+  FLIGHT_TICKET: "flight_ticket",
+
   // Licensing Exams
   PROMETRIC: 'prometric',
   DHA: 'dha',
@@ -39,6 +70,7 @@ export const DOCUMENT_TYPE = {
   USMLE: 'usmle',
   NCLEX_RN: 'nclex_rn',
   ELIGIBILITY_LETTER: 'eligibility_letter',
+  DATAFLOW_REPORT: 'dataflow_report',
 
   // Educational Documents
   /** Backend canonical: `degree_certificate` (legacy rows may still be `degree`). */
@@ -51,7 +83,6 @@ export const DOCUMENT_TYPE = {
   // Employment Documents
   RESUME: "resume",
   CV: "cv",
-  EXPERIENCE_LETTER: "experience_letter",
   EXPERIENCE_LETTERS: "experience_letters",
   RELIEVING_LETTER: "relieving_letter",
   SALARY_SLIP: "salary_slip",
@@ -59,7 +90,6 @@ export const DOCUMENT_TYPE = {
 
   // Verification Documents
   BACKGROUND_CHECK: "background_check",
-  POLICE_CLEARANCE: "police_clearance",
   REFERENCE_LETTER: "reference_letter",
 
   // Medical Documents
@@ -69,8 +99,10 @@ export const DOCUMENT_TYPE = {
   COVID_VACCINATION: "covid_vaccination",
   MEDICAL_INSURANCE: "medical_insurance",
 
+  // Media
+  INTRODUCTION_VIDEO: "introduction_video",
+
   // Other Documents
-  PHOTO: "photo",
   BANK_DETAILS: "bank_details",
   OFFER_LETTER: "offer_letter",
   JOINING_LETTER: "joining_letter",
@@ -78,6 +110,202 @@ export const DOCUMENT_TYPE = {
 } as const;
 
 export type DocumentType = (typeof DOCUMENT_TYPE)[keyof typeof DOCUMENT_TYPE];
+
+// ==================== COPY / ORIGINAL VARIANTS ====================
+
+export const DOCUMENT_VARIANT = {
+  COPY: "copy",
+  ORIGINAL: "original",
+} as const;
+
+export type DocumentVariant =
+  (typeof DOCUMENT_VARIANT)[keyof typeof DOCUMENT_VARIANT];
+
+export type DocumentTypeRelation = {
+  variant: DocumentVariant;
+  baseType: string;
+  pairedDocType: string | null;
+};
+
+/** Legacy DB / API aliases → canonical document type keys. */
+export const DOCUMENT_TYPE_ALIASES: Record<string, DocumentType> = {
+  passport: DOCUMENT_TYPE.PASSPORT,
+  degree: DOCUMENT_TYPE.DEGREE,
+  photo: DOCUMENT_TYPE.PASSPORT_PHOTO,
+  police_clearance: DOCUMENT_TYPE.PCC,
+  experience_letter: DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+};
+
+/**
+ * Maps copy/scan types to their original hardcopy counterparts (and vice versa).
+ * `baseType` is the logical document family (without variant suffix).
+ */
+export const DOCUMENT_TYPE_RELATIONS: Record<string, DocumentTypeRelation> = {
+  [DOCUMENT_TYPE.PASSPORT]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: "passport",
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COVER_BIO]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: "passport",
+    pairedDocType: DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PASSPORT_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: "passport",
+    pairedDocType: DOCUMENT_TYPE.PASSPORT,
+  },
+  [DOCUMENT_TYPE.DEGREE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.DEGREE,
+    pairedDocType: DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.DEGREE,
+    pairedDocType: DOCUMENT_TYPE.DEGREE,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.TRANSCRIPT,
+    pairedDocType: DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.TRANSCRIPT,
+    pairedDocType: DOCUMENT_TYPE.TRANSCRIPT,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.REGISTRATION_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.PCC]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.PCC,
+    pairedDocType: DOCUMENT_TYPE.PCC_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.PCC_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.PCC,
+    pairedDocType: DOCUMENT_TYPE.PCC,
+  },
+  [DOCUMENT_TYPE.OFFER_LETTER]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.OFFER_LETTER,
+    pairedDocType: DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.OFFER_LETTER,
+    pairedDocType: DOCUMENT_TYPE.OFFER_LETTER,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE]: {
+    variant: DOCUMENT_VARIANT.COPY,
+    baseType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+    pairedDocType: DOCUMENT_TYPE.MARRIAGE_CERTIFICATE,
+  },
+  [DOCUMENT_TYPE.BIRTH_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: "birth_certificate",
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.SSLC_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: "sslc_certificate",
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.PLUS_TWO_CERTIFICATE_ORIGINAL]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: "plus_two_certificate",
+    pairedDocType: null,
+  },
+  [DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE]: {
+    variant: DOCUMENT_VARIANT.ORIGINAL,
+    baseType: "original_documents_bundle",
+    pairedDocType: null,
+  },
+};
+
+function normalizeDocumentTypeKey(docType: string): string {
+  return DOCUMENT_TYPE_ALIASES[docType] ?? docType;
+}
+
+/** Resolve legacy/duplicate doc type strings to the canonical catalog key. */
+export function resolveCanonicalDocumentType(
+  docType: string,
+): DocumentType | undefined {
+  const normalized = normalizeDocumentTypeKey(docType);
+  return DOCUMENT_TYPE_CONFIG[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+}
+
+export function getDocumentTypeRelation(
+  docType: string,
+): DocumentTypeRelation | undefined {
+  return DOCUMENT_TYPE_RELATIONS[normalizeDocumentTypeKey(docType)];
+}
+
+export function isOriginalDocType(docType: string): boolean {
+  return getDocumentTypeRelation(docType)?.variant === DOCUMENT_VARIANT.ORIGINAL;
+}
+
+export function isCopyDocType(docType: string): boolean {
+  return getDocumentTypeRelation(docType)?.variant === DOCUMENT_VARIANT.COPY;
+}
+
+export function getPairedDocType(docType: string): string | null {
+  return getDocumentTypeRelation(docType)?.pairedDocType ?? null;
+}
+
+export function getDocumentVariantLabel(
+  docType: string,
+): "Copy" | "Original" | null {
+  const variant = getDocumentTypeRelation(docType)?.variant;
+  if (variant === DOCUMENT_VARIANT.COPY) return "Copy";
+  if (variant === DOCUMENT_VARIANT.ORIGINAL) return "Original";
+  return null;
+}
+
+export function resolveDocumentTypeWithVariant(docType: string): {
+  resolved: DocumentType | undefined;
+  variant: DocumentVariant | null;
+  pairedDocType: string | null;
+} {
+  const normalized = normalizeDocumentTypeKey(docType);
+  const resolved = DOCUMENT_TYPE_CONFIG[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+  const relation = DOCUMENT_TYPE_RELATIONS[normalized];
+
+  return {
+    resolved,
+    variant: relation?.variant ?? null,
+    pairedDocType: relation?.pairedDocType ?? null,
+  };
+}
 
 /**
  * Document Type UI Configuration
@@ -97,10 +325,15 @@ export const DOCUMENT_TYPE_CONFIG: Record<
       | "other";
     hasExpiry: boolean;
     expiryRequired: boolean;
+    hasIssueDate?: boolean;
+    issueRequired?: boolean;
+    numberFieldLabel?: string;
     maxSizeMB: number;
     allowedFormats: string[];
     icon: string;
     commonlyRequired: boolean;
+    variant?: DocumentVariant;
+    pairedDocType?: string | null;
   }
 > = {
   [DOCUMENT_TYPE.PASSPORT]: {
@@ -211,6 +444,303 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     maxSizeMB: 5,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Award",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE]: {
+    displayName: "Experience Certificate",
+    description: "Experience certificate (HRD)",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Briefcase",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATES]: {
+    displayName: "Experience Certificates",
+    description: "Experience certificates (multiple)",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Briefcase",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.SAUDI_PROMETRIC]: {
+    displayName: "Saudi Prometric Result",
+    description: "Saudi Council / Prometric Result",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.MOH_PROMETRIC]: {
+    displayName: "MOH Prometric / License",
+    description: "MOH License / Prometric",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "Medal",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.QCHP_PROMETRIC]: {
+    displayName: "QCHP Prometric / Evaluation",
+    description: "QCHP Evaluation / Prometric",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "ShieldCheck",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PROMETRIC_RESULT]: {
+    displayName: "Prometric Result",
+    description: "Prometric / Examination result (output)",
+    category: "professional",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.GOOD_STANDING_CERTIFICATE]: {
+    displayName: "Good Standing Certificate",
+    description: "Certificate of Good Standing from previous regulator/employer",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "Shield",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PCC]: {
+    displayName: "Police Clearance (PCC)",
+    description: "Police Clearance Certificate (PCC)",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Shield",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.PASSPORT_COVER_BIO]: {
+    displayName: "Passport Cover & Bio Page",
+    description: "Passport cover and bio page",
+    category: "identity",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.NAME_CHANGE_AFFIDAVIT]: {
+    displayName: "Name Change Affidavit",
+    description: "Affidavit for name change",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE]: {
+    displayName: "Marriage Certificate",
+    description: "Marriage certificate (marriage/union proof)",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.BIOMETRIC_ACKNOWLEDGEMENT]: {
+    displayName: "Biometric Acknowledgement",
+    description: "Acknowledgement/consent for biometric capture",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 2,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Scan",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PASSPORT_ORIGINAL]: {
+    displayName: "Original Passport (presented)",
+    description: "Original passport presented / scanned original passport (for in-person verification)",
+    category: "identity",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.DEGREE_CERTIFICATE_ORIGINAL]: {
+    displayName: "Degree Certificate (Original)",
+    description: "Original degree certificate",
+    category: "educational",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "GraduationCap",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.TRANSCRIPT_ORIGINAL]: {
+    displayName: "Academic Transcript (Original)",
+    description: "Original academic transcript / mark sheet",
+    category: "educational",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.REGISTRATION_CERTIFICATE_ORIGINAL]: {
+    displayName: "Registration Certificate (Original)",
+    description: "Original professional registration certificate",
+    category: "professional",
+    hasExpiry: true,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Award",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.OFFER_LETTER_ORIGINAL]: {
+    displayName: "Offer Letter (Original)",
+    description: "Original employment offer letter",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.MARRIAGE_CERTIFICATE_ORIGINAL]: {
+    displayName: "Marriage Certificate (Original)",
+    description: "Original marriage certificate",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.BIRTH_CERTIFICATE_ORIGINAL]: {
+    displayName: "Birth Certificate (Original)",
+    description: "Original birth certificate",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PCC_ORIGINAL]: {
+    displayName: "Police Clearance (Original)",
+    description: "Original police clearance certificate",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Shield",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.SSLC_CERTIFICATE_ORIGINAL]: {
+    displayName: "SSLC Certificate (Original)",
+    description: "Original SSLC certificate",
+    category: "educational",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.PLUS_TWO_CERTIFICATE_ORIGINAL]: {
+    displayName: "Plus Two Certificate (Original)",
+    description: "Original Plus Two certificate",
+    category: "educational",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.EXPERIENCE_CERTIFICATE_ORIGINAL]: {
+    displayName: "Experience Certificate (Original)",
+    description: "Original experience certificate",
+    category: "employment",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 10,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "FileText",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.ORIGINAL_DOCUMENTS_BUNDLE]: {
+    displayName: "Merged Original Documents Scan",
+    description: "Merged scan of all collected original documents",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 50,
+    allowedFormats: ["pdf"],
+    icon: "FileStack",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.E_VISA]: {
+    displayName: "e-Visa",
+    description: "Electronic visa (e-visa) document or approval",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: true,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: true,
+  },
+  [DOCUMENT_TYPE.VISA_STAMP]: {
+    displayName: "Visa Stamp",
+    description: "Visa stamp in passport (if applicable)",
+    category: "verification",
+    hasExpiry: true,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
+    commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.FLIGHT_TICKET]: {
+    displayName: "Flight Ticket / e-ticket",
+    description: "Flight ticket or e-ticket / booking confirmation",
+    category: "other",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
+    icon: "Plane",
     commonlyRequired: false,
   },
   [DOCUMENT_TYPE.PROMETRIC]: {
@@ -372,11 +902,25 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     description: "Document indicating project eligibility",
     category: "verification",
     hasExpiry: true,
-    expiryRequired: false,
+    expiryRequired: true,
+    hasIssueDate: true,
+    issueRequired: true,
+    numberFieldLabel: "Eligibility Number",
     maxSizeMB: 5,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "FileSignature",
     commonlyRequired: false,
+  },
+  [DOCUMENT_TYPE.DATAFLOW_REPORT]: {
+    displayName: "Dataflow Report",
+    description: "Dataflow verification report",
+    category: "verification",
+    hasExpiry: false,
+    expiryRequired: false,
+    maxSizeMB: 5,
+    allowedFormats: ["pdf"],
+    icon: "FileCheck",
+    commonlyRequired: true,
   },
   [DOCUMENT_TYPE.DEGREE]: {
     displayName: "Degree Certificate",
@@ -455,24 +999,13 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     icon: "FileText",
     commonlyRequired: false,
   },
-  [DOCUMENT_TYPE.EXPERIENCE_LETTER]: {
-    displayName: "Experience Letter",
-    description: "Previous employment experience letter",
-    category: "employment",
-    hasExpiry: false,
-    expiryRequired: false,
-    maxSizeMB: 5,
-    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
-    icon: "Briefcase",
-    commonlyRequired: false,
-  },
   [DOCUMENT_TYPE.EXPERIENCE_LETTERS]: {
-    displayName: "Experience Letter",
-    description: "Previous employment experience letter",
+    displayName: "Experience Letters",
+    description: "Previous employment experience letter(s)",
     category: "employment",
     hasExpiry: false,
     expiryRequired: false,
-    maxSizeMB: 5,
+    maxSizeMB: 10,
     allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Briefcase",
     commonlyRequired: false,
@@ -518,17 +1051,6 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     expiryRequired: false,
     maxSizeMB: 5,
     allowedFormats: ["pdf"],
-    icon: "Shield",
-    commonlyRequired: true,
-  },
-  [DOCUMENT_TYPE.POLICE_CLEARANCE]: {
-    displayName: "Police Clearance",
-    description: "Police clearance certificate",
-    category: "verification",
-    hasExpiry: true,
-    expiryRequired: true,
-    maxSizeMB: 5,
-    allowedFormats: ["pdf", "jpg", "jpeg", "png"],
     icon: "Shield",
     commonlyRequired: true,
   },
@@ -598,16 +1120,16 @@ export const DOCUMENT_TYPE_CONFIG: Record<
     icon: "Heart",
     commonlyRequired: false,
   },
-  [DOCUMENT_TYPE.PHOTO]: {
-    displayName: "Photograph",
-    description: "Passport-size photograph",
+  [DOCUMENT_TYPE.INTRODUCTION_VIDEO]: {
+    displayName: "Introduction Video",
+    description: "Candidate introduction video for project submission",
     category: "other",
     hasExpiry: false,
     expiryRequired: false,
-    maxSizeMB: 1,
-    allowedFormats: ["jpg", "jpeg", "png"],
-    icon: "User",
-    commonlyRequired: true,
+    maxSizeMB: 100,
+    allowedFormats: ["mp4", "webm", "mov", "avi"],
+    icon: "Video",
+    commonlyRequired: false,
   },
   [DOCUMENT_TYPE.BANK_DETAILS]: {
     displayName: "Bank Account Details",
@@ -655,11 +1177,19 @@ export const DOCUMENT_TYPE_CONFIG: Record<
   },
 };
 
+function resolveDocumentType(docType: string): DocumentType | undefined {
+  const normalized = normalizeDocumentTypeKey(docType);
+  return DOCUMENT_TYPE_CONFIG[normalized as DocumentType]
+    ? (normalized as DocumentType)
+    : undefined;
+}
+
 /**
  * Get document type configuration
  */
-export function getDocumentTypeConfig(docType: DocumentType) {
-  return DOCUMENT_TYPE_CONFIG[docType];
+export function getDocumentTypeConfig(docType: DocumentType | string) {
+  const resolved = resolveDocumentType(docType);
+  return resolved ? DOCUMENT_TYPE_CONFIG[resolved] : undefined;
 }
 
 /**
@@ -721,4 +1251,79 @@ export function getAllowedFormatsString(docType: DocumentType): string {
   const config = getDocumentTypeConfig(docType);
   if (!config) return "";
   return config.allowedFormats.map((f) => f.toUpperCase()).join(", ");
+}
+
+/** Doc types that represent a passport copy or original (excludes passport_photo). */
+export const PASSPORT_DOCUMENT_TYPES = [
+  DOCUMENT_TYPE.PASSPORT,
+  DOCUMENT_TYPE.PASSPORT_ORIGINAL,
+  DOCUMENT_TYPE.PASSPORT_COVER_BIO,
+  "passport",
+] as const;
+
+export function isPassportDocumentType(docType: string): boolean {
+  return (PASSPORT_DOCUMENT_TYPES as readonly string[]).includes(docType);
+}
+
+export function isEligibilityLetterType(docType: string): boolean {
+  return docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER;
+}
+
+export function getDocumentNumberLabel(docType: string): string {
+  if (isPassportDocumentType(docType)) {
+    return "Passport Number";
+  }
+  if (isEligibilityLetterType(docType)) {
+    return "Eligibility Number";
+  }
+  const config = getDocumentTypeConfig(docType);
+  return config?.numberFieldLabel ?? "Document Number";
+}
+
+/** Formats supported when building a unified client PDF (pdf-lib). */
+const PDF_MERGE_ALLOWED_FORMATS = new Set(["pdf", "jpg", "jpeg", "png"]);
+
+/** Doc types that must never appear in unified PDF merge flows. */
+export const PDF_MERGE_EXCLUDED_DOC_TYPES = [
+  DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+] as const;
+
+/**
+ * Whether a document can be included in unified PDF merge (excludes videos and non-image/pdf files).
+ */
+export function isPdfMergeableDocument(doc: {
+  docType?: string | null;
+  fileName?: string | null;
+}): boolean {
+  const docType = doc.docType?.trim();
+  if (!docType) return false;
+
+  if ((PDF_MERGE_EXCLUDED_DOC_TYPES as readonly string[]).includes(docType)) {
+    return false;
+  }
+
+  const config = DOCUMENT_TYPE_CONFIG[docType as DocumentType];
+  if (config?.allowedFormats?.length) {
+    return config.allowedFormats.some((format) => PDF_MERGE_ALLOWED_FORMATS.has(format));
+  }
+
+  const fileName = (doc.fileName || "").toLowerCase();
+  return (
+    fileName.endsWith(".pdf") ||
+    fileName.endsWith(".jpg") ||
+    fileName.endsWith(".jpeg") ||
+    fileName.endsWith(".png")
+  );
+}
+
+/**
+ * Whether a verified document may be attached individually when sending to client.
+ * Excludes introduction video and other client-send excluded types.
+ */
+export function isClientSendableDocument(doc: {
+  docType?: string | null;
+}): boolean {
+  const docType = doc.docType?.trim();
+  if (!docType) return false;
+  return !(PDF_MERGE_EXCLUDED_DOC_TYPES as readonly string[]).includes(docType);
 }

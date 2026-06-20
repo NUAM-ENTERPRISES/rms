@@ -4,9 +4,12 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateCandidateProjectDto } from './dto/create-candidate-project.dto';
 import { UpdateCandidateProjectDto } from './dto/update-candidate-project.dto';
@@ -20,15 +23,106 @@ import { BulkSendForScreeningDto } from './dto/bulk-send-for-screening.dto';
 import { ProjectOverviewQueryDto, DatePeriod } from './dto/project-overview-query.dto';
 import {
   CANDIDATE_PROJECT_STATUS,
+  CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
   CANDIDATE_STATUS,
   TRAINING_PRIORITY,
   TRAINING_EVENT,
   TRAINING_STATUS,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
+  isCandidateProjectPipelineBlocked,
+  isProcessingStatusChangeRequestType,
+  isProcessingStatusTransitionAllowed,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
+import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
+import {
+  assertCandidateNotBlockedForNewProjectAssignment,
+  assertNoProcessingConflictForProjectAction,
+  findProcessingInProgressAssignment,
+  findProcessingInProgressAssignmentsByCandidateIds,
+  getProcessingEligibilityHardReason,
+} from './utils/processing-assignment-guard';
+import {
+  isPipelineBlockedOnProject,
+} from '../common/constants/statuses';
+import {
+  CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES,
+  CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES,
+  PROCESSING_STATUS_CHANGE_APPROVER_ROLES,
+  PROCESSING_STATUS_CHANGE_DIRECT_ROLES,
+  ROLE_NAMES,
+} from '../common/constants/role-ids';
+import { CreateStatusChangeRequestDto, resolveProcessingRequestedStatus } from './dto/create-status-change-request.dto';
+import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { ProcessingService } from '../processing/processing.service';
+
+/** Project overview sub-status tiles (aligned with web ProjectCandidatesOverviewPage filters). */
+const PROJECT_DOCUMENT_SUB_STATUS_TILES = [
+  {
+    key: 'pending',
+    label: 'Pending',
+    subStatusNames: [
+      'pending_documents',
+      'documents_submitted',
+      'verification_in_progress_document',
+      'documents_re_submission_requested',
+      'client_revision_requested',
+    ],
+  },
+  {
+    key: 'verified',
+    label: 'Verified',
+    subStatusNames: ['documents_verified'],
+  },
+  {
+    key: 'rejected',
+    label: 'Rejected',
+    subStatusNames: ['rejected_documents'],
+  },
+  {
+    key: 'submitted_to_client',
+    label: 'Send to Client',
+    subStatusNames: ['submitted_to_client'],
+  },
+] as const;
+
+const PROJECT_INTERVIEW_SUB_STATUS_TILES = [
+  {
+    key: 'scheduled',
+    label: 'Interview Scheduled',
+    subStatusName: 'interview_scheduled',
+  },
+  { key: 'passed', label: 'Passed', subStatusName: 'interview_passed' },
+  { key: 'failed', label: 'Failed', subStatusName: 'interview_failed' },
+  { key: 'backout', label: 'Backout', subStatusName: 'interview_backout' },
+] as const;
+
+const PROJECT_PROCESSING_SUB_STATUS_TILES = [
+  {
+    key: 'transferred',
+    label: 'Transferred',
+    subStatusName: 'transfered_to_processing',
+  },
+  {
+    key: 'in_progress',
+    label: 'In Progress',
+    subStatusName: 'processing_in_progress',
+  },
+  {
+    key: 'completed',
+    label: 'Completed',
+    subStatusName: 'processing_completed',
+  },
+  { key: 'cancelled', label: 'Cancelled', subStatusName: 'processing_cancelled' },
+  {
+    key: 'ready_final',
+    label: 'Ready for Final',
+    subStatusName: 'ready_for_final',
+  },
+] as const;
 
 @Injectable()
 export class CandidateProjectsService {
@@ -39,6 +133,8 @@ export class CandidateProjectsService {
     private readonly notificationsService: NotificationsService,
     private readonly outboxService: OutboxService,
     private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => ProcessingService))
+    private readonly processingService: ProcessingService,
   ) {}
 
   private async ensureInterviewCoordinator(userId: string) {
@@ -68,7 +164,7 @@ export class CandidateProjectsService {
 
   private async getInterviewCoordinators(): Promise<Array<{ id: string }>> {
     return this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -76,11 +172,32 @@ export class CandidateProjectsService {
             },
           },
         },
-      },
+      }),
       select: {
         id: true,
       },
     });
+  }
+
+  private isCandidatePositiveStatus(candidate: any): boolean {
+    const status = typeof candidate?.currentStatus === 'string'
+      ? candidate.currentStatus
+      : candidate?.currentStatus?.statusName;
+
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    return [
+      CANDIDATE_STATUS.INTERESTED,
+      CANDIDATE_STATUS.FUTURE,
+      CANDIDATE_STATUS.ON_HOLD,
+    ].includes(normalizedStatus as any);
+  }
+
+  private ensureCandidatePositiveForProjectAssignment(candidate: any) {
+    if (!this.isCandidatePositiveStatus(candidate)) {
+      throw new BadRequestException(
+        `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+      );
+    }
   }
 
   /**
@@ -101,10 +218,19 @@ export class CandidateProjectsService {
     // -------------------------------
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
+      include: { currentStatus: true },
     });
     if (!candidate) {
       throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
     }
+
+    this.ensureCandidatePositiveForProjectAssignment(candidate);
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      projectId,
+    );
 
     // -------------------------------
     // VERIFY project exists
@@ -118,6 +244,8 @@ export class CandidateProjectsService {
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
+
+    assertProjectOpenForAssignment(project);
 
     // -------------------------------
     // AUTO-MATCH ROLE
@@ -369,6 +497,15 @@ export class CandidateProjectsService {
     });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
+    assertProjectOpenForAssignment(project);
+
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
+
     // -------------------------------
     // AUTO MATCH ROLE
     // -------------------------------
@@ -448,8 +585,15 @@ export class CandidateProjectsService {
       },
       include: {
         subStatus: true,
+        mainStatus: true,
       },
     });
+
+    if (existingAssignment) {
+      this.assertCandidateProjectPipelineNotBlocked(
+        existingAssignment.mainStatus?.name,
+      );
+    }
 
     const screeningTrainingStatuses = [
       'screening_assigned',
@@ -468,6 +612,42 @@ export class CandidateProjectsService {
       throw new BadRequestException(
         'Candidate currently in screening/ng.training stage. Cannot send for verification.',
       );
+    }
+
+    if (project.introductionVideoRequired) {
+      const assignmentForIntroCheck =
+        existingAssignment ??
+        (await this.prisma.candidateProjects.findFirst({
+          where: {
+            candidateId,
+            projectId,
+            roleNeededId: roleNeededId || null,
+          },
+        }));
+
+      if (!assignmentForIntroCheck) {
+        throw new BadRequestException(
+          'Introduction video is required before sending for verification',
+        );
+      }
+
+      const introVideoVerification =
+        await this.prisma.candidateProjectDocumentVerification.findFirst({
+          where: {
+            candidateProjectMapId: assignmentForIntroCheck.id,
+            isDeleted: false,
+            document: {
+              docType: 'introduction_video',
+              isDeleted: false,
+            },
+          },
+        });
+
+      if (!introVideoVerification) {
+        throw new BadRequestException(
+          'Introduction video is required before sending for verification',
+        );
+      }
     }
 
     if (existingAssignment) {
@@ -622,7 +802,10 @@ export class CandidateProjectsService {
     // -------------------------------
     // VERIFY candidate
     // -------------------------------
-    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: { currentStatus: true },
+    });
     if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     // -------------------------------
@@ -630,6 +813,15 @@ export class CandidateProjectsService {
     // -------------------------------
     const project = await this.prisma.project.findUnique({ where: { id: projectId }, include: { rolesNeeded: true } });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    assertProjectOpenForAssignment(project);
+
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
 
     // -------------------------------
     // AUTO MATCH ROLE
@@ -689,6 +881,10 @@ export class CandidateProjectsService {
       where: { candidateId, projectId, roleNeededId: roleNeededId || null },
       include: { subStatus: true },
     });
+
+    if (!existingAssignment) {
+      this.ensureCandidatePositiveForProjectAssignment(candidate);
+    }
 
     if (existingAssignment?.subStatus) {
       const screeningStatuses = [
@@ -827,7 +1023,7 @@ export class CandidateProjectsService {
 
         // Include all active interview coordinators/screening trainers for assigned-screenings updates
         const coordinators = (await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -837,7 +1033,7 @@ export class CandidateProjectsService {
                 },
               },
             },
-          },
+          }),
           select: { id: true },
         })) || [];
 
@@ -887,7 +1083,7 @@ export class CandidateProjectsService {
 
     if (!coordinatorId) {
       const coordinators = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -897,7 +1093,7 @@ export class CandidateProjectsService {
               },
             },
           },
-        },
+        }),
         select: { id: true },
         orderBy: { id: 'asc' },
       });
@@ -1148,10 +1344,19 @@ export class CandidateProjectsService {
       where.mainStatus = { name: queryDto.mainStatus };
     }
 
-    // Role-based filtering: recruiters and Client Coordinators only see candidates
-    // assigned to them on the project row (aligned with recruiter pipeline / agent CC flow).
+    if (queryDto.subStatuses) {
+      const subStatusNames = queryDto.subStatuses.split(',').map((s) => s.trim()).filter(Boolean);
+      if (subStatusNames.length > 0) {
+        where.subStatus = { name: { in: subStatusNames } };
+      }
+    } else if (queryDto.subStatus && queryDto.subStatus !== 'all') {
+      where.subStatus = { name: queryDto.subStatus };
+    }
+
+    // Role-based filtering: recruiters and Agent Coordinators only see candidates
+    // assigned to them on the project row (aligned with recruiter pipeline / agent flow).
     const isRecruiter = userRoles.includes('Recruiter');
-    const isClientCoordinator = userRoles.includes('Client Coordinator');
+    const isAgentCoordinator = userRoles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isSpecialistOrManagement = userRoles.some(r =>
       [
         'CEO',
@@ -1168,7 +1373,7 @@ export class CandidateProjectsService {
     );
 
     const scopeToOwnAssignments =
-      (isRecruiter || isClientCoordinator) && !isSpecialistOrManagement;
+      (isRecruiter || isAgentCoordinator) && !isSpecialistOrManagement;
 
     if (scopeToOwnAssignments) {
       where.recruiterId = userId;
@@ -1240,6 +1445,7 @@ export class CandidateProjectsService {
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
             { mobileNumber: { contains: search, mode: 'insensitive' } },
+            { candidateCode: { contains: search, mode: 'insensitive' } },
           ],
         },
       };
@@ -1257,9 +1463,7 @@ export class CandidateProjectsService {
       interviewCount,
       processingCount,
       finalCount,
-      data,
-      project,
-      filteredCount,
+      ...documentSubStatusCounts
     ] = await Promise.all([
       // Total count should use baseWhereForCounts to ignore current status filter
       this.prisma.candidateProjects.count({ where: baseWhereForCounts }),
@@ -1280,7 +1484,50 @@ export class CandidateProjectsService {
       this.prisma.candidateProjects.count({
         where: { ...baseWhereForCounts, mainStatus: { name: 'final' } },
       }),
+      ...PROJECT_DOCUMENT_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'documents' },
+            subStatus: { name: { in: [...tile.subStatusNames] } },
+          },
+        }),
+      ),
+      ...PROJECT_INTERVIEW_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'interview' },
+            subStatus: { name: tile.subStatusName },
+          },
+        }),
+      ),
+      ...PROJECT_PROCESSING_SUB_STATUS_TILES.map((tile) =>
+        this.prisma.candidateProjects.count({
+          where: {
+            ...baseWhereForCounts,
+            mainStatus: { name: 'processing' },
+            subStatus: { name: tile.subStatusName },
+          },
+        }),
+      ),
+    ]);
 
+    const interviewSubStatusCounts = documentSubStatusCounts.slice(
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length,
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length +
+        PROJECT_INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const processingSubStatusCounts = documentSubStatusCounts.slice(
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length +
+        PROJECT_INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const documentSubStatusCountsOnly = documentSubStatusCounts.slice(
+      0,
+      PROJECT_DOCUMENT_SUB_STATUS_TILES.length,
+    ) as number[];
+
+    const [data, project, filteredCount] = await Promise.all([
       // Paginated candidate list uses 'where' (which includes mainStatus)
       this.prisma.candidateProjects.findMany({
         where,
@@ -1325,6 +1572,30 @@ export class CandidateProjectsService {
         interviewCount,
         processingCount,
         finalCount, // aka Deployed counts as per user request
+        documentsSubStatus: {
+          tiles: PROJECT_DOCUMENT_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: documentSubStatusCountsOnly[index],
+            subStatusName: tile.key,
+          })),
+        },
+        interviewSubStatus: {
+          tiles: PROJECT_INTERVIEW_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: interviewSubStatusCounts[index],
+            subStatusName: tile.key,
+          })),
+        },
+        processingSubStatus: {
+          tiles: PROJECT_PROCESSING_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            label: tile.label,
+            count: processingSubStatusCounts[index],
+            subStatusName: tile.key,
+          })),
+        },
       },
       data,
       meta: {
@@ -1413,6 +1684,10 @@ export class CandidateProjectsService {
               designation: true,
               minExperience: true,
               maxExperience: true,
+              roleCatalogId: true,
+              roleCatalog: {
+                select: { id: true, name: true, label: true },
+              },
             },
           },
           recruiter: {
@@ -1423,6 +1698,13 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          subStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',
@@ -1603,6 +1885,743 @@ export class CandidateProjectsService {
     return updated;
   }
 
+  private assertCandidateProjectPipelineNotBlocked(
+    mainStatusName: string | null | undefined,
+  ): void {
+    if (!isCandidateProjectPipelineBlocked(mainStatusName)) return;
+    const label =
+      mainStatusName === CANDIDATE_PROJECT_STATUS.WITHDRAWN
+        ? 'Withdrawn'
+        : 'On Hold';
+    throw new BadRequestException(
+      `This candidate's project is currently ${label}. Pipeline actions are disabled.`,
+    );
+  }
+
+  private async getUserRoleNames(userId: string): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user.userRoles.map((ur) => ur.role.name);
+  }
+
+  private async assertUserCanApproveStatusChange(
+    userId: string,
+    requestType: string,
+  ): Promise<void> {
+    const roleNames = await this.getUserRoleNames(userId);
+    const approverRoles = isProcessingStatusChangeRequestType(requestType)
+      ? (PROCESSING_STATUS_CHANGE_APPROVER_ROLES as readonly string[])
+      : (CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES as readonly string[]);
+    const canApprove = roleNames.some((name) => approverRoles.includes(name));
+    if (!canApprove) {
+      throw new ForbiddenException(
+        'You do not have permission to approve or reject status change requests',
+      );
+    }
+  }
+
+  private async userCanDirectApplyStatusChange(userId: string): Promise<boolean> {
+    const roleNames = await this.getUserRoleNames(userId);
+    return roleNames.some((name) =>
+      (CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
+        name,
+      ),
+    );
+  }
+
+  private async userCanDirectApplyProcessingStatusChange(
+    userId: string,
+  ): Promise<boolean> {
+    const roleNames = await this.getUserRoleNames(userId);
+    return roleNames.some((name) =>
+      (PROCESSING_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
+        name,
+      ),
+    );
+  }
+
+  async createStatusChangeRequest(
+    candidateProjectMapId: string,
+    dto: CreateStatusChangeRequestDto,
+    userId: string,
+  ) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      include: {
+        mainStatus: true,
+        previousMainStatus: true,
+        previousSubStatus: true,
+        candidate: { select: { id: true, firstName: true, lastName: true } },
+        project: { select: { id: true, title: true, country: { select: { code: true, name: true } } } },
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    const isCurrentlyBlocked = isCandidateProjectPipelineBlocked(
+      candidateProject.mainStatus?.name,
+    );
+
+    // Validate based on request type
+    if (dto.requestType === 'block') {
+      // requestedStatus required for block
+      if (!dto.requestedStatus) {
+        throw new BadRequestException(
+          'requestedStatus is required for block type',
+        );
+      }
+      // Prevent blocking to same status (e.g., On Hold → On Hold)
+      if (candidateProject.mainStatus?.name === dto.requestedStatus) {
+        throw new BadRequestException(
+          `Candidate is already in ${dto.requestedStatus} status`,
+        );
+      }
+      // Note: DO NOT throw error if already blocked - allow Withdrawn ↔ On Hold
+    } else if (dto.requestType === 'reactivate') {
+      // Must BE blocked
+      if (!isCurrentlyBlocked) {
+        throw new BadRequestException(
+          'Can only reactivate from withdrawn or on_hold status',
+        );
+      }
+      // Must have previous status stored
+      if (!candidateProject.previousMainStatusId) {
+        throw new BadRequestException(
+          'No previous status to restore. Please contact administrator.',
+        );
+      }
+    } else if (isProcessingStatusChangeRequestType(dto.requestType)) {
+      if (!dto.processingStepId) {
+        throw new BadRequestException(
+          'processingStepId is required for processing status change requests',
+        );
+      }
+      if (candidateProject.mainStatus?.name !== 'processing') {
+        throw new BadRequestException(
+          'Processing status change requests are only allowed while candidate is in processing',
+        );
+      }
+      dto.requestedStatus =
+        dto.requestedStatus ?? resolveProcessingRequestedStatus(dto.requestType);
+
+      const processingCandidate = await this.prisma.processingCandidate.findFirst({
+        where: {
+          candidateId: candidateProject.candidateId,
+          projectId: candidateProject.projectId,
+        },
+      });
+      if (!processingCandidate?.assignedProcessingTeamUserId) {
+        throw new BadRequestException(
+          'Candidate must be assigned to a processing team before requesting a status change',
+        );
+      }
+      if (
+        !isProcessingStatusTransitionAllowed(
+          dto.requestType,
+          processingCandidate.processingStatus,
+        )
+      ) {
+        throw new BadRequestException(
+          `Cannot request ${dto.requestType} while processing status is ${processingCandidate.processingStatus}`,
+        );
+      }
+    }
+
+    const existingPending =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        },
+      });
+
+    if (existingPending) {
+      throw new BadRequestException(
+        'A pending status change request already exists for this candidate project',
+      );
+    }
+
+    const canDirectApply = isProcessingStatusChangeRequestType(dto.requestType)
+      ? await this.userCanDirectApplyProcessingStatusChange(userId)
+      : await this.userCanDirectApplyStatusChange(userId);
+    if (canDirectApply) {
+      return this.directApplyStatusChange(
+        candidateProjectMapId,
+        dto,
+        userId,
+        candidateProject,
+      );
+    }
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const request = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
+          reason: dto.reason,
+          requestedBy: userId,
+          processingStepId: dto.processingStepId ?? null,
+          stepKey: dto.stepKey ?? null,
+          processingCandidateId: dto.processingCandidateId ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.outboxService.publishCandidateProjectStatusChangeRequested(
+        {
+          requestId: created.id,
+          candidateProjectMapId,
+          candidateId: candidateProject.candidateId,
+          projectId: candidateProject.projectId,
+          candidateName: `${candidateProject.candidate.firstName} ${candidateProject.candidate.lastName}`,
+          projectTitle: candidateProject.project.title,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus,
+          requestedBy: userId,
+          requesterName: requester?.name ?? 'Recruiter',
+          reason: dto.reason,
+          processingStepId: dto.processingStepId,
+          stepKey: dto.stepKey,
+          processingCandidateId: dto.processingCandidateId,
+          countryCode: candidateProject.project.country?.code,
+          countryName: candidateProject.project.country?.name,
+        },
+        tx,
+      );
+
+      return created;
+    });
+
+    return request;
+  }
+
+  private async directApplyStatusChange(
+    candidateProjectMapId: string,
+    dto: CreateStatusChangeRequestDto,
+    userId: string,
+    candidateProject: {
+      candidateId: string;
+      projectId: string;
+      candidate: { firstName: string; lastName: string };
+      project: { title: string };
+    },
+  ) {
+    if (isProcessingStatusChangeRequestType(dto.requestType)) {
+      const created = await this.prisma.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
+          reason: dto.reason,
+          requestedBy: userId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          processingStepId: dto.processingStepId ?? null,
+          stepKey: dto.stepKey ?? null,
+          processingCandidateId: dto.processingCandidateId ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.processingService.executeApprovedProcessingStatusChange(
+        {
+          requestType: dto.requestType,
+          processingStepId: dto.processingStepId!,
+          candidateProjectMapId,
+          reason: dto.reason,
+        },
+        userId,
+      );
+
+      return created;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
+          reason: dto.reason,
+          requestedBy: userId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.applyStatusUpdateInTransaction(
+        tx,
+        candidateProjectMapId,
+        {
+          subStatusName: dto.requestType === 'reactivate' ? undefined : dto.requestedStatus,
+          reason: dto.reason,
+        },
+        userId,
+        dto.requestType as 'block' | 'reactivate',
+      );
+
+      return created;
+    });
+  }
+
+  /**
+   * Store current status as previous ONLY if this is the first block
+   * (i.e., candidate is not already blocked)
+   */
+  private async storePreviousStatusIfNeeded(
+    tx: Prisma.TransactionClient,
+    candidateProjectMapId: string,
+  ) {
+    const current = await tx.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+      select: {
+        mainStatusId: true,
+        subStatusId: true,
+        mainStatus: { select: { name: true } },
+        previousMainStatusId: true,
+        statusBlockedAt: true,
+      },
+    });
+
+    if (!current) {
+      throw new NotFoundException('Candidate project not found');
+    }
+
+    // Only store if NOT already blocked (first time blocking)
+    const isCurrentlyBlocked = isCandidateProjectPipelineBlocked(
+      current.mainStatus?.name,
+    );
+
+    if (!isCurrentlyBlocked && !current.previousMainStatusId) {
+      // First block - store current as previous
+      await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          previousMainStatusId: current.mainStatusId,
+          previousSubStatusId: current.subStatusId,
+          statusBlockedAt: new Date(),
+        },
+      });
+    }
+    // If already blocked, don't overwrite previousStatus
+  }
+
+  async getPendingStatusChangeRequest(candidateProjectMapId: string) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    const pending =
+      await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+        where: {
+          candidateProjectMapId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+    return pending;
+  }
+
+  async getStatusChangeRequestHistory(
+    candidateProjectMapId: string,
+    page = 1,
+    limit = 10,
+  ) {
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${candidateProjectMapId} not found`,
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      this.prisma.candidateProjectStatusChangeRequest.findMany({
+        where: { candidateProjectMapId },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.candidateProjectStatusChangeRequest.count({
+        where: { candidateProjectMapId },
+      }),
+    ]);
+
+    return {
+      data: requests,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  async approveStatusChangeRequest(
+    requestId: string,
+    dto: ReviewStatusChangeRequestDto,
+    userId: string,
+  ) {
+    const request =
+      await this.prisma.candidateProjectStatusChangeRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: { select: { id: true, firstName: true, lastName: true } },
+              project: { select: { id: true, title: true } },
+            },
+          },
+          requester: { select: { id: true, name: true } },
+        },
+      });
+
+    if (!request) {
+      throw new NotFoundException('Status change request not found');
+    }
+
+    await this.assertUserCanApproveStatusChange(userId, request.requestType);
+
+    if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
+      throw new BadRequestException('Status change request has already been processed');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updatedRequest = await tx.candidateProjectStatusChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      if (!isProcessingStatusChangeRequestType(request.requestType)) {
+        await this.applyStatusUpdateInTransaction(
+          tx,
+          request.candidateProjectMapId,
+          {
+            subStatusName:
+              request.requestType === 'reactivate' ? undefined : request.requestedStatus,
+            reason: request.reason,
+            notes: dto.reviewNotes,
+          },
+          userId,
+          request.requestType as 'block' | 'reactivate',
+        );
+      }
+
+      await this.outboxService.publishCandidateProjectStatusChangeReviewed(
+        {
+          requestId,
+          candidateProjectMapId: request.candidateProjectMapId,
+          candidateId: request.candidateProjectMap.candidateId,
+          projectId: request.candidateProjectMap.projectId,
+          candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
+          projectTitle: request.candidateProjectMap.project.title,
+          requestType: request.requestType,
+          requestedStatus: request.requestedStatus,
+          requestedBy: request.requestedBy,
+          outcome: 'approved',
+          reviewNotes: dto.reviewNotes,
+          processingStepId: request.processingStepId ?? undefined,
+          stepKey: request.stepKey ?? undefined,
+          processingCandidateId: request.processingCandidateId ?? undefined,
+        },
+        tx,
+      );
+
+      return updatedRequest;
+    });
+
+    if (isProcessingStatusChangeRequestType(request.requestType)) {
+      await this.processingService.executeApprovedProcessingStatusChange(
+        {
+          requestType: request.requestType,
+          processingStepId: request.processingStepId!,
+          candidateProjectMapId: request.candidateProjectMapId,
+          reason: request.reason,
+        },
+        userId,
+      );
+    }
+
+    return result;
+  }
+
+  async rejectStatusChangeRequest(
+    requestId: string,
+    dto: ReviewStatusChangeRequestDto,
+    userId: string,
+  ) {
+    const request =
+      await this.prisma.candidateProjectStatusChangeRequest.findUnique({
+        where: { id: requestId },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: { select: { id: true, firstName: true, lastName: true } },
+              project: { select: { id: true, title: true } },
+            },
+          },
+        },
+      });
+
+    if (!request) {
+      throw new NotFoundException('Status change request not found');
+    }
+
+    await this.assertUserCanApproveStatusChange(userId, request.requestType);
+
+    if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
+      throw new BadRequestException('Status change request has already been processed');
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const rejected = await tx.candidateProjectStatusChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.REJECTED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          reviewNotes: dto.reviewNotes ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.outboxService.publishCandidateProjectStatusChangeReviewed(
+        {
+          requestId,
+          candidateProjectMapId: request.candidateProjectMapId,
+          candidateId: request.candidateProjectMap.candidateId,
+          projectId: request.candidateProjectMap.projectId,
+          candidateName: `${request.candidateProjectMap.candidate.firstName} ${request.candidateProjectMap.candidate.lastName}`,
+          projectTitle: request.candidateProjectMap.project.title,
+          requestType: request.requestType,
+          requestedStatus: request.requestedStatus,
+          requestedBy: request.requestedBy,
+          outcome: 'rejected',
+          reviewNotes: dto.reviewNotes,
+          processingStepId: request.processingStepId ?? undefined,
+          stepKey: request.stepKey ?? undefined,
+          processingCandidateId: request.processingCandidateId ?? undefined,
+        },
+        tx,
+      );
+
+      return rejected;
+    });
+
+    return updated;
+  }
+
+  private async applyStatusUpdateInTransaction(
+    tx: Prisma.TransactionClient,
+    id: string,
+    updateStatusDto: Pick<
+      UpdateProjectStatusDto,
+      'mainStatusId' | 'subStatusId' | 'subStatusName' | 'reason' | 'notes'
+    >,
+    userId: string,
+    requestType?: 'block' | 'reactivate',
+  ) {
+    const { mainStatusId, subStatusId, subStatusName, reason, notes } =
+      updateStatusDto;
+
+    const candidateProject = await tx.candidateProjects.findUnique({
+      where: { id },
+      include: {
+        mainStatus: true,
+        previousMainStatus: true,
+        previousSubStatus: true,
+      },
+    });
+
+    if (!candidateProject) {
+      throw new NotFoundException(
+        `Candidate project assignment with ID ${id} not found`,
+      );
+    }
+
+    let targetMainStatusId: string;
+    let targetSubStatusId: string;
+    let targetMainStatus;
+    let targetSubStatus;
+
+    if (requestType === 'reactivate') {
+      // Restore last active status
+      if (
+        !candidateProject.previousMainStatusId ||
+        !candidateProject.previousSubStatusId
+      ) {
+        throw new BadRequestException('No previous status to restore');
+      }
+      targetMainStatusId = candidateProject.previousMainStatusId;
+      targetSubStatusId = candidateProject.previousSubStatusId;
+
+      targetMainStatus = candidateProject.previousMainStatus;
+      targetSubStatus = candidateProject.previousSubStatus;
+
+      // Clear previous status and blockedAt after restoring
+      await tx.candidateProjects.update({
+        where: { id },
+        data: {
+          previousMainStatusId: null,
+          previousSubStatusId: null,
+          statusBlockedAt: null,
+        },
+      });
+    } else if (requestType === 'block') {
+      // Store current status as previous ONLY if first block
+      await this.storePreviousStatusIfNeeded(tx, id);
+
+      // Resolve target status from subStatusName
+      if (!subStatusName) {
+        throw new BadRequestException('subStatusName required for block');
+      }
+
+      targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
+        where: { name: subStatusName },
+        include: { stage: true },
+      });
+
+      if (!targetSubStatus) {
+        throw new NotFoundException(`Sub-status ${subStatusName} not found`);
+      }
+
+      targetMainStatus = targetSubStatus.stage;
+      targetMainStatusId = targetSubStatus.stageId;
+      targetSubStatusId = targetSubStatus.id;
+    } else {
+      // Regular update (existing logic for other status changes)
+      if (subStatusId) {
+        targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
+          where: { id: subStatusId },
+          include: { stage: true },
+        });
+      } else if (subStatusName) {
+        targetSubStatus = await tx.candidateProjectSubStatus.findUnique({
+          where: { name: subStatusName },
+          include: { stage: true },
+        });
+      }
+
+      if (!targetSubStatus) {
+        throw new NotFoundException(
+          `Sub-status ${subStatusId || subStatusName} not found`,
+        );
+      }
+
+      targetMainStatus = mainStatusId
+        ? await tx.candidateProjectMainStatus.findUnique({
+            where: { id: mainStatusId },
+          })
+        : targetSubStatus.stage;
+
+      if (!targetMainStatus) {
+        throw new NotFoundException('Main status not found');
+      }
+
+      targetMainStatusId = targetMainStatus.id;
+      targetSubStatusId = targetSubStatus.id;
+    }
+
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
+    const activeRecruiterId = await this.getCandidateActiveRecruiter(
+      candidateProject.candidateId,
+    );
+
+    const updated = await tx.candidateProjects.update({
+      where: { id },
+      data: {
+        mainStatusId: targetMainStatusId,
+        subStatusId: targetSubStatusId,
+        ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
+      },
+      include: {
+        candidate: true,
+        project: true,
+        roleNeeded: true,
+        recruiter: true,
+        mainStatus: true,
+        subStatus: true,
+      },
+    });
+
+    await tx.candidateProjectStatusHistory.create({
+      data: {
+        candidateProjectMapId: id,
+        changedById: userId,
+        changedByName: user?.name || null,
+        mainStatusId: targetMainStatusId,
+        subStatusId: targetSubStatusId,
+        mainStatusSnapshot: targetMainStatus.label,
+        subStatusSnapshot: targetSubStatus.label,
+        reason: reason || null,
+        notes: notes || null,
+      },
+    });
+
+    return updated;
+  }
+
   async updateStatus(
     id: string,
     updateStatusDto: UpdateProjectStatusDto,
@@ -1615,6 +2634,7 @@ export class CandidateProjectsService {
     // -------------------------------------
     const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id },
+      include: { mainStatus: true },
     });
 
     if (!candidateProject) {
@@ -1623,96 +2643,18 @@ export class CandidateProjectsService {
       );
     }
 
-    // -------------------------------------
-    // GET sub-status (required)
-    // -------------------------------------
-    let subStatus;
-    if (subStatusId) {
-      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
-        where: { id: subStatusId },
-        include: { stage: true },
-      });
-    } else if (subStatusName) {
-      subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
-        where: { name: subStatusName },
-        include: { stage: true },
-      });
-    }
+    this.assertCandidateProjectPipelineNotBlocked(
+      candidateProject.mainStatus?.name,
+    );
 
-    if (!subStatus) {
-      throw new NotFoundException(
-        `Sub-status ${subStatusId || subStatusName} not found`,
-      );
-    }
-
-    // -------------------------------------
-    // IF mainStatusId not given → use subStatus.stage
-    // -------------------------------------
-    const mainStatus = mainStatusId
-      ? await this.prisma.candidateProjectMainStatus.findUnique({
-          where: { id: mainStatusId },
-        })
-      : subStatus.stage; // auto detected
-
-    if (!mainStatus) {
-      throw new NotFoundException(`Main status not found`);
-    }
-
-    // -------------------------------------
-    // GET USER NAME FOR HISTORY & RESOLVE RECRUITER
-    // -------------------------------------
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true },
-    });
-
-    const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateProject.candidateId);
-
-    // -------------------------------------
-    // UPDATE & ADD HISTORY IN TRANSACTION
-    // -------------------------------------
-    const result = await this.prisma.$transaction(async (tx) => {
-      // UPDATE current status (NEW SYSTEM)
-      const updated = await tx.candidateProjects.update({
-        where: { id },
-        data: {
-          mainStatusId: mainStatus.id,
-          subStatusId: subStatus.id,
-          // Sync recruiter if one is active in assignments table
-          ...(activeRecruiterId ? { recruiterId: activeRecruiterId } : {}),
-        },
-        include: {
-          candidate: true,
-          project: true,
-          roleNeeded: true,
-          recruiter: true,
-          mainStatus: true,
-          subStatus: true,
-        },
-      });
-
-      // Create history entry (NEW SYSTEM)
-      await tx.candidateProjectStatusHistory.create({
-        data: {
-          candidateProjectMapId: id,
-          changedById: userId,
-          changedByName: user?.name || null,
-
-          mainStatusId: mainStatus.id,
-          subStatusId: subStatus.id,
-
-          mainStatusSnapshot: mainStatus.label,
-          subStatusSnapshot: subStatus.label,
-
-          reason: reason || null,
-          notes: notes || null,
-        },
-      });
-
-      return updated;
-    });
-
-    return result;
+    return this.prisma.$transaction((tx) =>
+      this.applyStatusUpdateInTransaction(
+        tx,
+        id,
+        { mainStatusId, subStatusId, subStatusName, reason, notes },
+        userId,
+      ),
+    );
   }
 
   async remove(id: string) {
@@ -1908,6 +2850,10 @@ export class CandidateProjectsService {
               designation: true,
               minExperience: true,
               maxExperience: true,
+              roleCatalogId: true,
+              roleCatalog: {
+                select: { id: true, name: true, label: true },
+              },
             },
           },
           recruiter: {
@@ -1918,6 +2864,13 @@ export class CandidateProjectsService {
             },
           },
           currentProjectStatus: true,
+          subStatus: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
         },
         orderBy: {
           assignedAt: 'desc',
@@ -2092,6 +3045,7 @@ export class CandidateProjectsService {
           select: { designation: true },
         },
         subStatus: true,
+        mainStatus: true,
       },
     });
 
@@ -2100,6 +3054,10 @@ export class CandidateProjectsService {
         `Candidate-Project with ID "${candidateProjectMapId}" not found`,
       );
     }
+
+    this.assertCandidateProjectPipelineNotBlocked(
+      candidateProject.mainStatus?.name,
+    );
 
     // Verify coordinator exists and has correct role
     const coordinator = await this.prisma.user.findUnique({
@@ -2289,11 +3247,23 @@ export class CandidateProjectsService {
     const { projectId, candidateId, type, recruiterId: providedRecruiterId, notes } = dto as any;
 
     // Validate candidate & project
-    const candidate = await this.prisma.candidate.findUnique({ where: { id: candidateId } });
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: { currentStatus: true },
+    });
     if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     const project = await this.prisma.project.findUnique({ where: { id: projectId } });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    assertProjectOpenForAssignment(project);
+
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
 
     // Resolve recruiter
     // 1. Prioritize candidate's assigned recruiter from assignments table
@@ -2325,7 +3295,18 @@ export class CandidateProjectsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
 
     // Check existing assignment for candidate & project
-    const existingAssignment = await this.prisma.candidateProjects.findFirst({ where: { candidateId, projectId } });
+    const existingAssignment = await this.prisma.candidateProjects.findFirst({
+      where: { candidateId, projectId },
+      include: { mainStatus: true },
+    });
+
+    if (!existingAssignment) {
+      this.ensureCandidatePositiveForProjectAssignment(candidate);
+    } else {
+      this.assertCandidateProjectPipelineNotBlocked(
+        existingAssignment.mainStatus?.name,
+      );
+    }
 
     const candidateProject = await this.prisma.$transaction(async (tx) => {
       let assignment;
@@ -2616,6 +3597,24 @@ export class CandidateProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
+    const [processingConflict, existingOnProject] = await Promise.all([
+      findProcessingInProgressAssignment(this.prisma, candidateId),
+      this.prisma.candidateProjects.findFirst({
+        where: { candidateId, projectId },
+        select: { id: true },
+      }),
+    ]);
+    const pipelineBlockedOnThisProject = isPipelineBlockedOnProject(
+      processingConflict,
+      projectId,
+    );
+    const processingHardReason = getProcessingEligibilityHardReason(
+      processingConflict,
+      projectId,
+      project.title,
+      Boolean(existingOnProject),
+    );
+
     const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
     const candidateGender = candidate.gender?.toLowerCase();
     let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
@@ -2633,11 +3632,21 @@ export class CandidateProjectsService {
         experience: true,
       };
 
-      // Status Check (Hard) - Block assignment for RNR candidates
+      // Status Check (Hard) - Block assignment for non-positive candidates and RNR
+      if (!this.isCandidatePositiveStatus(candidate)) {
+        hardReasons.push(
+          `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+        );
+      }
+
       if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
         hardReasons.push(
           `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
         );
+      }
+
+      if (processingHardReason) {
+        hardReasons.push(processingHardReason);
       }
 
       // Gender Check (Hard)
@@ -2766,6 +3775,8 @@ export class CandidateProjectsService {
       projectTitle: project.title,
       isEligible: roleEligibility.some((r) => r.isEligible),
       roleEligibility,
+      processingConflict,
+      pipelineBlockedOnThisProject,
     };
   }
 
@@ -2810,7 +3821,37 @@ export class CandidateProjectsService {
       },
     });
 
+    const [processingConflictMap, existingOnProjectRows] = await Promise.all([
+      findProcessingInProgressAssignmentsByCandidateIds(
+        this.prisma,
+        candidateIds,
+      ),
+      this.prisma.candidateProjects.findMany({
+        where: {
+          candidateId: { in: candidateIds },
+          projectId,
+        },
+        select: { candidateId: true },
+      }),
+    ]);
+    const existingOnProjectIds = new Set(
+      existingOnProjectRows.map((row) => row.candidateId),
+    );
+
     const results = candidates.map((candidate) => {
+      const processingConflict =
+        processingConflictMap.get(candidate.id) ?? null;
+      const pipelineBlockedOnThisProject = isPipelineBlockedOnProject(
+        processingConflict,
+        projectId,
+      );
+      const processingHardReason = getProcessingEligibilityHardReason(
+        processingConflict,
+        projectId,
+        project.title,
+        existingOnProjectIds.has(candidate.id),
+      );
+
       const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
       const candidateGender = candidate.gender?.toLowerCase();
       let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
@@ -2827,11 +3868,21 @@ export class CandidateProjectsService {
           experience: true,
         };
 
-        // Status Check (Hard) - Block assignment for RNR candidates
+        // Status Check (Hard) - Block assignment for non-positive candidates and RNR
+        if (!this.isCandidatePositiveStatus(candidate)) {
+          hardReasons.push(
+            `Candidate must be in a positive status (${CANDIDATE_STATUS.INTERESTED}, ${CANDIDATE_STATUS.FUTURE}, or ${CANDIDATE_STATUS.ON_HOLD}) to be assigned to a project.`,
+          );
+        }
+
         if (candidate.currentStatus?.statusName?.toLowerCase() === CANDIDATE_STATUS.RNR) {
           hardReasons.push(
             `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
           );
+        }
+
+        if (processingHardReason) {
+          hardReasons.push(processingHardReason);
         }
 
         // Gender Check (Hard)
@@ -2997,6 +4048,8 @@ export class CandidateProjectsService {
         candidateName: `${candidate.firstName} ${candidate.lastName}`,
         isEligible: roleEligibility.some((r) => r.isEligible),
         roleEligibility,
+        processingConflict,
+        pipelineBlockedOnThisProject,
       };
     });
 
@@ -3128,6 +4181,8 @@ export class CandidateProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
+    assertProjectOpenForAssignment(project);
+
     // Get common statuses once
     const mainStatus = await this.prisma.candidateProjectMainStatus.findUnique({
       where: { name: 'nominated' },
@@ -3154,10 +4209,32 @@ export class CandidateProjectsService {
         // Simple verification - candidate exists
         const candidate = await this.prisma.candidate.findUnique({
           where: { id: candidateId },
+          include: { currentStatus: true },
         });
 
         if (!candidate) {
           errors.push({ candidateId, error: 'Candidate not found' });
+          continue;
+        }
+
+        try {
+          this.ensureCandidatePositiveForProjectAssignment(candidate);
+        } catch (error: any) {
+          errors.push({ candidateId, error: error.message || 'Candidate status not eligible for assignment' });
+          continue;
+        }
+
+        try {
+          await assertCandidateNotBlockedForNewProjectAssignment(
+            this.prisma,
+            candidateId,
+            projectId,
+          );
+        } catch (error: any) {
+          errors.push({
+            candidateId,
+            error: error.message || 'Candidate blocked by active processing on another project',
+          });
           continue;
         }
 

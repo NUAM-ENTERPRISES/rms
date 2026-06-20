@@ -45,8 +45,9 @@ export async function seedProcessingCountrySteps(prisma: PrismaClient) {
       const key = keys[i];
       const template = templateByKey[key];
       if (!template) {
-        console.warn(`⚠️  Template with key '${key}' not found — skipping for country ${countryCode}`);
-        continue;
+        throw new Error(
+          `ProcessingStepTemplate with key '${key}' not found — run seedProcessingStepTemplates first`,
+        );
       }
 
       await prisma.processingCountryStep.upsert({

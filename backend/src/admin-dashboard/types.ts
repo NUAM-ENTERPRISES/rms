@@ -20,6 +20,8 @@ export interface TopRecruiter {
   name: string;
   role: string;
   placementsThisMonth: number;
+  performanceScore: number;
+  rating: string;
   email?: string;
   phone?: string;
   avatarUrl?: string;
@@ -30,9 +32,44 @@ export interface RecruiterActivity {
   value: number;
 }
 
+export interface PerformanceLeaderboardEntry {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  performanceScore: number;
+  rating: string;
+  placementsThisMonth: number;
+  phone?: string;
+  avatarUrl?: string;
+}
+
+export interface RecruiterAwardWinner {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  performanceScore: number;
+  rating: string;
+  deployedCount: number;
+  phone?: string;
+  avatarUrl?: string;
+}
+
 export interface TopRecruiterStatsData {
+  period: {
+    year: number;
+    month: number;
+  };
+  recruiterOfTheMonth: RecruiterAwardWinner | null;
+  recruiterOfTheYear: RecruiterAwardWinner | null;
+  monthlyLeaderboard: PerformanceLeaderboardEntry[];
+  yearlyLeaderboard: PerformanceLeaderboardEntry[];
+  /** @deprecated Use recruiterOfTheMonth — kept for backward compatibility */
   topRecruiter: TopRecruiter;
   recruiterActivities: RecruiterActivity[];
+  /** @deprecated Use monthlyLeaderboard */
+  leaderboard: PerformanceLeaderboardEntry[];
 }
 
 export type InterviewStatus = "Scheduled" | "Completed" | "Pending" | "Missed";

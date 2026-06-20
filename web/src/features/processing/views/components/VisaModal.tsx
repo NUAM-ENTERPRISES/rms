@@ -3,19 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Loader2, FileCheck, Upload, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, FileCheck, Upload, CheckCircle2, XCircle, Eye, BookUser, AlertCircle } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
-import { useUploadDocumentMutation } from "@/features/candidates/api";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { useUploadDocumentMutation, useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { getUploadErrorMessage } from "@/lib/document-upload";
+import { resolveCandidatePassportNumber } from "@/features/candidates/utils/candidate-passport.util";
 
 
 
@@ -28,6 +36,7 @@ interface VisaModalProps {
 }
 
 export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: VisaModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetVisaRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -39,10 +48,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [updateStepStatus, { isLoading: isUpdatingVisa }] = useUpdateStepStatusMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [updateCandidate, { isLoading: isUpdatingCandidate }] = useUpdateCandidateMutation();
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -64,6 +70,9 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const [visaExpiryDate, setVisaExpiryDate] = useState<Date | undefined>(undefined);
   const [initialVisaIssuedDate, setInitialVisaIssuedDate] = useState<Date | undefined>(undefined);
   const [initialVisaExpiryDate, setInitialVisaExpiryDate] = useState<Date | undefined>(undefined);
+  const [passportNumber, setPassportNumber] = useState("");
+  const [initialPassportNumber, setInitialPassportNumber] = useState("");
+  const [isEditingPassport, setIsEditingPassport] = useState(false);
 
   // Reupload context (when replacing an existing document)
   const [replaceOldDocumentId, setReplaceOldDocumentId] = useState<string | null>(null);
@@ -89,6 +98,13 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
     setVisaExpiryDate(expiryDate);
     setInitialVisaExpiryDate(expiryDate);
   }, [activeStep]);
+
+  useEffect(() => {
+    const saved = resolveCandidatePassportNumber(candidate?.candidate) ?? "";
+    setPassportNumber(saved);
+    setInitialPassportNumber(saved);
+    setIsEditingPassport(!saved);
+  }, [candidate?.candidate?.id, candidate?.candidate?.passportNumber]);
 
   // Whether this specific step has been cancelled
   const isStepCancelled = activeStep?.status === 'cancelled';
@@ -260,7 +276,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       setUploadModalOpen(false);
       await refetch();
     } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to upload document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 
@@ -283,27 +299,42 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
     }
   };
 
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) return;
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-      if (onComplete) await onComplete();
-      onClose();
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to cancel step");
-    }
-  };
-
   const handleSaveVisaMetadata = async () => {
     if (!activeStep?.id) return;
-    const payload: any = {};
-    if (visaIssuedDate) payload.visaIssuedAt = visaIssuedDate.toISOString();
-    if (visaExpiryDate) payload.visaValidAt = visaExpiryDate.toISOString();
+
+    const trimmedPassport = passportNumber.trim();
+    const passportChanged = trimmedPassport !== initialPassportNumber;
+
+    if (passportChanged && trimmedPassport.length > 0 && trimmedPassport.length < 3) {
+      toast.error("Passport number must be at least 3 characters");
+      return;
+    }
+
     try {
-      await updateStepStatus({ stepId: activeStep.id, data: payload }).unwrap();
+      if (passportChanged) {
+        const candidateId = candidate?.candidate?.id;
+        if (!candidateId) {
+          toast.error("Missing candidate id");
+          return;
+        }
+        await updateCandidate({
+          id: candidateId,
+          passportNumber: trimmedPassport || null,
+        }).unwrap();
+      }
+
+      const payload: Record<string, string> = {};
+      if (visaIssuedDate) payload.visaIssuedAt = visaIssuedDate.toISOString();
+      if (visaExpiryDate) payload.visaValidAt = visaExpiryDate.toISOString();
+
+      if (Object.keys(payload).length > 0) {
+        await updateStepStatus({ stepId: activeStep.id, data: payload as any }).unwrap();
+      }
+
+      if (passportChanged) {
+        setIsEditingPassport(!trimmedPassport);
+      }
+
       toast.success("Visa details saved");
       await refetch();
     } catch (err: any) {
@@ -317,9 +348,14 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const statMissing = apiCounts?.missingCount ?? 0;
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
 
-  const visaChanged = (visaIssuedDate?.toISOString() || "") !== (initialVisaIssuedDate?.toISOString() || "") ||
-                       (visaExpiryDate?.toISOString() || "") !== (initialVisaExpiryDate?.toISOString() || "");
+  const visaChanged =
+    (visaIssuedDate?.toISOString() || "") !== (initialVisaIssuedDate?.toISOString() || "") ||
+    (visaExpiryDate?.toISOString() || "") !== (initialVisaExpiryDate?.toISOString() || "") ||
+    passportNumber.trim() !== initialPassportNumber;
   const showSaveVisaButton = visaChanged && !isVisaCompleted && !isStepCancelled;
+  const isSavingVisaDetails = isUpdatingVisa || isUpdatingCandidate;
+  const hasPassportOnFile = Boolean(initialPassportNumber);
+  const passportInputMissing = !passportNumber.trim() && !hasPassportOnFile;
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -351,6 +387,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
             <Card className="p-8 text-center text-sm text-slate-600">Could not load Visa requirements.</Card>
           ) : (
             <div className="space-y-4">
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="bg-rose-50 p-3 border-0">
                   <div className="flex items-start gap-3">
@@ -381,26 +419,189 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
               <div className="border rounded-lg bg-teal-50/30">
                 <div className="bg-teal-100/50 px-3 py-1 border-b text-[11px] font-bold uppercase text-teal-700">Visa Details</div>
                 <div className="p-3 space-y-3">
+                  <div
+                    className={`rounded-lg border p-3 ${
+                      hasPassportOnFile
+                        ? "border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white"
+                        : "border-amber-200 bg-gradient-to-br from-amber-50/80 to-white"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                            hasPassportOnFile ? "bg-emerald-100" : "bg-amber-100"
+                          }`}
+                        >
+                          <BookUser
+                            className={`h-4 w-4 ${
+                              hasPassportOnFile ? "text-emerald-700" : "text-amber-700"
+                            }`}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Passport Number
+                          </div>
+                          {hasPassportOnFile ? (
+                            <p className="mt-1 truncate font-mono text-sm font-semibold tracking-wide text-slate-900">
+                              {initialPassportNumber}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-amber-700">
+                              Not on file — processing team must add passport number
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {hasPassportOnFile ? (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-emerald-200 bg-emerald-50 text-[10px] text-emerald-700"
+                        >
+                          On file
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 border-amber-200 bg-amber-50 text-[10px] text-amber-700"
+                        >
+                          Missing
+                        </Badge>
+                      )}
+                    </div>
+
+                    {!isVisaCompleted && !isStepCancelled && (
+                      <div className="mt-3 space-y-2">
+                        {hasPassportOnFile && !isEditingPassport ? (
+                          <div className="flex justify-end">
+                            <LockedProcessingActionButton forceDisabled={isLocked}>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                disabled={isLocked}
+                                onClick={() => setIsEditingPassport(true)}
+                              >
+                                Update passport
+                              </Button>
+                            </LockedProcessingActionButton>
+                          </div>
+                        ) : (
+                          <>
+                            <Label htmlFor="visa-passport-number" className="text-xs text-slate-600">
+                              {hasPassportOnFile ? "Update passport number" : "Add passport number"}
+                            </Label>
+                            <Input
+                              id="visa-passport-number"
+                              value={passportNumber}
+                              onChange={(event) => setPassportNumber(event.target.value.toUpperCase())}
+                              placeholder="e.g., A1234567"
+                              autoComplete="off"
+                              disabled={isLocked}
+                              className="h-9 bg-white font-mono text-sm tracking-wide"
+                            />
+                            {hasPassportOnFile ? (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8"
+                                  onClick={() => {
+                                    setPassportNumber(initialPassportNumber);
+                                    setIsEditingPassport(false);
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : null}
+                            {passportInputMissing ? (
+                              <p className="flex items-center gap-1.5 text-[11px] text-amber-700">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                Passport number is required for visa processing
+                              </p>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {(visaIssuedDate || visaExpiryDate) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa issued
+                        </div>
+                        <div className="mt-1 text-sm font-semibold text-slate-800">
+                          {visaIssuedDate ? format(visaIssuedDate, "PPP") : "Not set"}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-teal-100 bg-white p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-teal-700">
+                          Visa expiry
+                        </div>
+                        <div
+                          className={`mt-1 text-sm font-semibold ${
+                            visaExpiryDate && visaExpiryDate.getTime() < Date.now()
+                              ? "text-rose-600"
+                              : "text-slate-800"
+                          }`}
+                        >
+                          {visaExpiryDate ? format(visaExpiryDate, "PPP") : "Not set"}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Visa issue date</Label>
-                      <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled} compact />
+                      <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Visa expiry date</Label>
-                      <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled} compact />
+                      <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                   </div>
                   {showSaveVisaButton && (
                     <div className="flex justify-end">
-                      <Button size="sm" onClick={handleSaveVisaMetadata} disabled={isUpdatingVisa} className="h-8 bg-teal-600">Save Details</Button>
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveVisaMetadata}
+                          disabled={isSavingVisaDetails || isLocked}
+                          className="h-8 bg-teal-600"
+                        >
+                        {isSavingVisaDetails ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : null}
+                        Save Details
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b text-xs font-black uppercase text-slate-600">Required Documents</div>
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isVisaCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Visa"
+                      disabled={isVerifying || isLocked}
+                    />
+                  )}
+                </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
                     const pdoc = processingDocsByDocType[req.docType]?.[0];
@@ -422,9 +623,13 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           {!isVisaCompleted && !isStepCancelled && (
                             <>
                               {!pdoc && !cdoc ? (
-                                <Button size="sm" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Upload</Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" className="h-8 text-xs" disabled={isLocked} onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Upload</Button>
+                                </LockedProcessingActionButton>
                               ) : !pdoc && cdoc ? (
-                                <Button size="sm" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Verify</Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" disabled={isLocked} onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Verify</Button>
+                                </LockedProcessingActionButton>
                               ) : (
                                 <Badge variant="outline" className="text-[10px]">{pdoc.status}</Badge>
                               )}
@@ -448,8 +653,23 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
             <div className="flex items-center gap-2">
               {!isVisaCompleted && !isStepCancelled && (
                 <>
-                  <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)}>Cancel Step</Button>
-                  <Button size="sm" onClick={handleMarkComplete} disabled={!allVerified || isCompletingStep}>Mark Complete</Button>
+                  <ProcessingStepActionButtons
+                    processingStepId={activeStep?.id}
+                    show={!isVisaCompleted && !isStepCancelled}
+                    onSubmitted={async () => {
+                      await refetch();
+                      if (onComplete) await onComplete();
+                    }}
+                  />
+                  {isLocked ? (
+                    <LockedProcessingActionButton forceDisabled>
+                      <Button size="sm" disabled className="opacity-80" aria-disabled>
+                        Mark Complete
+                      </Button>
+                    </LockedProcessingActionButton>
+                  ) : (
+                    <Button size="sm" onClick={handleMarkComplete} disabled={!allVerified || isCompletingStep || isLocked}>Mark Complete</Button>
+                  )}
                 </>
               )}
               {isVisaCompleted && <Badge className="bg-emerald-100 text-emerald-700 px-2">Completed ✓</Badge>}
@@ -461,7 +681,6 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       <React.Suspense fallback={null}>
         <UploadDocumentModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} docType={selectedDocType} docLabel={selectedDocLabel} onUpload={handleUploadFile} isUploading={isUploading || isReusing || isReuploadingProcessing} />
         <VerifyProcessingDocumentModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} documentId={verifyDocId} documentLabel={verifyDocLabel} processingStepId={activeStep?.id || ""} onConfirm={handleConfirmVerify} isVerifying={isVerifying} />
-        <ConfirmCancelStepModal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} onConfirm={handleConfirmCancel} isCancelling={isCancelling} />
         <CompleteProcessingStepModal isOpen={completeModalOpen} onClose={() => setCompleteModalOpen(false)} onConfirm={handleConfirmComplete} isCompleting={isCompletingStep} requiredDocuments={requiredDocuments} uploadsByDocType={uploadsByDocType} candidateDocsByDocType={candidateDocsByDocType} processingDocsByDocType={processingDocsByDocType} onViewDocument={handleViewDocument} />
       </React.Suspense>
       {viewerUrl && viewerMimeType?.includes("pdf") ? (

@@ -9,13 +9,117 @@ import { CreateAgentDto } from './dto/create-agent.dto';
 import { UpdateAgentDto } from './dto/update-agent.dto';
 import { QueryAgentsDto } from './dto/query-agents.dto';
 import { QueryAgentCandidatesDto } from './dto/query-agent-candidates.dto';
+import { QueryAgentInterviewPassedCandidatesDto } from './dto/query-agent-interview-passed-candidates.dto';
 import { QueryAgentProjectsDto } from './dto/query-agent-projects.dto';
 import { LinkAgentProjectsDto } from './dto/link-agent-projects.dto';
 import { UpdateAgentProjectDto } from './dto/update-agent-project.dto';
+import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
 
 @Injectable()
 export class AgentsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private interviewPassedHistoryEntryWhere(): Prisma.CandidateProjectStatusHistoryWhereInput {
+    return {
+      OR: [
+        { subStatus: { name: CANDIDATE_PROJECT_STATUS.INTERVIEW_PASSED } },
+        {
+          subStatusSnapshot: {
+            equals: CANDIDATE_PROJECT_STATUS.INTERVIEW_PASSED,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    };
+  }
+
+  private buildCandidateSearchOr(search: string): Prisma.CandidateWhereInput['OR'] {
+    return [
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { mobileNumber: { contains: search, mode: 'insensitive' } },
+      { passportNumber: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  private async assertAgentExists(id: string) {
+    const agent = await this.prisma.agent.findUnique({ where: { id } });
+    if (!agent) {
+      throw new NotFoundException(`Agent with ID ${id} not found`);
+    }
+    return agent;
+  }
+
+  private async countInterviewPassedCandidates(agentId: string): Promise<number> {
+    return this.prisma.candidate.count({
+      where: {
+        agentId,
+        projects: {
+          some: {
+            projectStatusHistory: {
+              some: this.interviewPassedHistoryEntryWhere(),
+            },
+          },
+        },
+      },
+    });
+  }
+
+  private async loadInterviewPassedProjectsByCandidateIds(
+    candidateIds: string[],
+  ): Promise<
+    Map<
+      string,
+      Array<{ projectId: string; projectTitle: string | null; passedAt: string }>
+    >
+  > {
+    if (candidateIds.length === 0) {
+      return new Map();
+    }
+
+    const histories = await this.prisma.candidateProjectStatusHistory.findMany({
+      where: {
+        ...this.interviewPassedHistoryEntryWhere(),
+        candidateProjectMap: {
+          candidateId: { in: candidateIds },
+        },
+      },
+      orderBy: { statusChangedAt: 'desc' },
+      select: {
+        statusChangedAt: true,
+        candidateProjectMap: {
+          select: {
+            candidateId: true,
+            projectId: true,
+            project: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    const grouped = new Map<
+      string,
+      Array<{ projectId: string; projectTitle: string | null; passedAt: string }>
+    >();
+
+    for (const entry of histories) {
+      const candidateId = entry.candidateProjectMap.candidateId;
+      const projectId = entry.candidateProjectMap.projectId;
+      const passedAt = entry.statusChangedAt.toISOString();
+      const projectTitle = entry.candidateProjectMap.project?.title ?? null;
+
+      const existing = grouped.get(candidateId) ?? [];
+      if (existing.some((p) => p.projectId === projectId)) {
+        continue;
+      }
+
+      existing.push({ projectId, projectTitle, passedAt });
+      grouped.set(candidateId, existing);
+    }
+
+    return grouped;
+  }
 
   async create(createAgentDto: CreateAgentDto) {
     const { projectLinks, ...agentData } = createAgentDto;
@@ -83,6 +187,7 @@ export class AgentsService {
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { companyName: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (isActive !== undefined) {
@@ -124,6 +229,7 @@ export class AgentsService {
     const agent = await this.prisma.agent.findUnique({
       where: { id },
       include: {
+        country: { select: { code: true, name: true } },
         _count: {
           select: { candidates: true, agentProjects: true },
         },
@@ -138,6 +244,27 @@ export class AgentsService {
       success: true,
       message: 'Agent retrieved successfully',
       data: agent,
+    };
+  }
+
+  async getAgentCandidateStats(id: string) {
+    await this.assertAgentExists(id);
+
+    const [totalCandidates, interviewPassedCandidates, linkedProjects] =
+      await Promise.all([
+        this.prisma.candidate.count({ where: { agentId: id } }),
+        this.countInterviewPassedCandidates(id),
+        this.prisma.agentProject.count({ where: { agentId: id } }),
+      ]);
+
+    return {
+      success: true,
+      message: 'Agent candidate stats retrieved successfully',
+      data: {
+        totalCandidates,
+        interviewPassedCandidates,
+        linkedProjects,
+      },
     };
   }
 
@@ -172,23 +299,15 @@ export class AgentsService {
   }
 
   async getAgentCandidates(id: string, query: QueryAgentCandidatesDto) {
-    const agentExists = await this.prisma.agent.findUnique({ where: { id } });
-    if (!agentExists) {
-      throw new NotFoundException(`Agent with ID ${id} not found`);
-    }
+    await this.assertAgentExists(id);
 
     const { search, status, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = { agentId: id };
+    const where: Prisma.CandidateWhereInput = { agentId: id };
 
     if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
+      where.OR = this.buildCandidateSearchOr(search);
     }
 
     if (status) {
@@ -208,6 +327,7 @@ export class AgentsService {
           lastName: true,
           countryCode: true,
           mobileNumber: true,
+          passportNumber: true,
           email: true,
           profileImage: true,
           createdAt: true,
@@ -251,14 +371,16 @@ export class AgentsService {
       const { recruiterAssignments, projects, agentCandidateDeclaredProjects, ...rest } = c;
       return {
         ...rest,
-        contact: `${c.countryCode}${c.mobileNumber}`,
+        contact: `${c.countryCode ?? ''}${c.mobileNumber ?? ''}`,
         recruiter: recruiterAssignments[0]?.recruiter ?? null,
         candidateProjects: projects.map((p) => ({
           id: p.id,
           projectId: p.projectId,
           projectTitle: p.project?.title ?? null,
           mainStatusLabel: p.mainStatus?.label ?? p.mainStatus?.name ?? null,
+          mainStatusName: p.mainStatus?.name ?? null,
           subStatusLabel: p.subStatus?.label ?? p.subStatus?.name ?? null,
+          subStatusName: p.subStatus?.name ?? null,
         })),
         declaredProjects: (agentCandidateDeclaredProjects || []).map((d) => ({
           id: d.id,
@@ -271,6 +393,108 @@ export class AgentsService {
     return {
       success: true,
       message: 'Agent candidates retrieved successfully',
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async getAgentInterviewPassedCandidates(
+    id: string,
+    query: QueryAgentInterviewPassedCandidatesDto,
+  ) {
+    await this.assertAgentExists(id);
+
+    const { search, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.CandidateWhereInput = {
+      AND: [
+        { agentId: id },
+        {
+          projects: {
+            some: {
+              projectStatusHistory: {
+                some: this.interviewPassedHistoryEntryWhere(),
+              },
+            },
+          },
+        },
+        ...(search ? [{ OR: this.buildCandidateSearchOr(search) }] : []),
+      ],
+    };
+
+    const [total, candidates] = await Promise.all([
+      this.prisma.candidate.count({ where }),
+      this.prisma.candidate.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          countryCode: true,
+          mobileNumber: true,
+          passportNumber: true,
+          email: true,
+          profileImage: true,
+          createdAt: true,
+          currentStatus: {
+            select: { id: true, statusName: true },
+          },
+          agentCandidateDeclaredProjects: {
+            orderBy: { createdAt: 'desc' },
+            take: 30,
+            select: {
+              id: true,
+              projectId: true,
+              project: { select: { id: true, title: true } },
+            },
+          },
+          recruiterAssignments: {
+            where: { isActive: true },
+            take: 1,
+            select: {
+              recruiter: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    const passedProjectsByCandidate = await this.loadInterviewPassedProjectsByCandidateIds(
+      candidates.map((c) => c.id),
+    );
+
+    const data = candidates.map((c) => {
+      const { recruiterAssignments, agentCandidateDeclaredProjects, ...rest } = c;
+      const interviewPassedProjects = passedProjectsByCandidate.get(c.id) ?? [];
+
+      return {
+        ...rest,
+        contact: `${c.countryCode ?? ''}${c.mobileNumber ?? ''}`,
+        recruiter: recruiterAssignments[0]?.recruiter ?? null,
+        interviewPassedCount: interviewPassedProjects.length,
+        interviewPassedProjects,
+        declaredProjects: (agentCandidateDeclaredProjects || []).map((d) => ({
+          id: d.id,
+          projectId: d.projectId,
+          projectTitle: d.project?.title ?? null,
+        })),
+      };
+    });
+
+    return {
+      success: true,
+      message: 'Agent interview passed candidates retrieved successfully',
       data,
       meta: {
         total,

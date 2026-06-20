@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar, Send, Edit3 } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Download, FileStack, Archive, Calendar, Send, Edit3 } from "lucide-react";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import React, { useState, useMemo } from "react";
 import { DatePicker } from "@/components/molecules/DatePicker";
@@ -14,12 +14,21 @@ const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
-import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useCancelStepMutation, useGetDocumentReceivedRequirementsQuery, useSubmitHrdDateMutation, useReuploadProcessingDocumentMutation, useSetProcessingDocumentReceivedDateMutation } from "@/services/processingApi";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { getUploadErrorMessage } from "@/lib/document-upload";
+
+const DOCUMENT_ORIGINAL_RECEIVED_LABEL = "Document Original Received";
+const AGENT_SUBMIT_HARD_COPY_DATE_LABEL = "Agent Submit Hard Copy Date";
+const AGENT_SUBMIT_HARD_COPY_STEP_LABEL = "Agent Submit Hard Copy";
+import { useVerifyProcessingDocumentMutation, useCompleteStepMutation, useGetDocumentReceivedRequirementsQuery, useReuploadProcessingDocumentMutation, useSubmitHrdDateMutation, useSetProcessingDocumentReceivedDateMutation } from "@/services/processingApi";
 
 interface DocumentReceivedModalProps {
   isOpen: boolean;
@@ -31,6 +40,7 @@ interface DocumentReceivedModalProps {
 }
 
 export function DocumentReceivedModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: DocumentReceivedModalProps) {
+  const { isLocked } = useProcessingActionLock();
   // Use RTK Query to fetch requirements (ensures auth & caching)
   const { data, isLoading, error, refetch: refetchRequirements } = useGetDocumentReceivedRequirementsQuery(processingId, { skip: !isOpen || !processingId });
 
@@ -52,22 +62,18 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
-  const [setProcessingDocumentReceivedDate, { isLoading: isSettingReceivedDate }] = useSetProcessingDocumentReceivedDateMutation();
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
+  const [setProcessingDocumentReceivedDate, { isLoading: isSettingReceivedDate }] = useSetProcessingDocumentReceivedDateMutation();
 
-  // Submission date state (mirrors HRD modal)
   const [submissionDate, setSubmissionDate] = useState<Date | undefined>(undefined);
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
 
-  // Document receivedAt date input state per verification/document
-  const [receivedDateInputs, setReceivedDateInputs] = useState<Record<string, Date | undefined>>({});
   const [isEditReceivedDateModalOpen, setIsEditReceivedDateModalOpen] = useState(false);
   const [editReceivedDateVerificationId, setEditReceivedDateVerificationId] = useState<string | null>(null);
-  const [editReceivedDateDocumentLabel, setEditReceivedDateDocumentLabel] = useState<string>('');
+  const [editReceivedDateDocumentLabel, setEditReceivedDateDocumentLabel] = useState<string>("");
   const [editReceivedDateValue, setEditReceivedDateValue] = useState<Date | undefined>(undefined);
 
   // Reupload context (when replacing an existing document)
@@ -80,6 +86,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
   const uploads: any[] = data?.uploads || [];
   const candidate = data?.processingCandidate || data?.candidate; // flexible payload
   const activeStep = data?.step || data?.activeStep;
+  const collectionSummary = data?.originalDocumentCollection ?? null;
+  const mergedDocument = collectionSummary?.mergedDocument ?? null;
 
   const uploadsByDocType = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -130,6 +138,9 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     return map;
   }, [processingDocs]);
 
+  const isStepCancelled = activeStep?.status === "cancelled";
+  const isStepCompleted = Boolean(activeStep?.completedAt);
+
   // Viewer
   const handleViewDocument = (docType: string) => {
     const pdocs = processingDocsByDocType[docType] || [];
@@ -154,6 +165,17 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     setViewerOpen(true);
   };
 
+  const handleViewMergedDocument = () => {
+    if (!mergedDocument?.fileUrl) {
+      toast('No merged document available to view');
+      return;
+    }
+    setViewerMimeType(mergedDocument.mimeType || 'application/pdf');
+    setViewerFileName(mergedDocument.fileName || 'Merged document');
+    setViewerUrl(mergedDocument.fileUrl);
+    setViewerOpen(true);
+  };
+
   // Upload handlers (reuse existing flows)
   const handleUploadClick = (docType: string, docLabel: string, roleCatalog?: string, roleLabel?: string, oldDocumentId?: string, candidateProjectMapId?: string) => {
     setSelectedDocType(docType);
@@ -174,7 +196,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
 
   const handleSaveReceivedDate = async (date: Date) => {
     if (!editReceivedDateVerificationId) {
-      toast.error('Missing document verification ID');
+      toast.error("Missing document verification ID");
       return false;
     }
 
@@ -184,13 +206,13 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
         receivedAt: date.toISOString(),
         processingId,
       }).unwrap();
-      toast.success('Received date updated');
+      toast.success("Agent submit hard copy date updated");
       setIsEditReceivedDateModalOpen(false);
       await refetchRequirements();
       return true;
     } catch (err: any) {
-      console.error('Set received date failed', err);
-      toast.error(err?.data?.message || 'Failed to set received date');
+      console.error("Set received date failed", err);
+      toast.error(err?.data?.message || "Failed to set agent submit hard copy date");
       return false;
     }
   };
@@ -262,7 +284,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
       }
     } catch (err: any) {
       console.error('Upload error', err);
-      toast.error(err?.data?.message || 'Failed to upload');
+      toast.error(getUploadErrorMessage(err));
     }
   };
 
@@ -348,29 +370,35 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
   const handleMarkComplete = async () => {
     if (!activeStep?.id) return;
     if (statMissing > 0) { toast.error('Cannot complete — Missing mandatory docs'); return; }
-    if (!hasSubmittedAt) { toast.error('Cannot complete — Submission date not set'); return; }
+    if (!hasSubmittedAt) {
+      toast.error(`Cannot complete — ${AGENT_SUBMIT_HARD_COPY_DATE_LABEL} not set`);
+      return;
+    }
     setCompleteModalOpen(true);
   };
 
-  // Submit date handlers
   const handleSubmitDate = async (date?: Date): Promise<boolean> => {
     if (!activeStep?.id) {
       toast.error('No active step');
       return false;
     }
     const payloadDate = date ?? submissionDate;
-    if (!payloadDate) { toast.error('Please select a date and time'); return false; }
+    if (!payloadDate) {
+      toast.error('Please select a date and time');
+      return false;
+    }
     try {
       await submitHrdDate({ stepId: activeStep.id, submittedAt: payloadDate.toISOString() }).unwrap();
-      toast.success('Submission date saved successfully');
-      try { await refetchRequirements(); } catch (err) { /* ignore */ }
+      toast.success(`${AGENT_SUBMIT_HARD_COPY_DATE_LABEL} saved successfully`);
+      try { await refetchRequirements(); } catch { /* ignore */ }
       return true;
     } catch (err: any) {
       console.error('Submit date failed', err);
-      toast.error(err?.data?.message || 'Failed to save submission date');
+      toast.error(err?.data?.message || `Failed to save ${AGENT_SUBMIT_HARD_COPY_DATE_LABEL}`);
       return false;
     }
   };
+
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const handleConfirmComplete = async () => {
     if (!activeStep?.id) return;
@@ -386,24 +414,6 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
     }
   };
 
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const handleConfirmCancel = async (reason: string): Promise<void> => {
-    if (!activeStep?.id) {
-      toast.error('No active step');
-      return;
-    }
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success('Processing step cancelled');
-      setCancelOpen(false);
-      if (onComplete) await onComplete();
-      onClose();
-    } catch (err: any) {
-      console.error('Cancel failed', err);
-      toast.error(err?.data?.message || 'Failed to cancel step');
-    }
-  };
-
   // Reuse upload modal & verify modal & confirm modals similar to HRD modal
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -413,8 +423,8 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center"><FileCheck className="h-5 w-5 text-white" /></div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">Document Received</DialogTitle>
-                <DialogDescription className="text-sm text-white/70">View and verify required documents</DialogDescription>
+                <DialogTitle className="text-lg font-bold text-white">{DOCUMENT_ORIGINAL_RECEIVED_LABEL}</DialogTitle>
+                <DialogDescription className="text-sm text-white/70">Upload and verify required documents</DialogDescription>
               </div>
             </div>
             {candidate?.candidate && (
@@ -430,36 +440,46 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
           {isLoading ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-slate-400" /></div>
           ) : error || !data ? (
-            <Card className="p-8 text-center"><div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center"><AlertCircle className="h-7 w-7 text-rose-500" /></div><div className="text-sm text-slate-600">Could not load Document Received requirements.</div></Card>
+            <Card className="p-8 text-center"><div className="h-14 w-14 rounded-full bg-rose-50 mx-auto mb-4 flex items-center justify-center"><AlertCircle className="h-7 w-7 text-rose-500" /></div><div className="text-sm text-slate-600">Could not load {DOCUMENT_ORIGINAL_RECEIVED_LABEL} requirements.</div></Card>
           ) : (
             <div className="space-y-4">
+              <ProcessingActionLockBanner />
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-slate-50 rounded-lg p-3 text-center border"><div className="text-2xl font-black text-slate-700">{statTotal}</div><div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total Docs</div></div>
                 <div className="bg-emerald-50 rounded-lg p-3 text-center border border-emerald-100"><div className="text-2xl font-black text-emerald-600">{statVerified}</div><div className="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">Verified</div></div>
                 <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100"><div className="text-2xl font-black text-amber-600">{statMissing}</div><div className="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Missing</div></div>
               </div>
 
-              {/* Submission Date Section (mirrors HRD) */}
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
                     <Calendar className="h-3.5 w-3.5" />
-                    Agency Submission Date & Time
+                    {AGENT_SUBMIT_HARD_COPY_DATE_LABEL} & Time
                   </h4>
                 </div>
                 <div className="p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex-1 w-full sm:w-auto">
-                      <Label className="text-xs text-slate-600 mb-1 block">Select hard copy received date and time</Label>
-
-                      {/* If step already has submittedAt, show the formatted submitted date and hide the picker */}
+                      <Label className="text-xs text-slate-600 mb-1 block">Select agent submit hard copy date and time</Label>
                       {activeStep?.submittedAt ? (
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-slate-700 font-semibold">{format(new Date(activeStep.submittedAt), "PPP p")}</div>
-                          {!activeStep?.completedAt && (
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" variant="ghost" onClick={() => { setEditDate(activeStep.submittedAt ? new Date(activeStep.submittedAt) : undefined); setEditSubmitOpen(true); }} className="h-8">Edit</Button>
-                            </div>
+                          {!activeStep?.completedAt && !isStepCancelled && (
+                            <LockedProcessingActionButton forceDisabled={isLocked}>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={isLocked}
+                                onClick={() => {
+                                  setEditDate(activeStep.submittedAt ? new Date(activeStep.submittedAt) : undefined);
+                                  setEditSubmitOpen(true);
+                                }}
+                                className="h-8"
+                              >
+                                Edit
+                              </Button>
+                            </LockedProcessingActionButton>
                           )}
                         </div>
                       ) : (
@@ -468,42 +488,124 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                             value={submissionDate}
                             onChange={setSubmissionDate}
                             placeholder="Pick date and time"
-                            disabled={Boolean(activeStep?.completedAt)}
+                            disabled={Boolean(activeStep?.completedAt) || isStepCancelled || isLocked}
                             className="w-full sm:min-w-[220px] h-8"
                             compact
                           />
-
-                          {/* Only show submit button when no submittedAt present and when step is not completed */}
-                          {!activeStep?.submittedAt && !activeStep?.completedAt && (
-                            <div className="text-xs text-slate-500 mt-2">Please set a hard copy received date before marking this step complete.</div>
+                          {!activeStep?.submittedAt && !activeStep?.completedAt && !isStepCancelled && (
+                            <div className="text-xs text-slate-500 mt-2">
+                              Please set an agent submit hard copy date before marking this step complete.
+                            </div>
                           )}
                         </>
                       )}
                     </div>
                     <div className="flex items-center">
-                      {/* Show submit button when no submittedAt and not completed */}
-                      {!activeStep?.submittedAt && !activeStep?.completedAt && (
-                        <Button
-                          size="sm"
-                          onClick={() => setSubmitConfirmOpen(true)}
-                          disabled={isSubmittingDate || !submissionDate || Boolean(activeStep?.completedAt)}
-                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
+                      {!activeStep?.submittedAt && !activeStep?.completedAt && !isStepCancelled && (
+                        <LockedProcessingActionButton forceDisabled={isLocked}>
+                          <Button
+                            size="sm"
+                            onClick={() => setSubmitConfirmOpen(true)}
+                            disabled={isSubmittingDate || !submissionDate || Boolean(activeStep?.completedAt) || isLocked}
+                            className="h-8 bg-blue-600 hover:bg-blue-700 text-white"
+                          >
                           {isSubmittingDate ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-1" />
                           ) : (
                             <Send className="h-3.5 w-3.5 mr-1" />
                           )}
-                          Submit Hard Copy Received Date
-                        </Button>
+                          {AGENT_SUBMIT_HARD_COPY_DATE_LABEL}
+                          </Button>
+                        </LockedProcessingActionButton>
                       )}
                     </div>
                   </div>
                 </div>
               </div>
 
+              <div className="overflow-hidden rounded-lg border border-teal-200 bg-gradient-to-r from-teal-50/80 to-white">
+                <div className="border-b border-teal-100 bg-teal-50/80 px-3 py-1.5">
+                  <h4 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-teal-800">
+                    <FileStack className="h-3.5 w-3.5" />
+                    Original collection merged document
+                  </h4>
+                </div>
+                <div className="p-3">
+                  {mergedDocument?.fileUrl ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-900">
+                            Combined original document
+                          </p>
+                          {collectionSummary?.lockerFileNumber ? (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-200 bg-amber-50 font-mono text-[10px] text-amber-800"
+                            >
+                              <Archive className="mr-1 h-3 w-3" />
+                              Locker {collectionSummary.lockerFileNumber}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {mergedDocument.fileName}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5"
+                          onClick={handleViewMergedDocument}
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Preview
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5"
+                          asChild
+                        >
+                          <a
+                            href={mergedDocument.fileUrl}
+                            download={mergedDocument.fileName}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Download
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No combined PDF from original document collection yet.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b"><h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4></div>
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isStepCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetchRequirements}
+                      stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
+                      disabled={isVerifying || isLocked}
+                    />
+                  )}
+                </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req: any) => {
                     const candidateList = candidateDocsByDocType[req.docType] || [];
@@ -528,11 +630,6 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                       candidateDoc?.verifications?.[0]?.id ||
                       null;
 
-                    const dateKey = verificationId || req.docType;
-                    const selectedReceivedDate =
-                      receivedDateInputs[dateKey] ||
-                      (existingReceivedAt ? new Date(existingReceivedAt) : undefined);
-
                     return (
                       <div key={req.docType} className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${processingVerified ? 'border-emerald-200 bg-emerald-50/40 shadow-sm' : hasRejected ? 'border-rose-200 bg-rose-50/40 shadow-sm' : 'border-slate-200 bg-white'}`}>
                         <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${processingVerified || (candidateDoc?.status === 'verified') ? 'bg-emerald-100' : hasPending ? 'bg-blue-100' : hasRejected ? 'bg-red-100' : 'bg-slate-100'}`}>
@@ -546,11 +643,23 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                           </div>
                           {(hasCandidate || hasProcessing) && (
                             <div className="flex items-center gap-1 text-xs text-slate-500">
-                              <span>Original hardcopy received date: {existingReceivedAt ? format(new Date(existingReceivedAt), 'PPP') : 'Not set'}</span>
-                              {verificationId && (
-                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)} title="Edit Original hardcopy received date">
-                                  <Edit3 className="h-2 w-2" />
-                                </Button>
+                              <span>
+                                Agent submit hard copy date:{" "}
+                                {existingReceivedAt ? format(new Date(existingReceivedAt), "PPP") : "Not set"}
+                              </span>
+                              {verificationId && !isStepCompleted && !isStepCancelled && (
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 p-0 disabled:opacity-80"
+                                    disabled={isLocked}
+                                    onClick={() => handleOpenEditReceivedDate(verificationId, req.label, existingReceivedAt)}
+                                    title="Edit agent submit hard copy date"
+                                  >
+                                    <Edit3 className="h-2 w-2" />
+                                  </Button>
+                                </LockedProcessingActionButton>
                               )}
                             </div>
                           )}
@@ -565,49 +674,59 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                           {!hasProcessing ? (
                             <>
                               {candidateDoc && (candidateDoc.status === 'pending' || candidateDoc.status === 'verified') && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
-                                  onClick={() => handleUploadClick(
-                                    req.docType,
-                                    req.label,
-                                    candidate?.role?.roleCatalog?.id,
-                                    candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                    candidateDoc?.id,
-                                    candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
-                                  )}
-                                >
-                                  <Upload className="h-3.5 w-3.5 mr-1.5" />Upload
-                                </Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                                    disabled={isLocked}
+                                    onClick={() => handleUploadClick(
+                                      req.docType,
+                                      req.label,
+                                      candidate?.role?.roleCatalog?.id,
+                                      candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                      candidateDoc?.id,
+                                      candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
+                                    )}
+                                  >
+                                    <Upload className="h-3.5 w-3.5 mr-1.5" />Upload
+                                  </Button>
+                                </LockedProcessingActionButton>
                               )}
 
                               {!candidateDoc && (
-                                <Button size="sm" variant="default" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>
-                                  <Upload className="h-3 w-3 mr-1" />Upload
-                                </Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" variant="default" className="h-8 text-xs" disabled={isLocked} onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>
+                                    <Upload className="h-3 w-3 mr-1" />Upload
+                                  </Button>
+                                </LockedProcessingActionButton>
                               )}
 
                               {candidateDoc && (
-                                <Button size="sm" variant="default" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>Verify</Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" variant="default" disabled={isLocked} onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}>Verify</Button>
+                                </LockedProcessingActionButton>
                               )}
                             </>
                           ) : processingVerified ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 text-xs font-semibold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                              onClick={() => handleUploadClick(
-                                req.docType,
-                                req.label,
-                                candidate?.role?.roleCatalog?.id,
-                                candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                processingDoc?.id,
-                                candidateProjectMapId || processingDoc?.candidateProjectMapId
-                              )}
-                            >
-                              <Upload className="h-3 w-3 mr-1" />Re-upload
-                            </Button>
+                            <LockedProcessingActionButton forceDisabled={isLocked}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs font-semibold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                disabled={isLocked}
+                                onClick={() => handleUploadClick(
+                                  req.docType,
+                                  req.label,
+                                  candidate?.role?.roleCatalog?.id,
+                                  candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                  processingDoc?.id,
+                                  candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                )}
+                              >
+                                <Upload className="h-3 w-3 mr-1" />Re-upload
+                              </Button>
+                            </LockedProcessingActionButton>
                           ) : (
                             <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
                           )}
@@ -628,7 +747,6 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" onClick={async () => { try { await refetchRequirements(); toast.success('Refreshed'); } catch (err) { toast.error('Refresh failed'); } }}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh</Button>
 
-              {/* Submit / Edit Date Confirmations */}
               <React.Suspense fallback={null}>
                 <ConfirmSubmitDateModal
                   isOpen={submitConfirmOpen}
@@ -636,6 +754,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                   date={submissionDate}
                   onConfirm={async () => { const ok = await handleSubmitDate(); if (ok) setSubmitConfirmOpen(false); }}
                   isSubmitting={isSubmittingDate}
+                  stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
                 />
               </React.Suspense>
 
@@ -644,14 +763,34 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
                   isOpen={editSubmitOpen}
                   onClose={() => setEditSubmitOpen(false)}
                   existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt}
-                  onConfirm={async (newDate: Date) => { const ok = await handleSubmitDate(newDate); return ok; }}
+                  onConfirm={async (newDate: Date) => handleSubmitDate(newDate)}
                   isSubmitting={isSubmittingDate}
+                  stepLabel={AGENT_SUBMIT_HARD_COPY_STEP_LABEL}
                 />
               </React.Suspense>
 
-              <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>{isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step</Button>
+              {!isStepCompleted && !isStepCancelled && (
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isStepCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetchRequirements();
+                    if (onComplete) await onComplete();
+                  }}
+                />
+              )}
 
-              <Button size="sm" onClick={handleMarkComplete} disabled={isCompletingStep || statMissing > 0 || !hasSubmittedAt}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Step Complete'}</Button>
+              {isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Step Complete
+                  </Button>
+                </LockedProcessingActionButton>
+              ) : (
+                <Button size="sm" onClick={handleMarkComplete} disabled={isCompletingStep || statMissing > 0 || !hasSubmittedAt || isLocked}>
+                  {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Step Complete'}
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -677,6 +816,7 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
         currentDate={editReceivedDateValue ? editReceivedDateValue.toISOString() : undefined}
         onConfirm={handleSaveReceivedDate}
         isSaving={isSettingReceivedDate}
+        dateLabel="agent submit hard copy"
       />
 
       <React.Suspense fallback={null}>
@@ -687,9 +827,6 @@ export function DocumentReceivedModal({ isOpen, onClose, processingId, candidate
         <CompleteProcessingStepModal isOpen={completeModalOpen} onClose={() => setCompleteModalOpen(false)} requiredDocuments={requiredDocuments} uploadsByDocType={uploadsByDocType} candidateDocsByDocType={candidateDocsByDocType} processingDocsByDocType={processingDocsByDocType} onConfirm={handleConfirmComplete} isCompleting={isCompletingStep} onViewDocument={handleViewDocument} />
       </React.Suspense>
 
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} onConfirm={handleConfirmCancel} isCancelling={isCancelling} />
-      </React.Suspense>
 
       {viewerUrl && viewerMimeType && viewerMimeType.includes('pdf') && (<PDFViewer fileUrl={viewerUrl} fileName={viewerFileName} isOpen={viewerOpen} onClose={() => setViewerOpen(false)} />)}
       {viewerUrl && (!viewerMimeType || viewerMimeType.startsWith('image/')) && (

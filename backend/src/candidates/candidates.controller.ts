@@ -32,9 +32,12 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
+import { LogOperationsCallDto } from './dto/log-operations-call.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { GetRecruiterCandidatesDto } from './dto/get-recruiter-candidates.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
+import { QueryPassportLookupDto } from './dto/query-passport-lookup.dto';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { Permissions } from '../auth/rbac/permissions.decorator';
@@ -58,11 +61,36 @@ export class CandidatesController {
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
   ) {}
 
+  @Get('overview/stats')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get recruiter dashboard overview tile counts',
+    description:
+      'Returns dashboard tile counts for the recruiter candidate overview (no list pagination), including workflow sub-status history counts in stats.registeredSubStatus, stats.screeningSubStatus, stats.interviewSubStatus, and stats.processingSubStatus.',
+  })
+  async getOverviewStats(
+    @Query() query: QueryCandidateOverviewDto,
+    @Request() req,
+  ) {
+    const roles = req.user.roles || [];
+    const userId = req.user.id;
+    const stats = await this.candidatesService.getCandidateOverviewStats(
+      query,
+      userId,
+      roles,
+    );
+    return {
+      success: true,
+      stats,
+      message: 'Candidate overview stats retrieved successfully',
+    };
+  }
+
   @Get('overview')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get candidate dashboard overview',
-    description: 'Returns dashboard tiles and a paginated list of candidates.',
+    summary: 'Get candidate dashboard overview list',
+    description: 'Returns a paginated, filterable list of candidates for the overview table.',
   })
   async getOverview(@Query() query: QueryCandidateOverviewDto, @Request() req) {
     const roles = req.user.roles || [];
@@ -75,7 +103,6 @@ export class CandidatesController {
     return {
       success: true,
       data: result.candidates,
-      stats: result.stats,
       pagination: result.pagination,
       message: 'Candidate overview retrieved successfully',
     };
@@ -125,6 +152,8 @@ export class CandidatesController {
             },
             preferredCountries: { type: 'array', items: { type: 'string' } },
             facilityPreferences: { type: 'array', items: { type: 'string' } },
+            preferredRoles: { type: 'array', items: { type: 'string' } },
+            professionTypeId: { type: 'string', example: 'pt_nurse_seed001' },
             projects: { type: 'array' },
           },
         },
@@ -166,7 +195,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Get consolidated candidates for project detail view',
     description:
-      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters and Client Coordinators, with nomination info for the specified project.',
+      'Returns all candidates for Admin/Manager and assigned candidates for Recruiters and Agent Coordinators, with nomination info for the specified project.',
   })
   async getConsolidatedCandidates(
     @Query() query: ConsolidatedCandidateQueryDto,
@@ -249,6 +278,7 @@ export class CandidatesController {
                 onHold: { type: 'number', example: 5 },
                 interested: { type: 'number', example: 15 },
                     notInterested: { type: 'number', example: 8 },
+                    notEligible: { type: 'number', example: 4 },
                     otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 7 },
                 future: { type: 'number', example: 12 },
@@ -284,9 +314,11 @@ export class CandidatesController {
       totalAssigned: number;
       untouched: number;
       rnr: number;
+      callBack?: number;
       onHold: number;
       interested: number;
       notInterested: number;
+      notEligible: number;
       otherEnquiry: number;
       qualified: number;
       future: number;
@@ -396,6 +428,7 @@ export class CandidatesController {
                 type: 'object',
                 properties: {
                   id: { type: 'string' },
+                  candidateCode: { type: 'string', nullable: true, example: 'AFFCD012026' },
                   name: { type: 'string' },
                   contact: { type: 'string' },
                   email: { type: 'string' },
@@ -429,6 +462,7 @@ export class CandidatesController {
                 onHold: { type: 'number', example: 5 },
                 interested: { type: 'number', example: 20 },
                 notInterested: { type: 'number', example: 8 },
+                notEligible: { type: 'number', example: 4 },
                 otherEnquiry: { type: 'number', example: 6 },
                 qualified: { type: 'number', example: 12 },
                 future: { type: 'number', example: 15 },
@@ -547,9 +581,9 @@ export class CandidatesController {
   @Get('my-assigned')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get candidates assigned to logged-in CRE user',
+    summary: 'Get candidates assigned to logged-in Operations user',
     description:
-      'Retrieve all candidates that are currently assigned to the logged-in CRE user. This is specifically for CRE dashboard.',
+      'Retrieve all candidates that are currently assigned to the logged-in Operations user. This is specifically for the Operations dashboard.',
   })
   @ApiQuery({
     name: 'page',
@@ -573,9 +607,16 @@ export class CandidatesController {
     required: false,
     description: 'Filter by candidate status (e.g., RNR)',
   })
+  @ApiQuery({
+    name: 'operationsCallAttempts',
+    required: false,
+    description:
+      'Filter by CRE call count on assignment (0 = 0/3, 1 = 1/3, 2 = 2/3, 3 = 3/3)',
+    example: 1,
+  })
   @ApiResponse({
     status: 200,
-    description: 'CRE assigned candidates retrieved successfully',
+    description: 'Operations assigned candidates retrieved successfully',
   })
   @ApiResponse({
     status: 403,
@@ -583,10 +624,7 @@ export class CandidatesController {
   })
   async getMyCREAssignedCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
-    @Query('currentStatus') currentStatus?: string,
+    @Query() query: QueryCandidatesDto,
   ): Promise<{
     success: boolean;
     data: {
@@ -601,34 +639,29 @@ export class CandidatesController {
     message: string;
   }> {
     const userId = req.user.id; // Get logged-in CRE user ID
-    
-    const result = await this.candidatesService.getCREAssignedCandidates(
-      userId,
-      {
-        page: Number(page),
-        limit: Number(limit),
-        search,
-        currentStatus,
-      },
-    );
+
+    const result = await this.candidatesService.getCREAssignedCandidates(userId, {
+      ...query,
+      currentStatus: query.currentStatus || query.status,
+    });
 
     return {
       success: true,
       data: result,
-      message: 'CRE assigned candidates retrieved successfully',
+      message: 'Operations assigned candidates retrieved successfully',
     };
   }
 
   @Get('my-assigned/summary')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get CRE assigned candidate status summary',
+    summary: 'Get Operations assigned candidate status summary',
     description:
-      'Get counts for assigned candidates by status (assigned/rnr/onHold/untouched) for CRE dashboard tiles.',
+      'Get counts for assigned candidates by status (assigned/rnr/onHold/untouched) for Operations dashboard tiles.',
   })
   @ApiResponse({
     status: 200,
-    description: 'CRE assigned summary retrieved successfully',
+    description: 'Operations assigned summary retrieved successfully',
   })
   @ApiResponse({
     status: 403,
@@ -641,34 +674,28 @@ export class CandidatesController {
     return {
       success: true,
       data: summary,
-      message: 'CRE assigned candidate summary retrieved successfully',
+      message: 'Operations assigned candidate summary retrieved successfully',
     };
   }
 
   @Get('my-assigned/reassigned')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get CRE reassigned candidates',
+    summary: 'Get Operations reassigned candidates',
     description:
-      'Retrieve candidates transferred by CRE to recruiter; currently untouched for recruiter',
+      'Retrieve candidates transferred by Operations to recruiter with their Operations status',
   })
   async getMyCREReassignedCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
+    @Query() query: QueryCandidatesDto,
   ) {
     const userId = req.user.id;
-    const result = await this.candidatesService.getCREReassignedCandidates(userId, {
-      page: Number(page),
-      limit: Number(limit),
-      search,
-    });
+    const result = await this.candidatesService.getCREReassignedCandidates(userId, query);
 
     return {
       success: true,
       data: result,
-      message: 'CRE reassigned candidate list retrieved successfully',
+      message: 'Operations reassigned candidate list retrieved successfully',
     };
   }
 
@@ -681,16 +708,10 @@ export class CandidatesController {
   @ApiResponse({ status: 200, description: 'User candidates retrieved successfully' })
   async getUserCandidates(
     @Request() req,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-    @Query('search') search?: string,
+    @Query() query: QueryCandidatesDto,
   ) {
     const userId = req.user.id;
-    const result = await this.candidatesService.getUserCandidates(userId, {
-      page: Number(page),
-      limit: Number(limit),
-      search,
-    });
+    const result = await this.candidatesService.getUserCandidates(userId, query);
 
     return {
       success: true,
@@ -702,8 +723,8 @@ export class CandidatesController {
   @Post(':id/converted-response')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Mark candidate as converted response (CRE action)',
-    description: 'Mark assigned candidate as converted response from CRE dashboard',
+    summary: 'Mark candidate as converted response (Operations action)',
+    description: 'Mark assigned candidate as converted response from Operations dashboard',
   })
   async markAsConvertedResponse(@Param('id') id: string, @Request() req) {
     const userId = req.user.id;
@@ -724,25 +745,153 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Transfer converted candidate to recruiter',
     description:
-      'Transfer an interested candidate to a recruiter and set status to untouched',
+      'Transfer an Operations-assigned candidate back to the recruiter with a selected pipeline status',
   })
   async transferToRecruiter(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: TransferToRecruiterDto,
     @Request() req,
   ) {
     const userId = req.user.id;
-    const notes = body?.notes;
     const candidate = await this.candidatesService.transferCREConvertedToRecruiter(
       id,
       userId,
-      notes,
+      body,
     );
 
     return {
       success: true,
       data: candidate,
       message: 'Candidate transferred to recruiter successfully',
+    };
+  }
+
+  @Post(':id/operations/log-call')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Log Operations call attempt (no answer)',
+    description:
+      'Increment the no-answer call count for an Operations-assigned candidate in the initial follow-up stage',
+  })
+  async logOperationsCall(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.logOperationsCall(
+      id,
+      req.user.id,
+      body,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Operations call logged successfully',
+    };
+  }
+
+  @Get(':id/operations/call-history')
+  @Permissions('read:candidates', 'read:operations_call_history')
+  @ApiOperation({
+    summary: 'Get Operations call log history for a candidate',
+    description:
+      'Retrieve logged no-answer call attempts with notes. Operations users see their assigned candidates; users with read:operations_call_history can view any Operations-handled candidate.',
+  })
+  async getOperationsCallHistory(@Param('id') id: string, @Request() req) {
+    const history = await this.candidatesService.getOperationsCallHistory(
+      id,
+      req.user.id,
+      req.user.permissions ?? [],
+      req.user.roles ?? [],
+    );
+
+    return {
+      success: true,
+      data: history,
+      message: 'Operations call history retrieved successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-one')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 1 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate to the 1 Week follow-up stage after 3 logged no-answer calls',
+  })
+  async moveOperationsToWeekOne(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekOne(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 1 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/move-to-week-two')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Move candidate to 2 Week follow-up bucket',
+    description:
+      'Move an Operations-assigned candidate from 1 Week to 2 Week follow-up stage',
+  })
+  async moveOperationsToWeekTwo(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.moveOperationsToWeekTwo(
+      id,
+      req.user.id,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate moved to 2 Week follow-up successfully',
+    };
+  }
+
+  @Post(':id/operations/mark-not-interested')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as not interested (junk)',
+    description:
+      'Log the contact attempt and immediately mark the candidate as junk when they are not interested',
+  })
+  async markOperationsNotInterested(
+    @Param('id') id: string,
+    @Body() body: LogOperationsCallDto,
+    @Request() req,
+  ) {
+    const result = await this.candidatesService.markOperationsNotInterested(
+      id,
+      req.user.id,
+      body,
+    );
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as not interested (junk) successfully',
+    };
+  }
+
+  @Post(':id/operations/mark-junk')
+  @Permissions('write:candidates')
+  @ApiOperation({
+    summary: 'Mark Operations candidate as junk',
+    description:
+      'Mark an Operations-assigned candidate as junk after 2 Week follow-up with no response',
+  })
+  async markOperationsJunk(@Param('id') id: string, @Request() req) {
+    const result = await this.candidatesService.markOperationsJunk(id, req.user.id);
+
+    return {
+      success: true,
+      data: result,
+      message: 'Candidate marked as junk successfully',
     };
   }
 
@@ -789,6 +938,28 @@ export class CandidatesController {
     };
   }
 
+  @Get('passport-lookup')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Look up candidate by passport number',
+    description:
+      'Returns a summary if a candidate already exists with this passport (intake field or passport document).',
+  })
+  @ApiQuery({ name: 'passportNumber', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Lookup result' })
+  async passportLookup(@Query() query: QueryPassportLookupDto) {
+    const result = await this.candidatesService.lookupByPassport(
+      query.passportNumber,
+    );
+    return {
+      success: true,
+      data: result,
+      message: result.found
+        ? 'Existing candidate found for this passport number'
+        : 'No existing candidate for this passport number',
+    };
+  }
+
   @Get(':id')
   @Permissions('read:candidates')
   @ApiOperation({
@@ -824,6 +995,23 @@ export class CandidatesController {
             visaType: { type: 'string' },
             recruiter: { type: 'object' },
             team: { type: 'object' },
+            activitySnapshot: {
+              type: 'object',
+              description:
+                'Aggregated pipeline activity counts for overview sidebar',
+              properties: {
+                projectsAssigned: { type: 'number', example: 1 },
+                inDocumentation: { type: 'number', example: 1 },
+                inInterview: { type: 'number', example: 0 },
+                processingOrDeployed: { type: 'number', example: 0 },
+                offersInPipeline: { type: 'number', example: 0 },
+                placements: { type: 'number', example: 0 },
+                verifiedDocuments: { type: 'number', example: 1 },
+                pendingDocuments: { type: 'number', example: 0 },
+                profileCompletion: { type: 'number', example: 44 },
+                pipelineUpdates: { type: 'number', example: 1 },
+              },
+            },
           },
         },
         message: {
@@ -1402,7 +1590,7 @@ export class CandidatesController {
   @ApiOperation({
     summary: 'Transfer candidate back to previous recruiter',
     description:
-      'Transfer a candidate from a CRE back to the previous recruiter who was assigned before escalation.',
+      'Transfer a candidate from Operations back to the previous recruiter who was assigned before escalation.',
   })
   @ApiParam({
     name: 'id',
@@ -1515,13 +1703,13 @@ export class CandidatesController {
   @Permissions('manage:candidates')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Manually trigger RNR → CRE assignment',
+    summary: 'Manually trigger RNR → Operations assignment',
     description:
-      'Manually trigger the assignment of CREs to RNR candidates who have been in RNR status for 3+ days',
+      'Manually trigger the assignment of Operations users to RNR candidates who have been in RNR status for 3+ days',
   })
   @ApiResponse({
     status: 200,
-    description: 'RNR → CRE assignment triggered successfully',
+    description: 'RNR → Operations assignment triggered successfully',
     schema: {
       type: 'object',
       properties: {
@@ -1544,19 +1732,19 @@ export class CandidatesController {
     return {
       success: true,
       data: results,
-      message: `RNR → CRE assignment completed. Processed: ${results.processed}, Assigned: ${results.assigned}, Errors: ${results.errors}`,
+      message: `RNR → Operations assignment completed. Processed: ${results.processed}, Assigned: ${results.assigned}, Errors: ${results.errors}`,
     };
   }
 
   @Get('rnr-cre-assignment/statistics')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get RNR CRE assignment statistics',
-    description: 'Get statistics about RNR candidates and CRE assignments',
+    summary: 'Get RNR Operations assignment statistics',
+    description: 'Get statistics about RNR candidates and Operations assignments',
   })
   @ApiResponse({
     status: 200,
-    description: 'RNR CRE assignment statistics retrieved successfully',
+    description: 'RNR Operations assignment statistics retrieved successfully',
     schema: {
       type: 'object',
       properties: {
@@ -1579,7 +1767,7 @@ export class CandidatesController {
     return {
       success: true,
       data: statistics,
-      message: 'RNR CRE assignment statistics retrieved successfully',
+      message: 'RNR Operations assignment statistics retrieved successfully',
     };
   }
 
@@ -1698,8 +1886,8 @@ export class CandidatesController {
   @Get(':id/interview-workflow')
   @Permissions('read:candidates')
   @ApiOperation({
-    summary: 'Get consolidated interview workflow details for a candidate',
-    description: 'Returns ONLY interview and screening details for all projects a candidate is nominated for.',
+    summary: 'Get consolidated client interview workflow details for a candidate',
+    description: 'Returns client interview details for projects in the client interview pipeline (excludes screening/training).',
   })
   @ApiParam({ name: 'id', description: 'Candidate ID' })
   async getInterviewWorkflow(
@@ -1714,6 +1902,28 @@ export class CandidatesController {
       success: true,
       ...data,
       message: 'Interview workflow details retrieved successfully',
+    };
+  }
+
+  @Get(':id/screening-workflow')
+  @Permissions('read:candidates')
+  @ApiOperation({
+    summary: 'Get consolidated screening workflow details for a candidate',
+    description: 'Returns internal screening and training details for projects in the screening/training pipeline (excludes client interviews).',
+  })
+  @ApiParam({ name: 'id', description: 'Candidate ID' })
+  async getScreeningWorkflow(
+    @Param('id') id: string,
+    @Query('subStatus') subStatus?: string,
+    @Query('search') search?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    const data = await this.candidatesService.getCandidateScreeningWorkflow(id, { subStatus, search, page: Number(page), limit: Number(limit) });
+    return {
+      success: true,
+      ...data,
+      message: 'Screening workflow details retrieved successfully',
     };
   }
 

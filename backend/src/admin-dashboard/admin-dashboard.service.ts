@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { RecruiterAnalyticsService } from '../analytics/recruiter/recruiter-analytics.service';
+import { buildProjectRoleHiringRows } from '../common/dashboard/project-role-hiring.util';
 import { AdminDashboardStats } from './types';
 
 @Injectable()
 export class AdminDashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recruiterAnalyticsService: RecruiterAnalyticsService,
+  ) {}
 
   async getDashboardStats(): Promise<{ success: boolean; data: AdminDashboardStats; message: string }> {
     const [totalCandidates, activeClients, openJobs, candidatesPlaced] = await Promise.all([
@@ -13,14 +18,14 @@ export class AdminDashboardService {
         where: {
           projects: {
             some: {
-              status: 'active',
+              status: 'IN_PROGRESS',
             },
           },
         },
       }),
       this.prisma.project.count({
         where: {
-          status: 'active',
+          status: 'IN_PROGRESS',
         },
       }),
       this.prisma.candidate.count({
@@ -158,7 +163,7 @@ export class AdminDashboardService {
     const { projectId, search, page = 1, limit = 10 } = queryDto || {};
     const skip = (page - 1) * limit;
 
-    const projectWhere: any = { status: 'active' };
+    const projectWhere: any = { status: 'IN_PROGRESS' };
     if (projectId) {
       projectWhere.id = projectId;
     }
@@ -186,39 +191,7 @@ export class AdminDashboardService {
       }),
     ]);
 
-    const projectIds = projects.map((p) => p.id);
-
-    const filledStatuses = ['hired', 'deployed'];
-    const candidateProjects = await this.prisma.candidateProjects.findMany({
-      where: {
-        projectId: { in: projectIds },
-        roleNeededId: { not: null },
-        currentProjectStatus: {
-          statusName: { in: filledStatuses },
-        },
-      },
-      select: {
-        projectId: true,
-        roleNeededId: true,
-      },
-    });
-
-    const filledMap = new Map<string, number>();
-    candidateProjects.forEach((cp) => {
-      if (!cp.roleNeededId) return;
-      const key = `${cp.projectId}:${cp.roleNeededId}`;
-      filledMap.set(key, (filledMap.get(key) ?? 0) + 1);
-    });
-
-    const projectRoles = projects.map((project) => ({
-      projectId: project.id,
-      projectName: project.title,
-      roles: project.rolesNeeded.map((role) => ({
-        role: role.designation,
-        required: role.quantity,
-        filled: filledMap.get(`${project.id}:${role.id}`) ?? 0,
-      })),
-    }));
+    const projectRoles = await buildProjectRoleHiringRows(this.prisma, projects);
 
     return {
       success: true,
@@ -235,154 +208,148 @@ export class AdminDashboardService {
     };
   }
 
+  private mapLeaderboardEntry(
+    entry: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      performanceScore: number;
+      rating: string;
+      placementsThisMonth: number;
+      phone?: string;
+      avatarUrl?: string;
+    } | undefined,
+  ): import('./types').RecruiterAwardWinner | null {
+    if (!entry || !entry.id) {
+      return null;
+    }
+    return {
+      id: entry.id,
+      name: entry.name,
+      email: entry.email,
+      role: entry.role,
+      performanceScore: entry.performanceScore,
+      rating: entry.rating,
+      deployedCount: entry.placementsThisMonth,
+      phone: entry.phone,
+      avatarUrl: entry.avatarUrl,
+    };
+  }
+
+  private mapLeaderboardRows(
+    leaderboard: Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      performanceScore: number;
+      rating: string;
+      placementsThisMonth: number;
+      phone?: string;
+      avatarUrl?: string;
+    }>,
+  ): import('./types').PerformanceLeaderboardEntry[] {
+    return leaderboard.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      email: entry.email,
+      role: entry.role,
+      performanceScore: entry.performanceScore,
+      rating: entry.rating,
+      placementsThisMonth: entry.placementsThisMonth,
+      phone: entry.phone,
+      avatarUrl: entry.avatarUrl,
+    }));
+  }
+
+  private awardWinnerToTopRecruiter(
+    winner: import('./types').RecruiterAwardWinner | null,
+  ): import('./types').TopRecruiter {
+    if (!winner) {
+      return {
+        name: 'No recruiter ranked yet',
+        role: 'Recruiter',
+        placementsThisMonth: 0,
+        performanceScore: 0,
+        rating: '—',
+      };
+    }
+    return {
+      name: winner.name,
+      role: winner.role,
+      placementsThisMonth: winner.deployedCount,
+      performanceScore: winner.performanceScore,
+      rating: winner.rating,
+      email: winner.email,
+      phone: winner.phone,
+      avatarUrl: winner.avatarUrl,
+    };
+  }
+
   async getTopRecruiterStats(
     year?: number,
     month?: number,
-    limit: number = 1,
+    limit: number = 5,
   ): Promise<{
     success: boolean;
-    data: {
-      topRecruiter: {
-        name: string;
-        role: string;
-        placementsThisMonth: number;
-        email?: string;
-        phone?: string;
-        avatarUrl?: string;
-      };
-      recruiterActivities: Array<{ activity: string; value: number }>;
-    };
+    data: import('./types').TopRecruiterStatsData;
     message: string;
   }> {
     const now = new Date();
     const targetYear = year ?? now.getFullYear();
-    const targetMonth = typeof month === 'number' ? month : now.getMonth() + 1; // 1-based
+    const targetMonth = typeof month === 'number' ? month : now.getMonth() + 1;
+    const leaderboardLimit = Math.max(limit, 5);
 
-    const periodStart = new Date(targetYear, targetMonth - 1, 1);
-    const periodEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
-
-    // Get all recruiter users
-    const recruiters = await this.prisma.user.findMany({
-      where: {
-        userRoles: {
-          some: {
-            role: {
-              name: 'Recruiter',
-            },
-          },
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        countryCode: true,
-        mobileNumber: true,
-        profileImage: true,
-      },
-    });
-
-    const recruiterSummary = await Promise.all(
-      recruiters.map(async (recruiter) => {
-        const candidateProjects = await this.prisma.candidateProjects.findMany({
-          where: {
-            recruiterId: recruiter.id,
-            assignedAt: {
-              gte: periodStart,
-              lte: periodEnd,
-            },
-          },
-          include: {
-            currentProjectStatus: {
-              select: { statusName: true },
-            },
-            subStatus: {
-              select: { name: true },
-            },
-          },
-        });
-
-        const assigned = candidateProjects.length;
-
-        const getStatusKey = (cp: any) => {
-          const currentStatus = cp.currentProjectStatus?.statusName ?? '';
-          const subStatus = cp.subStatus?.name ?? '';
-          return { currentStatus, subStatus };
-        };
-
-        const nominated = candidateProjects.filter((cp) => {
-          const { currentStatus, subStatus } = getStatusKey(cp);
-          return ['nominated', 'nominated_initial'].includes(currentStatus) || ['nominated', 'nominated_initial'].includes(subStatus);
-        }).length;
-
-        const documentsVerified = candidateProjects.filter((cp) => {
-          const { currentStatus, subStatus } = getStatusKey(cp);
-          return ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(currentStatus) || ['documents_verified', 'verified_documents', 'submitted_to_client'].includes(subStatus);
-        }).length;
-
-        const interviewPassed = candidateProjects.filter((cp) => {
-          const { currentStatus, subStatus } = getStatusKey(cp);
-          return ['interview_passed', 'shortlisted', 'interview_selected'].includes(currentStatus) || ['interview_passed', 'shortlisted', 'interview_selected'].includes(subStatus);
-        }).length;
-
-        const hired = candidateProjects.filter((cp) => {
-          const { currentStatus, subStatus } = getStatusKey(cp);
-          return ['hired', 'deployed'].includes(currentStatus) || ['hired', 'deployed'].includes(subStatus);
-        }).length;
-
-        return {
-          id: recruiter.id,
-          name: recruiter.name,
-          email: recruiter.email,
-          phone: recruiter.mobileNumber ? `${recruiter.countryCode}${recruiter.mobileNumber}` : undefined,
-          role: 'Affinks Recruiter', // This can be enhanced to fetch actual role if needed
-          avatarUrl: recruiter.profileImage || undefined,
-          assigned,
-          nominated,
-          documentsVerified,
-          interviewPassed,
-          hired,
-        };
+    const [monthlyResult, yearlyResult] = await Promise.all([
+      this.recruiterAnalyticsService.getPerformanceLeaderboard({
+        year: targetYear,
+        month: targetMonth,
+        limit: leaderboardLimit,
+        period: 'monthly',
       }),
-    );
+      this.recruiterAnalyticsService.getPerformanceLeaderboard({
+        year: targetYear,
+        limit: leaderboardLimit,
+        period: 'yearly',
+      }),
+    ]);
 
-    const sorted = recruiterSummary.sort((a, b) => {
-      if (a.hired !== b.hired) return b.hired - a.hired;
-      if (a.interviewPassed !== b.interviewPassed)
-        return b.interviewPassed - a.interviewPassed;
-      if (a.documentsVerified !== b.documentsVerified)
-        return b.documentsVerified - a.documentsVerified;
-      return b.assigned - a.assigned;
-    });
+    const monthlyLeaderboard = monthlyResult.data.leaderboard;
+    const yearlyLeaderboard = yearlyResult.data.leaderboard;
+    const monthTop = monthlyLeaderboard[0];
+    const yearTop = yearlyLeaderboard[0];
 
-    const top = sorted.slice(0, limit)[0] ?? {
-      name: 'N/A',
-      role: 'N/A',
-      placementsThisMonth: 0,
-      avatarUrl: undefined,
+    const recruiterOfTheMonth = this.mapLeaderboardEntry(monthTop);
+    const recruiterOfTheYear = this.mapLeaderboardEntry(yearTop);
+
+    const emptyStageCounts = {
+      positiveCandidate: 0,
+      documentVerified: 0,
+      interviewShortlisted: 0,
+      interviewPassed: 0,
+      processing: 0,
+      deployed: 0,
     };
 
-    const recruiterActivities = [
-      { activity: 'Projects Assigned', value: top.assigned ?? 0 },
-      { activity: 'Documents Verified', value: top.documentsVerified ?? 0 },
-      { activity: 'Interviews Passed', value: top.interviewPassed ?? 0 },
-      { activity: 'Candidates Hired', value: top.hired ?? 0 },
-    ];
+    const recruiterActivities =
+      this.recruiterAnalyticsService.stageCountsToActivities(
+        monthTop?.stageCounts ?? emptyStageCounts,
+      );
 
     return {
       success: true,
       data: {
-        topRecruiter: {
-          name: top.name,
-          role: top.role,
-          placementsThisMonth: top.hired,
-          email: top.email,
-          phone: top.phone,
-          avatarUrl: top.avatarUrl,
-        },
+        period: { year: targetYear, month: targetMonth },
+        recruiterOfTheMonth,
+        recruiterOfTheYear,
+        monthlyLeaderboard: this.mapLeaderboardRows(monthlyLeaderboard),
+        yearlyLeaderboard: this.mapLeaderboardRows(yearlyLeaderboard),
+        topRecruiter: this.awardWinnerToTopRecruiter(recruiterOfTheMonth),
         recruiterActivities,
+        leaderboard: this.mapLeaderboardRows(monthlyLeaderboard),
       },
-      message: 'Top recruiter stats retrieved successfully',
+      message: 'Recruiter performance awards retrieved successfully',
     };
   }
 

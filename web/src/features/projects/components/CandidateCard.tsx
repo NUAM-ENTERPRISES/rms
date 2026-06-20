@@ -14,7 +14,10 @@ import {
   AlertCircle,
   Upload,
   GraduationCap,
+  Video,
+  XCircle,
 } from "lucide-react";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui";
 import { CandidateDetailTooltip } from "./CandidateDetailTooltip";
@@ -32,6 +35,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { resolveProjectCandidateStatusDisplay } from "@/constants/statuses";
+import type { CareerGapAnalysis } from "@/features/candidates/api";
+import {
+  formatMonthsAsDuration,
+  getGapTypeLabel,
+  hasCareerGaps,
+} from "@/features/candidates/utils/career-gap-display";
+import {
+  getCandidateAssignmentBlockReason,
+  isCandidatePositiveForAssignment,
+} from "@/features/projects/utils/project-assignment";
 
 type StatusReference = {
   name?: string;
@@ -65,6 +79,7 @@ type CandidateProjectLink = {
 export interface CandidateRecord {
   id?: string;
   candidateId?: string;
+  candidateCode?: string | null;
   firstName?: string;
   lastName?: string;
   profileImage?: string;
@@ -111,6 +126,8 @@ export interface CandidateRecord {
    * but document verification was intentionally skipped (direct screening).
    */
   isSendedForDocumentVerification?: boolean;
+  isCREReassigned?: boolean;
+  isHandledByCRE?: boolean;
   matchScore?:
     | number
     | {
@@ -135,6 +152,7 @@ export interface CandidateRecord {
   project?: {
     id?: string;
     title?: string;
+    introductionVideoRequired?: boolean;
     documentRequirements?: Array<{
       id: string;
       docType: string;
@@ -208,6 +226,7 @@ export interface CandidateRecord {
     id?: string;
     name?: string;
   } | null;
+  careerGapAnalysis?: CareerGapAnalysis;
 }
 
 interface CandidateCardProps {
@@ -277,7 +296,7 @@ interface CandidateCardProps {
   showContactButtons?: boolean;
   /** control hiding of email/phone pills */
   hideContactInfo?: boolean;
-  /** When true, show supplying agent name (Client Coordinator project board). */
+  /** When true, show supplying agent name (Agent Coordinator project board). */
   showAgentName?: boolean;
   /** Drag and Drop support */
   onDragStart?: (e: React.DragEvent, candidateId: string) => void;
@@ -285,6 +304,16 @@ interface CandidateCardProps {
   selected?: boolean;
   /** Called when the selection checkbox is toggled */
   onSelect?: (candidateId: string) => void;
+  /** Subtle glass shimmer — Registered column processing cards only */
+  showProcessingGlance?: boolean;
+  /** Hover reason for "Cannot assign" badge (from project board status rules). */
+  assignmentBlockReason?: string | null;
+  processingBlockReason?: {
+    badgeLabel: string;
+    shortMessage: string;
+    fullMessage: string;
+  } | null;
+  pipelineBlockedByProcessing?: boolean;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -317,6 +346,10 @@ const CandidateCard = memo(function CandidateCard({
   onDragStart,
   selected,
   onSelect,
+  showProcessingGlance = false,
+  assignmentBlockReason: assignmentBlockReasonProp,
+  processingBlockReason,
+  pipelineBlockedByProcessing: _pipelineBlockedByProcessing = false,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -327,7 +360,27 @@ const CandidateCard = memo(function CandidateCard({
 
   // Eligibility check: enable if ANY role is eligible (even with soft reasons)
   const anyRoleEligible = propEligibilityData?.roleEligibility?.some((r) => r.isEligible);
-  const isNotEligible = propEligibilityData?.isEligible === false || !anyRoleEligible;
+  const currentStatusLabel = String(
+    typeof candidate.currentStatus === 'string'
+      ? candidate.currentStatus
+      : candidate.currentStatus?.statusName ||
+        candidate.currentStatus?.name ||
+        candidate.currentStatus?.label ||
+        '',
+  ).trim();
+  const isPositiveStatus = isCandidatePositiveForAssignment(currentStatusLabel);
+  const isNonPositiveStatus = !!currentStatusLabel && !isPositiveStatus;
+  const assignmentBlockReason =
+    assignmentBlockReasonProp ??
+    getCandidateAssignmentBlockReason(currentStatusLabel, {
+      isCREReassigned: candidate.isCREReassigned,
+    });
+  const hasProcessingAssignmentBlock = Boolean(processingBlockReason);
+  const isNotEligible =
+    isNonPositiveStatus ||
+    propEligibilityData?.isEligible === false ||
+    !anyRoleEligible;
+  const isAssignDisabled = isNotEligible || hasProcessingAssignmentBlock;
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -357,142 +410,24 @@ const CandidateCard = memo(function CandidateCard({
     };
   });
 
-  const isAllUploaded = docStatusList.every(d => d.isUploaded);
+  const introductionVideoRequired =
+    candidate.project?.introductionVideoRequired === true;
+
+  const introVideoVerification = uploadedDocs.find(
+    (u) => u.document?.docType === DOCUMENT_TYPE.INTRODUCTION_VIDEO,
+  );
+
+  const isIntroVideoUploaded = Boolean(introVideoVerification);
+
+  const isAllUploaded =
+    docStatusList.every((d) => d.isUploaded) &&
+    (!introductionVideoRequired || isIntroVideoUploaded);
 
   const handleUploadNavigation = (e: React.MouseEvent) => {
     e.stopPropagation();
     const pId = propProjectId || candidate.project?.id;
     if (pId && candidateId) {
       navigate(`/recruiter-docs/${pId}/${candidateId}`);
-    }
-  };
-
-  // Get status configuration
-  const getStatusConfig = (status: string) => {
-    const statusLower = status?.toLowerCase() || "";
-    switch (statusLower) {
-      case "interested":
-        return {
-          label: "Interested",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "untouched":
-        return {
-          label: "Untouched",
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
-      case "not interested":
-        return {
-          label: "Not Interested",
-          color: "bg-slate-100 text-slate-800 border-slate-200",
-        };
-      case "qualified":
-        return {
-          label: "Qualified",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "deployed":
-      case "working": // legacy
-        return {
-          label: "Deployed",
-          color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-        };
-      // Project statuses
-      case "nominated":
-        return {
-          label: "Nominated",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "pending_documents":
-        return {
-          label: "Pending Documents",
-          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        };
-      case "documents_submitted":
-        return {
-          label: "Documents Submitted",
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-        };
-      case "verification_in_progress":
-        return {
-          label: "Verification In Progress",
-          color: "bg-orange-100 text-orange-800 border-orange-200",
-        };
-      case "documents_verified":
-        return {
-          label: "Documents Verified",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "approved":
-        return {
-          label: "Approved",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "interview_scheduled":
-        return {
-          label: "Interview Scheduled",
-          color: "bg-purple-100 text-purple-800 border-purple-200",
-        };
-      case "interview_completed":
-        return {
-          label: "Interview Completed",
-          color: "bg-purple-100 text-purple-800 border-purple-200",
-        };
-      case "interview_passed":
-        return {
-          label: "Interview Passed",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "selected":
-        return {
-          label: "Selected",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "processing":
-        return {
-          label: "Processing",
-          color: "bg-orange-100 text-orange-800 border-orange-200",
-        };
-      case "hired":
-        return {
-          label: "Hired",
-          color: "bg-green-100 text-green-800 border-green-200",
-        };
-      case "rejected_documents":
-        return {
-          label: "Rejected - Documents",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "rejected_interview":
-        return {
-          label: "Rejected - Interview",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "rejected_selection":
-        return {
-          label: "Rejected - Selection",
-          color: "bg-red-100 text-red-800 border-red-200",
-        };
-      case "withdrawn":
-        return {
-          label: "Withdrawn",
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
-      case "on_hold":
-        return {
-          label: "On Hold",
-          color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-        };
-      case "not_in_project":
-        return {
-          label: "Not in Project",
-          color: "bg-red-50 text-red-600 border-red-200",
-        };
-      default:
-        return {
-          label: status,
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-        };
     }
   };
 
@@ -504,23 +439,56 @@ const CandidateCard = memo(function CandidateCard({
     return "bg-red-100 text-red-800 border-red-200";
   };
 
-  const statusConfig = getStatusConfig(
+  const projectStatusRaw =
     projectStatus ||
-      (typeof candidate.currentStatus === "string"
-        ? candidate.currentStatus
-        : candidate.currentStatus?.statusName || "") ||
-      ""
-  );
+    (typeof candidate.currentStatus === "string"
+      ? candidate.currentStatus
+      : candidate.currentStatus?.statusName || "") ||
+    "";
 
-  // Also compute explicit candidate.currentStatus (separate from projectStatus)
   const candidateStatusRaw: string =
     typeof candidate.currentStatus === "string"
       ? candidate.currentStatus
-      : candidate.currentStatus?.statusName || candidate.currentStatus?.name || "";
+      : candidate.currentStatus?.statusName ||
+        candidate.currentStatus?.name ||
+        candidate.currentStatus?.label ||
+        "";
+
+  const normalizeStatusKey = (s: string | undefined) =>
+    (s || "").toString().toLowerCase().replace(/[\s_-]+/g, "");
+
+  const isGenericProjectStatus = (status: string) => {
+    const key = normalizeStatusKey(status);
+    return (
+      !key ||
+      key === "notinproject" ||
+      key === "assigned" ||
+      key === "unknown"
+    );
+  };
+
+  const primaryStatusRaw =
+    isGenericProjectStatus(projectStatusRaw) && candidateStatusRaw
+      ? candidateStatusRaw
+      : projectStatusRaw || candidateStatusRaw;
+
+  const statusConfig = resolveProjectCandidateStatusDisplay(primaryStatusRaw);
+
   const normalize = (s: string | undefined) =>
     (s || "").toString().toLowerCase().replace(/[\s_]+/g, "");
-  const showCandidateStatusBadge = !!candidateStatusRaw && !!projectStatus && normalize(candidateStatusRaw) !== normalize(projectStatus);
-  const candidateStatusConfig = candidateStatusRaw ? getStatusConfig(candidateStatusRaw) : null;
+  const showCandidateStatusBadge =
+    !!candidateStatusRaw &&
+    !!projectStatusRaw &&
+    !isGenericProjectStatus(projectStatusRaw) &&
+    normalize(candidateStatusRaw) !== normalize(projectStatusRaw);
+  const candidateStatusConfig = candidateStatusRaw
+    ? resolveProjectCandidateStatusDisplay(candidateStatusRaw)
+    : null;
+
+  const cannotAssignStatusLabel =
+    candidateStatusConfig?.label ||
+    resolveProjectCandidateStatusDisplay(currentStatusLabel).label ||
+    currentStatusLabel;
 
   // Get initials for avatar
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -602,6 +570,13 @@ const CandidateCard = memo(function CandidateCard({
   };
 
   const primaryRoleMatch = getPrimaryRoleMatch();
+  const careerGapAnalysis = candidate.careerGapAnalysis;
+  const showCareerGapNotice = hasCareerGaps(careerGapAnalysis);
+  const showEligibilityIssues = Boolean(
+    eligibilityData &&
+      (eligibilityData.isEligible === false ||
+        eligibilityData.roleEligibility?.some((r) => r.reasons && r.reasons.length > 0))
+  );
   // Ensure the displayed match score is a plain number (not an object).
   const resolveNumericScore = (s: any): number | undefined => {
     if (s === undefined || s === null) return undefined;
@@ -658,14 +633,43 @@ const CandidateCard = memo(function CandidateCard({
   // DEBUG: In tests, help verify whether interview button is expected to render
   
 
+  const hasPipelineStatusAccent =
+    typeof className === "string" && className.includes("pipeline-status-accent");
+
+  // Check if candidate is withdrawn or on hold
+  const projectMainStatus = 
+    projectLink?.mainStatus?.name || 
+    candidate.projectMainStatus?.name ||
+    candidate.projectDetails?.mainStatus;
+  const isWithdrawn = 
+    projectMainStatus?.toLowerCase() === "withdrawn" ||
+    primaryStatusRaw.toLowerCase() === "withdrawn";
+  const isOnHold = 
+    projectMainStatus?.toLowerCase() === "on_hold" ||
+    primaryStatusRaw.toLowerCase() === "on_hold" ||
+    primaryStatusRaw.toLowerCase() === "on hold";
+
   return (
     <Card
       draggable={!!onDragStart}
       onDragStart={(e) => onDragStart?.(e, candidateId)}
       className={cn(
-        "group relative overflow-hidden cursor-pointer rounded-xl border border-slate-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-blue-200/80 hover:shadow-lg hover:shadow-blue-100/30 focus-within:border-blue-300 focus-within:shadow-lg py-0",
-        isAlreadyInProject && "border-l-[3px] border-l-emerald-400",
-        isNotEligible && !isAlreadyInProject && "border-l-[3px] border-l-red-300 opacity-75",
+        "group relative overflow-hidden cursor-pointer rounded-xl shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-within:shadow-lg py-0",
+        hasPipelineStatusAccent
+          ? "hover:shadow-purple-100/30 focus-within:border-purple-300"
+          : "border border-slate-200/80 bg-white hover:border-blue-200/80 hover:shadow-blue-100/30 focus-within:border-blue-300",
+        isWithdrawn &&
+          "border-2 border-red-300 bg-red-50/50",
+        !isWithdrawn && isOnHold &&
+          "border-2 border-orange-300 bg-orange-50/50",
+        !isWithdrawn && !isOnHold && isAlreadyInProject &&
+          !showProcessingGlance &&
+          !hasPipelineStatusAccent &&
+          "border-l-[3px] border-l-emerald-400",
+        !isWithdrawn && !isOnHold && isNotEligible &&
+          !isAlreadyInProject &&
+          !hasPipelineStatusAccent &&
+          "border-l-[3px] border-l-red-300 opacity-75",
         className
       )}
       onClick={() => onView?.(candidateId)}
@@ -679,10 +683,45 @@ const CandidateCard = memo(function CandidateCard({
       tabIndex={0}
       aria-label={`View candidate ${fullName}`}
     >
+      {showProcessingGlance && (
+        <div
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[inherit]"
+          aria-hidden
+        >
+          <div className="absolute inset-y-0 left-0 w-[48%] animate-processing-glance bg-gradient-to-r from-transparent via-white/75 to-transparent opacity-90 mix-blend-overlay" />
+          <div className="absolute inset-y-0 left-0 w-[38%] animate-processing-glance bg-gradient-to-r from-transparent via-blue-300/45 to-transparent opacity-70 mix-blend-soft-light [animation-delay:1.4s]" />
+        </div>
+      )}
+
       {/* Detailed Info Tooltip - Hover on entire card */}
       <CandidateDetailTooltip candidate={candidate} />
 
-      <CardContent className="px-3.5 py-3 space-y-2.5">
+      <CardContent
+        className={cn(
+          "px-3.5 py-3 space-y-2.5",
+          showProcessingGlance && "relative z-[1]",
+        )}
+      >
+        {/* Withdrawn Notice */}
+        {isWithdrawn && (
+          <div className="mb-2 flex items-center gap-2 rounded-md border border-red-300 bg-red-100 px-3 py-2">
+            <XCircle className="h-4 w-4 shrink-0 text-red-600" />
+            <p className="text-xs font-semibold text-red-800">
+              Candidate withdrawn from this project
+            </p>
+          </div>
+        )}
+        
+        {/* On Hold Notice */}
+        {isOnHold && (
+          <div className="mb-2 flex items-center gap-2 rounded-md border border-orange-300 bg-orange-100 px-3 py-2">
+            <AlertCircle className="h-4 w-4 shrink-0 text-orange-600" />
+            <p className="text-xs font-semibold text-orange-800">
+              This candidate is on hold
+            </p>
+          </div>
+        )}
+
         {/* Header row */}
         <div className="flex items-center gap-3">
           {/* Bulk-selection checkbox */}
@@ -711,6 +750,16 @@ const CandidateCard = memo(function CandidateCard({
                 <p className="text-[13px] font-semibold text-slate-800 truncate leading-tight">
                   {fullName || "Unnamed Candidate"}
                 </p>
+                {candidate.candidateCode ? (
+                  <div className="mt-1">
+                    <Badge
+                      variant="outline"
+                      className="text-[11px] font-bold bg-red-50 text-red-700 border-red-200 font-mono"
+                    >
+                      {candidate.candidateCode}
+                    </Badge>
+                  </div>
+                ) : null}
                 {/* Show current role / employer as subtitle */}
                 {(candidate.currentRole || candidate.currentEmployer) && (
                   <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
@@ -775,6 +824,9 @@ const CandidateCard = memo(function CandidateCard({
                       </TooltipTrigger>
                       {isNotEligible && (
                         <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
+                          {isNonPositiveStatus && assignmentBlockReason ? (
+                            <p>{assignmentBlockReason}</p>
+                          ) : (
                           <div className="space-y-2">
                             <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
                               Eligibility Mismatch:
@@ -798,6 +850,7 @@ const CandidateCard = memo(function CandidateCard({
                               <p>Not eligible for this project.</p>
                             )}
                           </div>
+                          )}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -832,7 +885,10 @@ const CandidateCard = memo(function CandidateCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge
             variant="outline"
-            className={`${statusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
+            className={cn(
+              statusConfig.badgeClass,
+              "border text-[10px] px-2 py-0.5 rounded-md font-medium"
+            )}
           >
             {statusConfig.label}
           </Badge>
@@ -841,11 +897,39 @@ const CandidateCard = memo(function CandidateCard({
           {showCandidateStatusBadge && candidateStatusConfig && (
             <Badge
               variant="outline"
-              className={`${candidateStatusConfig.color} border text-[10px] px-2 py-0.5 rounded-md font-medium`}
+              className={cn(
+                candidateStatusConfig.badgeClass,
+                "border text-[10px] px-2 py-0.5 rounded-md font-medium"
+              )}
               title={`Candidate status: ${candidateStatusConfig.label}`}
             >
               {candidateStatusConfig.label}
             </Badge>
+          )}
+
+          {isNonPositiveStatus && !isAlreadyInProject && (
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="border border-red-200 bg-red-50 text-red-700 text-[10px] px-2 py-0.5 rounded-md font-medium cursor-help"
+                  title={assignmentBlockReason ?? undefined}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
+                >
+                  Cannot assign: {cannotAssignStatusLabel}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl z-[60]"
+              >
+                <p>
+                  {assignmentBlockReason ??
+                    "Candidate must be in a positive status (Interested, Future, or On Hold) to be assigned to a project."}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {showMatchScore && displayMatchScore !== undefined && (
@@ -974,7 +1058,10 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Document Status Icon */}
-          {showDocumentStatus && (requiredDocs.length > 0 || uploadedDocs.length > 0) && (
+          {showDocumentStatus &&
+            (requiredDocs.length > 0 ||
+              uploadedDocs.length > 0 ||
+              introductionVideoRequired) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div 
@@ -1022,6 +1109,27 @@ const CandidateCard = memo(function CandidateCard({
                         </span>
                       </div>
                     ))}
+                    {introductionVideoRequired && (
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          {isIntroVideoUploaded ? (
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <AlertCircle className="h-3 w-3 text-amber-500" />
+                          )}
+                          <Video className="h-3 w-3 text-violet-500" aria-hidden />
+                          <span>Introduction Video</span>
+                        </div>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            isIntroVideoUploaded ? "text-green-600" : "text-amber-600",
+                          )}
+                        >
+                          {isIntroVideoUploaded ? "Uploaded" : "Missing"}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {isRecruiter && (
@@ -1061,7 +1169,7 @@ const CandidateCard = memo(function CandidateCard({
           )}
 
           {/* Eligibility Warning Icon */}
-          {eligibilityData && (eligibilityData.isEligible === false || eligibilityData.roleEligibility?.some(r => r.reasons && r.reasons.length > 0)) && (
+          {(showCareerGapNotice || showEligibilityIssues) && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div
@@ -1076,6 +1184,27 @@ const CandidateCard = memo(function CandidateCard({
               </TooltipTrigger>
               <TooltipContent className="bg-white text-slate-900 border border-red-200 shadow-lg max-w-xs max-h-72 overflow-y-auto p-3 rounded-xl">
                 <div className="space-y-2">
+                  {showCareerGapNotice && careerGapAnalysis && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                        <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+                        Career Gap
+                      </div>
+                      <p className="text-[10px] text-amber-800 font-medium">
+                        Total gap: {formatMonthsAsDuration(careerGapAnalysis.totalGapMonths)}
+                      </p>
+                      <ul className="space-y-1">
+                        {careerGapAnalysis.gaps.slice(0, 3).map((gap, gapIdx) => (
+                          <li key={gapIdx} className="text-[10px] text-amber-700 leading-snug">
+                            <span className="font-medium">{getGapTypeLabel(gap.type)}:</span>{" "}
+                            {gap.label} ({formatMonthsAsDuration(gap.months)})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {showEligibilityIssues && (
+                    <>
                   <div className={cn(
                     "flex items-center gap-2 font-bold text-xs",
                     isNotEligible ? "text-red-600" : "text-amber-600"
@@ -1088,8 +1217,10 @@ const CandidateCard = memo(function CandidateCard({
                       ? "This candidate does not meet the minimum requirements for any role in this project."
                       : "This candidate is eligible but has some soft mismatches or requires verification."}
                   </div>
+                    </>
+                  )}
                   
-                  {eligibilityData?.roleEligibility && (
+                  {showEligibilityIssues && eligibilityData?.roleEligibility && (
                     <div className="space-y-2 border-t pt-2">
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role Breakdown</div>
                       {eligibilityData.roleEligibility.map((role, rIdx) => (
@@ -1235,11 +1366,11 @@ const CandidateCard = memo(function CandidateCard({
               {isRecruiter && showAssignButton && onAssignToProject && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn(isNotEligible && "cursor-not-allowed")}>
+                    <span className={cn(isAssignDisabled && "cursor-not-allowed")}>
                       <Button
                         variant="default"
                         size="sm"
-                        disabled={isNotEligible}
+                        disabled={isAssignDisabled}
                         className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-3 rounded-lg font-medium shadow-sm shadow-emerald-200 transition-all"
                         onClick={(event) => {
                           event.stopPropagation();
@@ -1251,29 +1382,35 @@ const CandidateCard = memo(function CandidateCard({
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {isNotEligible && (
-                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs shadow-xl">
-                      <div className="space-y-2">
-                        <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
-                          Eligibility Mismatch:
-                        </p>
-                        {eligibilityData?.roleEligibility?.map((role, idx) => (
-                          <div key={idx} className="space-y-1">
-                            <p className="text-slate-300 font-medium">
-                              {role.designation}:
-                            </p>
-                            <ul className="list-disc pl-3 space-y-0.5">
-                              {role.reasons.map((reason, ridx) => (
-                                <li key={ridx}>{reason}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                        {(!eligibilityData?.roleEligibility ||
-                          eligibilityData.roleEligibility.length === 0) && (
-                          <p>Not eligible for this project.</p>
-                        )}
-                      </div>
+                  {isAssignDisabled && (
+                    <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
+                      {hasProcessingAssignmentBlock && processingBlockReason?.fullMessage ? (
+                        <p>{processingBlockReason.fullMessage}</p>
+                      ) : isNonPositiveStatus && assignmentBlockReason ? (
+                        <p>{assignmentBlockReason}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="font-semibold border-b border-slate-700 pb-1 mb-1">
+                            Eligibility Mismatch:
+                          </p>
+                          {eligibilityData?.roleEligibility?.map((role, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <p className="text-slate-300 font-medium">
+                                {role.designation}:
+                              </p>
+                              <ul className="list-disc pl-3 space-y-0.5">
+                                {role.reasons.map((reason, ridx) => (
+                                  <li key={ridx}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                          {(!eligibilityData?.roleEligibility ||
+                            eligibilityData.roleEligibility.length === 0) && (
+                            <p>Not eligible for this project.</p>
+                          )}
+                        </div>
+                      )}
                     </TooltipContent>
                   )}
                 </Tooltip>

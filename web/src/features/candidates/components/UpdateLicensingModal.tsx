@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -25,11 +26,22 @@ import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { toast } from "sonner";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 
-const licensingSchema = z.object({
-  licensingExam: z.string().optional(),
-  dataFlow: z.boolean().optional(),
-  eligibility: z.boolean().optional(),
-});
+const licensingSchema = z
+  .object({
+    licensingExam: z.string().optional(),
+    dataFlow: z.boolean().optional(),
+    eligibility: z.boolean().optional(),
+    eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+  })
+  .superRefine((data, ctx) => {
+    if (data.eligibility && !data.eligibilityNumber?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Eligibility number is required when eligibility is enabled",
+        path: ["eligibilityNumber"],
+      });
+    }
+  });
 
 type LicensingFormData = z.infer<typeof licensingSchema>;
 
@@ -41,6 +53,7 @@ interface UpdateLicensingModalProps {
     licensingExam?: string | null;
     dataFlow?: boolean | null;
     eligibility?: boolean | null;
+    eligibilityNumber?: string | null;
   };
 }
 
@@ -56,14 +69,18 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
     control,
     handleSubmit,
     reset,
+    formState: { errors },
   } = useForm<LicensingFormData>({
     resolver: zodResolver(licensingSchema),
     defaultValues: {
       licensingExam: initialData.licensingExam || "",
       dataFlow: initialData.dataFlow ?? false,
       eligibility: initialData.eligibility ?? false,
+      eligibilityNumber: initialData.eligibilityNumber || "",
     },
   });
+
+  const eligibilityEnabled = useWatch({ control, name: "eligibility" });
 
   useEffect(() => {
     if (isOpen) {
@@ -71,6 +88,7 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
         licensingExam: initialData.licensingExam || "",
         dataFlow: initialData.dataFlow ?? false,
         eligibility: initialData.eligibility ?? false,
+        eligibilityNumber: initialData.eligibilityNumber || "",
       });
     }
   }, [isOpen, initialData, reset]);
@@ -82,6 +100,10 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
         licensingExam: data.licensingExam,
         dataFlow: data.dataFlow,
         eligibility: data.eligibility,
+        eligibilityNumber:
+          data.eligibility && data.eligibilityNumber?.trim()
+            ? data.eligibilityNumber.trim()
+            : null,
       }).unwrap();
       toast.success("Licensing information updated successfully");
       onClose();
@@ -125,10 +147,10 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
                       <SelectValue placeholder="Select licensing exam" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None / Not Required</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {Object.entries(LICENSING_EXAMS).map(([key, value]) => (
                         <SelectItem key={value} value={value}>
-                          {key.replace(/_/g, " ")}
+                          {key.replace("_", " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -137,16 +159,16 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-4">
               {/* Data Flow */}
               <div className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/30">
                 <div className="space-y-0.5">
                   <Label className="text-sm font-semibold flex items-center gap-2">
                     <FileCheck className="h-4 w-4 text-blue-500" />
-                    Data Flow Completed
+                    Data Flow
                   </Label>
                   <p className="text-xs text-slate-500">
-                    Has the data flow verification been finished?
+                    Has the candidate completed data flow?
                   </p>
                 </div>
                 <Controller
@@ -185,6 +207,32 @@ export const UpdateLicensingModal: React.FC<UpdateLicensingModalProps> = ({
                   )}
                 />
               </div>
+
+              {eligibilityEnabled ? (
+                <div className="space-y-2 p-3 rounded-lg border border-emerald-100 bg-emerald-50/40">
+                  <Label htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                    Eligibility Number
+                  </Label>
+                  <Controller
+                    name="eligibilityNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        id="eligibilityNumber"
+                        placeholder="Enter eligibility number"
+                        disabled={isLoading}
+                        className="h-11 bg-white border-slate-200"
+                      />
+                    )}
+                  />
+                  {errors.eligibilityNumber?.message ? (
+                    <p className="text-sm text-red-600">
+                      {errors.eligibilityNumber.message}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
 

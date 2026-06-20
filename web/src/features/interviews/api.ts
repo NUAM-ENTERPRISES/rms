@@ -17,14 +17,37 @@ export interface Interview {
   interviewerEmail?: string;
   outcome?: string;
   notes?: string;
+  readyForProcessingAt?: string | null;
+  readyForProcessingBy?: { id: string; name: string; email?: string } | null;
+  /** Set when this candidate was sent on any other passed interview project. */
+  candidateSentForProcessingAt?: string | null;
+  /** Project title where the candidate was already sent for processing. */
+  candidateSentForProcessingProjectTitle?: string | null;
+  offerLetterData?: {
+    id?: string;
+    status?: string;
+    offerLetterReceivedAt?: string | null;
+    document?: {
+      id?: string;
+      fileName?: string;
+      fileUrl?: string;
+      status?: string;
+      uploadedBy?: string;
+      createdAt?: string;
+      uploadedByUser?: { id: string; name: string; email: string } | null;
+    };
+  } | null;
+  isOfferLetterUploaded?: boolean;
   // Top-level shortcuts: some endpoints include the candidate & role directly
   candidate?: {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string;
     profileImage?: string;
     mobileNumber?: string;
+    countryCode?: string;
     qualifications?: Array<{
       id: string;
       university?: string | null;
@@ -52,9 +75,11 @@ export interface Interview {
       id: string;
       firstName: string;
       lastName: string;
+      candidateCode?: string | null;
       email?: string;
       profileImage?: string;
       mobileNumber?: string;
+      countryCode?: string;
       qualifications?: Array<{
         id: string;
         university?: string | null;
@@ -123,6 +148,7 @@ export interface QueryInterviewsRequest {
   search?: string;
   mode?: string;
   status?: string;
+  readyForProcessingStatus?: "sent";
   projectId?: string;
   roleCatalogId?: string;
   candidateId?: string;
@@ -164,7 +190,7 @@ export interface QueryShortlistPendingRequest {
 
 export interface AssignedInterviewItem {
   id: string;
-  candidate?: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
+  candidate?: { id: string; firstName?: string; lastName?: string; candidateCode?: string | null; email?: string; profileImage?: string; mobileNumber?: string; countryCode?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
   project?: { id: string; title?: string };
   roleNeeded?: { id?: string; designation?: string };
   recruiter?: { id?: string; name?: string; email?: string };
@@ -176,7 +202,7 @@ export interface AssignedInterviewItem {
   // Optionally include the expanded candidateProjectMap for consistency with Interview
   candidateProjectMap?: {
     id: string;
-    candidate: { id: string; firstName?: string; lastName?: string; email?: string; profileImage?: string; mobileNumber?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
+    candidate: { id: string; firstName?: string; lastName?: string; candidateCode?: string | null; email?: string; profileImage?: string; mobileNumber?: string; countryCode?: string; qualifications?: Array<{ id: string; university?: string | null; graduationYear?: number | null; gpa?: number | null; isCompleted?: boolean; qualification?: { id?: string; name?: string; shortName?: string; level?: string } | null }>; workExperiences?: Array<{ id: string; companyName?: string; jobTitle?: string; startDate?: string | null; endDate?: string | null; isCurrent?: boolean; description?: string | null }>; };
     project: { id: string; title?: string };
     roleNeeded?: { id?: string; designation?: string };
     recruiter?: { id?: string; name?: string; email?: string };
@@ -377,7 +403,17 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: "Interview", id }, "Interview"],
+      invalidatesTags: (result, _error, { id }) => {
+        const candidateId =
+          result?.data?.candidateProjectMap?.candidate?.id ??
+          result?.data?.candidate?.id;
+        return [
+          { type: "Interview" as const, id },
+          { type: "Interview" as const },
+          { type: "Candidate" as const },
+          ...(candidateId ? [{ type: "Candidate" as const, id: candidateId }] : []),
+        ];
+      },
     }),
 
     /**
@@ -385,7 +421,11 @@ export const interviewsApi = baseApi.injectEndpoints({
      * PATCH /interviews/status
      */
     updateBulkInterviewStatus: builder.mutation<
-      { success: boolean; data: Interview[]; message?: string },
+      {
+        success: boolean;
+        data: Array<{ success: boolean; data?: Interview; error?: string; id?: string }>;
+        message?: string;
+      },
       { updates: { id: string; interviewStatus?: string; subStatus?: string; reason?: string }[] }
     >({
       query: (body) => ({
@@ -393,7 +433,81 @@ export const interviewsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Interview"],
+      invalidatesTags: (result) => {
+        const candidateTags = (result?.data ?? []).flatMap((item) => {
+          if (!item?.success || !item.data) return [];
+          const candidateId =
+            item.data.candidateProjectMap?.candidate?.id ??
+            item.data.candidate?.id;
+          return candidateId ? [{ type: "Candidate" as const, id: candidateId }] : [];
+        });
+        return [
+          { type: "Interview" as const },
+          { type: "Candidate" as const },
+          ...candidateTags,
+        ];
+      },
+    }),
+
+    sendForProcessing: builder.mutation<
+      { success: boolean; data: Interview; message?: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/interviews/${id}/send-for-processing`,
+        method: "PATCH",
+      }),
+      invalidatesTags: (result, _error, id) => {
+        const candidateId =
+          result?.data?.candidateProjectMap?.candidate?.id ??
+          (result?.data as { candidate?: { id?: string } })?.candidate?.id;
+        return [
+          { type: "Interview" as const, id },
+          "Interview" as const,
+          "ProcessingSummary" as const,
+          ...(candidateId
+            ? [
+                { type: "Document" as const, id: `offer-letter-requests-${candidateId}` },
+                { type: "Candidate" as const, id: candidateId },
+              ]
+            : []),
+        ];
+      },
+    }),
+
+    sendBulkForProcessing: builder.mutation<
+      {
+        success: boolean;
+        data: Array<{ id: string; success: boolean; data?: Interview; error?: string }>;
+        message?: string;
+      },
+      { interviewIds: string[] }
+    >({
+      query: (body) => ({
+        url: "/interviews/send-for-processing",
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (result, _error, arg) => {
+        const results = result?.data ?? [];
+        const candidateTags = results.flatMap((item) => {
+          const candidateId =
+            item.data?.candidateProjectMap?.candidate?.id ??
+            (item.data as { candidate?: { id?: string } })?.candidate?.id;
+          return candidateId
+            ? [
+                { type: "Document" as const, id: `offer-letter-requests-${candidateId}` },
+                { type: "Candidate" as const, id: candidateId },
+              ]
+            : [];
+        });
+        return [
+          ...arg.interviewIds.map((interviewId) => ({ type: "Interview" as const, id: interviewId })),
+          "Interview" as const,
+          "ProcessingSummary" as const,
+          ...candidateTags,
+        ];
+      },
     }),
 
     /**
@@ -480,6 +594,8 @@ export const {
   useCreateBulkInterviewsMutation,
   useUpdateInterviewMutation,
   useUpdateBulkInterviewStatusMutation,
+  useSendForProcessingMutation,
+  useSendBulkForProcessingMutation,
   useDeleteInterviewMutation,
   useUpdateInterviewStatusMutation,
   useGetAssignedInterviewsQuery,

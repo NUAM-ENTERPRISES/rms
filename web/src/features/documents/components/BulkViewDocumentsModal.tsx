@@ -27,6 +27,7 @@ import { PDFViewer } from "@/components/molecules";
 import { useGetCandidateProjectVerificationsQuery, useGetMergedDocumentQuery } from "../api";
 import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { formatDistanceToNow } from "date-fns";
+import { isClientSendableDocument } from "@/constants/document-types";
 
 export interface SelectedDoc {
   id: string;
@@ -117,6 +118,8 @@ export function BulkViewDocumentsModal({
       verifiedDocuments = verificationsResponse;
     }
   }
+
+  verifiedDocuments = verifiedDocuments.filter((doc) => isClientSendableDocument(doc));
 
   const mergedDoc = mergedDocResponse?.data;
 

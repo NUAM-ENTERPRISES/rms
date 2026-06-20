@@ -2,9 +2,11 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/organisms/NotificationBell";
 import UserMenu from "@/components/organisms/UserMenu";
+import { AccountStatusNavIndicator } from "@/components/molecules/AccountStatusNavIndicator";
 import { RNRReminderBadge } from "@/features/candidates/components/RNRReminderBadge";
 import { ProcessingRemindersBadge } from "@/features/processing/components/ProcessingRemindersBadge";
 import IdleUsersNotification from "@/features/admin/components/IdleUsersNotification";
+import { RecruiterNavPerformanceRating } from "@/features/candidates/components/RecruiterNavPerformanceRating";
 import SessionAvailabilityToggles from "@/features/staff/components/SessionAvailabilityToggles";
 
 interface HeaderProps {
@@ -29,12 +31,20 @@ export default function Header({ onMobileMenuToggle }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="relative">
+            <div
+              className="pointer-events-none absolute -inset-1 hidden rounded-2xl bg-amber-400/10 blur-md sm:block"
+              aria-hidden
+            />
+            <RecruiterNavPerformanceRating />
+          </div>
           <RNRReminderBadge />
           {/* Processing team unified badge */}
           <ProcessingRemindersBadge />
           {/* <SessionAvailabilityToggles /> */}
           <IdleUsersNotification />
           <NotificationBell />
+          <AccountStatusNavIndicator />
           <UserMenu />
         </div>
       </div>

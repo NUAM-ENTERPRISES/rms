@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { formatRolePreferenceLabel } from "@/features/candidates/utils/role-preference";
 import {
   Card,
   CardHeader,
@@ -32,18 +33,35 @@ import {
   ClipboardCheck,
   FileText,
   Eye,
+  PauseCircle,
+  Plane,
 } from "lucide-react";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, cn } from "@/lib/utils";
+import { FlagIcon } from "@/shared";
 import { DateUtils } from "@/shared/utils/date";
+import { getCandidateExperienceLabel } from "../../utils/experience-display";
 import { getAge } from "@/utils/getAge";
-import { Candidate, CandidateQualification, WorkExperience, Document } from "../../api";
+import {
+  Candidate,
+  CandidateQualification,
+  WorkExperience,
+  Document,
+  CareerGapType,
+} from "../../api";
 import { CandidateResumeList } from "@/components/molecules";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
+import type { PassportDocumentSummary } from "../../profileCompletion";
+import type { CandidateActivitySnapshot as ActivityStats } from "../../api";
+import {
+  CandidateActivitySnapshot,
+  type SnapshotTab,
+} from "../CandidateActivitySnapshot";
 
 interface CandidateOverviewProps {
   candidate: Candidate;
+  isCandidateLoading?: boolean;
   canWriteCandidates: boolean;
   openAddModal: (type: "qualification" | "workExperience") => void;
   openEditModal: (
@@ -57,10 +75,33 @@ interface CandidateOverviewProps {
   onDeleteWorkExperience?: (id: string) => void;
   onDeleteQualification?: (id: string) => void;
   workExperienceDocs?: Document[];
+  passportDocument?: PassportDocumentSummary | null;
+  onOpenPassportDocuments?: () => void;
+  activityStats?: ActivityStats;
+  isActivityStatsLoading?: boolean;
+  isActivityStatsFetching?: boolean;
+  onNavigateToTab?: (tab: SnapshotTab) => void;
 }
+
+const formatMonthsAsDuration = (totalMonths: number): string =>
+  DateUtils.formatDurationFromTotalMonths(totalMonths);
+
+const getGapTypeLabel = (type: CareerGapType): string => {
+  switch (type) {
+    case "education_to_work":
+      return "After education";
+    case "current_unemployment":
+      return "Currently unemployed";
+    case "between_jobs":
+      return "Between jobs";
+    default:
+      return "Gap";
+  }
+};
 
 export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   candidate,
+  isCandidateLoading = false,
   canWriteCandidates,
   openAddModal,
   openEditModal,
@@ -71,9 +112,16 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
   onDeleteWorkExperience,
   onDeleteQualification,
   workExperienceDocs,
+  passportDocument,
+  onOpenPassportDocuments,
+  activityStats,
+  isActivityStatsLoading = false,
+  isActivityStatsFetching = false,
+  onNavigateToTab,
 }) => {
   const age = getAge(candidate.dateOfBirth);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string; isPdf: boolean } | null>(null);
+  const careerGaps = candidate.careerGapAnalysis;
 
   const QUAL_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
   const WORK_PAGE_SIZE_OPTIONS = useMemo(() => [1, 2, 3], []);
@@ -87,6 +135,61 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
   const qualifications = candidate.qualifications ?? [];
   const workExperiences = candidate.workExperiences ?? [];
+
+  const experienceLabel = useMemo(
+    () =>
+      getCandidateExperienceLabel({
+        careerGapAnalysis: careerGaps,
+        workExperiences,
+        totalExperience: candidate.totalExperience,
+        experience: candidate.experience,
+      }),
+    [careerGaps, workExperiences, candidate.totalExperience, candidate.experience]
+  );
+
+  const careerGapLabel = useMemo(() => {
+    if (isCandidateLoading) return "Loading…";
+    if (!workExperiences.length) return "N/A";
+    if (!careerGaps || careerGaps.totalGapMonths === 0) return "No gaps";
+    return formatMonthsAsDuration(careerGaps.totalGapMonths);
+  }, [careerGaps, isCandidateLoading, workExperiences.length]);
+
+  const workExperienceSummary = useMemo(() => {
+    let totalExperience = "N/A";
+    if (workExperiences.length > 0) {
+      const { years, months, days } =
+        DateUtils.calculateTotalExperience(workExperiences);
+      totalExperience = DateUtils.formatDuration(years, months, days);
+    } else if (careerGaps) {
+      totalExperience = formatMonthsAsDuration(careerGaps.totalExperienceMonths);
+    } else {
+      totalExperience =
+        candidate.totalExperience?.toString() ||
+        candidate.experience?.toString() ||
+        "N/A";
+    }
+
+    const totalGap = isCandidateLoading
+      ? "…"
+      : careerGaps && careerGaps.totalGapMonths > 0
+        ? formatMonthsAsDuration(careerGaps.totalGapMonths)
+        : "None";
+
+    const hasGap = !isCandidateLoading && !!careerGaps && careerGaps.totalGapMonths > 0;
+
+    return {
+      totalExperience,
+      totalGap,
+      positions: workExperiences.length,
+      hasGap,
+    };
+  }, [
+    workExperiences,
+    careerGaps,
+    isCandidateLoading,
+    candidate.totalExperience,
+    candidate.experience,
+  ]);
 
   const qualificationsTotalPages = Math.max(
     1,
@@ -117,9 +220,9 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-stretch">
         {/* Candidate Information */}
-        <Card className="xl:col-span-2 border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
+        <Card className="xl:col-span-2 h-full flex flex-col border border-gray-300 rounded-lg shadow-lg bg-white bg-opacity-90 backdrop-blur-md transition-shadow hover:shadow-2xl">
           <CardHeader className="border-b border-gray-300 px-6 py-4">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-3 text-lg font-semibold text-gray-900 select-none">
@@ -142,22 +245,26 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
           <CardContent>
             <div className="max-w-4xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Email
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Mail className="h-3 w-3 text-slate-400" />
-                    {candidate.email || "N/A"}
+                  <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
+                    <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="min-w-0 flex-1 whitespace-normal break-all leading-snug">
+                      {candidate.email || "N/A"}
+                    </span>
                   </p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Phone
                   </label>
-                  <p className="text-sm flex items-center gap-2 mt-1">
-                    <Phone className="h-3 w-3 text-slate-400" />
-                    {candidate.mobileNumber || "N/A"}
+                  <p className="text-sm flex items-center gap-2 mt-1 min-w-0">
+                    <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
+                      {candidate.mobileNumber || "N/A"}
+                    </span>
                   </p>
                 </div>
                 <div>
@@ -189,25 +296,99 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Profession
+                  </label>
+                  <p className="text-sm mt-1">
+                    {candidate.professionType?.label || "N/A"}
+                  </p>
+                </div>
+                {onOpenPassportDocuments && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Passport
+                    </label>
+                    {(() => {
+                      const displayNumber =
+                        passportDocument?.documentNumber?.trim() ||
+                        (candidate as any).passportNumber?.trim() ||
+                        null;
+                      const hasPassport = Boolean(displayNumber);
+                      return (
+                        <button
+                          type="button"
+                          onClick={onOpenPassportDocuments}
+                          className="text-sm flex items-center gap-2 mt-1 text-left rounded-md transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+                          aria-label={
+                            hasPassport
+                              ? `Passport ${displayNumber}. Open passport document upload.`
+                              : "Add passport. Open passport document upload."
+                          }
+                        >
+                          <Plane className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+                          {hasPassport ? (
+                            <span>
+                              #{displayNumber}
+                              {passportDocument?.expiryDate && (
+                                <span className="text-slate-500">
+                                  {" "}
+                                  · Exp {DateUtils.formatDate(passportDocument.expiryDate)}
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 underline-offset-2 hover:underline">
+                              Add passport
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })()}
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                     Experience
                   </label>
                   <p className="text-sm flex items-center gap-2 mt-1">
                     <Clock className="h-3 w-3 text-slate-400" />
-                    {(() => {
-                      if (
-                        candidate.workExperiences &&
-                        candidate.workExperiences.length > 0
-                      ) {
-                        const { years, months } = DateUtils.calculateTotalExperience(candidate.workExperiences);
-                        return DateUtils.formatDuration(years, months);
-                      }
-                      return (
-                        candidate.totalExperience ||
-                        candidate.experience ||
-                        "N/A"
-                      );
-                    })()}
+                    {experienceLabel}
                   </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Career Gap
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {isCandidateLoading ? (
+                      <Badge variant="outline" className="text-slate-600 border-slate-200 bg-slate-50 text-[10px] h-5 px-1.5">
+                        Loading…
+                      </Badge>
+                    ) : (
+                      <>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-5 px-1.5",
+                            !workExperiences.length
+                              ? "text-slate-600 border-slate-200 bg-slate-50"
+                              : !careerGaps || careerGaps.totalGapMonths === 0
+                                ? "text-emerald-700 border-emerald-200 bg-emerald-50"
+                                : "text-violet-700 border-violet-200 bg-violet-50"
+                          )}
+                        >
+                          {careerGapLabel}
+                        </Badge>
+                        {careerGaps && careerGaps.longestGapMonths >= 12 && (
+                          <Badge
+                            variant="outline"
+                            className="text-amber-700 border-amber-200 bg-amber-50 text-[10px] h-5 px-1.5"
+                          >
+                            Longest {formatMonthsAsDuration(careerGaps.longestGapMonths)}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
@@ -234,38 +415,6 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                   </p>
                 </div>
 
-                {/* Referral Fields Integrated */}
-                {candidate.source === "referral" && (
-                  <>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Company
-                      </label>
-                      <p className="text-sm mt-1">
-                        {candidate.referralCompanyName || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Email
-                      </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Mail className="h-3 w-3 text-slate-400" />
-                        {candidate.referralEmail || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                        Referral Phone
-                      </label>
-                      <p className="text-sm flex items-center gap-2 mt-1">
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        {candidate.referralCountryCode}
-                        {candidate.referralPhone || "N/A"}
-                      </p>
-                    </div>
-                  </>
-                )}
               </div>
 
               {/* Referral Description Integrated */}
@@ -315,6 +464,22 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </label>
                     <p className="text-sm mt-1 text-slate-800 whitespace-pre-wrap">
                       {candidate.address?.trim() ? candidate.address : "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Pincode
+                    </label>
+                    <p className="text-sm mt-1 font-mono">
+                      {candidate.addressPincode?.trim() || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                      Alternate phone
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.alternatePhone?.trim() || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -386,6 +551,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </label>
                     <p className="text-sm mt-1 capitalize">
                       {candidate.skinTone || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Religion
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.religion?.name || "N/A"}
                     </p>
                   </div>
                   <div>
@@ -511,6 +684,25 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                     </div>
                   </div>
                 </div>
+                <div className="mt-6">
+                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                    Department Preferences
+                  </label>
+                  <div className="flex flex-wrap gap-1">
+                    {candidate.rolePreferences && candidate.rolePreferences.length > 0 ? (
+                      candidate.rolePreferences.map((rp) => (
+                        <Badge
+                          key={rp.roleCatalogId}
+                          className="bg-teal-50 text-teal-700 border-teal-100 hover:bg-teal-100"
+                        >
+                          {formatRolePreferenceLabel(rp.roleCatalog)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-400 italic">N/A</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Licensing & Verification Section */}
@@ -577,6 +769,16 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                         </Badge>
                       )}
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wide block mb-2">
+                      Eligibility Number
+                    </label>
+                    <p className="text-sm mt-1">
+                      {candidate.eligibility && candidate.eligibilityNumber
+                        ? candidate.eligibilityNumber
+                        : "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -676,6 +878,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                 <span className="flex items-center gap-1.5 text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full">
                                   <Trophy className="h-3 w-3" />
                                   GPA: {qual.gpa}
+                                </span>
+                              )}
+                              {(qual.country?.name || qual.countryCode) && (
+                                <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-full">
+                                  {qual.countryCode && (
+                                    <FlagIcon countryCode={qual.countryCode} size="sm" />
+                                  )}
+                                  {qual.country?.name || qual.countryCode}
                                 </span>
                               )}
                             </div>
@@ -811,26 +1021,101 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
 
                     {workExperiences.length > 0 ? (
                       <div className="space-y-3">
-                        {/* Total Experience Banner */}
-                        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 p-4 text-white shadow-lg shadow-emerald-200/50">
-                          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-8 translate-x-8" />
-                          <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
-                          <div className="relative flex items-center justify-between">
-                            <div>
-                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Total Experience</p>
-                              <p className="text-2xl font-extrabold tracking-tight">
-                                {(() => {
-                                  const { years, months } = DateUtils.calculateTotalExperience(workExperiences);
-                                  return DateUtils.formatDuration(years, months);
-                                })()}
+                        {/* Work experience summary — compact stat chips */}
+                        <div className="space-y-2" aria-label="Work experience summary">
+                          <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
+                              <Clock className="h-4 w-4" aria-hidden />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                Total experience
+                              </p>
+                              <p className="mt-1 text-base font-bold leading-snug text-slate-800 whitespace-normal">
+                                {workExperienceSummary.totalExperience}
                               </p>
                             </div>
-                            <div className="text-right">
-                              <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-1">Positions</p>
-                              <p className="text-2xl font-extrabold">{workExperiences.length}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                              <div
+                                className={cn(
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+                                  workExperienceSummary.hasGap
+                                    ? "bg-violet-100 text-violet-600"
+                                    : "bg-emerald-100 text-emerald-600"
+                                )}
+                              >
+                                <PauseCircle className="h-4 w-4" aria-hidden />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                  Total gap
+                                </p>
+                                <p
+                                  className={cn(
+                                    "mt-1 text-sm font-bold leading-snug whitespace-normal",
+                                    workExperienceSummary.hasGap
+                                      ? "text-violet-700"
+                                      : "text-emerald-700"
+                                  )}
+                                >
+                                  {workExperienceSummary.totalGap}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2.5 shadow-sm">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                                <Briefcase className="h-4 w-4" aria-hidden />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 leading-none">
+                                  Positions
+                                </p>
+                                <p className="mt-1 text-sm font-bold leading-snug text-slate-800 whitespace-normal">
+                                  {workExperienceSummary.positions}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
+
+                        {careerGaps && careerGaps.gaps.length > 0 && (
+                          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+                            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5">
+                              <PauseCircle className="h-3.5 w-3.5" aria-hidden />
+                              Career gap breakdown
+                            </p>
+                            <ul className="space-y-2" aria-label="Career gap breakdown">
+                              {careerGaps.gaps.map((gap) => (
+                                <li
+                                  key={`${gap.type}-${gap.startDate}-${gap.endDate}`}
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl bg-white border border-amber-100 px-3 py-2.5"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-amber-800 border-amber-200 bg-amber-50 text-[10px] h-5"
+                                      >
+                                        {getGapTypeLabel(gap.type)}
+                                      </Badge>
+                                      <span className="text-xs font-semibold text-slate-800 truncate">
+                                        {gap.label}
+                                      </span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                      {formatDate(gap.startDate)} — {formatDate(gap.endDate)}
+                                    </p>
+                                  </div>
+                                  <span className="text-sm font-bold text-amber-800 shrink-0">
+                                    {formatMonthsAsDuration(gap.months)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                         {/* Experience Cards */}
                         <div className="space-y-3">
@@ -843,7 +1128,7 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                             (d) =>
                               !d.workExperienceId &&
                               (d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTERS ||
-                                d.docType === DOCUMENT_TYPE.EXPERIENCE_LETTER ||
+                                d.docType === "experience_letter" ||
                                 d.docType === DOCUMENT_TYPE.RELIEVING_LETTER ||
                                 d.docType === DOCUMENT_TYPE.SALARY_SLIP ||
                                 d.docType === DOCUMENT_TYPE.APPOINTMENT_LETTER)
@@ -934,7 +1219,11 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                     )}
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-semibold">
                                       <Clock className="h-2.5 w-2.5" />
-                                      {DateUtils.formatDuration(duration.years, duration.months)}
+                                      {DateUtils.formatDuration(
+                                        duration.years,
+                                        duration.months,
+                                        duration.days
+                                      )}
                                     </span>
 
                                   </div>
@@ -951,6 +1240,14 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
                                   <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                                     <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                                     {exp.location}
+                                  </span>
+                                )}
+                                {(exp.country?.name || exp.countryCode) && (
+                                  <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                                    {exp.countryCode && (
+                                      <FlagIcon countryCode={exp.countryCode} size="sm" />
+                                    )}
+                                    {exp.country?.name || exp.countryCode}
                                   </span>
                                 )}
                                 {exp.salary && (
@@ -1144,106 +1441,18 @@ export const CandidateOverview: React.FC<CandidateOverviewProps> = ({
           </CardContent>
         </Card>
 
-        {/* Quick Stats */}
-        <Card
-          className="border-0 shadow-xl bg-white/95 backdrop-blur-xl rounded-2xl overflow-hidden 
-               ring-1 ring-gray-200/50 hover:ring-blue-400/30 hover:shadow-2xl 
-               transition-all duration-500"
-        >
-          <CardHeader className="border-b border-gray-200 bg-gradient-to-r px-6 py-5 relative overflow-hidden">
-            <div className="absolute inset-0 bg-black/5" />
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-16 translate-x-16" />
-
-            <CardTitle className="relative flex items-center gap-3 text-black text-lg font-semibold tracking-tight">
-              <div className="p-2.5 backdrop-blur-md rounded-xl border shadow-lg">
-                <Plus className="h-6 w-6 text-black" />
-              </div>
-              <span>Quick Stats</span>
-              <div className="ml-auto flex items-center gap-1">
-                <span className="h-2 w-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-xs font-medium opacity-90">Live</span>
-              </div>
-            </CardTitle>
-          </CardHeader>
-
-          <CardContent className="p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white">
-            {[
-              {
-                label: "Applications",
-                value: candidate.metrics?.totalApplications ?? 0,
-                icon: "paper-plane",
-                color: "from-gray-500 to-slate-600",
-                bg: "bg-gray-100",
-                hoverBg: "hover:bg-gray-200",
-              },
-              {
-                label: "Interviews",
-                value: candidate.metrics?.interviewsScheduled ?? 0,
-                icon: "calendar-check",
-                color: "from-blue-500 to-blue-600",
-                bg: "bg-blue-50",
-                hoverBg: "hover:bg-blue-100",
-              },
-              {
-                label: "Offers",
-                value: candidate.metrics?.offersReceived ?? 0,
-                icon: "handshake",
-                color: "from-emerald-500 to-green-600",
-                bg: "bg-emerald-50",
-                hoverBg: "hover:bg-emerald-100",
-              },
-              {
-                label: "Placements",
-                value: candidate.metrics?.placements ?? 0,
-                icon: "trophy",
-                color: "from-purple-500 to-indigo-600",
-                bg: "bg-purple-50",
-                hoverBg: "hover:bg-purple-100",
-              },
-            ].map(({ label, value, color, bg, hoverBg }) => (
-              <div
-                key={label}
-                className={`group relative flex items-center justify-between px-5 py-4 rounded-xl ${bg} ${hoverBg} 
-                  border border-transparent hover:border-gray-300 shadow-sm hover:shadow-md 
-                  transition-all duration-300 cursor-default backdrop-blur-sm`}
-              >
-                <div
-                  className={`absolute inset-0 rounded-xl bg-gradient-to-r ${color} opacity-0 
-                       group-hover:opacity-10 blur-xl transition-opacity duration-500`}
-                />
-
-                <div className="flex items-center gap-4">
-                  <div
-                    className={`p-2.5 rounded-lg bg-gradient-to-br ${color} shadow-md`}
-                  >
-                    {label === "Applications" && (
-                      <Mail className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Interviews" && (
-                      <Calendar className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Offers" && (
-                       <IndianRupee className="h-5 w-5 text-white" />
-                    )}
-                    {label === "Placements" && (
-                      <Trophy className="h-5 w-5 text-white" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 tracking-wide">
-                    {label}
-                  </span>
-                </div>
-
-                <span
-                  className={`text-2xl font-bold bg-gradient-to-r ${color} bg-clip-text text-transparent 
-                        drop-shadow-sm`}
-                >
-                  {value}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        {activityStats ? (
+          <div className="h-full min-h-0 flex flex-col">
+            <CandidateActivitySnapshot
+              stats={activityStats}
+              isLoading={isActivityStatsLoading}
+              isFetching={isActivityStatsFetching}
+              onNavigate={onNavigateToTab}
+              variant="sidebar"
+              className="h-full flex-1"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Resume List */}

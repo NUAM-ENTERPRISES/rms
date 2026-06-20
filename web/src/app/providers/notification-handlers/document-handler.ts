@@ -6,16 +6,25 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
     "document_verified",
     "document_rejected",
     "document_resubmission_requested",
+    "document_upload_requested",
+    "document_missing_uploaded",
+    "document_uploaded_by_documentation",
     "document_resubmitted",
     "documentation_notification",
     "recruiter_notification",
     "candidate_documents_verified",
     "candidate_documents_rejected",
     "candidate_sent_for_verification",
-    "client_revision_requested"
+    "client_revision_requested",
   ];
 
-  if (!documentNotificationTypes.includes(notification.type)) return false;
+  const notificationType =
+    notification.type === "documentation_notification" &&
+    notification.meta?.type
+      ? notification.meta.type
+      : notification.type;
+
+  if (!documentNotificationTypes.includes(notificationType)) return false;
 
   console.log(`[Socket] Handling document notification: ${notification.type}`);
 
@@ -49,16 +58,49 @@ export const handleDocumentNotifications = ({ notification, dispatch, invalidate
   if (candidateId) {
     tags.push({ type: "DocumentVerification", id: candidateId });
     tags.push({ type: "Candidate", id: candidateId });
+    tags.push({ type: "IntroductionVideo", id: candidateId });
+  }
+
+  if (projectId && candidateId) {
+    tags.push({ type: "IntroductionVideo", id: `${candidateId}-${projectId}` });
   }
 
   dispatch(invalidateTags(tags));
   return true;
 };
 
+const buildDocumentVerificationSyncTags = (payload: {
+  candidateId?: string;
+  projectId?: string;
+}) => {
+  const tags: Array<string | { type: string; id?: string }> = [
+    { type: "RecruiterDocuments" },
+    { type: "VerificationCandidates" },
+    { type: "IntroductionVideo" },
+  ];
+
+  if (payload.candidateId) {
+    tags.push({ type: "DocumentVerification", id: payload.candidateId });
+    if (payload.projectId) {
+      tags.push({
+        type: "IntroductionVideo",
+        id: `${payload.candidateId}-${payload.projectId}`,
+      });
+    }
+  } else {
+    tags.push({ type: "DocumentVerification" });
+  }
+
+  return tags;
+};
+
 export const handleDocumentSync = (payload: any, { dispatch, invalidateTags }: { dispatch: any, invalidateTags: any }) => {
-  if (payload.type === "RecruiterDocuments") {
-    console.log("[Socket] Recruiter documents data sync");
-    dispatch(invalidateTags([{ type: "RecruiterDocuments" }]));
+  if (
+    payload.type === "RecruiterDocuments" ||
+    payload.type === "DocumentVerification"
+  ) {
+    console.log("[Socket] Document verification data sync", payload.type);
+    dispatch(invalidateTags(buildDocumentVerificationSyncTags(payload)));
     return true;
   }
   return false;
@@ -101,8 +143,17 @@ export const handleDocumentSocketEvents = (eventName: string, { data, dispatch, 
 
   if (data?.candidateId) {
     tags.push({ type: "DocumentVerification", id: data.candidateId });
+    tags.push({ type: "IntroductionVideo", id: data.candidateId });
   } else {
     tags.push({ type: "DocumentVerification" });
+    tags.push({ type: "IntroductionVideo" });
+  }
+
+  if (data?.candidateId && data?.projectId) {
+    tags.push({
+      type: "IntroductionVideo",
+      id: `${data.candidateId}-${data.projectId}`,
+    });
   }
 
   dispatch(invalidateTags(tags));

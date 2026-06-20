@@ -3,16 +3,25 @@ import { UsersService } from '../users.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AuditService } from '../../common/audit/audit.service';
 import { UploadService } from '../../upload/upload.service';
+import { NotificationsGateway } from '../../notifications/notifications.gateway';
+import { NotificationsService } from '../../notifications/notifications.service';
+import {
+  ACCOUNT_STATUS_SOCKET_EVENT,
+  ACCOUNT_STATUS_NOTIFICATION_TYPE,
+} from '../account-status-notifications';
+import { SystemConfigService } from '../../system-config/system-config.service';
+import { RbacUtil } from '../../auth/rbac/rbac.util';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SessionAvailability } from '@prisma/client';
+import { SessionAvailability, UserAccountStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 describe('UsersService', () => {
@@ -41,6 +50,29 @@ describe('UsersService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    refreshToken: {
+      updateMany: jest.fn(),
+    },
+    userAccountStatusHistory: {
+      create: jest.fn(),
+      count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    professionType: {
+      findMany: jest.fn(),
+    },
+    userProfessionScope: {
+      createMany: jest.fn(),
+      deleteMany: jest.fn(),
+    },
+    permission: {
+      findMany: jest.fn(),
+    },
+    userPermission: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
     },
     $transaction: jest.fn().mockImplementation(async (fn: any) => fn(mockPrismaService)),
   };
@@ -49,6 +81,19 @@ describe('UsersService', () => {
     logUserAction: jest.fn(),
     logAuthAction: jest.fn(),
     logRoleAction: jest.fn(),
+  };
+
+  const mockNotificationsGateway = {
+    broadcastToAdmins: jest.fn().mockResolvedValue(undefined),
+    emitToUser: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockNotificationsService = {
+    createNotification: jest.fn().mockResolvedValue({ id: 'notif-1' }),
+  };
+
+  const mockSystemConfigService = {
+    getSessionConfig: jest.fn().mockResolvedValue({ idleThresholdMinutes: 15 }),
   };
 
   beforeEach(async () => {
@@ -62,6 +107,34 @@ describe('UsersService', () => {
         {
           provide: AuditService,
           useValue: mockAuditService,
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: mockNotificationsGateway,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
+        {
+          provide: SystemConfigService,
+          useValue: mockSystemConfigService,
+        },
+        {
+          provide: RbacUtil,
+          useValue: {
+            clearUserCache: jest.fn(),
+            getUserRolesAndPermissions: jest.fn().mockResolvedValue({
+              roles: ['Operations'],
+              permissions: [
+                'read:cre',
+                'read:original_document_intake',
+                'read:courier_management',
+              ],
+              teamIds: [],
+              userVersion: Date.now(),
+            }),
+          },
         },
         {
           provide: UploadService,
@@ -90,6 +163,7 @@ describe('UsersService', () => {
       dateOfBirth: '1990-01-01',
       countryCode: '+1',
       mobileNumber: '1234567890',
+      professionTypeIds: ['pt_nurse_seed001'],
     };
 
     it('should create a user successfully', async () => {
@@ -108,10 +182,19 @@ describe('UsersService', () => {
         .mockResolvedValueOnce(null) // email check
         .mockResolvedValueOnce(mockUser); // fetch new user after create
       mockPrismaService.user.create.mockResolvedValue(mockUser);
+      mockPrismaService.professionType.findMany.mockResolvedValue([
+        { id: 'pt_nurse_seed001' },
+      ]);
+      mockPrismaService.userProfessionScope.createMany.mockResolvedValue({
+        count: 1,
+      });
 
       const result = await service.create(createUserDto, 'admin123');
 
       expect(result).toEqual(mockUser);
+      expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
+        data: [{ userId: 'user123', professionTypeId: 'pt_nurse_seed001' }],
+      });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { email: createUserDto.email },
       });
@@ -132,6 +215,98 @@ describe('UsersService', () => {
         ConflictException,
       );
     });
+
+    it('should throw ConflictException if employeeCode already exists', async () => {
+      const dtoWithEmployeeCode: CreateUserDto = {
+        ...createUserDto,
+        employeeCode: 'AFFEMP012026',
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValueOnce({ id: 'existing' });
+
+      await expect(service.create(dtoWithEmployeeCode, 'admin123')).rejects.toThrow(
+        ConflictException,
+      );
+    });
+
+    it('should reject invalid professionTypeIds', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockPrismaService.professionType.findMany.mockResolvedValue([]);
+
+      await expect(service.create(createUserDto, 'admin123')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should reject duplicate professionTypeIds', async () => {
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.create(
+          {
+            ...createUserDto,
+            professionTypeIds: ['pt_nurse_seed001', 'pt_nurse_seed001'],
+          },
+          'admin123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('update profession coverage', () => {
+    it('should replace profession scopes when professionTypeIds provided', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+      };
+      const updatedUser = {
+        ...existingUser,
+        userRoles: [],
+        userProfessionScopes: [
+          {
+            id: 'scope-1',
+            professionTypeId: 'pt_doctor_seed01',
+            professionType: {
+              id: 'pt_doctor_seed01',
+              name: 'doctor',
+              label: 'Doctor',
+            },
+          },
+        ],
+      };
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser)
+        .mockResolvedValueOnce(updatedUser);
+      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      mockPrismaService.professionType.findMany.mockResolvedValue([
+        { id: 'pt_doctor_seed01' },
+      ]);
+      mockPrismaService.userProfessionScope.deleteMany.mockResolvedValue({
+        count: 1,
+      });
+      mockPrismaService.userProfessionScope.createMany.mockResolvedValue({
+        count: 1,
+      });
+
+      const dto: UpdateUserDto = {
+        professionTypeIds: ['pt_doctor_seed01'],
+      };
+
+      await service.update('user123', dto, 'admin123');
+
+      expect(mockPrismaService.userProfessionScope.deleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user123' },
+      });
+      expect(mockPrismaService.userProfessionScope.createMany).toHaveBeenCalledWith({
+        data: [{ userId: 'user123', professionTypeId: 'pt_doctor_seed01' }],
+      });
+    });
   });
 
   describe('findOne', () => {
@@ -141,13 +316,23 @@ describe('UsersService', () => {
         email: 'test@example.com',
         name: 'Test User',
         userRoles: [],
+        userPermissions: [],
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
       const result = await service.findOne('user123');
 
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual({
+        id: 'user123',
+        email: 'test@example.com',
+        name: 'Test User',
+        userRoles: [],
+        documentsControlAccess: {
+          originalDocumentIntakeEnabled: false,
+          courierManagementEnabled: false,
+        },
+      });
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user123' },
         include: expect.any(Object),
@@ -159,6 +344,28 @@ describe('UsersService', () => {
 
       await expect(service.findOne('nonexistent')).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should throw ConflictException if employeeCode already exists', async () => {
+      const existingUser = {
+        id: 'user123',
+        email: 'test@example.com',
+        employeeCode: null,
+      };
+
+      const dto: UpdateUserDto = {
+        employeeCode: 'AFFEMP012026',
+      } as any;
+
+      mockPrismaService.user.findUnique
+        .mockResolvedValueOnce(existingUser) // existing user by id
+        .mockResolvedValueOnce({ id: 'other-user' }); // employee code uniqueness check
+
+      await expect(service.update('user123', dto, 'admin123')).rejects.toThrow(
+        ConflictException,
       );
     });
   });
@@ -384,6 +591,153 @@ describe('UsersService', () => {
     });
   });
 
+  describe('updateAccountStatus', () => {
+    it('should reject changing own account status', async () => {
+      await expect(
+        service.updateAccountStatus(
+          'user123',
+          { status: UserAccountStatus.BLOCKED, remarks: 'Policy issue' },
+          'user123',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject when status is unchanged', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+
+      await expect(
+        service.updateAccountStatus(
+          'target',
+          { status: UserAccountStatus.ACTIVE, remarks: 'No change' },
+          'admin1',
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should create history, update user, and revoke sessions when blocking', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+      mockPrismaService.userAccountStatusHistory.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+      mockPrismaService.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.userSession.updateMany.mockResolvedValue({ count: 1 });
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.BLOCKED,
+      } as any);
+
+      await service.updateAccountStatus(
+        'target',
+        { status: UserAccountStatus.BLOCKED, remarks: 'Policy violation' },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userAccountStatusHistory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'target',
+            previousStatus: UserAccountStatus.ACTIVE,
+            newStatus: UserAccountStatus.BLOCKED,
+            remarks: 'Policy violation',
+            changedById: 'admin1',
+          }),
+        }),
+      );
+      expect(mockPrismaService.refreshToken.updateMany).toHaveBeenCalled();
+      expect(mockPrismaService.userSession.updateMany).toHaveBeenCalled();
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'account:blocked',
+        expect.objectContaining({ message: expect.any(String) }),
+      );
+      expect(mockAuditService.logUserAction).toHaveBeenCalledWith(
+        'status_change',
+        'admin1',
+        'target',
+        expect.any(Object),
+        expect.any(Object),
+      );
+
+      findOneSpy.mockRestore();
+    });
+
+    it('should emit socket and create notification when setting inactive', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.ACTIVE,
+      });
+      mockPrismaService.userAccountStatusHistory.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        accountStatus: UserAccountStatus.INACTIVE,
+      } as any);
+
+      await service.updateAccountStatus(
+        'target',
+        { status: UserAccountStatus.INACTIVE, remarks: 'On leave' },
+        'admin1',
+      );
+
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        ACCOUNT_STATUS_SOCKET_EVENT,
+        expect.objectContaining({
+          accountStatus: UserAccountStatus.INACTIVE,
+          previousStatus: UserAccountStatus.ACTIVE,
+        }),
+      );
+      expect(mockNotificationsService.createNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'target',
+          type: ACCOUNT_STATUS_NOTIFICATION_TYPE,
+          title: 'Account inactive',
+        }),
+      );
+      expect(mockPrismaService.refreshToken.updateMany).not.toHaveBeenCalled();
+
+      findOneSpy.mockRestore();
+    });
+  });
+
+  describe('getAccountStatusHistory', () => {
+    it('should return paginated history for a user', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.userAccountStatusHistory.count.mockResolvedValue(1);
+      mockPrismaService.userAccountStatusHistory.findMany.mockResolvedValue([
+        {
+          id: 'h1',
+          previousStatus: UserAccountStatus.ACTIVE,
+          newStatus: UserAccountStatus.BLOCKED,
+          remarks: 'Test',
+          createdAt: new Date(),
+          changedBy: {
+            id: 'admin1',
+            name: 'Admin',
+            email: 'a@test.com',
+            employeeCode: null,
+          },
+        },
+      ]);
+
+      const result = await service.getAccountStatusHistory('target', {
+        page: 1,
+        limit: 20,
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].newStatus).toBe(UserAccountStatus.BLOCKED);
+    });
+  });
+
   describe('getUserRoles', () => {
     it('should return user roles', async () => {
       const mockUserRoles = [
@@ -404,6 +758,68 @@ describe('UsersService', () => {
         where: { userId: 'user123' },
         include: expect.any(Object),
       });
+    });
+  });
+
+  describe('updateDocumentsControlPermissions', () => {
+    it('should persist direct permissions and emit realtime socket events to the user', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'target' });
+      mockPrismaService.permission.findMany.mockResolvedValue([
+        { id: 'perm-intake-read', key: 'read:original_document_intake' },
+        { id: 'perm-intake-write', key: 'write:original_document_intake' },
+        { id: 'perm-courier-read', key: 'read:courier_management' },
+        { id: 'perm-courier-write', key: 'write:courier_management' },
+      ]);
+      mockPrismaService.userPermission.deleteMany.mockResolvedValue({ count: 0 });
+      mockPrismaService.userPermission.createMany.mockResolvedValue({ count: 2 });
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const findOneSpy = jest.spyOn(service, 'findOne').mockResolvedValue({
+        id: 'target',
+        documentsControlAccess: {
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        },
+      } as any);
+
+      await service.updateDocumentsControlPermissions(
+        'target',
+        {
+          originalDocumentIntakeEnabled: true,
+          courierManagementEnabled: false,
+        },
+        'admin1',
+      );
+
+      expect(mockPrismaService.userPermission.deleteMany).toHaveBeenCalled();
+      expect(mockPrismaService.userPermission.createMany).toHaveBeenCalledWith({
+        data: [
+          { userId: 'target', permissionId: 'perm-intake-read' },
+          { userId: 'target', permissionId: 'perm-intake-write' },
+        ],
+        skipDuplicates: true,
+      });
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'user:documents-control-permissions-changed',
+        expect.objectContaining({
+          userId: 'target',
+          roles: ['Operations'],
+          permissions: expect.arrayContaining([
+            'read:original_document_intake',
+            'read:courier_management',
+          ]),
+        }),
+      );
+      expect(mockNotificationsGateway.emitToUser).toHaveBeenCalledWith(
+        'target',
+        'data:sync',
+        expect.objectContaining({
+          type: 'DocumentsControlPermissionsUpdated',
+        }),
+      );
+
+      findOneSpy.mockRestore();
     });
   });
 });

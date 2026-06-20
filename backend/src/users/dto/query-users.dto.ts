@@ -1,6 +1,7 @@
-import { IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { UserAccountStatus } from '@prisma/client';
 
 export class QueryUsersDto {
   @ApiPropertyOptional({
@@ -62,4 +63,13 @@ export class QueryUsersDto {
   @IsOptional()
   @IsString({ each: true })
   roles?: string | string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by account status',
+    enum: UserAccountStatus,
+    example: UserAccountStatus.ACTIVE,
+  })
+  @IsOptional()
+  @IsEnum(UserAccountStatus)
+  accountStatus?: UserAccountStatus;
 }

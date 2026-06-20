@@ -266,7 +266,8 @@ export class AdminDashboardController {
   @Permissions('read:admin-dashboard')
   @ApiOperation({
     summary: 'Get top recruiter statistics',
-    description: 'Get top recruiter, placements, and activity metrics for a time period.',
+    description:
+      'Get top recruiter ranked by weighted performance score, with stage breakdown and leaderboard.',
   })
   @ApiResponse({
     status: 200,
@@ -284,6 +285,8 @@ export class AdminDashboardController {
                 name: { type: 'string', example: 'Emma' },
                 role: { type: 'string', example: 'Senior IT Recruiter' },
                 placementsThisMonth: { type: 'number', example: 4 },
+                performanceScore: { type: 'number', example: 113 },
+                rating: { type: 'string', example: 'Outstanding' },
                 email: { type: 'string', example: 'emma@example.com' },
                 phone: { type: 'string', example: '+912345678901' },
                 avatarUrl: { type: 'string', example: 'https://example.com/avatar.png' },
@@ -294,8 +297,20 @@ export class AdminDashboardController {
               items: {
                 type: 'object',
                 properties: {
-                  activity: { type: 'string', example: 'Projects Assigned' },
+                  activity: { type: 'string', example: 'Positive Candidate' },
                   value: { type: 'number', example: 20 },
+                },
+              },
+            },
+            leaderboard: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  performanceScore: { type: 'number' },
+                  rating: { type: 'string' },
                 },
               },
             },

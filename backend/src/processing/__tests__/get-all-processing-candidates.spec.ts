@@ -116,9 +116,51 @@ describe('ProcessingService - getAllProcessingCandidates progressCount', () => {
     const result = await service.getAllProcessingCandidates(query as any);
 
     expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ step: 'hrd' }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({
+          step: 'hrd',
+          processingStatus: { not: 'on_hold' },
+        }),
+      }),
     );
     expect(result.counts.steps.hrd).toBe(3);
+  });
+
+  it('excludes on_hold candidates from step counts', async () => {
+    const query: any = { page: 1, limit: 10 };
+
+    jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingCandidate, 'count' as any).mockResolvedValue(0);
+    jest.spyOn(prisma.processingCandidate, 'groupBy' as any)
+      .mockImplementationOnce(async () => [{ processingStatus: 'on_hold', _count: { _all: 2 } }])
+      .mockImplementationOnce(async () => [{ step: 'hrd', _count: { _all: 1 } }]);
+
+    const result = await service.getAllProcessingCandidates(query as any);
+
+    expect(prisma.processingCandidate.groupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        by: ['step'],
+        where: expect.objectContaining({ processingStatus: { not: 'on_hold' } }),
+      }),
+    );
+    expect(result.counts.on_hold).toBe(2);
+    expect(result.counts.steps.hrd).toBe(1);
+  });
+
+  it('returns on_hold count and filters list by status=on_hold', async () => {
+    const query: any = { page: 1, limit: 10, status: 'on_hold' };
+
+    jest.spyOn(prisma.processingCandidate, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingCandidate, 'count' as any).mockResolvedValue(0);
+    jest.spyOn(prisma.processingCandidate, 'groupBy' as any).mockResolvedValue([]);
+
+    await service.getAllProcessingCandidates(query as any);
+
+    expect(prisma.processingCandidate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ processingStatus: 'on_hold' }),
+      }),
+    );
   });
 
   it('filters candidates by assigned processing user when userId is provided', async () => {

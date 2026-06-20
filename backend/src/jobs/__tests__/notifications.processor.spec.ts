@@ -1,4 +1,5 @@
 import { NotificationsProcessor } from '../notifications.processor';
+import { DocumentsService } from '../../documents/documents.service';
 
 describe('NotificationsProcessor', () => {
   let processor: NotificationsProcessor;
@@ -7,7 +8,14 @@ describe('NotificationsProcessor', () => {
     candidateProjects: {
       findUnique: jest.fn(),
     },
+    processingCandidate: {
+      findUnique: jest.fn(),
+    },
     user: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    userRole: {
       findMany: jest.fn(),
     },
   };
@@ -114,6 +122,387 @@ describe('NotificationsProcessor', () => {
     );
     expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'trainer-2' }),
+    );
+  });
+
+  it('notifies only agent coordinators for agent candidate requests', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-agent-1',
+        payload: {
+          requestId: 'req-1',
+          projectId: 'project-1',
+          projectTitle: 'Saudi MOH Nurses',
+          requestedById: 'manager-1',
+          items: [
+            {
+              roleNeededId: 'role-1',
+              requestedCount: 2,
+              roleDesignation: 'Emergency Staff Nurse',
+            },
+          ],
+          notes: 'Need urgent profiles',
+        },
+      },
+    };
+
+    prisma.user.findUnique.mockResolvedValue({ name: 'Manager One' });
+    prisma.user.findMany.mockResolvedValue([{ id: 'ac-1' }, { id: 'ac-2' }]);
+
+    await processor.handleAgentCandidateRequestCreated(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ac-1',
+        type: 'agent_candidate_request_created',
+        link: '/projects/project-1',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'ac-2',
+        type: 'agent_candidate_request_created',
+      }),
+    );
+  });
+
+  it('notifies assigned recruiter when offer letter upload is required', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-req-1',
+        payload: {
+          recruiterId: 'recruiter-1',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          roleCatalogId: 'rc-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          requestedBy: 'coord-1',
+          requestedByName: 'Coordinator',
+          reason:
+            DocumentsService.buildDefaultOfferLetterUploadRequestReason(
+              'Rachel Interview Coordinator',
+            ),
+        },
+      },
+    };
+
+    await processor.handleOfferLetterUploadRequested(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'offer_letter_upload_requested',
+        title: 'Offer Letter Upload Required',
+        link: '/recruiter-docs/proj-1/cand-1',
+        meta: expect.objectContaining({
+          type: 'offer_letter_upload_requested',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+        }),
+      }),
+    );
+  });
+
+  it('notifies recruiter, admin, manager, and operational roles for offer letter upload and excludes uploader', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-1',
+        payload: {
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          documentId: 'doc-1',
+          recruiterId: 'recruiter-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          roleDesignation: 'Nurse',
+          uploadedBy: 'uploader-1',
+          uploadedByName: 'IC User',
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'admin-1' },
+      { id: 'mgr-1' },
+      { id: 'ic-1' },
+      { id: 'pe-1' },
+      { id: 'uploader-1' },
+    ]);
+
+    await processor.handleOfferLetterUploaded(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(5);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'offer_letter_uploaded',
+        link: '/recruiter-docs/proj-1/cand-1',
+        meta: expect.objectContaining({
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+        }),
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'mgr-1', type: 'offer_letter_uploaded' }),
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'uploader-1' }),
+    );
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          userRoles: {
+            some: {
+              role: {
+                name: {
+                  in: expect.arrayContaining([
+                    'System Admin',
+                    'Admin',
+                    'Manager',
+                    'Recruiter Manager',
+                    'Interview Coordinator',
+                    'Processing Executive',
+                  ]),
+                },
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('deduplicates recruiter when already included in leadership role query', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-2',
+        payload: {
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateProjectMapId: 'cpm-1',
+          documentId: 'doc-1',
+          recruiterId: 'mgr-1',
+          candidateName: 'John Doe',
+          projectTitle: 'Project X',
+          roleDesignation: 'Nurse',
+          uploadedBy: 'uploader-1',
+          uploadedByName: 'IC User',
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([{ id: 'mgr-1' }, { id: 'pe-1' }]);
+
+    await processor.handleOfferLetterUploaded(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'mgr-1' }),
+    );
+  });
+
+  it('notifies admin and manager roles for offer letter upload role notifications', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-offer-role-1',
+        payload: {
+          roleName: 'Manager',
+          message:
+            'Offer letter uploaded for John Doe (Nurse) on project "Project X" by IC User.',
+          title: 'Offer Letter Uploaded',
+          link: '/recruiter-docs/proj-1/cand-1',
+          meta: {
+            type: 'offer_letter_uploaded',
+            excludeUserId: 'uploader-1',
+          },
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'mgr-1' },
+      { id: 'uploader-1' },
+    ]);
+
+    await processor.handleRoleNotification(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'mgr-1',
+        type: 'offer_letter_uploaded',
+        title: 'Offer Letter Uploaded',
+      }),
+    );
+  });
+
+  it('notifies manager and processing manager roles when candidate is sent for processing', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-sent-processing-1',
+        payload: {
+          roleName: 'Processing Manager',
+          message:
+            'Jane Doe has been sent to ready for processing on project "ICU Project" by IC User.',
+          title: 'Sent to Ready for Processing',
+          link: '/ready-for-processing?projectId=proj-1&search=Jane%20Doe',
+          meta: {
+            type: 'candidate_ready_for_processing',
+            candidateId: 'cand-1',
+            projectId: 'proj-1',
+            candidateProjectMapId: 'cpm-1',
+            excludeUserId: 'coord-1',
+            syncTags: [
+              'Interview',
+              'ProcessingSummary',
+              'Candidate',
+              'Processing',
+              'RecruiterDocuments',
+            ],
+          },
+        },
+      },
+    };
+
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'pm-1' },
+      { id: 'coord-1' },
+    ]);
+
+    await processor.handleRoleNotification(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'pm-1',
+        type: 'candidate_ready_for_processing',
+        title: 'Sent to Ready for Processing',
+        link: '/recruiter-docs/proj-1/cand-1',
+      }),
+    );
+  });
+
+  it('notifies requester, processing team, and recruiter when processing cancel is approved', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-processing-reviewed-1',
+        payload: {
+          requestId: 'req-1',
+          candidateProjectMapId: 'cpm-1',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateName: 'Jane Doe',
+          projectTitle: 'ICU Project',
+          requestType: 'processing_cancel',
+          requestedStatus: 'processing_cancelled',
+          requestedBy: 'requester-1',
+          outcome: 'approved',
+          reviewNotes: null,
+          processingCandidateId: 'pc-1',
+        },
+      },
+    };
+
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      recruiterId: 'recruiter-1',
+    });
+    prisma.processingCandidate.findUnique.mockResolvedValue({
+      assignedProcessingTeamUserId: 'processor-1',
+    });
+
+    await processor.handleCandidateProjectStatusChangeReviewed(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(3);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'requester-1',
+        type: 'processing_status_change_reviewed',
+        link: '/processingCandidateDetails/pc-1?actionOutcome=req-1',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'processor-1',
+        type: 'processing_status_change_reviewed',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'recruiter_notification',
+        title: 'Processing Cancelled',
+        message:
+          'Jane Doe — processing cancelled for project "ICU Project". Please inform the candidate for other details.',
+        link: '/candidate-project/cand-1/projects/proj-1',
+        meta: expect.objectContaining({
+          type: 'processing_status_change_reviewed',
+          requestType: 'processing_cancel',
+          outcome: 'approved',
+        }),
+      }),
+    );
+  });
+
+  it('notifies recruiter with rejection copy when processing cancel is rejected', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-processing-reviewed-2',
+        payload: {
+          requestId: 'req-2',
+          candidateProjectMapId: 'cpm-2',
+          candidateId: 'cand-2',
+          projectId: 'proj-2',
+          candidateName: 'John Smith',
+          projectTitle: 'ER Project',
+          requestType: 'processing_cancel',
+          requestedStatus: 'processing_cancelled',
+          requestedBy: 'recruiter-2',
+          outcome: 'rejected',
+          reviewNotes: 'Not approved yet',
+          processingCandidateId: 'pc-2',
+        },
+      },
+    };
+
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      recruiterId: 'recruiter-2',
+    });
+    prisma.processingCandidate.findUnique.mockResolvedValue({
+      assignedProcessingTeamUserId: 'processor-2',
+    });
+
+    await processor.handleCandidateProjectStatusChangeReviewed(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'processor-2',
+        type: 'processing_status_change_reviewed',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-2',
+        type: 'recruiter_notification',
+        title: 'Processing Cancellation Rejected',
+        message:
+          'Processing cancellation request for John Smith on "ER Project" was rejected. Remarks: Not approved yet',
+        link: '/candidate-project/cand-2/projects/proj-2',
+      }),
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-2',
+        type: 'processing_status_change_reviewed',
+      }),
     );
   });
 });

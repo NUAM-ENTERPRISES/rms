@@ -9,6 +9,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { Project } from "@/features/projects";
+import {
+  getProjectStatusBadge,
+  getProjectStatusBlinkClass,
+  normalizeProjectStatusKey,
+} from "@/features/projects/constants/statusBadges";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -49,34 +54,21 @@ export default function ProjectCard({
   const filledPositions = project.candidateProjects?.length || 0;
   const openPositions = totalPositions - filledPositions;
 
-  // Get status color and icon
-  const getStatusConfig = (status: string) => {
-    switch (status) {
+  const statusBadge = getProjectStatusBadge(project.status);
+  const statusBlinkClass = getProjectStatusBlinkClass(project.status);
+  const StatusIcon = (() => {
+    switch (normalizeProjectStatusKey(project.status)) {
+      case "in_progress":
       case "active":
-        return {
-          color: "bg-green-100 text-green-800 border-green-200",
-          icon: CheckCircle,
-        };
       case "completed":
-        return {
-          color: "bg-blue-100 text-blue-800 border-blue-200",
-          icon: CheckCircle,
-        };
+        return CheckCircle;
       case "cancelled":
-        return {
-          color: "bg-red-100 text-red-800 border-red-200",
-          icon: XCircle,
-        };
+      case "inactive":
+        return XCircle;
       default:
-        return {
-          color: "bg-gray-100 text-gray-800 border-gray-200",
-          icon: Clock,
-        };
+        return Clock;
     }
-  };
-
-  const statusConfig = getStatusConfig(project.status);
-  const StatusIcon = statusConfig.icon;
+  })();
 
   // Get priority color
   const getPriorityColor = (priority: string) => {
@@ -97,7 +89,10 @@ export default function ProjectCard({
   return (
     <Card
       className={cn(
-        "group hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-l-4 cursor-pointer",
+        "group border-l-4 cursor-pointer",
+        statusBlinkClass
+          ? "rounded-none border-0 bg-transparent py-0 shadow-none hover:scale-[1.01] transition-transform duration-200"
+          : "hover:shadow-lg hover:scale-[1.02] bg-card transition-[transform,box-shadow] duration-200",
         isOverdue && "border-l-red-500",
         isUrgent && "border-l-orange-500",
         isWarning && "border-l-yellow-500",
@@ -126,10 +121,10 @@ export default function ProjectCard({
               <div className="flex items-center gap-2 mb-2">
                 <Badge
                   variant="outline"
-                  className={cn("text-xs font-medium", statusConfig.color)}
+                  className={cn("text-xs font-medium", statusBadge.badgeClass)}
                 >
                   <StatusIcon className="w-3 h-3 mr-1" />
-                  {project.status}
+                  {statusBadge.label}
                 </Badge>
 
                 {project.sector && (

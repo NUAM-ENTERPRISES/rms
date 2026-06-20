@@ -92,6 +92,12 @@ export interface Client {
   // Metadata
   createdAt: string;
   updatedAt: string;
+  createdBy?: string | null;
+  creator?: {
+    id: string;
+    name: string;
+    email?: string;
+  } | null;
 
   /** GET /clients/:id and GET /clients (list) */
   projectCount?: number;

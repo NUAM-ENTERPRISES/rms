@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ClientSubClientLinkType,
@@ -16,10 +17,21 @@ import {
   assertPhysicalAddressConsistent,
   mergePhysicalAddress,
 } from '../common/address/assert-physical-address';
+import {
+  getProjectCoordinatorClientIds,
+  isProjectCoordinator,
+} from '../common/scoping/project-coordinator-scope.util';
 
 const clientSingleDetailInclude = {
   addressCountry: true,
   addressState: true,
+  creator: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
   _count: {
     select: {
       projects: true,
@@ -115,7 +127,7 @@ export class ClientsService {
       createClientDto.type === ClientType.SUB_AGENT ||
       createClientDto.type === ClientType.FREELANCE;
 
-    const createData: Record<string, unknown> = { ...parentFields };
+    const createData: Record<string, unknown> = { ...parentFields, createdBy };
 
     if (createClientDto.specialties) {
       createData.specialties = createClientDto.specialties;
@@ -172,6 +184,7 @@ export class ClientsService {
           address: subClient.address,
           addressCountryCode: subClient.addressCountryCode,
           addressStateId: subClient.addressStateId,
+          createdBy,
         };
 
         const child = await tx.client.create({
@@ -202,12 +215,25 @@ export class ClientsService {
     };
   }
 
-  async findAll(query?: QueryClientsDto) {
+  async findAll(
+    query?: QueryClientsDto,
+    userId?: string,
+    roles?: string[],
+  ) {
     const { type, search, page = 1, limit = 10 } = query || {};
 
     const skip = (page - 1) * limit;
 
     const where: Prisma.ClientWhereInput = {};
+    let scopedClientIds: string[] | undefined;
+
+    if (isProjectCoordinator(roles) && userId) {
+      scopedClientIds = await getProjectCoordinatorClientIds(
+        this.prisma,
+        userId,
+      );
+      where.id = { in: scopedClientIds };
+    }
 
     if (type) {
       where.type = type;
@@ -215,6 +241,21 @@ export class ClientsService {
 
     if (search) {
       where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { pointOfContact: { contains: search, mode: 'insensitive' } },
+        { organization: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const totalsWhere: Prisma.ClientWhereInput = {};
+
+    if (scopedClientIds) {
+      totalsWhere.id = { in: scopedClientIds };
+    }
+
+    if (search) {
+      totalsWhere.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { pointOfContact: { contains: search, mode: 'insensitive' } },
@@ -233,16 +274,7 @@ export class ClientsService {
       this.prisma.client.count({ where }),
       this.prisma.client.groupBy({
         by: ['type'],
-        where: {
-          ...(search ? {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { email: { contains: search, mode: 'insensitive' } },
-              { pointOfContact: { contains: search, mode: 'insensitive' } },
-              { organization: { contains: search, mode: 'insensitive' } },
-            ]
-          } : {})
-        },
+        where: totalsWhere,
         _count: {
           _all: true,
         },
@@ -289,7 +321,7 @@ export class ClientsService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId?: string, roles?: string[]) {
     const client = await this.prisma.client.findUnique({
       where: { id },
       include: clientSingleDetailInclude,
@@ -299,10 +331,20 @@ export class ClientsService {
       throw new NotFoundException('Client not found');
     }
 
+    if (isProjectCoordinator(roles) && userId) {
+      const allowedClientIds = await getProjectCoordinatorClientIds(
+        this.prisma,
+        userId,
+      );
+      if (!allowedClientIds.includes(id)) {
+        throw new ForbiddenException('You do not have access to this client');
+      }
+    }
+
     const activeProjectCount = await this.prisma.project.count({
       where: {
         clientId: id,
-        status: { equals: 'active', mode: 'insensitive' },
+        status: 'IN_PROGRESS',
       },
     });
 
@@ -327,7 +369,7 @@ export class ClientsService {
   async linkSubClient(
     parentClientId: string,
     dto: CreateClientSubClientDto,
-    _createdBy: string,
+    createdBy: string,
   ) {
     const parent = await this.prisma.client.findUnique({
       where: { id: parentClientId },
@@ -371,6 +413,7 @@ export class ClientsService {
           address: dto.address,
           addressCountryCode: dto.addressCountryCode,
           addressStateId: dto.addressStateId,
+          createdBy,
         };
 
         const child = await tx.client.create({
@@ -471,7 +514,7 @@ export class ClientsService {
     }
 
     const activeProjects = existingClient.projects.filter(
-      (project) => project.status === 'active',
+      (project) => project.status === 'IN_PROGRESS',
     );
 
     if (activeProjects.length > 0) {
@@ -491,17 +534,33 @@ export class ClientsService {
     };
   }
 
-  async getClientStats() {
+  async getClientStats(userId?: string, roles?: string[]) {
+    const where: Prisma.ClientWhereInput = {};
+
+    if (isProjectCoordinator(roles) && userId) {
+      const clientIds = await getProjectCoordinatorClientIds(
+        this.prisma,
+        userId,
+      );
+      where.id = { in: clientIds };
+    }
+
+    const projectWhere: Prisma.ProjectWhereInput = { status: 'IN_PROGRESS' };
+    if (isProjectCoordinator(roles) && userId) {
+      projectWhere.createdBy = userId;
+    }
+
     const stats = await this.prisma.client.groupBy({
       by: ['type'],
+      where,
       _count: {
         id: true,
       },
     });
 
-    const totalClients = await this.prisma.client.count();
+    const totalClients = await this.prisma.client.count({ where });
     const activeProjects = await this.prisma.project.count({
-      where: { status: 'active' },
+      where: projectWhere,
     });
 
     return {

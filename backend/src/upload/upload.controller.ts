@@ -18,6 +18,11 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { DocumentsService } from '../documents/documents.service';
 import { DocumentWithRelations } from '../documents/types';
 import { PrismaService } from '../database/prisma.service';
+import { UPLOAD_ACCEPT_BUFFER_BYTES } from './upload.constants';
+
+const documentUploadMulterOptions = {
+  limits: { fileSize: UPLOAD_ACCEPT_BUFFER_BYTES },
+};
 
 @ApiTags('Upload')
 @Controller('upload')
@@ -112,7 +117,7 @@ export class UploadController {
    * Upload document for candidate
    */
   @Post('document/:candidateId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
   @Permissions('write:candidates', 'manage:candidates', 'write:documents')
   @ApiOperation({ summary: 'Upload candidate document' })
   @ApiConsumes('multipart/form-data')
@@ -187,7 +192,9 @@ export class UploadController {
    * Same docType and optional docName applied to each created document record.
    */
   @Post('work-experience-documents/:candidateId')
-  @UseInterceptors(FilesInterceptor('files', 15))
+  @UseInterceptors(
+    FilesInterceptor('files', 15, documentUploadMulterOptions),
+  )
   @Permissions('write:candidates', 'manage:candidates', 'write:documents')
   @ApiOperation({
     summary: 'Upload multiple work experience certificate files',
@@ -290,8 +297,8 @@ export class UploadController {
    * Upload an offer letter and link it to a project nomination
    */
   @Post('offer-letter/:candidateId')
-  @UseInterceptors(FileInterceptor('file'))
-  @Permissions('write:documents')
+  @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
+  @Permissions('write:documents', 'write:interviews')
   @ApiOperation({
     summary: 'Upload offer letter',
     description: 'Upload an offer letter (multipart) and link it to a specific project. This handles both file storage and document record creation.',
@@ -365,7 +372,7 @@ export class UploadController {
    * Upload resume for candidate
    */
   @Post('resume/:candidateId')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', documentUploadMulterOptions))
   @Permissions('write:candidates', 'manage:candidates')
   @ApiOperation({ summary: 'Upload candidate resume' })
   @ApiConsumes('multipart/form-data')
@@ -381,6 +388,10 @@ export class UploadController {
           type: 'string',
           description: 'Role Catalog ID',
         },
+        docName: {
+          type: 'string',
+          description: 'Optional document display name',
+        },
       },
     },
   })
@@ -388,6 +399,7 @@ export class UploadController {
     @Param('candidateId') candidateId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('roleCatalogId') roleCatalogId?: string,
+    @Body('docName') docName?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -397,6 +409,7 @@ export class UploadController {
       file,
       candidateId,
       roleCatalogId,
+      docName?.trim() || undefined,
     );
 
     return {

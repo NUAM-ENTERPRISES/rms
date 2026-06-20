@@ -1,14 +1,38 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Briefcase, Phone, Mail, Hash, Edit3 } from "lucide-react";
+import { ArrowLeft, Phone, Mail, FileStack, Archive, MapPin, Check, FolderKanban } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
+import { FlagIcon } from "@/shared/components/FlagIcon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { OriginalDocumentCollectionModal } from "./OriginalDocumentCollectionModal";
+
+interface ProjectCountrySummary {
+  code?: string;
+  name?: string;
+  flag?: string;
+  flagName?: string;
+}
+
+interface OriginalDocumentCollectionSummary {
+  id: string;
+  status: string;
+  lockerFileNumber?: string | null;
+  mergedDocument?: {
+    id: string;
+    fileName: string;
+    fileUrl: string;
+    mimeType?: string;
+  } | null;
+}
 
 interface ProcessingCandidateHeaderProps {
   candidate: {
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string;
     mobileNumber?: string;
     countryCode?: string;
@@ -19,6 +43,8 @@ interface ProcessingCandidateHeaderProps {
   };
   project: {
     title: string;
+    countryCode?: string | null;
+    country?: ProjectCountrySummary | string | null;
   };
   role: {
     designation: string;
@@ -26,10 +52,13 @@ interface ProcessingCandidateHeaderProps {
   processingStatus: string;
   processingId: string;
   fileNumber?: string | null;
-  onEditFileNumber?: () => void;
   recruiter?: {
     name: string;
   };
+  originalDocumentCollection?: OriginalDocumentCollectionSummary | null;
+  documentReceivedStepStatus?: string | null;
+  onOpenPreviousProjects?: () => void;
+  previousProjectsCount?: number;
 }
 
 export function ProcessingCandidateHeader({
@@ -39,10 +68,29 @@ export function ProcessingCandidateHeader({
   processingStatus,
   processingId,
   fileNumber,
-  onEditFileNumber,
   recruiter,
+  originalDocumentCollection,
+  documentReceivedStepStatus,
+  onOpenPreviousProjects,
+  previousProjectsCount = 0,
 }: ProcessingCandidateHeaderProps) {
   const navigate = useNavigate();
+  const [originalDocsOpen, setOriginalDocsOpen] = useState(false);
+  const mergedDocument = originalDocumentCollection?.mergedDocument;
+  const hasOriginalDocCollection = Boolean(originalDocumentCollection?.id);
+  const showOriginalDocumentBadge =
+    documentReceivedStepStatus !== "cancelled" &&
+    (hasOriginalDocCollection || Boolean(documentReceivedStepStatus));
+  const lockerLocation = originalDocumentCollection?.lockerFileNumber?.trim();
+  const showCollectedLabel =
+    documentReceivedStepStatus === "completed" && Boolean(mergedDocument?.fileUrl);
+  const showSubmittedLabel = !showCollectedLabel && hasOriginalDocCollection;
+
+  const projectCountry =
+    project.country && typeof project.country === "object" ? project.country : null;
+  const projectCountryCode = projectCountry?.code ?? project.countryCode ?? null;
+  const projectCountryName = projectCountry?.name ?? projectCountryCode ?? null;
+  const useGreenDocsBadge = showCollectedLabel || showSubmittedLabel;
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -65,8 +113,8 @@ export function ProcessingCandidateHeader({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-white rounded-2xl shadow-xl border border-slate-100">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex min-w-0 items-start gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -84,42 +132,197 @@ export function ProcessingCandidateHeader({
           enableHoverPreview={true}
         />
 
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-black text-slate-900 truncate">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="max-w-full truncate text-xl font-black text-slate-900">
               {candidate.firstName} {candidate.lastName}
             </h1>
-            <Badge className={`px-2 py-0.5 text-[10px] font-bold border ${getStatusBadge(processingStatus)}`}>
+            {candidate.candidateCode && (
+              <div className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700">
+                {candidate.candidateCode}
+              </div>
+            )}
+            <Badge
+              className={`whitespace-nowrap border px-2 py-0.5 text-[10px] font-bold ${getStatusBadge(processingStatus)}`}
+            >
               {displayStatus(processingStatus)}
             </Badge>
-
-            {/* Refined File Number Badge */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button 
-                    onClick={onEditFileNumber}
-                    className="flex items-center gap-2 px-2.5 py-1 text-[11px] font-black tracking-tight border border-violet-200 bg-violet-100/50 text-violet-700 rounded-lg hover:bg-violet-200 hover:border-violet-300 transition-all active:scale-95 group shadow-sm"
-                  >
-                    <div className="flex items-center justify-center w-4 h-4 rounded bg-violet-700 text-white shadow-sm group-hover:bg-violet-800 transition-colors">
-                      <Hash className="h-2.5 w-2.5" />
-                    </div>
-                    <span className="uppercase opacity-70 text-[9px] font-bold">File #</span>
-                    <span className="min-w-[40px] text-center">{fileNumber || "NOT SET"}</span>
-                    <Edit3 className="ml-0.5 h-3 w-3 text-violet-400 group-hover:text-violet-700 opacity-60 group-hover:opacity-100" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
-                  <p className="font-bold">{fileNumber ? `File Reference: ${fileNumber}` : "Click to assign a master file record number"}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
           </div>
 
+          {showOriginalDocumentBadge ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setOriginalDocsOpen(true)}
+                      className={cn(
+                        "relative inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 overflow-hidden rounded-xl border px-2.5 py-1.5 text-[10px] font-black shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        useGreenDocsBadge
+                          ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 text-emerald-900 hover:bg-emerald-50 hover:shadow-md"
+                          : "border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 text-amber-950 hover:bg-amber-50 hover:shadow-md",
+                      )}
+                      aria-label="View original document collection details"
+                    >
+                        {/* Glow + glancing sheen (motion-safe) */}
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "pointer-events-none absolute inset-0 opacity-0 transition-opacity",
+                            "motion-safe:opacity-100",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "absolute -inset-x-10 -inset-y-6",
+                              "bg-gradient-to-r from-transparent via-white/60 to-transparent",
+                              "motion-safe:animate-pulse",
+                              useGreenDocsBadge ? "via-emerald-200/40" : "via-amber-200/40",
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "absolute inset-0",
+                              useGreenDocsBadge
+                                ? "shadow-[0_0_22px_rgba(16,185,129,0.25)]"
+                                : "shadow-[0_0_22px_rgba(245,158,11,0.22)]",
+                            )}
+                          />
+                        </span>
+                        <span
+                          className={cn(
+                            "mr-0.5 inline-flex h-5 w-5 items-center justify-center rounded-lg shadow-sm ring-1 ring-inset",
+                            useGreenDocsBadge
+                              ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                              : "bg-amber-100 text-amber-700 ring-amber-200",
+                          )}
+                        >
+                          <FileStack className="h-3 w-3 shrink-0" />
+                        </span>
+                        <span>
+                          {showCollectedLabel
+                            ? "Document collected"
+                            : showSubmittedLabel
+                              ? "Original Documents submitted"
+                              : "Original Documents not submitted"}
+                        </span>
+                        {fileNumber ? (
+                          <span className="inline-flex items-center gap-0.5 font-mono">
+                            <span className="opacity-50">·</span>
+                            <span
+                              className={cn(
+                                "rounded-md px-1.5 py-0.5 text-[10px] font-black shadow-sm ring-1 ring-inset",
+                                useGreenDocsBadge
+                                  ? "bg-white text-slate-900 ring-emerald-200"
+                                  : "bg-white text-slate-900 ring-amber-200",
+                              )}
+                            >
+                              {fileNumber}
+                            </span>
+                          </span>
+                        ) : null}
+                        {lockerLocation ? (
+                          <span className="inline-flex items-center gap-0.5 font-mono">
+                            <span className="opacity-50">·</span>
+                            <Archive className="h-2.5 w-2.5" />
+                            {lockerLocation}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 opacity-80">
+                            <span className="opacity-50">·</span>
+                            <MapPin className="h-2.5 w-2.5" />
+                           Pending - Awaiting for documents
+                          </span>
+                        )}
+
+                        {useGreenDocsBadge ? (
+                          <span
+                            className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm"
+                            aria-hidden="true"
+                          >
+                            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                          </span>
+                        ) : (
+                          <span
+                            className="ml-0.5 inline-flex h-1.5 w-1.5 rounded-full bg-amber-500"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs bg-slate-800 text-white border-slate-700">
+                      <p className="font-bold">
+                        {showCollectedLabel
+                          ? "Original document collection by Affiniks"
+                          : showSubmittedLabel
+                            ? "Original documents submitted"
+                            : "Original documents pending"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        {showCollectedLabel
+                          ? "Available for Documents Received (Step 2)"
+                          : showSubmittedLabel
+                            ? "Documents are submitted (merge may still be processing)"
+                            : "Documents have not been submitted yet"}
+                        {lockerLocation ? ` · Locker ${lockerLocation}` : ""}
+                      </p>
+                      {mergedDocument?.fileName ? (
+                        <p className="mt-1 truncate text-xs text-slate-400">{mergedDocument.fileName}</p>
+                      ) : null}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+            </div>
+          ) : null}
+
+          <OriginalDocumentCollectionModal
+            open={originalDocsOpen}
+            onOpenChange={setOriginalDocsOpen}
+            processingId={processingId}
+            fileNumber={fileNumber ?? null}
+            originalDocumentCollection={originalDocumentCollection ?? null}
+          />
+
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 flex-wrap">
-            <Badge variant="outline" className="bg-violet-50 font-bold border-violet-200 text-violet-700 text-[10px] px-1.5 py-0">
-              <Briefcase className="mr-1 h-3 w-3" /> {project.title}
-            </Badge>
+            <span
+              className={cn(
+                "relative inline-flex overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 px-2.5 py-1 shadow-sm ring-1 ring-amber-100",
+                "motion-safe:animate-project-country-badge-glow",
+              )}
+              title={projectCountry?.flagName || projectCountryName || project.title}
+            >
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 overflow-hidden opacity-0 motion-safe:opacity-100"
+              >
+                <span className="absolute -inset-y-3 -left-1/2 h-[220%] w-1/2 bg-gradient-to-r from-transparent via-amber-100/80 to-transparent motion-safe:animate-project-country-badge-sheen" />
+                <span className="absolute inset-0 shadow-[0_0_20px_rgba(245,158,11,0.22)]" />
+              </span>
+              <span className="relative z-10 inline-flex items-center gap-2">
+                {(projectCountry?.flag || projectCountryCode) ? (
+                  projectCountry?.flag ? (
+                    <span
+                      className="text-lg leading-none"
+                      aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                    >
+                      {projectCountry.flag}
+                    </span>
+                  ) : (
+                    <FlagIcon
+                      countryCode={projectCountryCode}
+                      size="md"
+                      showFallback={false}
+                      aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                    />
+                  )
+                ) : null}
+                {(projectCountry?.flag || projectCountryCode) ? (
+                  <span className="h-3 w-px shrink-0 bg-amber-300" aria-hidden="true" />
+                ) : null}
+                <span className="text-xs font-black text-amber-950">{project.title}</span>
+              </span>
+            </span>
             <span className="font-bold text-slate-600">{role.designation}</span>
             {candidate.email && (
               <span className="flex items-center gap-1 hidden lg:flex">
@@ -137,16 +340,78 @@ export function ProcessingCandidateHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        {recruiter && (
-          <p className="text-xs text-slate-400 hidden md:block">
-            Recruited by <span className="font-bold text-slate-600">{recruiter.name}</span>
-          </p>
-        )}
-       
-        <p className="text-[10px] font-medium text-slate-400">
-          ID: <span className="text-slate-600 font-mono font-bold">{processingId.slice(-8).toUpperCase()}</span>
-        </p>
+      <div className="flex w-full min-w-0 flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:w-auto xl:border-t-0 xl:pt-0">
+        {onOpenPreviousProjects ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full gap-2 rounded-xl border-slate-200 font-bold text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 sm:w-auto"
+                  onClick={onOpenPreviousProjects}
+                  aria-label="View previous projects processing"
+                >
+                  <FolderKanban className="h-4 w-4 shrink-0" />
+                  <span className="hidden lg:inline">Previous Projects Processing</span>
+                  <span className="lg:hidden">Previous Projects</span>
+                  {previousProjectsCount > 0 ? (
+                    <Badge className="border-0 bg-violet-100 text-xs font-bold text-violet-700">
+                      {previousProjectsCount}
+                    </Badge>
+                  ) : null}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="border-slate-700 bg-slate-800 text-white">
+                <p className="font-bold">Previous Projects Processing</p>
+                <p className="text-xs text-slate-300">
+                  {previousProjectsCount > 0
+                    ? `Processed on ${previousProjectsCount} other project${previousProjectsCount === 1 ? "" : "s"}`
+                    : "View current and past processing nominations"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : null}
+
+        <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
+          {recruiter ? (
+            <p className="min-w-0 truncate text-xs text-slate-400">
+              Recruited by{" "}
+              <span className="font-bold text-slate-600">{recruiter.name}</span>
+            </p>
+          ) : null}
+
+          {(projectCountry?.flag || projectCountryCode) ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="flex shrink-0 items-center bg-transparent px-1"
+                    aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                  >
+                    {projectCountry?.flag ? (
+                      <span className="text-3xl leading-none drop-shadow-sm" aria-hidden="true">
+                        {projectCountry.flag}
+                      </span>
+                    ) : (
+                      <FlagIcon
+                        countryCode={projectCountryCode}
+                        size="xl"
+                        showFallback={false}
+                        aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                      />
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="border-slate-700 bg-slate-800 text-white">
+                  <p className="font-bold">{projectCountry?.flagName || projectCountryName || "Project destination"}</p>
+                  <p className="text-xs text-slate-300">Project destination</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+        </div>
       </div>
     </div>
   );

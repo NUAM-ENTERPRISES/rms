@@ -10,26 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { AGENT_TYPES } from "@/constants/agent-types";
 import { useCreateAgentMutation, type CreateAgentRequest } from "../api";
 import { CreateAgentProjectLinksField } from "./CreateAgentProjectLinksField";
-
-const initialForm = {
-  name: "",
-  email: "",
-  mobileNumber: "",
-  companyName: "",
-  agentType: "",
-};
+import { AgentFormFieldsSection } from "./AgentFormFields";
+import {
+  agentFormFieldsToPayload,
+  initialAgentFormFields,
+  type AgentFormFields,
+} from "../utils/agent-form.utils";
 
 export type CreateAgentDialogProps = {
   open: boolean;
@@ -37,7 +25,7 @@ export type CreateAgentDialogProps = {
 };
 
 export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps) {
-  const [formData, setFormData] = useState(initialForm);
+  const [formData, setFormData] = useState<AgentFormFields>(initialAgentFormFields);
   const [createAgentProjectIds, setCreateAgentProjectIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -50,7 +38,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
 
   useEffect(() => {
     if (open) {
-      setFormData(initialForm);
+      setFormData(initialAgentFormFields);
       setCreateAgentProjectIds(new Set());
       setCreateAgentProjectNotes({});
       setStep(1);
@@ -72,7 +60,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
       return;
     }
 
-    const payload: CreateAgentRequest = { ...formData };
+    const payload: CreateAgentRequest = agentFormFieldsToPayload(formData);
     if (createAgentProjectIds.size > 0) {
       payload.projectLinks = [...createAgentProjectIds].map((projectId) => {
         const raw = createAgentProjectNotes[projectId]?.trim();
@@ -90,82 +78,25 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <p className="text-xs font-medium text-slate-500 mb-1">Step {step} of 2</p>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-3xl w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto gap-3 p-6">
+        <DialogHeader className="space-y-1 pb-0">
+          <p className="text-xs font-medium text-slate-500">Step {step} of 2</p>
+          <DialogTitle className="text-lg">
             {step === 1 ? "Add New Agent" : "Link projects (optional)"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             {step === 1
-              ? "Enter agent details. You can link client projects on the next step."
-              : "Search and select active projects to tie to this agent, or leave empty and create — you can add links later from the agent profile."}
+              ? "Enter agent details. Link projects on the next step (optional)."
+              : "Select projects for this agent, or skip and add links later from the profile."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
           {step === 1 ? (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="create-agent-name">Agent Name *</Label>
-                <Input
-                  id="create-agent-name"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Full name of agent"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-agent-company">Agency/Organization Name</Label>
-                <Input
-                  id="create-agent-company"
-                  value={formData.companyName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, companyName: e.target.value })
-                  }
-                  placeholder="e.g. Ace Recruitment Ltd"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-agent-type">Agent Type</Label>
-                <Select
-                  value={formData.agentType}
-                  onValueChange={(value) => setFormData({ ...formData, agentType: value })}
-                >
-                  <SelectTrigger id="create-agent-type" className="w-full">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AGENT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-agent-email">Email Address</Label>
-                <Input
-                  id="create-agent-email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="agent@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="create-agent-mobile">Mobile Number</Label>
-                <Input
-                  id="create-agent-mobile"
-                  value={formData.mobileNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mobileNumber: e.target.value })
-                  }
-                  placeholder="+91 9876543210"
-                />
-              </div>
-            </>
+            <AgentFormFieldsSection
+              idPrefix="create-agent"
+              form={formData}
+              onChange={(updates) => setFormData((prev) => ({ ...prev, ...updates }))}
+            />
           ) : (
             <CreateAgentProjectLinksField
               enabled={open && step === 2}
@@ -191,7 +122,7 @@ export function CreateAgentDialog({ open, onOpenChange }: CreateAgentDialogProps
               }
             />
           )}
-          <DialogFooter className="pt-4 gap-2 sm:gap-0 flex-col sm:flex-row">
+          <DialogFooter className="pt-2 gap-2 sm:gap-0 flex-col sm:flex-row border-t border-slate-100 mt-1">
             {step === 1 ? (
               <>
                 <Button

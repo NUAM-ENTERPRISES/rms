@@ -678,9 +678,9 @@ export class TeamsService {
       },
     });
 
-    const activeProjects = projects.filter((p) => p.status === 'active').length;
+    const activeProjects = projects.filter((p) => p.status === 'IN_PROGRESS').length;
     const completedProjects = projects.filter(
-      (p) => p.status === 'completed',
+      (p) => p.status === 'COMPLETED',
     ).length;
 
     // Get candidates count

@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
+import ProjectRoleFilter from "@/components/molecules/ProjectRoleFilter";
 import {
     Users,
     XCircle,
@@ -28,20 +29,33 @@ import {
     Search,
     RefreshCw,
     Filter,
-    X,
     ChevronLeft,
     ChevronRight,
     UserCheck,
     Mail,
     Phone,
     ArrowUpRight,
-    FilterX,
+    SlidersHorizontal,
+    AlertCircle,
+    PauseCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAppSelector } from "@/app/hooks";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { Can } from "@/components/auth/Can";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGetAllProcessingCandidatesAdminQuery } from "@/features/processing/data/processing.endpoints";
-import { useGetProjectsQuery } from "@/services/projectsApi";
+import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
+import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
+import { ProcessingAdvancedFiltersSheet } from "./components/ProcessingAdvancedFiltersSheet";
+import {
+  advancedFiltersToQueryParams,
+  countProcessingAdvancedFilters,
+  DEFAULT_PROCESSING_ADVANCED_FILTERS,
+  parseProcessingAdvancedFiltersFromSearchParams,
+  writeProcessingAdvancedFiltersToSearchParams,
+  type ProcessingAdvancedFilters,
+} from "../utils/processingListQuery";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -50,7 +64,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
     amber: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
     rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
     slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
-    purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+    orange: { card: "from-orange-100 via-orange-50 to-orange-100/50 border-orange-200", icon: "text-orange-700", iconBg: "bg-orange-200", value: "text-orange-800", ring: "ring-orange-500/50", dot: "bg-orange-600" },
 };
 
 // This page is intentionally not wired to any API. It uses local dummy data
@@ -58,50 +72,109 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
 
 export default function ProcessingAdminDashboardPage() {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { user } = useAppSelector((state) => state.auth);
     const tableRef = useRef<HTMLDivElement>(null);
 
     const handleTileClick = (tile: any) => {
-        if (tile.type === "step") {
+        if (tile.type === "filter") {
+            setAwaitingRequestsFilter((prev) => !prev);
+            setStepFilter(null);
+            setStatusFilter("all");
+        } else if (tile.type === "step") {
+            setAwaitingRequestsFilter(false);
             setStatusFilter("all");
             setStepFilter((prev) => (prev === tile.key ? null : tile.key));
         } else {
+            setAwaitingRequestsFilter(false);
             setStepFilter(null);
             setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
         }
         setPage(1);
+        window.requestAnimationFrame(() => {
+            tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
     };
 
     // Local UI state (same as production page)
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
-    const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "visa_stamped">("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold" | "visa_stamped">("all");
+    const [awaitingRequestsFilter, setAwaitingRequestsFilter] = useState(
+        () => searchParams.get("filter") === "awaiting_requests",
+    );
     const [stepFilter, setStepFilter] = useState<string | null>(null);
     const [projectFilter, setProjectFilter] = useState<string>("all");
     const [roleFilter, setRoleFilter] = useState<string>("all");
     const [page, setPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
+    const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+    const [advancedFilters, setAdvancedFilters] = useState<ProcessingAdvancedFilters>(() =>
+        parseProcessingAdvancedFiltersFromSearchParams(searchParams),
+    );
 
-    // Fetch projects for filters
-    const { data: projectsData } = useGetProjectsQuery({ limit: 50 });
-    const projects = projectsData?.data?.projects || [];
+    const syncAdvancedFiltersToUrl = useCallback(
+        (nextFilters: ProcessingAdvancedFilters) => {
+            const params = new URLSearchParams(searchParams);
+            writeProcessingAdvancedFiltersToSearchParams(params, nextFilters);
+            setSearchParams(params, { replace: true });
+        },
+        [searchParams, setSearchParams],
+    );
 
-    // API call for admin processing candidates
-    const adminQueryParams: any = {
-        search: debouncedSearch || undefined,
-        projectId: projectFilter === "all" ? undefined : projectFilter,
-        roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
-        page,
-        limit: pageSize,
+    const handleApplyAdvancedFilters = (nextFilters: ProcessingAdvancedFilters) => {
+        setAdvancedFilters(nextFilters);
+        syncAdvancedFiltersToUrl(nextFilters);
+        setPage(1);
     };
 
-    if (stepFilter) {
-        adminQueryParams.step = stepFilter;
-        adminQueryParams.filterType = "total_processing";
-    } else if (statusFilter === "all") {
-        adminQueryParams.filterType = "total_processing";
-    } else {
-        adminQueryParams.status = statusFilter;
-    }
+    const handleResetAdvancedFilters = () => {
+        setAdvancedFilters(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+        syncAdvancedFiltersToUrl(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+        setPage(1);
+    };
+
+    const advancedFilterCount = countProcessingAdvancedFilters(advancedFilters);
+
+    const adminQueryParams = useMemo(() => {
+        const params: Record<string, unknown> = {
+            search: debouncedSearch || undefined,
+            projectId: projectFilter === "all" ? undefined : projectFilter,
+            roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
+            page,
+            limit: pageSize,
+            ...advancedFiltersToQueryParams(advancedFilters),
+        };
+
+        if (awaitingRequestsFilter) {
+            params.filterType = "awaiting_requests";
+            params.status = undefined;
+            params.step = undefined;
+        } else if (stepFilter) {
+            params.step = stepFilter;
+            params.filterType = "total_processing";
+            params.status = undefined;
+        } else if (statusFilter === "all") {
+            params.filterType = "total_processing";
+            params.status = undefined;
+        } else {
+            params.status = statusFilter;
+            params.filterType = undefined;
+            params.step = undefined;
+        }
+
+        return params;
+    }, [
+        debouncedSearch,
+        projectFilter,
+        roleFilter,
+        page,
+        pageSize,
+        stepFilter,
+        statusFilter,
+        awaitingRequestsFilter,
+        advancedFilters,
+    ]);
 
     const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesAdminQuery(adminQueryParams);
 
@@ -113,11 +186,11 @@ export default function ProcessingAdminDashboardPage() {
     // Pagination (driven by API when available)
     const totalItems = pagination?.total ?? candidates.length;
     const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
-    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, pageSize]);
+    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, awaitingRequestsFilter, projectFilter, roleFilter, pageSize, advancedFilters]);
     const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalItems);
 
-    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; visa_stamped?: number; steps?: Record<string, number> } = apiResponse?.data?.counts ?? {};
+    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; on_hold?: number; visa_stamped?: number; pendingStatusChangeRequests?: number; steps?: Record<string, number> } = apiResponse?.data?.counts ?? {};
     const totalProcessing = counts?.all ?? ((counts.assigned || 0) + (counts.in_progress || 0) + (counts.completed || 0) + (counts.cancelled || 0));
 
     const processingTiles: Array<any> = [
@@ -133,7 +206,7 @@ export default function ProcessingAdminDashboardPage() {
       },
       {
         type: "status",
-        label: "Ready for Processing",
+        label: "Untouched",
         status: "assigned",
         icon: UserCheck,
         color: "text-blue-600",
@@ -142,7 +215,7 @@ export default function ProcessingAdminDashboardPage() {
         value: counts?.assigned || 0,
       },
       { type: "step", key: "offer_letter_verified", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
-      { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+      { type: "step", key: "document_received", label: "Document Original Received", gradient: "from-yellow-400 to-amber-500" },
       { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
       { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
       { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
@@ -154,6 +227,14 @@ export default function ProcessingAdminDashboardPage() {
       { type: "step", key: "visa", label: "Visa", accent: "indigo" },
       { type: "step", key: "emigration", label: "Emigration", accent: "rose" },
       { type: "step", key: "ticket", label: "Ticket", accent: "emerald" },
+      {
+        type: "status",
+        label: "Processing Hold",
+        status: "on_hold",
+        accent: "amber",
+        icon: PauseCircle,
+        value: counts?.on_hold || 0,
+      },
       {
         type: "status",
         label: "Completed",
@@ -170,6 +251,14 @@ export default function ProcessingAdminDashboardPage() {
         icon: XCircle,
         value: counts?.cancelled || 0,
       },
+      {
+        type: "filter",
+        label: "Awaiting Requests",
+        filterType: "awaiting_requests",
+        accent: "orange",
+        icon: AlertCircle,
+        value: counts?.pendingStatusChangeRequests || 0,
+      },
     ];
 
     const getStatusBadge = (status: string) => {
@@ -177,7 +266,8 @@ export default function ProcessingAdminDashboardPage() {
             "in_progress": "bg-blue-100 text-blue-700 border-blue-200",
             "assigned": "bg-indigo-100 text-indigo-700 border-indigo-200",
             "completed": "bg-emerald-100 text-emerald-700 border-emerald-200",
-            "cancelled": "bg-rose-100 text-rose-700 border-rose-200"
+            "cancelled": "bg-rose-100 text-rose-700 border-rose-200",
+            "on_hold": "bg-amber-100 text-amber-800 border-amber-200",
         };
         return styles[status] || "bg-slate-100 text-slate-700";
     };
@@ -185,36 +275,65 @@ export default function ProcessingAdminDashboardPage() {
     const displayStatus = (status: string) => {
         const labels: Record<string, string> = {
             "all": "All",
-            "assigned": "Ready for Processing",
+            "assigned": "Untouched",
             "in_progress": "In Progress",
             "completed": "Completed",
-            "cancelled": "Cancelled"
+            "cancelled": "Cancelled",
+            "on_hold": "Processing Hold",
         };
         return labels[status] || status;
     };
 
-    const formatStep = (step?: string) => {
-        if (!step) return "—";
-        if (step === "verify_offer_letter") return "Verify Offer Letter";
-        return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const formatStep = (step?: string) => formatProcessingStepLabel(step);
+
+    const getStepTileCount = (stepKey: string) => {
+        const stepCounts = counts?.steps ?? {};
+        if (stepKey === "offer_letter_verified") {
+            return (stepCounts.offer_letter_verified ?? 0) + (stepCounts.verify_offer_letter ?? 0);
+        }
+        return stepCounts[stepKey] ?? 0;
     };
 
-    
     const rowBgClass = (status: string) => {
         switch (status) {
             case "in_progress": return "bg-blue-50/40";
             case "assigned": return "bg-indigo-50/40";
             case "completed": return "bg-emerald-50/40";
-            case "cancelled": return "bg-rose-50/40";
+            case "cancelled": return "bg-rose-50/60";
+            case "on_hold": return "bg-amber-50/60";
             default: return "";
         }
     };
 
+    const getCandidateRowBgClass = (
+        processingStatus: string,
+        pendingRequest?: { requestType: string } | null,
+    ) => {
+        if (processingStatus === "cancelled") {
+            return "bg-rose-50/60";
+        }
+        if (processingStatus === "on_hold") {
+            return "bg-amber-50/60";
+        }
+        if (pendingRequest) {
+            return "bg-orange-100";
+        }
+        return rowBgClass(processingStatus);
+    };
+
     return (
-        <Can roles={["CEO", "Director", "Manager", "System Admin"]} fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}>
+        <Can
+            roles={["CEO", "Director", "Manager", "System Admin", "Processing Manager"]}
+            fallback={<div className="p-8 text-center text-slate-600">Not authorized</div>}
+        >
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
                 <div className="mx-auto max-w-7xl space-y-8">
-                    <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <DashboardWelcomeHeader
+                        userName={user?.name || "Processing Manager"}
+                        subtitle="Monitor and manage candidate processing workflows"
+                    />
+
+                    {/* <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
                             <div className="rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 p-3 shadow-lg">
                                 <ClipboardList className="h-7 w-7 text-white" />
@@ -231,13 +350,17 @@ export default function ProcessingAdminDashboardPage() {
                                 <X className="h-3 w-3 cursor-pointer hover:text-rose-500" onClick={() => { setStepFilter(null); setStatusFilter('all'); }} />
                             </Badge>
                         )}
-                    </header>
+                    </header> */}
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
                         {processingTiles.map((tile) => {
                             const isStepTile = tile.type === "step";
-                            const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-                            const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
+                            const isActive = tile.type === "filter"
+                                ? awaitingRequestsFilter
+                                : isStepTile
+                                  ? stepFilter === tile.key
+                                  : statusFilter === tile.status && !stepFilter && !awaitingRequestsFilter;
+                            const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
                             const s = accentStyles[tile.accent || "blue"];
                             const Icon = isStepTile ? ClipboardList : tile.icon;
 
@@ -289,38 +412,33 @@ export default function ProcessingAdminDashboardPage() {
                                         />
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Select value={projectFilter} onValueChange={(val) => { setProjectFilter(val); setRoleFilter("all"); }}>
-                                            <SelectTrigger className="h-11 w-[200px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
-                                                <SelectValue placeholder="All Projects" />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                <SelectItem value="all">All Projects</SelectItem>
-                                                {projects.map(p => (<SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>))}
-                                            </SelectContent>
-                                        </Select>
-
-                                        {projectFilter !== "all" && (
-                                            <Select value={roleFilter} onValueChange={setRoleFilter}>
-                                                <SelectTrigger className="h-11 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm focus:ring-blue-500/10 transition-all">
-                                                    <SelectValue placeholder="All Roles" />
-                                                </SelectTrigger>
-                                                <SelectContent className="rounded-xl">
-                                                    <SelectItem value="all">All Roles</SelectItem>
-                                                    {projects.find(p => p.id === projectFilter)?.rolesNeeded?.map((r: any) => (
-                                                        <SelectItem key={r.roleCatalogId} value={r.roleCatalogId}>{r.designation}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        )}
+                                        <ProjectRoleFilter
+                                            value={{ projectId: projectFilter, roleCatalogId: roleFilter }}
+                                            onChange={({ projectId, roleCatalogId }) => {
+                                                setProjectFilter(projectId);
+                                                setRoleFilter(roleCatalogId);
+                                            }}
+                                            className="items-center"
+                                        />
 
                                         <Button
+                                            type="button"
                                             variant="outline"
-                                            size="icon"
-                                            className="shrink-0 h-11 w-11 rounded-xl border-slate-200 hover:bg-slate-50"
-                                            onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}
-                                            title="Reset Filters"
+                                            className={cn(
+                                                "h-11 shrink-0 gap-2 rounded-xl border px-4 shadow-sm",
+                                                isAdvancedFiltersOpen || advancedFilterCount > 0
+                                                    ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                                                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                                            )}
+                                            onClick={() => setIsAdvancedFiltersOpen(true)}
                                         >
-                                            <FilterX className="h-4 w-4 text-slate-500" />
+                                            <SlidersHorizontal className="h-4 w-4" />
+                                            Filters
+                                            {advancedFilterCount > 0 ? (
+                                                <Badge className="border-0 bg-white/20 px-1.5 text-[10px] text-white">
+                                                    {advancedFilterCount}
+                                                </Badge>
+                                            ) : null}
                                         </Button>
                                     </div>
                                 </div>
@@ -335,7 +453,13 @@ export default function ProcessingAdminDashboardPage() {
                                     </div>
                                     <div>
                                         <h2 className="text-base font-bold text-gray-900">
-                                            {stepFilter ? formatStep(stepFilter) : (statusFilter !== 'all' ? displayStatus(statusFilter) : "Active Candidates")}
+                                            {awaitingRequestsFilter
+                                                ? "Awaiting Requests"
+                                                : stepFilter
+                                                  ? formatStep(stepFilter)
+                                                  : statusFilter !== "all"
+                                                    ? displayStatus(statusFilter)
+                                                    : "Active Candidates"}
                                         </h2>
                                         <p className="text-xs text-slate-500">
                                             <span className="font-semibold text-gray-900">{totalItems}</span> candidate{totalItems !== 1 ? "s" : ""} in processing
@@ -354,6 +478,7 @@ export default function ProcessingAdminDashboardPage() {
                                     <TableHeader>
                                         <TableRow className="bg-slate-50/80 hover:bg-slate-50">
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Candidate</TableHead>
+                                            <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">Contact</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Project & Role</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Recruiter</TableHead>
                                             <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">Agent</TableHead>
@@ -367,7 +492,7 @@ export default function ProcessingAdminDashboardPage() {
                                     <TableBody>
                                         {isLoading ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} className="h-64 text-center">
+                                                <TableCell colSpan={9} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <svg className="h-10 w-10 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" /></svg>
                                                         <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
@@ -376,27 +501,51 @@ export default function ProcessingAdminDashboardPage() {
                                             </TableRow>
                                         ) : candidates.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={8} className="h-64 text-center">
+                                                <TableCell colSpan={9} className="h-64 text-center">
                                                     <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
                                                         <Filter className="h-10 w-10 opacity-20" />
                                                         <p className="text-lg font-bold">No candidates found</p>
                                                         <p className="text-sm">Try adjusting your filters or search term</p>
-                                                        <Button variant="link" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); }}>Clear all filters</Button>
+                                                        <Button variant="link" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter("all"); setAwaitingRequestsFilter(false); setStepFilter(null); }}>Clear all filters</Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            candidates.map((procCandidate) => (
-                                                <TableRow key={procCandidate.id} className={`group transition-colors border-b border-slate-100 hover:shadow-sm ${rowBgClass(procCandidate.processingStatus)}`}>
+                                            candidates.map((procCandidate) => {
+                                                const pendingRequest = (procCandidate as { pendingStatusChangeRequest?: { id: string; requestType: string; createdAt: string } }).pendingStatusChangeRequest;
+                                                return (
+                                                <TableRow key={procCandidate.id} className={cn(
+                                                    "group transition-colors border-b border-slate-100 hover:shadow-sm",
+                                                    getCandidateRowBgClass(
+                                                        procCandidate.processingStatus,
+                                                        pendingRequest,
+                                                    ),
+                                                )}>
                                                     <TableCell className="py-4">
                                                         <div className="flex items-center gap-3">
                                                             <ImageViewer title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} src={procCandidate.candidate.profileImage || null} className="h-9 w-9 rounded-full" ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} enableHoverPreview={true} />
                                                             <div className="min-w-0">
                                                                 <button className="font-bold text-sm text-slate-900 truncate text-left hover:text-violet-600 transition-colors" onClick={(e) => { e.stopPropagation(); navigate(`/processingCandidateDetails/${procCandidate.id}`); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/processingCandidateDetails/${procCandidate.id}`); } }}>{procCandidate.candidate.firstName} {procCandidate.candidate.lastName}</button>
-                                                                <div className="text-xs text-slate-500 truncate flex flex-col gap-0.5 mt-1">
-                                                                    <div className="flex items-center gap-2"><Mail className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.email || "—"}</span></div>
-                                                                    <div className="flex items-center gap-2"><Phone className="h-3 w-3" /> <span className="truncate">{procCandidate.candidate.mobileNumber || "—"}</span></div>
-                                                                </div>
+                                                                {procCandidate.candidate.candidateCode && (
+                                                                    <div className="mt-1">
+                                                                        <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                                                            {procCandidate.candidate.candidateCode}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    <TableCell className="py-4">
+                                                        <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                                                <span className="min-w-0 whitespace-normal break-all">{procCandidate.candidate.email || "—"}</span>
+                                                            </div>
+                                                            <div className="flex items-start gap-2 min-w-0">
+                                                                <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                                                                <span className="min-w-0 whitespace-normal break-words">{procCandidate.candidate.mobileNumber || "—"}</span>
                                                             </div>
                                                         </div>
                                                     </TableCell>
@@ -442,15 +591,33 @@ export default function ProcessingAdminDashboardPage() {
                                                     </TableCell>
 
     
-                                                    <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge></TableCell>
-
-                                                    <TableCell className="py-4">
-                                                        <div className="space-y-1.5">{(() => { const raw = (procCandidate as any).progressCount; const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0); return (<><span className="text-xs font-black text-slate-700">{pct}%</span><div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200"><div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} /></div></>); })()}</div>
+                                                    <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge>
+                                                        {pendingRequest && (
+                                                            <Badge className="mt-1 block w-fit text-[10px] bg-orange-200 text-orange-900 border-orange-300 font-semibold">
+                                                                Review Request
+                                                            </Badge>
+                                                        )}
+                                                        {!pendingRequest && procCandidate.processingStatus === "on_hold" && (
+                                                            <Badge className="mt-1 block w-fit text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                                                                On hold
+                                                            </Badge>
+                                                        )}
                                                     </TableCell>
 
-                                                    <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(`/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>
+                                                    <TableCell className="py-4">
+                                                        <ProcessingProgressBar
+                                                            processingStatus={procCandidate.processingStatus}
+                                                            progressCount={procCandidate.progressCount}
+                                                            progressCompletedSteps={procCandidate.progressCompletedSteps}
+                                                            progressTotalSteps={procCandidate.progressTotalSteps}
+                                                            progressPendingSteps={procCandidate.progressPendingSteps}
+                                                        />
+                                                    </TableCell>
+
+                                                    <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(pendingRequest ? `/processingCandidateDetails/${procCandidate.id}?reviewRequest=${pendingRequest.id}` : `/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>
                                                 </TableRow>
-                                            ))
+                                            );
+                                            })
                                         )}
                                     </TableBody>
                                 </Table>
@@ -476,6 +643,15 @@ export default function ProcessingAdminDashboardPage() {
                     </div>
                 </div>
             </div>
+
+            <ProcessingAdvancedFiltersSheet
+                isOpen={isAdvancedFiltersOpen}
+                onOpenChange={setIsAdvancedFiltersOpen}
+                filters={advancedFilters}
+                onApply={handleApplyAdvancedFilters}
+                onReset={handleResetAdvancedFilters}
+                showAssignedToFilter
+            />
         </Can>
     );
 }

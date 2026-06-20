@@ -6,9 +6,11 @@ import {
   Project,
   WorkExperience,
   RoleCatalog,
+  RoleDepartment,
   CandidateQualification,
   Qualification,
 } from '@prisma/client';
+import { CareerGapAnalysis } from './utils/employment-timeline.util';
 
 export interface CandidateWithRelations extends Candidate {
   team: Team | null;
@@ -60,7 +62,17 @@ export interface CandidateWithRelations extends Candidate {
   })[];
   preferredCountries?: { countryCode: string }[];
   facilityPreferences?: { facilityType: string }[];
+  professionType?: {
+    id: string;
+    name: string;
+    label: string;
+  };
+  rolePreferences?: {
+    roleCatalogId: string;
+    roleCatalog?: RoleCatalog & { roleDepartment?: RoleDepartment | null };
+  }[];
   documents?: any[];
+  careerGapAnalysis?: CareerGapAnalysis;
 }
 
 export interface PaginatedCandidates {
@@ -75,9 +87,11 @@ export interface PaginatedCandidates {
     total: number;
     untouched: number;
     rnr: number;
+    callBack?: number;
     onHold: number;
     interested: number;
     notInterested: number;
+    notEligible: number;
     otherEnquiry: number;
     qualified: number;
     future: number;

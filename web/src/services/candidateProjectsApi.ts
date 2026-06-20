@@ -5,6 +5,8 @@ export interface ProjectOverviewParams {
   roleCatalogId?: string;
   search?: string;
   mainStatus?: string;
+  subStatus?: string;
+  subStatuses?: string;
   period?: string;
   startDate?: string;
   endDate?: string;
@@ -21,6 +23,13 @@ export interface ProjectOverviewParams {
   maxAge?: number;
 }
 
+export type ProjectOverviewSubStatusTile = {
+  key: string;
+  label: string;
+  count: number;
+  subStatusName: string;
+};
+
 export interface ProjectOverviewResponse {
   projectTitle?: string;
   summary: {
@@ -30,6 +39,9 @@ export interface ProjectOverviewResponse {
     interviewCount: number;
     processingCount: number;
     finalCount: number;
+    documentsSubStatus?: { tiles: ProjectOverviewSubStatusTile[] };
+    interviewSubStatus?: { tiles: ProjectOverviewSubStatusTile[] };
+    processingSubStatus?: { tiles: ProjectOverviewSubStatusTile[] };
   };
   data: any[];
   meta: {

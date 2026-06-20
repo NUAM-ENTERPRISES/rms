@@ -26,11 +26,23 @@ import { SendForVerificationDto } from './dto/send-for-verification.dto';
 import { UpdateCandidateStatusDto } from './dto/update-candidate-status.dto';
 import { AssignRecruiterDto } from './dto/assign-recruiter.dto';
 import { TransferCandidateDto } from './dto/transfer-candidate.dto';
+import { TransferToRecruiterDto } from './dto/transfer-to-recruiter.dto';
+import { LogOperationsCallDto } from './dto/log-operations-call.dto';
 import { BulkTransferCandidateDto } from './dto/bulk-transfer-candidate.dto';
 import { ConsolidatedCandidateQueryDto } from './dto/consolidated-candidate-query.dto';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { CandidateCodeService } from './services/candidate-code.service';
+import {
+  findExistingCandidateByPassport,
+  normalizePassportNumber,
+  resolvePassportNumberForCandidate,
+} from './utils/passport-number.util';
+import { syncEligibilityLetterDocumentNumberFromCandidate } from './utils/eligibility-number.util';
+import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { allowedTemplateKeysForSector } from '../processing/processing-sector-steps';
 import { RnrRemindersService } from '../rnr-reminders/rnr-reminders.service';
+import { CallbackRemindersService } from '../callback-reminders/callback-reminders.service';
 import { WhatsAppService } from '../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import {
@@ -42,12 +54,25 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_STATUS,
   CANDIDATE_ASSIGNMENT_TYPE,
+  CRE_REASSIGN_RECRUITER_RETURN_REASON,
+  CLIENT_INTERVIEW_SUB_STATUS_NAMES,
+  SCREENING_TRAINING_SUB_STATUS_NAMES,
+  TRAINING_SUB_STATUS_NAMES,
+  OPERATIONS_CALL_OUTCOME,
+  OPERATIONS_FOLLOW_UP_STAGE,
+  OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+  OPERATIONS_WEEK_ONE_WAIT_MS,
+  OPERATIONS_WEEK_TWO_WAIT_MS,
+  getOperationsStageWaitRemainingMs,
+  isAssignedUntouchedDashboardBucket,
+  isEligibleForWeekOneDashboardBucket,
   canTransitionStatus,
   requiresCREHandling,
   isCandidateStatusTerminal,
   normalizeCandidateSource,
 } from '../common/constants';
-import { ROLE_NAMES } from '../common/constants/role-ids';
+import { PERMISSIONS } from '../common/constants/permissions';
+import { ROLE_NAMES, isOperationsRole } from '../common/constants/role-ids';
 import { canSeeAgentSourcedCandidates } from './candidate-visibility';
 import {
   assertPhysicalAddressConsistent,
@@ -57,14 +82,361 @@ import {
   assertAgentCandidateLinkedToAgentProject,
   agentSourceConsolidatedCandidateWhere,
 } from '../common/agent-project-candidate-scope';
+import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
 import {
   computeCandidateProfileCompletion,
   withProfileCompletion,
 } from './utils/profile-completion.util';
+import { calculateTotalExperienceYears, calculateCareerGaps } from './utils/employment-timeline.util';
+import {
+  resolveCreHandoffNote,
+  resolveCreHandoffStatus,
+} from './utils/cre-handoff.util';
+import { computeCandidateActivitySnapshot } from './utils/candidate-activity-snapshot.util';
+import {
+  assertOptionalCountryCode,
+  normalizeOptionalCountryCode,
+} from '../common/country/assert-optional-country-code';
+
+const candidateWorkExperiencesInclude = {
+  include: {
+    roleCatalog: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
+
+const candidateQualificationsInclude = {
+  include: {
+    qualification: true,
+    country: { select: { code: true, name: true } },
+  },
+} as const;
+
+/** Recruiter CRM statuses counted as positive (nomination/pipeline does not remove). */
+const POSITIVE_CRM_STATUS_NAMES = [
+  'Interested',
+  'Future',
+  'On Hold',
+  'Call Back',
+  'Qualified',
+] as const;
+
+/** CRM statuses excluded from the positive tile. */
+const NEGATIVE_CRM_STATUS_NAMES = [
+  'Not Interested',
+  'Other Enquiry',
+  'RNR',
+  'Not Eligible',
+] as const;
+
+const DEPLOYED_CRM_STATUS_NAMES = ['Deployed'] as const;
+
+/** Document sub-statuses after Send for Verification (excludes pending_documents). */
+const REGISTERED_DOC_SUB_STATUSES = [
+  'documents_submitted',
+  'verification_in_progress_document',
+  'documents_verified',
+  'client_revision_requested',
+  'documents_re_submission_requested',
+  'rejected_documents',
+  'submitted_to_client',
+] as const;
+
+/** Registered dashboard sub-tiles: history-based counts per documents sub-status. */
+const REGISTERED_SUB_STATUS_TILES = [
+  {
+    key: 'send_for_verification',
+    subStatusName: 'verification_in_progress_document',
+    label: 'Send for Verification',
+  },
+  {
+    key: 'documents_verified',
+    subStatusName: 'documents_verified',
+    label: 'Document Verified',
+  },
+  {
+    key: 'rejected_documents',
+    subStatusName: 'rejected_documents',
+    label: 'Documents Rejected',
+  },
+  {
+    key: 'submitted_to_client',
+    subStatusName: 'submitted_to_client',
+    label: 'Submitted to Client',
+  },
+] as const;
+
+/** Screening dashboard sub-tiles: history-based counts per screening/training sub-status. */
+const SCREENING_SUB_STATUS_TILES = [
+  {
+    key: 'assigned',
+    subStatusName: 'screening_assigned',
+    label: 'Assigned',
+  },
+  {
+    key: 'scheduled',
+    subStatusName: 'screening_scheduled',
+    label: 'Scheduled',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'screening_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'passed',
+    subStatusName: 'screening_passed',
+    label: 'Passed',
+  },
+  {
+    key: 'needs_training',
+    subStatusName: 'screening_needs_training',
+    label: 'Needs Training',
+  },
+  {
+    key: 'on_hold',
+    subStatusName: 'screening_on_hold',
+    label: 'On Hold',
+  },
+  {
+    key: 'failed',
+    subStatusName: 'screening_failed',
+    label: 'Failed',
+  },
+] as const;
+
+/** Interview dashboard sub-tiles: history-based counts per interview sub-status. */
+const INTERVIEW_SUB_STATUS_TILES = [
+  {
+    key: 'shortlisted',
+    subStatusName: 'shortlisted',
+    label: 'Shortlisted',
+  },
+  {
+    key: 'not_shortlisted',
+    subStatusName: 'not_shortlisted',
+    label: 'Not Shortlisted',
+  },
+  {
+    key: 'scheduled',
+    subStatusName: 'interview_scheduled',
+    label: 'Scheduled',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'interview_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'passed',
+    subStatusName: 'interview_passed',
+    label: 'Passed',
+  },
+  {
+    key: 'failed',
+    subStatusName: 'interview_failed',
+    label: 'Failed',
+  },
+] as const;
+
+/** Processing dashboard sub-tiles: history-based counts per processing sub-status. */
+const PROCESSING_SUB_STATUS_TILES = [
+  {
+    key: 'transferred',
+    subStatusName: 'transfered_to_processing',
+    label: 'Transferred',
+  },
+  {
+    key: 'in_progress',
+    subStatusName: 'processing_in_progress',
+    label: 'In Progress',
+  },
+  {
+    key: 'completed',
+    subStatusName: 'processing_completed',
+    label: 'Completed',
+  },
+  {
+    key: 'hold',
+    subStatusName: 'processing_hold',
+    label: 'Hold',
+  },
+  {
+    key: 'cancelled',
+    subStatusName: 'processing_cancelled',
+    label: 'Cancelled',
+  },
+] as const;
 
 @Injectable()
 export class CandidatesService {
   private readonly logger = new Logger(CandidatesService.name);
+
+  private async assertValidPreferredRoles(
+    roleCatalogIds: string[],
+  ): Promise<void> {
+    if (!roleCatalogIds.length) return;
+    const uniqueIds = [...new Set(roleCatalogIds)];
+    const activeRoles = await this.prisma.roleCatalog.findMany({
+      where: { id: { in: uniqueIds }, isActive: true },
+      select: { id: true },
+    });
+    if (activeRoles.length !== uniqueIds.length) {
+      throw new BadRequestException(
+        'One or more preferred roles are invalid or inactive',
+      );
+    }
+  }
+
+  private async assertValidProfessionType(
+    professionTypeId: string,
+  ): Promise<void> {
+    const professionType = await this.prisma.professionType.findFirst({
+      where: { id: professionTypeId, isActive: true },
+      select: { id: true },
+    });
+    if (!professionType) {
+      throw new BadRequestException('Invalid profession type');
+    }
+  }
+
+  private async assertValidReligionId(
+    religionId?: string | null,
+  ): Promise<void> {
+    if (!religionId?.trim()) return;
+    const religion = await this.prisma.religion.findFirst({
+      where: { id: religionId.trim(), isActive: true },
+      select: { id: true },
+    });
+    if (!religion) {
+      throw new BadRequestException('Invalid religion selected');
+    }
+  }
+
+  private assertEligibilityNumberRequired(
+    eligibility?: boolean | null,
+    eligibilityNumber?: string | null,
+  ): void {
+    if (eligibility === true && !eligibilityNumber?.trim()) {
+      throw new BadRequestException(
+        'Eligibility number is required when eligibility is enabled',
+      );
+    }
+  }
+
+  private async resolveCrmStatusIds(
+    statusNames: readonly string[],
+  ): Promise<number[]> {
+    if (!statusNames.length) return [];
+    const rows = await this.prisma.candidateStatus.findMany({
+      where: {
+        OR: statusNames.map((statusName) => ({
+          statusName: { equals: statusName, mode: 'insensitive' },
+        })),
+      },
+      select: { id: true },
+    });
+    return rows.map((row) => row.id);
+  }
+
+  private buildPositiveCrmStatusFilter(
+    positiveStatusIds: number[],
+  ): Prisma.CandidateWhereInput {
+    if (positiveStatusIds.length > 0) {
+      return {
+        OR: [
+          { currentStatusId: { in: positiveStatusIds } },
+          {
+            currentStatus: {
+              OR: POSITIVE_CRM_STATUS_NAMES.map((statusName) => ({
+                statusName: { equals: statusName, mode: 'insensitive' },
+              })),
+            },
+          },
+        ],
+      };
+    }
+
+    return {
+      currentStatus: {
+        OR: POSITIVE_CRM_STATUS_NAMES.map((statusName) => ({
+          statusName: { equals: statusName, mode: 'insensitive' },
+        })),
+      },
+    };
+  }
+
+  private buildRecruiterOverviewScope(
+    recruiterId: string,
+  ): Prisma.CandidateWhereInput {
+    return {
+      OR: [
+        {
+          recruiterAssignments: {
+            some: { recruiterId, isActive: true },
+          },
+        },
+        {
+          projects: {
+            some: { recruiterId },
+          },
+        },
+      ],
+    };
+  }
+
+  private mergeOverviewWhere(
+    base: Prisma.CandidateWhereInput,
+    extra?: Prisma.CandidateWhereInput,
+  ): Prisma.CandidateWhereInput {
+    if (!extra || !Object.keys(extra).length) {
+      return base;
+    }
+    const baseAnd = Array.isArray(base.AND)
+      ? base.AND
+      : base.AND
+        ? [base.AND]
+        : [];
+    return {
+      ...base,
+      AND: [...baseAnd, extra],
+    };
+  }
+
+  /** Clone overview scope before tile filters (preserves Date fields). */
+  private cloneOverviewScopeWhere(
+    source: Prisma.CandidateWhereInput,
+  ): Prisma.CandidateWhereInput {
+    const cloned: Prisma.CandidateWhereInput = { ...source };
+
+    if (source.AND) {
+      const clauses = Array.isArray(source.AND) ? source.AND : [source.AND];
+      cloned.AND = clauses.map((clause) => ({ ...clause }));
+    }
+
+    if (source.OR) {
+      const clauses = Array.isArray(source.OR) ? source.OR : [source.OR];
+      cloned.OR = clauses.map((clause) => ({ ...clause }));
+    }
+
+    if (source.createdAt) {
+      const createdAt = source.createdAt as Prisma.DateTimeFilter;
+      cloned.createdAt = {
+        ...(createdAt.gte ? { gte: createdAt.gte } : {}),
+        ...(createdAt.lte ? { lte: createdAt.lte } : {}),
+      };
+    }
+
+    if (source.dateOfBirth) {
+      const dateOfBirth = source.dateOfBirth as Prisma.DateTimeFilter;
+      cloned.dateOfBirth = {
+        ...(dateOfBirth.gte ? { gte: dateOfBirth.gte } : {}),
+        ...(dateOfBirth.lte ? { lte: dateOfBirth.lte } : {}),
+      };
+    }
+
+    return cloned;
+  }
 
   constructor(
     private readonly prisma: PrismaService,
@@ -72,62 +444,13 @@ export class CandidatesService {
     private readonly pipelineService: PipelineService,
     private readonly eligibilityService: UnifiedEligibilityService,
     private readonly recruiterAssignmentService: RecruiterAssignmentService,
+    private readonly candidateCodeService: CandidateCodeService,
+    private readonly candidateListFilterService: CandidateListFilterService,
     private readonly rnrRemindersService: RnrRemindersService,
+    private readonly callbackRemindersService: CallbackRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
   ) { }
-
-  /**
-   * Calculate total experience in years from work experiences
-   * Considers overlapping periods and current jobs
-   */
-  private calculateTotalExperience(workExperiences?: any[]): number {
-    if (!workExperiences || workExperiences.length === 0) {
-      return 0;
-    }
-
-    // Create date ranges for each experience
-    const dateRanges = workExperiences.map((exp) => {
-      const startDate = new Date(exp.startDate);
-      const endDate = exp.endDate ? new Date(exp.endDate) : new Date();
-      return { startDate, endDate };
-    });
-
-    // Sort by start date
-    dateRanges.sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
-
-    // Merge overlapping date ranges
-    const mergedRanges: Array<{ startDate: Date; endDate: Date }> = [];
-    let currentRange = dateRanges[0];
-
-    for (let i = 1; i < dateRanges.length; i++) {
-      const nextRange = dateRanges[i];
-
-      // Check if ranges overlap or are adjacent
-      if (nextRange.startDate <= currentRange.endDate) {
-        // Merge: extend current range to max end date
-        currentRange.endDate = new Date(
-          Math.max(currentRange.endDate.getTime(), nextRange.endDate.getTime())
-        );
-      } else {
-        // No overlap: save current range and start new one
-        mergedRanges.push(currentRange);
-        currentRange = nextRange;
-      }
-    }
-    mergedRanges.push(currentRange);
-
-    // Calculate total years from merged ranges
-    const totalMonths = mergedRanges.reduce((total, range) => {
-      const months =
-        (range.endDate.getFullYear() - range.startDate.getFullYear()) * 12 +
-        (range.endDate.getMonth() - range.startDate.getMonth());
-      return total + months;
-    }, 0);
-
-    // Convert to years (rounded to 1 decimal place)
-    return Math.round((totalMonths / 12) * 10) / 10;
-  }
 
   /**
    * Shared nomination logic for nominate API (and similar flows).
@@ -227,24 +550,117 @@ export class CandidatesService {
   }
 
 
+  async lookupByPassport(passportNumber: string): Promise<{
+    found: boolean;
+    candidate?: {
+      id: string;
+      candidateCode: string | null;
+      firstName: string;
+      lastName: string;
+      email: string | null;
+      countryCode: string | null;
+      mobileNumber: string | null;
+    };
+  }> {
+    const existing = await findExistingCandidateByPassport(
+      this.prisma,
+      passportNumber,
+    );
+    if (!existing) {
+      return { found: false };
+    }
+    return {
+      found: true,
+      candidate: {
+        id: existing.id,
+        candidateCode: existing.candidateCode,
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        email: existing.email,
+        countryCode: existing.countryCode,
+        mobileNumber: existing.mobileNumber,
+      },
+    };
+  }
+
   async create(
     createCandidateDto: CreateCandidateDto,
     userId: string,
   ): Promise<CandidateWithRelations> {
-    // Check if countryCode and mobileNumber combination already exists (unique constraint)
-    const existingCandidate = await this.prisma.candidate.findUnique({
-      where: {
-        countryCode_mobileNumber: {
-          countryCode: createCandidateDto.countryCode,
-          mobileNumber: createCandidateDto.mobileNumber,
+    const creatingUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        name: true,
+        email: true,
+        userRoles: {
+          include: {
+            role: { select: { name: true } },
+          },
         },
       },
     });
-    if (existingCandidate) {
-      throw new ConflictException(
-        `Candidate with contact ${createCandidateDto.countryCode}${createCandidateDto.mobileNumber} already exists`,
+
+    const isAgentCoordinator = Boolean(
+      creatingUser?.userRoles.some(
+        (ur) =>
+          ur.role?.name?.toLowerCase() ===
+          ROLE_NAMES.AGENT_COORDINATOR.toLowerCase(),
+      ),
+    );
+
+    const countryCode = createCandidateDto.countryCode?.trim() || undefined;
+    const mobileNumber = createCandidateDto.mobileNumber?.trim() || undefined;
+    const hasPhone = Boolean(countryCode && mobileNumber);
+    const hasPartialPhone = Boolean(countryCode || mobileNumber) && !hasPhone;
+
+    if (isAgentCoordinator) {
+      const normalizedPassport = normalizePassportNumber(
+        createCandidateDto.passportNumber,
+      );
+      if (!normalizedPassport || normalizedPassport.length < 3) {
+        throw new BadRequestException(
+          'Passport number is required for agent coordinator candidate creation',
+        );
+      }
+      if (hasPartialPhone) {
+        throw new BadRequestException(
+          'Provide both country code and mobile number, or leave contact empty',
+        );
+      }
+      const passportConflict = await findExistingCandidateByPassport(
+        this.prisma,
+        normalizedPassport,
+      );
+      if (passportConflict) {
+        throw new ConflictException(
+          `Candidate with passport number ${normalizedPassport} already exists`,
+        );
+      }
+    } else if (!hasPhone) {
+      throw new BadRequestException(
+        'Country code and mobile number are required',
       );
     }
+
+    if (hasPhone) {
+      const existingByPhone = await this.prisma.candidate.findUnique({
+        where: {
+          countryCode_mobileNumber: {
+            countryCode: countryCode!,
+            mobileNumber: mobileNumber!,
+          },
+        },
+      });
+      if (existingByPhone) {
+        throw new ConflictException(
+          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
+        );
+      }
+    }
+
+    const resolvedPassportNumber = isAgentCoordinator
+      ? normalizePassportNumber(createCandidateDto.passportNumber)!
+      : normalizePassportNumber(createCandidateDto.passportNumber) ?? undefined;
 
     // Validate team exists if provided
     if (createCandidateDto.teamId) {
@@ -298,9 +714,32 @@ export class CandidatesService {
       }
     }
 
+    if (createCandidateDto.qualifications?.length) {
+      for (const qual of createCandidateDto.qualifications) {
+        await assertOptionalCountryCode(this.prisma, qual.countryCode);
+      }
+    }
+
+    if (createCandidateDto.workExperiences?.length) {
+      for (const exp of createCandidateDto.workExperiences) {
+        await assertOptionalCountryCode(this.prisma, exp.countryCode);
+      }
+    }
+
+    if (createCandidateDto.preferredRoles?.length) {
+      await this.assertValidPreferredRoles(createCandidateDto.preferredRoles);
+    }
+
+    await this.assertValidProfessionType(createCandidateDto.professionTypeId);
+    await this.assertValidReligionId(createCandidateDto.religionId);
+    this.assertEligibilityNumberRequired(
+      createCandidateDto.eligibility,
+      createCandidateDto.eligibilityNumber,
+    );
+
     // Calculate total experience from work experiences if provided
     const calculatedExperience = createCandidateDto.workExperiences && createCandidateDto.workExperiences.length > 0
-      ? this.calculateTotalExperience(createCandidateDto.workExperiences)
+      ? calculateTotalExperienceYears(createCandidateDto.workExperiences)
       : 0;
 
     // Use provided totalExperience or calculated value
@@ -308,28 +747,9 @@ export class CandidatesService {
 
     this.logger.log(`Calculated experience: ${calculatedExperience}, Final totalExperience: ${totalExperience}`);
 
-    const creatingUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        name: true,
-        email: true,
-        userRoles: {
-          include: {
-            role: { select: { name: true } },
-          },
-        },
-      },
-    });
-
-    const isClientCoordinator = creatingUser?.userRoles.some(
-      (ur) =>
-        ur.role?.name?.toLowerCase() ===
-        ROLE_NAMES.CLIENT_COORDINATOR.toLowerCase(),
-    );
-
     let resolvedSource =
       normalizeCandidateSource(createCandidateDto.source) ?? 'manual';
-    if (isClientCoordinator) {
+    if (isAgentCoordinator) {
       resolvedSource = 'agent';
     }
 
@@ -365,7 +785,25 @@ export class CandidatesService {
     });
 
     // Get the default status info for history tracking
-    const defaultStatusId = createCandidateDto.currentStatusId ?? 1;
+    let defaultStatusId = createCandidateDto.currentStatusId ?? 1;
+    if (isAgentCoordinator && createCandidateDto.currentStatusId == null) {
+      const interestedStatus = await this.prisma.candidateStatus.findFirst({
+        where: {
+          statusName: {
+            equals: CANDIDATE_STATUS.INTERESTED,
+            mode: 'insensitive',
+          },
+        },
+        select: { id: true, statusName: true },
+      });
+      if (interestedStatus) {
+        defaultStatusId = interestedStatus.id;
+      } else {
+        this.logger.warn(
+          'Interested candidate status not found; using default status id 1',
+        );
+      }
+    }
     const defaultStatus = await this.prisma.candidateStatus.findUnique({
       where: { id: defaultStatusId },
       select: { statusName: true },
@@ -375,14 +813,13 @@ export class CandidatesService {
 
     const candidateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
-        },
-      },
-      qualifications: {
-        include: {
-          qualification: true,
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
+      professionType: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
         },
       },
       projects: {
@@ -410,20 +847,29 @@ export class CandidatesService {
           },
         },
       },
+      religion: {
+        select: { id: true, name: true },
+      },
     } as const;
 
     const candidate = await this.prisma.$transaction(async (tx) => {
+      const candidateCode = await this.candidateCodeService.reserveNextCode(tx);
+
       const created = await tx.candidate.create({
         data: {
+          candidateCode,
           firstName: createCandidateDto.firstName,
           lastName: createCandidateDto.lastName,
-          countryCode: createCandidateDto.countryCode,
-          mobileNumber: createCandidateDto.mobileNumber,
+          countryCode: hasPhone ? countryCode! : null,
+          mobileNumber: hasPhone ? mobileNumber! : null,
+          passportNumber: resolvedPassportNumber ?? null,
           email: createCandidateDto.email,
           profileImage: createCandidateDto.profileImage,
           addressCountryCode: createCandidateDto.addressCountryCode,
           addressStateId: createCandidateDto.addressStateId,
-          address: createCandidateDto.address,
+          address: createCandidateDto.address?.trim() || null,
+          addressPincode: createCandidateDto.addressPincode?.trim() || null,
+          alternatePhone: createCandidateDto.alternatePhone?.trim() || null,
           source: resolvedSource,
           agentId: resolvedSource === 'agent' ? resolvedAgentId : null,
           referralCompanyName: createCandidateDto.referralCompanyName,
@@ -444,14 +890,20 @@ export class CandidatesService {
           expectedMaxSalary: createCandidateDto.expectedMaxSalary,
           sectorType: createCandidateDto.sectorType,
           visaType: createCandidateDto.visaType,
+          professionTypeId: createCandidateDto.professionTypeId,
           height: createCandidateDto.height,
           weight: createCandidateDto.weight,
           skinTone: createCandidateDto.skinTone,
           languageProficiency: createCandidateDto.languageProficiency,
           smartness: createCandidateDto.smartness,
+          religionId: createCandidateDto.religionId?.trim() || null,
           licensingExam: createCandidateDto.licensingExam,
           dataFlow: createCandidateDto.dataFlow ?? null,
           eligibility: createCandidateDto.eligibility ?? null,
+          eligibilityNumber:
+            createCandidateDto.eligibility === true
+              ? createCandidateDto.eligibilityNumber?.trim() || null
+              : null,
           highestEducation: createCandidateDto.highestEducation,
           university: createCandidateDto.university,
           graduationYear: createCandidateDto.graduationYear,
@@ -481,6 +933,13 @@ export class CandidatesService {
                 ),
               }
             : undefined,
+          rolePreferences: createCandidateDto.preferredRoles
+            ? {
+                create: createCandidateDto.preferredRoles.map((roleCatalogId) => ({
+                  roleCatalog: { connect: { id: roleCatalogId } },
+                })),
+              }
+            : undefined,
           qualifications: createCandidateDto.qualifications
             ? {
                 create: createCandidateDto.qualifications.map((qual) => ({
@@ -490,6 +949,8 @@ export class CandidatesService {
                   gpa: qual.gpa,
                   isCompleted: qual.isCompleted ?? true,
                   notes: qual.notes,
+                  countryCode:
+                    normalizeOptionalCountryCode(qual.countryCode) ?? null,
                 })),
               }
             : undefined,
@@ -521,6 +982,8 @@ export class CandidatesService {
                     description: exp.description,
                     salary: exp.salary,
                     location: exp.location,
+                    countryCode:
+                      normalizeOptionalCountryCode(exp.countryCode) ?? null,
                     skills: parsedSkills,
                     achievements: exp.achievements,
                   };
@@ -620,21 +1083,8 @@ export class CandidatesService {
       search,
       currentStatus,
       status,
-      source,
-      gender,
       teamId,
       assignedTo,
-      minExperience,
-      maxExperience,
-      minSalary,
-      maxSalary,
-      dateOfBirthFrom,
-      dateOfBirthTo,
-      // server-side createdAt range filter (ISO strings)
-      dateFrom,
-      dateTo,
-      roleCatalogId,
-      agentId,
       page = 1,
       limit = 10,
       sortBy = 'createdAt',
@@ -642,150 +1092,26 @@ export class CandidatesService {
       roles = [],
     } = query;
 
-    // Handle status alias - status is an alias for currentStatus
-    const effectiveStatus = currentStatus || status;
-
     // Build where clause
-    const where: any = {};
+    const where: Prisma.CandidateWhereInput = {};
 
-    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    // 1. Leadership / Agent Coordinator: may see candidates with source === 'agent'
     if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
       };
     }
 
-    if (search && typeof search === 'string' && search.trim().length > 0) {
-      const s = search.trim();
-      // Search across primary candidate fields and related qualifications
-      where.OR = [
-        { firstName: { contains: s, mode: 'insensitive' } },
-        { lastName: { contains: s, mode: 'insensitive' } },
-        { mobileNumber: { contains: s, mode: 'insensitive' } },
-        { email: { contains: s, mode: 'insensitive' } },
-        // Match candidate qualifications (qualification name / shortName / field / university)
-        {
-          qualifications: {
-            some: {
-              OR: [
-                { qualification: { name: { contains: s, mode: 'insensitive' } } },
-                { qualification: { shortName: { contains: s, mode: 'insensitive' } } },
-                { qualification: { field: { contains: s, mode: 'insensitive' } } },
-                { university: { contains: s, mode: 'insensitive' } },
-              ],
-            },
-          },
-        },
-      ];
-    }
-
-    if (effectiveStatus) {
-      // Look up status by name to get the ID
-      const statusRecord = await this.prisma.candidateStatus.findFirst({
-        where: {
-          statusName: {
-            equals: effectiveStatus,
-            mode: 'insensitive',
-          },
-        },
-      });
-      if (statusRecord) {
-        where.currentStatusId = statusRecord.id;
-      }
-    }
-
-    if (source) {
-      where.source = source;
-    }
-
-    if (agentId) {
-      where.agentId = agentId;
-    }
-
-    if (gender) {
-      where.gender = gender;
-    }
-
-    if (teamId) {
-      where.teamId = teamId;
-    }
-
-    // Note: assignedTo filtering is now handled via CandidateProjects
-    // This will be implemented in the query logic below
-
-    if (minExperience !== undefined || maxExperience !== undefined) {
-      where.experience = {};
-      if (minExperience !== undefined) {
-        where.experience.gte = minExperience;
-      }
-      if (maxExperience !== undefined) {
-        where.experience.lte = maxExperience;
-      }
-    }
-
-    if (minSalary !== undefined || maxSalary !== undefined) {
-      where.expectedMinSalary = {};
-      if (minSalary !== undefined) {
-        where.expectedMinSalary.gte = minSalary;
-      }
-      if (maxSalary !== undefined) {
-        where.expectedMinSalary.lte = maxSalary;
-      }
-    }
-
-    if (dateOfBirthFrom || dateOfBirthTo) {
-      where.dateOfBirth = {};
-      if (dateOfBirthFrom) {
-        where.dateOfBirth.gte = new Date(dateOfBirthFrom);
-      }
-      if (dateOfBirthTo) {
-        where.dateOfBirth.lte = new Date(dateOfBirthTo);
-      }
-    }
-
-    // createdAt range filter (date added) - server-side
-    // Treat incoming dateFrom/dateTo as calendar dates — normalize to UTC day boundaries
-    if (dateFrom || dateTo) {
-      const rawFrom = dateFrom;
-      const rawTo = dateTo;
-
-      let fromDt: Date | undefined;
-      let toDt: Date | undefined;
-
-      if (rawFrom) {
-        const parsed = new Date(rawFrom);
-        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-      }
-
-      if (rawTo) {
-        const parsed = new Date(rawTo);
-        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
-      }
-
-      if (fromDt && toDt && fromDt.getTime() > toDt.getTime()) {
-        const tmp = fromDt;
-        fromDt = toDt;
-        toDt = tmp;
-      }
-
-      where.createdAt = {} as any;
-      if (fromDt) {
-        where.createdAt.gte = fromDt;
-      }
-      if (toDt) {
-        where.createdAt.lte = toDt;
-      }
-
-      this.logger.log(`Applying createdAt filter in findAll(): rawFrom=${rawFrom || 'n/a'} rawTo=${rawTo || 'n/a'} normalizedFrom=${fromDt?.toISOString() || 'n/a'} normalizedTo=${toDt?.toISOString() || 'n/a'}`);
-    }
-
-    if (roleCatalogId && roleCatalogId !== 'all') {
-      where.workExperiences = {
-        some: {
-          roleCatalogId: roleCatalogId,
-        },
-      };
-    }
+    this.candidateListFilterService.applySearchFilter(where, search, {
+      includeQualifications: true,
+    });
+    await this.candidateListFilterService.applyCrmStatusNameFilter(
+      where,
+      status,
+      currentStatus,
+    );
+    this.candidateListFilterService.applyCreatedAtFilter(where, query);
+    this.candidateListFilterService.applyAdvancedListFilters(where, query);
 
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -811,47 +1137,36 @@ export class CandidatesService {
       };
     }
 
-    // apply createdAt filter to dashboard counts when provided (use same normalization)
-    if (dateFrom || dateTo) {
-      const rawFrom = dateFrom;
-      const rawTo = dateTo;
-      let fromDt: Date | undefined;
-      let toDt: Date | undefined;
-
-      if (rawFrom) {
-        const parsed = new Date(rawFrom);
-        fromDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 0, 0, 0, 0));
-      }
-      if (rawTo) {
-        const parsed = new Date(rawTo);
-        toDt = new Date(Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate(), 23, 59, 59, 999));
-      }
-
-      baseWhere.createdAt = {} as any;
-      if (fromDt) baseWhere.createdAt.gte = fromDt;
-      if (toDt) baseWhere.createdAt.lte = toDt;
-    }
+    this.candidateListFilterService.applyCreatedAtFilter(baseWhere, query);
 
     // Get all candidate status records in one query
     const statuses = await this.prisma.candidateStatus.findMany({
       where: {
         statusName: {
           in: [
-            'untouched', 'rnr', 'on_hold', 'interested', 'not_interested',
-            'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
+            'untouched', 'rnr', 'call back', 'on_hold', 'interested', 'not_interested',
+            'not_eligible', 'other_enquiry', 'qualified', 'future', CANDIDATE_STATUS.DEPLOYED
           ],
           mode: 'insensitive'
         }
       }
     });
 
-    const getStatusId = (name: string) => statuses.find(s => s.statusName.toLowerCase() === name.toLowerCase())?.id;
+    const getStatusId = (name: string) => {
+      const normalizedTarget = name.replace(/_/g, ' ').toLowerCase();
+      return statuses.find(
+        (s) =>
+          s.statusName.replace(/_/g, ' ').toLowerCase() === normalizedTarget,
+      )?.id;
+    };
     
     const untouchedId = getStatusId('untouched');
     const rnrId = getStatusId('rnr');
+    const callBackId = getStatusId('call back');
     const onHoldId = getStatusId('on_hold');
     const interestedId = getStatusId('interested');
     const notInterestedId = getStatusId('not_interested');
+    const notEligibleId = getStatusId('not_eligible');
     const otherEnquiryId = getStatusId('other_enquiry');
     const qualifiedId = getStatusId('qualified');
     const futureId = getStatusId('future');
@@ -898,10 +1213,12 @@ export class CandidatesService {
       handledByCRE: creCount,
       untouched: getCountForStatus(untouchedId),
       rnr: getCountForStatus(rnrId),
+      callBack: getCountForStatus(callBackId),
       rnrHandledByCRE: rnrCreCount,
       onHold: getCountForStatus(onHoldId),
       interested: getCountForStatus(interestedId),
       notInterested: getCountForStatus(notInterestedId),
+      notEligible: getCountForStatus(notEligibleId),
       otherEnquiry: getCountForStatus(otherEnquiryId),
       qualified: getCountForStatus(qualifiedId),
       future: getCountForStatus(futureId),
@@ -928,12 +1245,21 @@ export class CandidatesService {
           }
         },
         recruiterAssignments: {
-          where: {
-            isActive: true,
-          },
+          orderBy: { createdAt: 'asc' },
           select: {
             id: true,
+            isActive: true,
+            recruiterId: true,
+            createdAt: true,
             assignmentType: true,
+            creStatusNote: true,
+            operationsFollowUpStage: true,
+            operationsCallAttempts: true,
+            operationsLastCallAt: true,
+            operationsStageEnteredAt: true,
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
             recruiter: {
               select: {
                 id: true,
@@ -941,20 +1267,32 @@ export class CandidatesService {
                 email: true,
               },
             },
-          }
-        },
-        projects: {
-          take: 5,
-          select: {
-            id: true,
-            projectId: true,
-            project: {
+            createdByUser: {
               select: {
                 id: true,
-                title: true,
-              }
-            }
-          }
+                name: true,
+                email: true,
+              },
+            },
+            assignedByUser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
         },
         workExperiences: {
           take: 1,
@@ -982,7 +1320,15 @@ export class CandidatesService {
 
     const candidatesWithCreator = candidates.map((candidate: any) => {
       // Find the specific active assignment
-      const activeAssignment = candidate.recruiterAssignments?.[0];
+      const activeAssignment = candidate.recruiterAssignments?.find(
+        (a: any) => a.isActive,
+      );
+
+      const firstAssignment = candidate.recruiterAssignments?.[0];
+      const creReassignedAssignment = candidate.recruiterAssignments.find(
+        (a: any) =>
+          a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
       
       // Find the specific CRE assignment if it exists
       const creAssignment = candidate.recruiterAssignments.find(
@@ -992,12 +1338,10 @@ export class CandidatesService {
       // Check if candidate is handled by a CRE
       const isHandledByCRE = !!creAssignment;
 
-      // Check if any active assignment is marked as CRE_REASSIGNED
-      const isCREReassigned = candidate.recruiterAssignments.some(
-        (a: any) => a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED
-      );
+      const isCREReassigned = !!creReassignedAssignment;
+      const statusHistories = candidate.statusHistories ?? [];
 
-      const { documents, ...rest } = candidate;
+      const { documents, statusHistories: _omitHistories, ...rest } = candidate;
       const merged = withProfileCompletion({
         ...rest,
         documents: documents ?? [],
@@ -1006,12 +1350,24 @@ export class CandidatesService {
         ...merged,
         isHandledByCRE,
         isCREReassigned,
+        creStatusNote: isCREReassigned
+          ? resolveCreHandoffNote(creReassignedAssignment, statusHistories)
+          : null,
+        creStatus: isCREReassigned
+          ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
+          : null,
         creHandler: creAssignment ? {
           id: creAssignment.recruiter.id,
           name: creAssignment.recruiter.name,
           email: creAssignment.recruiter.email,
         } : null,
         recruiter: activeAssignment?.recruiter || null,
+        createdBy:
+          firstAssignment?.createdByUser ||
+          firstAssignment?.assignedByUser ||
+          activeAssignment?.createdByUser ||
+          activeAssignment?.assignedByUser ||
+          null,
       };
     });
 
@@ -1029,7 +1385,7 @@ export class CandidatesService {
 
   /**
    * Get consolidated candidates for project detail view
-   * Admin/Manager-style roles see all; Recruiter and Client Coordinator see active recruiter assignments only.
+   * Admin/Manager-style roles see all; Recruiter and Agent Coordinator see active recruiter assignments only.
    * Includes nomination status for a specific project
    */
   async getConsolidatedCandidates(
@@ -1041,7 +1397,7 @@ export class CandidatesService {
     const skip = (page - 1) * limit;
 
     const isRecruiter = roles.includes('Recruiter');
-    const isClientCoordinator = roles.includes('Client Coordinator');
+    const isAgentCoordinator = roles.includes(ROLE_NAMES.AGENT_COORDINATOR);
     const isAdminOrManager = roles.some((role) =>
       [
         'CEO',
@@ -1057,15 +1413,15 @@ export class CandidatesService {
     // Build where clause
     const where: any = {};
 
-    // 1. Leadership / Client Coordinator: may see candidates with source === 'agent'
+    // 1. Leadership / Agent Coordinator: may see candidates with source === 'agent'
     if (!canSeeAgentSourcedCandidates(roles)) {
       where.NOT = {
         source: 'agent',
       };
     }
 
-    // 2. Role-based filtering (recruiters and client coordinators see assigned candidates only)
-    if ((isRecruiter || isClientCoordinator) && !isAdminOrManager) {
+    // 2. Role-based filtering (recruiters and agent coordinators see assigned candidates only)
+    if ((isRecruiter || isAgentCoordinator) && !isAdminOrManager) {
       where.recruiterAssignments = {
         some: {
           recruiterId: userId,
@@ -1150,16 +1506,8 @@ export class CandidatesService {
               name: true,
             },
           },
-          qualifications: {
-            include: {
-              qualification: true,
-            },
-          },
-          workExperiences: {
-            include: {
-              roleCatalog: true,
-            },
-          },
+          qualifications: candidateQualificationsInclude,
+          workExperiences: candidateWorkExperiencesInclude,
           projects: {
             where: {
               projectId: projectId,
@@ -1189,6 +1537,22 @@ export class CandidatesService {
           },
           preferredCountries: true,
           facilityPreferences: true,
+          professionType: {
+            select: {
+              id: true,
+              name: true,
+              label: true,
+            },
+          },
+          rolePreferences: {
+            include: {
+              roleCatalog: {
+                include: {
+                  roleDepartment: true,
+                },
+              },
+            },
+          },
         },
         orderBy: {
           createdAt: 'desc',
@@ -1220,6 +1584,10 @@ export class CandidatesService {
 
       return {
         ...candidateData,
+        careerGapAnalysis: calculateCareerGaps(
+          candidate.workExperiences ?? [],
+          candidate.qualifications ?? [],
+        ),
         isNominated,
         isHandledByCRE,
         isCREReassigned,
@@ -1266,19 +1634,88 @@ export class CandidatesService {
     };
   }
 
+  /** Merge CRE list base scope with shared advanced candidate filters. */
+  private buildCreListWhere(
+    baseWhere: Prisma.CandidateWhereInput,
+    query: QueryCandidatesDto,
+  ): Prisma.CandidateWhereInput {
+    const advancedWhere: Prisma.CandidateWhereInput = {};
+    this.candidateListFilterService.applySearchFilter(advancedWhere, query.search, {
+      includeQualifications: true,
+    });
+    this.candidateListFilterService.applyCreatedAtFilter(advancedWhere, query);
+    this.candidateListFilterService.applyAdvancedListFilters(advancedWhere, query);
+
+    if (Object.keys(advancedWhere).length === 0) {
+      return baseWhere;
+    }
+
+    return { AND: [baseWhere, advancedWhere] };
+  }
+
+  private getExcludedCreAssignmentTypes(): string[] {
+    return [
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+    ];
+  }
+
+  private async getCreAssignedUntouchedBucketCandidateIds(
+    creUserId: string,
+  ): Promise<string[]> {
+    const waitMs = OPERATIONS_WEEK_ONE_WAIT_MS;
+    const excludedTypes = this.getExcludedCreAssignmentTypes();
+    const rows = await this.prisma.$queryRaw<{ candidateId: string }[]>`
+      SELECT DISTINCT cra."candidateId" AS "candidateId"
+      FROM "candidate_recruiter_assignments" cra
+      WHERE cra."recruiterId" = ${creUserId}
+        AND cra."isActive" = true
+        AND cra."assignmentType" NOT IN (${Prisma.join(excludedTypes)})
+        AND (
+          cra."operationsFollowUpStage" = ${OPERATIONS_FOLLOW_UP_STAGE.INITIAL}
+          OR (
+            cra."operationsFollowUpStage" = ${OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE}
+            AND COALESCE(cra."operationsCallAttempts", 0) = 0
+            AND cra."operationsLastCallAt" IS NOT NULL
+            AND cra."operationsStageEnteredAt" IS NOT NULL
+            AND EXTRACT(EPOCH FROM (cra."operationsStageEnteredAt" - cra."operationsLastCallAt")) * 1000 < ${waitMs}
+          )
+        )
+    `;
+    return rows.map((row) => row.candidateId);
+  }
+
+  private async getCreWeekOneBucketCandidateIds(
+    creUserId: string,
+  ): Promise<string[]> {
+    const waitMs = OPERATIONS_WEEK_ONE_WAIT_MS;
+    const excludedTypes = this.getExcludedCreAssignmentTypes();
+    const rows = await this.prisma.$queryRaw<{ candidateId: string }[]>`
+      SELECT DISTINCT cra."candidateId" AS "candidateId"
+      FROM "candidate_recruiter_assignments" cra
+      WHERE cra."recruiterId" = ${creUserId}
+        AND cra."isActive" = true
+        AND cra."assignmentType" NOT IN (${Prisma.join(excludedTypes)})
+        AND cra."operationsFollowUpStage" = ${OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE}
+        AND (
+          COALESCE(cra."operationsCallAttempts", 0) > 0
+          OR (
+            cra."operationsLastCallAt" IS NOT NULL
+            AND cra."operationsStageEnteredAt" IS NOT NULL
+            AND EXTRACT(EPOCH FROM (cra."operationsStageEnteredAt" - cra."operationsLastCallAt")) * 1000 >= ${waitMs}
+          )
+        )
+    `;
+    return rows.map((row) => row.candidateId);
+  }
+
   /**
    * Get candidates assigned to a specific CRE user
    * Used for CRE dashboard to show only their assigned candidates
    */
   async getCREAssignedCandidates(
     creUserId: string,
-    query: {
-      page?: number;
-      limit?: number;
-      search?: string;
-      currentStatus?: string;
-      gender?: string;
-    },
+    query: QueryCandidatesDto & { currentStatus?: string },
   ): Promise<{
     candidates: any[];
     pagination: {
@@ -1288,11 +1725,12 @@ export class CandidatesService {
       totalPages: number;
     };
   }> {
-    const { page = 1, limit = 10, search, currentStatus, gender } = query;
+    const { page = 1, limit = 10, currentStatus, status } = query;
+    const effectiveStatus = currentStatus || status;
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       recruiterAssignments: {
         some: {
           recruiterId: creUserId,
@@ -1301,49 +1739,100 @@ export class CandidatesService {
       },
     };
 
-    // Add search filter
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    let where: Prisma.CandidateWhereInput = baseWhere;
 
     // Add status filter (supports numeric id or statusName string)
-    const normalizedStatusInput = currentStatus?.toLowerCase().trim();
+    const normalizedStatusInput = effectiveStatus?.toLowerCase().trim();
 
     const statusNameMap: Record<string, string> = {
       interested: 'interested',
       rnr: 'rnr',
+      call_back: 'call back',
+      'call back': 'call back',
       'on_hold': 'on hold',
       'on hold': 'on hold',
       untouched: 'untouched',
       junk: 'junk',
+      week_one: 'week_one',
+      week_two: 'week_two',
     };
+
+    const followUpStageFilters: Record<string, string> = {
+      junk: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+      week_one: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+      week_two: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+    };
+
+    const buildActiveCreAssignmentWhere = (
+      followUpStage?: string,
+    ): Prisma.CandidateRecruiterAssignmentWhereInput => ({
+      recruiterId: creUserId,
+      isActive: true,
+      assignmentType: {
+        notIn: [
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+        ],
+      },
+      ...(followUpStage ? { operationsFollowUpStage: followUpStage } : {}),
+    });
 
     if (normalizedStatusInput) {
       if (normalizedStatusInput === 'interested') {
         // Converted Response mode: now identified by assignmentType instead of status
-        where.recruiterAssignments.some.assignmentType = CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED;
-      } else if (normalizedStatusInput === 'junk') {
-        // Junk Candidates logic: Assigned > 5 days ago, active, not converted/reassigned
-        const threshold = new Date();
-        threshold.setDate(threshold.getDate() - 5);
-
         where.recruiterAssignments = {
           some: {
             recruiterId: creUserId,
             isActive: true,
-            assignedAt: { lt: threshold },
-            assignmentType: {
-              notIn: [
-                CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
-                CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+            assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+          },
+        };
+      } else if (normalizedStatusInput === 'junk') {
+        where = {
+          AND: [
+            {
+              recruiterAssignments: {
+                some: {
+                  recruiterId: creUserId,
+                  isActive: true,
+                  assignmentType: {
+                    notIn: [
+                      CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
+                      CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+                    ],
+                  },
+                },
+              },
+            },
+            {
+              OR: [
+                { isJunk: true },
+                {
+                  recruiterAssignments: {
+                    some: buildActiveCreAssignmentWhere(
+                      OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+                    ),
+                  },
+                },
               ],
             },
-          },
+          ],
+        };
+      } else if (normalizedStatusInput === 'week_one') {
+        const weekOneCandidateIds =
+          await this.getCreWeekOneBucketCandidateIds(creUserId);
+        where.id = { in: weekOneCandidateIds };
+      } else if (normalizedStatusInput === 'week_two') {
+        where.recruiterAssignments = {
+          some: buildActiveCreAssignmentWhere(
+            followUpStageFilters.week_two,
+          ),
+        };
+      } else if (followUpStageFilters[normalizedStatusInput]) {
+        where.recruiterAssignments = {
+          some: buildActiveCreAssignmentWhere(
+            followUpStageFilters[normalizedStatusInput],
+          ),
         };
       } else {
         const normalizedStatus = statusNameMap[normalizedStatusInput] ?? normalizedStatusInput;
@@ -1351,33 +1840,75 @@ export class CandidatesService {
 
         if (!Number.isNaN(statusId)) {
           where.currentStatusId = statusId;
+          where.recruiterAssignments = {
+            some: buildActiveCreAssignmentWhere(
+              OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            ),
+          };
         } else {
           where.currentStatus = { statusName: { equals: normalizedStatus, mode: 'insensitive' } };
+          where.recruiterAssignments = {
+            some: buildActiveCreAssignmentWhere(
+              OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            ),
+          };
         }
       }
     } else {
-      // Default CRE assigned listing: exclude converted, reassigned, and junk (assigned > 5 days ago) candidates
-      const junkThreshold = new Date();
-      junkThreshold.setDate(junkThreshold.getDate() - 5);
-      where.recruiterAssignments = {
-        some: {
+      const assignedCandidateIds =
+        await this.getCreAssignedUntouchedBucketCandidateIds(creUserId);
+      where.id = { in: assignedCandidateIds };
+    }
+
+    if (query.operationsCallAttempts !== undefined) {
+      const callCountFilter =
+        query.operationsCallAttempts >=
+        OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+          ? { gte: OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE }
+          : query.operationsCallAttempts;
+      const callCountAssignmentWhere: Prisma.CandidateRecruiterAssignmentWhereInput =
+        {
           recruiterId: creUserId,
           isActive: true,
-          assignedAt: { gte: junkThreshold },
           assignmentType: {
             notIn: [
               CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED,
               CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
             ],
           },
-        },
-      };
+          operationsCallAttempts: callCountFilter,
+        };
+
+      if (where.id) {
+        where = {
+          AND: [
+            { id: where.id },
+            {
+              recruiterAssignments: {
+                some: callCountAssignmentWhere,
+              },
+            },
+          ],
+        };
+      } else {
+        const assignmentFilter = where.recruiterAssignments;
+        if (
+          assignmentFilter &&
+          typeof assignmentFilter === 'object' &&
+          'some' in assignmentFilter &&
+          assignmentFilter.some
+        ) {
+          where.recruiterAssignments = {
+            some: {
+              ...(assignmentFilter.some as Prisma.CandidateRecruiterAssignmentWhereInput),
+              operationsCallAttempts: callCountFilter,
+            },
+          };
+        }
+      }
     }
 
-    // Add gender filter
-    if (gender) {
-      where.gender = gender;
-    }
+    where = this.buildCreListWhere(where, query);
 
     // Get total count
     const total = await this.prisma.candidate.count({ where });
@@ -1395,16 +1926,8 @@ export class CandidatesService {
             statusName: true,
           },
         },
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         recruiterAssignments: {
           where: { isActive: true },
           orderBy: { assignedAt: 'desc' },
@@ -1462,6 +1985,7 @@ export class CandidatesService {
         },
       },
       select: {
+        isJunk: true,
         currentStatus: {
           select: {
             statusName: true,
@@ -1471,6 +1995,10 @@ export class CandidatesService {
           select: {
             assignmentType: true,
             assignedAt: true,
+            operationsFollowUpStage: true,
+            operationsCallAttempts: true,
+            operationsLastCallAt: true,
+            operationsStageEnteredAt: true,
           },
           where: {
             recruiterId: creUserId,
@@ -1480,9 +2008,6 @@ export class CandidatesService {
       },
     });
 
-    const threshold = new Date();
-    threshold.setDate(threshold.getDate() - 5);
-
     const roleCounters = {
       assigned: 0,
       converted: 0,
@@ -1491,26 +2016,47 @@ export class CandidatesService {
       onHold: 0,
       untouched: 0,
       junk: 0,
+      weekOne: 0,
+      weekTwo: 0,
       other: 0,
     };
 
     allAssigned.forEach((candidate) => {
       const assignment = candidate.recruiterAssignments[0];
       const assignmentType = assignment?.assignmentType;
-      const assignedAt = assignment?.assignedAt;
-      
-      if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED || 
+      const followUpStage =
+        assignment?.operationsFollowUpStage ??
+        OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+
+      if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED ||
           assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED) {
         if (assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_CONVERTED) {
           roleCounters.converted += 1;
         }
-        return; // Don't count converted or reassigned in "Total Assigned" status-based buckets
+        return;
       }
 
-      // Check for junk (assigned > 5 days ago)
-      if (assignedAt && assignedAt < threshold) {
+      if (
+        followUpStage === OPERATIONS_FOLLOW_UP_STAGE.JUNK ||
+        candidate.isJunk
+      ) {
         roleCounters.junk += 1;
-        return; // Don't count junk candidates in status-based buckets or total
+        return;
+      }
+
+      if (followUpStage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+        roleCounters.weekTwo += 1;
+        return;
+      }
+
+      if (isEligibleForWeekOneDashboardBucket(assignment)) {
+        roleCounters.weekOne += 1;
+        return;
+      }
+
+      if (!isAssignedUntouchedDashboardBucket(assignment)) {
+        roleCounters.other += 1;
+        return;
       }
 
       const status = (candidate.currentStatus?.statusName || '').toLowerCase();
@@ -1521,7 +2067,6 @@ export class CandidatesService {
       } else if (status === 'untouched') {
         roleCounters.untouched += 1;
       } else if (status === 'interested') {
-        // Legacy check for interested status
         roleCounters.converted += 1;
         return;
       } else {
@@ -1535,33 +2080,9 @@ export class CandidatesService {
       roleCounters.untouched +
       roleCounters.other;
 
-    // Count reassigned candidates (CRE transferred to recruiter, now untouched)
+    // Count reassigned candidates (CRE transferred to recruiter at any handoff status)
     roleCounters.reassigned = await this.prisma.candidate.count({
-      where: {
-        OR: [
-          {
-            recruiterAssignments: {
-              some: {
-                recruiterId: creUserId,
-                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-                isActive: true,
-              },
-            },
-          },
-          {
-            recruiterAssignments: {
-              some: {
-                assignedBy: creUserId,
-                assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
-                isActive: true,
-              },
-            },
-          },
-        ],
-        currentStatus: {
-          statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
-        },
-      },
+      where: this.buildCreReassignedCandidatesWhere(creUserId),
     });
 
     // Count candidates created by this CRE user
@@ -1608,7 +2129,7 @@ export class CandidatesService {
     );
 
     if (!creAssignment) {
-      throw new ForbiddenException('CRE may only convert assigned candidates.');
+      throw new ForbiddenException('Operations may only convert assigned candidates.');
     }
 
     // Update assignment type to cre_converted instead of changing candidate status
@@ -1622,6 +2143,7 @@ export class CandidatesService {
     const updatedCandidate = await this.prisma.candidate.update({
       where: { id: candidateId },
       data: {
+        isJunk: false,
         updatedAt: new Date(),
       },
       include: {
@@ -1642,13 +2164,828 @@ export class CandidatesService {
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
-      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} marked as converted response by CRE`,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} marked as converted response by Operations`,
     });
 
     return updatedCandidate as any;
   }
 
-  async transferCREConvertedToRecruiter(candidateId: string, creUserId: string, notes?: string) {
+  private async getActiveOperationsAssignmentForUser(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        recruiterId: operationsUserId,
+        isActive: true,
+        assignmentType: {
+          in: [
+            CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+            CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+          ],
+        },
+      },
+    });
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'Operations may only update follow-up for candidates assigned to them.',
+      );
+    }
+
+    return assignment;
+  }
+
+  private assertOperationsStageWaitElapsed(
+    stageEnteredAt: Date | null,
+    requiredWaitMs: number,
+    stageLabel: string,
+  ): void {
+    if (!stageEnteredAt) {
+      throw new BadRequestException(
+        `${stageLabel} stage entry time is missing.`,
+      );
+    }
+
+    const remainingMs = getOperationsStageWaitRemainingMs(
+      stageEnteredAt,
+      requiredWaitMs,
+    );
+
+    if (remainingMs > 0) {
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      throw new BadRequestException(
+        `Must wait before advancing from ${stageLabel}. ${remainingSec} second(s) remaining.`,
+      );
+    }
+  }
+
+  private async advanceToWeekOneTx(
+    tx: Prisma.TransactionClient,
+    assignmentId: string,
+    now = new Date(),
+  ) {
+    return tx.candidateRecruiterAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        operationsCallAttempts: 0,
+        operationsStageEnteredAt: now,
+      },
+    });
+  }
+
+  private async advanceToWeekTwoTx(
+    tx: Prisma.TransactionClient,
+    assignmentId: string,
+    now = new Date(),
+  ) {
+    return tx.candidateRecruiterAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+        operationsStageEnteredAt: now,
+      },
+    });
+  }
+
+  private async markAsJunkTx(
+    tx: Prisma.TransactionClient,
+    assignmentId: string,
+    candidateId: string,
+    now = new Date(),
+  ) {
+    const updatedAssignment = await tx.candidateRecruiterAssignment.update({
+      where: { id: assignmentId },
+      data: {
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+        operationsStageEnteredAt: now,
+      },
+    });
+
+    await tx.candidate.update({
+      where: { id: candidateId },
+      data: { isJunk: true, updatedAt: now },
+    });
+
+    return updatedAssignment;
+  }
+
+  async logOperationsCall(
+    candidateId: string,
+    operationsUserId: string,
+    dto: LogOperationsCallDto,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    const stage =
+      assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.JUNK) {
+      throw new BadRequestException(
+        'Call logging is not available for junk candidates.',
+      );
+    }
+
+    if (!dto.usedPhone && !dto.usedWhatsapp) {
+      throw new BadRequestException(
+        'Select at least one contact method: Phone or WhatsApp.',
+      );
+    }
+
+    const note = dto.note.trim();
+    const now = new Date();
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+      if (
+        assignment.operationsCallAttempts >=
+        OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+      ) {
+        throw new BadRequestException(
+          `Maximum of ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} call attempts already logged.`,
+        );
+      }
+
+      const nextAttempt = assignment.operationsCallAttempts + 1;
+      const autoAdvanceToWeekOne =
+        nextAttempt >= OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE;
+
+      return this.prisma.$transaction(async (tx) => {
+        const callLog = await tx.operationsCallLog.create({
+          data: {
+            candidateId,
+            assignmentId: assignment.id,
+            loggedById: operationsUserId,
+            attemptNumber: nextAttempt,
+            note,
+            usedPhone: dto.usedPhone,
+            usedWhatsapp: dto.usedWhatsapp,
+            followUpStage: OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
+          },
+          include: {
+            loggedBy: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        let updatedAssignment = await tx.candidateRecruiterAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            operationsCallAttempts: nextAttempt,
+            operationsLastCallAt: now,
+          },
+        });
+
+        if (autoAdvanceToWeekOne) {
+          updatedAssignment = await tx.candidateRecruiterAssignment.update({
+            where: { id: assignment.id },
+            data: {
+              operationsStageEnteredAt: now,
+            },
+          });
+        }
+
+        await tx.candidate.update({
+          where: { id: candidateId },
+          data: { updatedAt: now },
+        });
+
+        return {
+          assignment: updatedAssignment,
+          callLog,
+          startedWeekOneWait: autoAdvanceToWeekOne,
+        };
+      });
+    }
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+      const nextAttempt = assignment.operationsCallAttempts + 1;
+
+      return this.prisma.$transaction(async (tx) => {
+        const callLog = await tx.operationsCallLog.create({
+          data: {
+            candidateId,
+            assignmentId: assignment.id,
+            loggedById: operationsUserId,
+            attemptNumber: nextAttempt,
+            note,
+            usedPhone: dto.usedPhone,
+            usedWhatsapp: dto.usedWhatsapp,
+            followUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
+          },
+          include: {
+            loggedBy: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        const updatedAssignment = await tx.candidateRecruiterAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            operationsCallAttempts: nextAttempt,
+            operationsLastCallAt: now,
+          },
+        });
+
+        await tx.candidate.update({
+          where: { id: candidateId },
+          data: { updatedAt: now },
+        });
+
+        return { assignment: updatedAssignment, callLog };
+      });
+    }
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+      const nextAttempt = assignment.operationsCallAttempts + 1;
+
+      return this.prisma.$transaction(async (tx) => {
+        const callLog = await tx.operationsCallLog.create({
+          data: {
+            candidateId,
+            assignmentId: assignment.id,
+            loggedById: operationsUserId,
+            attemptNumber: nextAttempt,
+            note,
+            usedPhone: dto.usedPhone,
+            usedWhatsapp: dto.usedWhatsapp,
+            followUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NO_RESPONDED,
+          },
+          include: {
+            loggedBy: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        await tx.candidateRecruiterAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            operationsCallAttempts: nextAttempt,
+            operationsLastCallAt: now,
+          },
+        });
+
+        const updatedAssignment = await this.markAsJunkTx(
+          tx,
+          assignment.id,
+          candidateId,
+          now,
+        );
+
+        return {
+          assignment: updatedAssignment,
+          callLog,
+          markedJunk: true,
+        };
+      });
+    }
+
+    throw new BadRequestException(
+      'Call logging is not available for this follow-up stage.',
+    );
+  }
+
+  async sweepOperationsFollowUp(now = new Date()): Promise<{
+    initialAdvancedToWeekOne: number;
+    weekOneAdvanced: number;
+    weekTwoJunked: number;
+  }> {
+    const weekOneCutoff = new Date(
+      now.getTime() - OPERATIONS_WEEK_ONE_WAIT_MS,
+    );
+    const weekTwoCutoff = new Date(
+      now.getTime() - OPERATIONS_WEEK_TWO_WAIT_MS,
+    );
+
+    const operationsAssignmentTypes = [
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+    ];
+
+    const initialWeekOneDue =
+      await this.prisma.candidateRecruiterAssignment.findMany({
+        where: {
+          isActive: true,
+          assignmentType: { in: operationsAssignmentTypes },
+          operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.INITIAL,
+          operationsCallAttempts: {
+            gte: OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE,
+          },
+          operationsStageEnteredAt: { lte: weekOneCutoff },
+        },
+        select: { id: true, candidateId: true },
+      });
+
+    let initialAdvancedToWeekOne = 0;
+    for (const assignment of initialWeekOneDue) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.advanceToWeekOneTx(tx, assignment.id, now);
+        await tx.candidate.update({
+          where: { id: assignment.candidateId },
+          data: { updatedAt: now },
+        });
+      });
+      initialAdvancedToWeekOne += 1;
+    }
+
+    const weekOneDue = await this.prisma.candidateRecruiterAssignment.findMany({
+      where: {
+        isActive: true,
+        assignmentType: { in: operationsAssignmentTypes },
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE,
+        operationsStageEnteredAt: { lte: weekOneCutoff },
+      },
+      select: { id: true, candidateId: true },
+    });
+
+    let weekOneAdvanced = 0;
+    for (const assignment of weekOneDue) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.advanceToWeekTwoTx(tx, assignment.id, now);
+        await tx.candidate.update({
+          where: { id: assignment.candidateId },
+          data: { updatedAt: now },
+        });
+      });
+      weekOneAdvanced += 1;
+    }
+
+    const weekTwoDue = await this.prisma.candidateRecruiterAssignment.findMany({
+      where: {
+        isActive: true,
+        assignmentType: { in: operationsAssignmentTypes },
+        operationsFollowUpStage: OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO,
+        operationsStageEnteredAt: { lte: weekTwoCutoff },
+      },
+      select: { id: true, candidateId: true },
+    });
+
+    let weekTwoJunked = 0;
+    for (const assignment of weekTwoDue) {
+      await this.prisma.$transaction(async (tx) => {
+        await this.markAsJunkTx(tx, assignment.id, assignment.candidateId, now);
+      });
+      weekTwoJunked += 1;
+    }
+
+    if (
+      initialAdvancedToWeekOne > 0 ||
+      weekOneAdvanced > 0 ||
+      weekTwoJunked > 0
+    ) {
+      this.logger.log(
+        `Operations follow-up sweep: ${initialAdvancedToWeekOne} advanced to week_one, ${weekOneAdvanced} advanced to week_two, ${weekTwoJunked} marked junk`,
+      );
+    }
+
+    return { initialAdvancedToWeekOne, weekOneAdvanced, weekTwoJunked };
+  }
+
+  async getOperationsCallHistory(
+    candidateId: string,
+    userId: string,
+    userPermissions: string[] = [],
+    userRoles: string[] = [],
+  ) {
+    const elevatedViewerRoles = [
+      'CEO',
+      'Director',
+      'Manager',
+      'Recruiter Manager',
+      'Team Head',
+      'Team Lead',
+      'System Admin',
+      ROLE_NAMES.OPERATIONS,
+      'CRE',
+    ];
+
+    const canViewAnyOperationsCallHistory =
+      userPermissions.includes('*') ||
+      userPermissions.includes('read:all') ||
+      userPermissions.includes('manage:all') ||
+      userPermissions.includes(PERMISSIONS.READ_OPERATIONS_CALL_HISTORY) ||
+      userRoles.some((role) => elevatedViewerRoles.includes(role));
+
+    const operationsAssignmentTypes = [
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO,
+      CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL,
+    ];
+
+    let assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+      where: {
+        candidateId,
+        assignmentType: { in: operationsAssignmentTypes },
+        isActive: true,
+      },
+      orderBy: { assignedAt: 'desc' },
+    });
+
+    if (!assignment) {
+      assignment = await this.prisma.candidateRecruiterAssignment.findFirst({
+        where: {
+          candidateId,
+          assignmentType: { in: operationsAssignmentTypes },
+        },
+        orderBy: { assignedAt: 'desc' },
+      });
+    }
+
+    if (!assignment) {
+      throw new ForbiddenException(
+        'No Operations assignment found for this candidate.',
+      );
+    }
+
+    const isAssignedOperationsHandler = assignment.recruiterId === userId;
+
+    let canView =
+      canViewAnyOperationsCallHistory || isAssignedOperationsHandler;
+
+    if (!canView) {
+      const recruiterAssignment =
+        await this.prisma.candidateRecruiterAssignment.findFirst({
+          where: {
+            candidateId,
+            recruiterId: userId,
+            isActive: true,
+            assignmentType: { notIn: operationsAssignmentTypes },
+          },
+        });
+      canView = Boolean(recruiterAssignment);
+    }
+
+    if (!canView) {
+      throw new ForbiddenException(
+        'You do not have permission to view Operations call history for this candidate.',
+      );
+    }
+
+    return this.prisma.operationsCallLog.findMany({
+      where: {
+        candidateId,
+        assignmentId: assignment.id,
+      },
+      orderBy: { loggedAt: 'desc' },
+      include: {
+        loggedBy: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+  }
+
+  async moveOperationsToWeekOne(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.INITIAL) {
+      throw new BadRequestException(
+        'Candidate must be in the initial follow-up stage to move to 1 Week.',
+      );
+    }
+
+    if (
+      assignment.operationsCallAttempts <
+      OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE
+    ) {
+      throw new BadRequestException(
+        `At least ${OPERATIONS_INITIAL_CALL_ATTEMPTS_BEFORE_WEEK_ONE} logged calls are required before moving to 1 Week.`,
+      );
+    }
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.$transaction(async (tx) => {
+      const result = await this.advanceToWeekOneTx(tx, assignment.id, now);
+      await tx.candidate.update({
+        where: { id: candidateId },
+        data: { updatedAt: now },
+      });
+      return result;
+    });
+
+    return { assignment: updatedAssignment };
+  }
+
+  async moveOperationsToWeekTwo(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_ONE) {
+      throw new BadRequestException(
+        'Candidate must be in the 1 Week follow-up stage to move to 2nd Week.',
+      );
+    }
+
+    this.assertOperationsStageWaitElapsed(
+      assignment.operationsStageEnteredAt,
+      OPERATIONS_WEEK_ONE_WAIT_MS,
+      '1 Week follow-up',
+    );
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.$transaction(async (tx) => {
+      const result = await this.advanceToWeekTwoTx(tx, assignment.id, now);
+      await tx.candidate.update({
+        where: { id: candidateId },
+        data: { updatedAt: now },
+      });
+      return result;
+    });
+
+    return { assignment: updatedAssignment };
+  }
+
+  async markOperationsNotInterested(
+    candidateId: string,
+    operationsUserId: string,
+    dto: LogOperationsCallDto,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    const stage =
+      assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+
+    if (!dto.usedPhone && !dto.usedWhatsapp) {
+      throw new BadRequestException(
+        'Select at least one contact method: Phone or WhatsApp.',
+      );
+    }
+
+    const note = dto.note.trim();
+    const now = new Date();
+    const nextAttempt = assignment.operationsCallAttempts + 1;
+
+    if (stage === OPERATIONS_FOLLOW_UP_STAGE.JUNK) {
+      return this.prisma.$transaction(async (tx) => {
+        const callLog = await tx.operationsCallLog.create({
+          data: {
+            candidateId,
+            assignmentId: assignment.id,
+            loggedById: operationsUserId,
+            attemptNumber: nextAttempt,
+            note,
+            usedPhone: dto.usedPhone,
+            usedWhatsapp: dto.usedWhatsapp,
+            followUpStage: OPERATIONS_FOLLOW_UP_STAGE.JUNK,
+            callOutcome: OPERATIONS_CALL_OUTCOME.NOT_INTERESTED,
+          },
+          include: {
+            loggedBy: {
+              select: { id: true, name: true },
+            },
+          },
+        });
+
+        const updatedAssignment = await tx.candidateRecruiterAssignment.update({
+          where: { id: assignment.id },
+          data: {
+            operationsCallAttempts: nextAttempt,
+            operationsLastCallAt: now,
+          },
+        });
+
+        await tx.candidate.update({
+          where: { id: candidateId },
+          data: { updatedAt: now },
+        });
+
+        return {
+          assignment: updatedAssignment,
+          callLog,
+          alreadyJunk: true,
+        };
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const callLog = await tx.operationsCallLog.create({
+        data: {
+          candidateId,
+          assignmentId: assignment.id,
+          loggedById: operationsUserId,
+          attemptNumber: nextAttempt,
+          note,
+          usedPhone: dto.usedPhone,
+          usedWhatsapp: dto.usedWhatsapp,
+          followUpStage: stage,
+          callOutcome: OPERATIONS_CALL_OUTCOME.NOT_INTERESTED,
+        },
+        include: {
+          loggedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      });
+
+      await tx.candidateRecruiterAssignment.update({
+        where: { id: assignment.id },
+        data: {
+          operationsCallAttempts: nextAttempt,
+          operationsLastCallAt: now,
+        },
+      });
+
+      const updatedAssignment = await this.markAsJunkTx(
+        tx,
+        assignment.id,
+        candidateId,
+        now,
+      );
+
+      return {
+        assignment: updatedAssignment,
+        callLog,
+        markedJunk: true,
+      };
+    });
+  }
+
+  private async recordInterestedOperationsCall(
+    assignment: {
+      id: string;
+      operationsCallAttempts: number;
+      operationsFollowUpStage: string | null;
+    },
+    candidateId: string,
+    creUserId: string,
+    dto: Pick<
+      TransferToRecruiterDto,
+      'operationsCallNote' | 'usedPhone' | 'usedWhatsapp'
+    >,
+  ) {
+    const note = dto.operationsCallNote?.trim();
+    if (!note) {
+      return;
+    }
+
+    if (!dto.usedPhone && !dto.usedWhatsapp) {
+      throw new BadRequestException(
+        'Select at least one contact method: Phone or WhatsApp.',
+      );
+    }
+
+    const now = new Date();
+    const stage =
+      assignment.operationsFollowUpStage ?? OPERATIONS_FOLLOW_UP_STAGE.INITIAL;
+    const nextAttempt = assignment.operationsCallAttempts + 1;
+
+    await this.prisma.operationsCallLog.create({
+      data: {
+        candidateId,
+        assignmentId: assignment.id,
+        loggedById: creUserId,
+        attemptNumber: nextAttempt,
+        note,
+        usedPhone: dto.usedPhone ?? false,
+        usedWhatsapp: dto.usedWhatsapp ?? false,
+        followUpStage: stage,
+        callOutcome: OPERATIONS_CALL_OUTCOME.INTERESTED,
+      },
+    });
+
+    await this.prisma.candidateRecruiterAssignment.update({
+      where: { id: assignment.id },
+      data: {
+        operationsCallAttempts: nextAttempt,
+        operationsLastCallAt: now,
+      },
+    });
+  }
+
+  async markOperationsJunk(
+    candidateId: string,
+    operationsUserId: string,
+  ) {
+    const assignment = await this.getActiveOperationsAssignmentForUser(
+      candidateId,
+      operationsUserId,
+    );
+
+    if (assignment.operationsFollowUpStage !== OPERATIONS_FOLLOW_UP_STAGE.WEEK_TWO) {
+      throw new BadRequestException(
+        'Candidate must be in the 2 Week follow-up stage to mark as junk.',
+      );
+    }
+
+    this.assertOperationsStageWaitElapsed(
+      assignment.operationsStageEnteredAt,
+      OPERATIONS_WEEK_TWO_WAIT_MS,
+      '2 Week follow-up',
+    );
+
+    const now = new Date();
+    const updatedAssignment = await this.prisma.$transaction(async (tx) =>
+      this.markAsJunkTx(tx, assignment.id, candidateId, now),
+    );
+
+    return { assignment: updatedAssignment };
+  }
+
+  private validateCandidateStatusTransitionFields(
+    statusName: string,
+    fields: Pick<
+      UpdateCandidateStatusDto,
+      'onHoldDurationDays' | 'onHoldUntil' | 'futureDate'
+    >,
+  ): void {
+    const normalizedStatus = statusName.toLowerCase();
+
+    if (normalizedStatus === 'on hold' || normalizedStatus === 'onhold') {
+      if (
+        (fields.onHoldDurationDays === undefined ||
+          fields.onHoldDurationDays === null ||
+          fields.onHoldDurationDays <= 0) &&
+        !fields.onHoldUntil
+      ) {
+        throw new BadRequestException(
+          'onHoldDurationDays or onHoldUntil is required when status is On Hold',
+        );
+      }
+    }
+
+    if (normalizedStatus === 'future') {
+      if (!fields.futureDate) {
+        throw new BadRequestException(
+          'futureDate is required when status is Future',
+        );
+      }
+      const futureDate = new Date(fields.futureDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (futureDate < today) {
+        throw new BadRequestException(
+          'futureDate must be today or a future date when status is Future',
+        );
+      }
+    }
+  }
+
+  private async resolveTransferToRecruiterStatus(
+    dto: TransferToRecruiterDto,
+  ): Promise<{ id: number; statusName: string }> {
+    const status = await this.prisma.candidateStatus.findUnique({
+      where: { id: dto.currentStatusId },
+    });
+
+    if (!status) {
+      throw new NotFoundException(
+        `Candidate status ${dto.currentStatusId} not found`,
+      );
+    }
+
+    const normalizedStatus = status.statusName.toLowerCase();
+    const disallowedForCreTransfer = new Set([
+      'qualified',
+      'new',
+      'nominated',
+      'verified',
+      'interviewing',
+      'selected',
+      'processing',
+      'hired',
+      'rejected',
+      'deployed',
+    ]);
+
+    if (disallowedForCreTransfer.has(normalizedStatus)) {
+      throw new BadRequestException(
+        `Status "${status.statusName}" cannot be set during Operations reassignment`,
+      );
+    }
+
+    this.validateCandidateStatusTransitionFields(status.statusName, dto);
+
+    return status;
+  }
+
+  async transferCREConvertedToRecruiter(
+    candidateId: string,
+    creUserId: string,
+    dto: TransferToRecruiterDto,
+  ) {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
@@ -1670,9 +3007,16 @@ export class CandidatesService {
 
     if (!activeCREAssignment) {
       throw new ForbiddenException(
-        'CRE can only transfer candidates assigned to them',
+        'Operations can only transfer candidates assigned to them',
       );
     }
+
+    await this.recordInterestedOperationsCall(
+      activeCREAssignment,
+      candidateId,
+      creUserId,
+      dto,
+    );
 
     // Find the PRIMARY recruiter (regular recruiter)
     const primaryAssignment = candidate.recruiterAssignments?.find(
@@ -1689,6 +3033,40 @@ export class CandidatesService {
       },
     });
 
+    const creStatus = await this.resolveTransferToRecruiterStatus(dto);
+
+    const statusNote = dto.reason?.trim();
+    if (!statusNote) {
+      throw new BadRequestException('Operations status note is required');
+    }
+
+    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
+      where: {
+        statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' },
+      },
+    });
+
+    if (!untouchedStatus) {
+      throw new NotFoundException('Untouched status not found');
+    }
+
+    let creStatusOnHoldDays: number | null = null;
+    const creStatusNormalized = creStatus.statusName.toLowerCase();
+    if (creStatusNormalized === 'on hold' || creStatusNormalized === 'onhold') {
+      if (dto.onHoldUntil) {
+        const untilDate = new Date(dto.onHoldUntil);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        creStatusOnHoldDays = Math.ceil(
+          (untilDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+        );
+      } else {
+        creStatusOnHoldDays = dto.onHoldDurationDays ?? null;
+      }
+    }
+
+    const reassignmentReason = 'Handed back from Operations converted response';
+
     // Update the primary recruiter assignment to mark it as cre_reassigned
     if (primaryAssignment) {
       await this.prisma.candidateRecruiterAssignment.update({
@@ -1696,31 +3074,31 @@ export class CandidatesService {
         data: {
           assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
           assignedBy: creUserId,
-          reason: notes || 'Handed back from CRE converted response',
+          reason: reassignmentReason,
+          creStatusNote: statusNote,
+          creStatusId: creStatus.id,
         },
       });
     }
 
-    // Notify about handoff
     await this.outboxService.publishCandidateRecruiterAssigned(
       candidateId,
       primaryAssignment?.recruiterId || creUserId, // Notify the primary recruiter (or self if none)
       creUserId,
-      notes || 'Handed back from CRE converted response',
+      reassignmentReason,
       creUserId, // Previous was the CRE
     );
 
-    const untouchedStatus = await this.prisma.candidateStatus.findFirst({
-      where: { statusName: { equals: CANDIDATE_STATUS.UNTOUCHED, mode: 'insensitive' } },
-    });
-
-    if (!untouchedStatus) {
-      throw new NotFoundException('Untouched status not found');
-    }
-
+    // Recruiter always receives the candidate as untouched to call fresh
     const updatedCandidate = await this.prisma.candidate.update({
       where: { id: candidateId },
-      data: { currentStatusId: untouchedStatus.id },
+      data: {
+        currentStatusId: untouchedStatus.id,
+        isJunk: false,
+        onHoldDuration: null,
+        onHoldUntil: null,
+        futureDate: null,
+      },
       include: {
         recruiterAssignments: {
           include: {
@@ -1730,9 +3108,30 @@ export class CandidatesService {
             assignedByUser: {
               select: { id: true, name: true, email: true },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
         },
         currentStatus: true,
+      },
+    });
+
+    const creUserName =
+      (await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name ||
+      ROLE_NAMES.OPERATIONS;
+
+    await this.prisma.candidateStatusHistory.create({
+      data: {
+        candidateId,
+        changedById: creUserId,
+        changedByName: creUserName,
+        statusId: creStatus.id,
+        statusNameSnapshot: creStatus.statusName,
+        statusUpdatedAt: new Date(),
+        notificationCount: 0,
+        reason: statusNote,
+        onHoldDurationDays: creStatusOnHoldDays,
       },
     });
 
@@ -1740,28 +3139,27 @@ export class CandidatesService {
       data: {
         candidateId,
         changedById: creUserId,
-        changedByName:
-          (await this.prisma.user.findUnique({ where: { id: creUserId } }))
-            ?.name || 'CRE',
+        changedByName: creUserName,
         statusId: untouchedStatus.id,
         statusNameSnapshot: untouchedStatus.statusName,
         statusUpdatedAt: new Date(),
         notificationCount: 0,
+        reason: CRE_REASSIGN_RECRUITER_RETURN_REASON,
       },
     });
 
     await this.outboxService.publishEvent('DataSync', {
       type: 'Candidate',
       candidateId,
-      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from CRE to recruiter ${primaryAssignment?.recruiter?.name || 'Primary Recruiter'}`,
+      message: `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} transferred from Operations to recruiter ${primaryAssignment?.recruiter?.name || 'Primary Recruiter'}`,
     });
 
     // Notify the target recruiter that a CRE has transferred a candidate to them
     if (primaryAssignment) {
       await this.outboxService.publishRecruiterNotification(
         primaryAssignment.recruiterId,
-        `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} has been transferred back to you by CRE ${(await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name || 'a team member'} after being converted from RNR.`,
-        'Candidate Transferred from CRE',
+        `Candidate ${updatedCandidate.firstName} ${updatedCandidate.lastName} has been transferred back to you by Operations ${(await this.prisma.user.findUnique({ where: { id: creUserId } }))?.name || 'a team member'} after being converted from RNR.`,
+        'Candidate Transferred from Operations',
         `/candidates/${candidateId}`,
         {
           candidateId,
@@ -1774,18 +3172,64 @@ export class CandidatesService {
     return updatedCandidate;
   }
 
+  /**
+   * Candidates handed from CRE to recruiter (any status CRE set on reassign).
+   */
+  private buildCreReassignedCandidatesWhere(
+    creUserId: string,
+    search?: string,
+  ): Prisma.CandidateWhereInput {
+    const reassignedFilter: Prisma.CandidateWhereInput = {
+      OR: [
+        {
+          recruiterAssignments: {
+            some: {
+              recruiterId: creUserId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+        {
+          recruiterAssignments: {
+            some: {
+              assignedBy: creUserId,
+              assignmentType: CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+              isActive: true,
+            },
+          },
+        },
+      ],
+    };
+
+    if (!search?.trim()) {
+      return reassignedFilter;
+    }
+
+    const term = search.trim();
+    return {
+      AND: [
+        reassignedFilter,
+        {
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' } },
+            { lastName: { contains: term, mode: 'insensitive' } },
+            { email: { contains: term, mode: 'insensitive' } },
+            { mobileNumber: { contains: term, mode: 'insensitive' } },
+          ],
+        },
+      ],
+    };
+  }
+
   async getCREReassignedCandidates(
     recruiterId: string,
-    query: {
-      page?: number;
-      limit?: number;
-      search?: string;
-    },
+    query: QueryCandidatesDto,
   ) {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       OR: [
         {
           recruiterAssignments: {
@@ -1811,14 +3255,7 @@ export class CandidatesService {
       },
     };
 
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { mobileNumber: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    const where = this.buildCreListWhere(baseWhere, query);
 
     const total = await this.prisma.candidate.count({ where });
 
@@ -1829,18 +3266,46 @@ export class CandidatesService {
       orderBy: { updatedAt: 'desc' },
       include: {
         currentStatus: { select: { id: true, statusName: true } },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          include: {
+            status: { select: { id: true, statusName: true } },
+          },
+        },
         recruiterAssignments: {
           where: { isActive: true },
           include: {
             recruiter: { select: { id: true, name: true, email: true } },
             assignedByUser: { select: { id: true, name: true, email: true } },
+            creStatus: { select: { id: true, statusName: true } },
           },
         },
       },
     });
 
+    const candidatesWithCreStatus = candidates.map((candidate) => {
+      const reassignedAssignment = candidate.recruiterAssignments.find(
+        (assignment) =>
+          assignment.assignmentType ===
+          CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
+
+      const creStatus = resolveCreHandoffStatus(
+        reassignedAssignment,
+        candidate.statusHistories,
+      );
+
+      const { statusHistories: _omit, ...candidateRest } = candidate;
+
+      return {
+        ...candidateRest,
+        creStatus,
+      };
+    });
+
     return {
-      candidates,
+      candidates: candidatesWithCreStatus,
       pagination: {
         page,
         limit,
@@ -1856,12 +3321,12 @@ export class CandidatesService {
    */
   async getUserCandidates(
     creUserId: string,
-    query: { page?: number; limit?: number; search?: string },
+    query: QueryCandidatesDto,
   ) {
-    const { page = 1, limit = 10, search } = query;
+    const { page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const baseWhere: Prisma.CandidateWhereInput = {
       recruiterAssignments: {
         some: {
           createdBy: creUserId,
@@ -1869,18 +3334,7 @@ export class CandidatesService {
       },
     };
 
-    if (search) {
-      where.AND = [
-        {
-          OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } },
-            { mobileNumber: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-      ];
-    }
+    const where = this.buildCreListWhere(baseWhere, query);
 
     const total = await this.prisma.candidate.count({ where });
 
@@ -1923,27 +3377,38 @@ export class CandidatesService {
           },
         },
         team: true,
-        workExperiences: {
-          include: {
-            roleCatalog: true,
-          },
-        },
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
         preferredCountries: {
           include: {
             country: true,
           },
         },
         facilityPreferences: true,
+        professionType: {
+          select: {
+            id: true,
+            name: true,
+            label: true,
+          },
+        },
+        rolePreferences: {
+          include: {
+            roleCatalog: {
+              include: {
+                roleDepartment: true,
+              },
+            },
+          },
+        },
         addressCountry: {
           select: { code: true, name: true },
         },
         addressState: {
           select: { id: true, name: true, code: true },
+        },
+        religion: {
+          select: { id: true, name: true },
         },
         agentCandidateDeclaredProjects: {
           include: {
@@ -1979,12 +3444,35 @@ export class CandidatesService {
                 email: true,
               },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
           orderBy: { assignedAt: 'asc' },
         },
         documents: {
           where: { isDeleted: false },
-          select: { docType: true },
+          select: {
+            id: true,
+            docType: true,
+            fileName: true,
+            fileUrl: true,
+            documentNumber: true,
+            issuedAt: true,
+            expiryDate: true,
+            createdAt: true,
+          },
+        },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
         },
       },
     });
@@ -1993,19 +3481,78 @@ export class CandidatesService {
       throw new NotFoundException(`Candidate with ID ${id} not found`);
     }
 
+    const { statusHistories, documents, ...candidateWithoutHistories } =
+      candidate;
+
     // Extract the creator from the first active assignment
-    const firstAssignment = candidate.recruiterAssignments?.[0];
+    const firstAssignment = candidateWithoutHistories.recruiterAssignments?.[0];
+    const activeAssignment = candidateWithoutHistories.recruiterAssignments?.find(
+      (assignment) => assignment.isActive,
+    );
     const createdBy =
       firstAssignment?.createdByUser ||
       firstAssignment?.assignedByUser ||
       null;
 
-    const base = withProfileCompletion(candidate as any);
+    const base = withProfileCompletion(candidateWithoutHistories as any);
 
-    // Pipeline data removed from response to reduce payload
+    const creReassignedAssignment =
+      candidateWithoutHistories.recruiterAssignments.find(
+      (assignment) =>
+        assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED &&
+        assignment.isActive,
+    );
+    const isCREReassigned = !!creReassignedAssignment;
+    const histories = statusHistories ?? [];
+
+    const [projectAssignments, activityDocuments, pipelineUpdatesCount] =
+      await Promise.all([
+        this.prisma.candidateProjects.findMany({
+          where: { candidateId: id },
+          select: {
+            currentProjectStatus: {
+              select: { statusName: true },
+            },
+          },
+        }),
+        this.prisma.document.findMany({
+          where: { candidateId: id, isDeleted: false },
+          select: { status: true },
+        }),
+        this.prisma.candidateStatusHistory.count({
+          where: { candidateId: id },
+        }),
+      ]);
+
+    const activitySnapshot = computeCandidateActivitySnapshot({
+      projects: projectAssignments,
+      documents: activityDocuments,
+      pipelineSteps: pipelineUpdatesCount,
+      profileCompletion: base.profileCompletion?.percent ?? 0,
+    });
+
     return {
       ...base,
+      documents: documents ?? [],
+      passportNumber: resolvePassportNumberForCandidate({
+        passportNumber: candidate.passportNumber,
+        documents: documents ?? [],
+      }),
+      currentStatus: base.currentStatus,
+      recruiter: activeAssignment?.recruiter || null,
       createdBy,
+      isCREReassigned,
+      creStatusNote: isCREReassigned
+        ? resolveCreHandoffNote(creReassignedAssignment, histories)
+        : null,
+      creStatus: isCREReassigned
+        ? resolveCreHandoffStatus(creReassignedAssignment, histories)
+        : null,
+      careerGapAnalysis: calculateCareerGaps(
+        candidateWithoutHistories.workExperiences ?? [],
+        candidateWithoutHistories.qualifications ?? [],
+      ),
+      activitySnapshot,
     } as any;
   }
 
@@ -2047,8 +3594,8 @@ export class CandidatesService {
       },
     });
 
-    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
-      throw new ForbiddenException('CRE users cannot update candidate details.');
+    if (user?.userRoles?.some((ur) => isOperationsRole(ur.role?.name ?? ''))) {
+      throw new ForbiddenException('Operations users cannot update candidate details.');
     }
 
     // Check if countryCode and mobileNumber combination is being updated and if it already exists
@@ -2058,22 +3605,24 @@ export class CandidatesService {
         updateCandidateDto.mobileNumber !== existingCandidate.mobileNumber)
     ) {
       const countryCode =
-        updateCandidateDto.countryCode || existingCandidate.countryCode;
+        updateCandidateDto.countryCode ?? existingCandidate.countryCode;
       const mobileNumber =
-        updateCandidateDto.mobileNumber || existingCandidate.mobileNumber;
+        updateCandidateDto.mobileNumber ?? existingCandidate.mobileNumber;
 
-      const candidateWithContact = await this.prisma.candidate.findUnique({
-        where: {
-          countryCode_mobileNumber: {
-            countryCode,
-            mobileNumber,
+      if (countryCode && mobileNumber) {
+        const candidateWithContact = await this.prisma.candidate.findUnique({
+          where: {
+            countryCode_mobileNumber: {
+              countryCode,
+              mobileNumber,
+            },
           },
-        },
-      });
-      if (candidateWithContact && candidateWithContact.id !== id) {
-        throw new ConflictException(
-          `Candidate with contact ${countryCode}${mobileNumber} already exists`,
-        );
+        });
+        if (candidateWithContact && candidateWithContact.id !== id) {
+          throw new ConflictException(
+            `Candidate with contact ${countryCode}${mobileNumber} already exists`,
+          );
+        }
       }
     }
 
@@ -2117,7 +3666,38 @@ export class CandidatesService {
     if (updateCandidateDto.addressStateId !== undefined)
       updateData.addressStateId = updateCandidateDto.addressStateId;
     if (updateCandidateDto.address !== undefined)
-      updateData.address = updateCandidateDto.address;
+      updateData.address = updateCandidateDto.address?.trim() || null;
+    if (updateCandidateDto.addressPincode !== undefined) {
+      const pincode = updateCandidateDto.addressPincode;
+      updateData.addressPincode =
+        pincode === null ? null : String(pincode).trim() || null;
+    }
+    if (updateCandidateDto.alternatePhone !== undefined)
+      updateData.alternatePhone =
+        updateCandidateDto.alternatePhone?.trim() || null;
+    if (updateCandidateDto.passportNumber !== undefined) {
+      const normalizedPassport = normalizePassportNumber(
+        updateCandidateDto.passportNumber,
+      );
+      if (normalizedPassport && normalizedPassport.length < 3) {
+        throw new BadRequestException(
+          'Passport number must be at least 3 characters',
+        );
+      }
+      if (normalizedPassport) {
+        const passportConflict = await findExistingCandidateByPassport(
+          this.prisma,
+          normalizedPassport,
+          id,
+        );
+        if (passportConflict) {
+          throw new ConflictException(
+            `Candidate with passport number ${normalizedPassport} already exists`,
+          );
+        }
+      }
+      updateData.passportNumber = normalizedPassport;
+    }
     if (updateCandidateDto.source)
       updateData.source = updateCandidateDto.source;
     if (updateCandidateDto.agentId !== undefined) {
@@ -2158,6 +3738,10 @@ export class CandidatesService {
       updateData.sectorType = updateCandidateDto.sectorType;
     if (updateCandidateDto.visaType !== undefined)
       updateData.visaType = updateCandidateDto.visaType;
+    if (updateCandidateDto.professionTypeId !== undefined) {
+      await this.assertValidProfessionType(updateCandidateDto.professionTypeId);
+      updateData.professionTypeId = updateCandidateDto.professionTypeId;
+    }
     if (updateCandidateDto.height !== undefined)
       updateData.height = updateCandidateDto.height;
     if (updateCandidateDto.weight !== undefined)
@@ -2168,12 +3752,43 @@ export class CandidatesService {
       updateData.languageProficiency = updateCandidateDto.languageProficiency;
     if (updateCandidateDto.smartness !== undefined)
       updateData.smartness = updateCandidateDto.smartness;
+    if (updateCandidateDto.religionId !== undefined) {
+      const religionId =
+        updateCandidateDto.religionId === '' ||
+        updateCandidateDto.religionId === null
+          ? null
+          : updateCandidateDto.religionId;
+      await this.assertValidReligionId(religionId);
+      updateData.religionId = religionId;
+    }
     if (updateCandidateDto.licensingExam !== undefined)
       updateData.licensingExam = updateCandidateDto.licensingExam;
     if (updateCandidateDto.dataFlow !== undefined)
       updateData.dataFlow = updateCandidateDto.dataFlow;
-    if (updateCandidateDto.eligibility !== undefined)
+    if (updateCandidateDto.eligibility !== undefined) {
       updateData.eligibility = updateCandidateDto.eligibility;
+      if (!updateCandidateDto.eligibility) {
+        updateData.eligibilityNumber = null;
+      }
+    }
+    if (updateCandidateDto.eligibilityNumber !== undefined) {
+      updateData.eligibilityNumber =
+        updateCandidateDto.eligibilityNumber?.trim() || null;
+    }
+    const resolvedEligibility =
+      updateCandidateDto.eligibility !== undefined
+        ? updateCandidateDto.eligibility
+        : existingCandidate.eligibility;
+    const resolvedEligibilityNumber =
+      updateData.eligibilityNumber !== undefined
+        ? updateData.eligibilityNumber
+        : updateCandidateDto.eligibility === false
+          ? null
+          : existingCandidate.eligibilityNumber;
+    this.assertEligibilityNumberRequired(
+      resolvedEligibility,
+      resolvedEligibilityNumber,
+    );
     if (updateCandidateDto.highestEducation)
       updateData.highestEducation = updateCandidateDto.highestEducation;
     if (updateCandidateDto.university)
@@ -2204,6 +3819,15 @@ export class CandidatesService {
         deleteMany: {},
         create: updateCandidateDto.facilityPreferences.map((facilityType) => ({
           facilityType,
+        })),
+      };
+    }
+    if (updateCandidateDto.preferredRoles !== undefined) {
+      await this.assertValidPreferredRoles(updateCandidateDto.preferredRoles);
+      updateData.rolePreferences = {
+        deleteMany: {},
+        create: updateCandidateDto.preferredRoles.map((roleCatalogId) => ({
+          roleCatalog: { connect: { id: roleCatalogId } },
         })),
       };
     }
@@ -2238,14 +3862,29 @@ export class CandidatesService {
 
     const candidateUpdateInclude = {
       team: true,
-      workExperiences: {
-        include: {
-          roleCatalog: true,
+      workExperiences: candidateWorkExperiencesInclude,
+      qualifications: candidateQualificationsInclude,
+      preferredCountries: {
+        include: { country: true },
+      },
+      facilityPreferences: true,
+      religion: {
+        select: { id: true, name: true },
+      },
+      professionType: {
+        select: {
+          id: true,
+          name: true,
+          label: true,
         },
       },
-      qualifications: {
+      rolePreferences: {
         include: {
-          qualification: true,
+          roleCatalog: {
+            include: {
+              roleDepartment: true,
+            },
+          },
         },
       },
       projects: {
@@ -2280,6 +3919,17 @@ export class CandidatesService {
       data: updateData,
       include: candidateUpdateInclude,
     });
+
+    if (
+      resolvedEligibility === true &&
+      resolvedEligibilityNumber?.trim()
+    ) {
+      await syncEligibilityLetterDocumentNumberFromCandidate(
+        this.prisma,
+        id,
+        resolvedEligibilityNumber,
+      );
+    }
 
     if (declaredIdsPayload !== undefined && finalAgentIdMerged) {
       await this.prisma.$transaction(async (tx) => {
@@ -2378,15 +4028,18 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', 'CRE'].includes(ur.role.name)
+        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ur.role.name === 'CRE'
       );
 
       if (!isAdminOrCRE) {
         throw new ForbiddenException(
-          'Candidate is currently being handled by CRE and cannot be assigned to projects until handed back to recruiter.',
+          'Candidate is currently being handled by Operations and cannot be assigned to projects until handed back to recruiter.',
         );
       }
     }
+
+    await this.assertRecruiterCanManageLockedRnrCandidate(candidateId, userId);
 
     // Check if project exists
     const project = await this.prisma.project.findUnique({
@@ -2411,6 +4064,12 @@ export class CandidatesService {
         `Candidate ${candidateId} is already assigned to project ${assignProjectDto.projectId}`,
       );
     }
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      assignProjectDto.projectId,
+    );
 
     // Get next available recruiter for round-robin allocation
     const recruiters = await this.getProjectRecruiters(
@@ -2476,12 +4135,8 @@ export class CandidatesService {
     const candidate = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       include: {
-        qualifications: {
-          include: {
-            qualification: true,
-          },
-        },
-        workExperiences: true,
+        qualifications: candidateQualificationsInclude,
+        workExperiences: candidateWorkExperiencesInclude,
       },
     });
 
@@ -2492,7 +4147,7 @@ export class CandidatesService {
     // Get all active projects with roles needed
     const activeProjects = await this.prisma.project.findMany({
       where: {
-        status: 'active',
+        status: 'IN_PROGRESS',
         deadline: {
           gte: new Date(), // Not expired
         },
@@ -2694,7 +4349,7 @@ export class CandidatesService {
    */
   private async getAllRecruiters(): Promise<any[]> {
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -2702,7 +4357,7 @@ export class CandidatesService {
             },
           },
         },
-      },
+      }),
       include: {
         userRoles: {
           include: {
@@ -2955,15 +4610,24 @@ export class CandidatesService {
         include: { userRoles: { include: { role: true } } }
       });
       const isAdminOrCRE = user?.userRoles.some(ur => 
-        ['System Admin', 'CRE'].includes(ur.role.name)
+        ['System Admin', ROLE_NAMES.OPERATIONS].includes(ur.role.name) ||
+        ur.role.name === 'CRE'
       );
 
       if (!isAdminOrCRE) {
         throw new ForbiddenException(
-          'Candidate is currently being handled by CRE and cannot be nominated to projects until handed back to recruiter.',
+          'Candidate is currently being handled by Operations and cannot be nominated to projects until handed back to recruiter.',
         );
       }
     }
+
+    await this.assertRecruiterCanManageLockedRnrCandidate(candidateId, nominatorId);
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      nominateDto.projectId,
+    );
 
     await assertAgentCandidateLinkedToAgentProject(
       this.prisma,
@@ -3183,7 +4847,7 @@ export class CandidatesService {
 
     // Find document executive with least tasks
     const documentExecutives = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -3193,7 +4857,7 @@ export class CandidatesService {
             },
           },
         },
-      },
+      }),
       include: {
         _count: {
           select: {
@@ -3300,6 +4964,28 @@ export class CandidatesService {
       }
     }
 
+    const isCallBackTarget =
+      this.callbackRemindersService.isCallBackStatusName(status.statusName);
+    if (isCallBackTarget && !updateStatusDto.callbackAt) {
+      throw new BadRequestException(
+        'callbackAt is required when status is Call Back',
+      );
+    }
+
+    let previousStatusName = '';
+    if (candidate.currentStatusId) {
+      const previousStatus = await this.prisma.candidateStatus.findUnique({
+        where: { id: candidate.currentStatusId },
+      });
+      previousStatusName = previousStatus?.statusName ?? '';
+    }
+
+    const isRnrPrevious = previousStatusName.toLowerCase().trim() === 'rnr';
+    const isRnrNew = status.statusName.toLowerCase().trim() === 'rnr';
+    const isCallBackPrevious =
+      this.callbackRemindersService.isCallBackStatusName(previousStatusName);
+    const isCallBackNew = isCallBackTarget;
+
     // Get the user (who’s changing the status) and enforce CRE read-only behavior
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -3312,9 +4998,11 @@ export class CandidatesService {
       },
     });
 
-    if (user?.userRoles?.some((ur) => ur.role?.name === 'CRE')) {
-      throw new ForbiddenException('CRE users cannot update candidate status.');
+    if (user?.userRoles?.some((ur) => isOperationsRole(ur.role?.name ?? ''))) {
+      throw new ForbiddenException('Operations users cannot update candidate status.');
     }
+
+    await this.assertRecruiterCanManageLockedRnrCandidate(candidateId, userId);
 
     // Update candidate status
     const updatedCandidate = await this.prisma.candidate.update({
@@ -3366,8 +5054,7 @@ export class CandidatesService {
     });
 
     // ===== RNR REMINDER LOGIC START =====
-    // If status is changing TO RNR (statusId = 8), create a reminder
-    if (updateStatusDto.currentStatusId === 8) {
+    if (isRnrNew) {
       this.logger.log(
         `Candidate ${candidateId} status changed to RNR. Creating reminder...`,
       );
@@ -3375,8 +5062,8 @@ export class CandidatesService {
       try {
         await this.rnrRemindersService.createRNRReminder(
           candidateId,
-          userId, // The recruiter who marked as RNR
-          statusHistory.id, // Link to the status history record
+          userId,
+          statusHistory.id,
         );
         this.logger.log(
           `RNR reminder created for candidate ${candidateId}`,
@@ -3389,8 +5076,7 @@ export class CandidatesService {
       }
     }
 
-    // If status is changing FROM RNR to something else, cancel pending reminders
-    if (candidate.currentStatusId === 8 && updateStatusDto.currentStatusId !== 8) {
+    if (isRnrPrevious && !isRnrNew) {
       this.logger.log(
         `Candidate ${candidateId} status changed from RNR. Cancelling reminders...`,
       );
@@ -3409,13 +5095,50 @@ export class CandidatesService {
     }
     // ===== RNR REMINDER LOGIC END =====
 
+    // ===== CALLBACK REMINDER LOGIC START =====
+    if (isCallBackNew && updateStatusDto.callbackAt) {
+      this.logger.log(
+        `Candidate ${candidateId} status set to Call Back. Scheduling reminder...`,
+      );
+
+      try {
+        await this.callbackRemindersService.createCallbackReminder(
+          candidateId,
+          userId,
+          statusHistory.id,
+          updateStatusDto.callbackAt,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to create callback reminder for candidate ${candidateId}:`,
+          error,
+        );
+        throw error;
+      }
+    }
+
+    if (isCallBackPrevious && !isCallBackNew) {
+      try {
+        await this.callbackRemindersService.cancelCallbackReminders(candidateId);
+      } catch (error) {
+        this.logger.error(
+          `Failed to cancel callback reminders for candidate ${candidateId}:`,
+          error,
+        );
+      }
+    }
+    // ===== CALLBACK REMINDER LOGIC END =====
+
     // ===== WHATSAPP NOTIFICATION START =====
     // Send WhatsApp notification to candidate about status change
     try {
-      const phoneNumber = this.whatsAppService.validatePhoneNumber(
-        updatedCandidate.countryCode,
-        updatedCandidate.mobileNumber,
-      );
+      const phoneNumber =
+        updatedCandidate.countryCode && updatedCandidate.mobileNumber
+          ? this.whatsAppService.validatePhoneNumber(
+              updatedCandidate.countryCode,
+              updatedCandidate.mobileNumber,
+            )
+          : null;
 
       if (phoneNumber) {
         const candidateName = `${updatedCandidate.firstName} ${updatedCandidate.lastName}`;
@@ -3959,6 +5682,78 @@ export class CandidatesService {
   }
 
   /**
+   * RNR candidates stay locked for recruiters until Operations hands them back
+   * with a cre_reassigned assignment.
+   */
+  async isRecruiterLockedRnrCandidate(candidateId: string): Promise<boolean> {
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      include: {
+        currentStatus: { select: { statusName: true } },
+        recruiterAssignments: {
+          where: { isActive: true },
+          select: { assignmentType: true },
+        },
+      },
+    });
+
+    if (!candidate) {
+      return false;
+    }
+
+    const isCREReassigned = candidate.recruiterAssignments.some(
+      (assignment) =>
+        assignment.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+    );
+    if (isCREReassigned) {
+      return false;
+    }
+
+    const statusName = candidate.currentStatus?.statusName?.toLowerCase().trim();
+    return statusName === CANDIDATE_STATUS.RNR.toLowerCase();
+  }
+
+  private async assertRecruiterCanManageLockedRnrCandidate(
+    candidateId: string,
+    userId: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    const roleNames = user?.userRoles.map((ur) => ur.role.name) ?? [];
+    const isExempt = roleNames.some((role) =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Team Head',
+        'Team Lead',
+        'Admin',
+        'SuperAdmin',
+        'System Admin',
+      ].includes(role),
+    );
+    if (isExempt) {
+      return;
+    }
+
+    const isRecruiterLike =
+      roleNames.includes('Recruiter') ||
+      roleNames.includes(ROLE_NAMES.AGENT_COORDINATOR);
+    if (!isRecruiterLike) {
+      return;
+    }
+
+    if (await this.isRecruiterLockedRnrCandidate(candidateId)) {
+      throw new ForbiddenException(
+        'This candidate is in RNR and is with Operations. You can update status and assign to projects only after Operations reassigns them back to you.',
+      );
+    }
+  }
+
+  /**
    * Convert min/max age to dateOfBirth range for filtering.
    */
   private computeDateOfBirthRangeFromAge(
@@ -3987,495 +5782,198 @@ export class CandidatesService {
     return range;
   }
 
-  /**
-   * Get candidate overview for a specific recruiter or all (admin)
-   */
-  async getCandidateOverview(
+  private resolveOverviewTargetRecruiterId(
     query: QueryCandidateOverviewDto,
     userId: string,
     roles: string[],
-  ): Promise<any> {
-    const isManagerOrAdmin = roles.some((role) =>
-      ['CEO', 'Director', 'Manager', 'Team Head', 'Team Lead', 'System Admin', 'CRE'].includes(role),
+  ): string | undefined {
+    if (roles.includes('Recruiter')) {
+      return userId;
+    }
+    return query.recruiterId;
+  }
+
+  private buildOverviewBaseScopeWhere(
+    query: QueryCandidateOverviewDto,
+    userId: string,
+    roles: string[],
+  ): {
+    baseWhereForCounts: Prisma.CandidateWhereInput;
+    targetRecruiterId?: string;
+  } {
+    const targetRecruiterId = this.resolveOverviewTargetRecruiterId(
+      query,
+      userId,
+      roles,
     );
+    const where: Prisma.CandidateWhereInput = {};
 
-    const isRecruiter = roles.includes('Recruiter');
-
-    // If a specific recruiter ID is passed and requester is manager/admin/cre, use it.
-    // Otherwise, if recruiter, force filter by their ID.
-    // If it's none of above, could be something else, default to all for now.
-    let targetRecruiterId = query.recruiterId;
-
-    if (isRecruiter) {
-      targetRecruiterId = userId;
-    }
-
-    const where: any = {};
-
-    // Base filter for list and counts: candidates assigned to the recruiter
     if (targetRecruiterId && targetRecruiterId !== 'all') {
-      where.recruiterAssignments = {
-        some: {
-          recruiterId: targetRecruiterId,
-          isActive: true,
-        },
-      };
-    }
-
-    // Date Range logic
-    if (query.dateFilter && query.dateFilter !== 'custom' && query.dateFilter !== 'all') {
-      const now = new Date();
-      let start: Date | undefined;
-      let end: Date | undefined;
-
-      switch (query.dateFilter) {
-        case 'today':
-          start = new Date(new Date().setHours(0, 0, 0, 0));
-          end = new Date(new Date().setHours(23, 59, 59, 999));
-          break;
-        case 'yesterday':
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          start = new Date(yesterday.setHours(0, 0, 0, 0));
-          end = new Date(yesterday.setHours(23, 59, 59, 999));
-          break;
-        case 'this_week':
-          const first = now.getDate() - now.getDay();
-          const sunday = new Date(new Date().setDate(first));
-          start = new Date(sunday.setHours(0, 0, 0, 0));
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'last_week':
-          const lastFirst = now.getDate() - now.getDay() - 7;
-          const lastSunday = new Date(new Date().setDate(lastFirst));
-          start = new Date(lastSunday.setHours(0, 0, 0, 0));
-          end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'this_month':
-          start = new Date(now.getFullYear(), now.getMonth(), 1);
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-        case 'this_year':
-          start = new Date(now.getFullYear(), 0, 1);
-          end = new Date();
-          end.setHours(23, 59, 59, 999);
-          break;
-      }
-      if (start && end) {
-        where.createdAt = { gte: start, lte: end };
-      }
-    } else if (query.dateFrom || query.dateTo) {
-      const dateRange: any = {};
-      if (query.dateFrom) dateRange.gte = new Date(query.dateFrom);
-      if (query.dateTo) dateRange.lte = new Date(query.dateTo);
-      where.createdAt = dateRange;
-    }
-
-    // Add list filters
-    if (query.search) {
-      where.OR = [
-        { firstName: { contains: query.search, mode: 'insensitive' } },
-        { lastName: { contains: query.search, mode: 'insensitive' } },
-        { mobileNumber: { contains: query.search, mode: 'insensitive' } },
-        { email: { contains: query.search, mode: 'insensitive' } },
+      const existingAnd = Array.isArray(where.AND)
+        ? where.AND
+        : where.AND
+          ? [where.AND]
+          : [];
+      where.AND = [
+        ...existingAnd,
+        this.buildRecruiterOverviewScope(targetRecruiterId),
       ];
     }
 
-    if (query.gender) {
-      where.gender = query.gender.toUpperCase();
-    }
+    this.candidateListFilterService.applyCreatedAtFilter(where, query);
+    this.candidateListFilterService.applySearchFilter(where, query.search);
+    this.candidateListFilterService.applyAdvancedListFilters(where, query);
 
-    if (query.sources && query.sources.length > 0) {
-      where.source = { in: query.sources };
-    } else if (query.source) {
-      where.source = query.source;
-    }
+    return {
+      baseWhereForCounts: this.cloneOverviewScopeWhere(where),
+      targetRecruiterId,
+    };
+  }
 
-    if (query.countryPreferences && query.countryPreferences.length > 0) {
-      where.preferredCountries = { some: { countryCode: { in: query.countryPreferences } } };
-    }
+  /**
+   * Dashboard tile counts for recruiter candidate overview (no list / tile status filter).
+   */
+  async getCandidateOverviewStats(
+    query: QueryCandidateOverviewDto,
+    userId: string,
+    roles: string[],
+  ): Promise<{
+    total: number;
+    positive: number;
+    untouched: number;
+    negative: number;
+    profileShortlisting: number;
+    nominated: number;
+    registered: number;
+    documentation: number;
+    screening: number;
+    interview: number;
+    processing: number;
+    interviewAssigned: number;
+    documentReceived: number;
+    medical: number;
+    visa: number;
+    deployed: number;
+    registeredSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    screeningSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    interviewSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+    processingSubStatus: {
+      tiles: Array<{
+        key: string;
+        subStatusName: string;
+        label: string;
+        count: number;
+      }>;
+    };
+  }> {
+    const { baseWhereForCounts, targetRecruiterId } =
+      this.buildOverviewBaseScopeWhere(query, userId, roles);
 
-    if (query.sectorTypes && query.sectorTypes.length > 0) {
-      where.sectorType = { in: query.sectorTypes };
-    }
+    const workflowProjectScope: Prisma.CandidateProjectsWhereInput =
+      targetRecruiterId && targetRecruiterId !== 'all'
+        ? { recruiterId: targetRecruiterId }
+        : {};
 
-    if (query.facilityPreferences && query.facilityPreferences.length > 0) {
-      where.facilityPreferences = { some: { facilityType: { in: query.facilityPreferences } } };
-    }
-
-    if (query.visaType) {
-      where.visaType = query.visaType;
-    }
-
-    if (query.qualification) {
-      where.qualifications = {
-        some: {
-          qualification: {
-            name: { contains: query.qualification, mode: 'insensitive' },
-          },
-        },
-      };
-    }
-
-    if (query.minExperience !== undefined || query.maxExperience !== undefined) {
-      where.experience = {};
-      if (query.minExperience !== undefined) where.experience.gte = query.minExperience;
-      if (query.maxExperience !== undefined) where.experience.lte = query.maxExperience;
-    }
-
-    if (query.minSalary !== undefined || query.maxSalary !== undefined) {
-      where.expectedMinSalary = {};
-      if (query.minSalary !== undefined) where.expectedMinSalary.gte = query.minSalary;
-      if (query.maxSalary !== undefined) where.expectedMinSalary.lte = query.maxSalary;
-    }
-
-    if (query.agentId) {
-      where.agentId = query.agentId;
-    }
-
-    if (query.heightMin !== undefined || query.heightMax !== undefined) {
-      where.height = {};
-      if (query.heightMin !== undefined) where.height.gte = query.heightMin;
-      if (query.heightMax !== undefined) where.height.lte = query.heightMax;
-    }
-
-    if (query.weightMin !== undefined || query.weightMax !== undefined) {
-      where.weight = {};
-      if (query.weightMin !== undefined) where.weight.gte = query.weightMin;
-      if (query.weightMax !== undefined) where.weight.lte = query.weightMax;
-    }
-
-    if (query.skinTone) {
-      where.skinTone = query.skinTone;
-    }
-
-    if (query.languageProficiency) {
-      where.languageProficiency = { contains: query.languageProficiency, mode: 'insensitive' };
-    }
-
-    if (query.smartness) {
-      where.smartness = query.smartness;
-    }
-
-    if (query.licensingExam) {
-      where.licensingExam = query.licensingExam;
-    }
-
-    if (query.dataFlow !== undefined) {
-      where.dataFlow = query.dataFlow;
-    }
-
-    if (query.eligibility !== undefined) {
-      where.eligibility = query.eligibility;
-    }
-
-    // Age filter is converted to dateOfBirth filter range
-    const ageDobRange = this.computeDateOfBirthRangeFromAge(query.minAge, query.maxAge);
-    if (ageDobRange.dateOfBirthFrom || ageDobRange.dateOfBirthTo) {
-      where.dateOfBirth = {};
-      if (ageDobRange.dateOfBirthFrom) {
-        where.dateOfBirth.gte = ageDobRange.dateOfBirthFrom;
-      }
-      if (ageDobRange.dateOfBirthTo) {
-        where.dateOfBirth.lte = ageDobRange.dateOfBirthTo;
-      }
-    }
-
-    if (query.dateOfBirthFrom || query.dateOfBirthTo) {
-      if (!where.dateOfBirth) {
-        where.dateOfBirth = {};
-      }
-      if (query.dateOfBirthFrom) {
-        const parsedFrom = new Date(query.dateOfBirthFrom);
-        where.dateOfBirth.gte = where.dateOfBirth.gte
-          ? new Date(Math.max(new Date(where.dateOfBirth.gte).getTime(), parsedFrom.getTime()))
-          : parsedFrom;
-      }
-      if (query.dateOfBirthTo) {
-        const parsedTo = new Date(query.dateOfBirthTo);
-        const toDate = new Date(parsedTo);
-        toDate.setHours(23, 59, 59, 999);
-        where.dateOfBirth.lte = where.dateOfBirth.lte
-          ? new Date(Math.min(new Date(where.dateOfBirth.lte).getTime(), toDate.getTime()))
-          : toDate;
-      }
-    }
-
-    if (query.workExperienceCompany || query.workExperienceTitle) {
-      const workExperienceCondition: any = {};
-      if (query.workExperienceCompany) {
-        workExperienceCondition.companyName = { contains: query.workExperienceCompany, mode: 'insensitive' };
-      }
-      if (query.workExperienceTitle) {
-        workExperienceCondition.jobTitle = { contains: query.workExperienceTitle, mode: 'insensitive' };
-      }
-      where.workExperiences = { some: workExperienceCondition };
-    }
-
-    // New: Main and Sub Status filtering
-    if (query.mainStatus || query.subStatus) {
-      if (!where.projects) {
-        where.projects = {
-          some: {
-            ...(query.mainStatus ? { mainStatus: { name: query.mainStatus } } : {}),
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
-      } else if (where.projects.some) {
-        // Merge with existing projects.some filters
-        where.projects.some = {
-          ...where.projects.some,
-          ...(query.mainStatus ? { mainStatus: { name: query.mainStatus } } : {}),
-          ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-        };
-      }
-    }
-
-    if (query.processingStep) {
-      where.projects = {
-        some: {
-          processing: {
-            processingSteps: {
-              some: {
-                template: { key: query.processingStep },
-                status: 'completed',
-              },
+    const [positiveStatusIds, negativeStatusIds] = await Promise.all([
+      this.resolveCrmStatusIds(POSITIVE_CRM_STATUS_NAMES),
+      this.resolveCrmStatusIds(NEGATIVE_CRM_STATUS_NAMES),
+    ]);
+    const positiveCurrentStatusFilter =
+      this.buildPositiveCrmStatusFilter(positiveStatusIds);
+    const negativeCurrentStatusFilter: Prisma.CandidateWhereInput =
+      negativeStatusIds.length > 0
+        ? { currentStatusId: { in: negativeStatusIds } }
+        : {
+            currentStatus: {
+              OR: NEGATIVE_CRM_STATUS_NAMES.map((statusName) => ({
+                statusName: { equals: statusName, mode: 'insensitive' },
+              })),
             },
-          },
-        },
-      };
-    }
+          };
 
-    if (query.currentStatus || query.status) {
-      const rawStatus = query.currentStatus || query.status;
-      const statusValue = rawStatus ? rawStatus.toLowerCase() : '';
-
-      if (statusValue === 'registered' || statusValue === 'nominated') {
-        where.projects = {
-          some: {
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
-      } else if (statusValue === 'positive') {
-        where.currentStatus = {
-          statusName: { in: ['Interested', 'Future', 'On Hold'] },
-        };
-        where.projects = { none: {} };
-      } else if (statusValue === 'negative') {
-        where.currentStatus = {
-          statusName: {
-            in: ['Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible'],
-          },
-        };
-        where.projects = { none: {} };
-      } else if (statusValue === 'documentation') {
-        where.projects = {
-          some: {
-            mainStatus: { name: 'documents' },
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
-      } else if (statusValue === 'interview') {
-        where.projects = {
-          some: {
-            mainStatus: { name: 'interview' },
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
-      } else if (statusValue === 'processing') {
-        where.projects = {
-          some: {
-            mainStatus: { name: 'processing' },
-            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
-          },
-        };
-      } else if (statusValue === 'deployed') {
-        where.OR = [
-          { currentStatus: { statusName: 'Deployed' } },
-          { projects: { some: { subStatus: { name: 'hired' } } } },
-        ];
-      } else if (statusValue === 'interested' || statusValue === 'qualified') {
-        where.OR = [
-          { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
-          { projects: { some: {} } },
-        ];
-      } else if ([
-        'untouched', 'not_interested', 'not_eligible', 'other_enquiry', 'future', 'on_hold', 'rnr'
-      ].includes(statusValue)) {
-        where.currentStatus = {
-          statusName: {
-            in: ['Untouched', 'Not Interested', 'Not Eligible', 'Other Enquiry', 'Future', 'On Hold', 'RNR'],
-          },
-        };
-        where.projects = { none: {} };
-      } else if (statusValue === 'interview_assigned') {
-        // Updated logic: Filter by candidates who have EVER been in specific interview sub-statuses
-        where.projects = {
-          some: {
-            projectStatusHistory: {
-              some: {
-                subStatus: {
-                  name: {
-                    in: [
-                      'interview_assigned',
-                      'interview_scheduled',
-                      'interview_rescheduled',
-                      'interview_completed',
-                      'interview_passed',
-                      'shortlisted',
-                    ],
-                  },
-                },
-              },
-            },
-          },
-        };
-      } else if (statusValue === 'document_received') {
-        where.projects = {
-          some: {
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'document_received' },
-                  status: 'completed',
-                },
-              },
-            },
-          },
-        };
-      } else if (statusValue === 'medical') {
-        where.projects = {
-          some: {
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'medical' },
-                  status: 'completed',
-                },
-              },
-            },
-          },
-        };
-      } else if (statusValue === 'visa') {
-        where.projects = {
-          some: {
-            processing: {
-              processingSteps: {
-                some: {
-                  template: { key: 'visa' },
-                  status: 'completed',
-                },
-              },
-            },
-          },
-        };
-      } else {
-        where.currentStatus = { statusName: { contains: statusValue, mode: 'insensitive' } };
-      }
-    }
-
-    // Common query options for counts
-    // We create a base where clause that EXCLUDES the status/currentStatus filters
-    // so that clicking a tile doesn't recalculate the other tiles based on the filtered list.
-    const baseWhereForCounts = { ...where };
-    delete baseWhereForCounts.OR;
-    delete baseWhereForCounts.currentStatus;
-    delete baseWhereForCounts.status; // Fixed: also delete status from base count where
-    delete baseWhereForCounts.mainStatus;
-    delete baseWhereForCounts.subStatus;
-    delete baseWhereForCounts.processingStep;
-
-    // Also remove projects filter if it was added for specific status filtering
-    if (query.currentStatus || query.status || query.mainStatus || query.subStatus || query.processingStep) {
-      delete baseWhereForCounts.projects;
-    }
-
-    // Optimized summary counts using Promise.all
-    const [
-      tableTotalCount,
-      totalCandidatesCount,
-      positiveCandidates,
-      negativeCandidates,
-      registeredCandidates,
-      documentationCandidates,
-      interviewCandidates,
-      processingCandidates,
-      deployedCandidatesCount,
-      interviewAssignedCandidates,
-      docReceivedCandidates,
-      medicalCandidates,
-      visaCandidates
-    ] = await Promise.all([
-      // 1. Total (Filtered for table)
-      this.prisma.candidate.count({ where }),
-
-      // 2. Total Summary (Filtered for context)
+    const overviewCountResults = await Promise.all([
       this.prisma.candidate.count({ where: baseWhereForCounts }),
-
-      // 3. Positive ('Interested', 'Future', 'On Hold' AND NOT nominated)
+      this.prisma.candidate.count({
+        where: this.mergeOverviewWhere(
+          baseWhereForCounts,
+          positiveCurrentStatusFilter,
+        ),
+      }),
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
-          currentStatus: { statusName: { in: ['Interested', 'Future', 'On Hold'] } },
+          currentStatus: { statusName: 'Untouched' },
           projects: { none: {} },
         },
       }),
-
-      // 4. Negative ('Not Interested', 'Other Enquiry', 'RNR', 'Not Eligible' AND NOT nominated)
+      this.prisma.candidate.count({
+        where: this.mergeOverviewWhere(
+          baseWhereForCounts,
+          negativeCurrentStatusFilter,
+        ),
+      }),
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
-          currentStatus: {
-            statusName: {
-              in: [
-                'Not Interested',
-                'Other Enquiry',
-                'RNR',
-                'Not Eligible',
-              ],
+          projects: { some: { mainStatus: { name: 'nominated' } } },
+        },
+      }),
+      this.prisma.candidate.count({
+        where: {
+          ...baseWhereForCounts,
+          projects: {
+            some: {
+              mainStatus: { name: 'documents' },
+              subStatus: {
+                name: { in: [...REGISTERED_DOC_SUB_STATUSES] },
+              },
             },
           },
-          projects: { none: {} },
         },
       }),
-
-      // 5. Registered / Nominated
-      this.prisma.candidate.count({
-        where: {
-          ...baseWhereForCounts,
-          projects: { some: {} },
-        },
-      }),
-
-      // 6. Documentation
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
           projects: { some: { mainStatus: { name: 'documents' } } },
         },
       }),
-
-      // 7. Interview
-      this.prisma.candidate.count({
-        where: {
-          ...baseWhereForCounts,
-          projects: { some: { mainStatus: { name: 'interview' } } },
-        },
-      }),
-
-      // 8. Processing
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...SCREENING_TRAINING_SUB_STATUS_NAMES],
+      ),
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...CLIENT_INTERVIEW_SUB_STATUS_NAMES],
+      ),
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
           projects: { some: { mainStatus: { name: 'processing' } } },
         },
       }),
-
-      // 9. Deployed
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4485,8 +5983,6 @@ export class CandidatesService {
           ],
         },
       }),
-
-      // 10. Interview Assigned
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4513,8 +6009,6 @@ export class CandidatesService {
           },
         },
       }),
-
-      // 11. Documents Received
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4533,8 +6027,6 @@ export class CandidatesService {
           },
         },
       }),
-
-      // 12. Medical
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4553,8 +6045,6 @@ export class CandidatesService {
           },
         },
       }),
-
-      // 13. Visa
       this.prisma.candidate.count({
         where: {
           ...baseWhereForCounts,
@@ -4573,7 +6063,504 @@ export class CandidatesService {
           },
         },
       }),
+      ...REGISTERED_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      ...SCREENING_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      this.countCandidatesWithAnySubStatusHistory(
+        baseWhereForCounts,
+        workflowProjectScope,
+        [...TRAINING_SUB_STATUS_NAMES],
+      ),
+      ...INTERVIEW_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
+      ...PROCESSING_SUB_STATUS_TILES.map((tile) =>
+        this.countCandidatesWithSubStatusHistory(
+          baseWhereForCounts,
+          workflowProjectScope,
+          tile.subStatusName,
+        ),
+      ),
     ]);
+
+    const [
+      totalCandidatesCount,
+      positiveCandidates,
+      untouchedCandidates,
+      negativeCandidates,
+      profileShortlistingCandidates,
+      registeredCandidates,
+      documentationCandidates,
+      screeningCandidates,
+      interviewCandidates,
+      processingCandidates,
+      deployedCandidatesCount,
+      interviewAssignedCandidates,
+      docReceivedCandidates,
+      medicalCandidates,
+      visaCandidates,
+    ] = overviewCountResults.slice(0, 15) as number[];
+
+    const registeredSubStatusCounts = overviewCountResults.slice(
+      15,
+      15 + REGISTERED_SUB_STATUS_TILES.length,
+    ) as number[];
+    const screeningSubStatusCounts = overviewCountResults.slice(
+      15 + REGISTERED_SUB_STATUS_TILES.length,
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length,
+    ) as number[];
+    const screeningTrainingGroupedCount = overviewCountResults[
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length
+    ] as number;
+    const interviewSubStatusCounts = overviewCountResults.slice(
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1,
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1 +
+        INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+    const processingSubStatusCounts = overviewCountResults.slice(
+      15 +
+        REGISTERED_SUB_STATUS_TILES.length +
+        SCREENING_SUB_STATUS_TILES.length +
+        1 +
+        INTERVIEW_SUB_STATUS_TILES.length,
+    ) as number[];
+
+    return {
+      total: totalCandidatesCount,
+      positive: positiveCandidates,
+      untouched: untouchedCandidates,
+      negative: negativeCandidates,
+      profileShortlisting: profileShortlistingCandidates,
+      nominated: profileShortlistingCandidates,
+      registered: registeredCandidates,
+      documentation: documentationCandidates,
+      screening: screeningCandidates,
+      interview: interviewCandidates,
+      processing: processingCandidates,
+      interviewAssigned: interviewAssignedCandidates,
+      documentReceived: docReceivedCandidates,
+      medical: medicalCandidates,
+      visa: visaCandidates,
+      deployed: deployedCandidatesCount,
+      registeredSubStatus: {
+        tiles: REGISTERED_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: registeredSubStatusCounts[index],
+        })),
+      },
+      screeningSubStatus: {
+        tiles: [
+          ...SCREENING_SUB_STATUS_TILES.map((tile, index) => ({
+            key: tile.key,
+            subStatusName: tile.subStatusName,
+            label: tile.label,
+            count: screeningSubStatusCounts[index],
+          })),
+          {
+            key: 'training',
+            subStatusName: 'training_assigned',
+            label: 'Training',
+            count: screeningTrainingGroupedCount,
+          },
+        ],
+      },
+      interviewSubStatus: {
+        tiles: INTERVIEW_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: interviewSubStatusCounts[index],
+        })),
+      },
+      processingSubStatus: {
+        tiles: PROCESSING_SUB_STATUS_TILES.map((tile, index) => ({
+          key: tile.key,
+          subStatusName: tile.subStatusName,
+          label: tile.label,
+          count: processingSubStatusCounts[index],
+        })),
+      },
+    };
+  }
+
+  /** List filter: candidates with project history entry for a workflow sub-status. */
+  private buildWorkflowSubStatusProjectFilter(
+    mainStatusName: string,
+    subStatusName: string,
+    targetRecruiterId?: string,
+  ): Prisma.CandidateWhereInput['projects'] {
+    return {
+      some: {
+        ...(targetRecruiterId && targetRecruiterId !== 'all'
+          ? { recruiterId: targetRecruiterId }
+          : {}),
+        mainStatus: { name: mainStatusName },
+        projectStatusHistory: {
+          some: {
+            subStatus: { name: subStatusName },
+          },
+        },
+      },
+    };
+  }
+
+  /** Unique candidates who reached a project sub-status at least once (history). */
+  private countCandidatesWithSubStatusHistory(
+    baseWhereForCounts: Prisma.CandidateWhereInput,
+    projectScope: Prisma.CandidateProjectsWhereInput,
+    subStatusName: string,
+  ) {
+    return this.prisma.candidate.count({
+      where: this.mergeOverviewWhere(baseWhereForCounts, {
+        projects: {
+          some: {
+            ...projectScope,
+            projectStatusHistory: {
+              some: {
+                subStatus: { name: subStatusName },
+              },
+            },
+          },
+        },
+      }),
+    });
+  }
+
+  /** Unique candidates who reached any of the given sub-statuses at least once (history). */
+  private countCandidatesWithAnySubStatusHistory(
+    baseWhereForCounts: Prisma.CandidateWhereInput,
+    projectScope: Prisma.CandidateProjectsWhereInput,
+    subStatusNames: readonly string[],
+  ) {
+    return this.prisma.candidate.count({
+      where: this.mergeOverviewWhere(baseWhereForCounts, {
+        projects: {
+          some: {
+            ...projectScope,
+            projectStatusHistory: {
+              some: {
+                subStatus: { name: { in: [...subStatusNames] } },
+              },
+            },
+          },
+        },
+      }),
+    });
+  }
+
+  /** List filter: candidates with project history in any of the given sub-statuses. */
+  private buildWorkflowAnySubStatusProjectFilter(
+    subStatusNames: readonly string[],
+    targetRecruiterId?: string,
+  ): Prisma.CandidateWhereInput['projects'] {
+    return {
+      some: {
+        ...(targetRecruiterId && targetRecruiterId !== 'all'
+          ? { recruiterId: targetRecruiterId }
+          : {}),
+        projectStatusHistory: {
+          some: {
+            subStatus: { name: { in: [...subStatusNames] } },
+          },
+        },
+      },
+    };
+  }
+
+  /**
+   * Get candidate overview list for a specific recruiter or all (admin)
+   */
+  async getCandidateOverview(
+    query: QueryCandidateOverviewDto,
+    userId: string,
+    roles: string[],
+  ): Promise<any> {
+    const { baseWhereForCounts, targetRecruiterId } =
+      this.buildOverviewBaseScopeWhere(query, userId, roles);
+
+    const [positiveStatusIds, negativeStatusIds] = await Promise.all([
+      this.resolveCrmStatusIds(POSITIVE_CRM_STATUS_NAMES),
+      this.resolveCrmStatusIds(NEGATIVE_CRM_STATUS_NAMES),
+    ]);
+    const positiveCurrentStatusFilter =
+      this.buildPositiveCrmStatusFilter(positiveStatusIds);
+    const negativeCurrentStatusFilter: Prisma.CandidateWhereInput =
+      negativeStatusIds.length > 0
+        ? { currentStatusId: { in: negativeStatusIds } }
+        : {
+            currentStatus: {
+              OR: NEGATIVE_CRM_STATUS_NAMES.map((statusName) => ({
+                statusName: { equals: statusName, mode: 'insensitive' },
+              })),
+            },
+          };
+
+    const tableWhere = this.cloneOverviewScopeWhere(baseWhereForCounts);
+
+    const rawTileStatus = query.currentStatus || query.status;
+    const statusValue = rawTileStatus ? rawTileStatus.toLowerCase() : '';
+    const usesWorkflowHistorySubStatus =
+      !!query.subStatus &&
+      ['registered', 'screening', 'interview', 'processing'].includes(statusValue);
+
+    // Main and sub-status filtering (current status); skipped when workflow history filter applies
+    if ((query.mainStatus || query.subStatus) && !usesWorkflowHistorySubStatus) {
+      if (!tableWhere.projects) {
+        tableWhere.projects = {
+          some: {
+            ...(query.mainStatus ? { mainStatus: { name: query.mainStatus } } : {}),
+            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
+          },
+        };
+      } else if (tableWhere.projects.some) {
+        // Merge with existing projects.some filters
+        tableWhere.projects.some = {
+          ...tableWhere.projects.some,
+          ...(query.mainStatus ? { mainStatus: { name: query.mainStatus } } : {}),
+          ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
+        };
+      }
+    }
+
+    if (query.processingStep) {
+      tableWhere.projects = {
+        some: {
+          processing: {
+            processingSteps: {
+              some: {
+                template: { key: query.processingStep },
+                status: 'completed',
+              },
+            },
+          },
+        },
+      };
+    }
+
+    if (statusValue && statusValue !== 'all') {
+      if (
+        statusValue === 'profile_shortlisting' ||
+        statusValue === 'nominated'
+      ) {
+        tableWhere.projects = {
+          some: {
+            mainStatus: { name: 'nominated' },
+            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
+          },
+        };
+      } else if (statusValue === 'registered') {
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'documents',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : {
+              some: {
+                mainStatus: { name: 'documents' },
+                subStatus: {
+                  name: { in: [...REGISTERED_DOC_SUB_STATUSES] },
+                },
+              },
+            };
+      } else if (statusValue === 'positive') {
+        const existingAnd = Array.isArray(tableWhere.AND)
+          ? tableWhere.AND
+          : tableWhere.AND
+            ? [tableWhere.AND]
+            : [];
+        tableWhere.AND = [...existingAnd, positiveCurrentStatusFilter];
+      } else if (statusValue === 'negative') {
+        const existingAnd = Array.isArray(tableWhere.AND)
+          ? tableWhere.AND
+          : tableWhere.AND
+            ? [tableWhere.AND]
+            : [];
+        tableWhere.AND = [...existingAnd, negativeCurrentStatusFilter];
+      } else if (statusValue === 'untouched') {
+        tableWhere.currentStatus = { statusName: 'Untouched' };
+        tableWhere.projects = { none: {} };
+      } else if (statusValue === 'call_back') {
+        tableWhere.currentStatus = { statusName: 'Call Back' };
+        tableWhere.projects = { none: {} };
+      } else if (statusValue === 'documentation') {
+        tableWhere.projects = {
+          some: {
+            mainStatus: { name: 'documents' },
+            ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
+          },
+        };
+      } else if (statusValue === 'screening') {
+        if (query.subStatus === 'training_assigned') {
+          tableWhere.projects = this.buildWorkflowAnySubStatusProjectFilter(
+            [...TRAINING_SUB_STATUS_NAMES],
+            targetRecruiterId,
+          );
+        } else {
+          tableWhere.projects = query.subStatus
+            ? this.buildWorkflowSubStatusProjectFilter(
+                'interview',
+                query.subStatus,
+                targetRecruiterId,
+              )
+            : this.buildWorkflowAnySubStatusProjectFilter(
+                [...SCREENING_TRAINING_SUB_STATUS_NAMES],
+                targetRecruiterId,
+              );
+        }
+      } else if (statusValue === 'interview') {
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'interview',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : this.buildWorkflowAnySubStatusProjectFilter(
+              [...CLIENT_INTERVIEW_SUB_STATUS_NAMES],
+              targetRecruiterId,
+            );
+      } else if (statusValue === 'processing') {
+        tableWhere.projects = query.subStatus
+          ? this.buildWorkflowSubStatusProjectFilter(
+              'processing',
+              query.subStatus,
+              targetRecruiterId,
+            )
+          : {
+              some: {
+                mainStatus: { name: 'processing' },
+              },
+            };
+      } else if (statusValue === 'deployed') {
+        tableWhere.OR = [
+          { currentStatus: { statusName: 'Deployed' } },
+          { projects: { some: { subStatus: { name: 'hired' } } } },
+        ];
+      } else if (statusValue === 'interested' || statusValue === 'qualified') {
+        tableWhere.OR = [
+          { currentStatus: { statusName: { in: ['Interested', 'Qualified', 'Deployed'] } } },
+          { projects: { some: {} } },
+        ];
+      } else if (
+        [
+          'not_interested',
+          'not_eligible',
+          'other_enquiry',
+          'future',
+          'on_hold',
+          'rnr',
+        ].includes(statusValue)
+      ) {
+        const statusNameMap: Record<string, string> = {
+          not_interested: 'Not Interested',
+          not_eligible: 'Not Eligible',
+          other_enquiry: 'Other Enquiry',
+          future: 'Future',
+          on_hold: 'On Hold',
+          rnr: 'RNR',
+        };
+        tableWhere.currentStatus = {
+          statusName: statusNameMap[statusValue] ?? statusValue,
+        };
+        tableWhere.projects = { none: {} };
+      } else if (statusValue === 'interview_assigned') {
+        // Updated logic: Filter by candidates who have EVER been in specific interview sub-statuses
+        tableWhere.projects = {
+          some: {
+            projectStatusHistory: {
+              some: {
+                subStatus: {
+                  name: {
+                    in: [
+                      'interview_assigned',
+                      'interview_scheduled',
+                      'interview_rescheduled',
+                      'interview_completed',
+                      'interview_passed',
+                      'shortlisted',
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'document_received') {
+        tableWhere.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'document_received' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'medical') {
+        tableWhere.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'medical' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else if (statusValue === 'visa') {
+        tableWhere.projects = {
+          some: {
+            processing: {
+              processingSteps: {
+                some: {
+                  template: { key: 'visa' },
+                  status: 'completed',
+                },
+              },
+            },
+          },
+        };
+      } else {
+        tableWhere.currentStatus = {
+          statusName: { contains: statusValue, mode: 'insensitive' },
+        };
+      }
+    }
+
+    const tableTotalCount = await this.prisma.candidate.count({
+      where: tableWhere,
+    });
 
     // Pagination for the table
     const page = query.page || 1;
@@ -4585,7 +6572,7 @@ export class CandidatesService {
 
     // Define the projects filtering based on current status/mainStatus
     let projectsFilter: any = undefined;
-    const statusValue = (query.currentStatus || query.status || '').toLowerCase();
+    const listStatusValue = statusValue;
 
     if (query.mainStatus || query.subStatus) {
       projectsFilter = {
@@ -4594,15 +6581,25 @@ export class CandidatesService {
           ...(query.subStatus ? { subStatus: { name: query.subStatus } } : {}),
         },
       };
-    } else if (statusValue === 'interview') {
+    } else if (listStatusValue === 'interview') {
       projectsFilter = { where: { mainStatus: { name: 'interview' } } };
-    } else if (statusValue === 'documentation') {
+    } else if (listStatusValue === 'documentation') {
       projectsFilter = { where: { mainStatus: { name: 'documents' } } };
-    } else if (statusValue === 'processing') {
+    } else if (listStatusValue === 'processing') {
       projectsFilter = { where: { mainStatus: { name: 'processing' } } };
-    } else if (statusValue === 'registered' || statusValue === 'nominated') {
-      projectsFilter = { where: {} }; // Show any project
-    } else if (statusValue === 'interview_assigned') {
+    } else if (
+      listStatusValue === 'profile_shortlisting' ||
+      listStatusValue === 'nominated'
+    ) {
+      projectsFilter = { where: { mainStatus: { name: 'nominated' } } };
+    } else if (listStatusValue === 'registered') {
+      projectsFilter = {
+        where: {
+          mainStatus: { name: 'documents' },
+          subStatus: { name: { in: [...REGISTERED_DOC_SUB_STATUSES] } },
+        },
+      };
+    } else if (listStatusValue === 'interview_assigned') {
       projectsFilter = {
         where: {
           projectStatusHistory: {
@@ -4626,7 +6623,7 @@ export class CandidatesService {
     }
 
     const candidatesData = await this.prisma.candidate.findMany({
-      where,
+      where: tableWhere,
       include: {
         currentStatus: true,
         team: true,
@@ -4675,13 +6672,29 @@ export class CandidatesService {
                 email: true,
               },
             },
+            creStatus: {
+              select: { id: true, statusName: true },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
         documents: {
           where: { isDeleted: false },
-          select: { docType: true },
+          select: { docType: true, documentNumber: true },
         },
+        statusHistories: {
+          orderBy: { statusUpdatedAt: 'desc' },
+          take: 15,
+          select: {
+            statusId: true,
+            statusNameSnapshot: true,
+            reason: true,
+            statusUpdatedAt: true,
+            status: { select: { id: true, statusName: true } },
+          },
+        },
+        workExperiences: candidateWorkExperiencesInclude,
+        qualifications: candidateQualificationsInclude,
       },
       orderBy: { [sortBy as string]: sortOrder },
       skip,
@@ -4690,21 +6703,64 @@ export class CandidatesService {
 
     const candidates = candidatesData.map((c) => {
       const activeAssignment = c.recruiterAssignments?.find((a) => a.isActive);
+      const recruiterAssignment =
+        targetRecruiterId && targetRecruiterId !== 'all'
+          ? c.recruiterAssignments.find(
+              (a) => a.isActive && a.recruiterId === targetRecruiterId,
+            )
+          : activeAssignment;
+      const creReassignedAssignment = c.recruiterAssignments.find(
+        (a) =>
+          a.isActive &&
+          a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_REASSIGNED,
+      );
       const firstAssignment = c.recruiterAssignments?.[0]; // The one who created the first engagement
       const latestProject = c.projects?.[0] as any;
-      
+      const statusHistories = c.statusHistories ?? [];
+
+      const creAssignment = c.recruiterAssignments.find(
+        (a) =>
+          a.isActive &&
+          (a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_AUTO ||
+            a.assignmentType === CANDIDATE_ASSIGNMENT_TYPE.CRE_MANUAL),
+      );
+      const isHandledByCRE = !!creAssignment;
+      const isCREReassigned = !!creReassignedAssignment;
+
       // Destructure to remove projects array from the final response object
-      const { projects, documents, ...candidateRest } = c as typeof c & {
-        documents?: Array<{ docType: string }>;
+      const {
+        projects,
+        documents,
+        statusHistories: _omitHistories,
+        ...candidateRest
+      } = c as typeof c & {
+        documents?: Array<{ docType: string; documentNumber?: string | null }>;
       };
 
       const withCompletion = withProfileCompletion({
         ...candidateRest,
+        currentStatus: c.currentStatus,
         documents: documents ?? [],
       });
 
       return {
         ...withCompletion,
+        passportNumber: resolvePassportNumberForCandidate({
+          passportNumber: c.passportNumber,
+          documents: documents ?? [],
+        }),
+        careerGapAnalysis: calculateCareerGaps(
+          c.workExperiences ?? [],
+          c.qualifications ?? [],
+        ),
+        isHandledByCRE,
+        isCREReassigned,
+        creStatusNote: isCREReassigned
+          ? resolveCreHandoffNote(creReassignedAssignment, statusHistories)
+          : null,
+        creStatus: isCREReassigned
+          ? resolveCreHandoffStatus(creReassignedAssignment, statusHistories)
+          : null,
         recruiter: activeAssignment?.recruiter || null,
         createdBy:
           firstAssignment?.createdByUser ||
@@ -4727,21 +6783,6 @@ export class CandidatesService {
         limit,
         total: tableTotalCount,
         totalPages: Math.ceil(tableTotalCount / limit),
-      },
-      stats: {
-        total: totalCandidatesCount,
-        positive: positiveCandidates,
-        negative: negativeCandidates,
-        nominated: registeredCandidates, // Renamed for front end compatibility while keeping key name if needed
-        registered: registeredCandidates,
-        documentation: documentationCandidates,
-        interview: interviewCandidates,
-        processing: processingCandidates,
-        interviewAssigned: interviewAssignedCandidates,
-        documentReceived: docReceivedCandidates,
-        medical: medicalCandidates,
-        visa: visaCandidates,
-        deployed: deployedCandidatesCount,
       },
     };
   }
@@ -4930,6 +6971,36 @@ export class CandidatesService {
       };
     }
 
+    const countBaseWhere: typeof projectWhere = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'documents',
+          mode: 'insensitive',
+        },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
+
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
       where: projectWhere,
@@ -5029,6 +7100,8 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithUserDetails,
+      subStatusCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,
@@ -5039,8 +7112,8 @@ export class CandidatesService {
   }
 
   /**
-   * Get interview-specific workflow details for a candidate
-   * Includes only project info, screenings, and interviews
+   * Get client interview workflow details for a candidate
+   * Includes only project info and client interviews (excludes screening/training)
    */
   async getCandidateInterviewWorkflow(
     candidateId: string,
@@ -5049,7 +7122,6 @@ export class CandidatesService {
     const { subStatus, search, page = 1, limit = 10 } = options;
     const skip = (page - 1) * limit;
 
-    // First find the candidate details
     const candidateInfo = await this.prisma.candidate.findUnique({
       where: { id: candidateId },
       select: {
@@ -5063,14 +7135,16 @@ export class CandidatesService {
 
     if (!candidateInfo) return null;
 
-    // Define where clause for filtering projects
-    const projectWhere: any = {
+    const projectWhere: Prisma.CandidateProjectsWhereInput = {
       candidateId,
       mainStatus: {
         name: {
           equals: 'interview',
           mode: 'insensitive',
         },
+      },
+      subStatus: {
+        name: { in: [...CLIENT_INTERVIEW_SUB_STATUS_NAMES] },
       },
     };
 
@@ -5087,12 +7161,212 @@ export class CandidatesService {
       };
     }
 
+    const countBaseWhere: Prisma.CandidateProjectsWhereInput = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+      subStatus: {
+        name: { in: [...CLIENT_INTERVIEW_SUB_STATUS_NAMES] },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
+
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
       where: projectWhere,
     });
 
     // Get paginated projects with details
+    const projects = await this.prisma.candidateProjects.findMany({
+      where: projectWhere,
+      include: {
+        project: {
+          include: {
+            client: true,
+            country: true,
+          },
+        },
+        roleNeeded: {
+          select: {
+            designation: true,
+            roleCatalog: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        mainStatus: true,
+        subStatus: true,
+        interviews: {
+          include: {
+            candidateProjectMap: {
+              select: {
+                id: true,
+                project: { select: { title: true } },
+                candidate: { select: { firstName: true, lastName: true } },
+              },
+            },
+          },
+          orderBy: { scheduledTime: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    });
+
+    const projectsWithSchedulingInfo = await Promise.all(
+      projects.map(async (project) => {
+        const interviewsWithScheduler = await Promise.all(
+          project.interviews.map(async (interview) => {
+            const history = await this.prisma.interviewStatusHistory.findFirst({
+              where: {
+                interviewId: interview.id,
+                interviewType: 'client',
+                status: 'scheduled',
+              },
+              orderBy: { statusAt: 'asc' },
+              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
+            });
+            return {
+              ...interview,
+              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
+            };
+          }),
+        );
+
+        return {
+          ...project,
+          interviews: interviewsWithScheduler,
+        };
+      }),
+    );
+
+    return {
+      candidate: candidateInfo,
+      projects: projectsWithSchedulingInfo,
+      subStatusCounts,
+      totalAll,
+      pagination: {
+        total: totalProjects,
+        page,
+        limit,
+        totalPages: Math.ceil(totalProjects / limit),
+      },
+    };
+  }
+
+  /**
+   * Get screening + training workflow details for a candidate
+   * Includes internal screenings and training assignments (excludes client interviews)
+   */
+  async getCandidateScreeningWorkflow(
+    candidateId: string,
+    options: { subStatus?: string; search?: string; page?: number; limit?: number } = {},
+  ) {
+    const { subStatus, search, page = 1, limit = 10 } = options;
+    const skip = (page - 1) * limit;
+
+    const candidateInfo = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        profileImage: true,
+      },
+    });
+
+    if (!candidateInfo) return null;
+
+    const projectWhere: Prisma.CandidateProjectsWhereInput = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+      subStatus: {
+        name: { in: [...SCREENING_TRAINING_SUB_STATUS_NAMES] },
+      },
+    };
+
+    if (subStatus) {
+      projectWhere.subStatusId = subStatus;
+    }
+
+    if (search) {
+      projectWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const countBaseWhere: Prisma.CandidateProjectsWhereInput = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'interview',
+          mode: 'insensitive',
+        },
+      },
+      subStatus: {
+        name: { in: [...SCREENING_TRAINING_SUB_STATUS_NAMES] },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+    const totalAll = subStatusCounts.reduce((sum, row) => sum + row.count, 0);
+
+    const totalProjects = await this.prisma.candidateProjects.count({
+      where: projectWhere,
+    });
+
     const projects = await this.prisma.candidateProjects.findMany({
       where: projectWhere,
       include: {
@@ -5128,17 +7402,8 @@ export class CandidatesService {
           },
           orderBy: { scheduledTime: 'desc' },
         },
-        interviews: {
-          include: {
-            candidateProjectMap: {
-              select: {
-                id: true,
-                project: { select: { title: true } },
-                candidate: { select: { firstName: true, lastName: true } },
-              },
-            },
-          },
-          orderBy: { scheduledTime: 'desc' },
+        trainingAssignments: {
+          orderBy: { assignedAt: 'desc' },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -5146,8 +7411,31 @@ export class CandidatesService {
       take: limit,
     });
 
-    // For each screening and interview, fetch who scheduled it from InterviewStatusHistory
-    const projectsWithSchedulingInfo = await Promise.all(
+    const trainerIds = new Set<string>();
+    projects.forEach((project) => {
+      project.trainingAssignments.forEach((training) => {
+        if (training.trainerId) {
+          trainerIds.add(training.trainerId);
+        }
+      });
+    });
+
+    const trainers =
+      trainerIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(trainerIds) } },
+            select: { id: true, name: true, email: true, profileImage: true },
+          })
+        : [];
+    const trainerMap = trainers.reduce(
+      (acc, trainer) => {
+        acc[trainer.id] = trainer;
+        return acc;
+      },
+      {} as Record<string, (typeof trainers)[number]>,
+    );
+
+    const projectsWithDetails = await Promise.all(
       projects.map(async (project) => {
         const screeningsWithScheduler = await Promise.all(
           project.screenings.map(async (screening) => {
@@ -5167,35 +7455,24 @@ export class CandidatesService {
           }),
         );
 
-        const interviewsWithScheduler = await Promise.all(
-          project.interviews.map(async (interview) => {
-            const history = await this.prisma.interviewStatusHistory.findFirst({
-              where: {
-                interviewId: interview.id,
-                interviewType: 'client',
-                status: 'scheduled',
-              },
-              orderBy: { statusAt: 'asc' },
-              include: { changedBy: { select: { id: true, name: true, profileImage: true } } },
-            });
-            return {
-              ...interview,
-              scheduledBy: history?.changedBy || (history?.changedByName ? { name: history.changedByName } : null),
-            };
-          }),
-        );
+        const trainingWithTrainer = project.trainingAssignments.map((training) => ({
+          ...training,
+          trainer: training.trainerId ? trainerMap[training.trainerId] ?? { id: training.trainerId } : null,
+        }));
 
         return {
           ...project,
           screenings: screeningsWithScheduler,
-          interviews: interviewsWithScheduler,
+          trainingAssignments: trainingWithTrainer,
         };
       }),
     );
 
     return {
       candidate: candidateInfo,
-      projects: projectsWithSchedulingInfo,
+      projects: projectsWithDetails,
+      subStatusCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,
@@ -5262,6 +7539,67 @@ export class CandidatesService {
         },
       };
     }
+
+    const countBaseWhere: typeof projectWhere = {
+      candidateId,
+      mainStatus: {
+        name: {
+          equals: 'processing',
+          mode: 'insensitive',
+        },
+      },
+    };
+    if (search) {
+      countBaseWhere.project = {
+        title: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      };
+    }
+
+    const subStatusGrouped = await this.prisma.candidateProjects.groupBy({
+      by: ['subStatusId'],
+      where: countBaseWhere,
+      _count: { _all: true },
+    });
+
+    const subStatusCounts = subStatusGrouped.map((row) => ({
+      subStatusId: row.subStatusId,
+      count: row._count._all,
+    }));
+
+    const projectsForStepCounts = await this.prisma.candidateProjects.findMany({
+      where: countBaseWhere,
+      select: {
+        processing: { select: { step: true } },
+      },
+    });
+
+    const processingStepKeys = [
+      'offer_letter',
+      'documents_received',
+      'hrd',
+      'data_flow',
+      'eligibility',
+      'prometric',
+      'council_registration',
+      'document_attestation',
+      'medical',
+      'biometrics',
+      'visa',
+      'emigration',
+      'ticket',
+    ] as const;
+
+    const stepCounts = processingStepKeys.reduce<Record<string, number>>((acc, key) => {
+      acc[key] = projectsForStepCounts.filter((row) =>
+        row.processing?.step?.toLowerCase().includes(key),
+      ).length;
+      return acc;
+    }, {});
+
+    const totalAll = projectsForStepCounts.length;
 
     // Get total count for pagination
     const totalProjects = await this.prisma.candidateProjects.count({
@@ -5340,6 +7678,9 @@ export class CandidatesService {
     return {
       candidate: candidateInfo,
       projects: projectsWithSectorSteps,
+      subStatusCounts,
+      stepCounts,
+      totalAll,
       pagination: {
         total: totalProjects,
         page,

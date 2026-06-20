@@ -39,11 +39,41 @@ export class CreateAgentDto {
   @IsString()
   mobileNumber?: string;
 
+  @ApiPropertyOptional({ description: 'Agent WhatsApp number' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Agent alternate phone 1' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  alternatePhone1?: string;
+
+  @ApiPropertyOptional({ description: 'Agent alternate phone 2' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  alternatePhone2?: string;
+
+  @ApiPropertyOptional({ description: 'Agent country code (ISO)' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  countryCode?: string;
+
   @ApiPropertyOptional({ description: 'Agent company name' })
   @Transform(optionalString)
   @IsOptional()
   @IsString()
   companyName?: string;
+
+  @ApiPropertyOptional({ description: 'Agent location (city, region, or address)' })
+  @Transform(optionalString)
+  @IsOptional()
+  @IsString()
+  location?: string;
 
   @ApiPropertyOptional({ description: 'Agent type', enum: AGENT_TYPES })
   @Transform(optionalString)

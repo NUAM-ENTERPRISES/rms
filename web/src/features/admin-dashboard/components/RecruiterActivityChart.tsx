@@ -11,26 +11,35 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useGetTopRecruiterStatsQuery } from "@/features/admin/api/adminDashboardApi";
 
-const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#06b6d4"];
+const COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-1)",
+];
 
 export default function RecruiterActivityChart() {
   const { data, isLoading, isError } = useGetTopRecruiterStatsQuery({});
   const recruiterActivities = data?.data?.recruiterActivities ?? [];
 
-  const chartData = isLoading
-    ? [
-        { activity: "Projects Assigned", value: 0 },
-        { activity: "Documents Verified", value: 0 },
-        { activity: "Interviews Passed", value: 0 },
-        { activity: "Candidates Deployed", value: 0 },
-      ]
-    : recruiterActivities;
+  const defaultStages = [
+    { activity: "Positive Candidate", value: 0 },
+    { activity: "Document Verified", value: 0 },
+    { activity: "Interview Shortlisted", value: 0 },
+    { activity: "Interview Passed", value: 0 },
+    { activity: "Processing", value: 0 },
+    { activity: "Deployed", value: 0 },
+  ];
+
+  const chartData = isLoading ? defaultStages : recruiterActivities.length > 0 ? recruiterActivities : defaultStages;
 
   return (
     <Card className="border-0 shadow-sm rounded-xl bg-white">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold text-slate-700">
-          Recruiter Activity Breakdown
+          Top Recruiter — Stage Breakdown
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-2">

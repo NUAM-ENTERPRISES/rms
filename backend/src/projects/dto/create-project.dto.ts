@@ -12,11 +12,16 @@ import {
   Max,
   IsJSON,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { EducationRequirementDto } from './education-requirement.dto';
 import { CreateDocumentRequirementDto } from './document-requirement.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PROJECT_SECTOR } from '../constants';
+import {
+  normalizeProjectRoleVisaType,
+  PROJECT_ROLE_VISA_TYPES,
+  PROJECT_SECTOR,
+} from '../constants';
+import { parseProjectStatusInput } from '../utils/project-status.util';
 
 export class CreateRoleNeededDto {
   @ApiPropertyOptional({
@@ -32,7 +37,7 @@ export class CreateRoleNeededDto {
     example: 'Registered Nurse',
   })
   @IsString()
-  designation: string;
+  designation!: string;
 
   @ApiProperty({
     description: 'Number of positions needed',
@@ -41,7 +46,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 
   @ApiPropertyOptional({
     description: 'Priority level for this role',
@@ -262,7 +267,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(0)
-  minAge: number;
+  minAge!: number;
 
   @ApiProperty({
     description: 'Maximum age requirement for this role',
@@ -271,7 +276,7 @@ export class CreateRoleNeededDto {
   })
   @IsInt()
   @Min(0)
-  maxAge: number;
+  maxAge!: number;
 
   @ApiPropertyOptional({
     description: 'Accommodation details or requirements',
@@ -307,12 +312,13 @@ export class CreateRoleNeededDto {
 
   @ApiPropertyOptional({
     description: 'Visa type for this role',
-    enum: ['contract', 'permanent'],
-    default: 'contract',
+    enum: PROJECT_ROLE_VISA_TYPES,
+    default: 'company_visa',
   })
   @IsOptional()
-  @IsEnum(['contract', 'permanent'])
-  visaType?: string = 'contract';
+  @Transform(({ value }) => normalizeProjectRoleVisaType(value))
+  @IsEnum(PROJECT_ROLE_VISA_TYPES)
+  visaType?: string = 'company_visa';
 
   @ApiPropertyOptional({
     description: 'Required skills as JSON array',
@@ -331,7 +337,7 @@ export class CreateRoleNeededDto {
     example: 'cmje8as41007gq4eo8btha21t',
   })
   @IsString()
-  roleCatalogId: string;
+  roleCatalogId!: string;
 
   @ApiPropertyOptional({
     description: 'Candidate states as JSON array',
@@ -405,7 +411,7 @@ export class CreateProjectDto {
     minLength: 2,
   })
   @IsString()
-  title: string;
+  title!: string;
 
   @ApiPropertyOptional({
     description: 'Project description',
@@ -424,13 +430,15 @@ export class CreateProjectDto {
   deadline?: string;
 
   @ApiPropertyOptional({
-    description: 'Project status',
-    enum: ['active', 'completed', 'cancelled'],
-    default: 'active',
+    description:
+      'Project status (accepts enum or snake_case, e.g. IN_PROGRESS or in_progress)',
+    enum: ['COMPLETED', 'ON_HOLD', 'IN_PROGRESS', 'CANCELLED'],
+    default: 'IN_PROGRESS',
   })
   @IsOptional()
-  @IsEnum(['active', 'completed', 'cancelled'])
-  status?: string = 'active';
+  @Transform(({ value }) => parseProjectStatusInput(value))
+  @IsEnum(['COMPLETED', 'ON_HOLD', 'IN_PROGRESS', 'CANCELLED'])
+  status?: 'COMPLETED' | 'ON_HOLD' | 'IN_PROGRESS' | 'CANCELLED' = 'IN_PROGRESS';
 
   @ApiPropertyOptional({
     description: 'Project priority level',
@@ -546,6 +554,15 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   requiredScreening?: boolean = false;
+
+  @ApiPropertyOptional({
+    description: 'Whether recruiters must upload a candidate introduction video for this project',
+    example: false,
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  introductionVideoRequired?: boolean = false;
 
   @ApiPropertyOptional({
     description: 'Document requirements for this project',

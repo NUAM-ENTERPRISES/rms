@@ -1,3 +1,4 @@
+import { ProjectStatus } from '@prisma/client';
 import {
   IsOptional,
   IsString,
@@ -10,6 +11,7 @@ import {
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { parseProjectStatusInput } from '../utils/project-status.util';
 
 export class QueryProjectsDto {
   @ApiPropertyOptional({
@@ -31,12 +33,14 @@ export class QueryProjectsDto {
   summary?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Filter by project status',
-    enum: ['active', 'completed', 'cancelled'],
+    description:
+      'Filter by project status (accepts enum or snake_case, e.g. IN_PROGRESS or in_progress)',
+    enum: ProjectStatus,
   })
   @IsOptional()
-  @IsEnum(['active', 'completed', 'cancelled'])
-  status?: string;
+  @Transform(({ value }) => parseProjectStatusInput(value))
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
 
   @ApiPropertyOptional({
     description: 'Filter by priority',

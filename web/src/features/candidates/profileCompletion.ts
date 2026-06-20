@@ -3,6 +3,8 @@
  * Keep in sync with `backend/src/candidates/utils/profile-completion.util.ts`.
  */
 
+import { isPassportDocumentType } from "@/constants/document-types";
+
 export type ProfileMissingItem =
   | {
       kind: "personal";
@@ -198,6 +200,29 @@ export function getDocumentRepositorySlots(
     uploadDocType: DOCUMENT_REPOSITORY_UPLOAD_TYPE[id],
     satisfied: hasRequiredDocument(uploaded, id),
   }));
+}
+
+export type PassportDocumentSummary = {
+  id?: string;
+  docType?: string;
+  documentNumber?: string | null;
+  expiryDate?: string | null;
+  createdAt?: string;
+};
+
+/** Latest passport document for a candidate (copy, original, or cover/bio). */
+export function getPassportDocument(
+  documents: PassportDocumentSummary[] | undefined
+): PassportDocumentSummary | undefined {
+  if (!documents?.length) return undefined;
+
+  return [...documents]
+    .filter((doc) => isPassportDocumentType(doc.docType || ""))
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt || 0).getTime() -
+        new Date(a.createdAt || 0).getTime()
+    )[0];
 }
 
 type ProfileInput = {

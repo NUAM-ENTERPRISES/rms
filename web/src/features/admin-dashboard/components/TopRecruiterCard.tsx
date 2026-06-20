@@ -18,6 +18,8 @@ export default function TopRecruiterCard() {
   const name = topRecruiter?.name ?? "Top Recruiter";
   const role = topRecruiter?.role ?? "Recruiter";
   const placements = topRecruiter?.placementsThisMonth ?? 0;
+  const performanceScore = topRecruiter?.performanceScore ?? 0;
+  const rating = topRecruiter?.rating ?? "—";
 
   return (
     <Card className="border-0 shadow-sm rounded-xl bg-white flex flex-col justify-center">
@@ -48,9 +50,19 @@ export default function TopRecruiterCard() {
           )}
         </div>
 
-        <Badge variant="secondary" className="text-sm px-3 py-1">
-          {isLoading ? "Loading..." : `${placements} placements this month`}
-        </Badge>
+        <div className="flex flex-col gap-2 items-center">
+          <Badge variant="secondary" className="text-sm px-3 py-1">
+            {isLoading
+              ? "Loading..."
+              : `Performance Score: ${performanceScore}`}
+          </Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 border-emerald-200 bg-emerald-50 text-emerald-800">
+            {isLoading ? "—" : `Rating: ${rating}`}
+          </Badge>
+          <p className="text-xs text-slate-500">
+            {isLoading ? "" : `${placements} deployed this month`}
+          </p>
+        </div>
 
         {isError && (
           <p className="text-xs text-red-500 uppercase tracking-wider font-medium">

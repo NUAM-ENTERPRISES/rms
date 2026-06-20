@@ -41,6 +41,7 @@ export interface ProcessingCandidateSummary {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string | null;
     countryCode?: string | null;
     mobileNumber?: string | null;
@@ -86,6 +87,7 @@ export interface ProcessingCandidate {
     id: string;
     firstName: string;
     lastName: string;
+    candidateCode?: string | null;
     email?: string | null;
     mobileNumber?: string | null;
     profileImage?: string | null;
@@ -129,4 +131,13 @@ export interface ProcessingCandidate {
       email: string;
     };
   };
+  /** Sector-aware completion percentage (0–100) from applicable processing steps */
+  progressCount?: number;
+  progressCompletedSteps?: number;
+  progressTotalSteps?: number;
+  progressPendingSteps?: Array<{
+    key: string;
+    label: string;
+    status: string;
+  }>;
 }

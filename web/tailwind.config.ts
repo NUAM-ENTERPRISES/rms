@@ -94,6 +94,9 @@ export default {
         'slide-up': 'slideUp 0.3s ease-out',
         'wiggle': 'wiggle 1s ease-in-out infinite',
         'shimmer': 'shimmer 2s infinite',
+        'processing-glance': 'processingGlance 2.8s ease-in-out infinite',
+        'deadline-blink': 'deadlineBlink 1.2s ease-in-out infinite',
+        'deadline-blink-urgent': 'deadlineBlinkUrgent 0.9s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -109,7 +112,32 @@ export default {
           '50%': { transform: 'rotate(3deg)' },
         },
         shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
+        },
+        processingGlance: {
+          '0%': { transform: 'translateX(-120%) skewX(-14deg)' },
+          '100%': { transform: 'translateX(320%) skewX(-14deg)' },
+        },
+        deadlineBlink: {
+          '0%, 100%': {
+            opacity: '1',
+            boxShadow: '0 0 0 0 rgba(245, 158, 11, 0)',
+          },
+          '50%': {
+            opacity: '0.65',
+            boxShadow: '0 0 0 3px rgba(245, 158, 11, 0.35)',
+          },
+        },
+        deadlineBlinkUrgent: {
+          '0%, 100%': {
+            opacity: '1',
+            boxShadow: '0 0 0 0 rgba(239, 68, 68, 0)',
+          },
+          '50%': {
+            opacity: '0.5',
+            boxShadow: '0 0 0 4px rgba(239, 68, 68, 0.4)',
+          },
         },
       },
     },

@@ -35,6 +35,11 @@ import {
   ShieldAlert
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  validateCsvAttachment,
+  EMAIL_COMBINED_ATTACHMENT_MAX_MB,
+  CSV_ATTACHMENT_MAX_MB,
+} from "@/lib/document-upload";
 import { 
   useGetMergedDocumentQuery, 
   useForwardToClientMutation, 
@@ -48,6 +53,7 @@ import { MergeVerifiedModal } from "./MergeVerifiedModal";
 import { SelectedDoc } from "./BulkViewDocumentsModal";
 import { Badge } from "@/components/ui";
 import { MultiEmailInput } from "./MultiEmailInput";
+import { isClientSendableDocument } from "@/constants/document-types";
 
 interface SendToClientModalProps {
   isOpen: boolean;
@@ -55,6 +61,7 @@ interface SendToClientModalProps {
   candidateId: string;
   projectId: string;
   roleCatalogId?: string;
+  candidateProjectMapId?: string;
   clientData?: any;
   documents: any[];
   candidateName: string;
@@ -67,6 +74,7 @@ export function SendToClientModal({
   candidateId,
   projectId,
   roleCatalogId,
+  candidateProjectMapId,
   clientData,
   documents,
   candidateName,
@@ -106,6 +114,11 @@ export function SendToClientModal({
   }, [isOpen, refetchMerged, roleCatalogId]);
 
   const mergedDoc = mergedDocResponse?.data;
+
+  const sendableDocuments = useMemo(
+    () => documents.filter((doc) => isClientSendableDocument(doc)),
+    [documents],
+  );
 
   // Total size of selected documents in MB
   const totalSelectedSizeInfo = useMemo(() => {
@@ -193,7 +206,7 @@ export function SendToClientModal({
       if (isCurrentlySelected) {
         return withoutMerged.filter(d => d.id !== docId);
       } else {
-        const doc = documents.find(d => d.id === docId);
+        const doc = sendableDocuments.find(d => d.id === docId);
         if (!doc) return withoutMerged;
         return [
           ...withoutMerged,
@@ -229,8 +242,10 @@ export function SendToClientModal({
     }
 
     // Gmail/Outlook limit check
-    if (totalSelectedSizeInfo.mb > 20) {
-      toast.error(`Total document size (${totalSelectedSizeInfo.mb.toFixed(2)}MB) exceeds the 20MB limit. Please remove some documents.`);
+    if (totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB) {
+      toast.error(
+        `Total attachment size (${totalSelectedSizeInfo.mb.toFixed(2)} MB) exceeds the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB limit for combined emails. Please remove some documents or use Google Drive.`
+      );
       return;
     }
 
@@ -331,7 +346,9 @@ export function SendToClientModal({
                   <Badge 
                     variant="outline" 
                     className={`text-[10px] h-4.5 px-1.5 border-white/20 text-white font-bold ${
-                      totalSelectedSizeInfo.mb > 20 ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse" : "bg-white/10"
+                      totalSelectedSizeInfo.mb > EMAIL_COMBINED_ATTACHMENT_MAX_MB
+                        ? "bg-red-500/20 text-red-100 border-red-400/30 animate-pulse"
+                        : "bg-white/10"
                     }`}
                   >
                     {totalSelectedSizeInfo.mb.toFixed(2)} MB
@@ -573,13 +590,23 @@ export function SendToClientModal({
                       accept=".csv"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) {
-                          if (file.type !== "text/csv" && !file.name.endsWith('.csv')) {
-                            toast.error("Please upload only CSV files");
-                            return;
-                          }
-                          setCsvFile(file);
+                        e.target.value = "";
+                        if (!file) return;
+                        const result = validateCsvAttachment(file);
+                        if (!result.ok) {
+                          if (result.message) toast.error(result.message);
+                          return;
                         }
+                        const projectedMb =
+                          (totalSelectedSizeInfo.bytes + file.size) /
+                          (1024 * 1024);
+                        if (projectedMb > EMAIL_COMBINED_ATTACHMENT_MAX_MB) {
+                          toast.error(
+                            `Adding this CSV would exceed the ${EMAIL_COMBINED_ATTACHMENT_MAX_MB} MB combined email limit (${projectedMb.toFixed(2)} MB). Remove other attachments first.`
+                          );
+                          return;
+                        }
+                        setCsvFile(file);
                       }}
                       className="absolute inset-0 opacity-0 cursor-pointer z-10"
                       id="csv-upload"
@@ -589,7 +616,9 @@ export function SendToClientModal({
                         <Paperclip className="h-4 w-4 text-slate-500" />
                       </div>
                       <p className="text-xs font-medium text-slate-700">Attach CSV</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Summary data</p>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        CSV only · max {CSV_ATTACHMENT_MAX_MB} MB
+                      </p>
                     </div>
                   </div>
                 )}
@@ -722,10 +751,10 @@ export function SendToClientModal({
                     
                     const individualSelectedCount = selectedDocs.filter(d => d.id !== "merged").length;
                     
-                    if (individualSelectedCount === documents.length) {
+                    if (individualSelectedCount === sendableDocuments.length) {
                       setSelectedDocs([]);
                     } else {
-                      setSelectedDocs(documents.map(doc => ({
+                      setSelectedDocs(sendableDocuments.map(doc => ({
                         id: doc.id,
                         name: doc.fileName,
                         size: doc.fileSize || 0
@@ -733,11 +762,11 @@ export function SendToClientModal({
                     }
                   }}
                 >
-                  {selectedDocs.filter(d => d.id !== "merged").length === documents.length ? "Deselect All" : "Select All"}
+                  {selectedDocs.filter(d => d.id !== "merged").length === sendableDocuments.length ? "Deselect All" : "Select All"}
                 </Button>
               </div>
               <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                {documents.map((doc) => (
+                {sendableDocuments.map((doc) => (
                   <div key={doc.id} className={`p-3 flex items-center gap-3 transition-colors ${hasMergedSelected ? "cursor-not-allowed" : "hover:bg-slate-50"}`}>
                     <Checkbox 
                       id={`doc-${doc.id}`} 
@@ -826,7 +855,8 @@ export function SendToClientModal({
         onOpenChange={setIsMergeModalOpen}
         candidateId={candidateId}
         projectId={projectId}
-        roleCatalogId={roleCatalogId || ""}
+        roleCatalogId={roleCatalogId}
+        candidateProjectMapId={candidateProjectMapId}
         onViewDocument={(url: string, name: string) => {
           setPdfViewerUrl(url);
           setPdfViewerName(name);

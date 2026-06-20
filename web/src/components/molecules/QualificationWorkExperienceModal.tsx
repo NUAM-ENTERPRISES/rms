@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -46,9 +46,11 @@ import {
   Trash2,
   Check,
   Edit,
+  Clock,
 } from "lucide-react";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
-import { JobTitleSelect, DepartmentSelect } from "@/components/molecules";
+import { DateUtils } from "@/shared/utils/date";
+import { JobTitleSelect, DepartmentSelect, CountrySelect } from "@/components/molecules";
 import {
   useCreateCandidateQualificationMutation,
   useUpdateCandidateQualificationMutation,
@@ -66,15 +68,94 @@ import type {
   WorkExperience,
   Document,
 } from "@/features/candidates/api";
+import {
+  formatBytes,
+  getUploadErrorMessage,
+  prepareDocumentFileForUpload,
+} from "@/lib/document-upload";
+
+const formatOptionalNumberInput = (value?: number | null): string =>
+  value != null ? String(value) : "";
+
+const validateOptionalYear = (value: string, ctx: z.RefinementCtx) => {
+  const trimmed = value.trim();
+  if (trimmed === "") return;
+
+  if (!/^\d+$/.test(trimmed)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter a valid year",
+    });
+    return;
+  }
+
+  const num = Number(trimmed);
+  if (num < 1950 || num > 2030) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Year must be between 1950 and 2030",
+    });
+  }
+};
+
+const validateOptionalGpa = (value: string, ctx: z.RefinementCtx) => {
+  const trimmed = value.trim();
+  if (trimmed === "") return;
+
+  const num = Number(trimmed);
+  if (Number.isNaN(num)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enter a valid GPA",
+    });
+    return;
+  }
+
+  if (num < 0 || num > 4) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "GPA must be between 0 and 4",
+    });
+  }
+};
+
+const parseQualificationNumberForCreate = (
+  value: string,
+): number | undefined => {
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+
+  const num = Number(trimmed);
+  return Number.isNaN(num) ? undefined : num;
+};
+
+const parseQualificationNumberForUpdate = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  const num = Number(trimmed);
+  return Number.isNaN(num) ? null : num;
+};
+
+type QualificationFormData = {
+  qualificationId: string;
+  university?: string;
+  graduationYear: string;
+  gpa: string;
+  isCompleted: boolean;
+  notes?: string;
+  countryCode?: string;
+};
 
 // Validation schemas
 const qualificationSchema = z.object({
   qualificationId: z.string().min(1, "Qualification is required"),
   university: z.string().optional(),
-  graduationYear: z.number().min(1950).max(2030).optional(),
-  gpa: z.number().min(0).max(4).optional(),
+  graduationYear: z.string().superRefine(validateOptionalYear),
+  gpa: z.string().superRefine(validateOptionalGpa),
   isCompleted: z.boolean(),
   notes: z.string().optional(),
+  countryCode: z.string().optional(),
 });
 
 const workExperienceSchema = z.object({
@@ -95,11 +176,11 @@ const workExperienceSchema = z.object({
     z.number().min(0).optional().nullable()
   ),
   location: z.string().optional(),
+  countryCode: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().optional(),
 });
 
-type QualificationFormData = z.infer<typeof qualificationSchema>;
 type WorkExperienceFormData = z.infer<typeof workExperienceSchema>;
 
 interface QualificationWorkExperienceModalProps {
@@ -124,6 +205,7 @@ export default function QualificationWorkExperienceModal({
   const [newSkill, setNewSkill] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedQualName, setSelectedQualName] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [page, setPage] = useState(1);
   type PendingCertBatch = { id: string; docName: string; files: File[] };
@@ -133,6 +215,7 @@ export default function QualificationWorkExperienceModal({
   const [certModalOpen, setCertModalOpen] = useState(false);
   const [certDocName, setCertDocName] = useState("");
   const [certFiles, setCertFiles] = useState<File[]>([]);
+  const [isPreparingCertFiles, setIsPreparingCertFiles] = useState(false);
   const certFileInputRef = useRef<HTMLInputElement>(null);
   const [existingDocs, setExistingDocs] = useState<Document[]>([]);
   const [deletingDocIds, setDeletingDocIds] = useState<Record<string, boolean>>(
@@ -186,14 +269,15 @@ export default function QualificationWorkExperienceModal({
 
   // Form setup
   const qualificationForm = useForm<QualificationFormData>({
-    resolver: zodResolver(qualificationSchema),
+    resolver: zodResolver(qualificationSchema) as Resolver<QualificationFormData>,
     defaultValues: {
       qualificationId: "",
       university: "",
-      graduationYear: undefined,
-      gpa: undefined,
+      graduationYear: "",
+      gpa: "",
       isCompleted: true,
       notes: "",
+      countryCode: "",
     },
   });
 
@@ -209,6 +293,7 @@ export default function QualificationWorkExperienceModal({
       description: "",
       salary: undefined,
       location: "",
+      countryCode: "",
       skills: [],
       achievements: "",
     },
@@ -227,13 +312,15 @@ export default function QualificationWorkExperienceModal({
     if (editData && isOpen) {
       if (type === "qualification") {
         const qual = editData as CandidateQualification;
+        setSelectedQualName(qual.qualificationName || (qual as any).qualification?.name || "");
         qualificationForm.reset({
           qualificationId: qual.qualificationId,
           university: qual.university || "",
-          graduationYear: qual.graduationYear,
-          gpa: qual.gpa,
+          graduationYear: formatOptionalNumberInput(qual.graduationYear),
+          gpa: formatOptionalNumberInput(qual.gpa),
           isCompleted: qual.isCompleted,
           notes: qual.notes || "",
+          countryCode: qual.countryCode || qual.country?.code || "",
         });
       } else {
         const exp = editData as WorkExperience;
@@ -250,19 +337,22 @@ export default function QualificationWorkExperienceModal({
           description: exp.description || "",
           salary: exp.salary,
           location: exp.location || "",
+          countryCode: exp.countryCode || exp.country?.code || "",
           skills: expSkills,
           achievements: exp.achievements || "",
         });
       }
     } else if (!editData && isOpen) {
       // Reset forms for new entries
+      setSelectedQualName("");
       qualificationForm.reset({
         qualificationId: "",
         university: "",
-        graduationYear: undefined,
-        gpa: undefined,
+        graduationYear: "",
+        gpa: "",
         isCompleted: true,
         notes: "",
+        countryCode: "",
       });
       workExperienceForm.reset({
         companyName: "",
@@ -275,29 +365,55 @@ export default function QualificationWorkExperienceModal({
         description: "",
         salary: undefined,
         location: "",
+        countryCode: "",
         skills: [],
         achievements: "",
       });
       setSkills([]);
     }
-    // Reset search query when modal opens
+  }, [editData, isOpen, type, qualificationForm, workExperienceForm]);
+
+  // Reset search query and dropdown state ONLY when modal opens or type changes
+  useEffect(() => {
     if (isOpen) {
       setSearchQuery("");
       setIsDropdownOpen(false);
     }
-  }, [editData, isOpen, type, qualificationForm, workExperienceForm]);
+  }, [isOpen, type]);
 
   const handleQualificationSubmit = async (data: QualificationFormData) => {
     try {
+      const countryCode = data.countryCode?.trim() || null;
+
+      const sharedPayload = {
+        qualificationId: data.qualificationId,
+        university: data.university,
+        isCompleted: data.isCompleted,
+        notes: data.notes,
+      };
+
       if (isEdit) {
         await updateQualification({
           id: (editData as CandidateQualification).id,
-          ...data,
+          ...sharedPayload,
+          graduationYear: parseQualificationNumberForUpdate(data.graduationYear),
+          gpa: parseQualificationNumberForUpdate(data.gpa),
+          countryCode,
         }).unwrap();
       } else {
+        const createGraduationYear = parseQualificationNumberForCreate(
+          data.graduationYear,
+        );
+        const createGpa = parseQualificationNumberForCreate(data.gpa);
+
         await createQualification({
           candidateId,
-          ...data,
+          ...sharedPayload,
+          ...(createGraduationYear !== undefined && {
+            graduationYear: createGraduationYear,
+          }),
+          ...(createGpa !== undefined && { gpa: createGpa }),
+          ...(countryCode && { countryCode }),
         }).unwrap();
       }
       onSuccess?.();
@@ -309,7 +425,8 @@ export default function QualificationWorkExperienceModal({
 
   const handleWorkExperienceSubmit = async (data: WorkExperienceFormData) => {
     try {
-      const { departmentId, ...dataWithoutDepartmentId } = data;
+      const { departmentId, countryCode: rawCountryCode, ...dataWithoutDepartmentId } = data;
+      const trimmedCountryCode = rawCountryCode?.trim();
       const payload = {
         ...dataWithoutDepartmentId,
         skills: JSON.stringify(skills),
@@ -332,12 +449,14 @@ export default function QualificationWorkExperienceModal({
         const result = await updateWorkExperience({
           id: (editData as WorkExperience).id,
           ...payload,
+          countryCode: trimmedCountryCode || null,
         }).unwrap();
         workExperienceId = (result as WorkExperience)?.id ?? (editData as WorkExperience).id;
       } else {
         const result = await createWorkExperience({
           candidateId,
           ...payload,
+          ...(trimmedCountryCode ? { countryCode: trimmedCountryCode } : {}),
         }).unwrap();
         workExperienceId = (result as WorkExperience)?.id;
       }
@@ -359,8 +478,13 @@ export default function QualificationWorkExperienceModal({
                 ...res.data.failedFileNames.map((n) => `${batch.docName || "Batch"}: ${n}`)
               );
             }
-          } catch {
-            failedBatches.push(batch.docName || "Unnamed batch");
+          } catch (err: unknown) {
+            const detail = getUploadErrorMessage(err);
+            failedBatches.push(
+              batch.docName
+                ? `${batch.docName}: ${detail}`
+                : detail,
+            );
           }
         }
         if (failedBatches.length > 0) {
@@ -398,6 +522,7 @@ export default function QualificationWorkExperienceModal({
     setSkills([]);
     setNewSkill("");
     setSearchQuery("");
+    setSelectedQualName("");
     setIsDropdownOpen(false);
     setPendingCertBatches([]);
     setCertModalOpen(false);
@@ -497,6 +622,7 @@ export default function QualificationWorkExperienceModal({
     setCertModalOpen(false);
     setCertDocName("");
     setCertFiles([]);
+    setIsPreparingCertFiles(false);
     if (certFileInputRef.current) certFileInputRef.current.value = "";
   };
 
@@ -512,11 +638,31 @@ export default function QualificationWorkExperienceModal({
     closeCertModal();
   };
 
-  const addCertFilesFromInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    if (files.length > 0) {
-      setCertFiles((prev) => [...prev, ...files]);
-      e.target.value = "";
+  const addCertFilesFromInput = async (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (selected.length === 0) return;
+
+    setIsPreparingCertFiles(true);
+    const accepted: File[] = [];
+    try {
+      for (const file of selected) {
+        try {
+          const { file: prepared } = await prepareDocumentFileForUpload(
+            file,
+            DOCUMENT_TYPE.EXPERIENCE_LETTERS,
+            { showToasts: true },
+          );
+          accepted.push(prepared);
+        } catch {
+          // prepareDocumentFileForUpload already toasts validation errors
+        }
+      }
+      if (accepted.length > 0) {
+        setCertFiles((prev) => [...prev, ...accepted]);
+      }
+    } finally {
+      setIsPreparingCertFiles(false);
     }
   };
 
@@ -579,8 +725,10 @@ export default function QualificationWorkExperienceModal({
                         className="w-full justify-start text-slate-600"
                       >
                         {field.value
-                          ? qualifications.find((q) => q.id === field.value)
-                              ?.name || "Select a qualification"
+                          ? selectedQualName ||
+                            qualifications.find((q) => q.id === field.value)
+                              ?.name ||
+                            "Select a qualification"
                           : "Select a qualification"}
                       </Button>
                     </DropdownMenuTrigger>
@@ -596,7 +744,9 @@ export default function QualificationWorkExperienceModal({
                             placeholder="Search qualifications..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => e.stopPropagation()}
                             className="pl-8 h-8"
+                            autoFocus
                           />
                         </div>
                       </div>
@@ -618,6 +768,7 @@ export default function QualificationWorkExperienceModal({
                               key={qualification.id}
                               onSelect={() => {
                                 field.onChange(qualification.id);
+                                setSelectedQualName(qualification.name);
                                 setIsDropdownOpen(false);
                                 setSearchQuery("");
                               }}
@@ -679,29 +830,34 @@ export default function QualificationWorkExperienceModal({
               <div className="space-y-2">
                 <Label htmlFor="graduationYear">Graduation Year</Label>
                 <Input
-                  type="number"
-                  {...qualificationForm.register("graduationYear", {
-                    valueAsNumber: true,
-                  })}
+                  id="graduationYear"
+                  type="text"
+                  inputMode="numeric"
+                  {...qualificationForm.register("graduationYear")}
                   placeholder="2020"
-                  min="1950"
-                  max="2030"
                 />
+                {qualificationForm.formState.errors.graduationYear && (
+                  <p className="text-sm text-red-600">
+                    {qualificationForm.formState.errors.graduationYear.message}
+                  </p>
+                )}
               </div>
 
               {/* GPA */}
               <div className="space-y-2">
                 <Label htmlFor="gpa">GPA</Label>
                 <Input
-                  type="number"
-                  step="0.1"
-                  {...qualificationForm.register("gpa", {
-                    valueAsNumber: true,
-                  })}
+                  id="gpa"
+                  type="text"
+                  inputMode="decimal"
+                  {...qualificationForm.register("gpa")}
                   placeholder="3.8"
-                  min="0"
-                  max="4"
                 />
+                {qualificationForm.formState.errors.gpa && (
+                  <p className="text-sm text-red-600">
+                    {qualificationForm.formState.errors.gpa.message}
+                  </p>
+                )}
               </div>
 
               {/* Status */}
@@ -725,6 +881,32 @@ export default function QualificationWorkExperienceModal({
                         <SelectItem value="in-progress">In Progress</SelectItem>
                       </SelectContent>
                     </Select>
+                  )}
+                />
+              </div>
+
+              {/* Country */}
+              <div className="space-y-2 md:col-span-2">
+                <Controller
+                  name="countryCode"
+                  control={qualificationForm.control}
+                  render={({ field }) => (
+                    <CountrySelect
+                      label="Country (optional)"
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      allowEmpty
+                      initialCountryData={
+                        editData && type === "qualification"
+                          ? (editData as CandidateQualification).country
+                            ? {
+                                code: (editData as CandidateQualification).country!.code,
+                                name: (editData as CandidateQualification).country!.name,
+                              }
+                            : undefined
+                          : undefined
+                      }
+                    />
                   )}
                 />
               </div>
@@ -862,6 +1044,27 @@ export default function QualificationWorkExperienceModal({
                 />
               </div>
 
+              {/* Duration Preview */}
+              {(() => {
+                const start = workExperienceForm.watch("startDate");
+                const end = workExperienceForm.watch("endDate");
+                const isCurrent = workExperienceForm.watch("isCurrent");
+                if (!start) return null;
+                const duration = DateUtils.formatDurationBetweenDates(
+                  start,
+                  end,
+                  isCurrent
+                );
+                return (
+                  <div className="md:col-span-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-xs font-semibold text-blue-800">
+                      Calculated Duration: {duration}
+                    </span>
+                  </div>
+                );
+              })()}
+
               {/* Current Position */}
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -908,6 +1111,32 @@ export default function QualificationWorkExperienceModal({
                 <Input
                   {...workExperienceForm.register("location")}
                   placeholder="New York, NY"
+                />
+              </div>
+
+              {/* Country */}
+              <div className="space-y-2 md:col-span-2">
+                <Controller
+                  name="countryCode"
+                  control={workExperienceForm.control}
+                  render={({ field }) => (
+                    <CountrySelect
+                      label="Country (optional)"
+                      value={field.value || ""}
+                      onValueChange={field.onChange}
+                      allowEmpty
+                      initialCountryData={
+                        editData && type === "workExperience"
+                          ? (editData as WorkExperience).country
+                            ? {
+                                code: (editData as WorkExperience).country!.code,
+                                name: (editData as WorkExperience).country!.name,
+                              }
+                            : undefined
+                          : undefined
+                      }
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -977,7 +1206,8 @@ export default function QualificationWorkExperienceModal({
                     Experience certificates
                   </Label>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    PDF or images. Add documents before saving; they upload after work experience is saved.
+                    PDF or images up to 10 MB each (larger files are compressed on upload).
+                    Add documents before saving; they upload after work experience is saved.
                   </p>
                 </div>
                 <Button
@@ -1069,6 +1299,11 @@ export default function QualificationWorkExperienceModal({
                             {" "}
                             · {batch.files.length} file
                             {batch.files.length === 1 ? "" : "s"}
+                            {" "}
+                            ·{" "}
+                            {formatBytes(
+                              batch.files.reduce((sum, f) => sum + f.size, 0),
+                            )}
                           </span>
                         </span>
                         <button
@@ -1145,7 +1380,7 @@ export default function QualificationWorkExperienceModal({
             <input
               ref={certFileInputRef}
               type="file"
-              accept="application/pdf,image/jpeg,image/png"
+              accept="application/pdf,image/jpeg,image/jpg,image/png,image/webp"
               multiple
               className="hidden"
               onChange={addCertFilesFromInput}
@@ -1158,7 +1393,10 @@ export default function QualificationWorkExperienceModal({
                     className="flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-800 max-w-full"
                   >
                     <FileText className="h-3 w-3 shrink-0" />
-                    <span className="truncate max-w-[200px]">{file.name}</span>
+                    <span className="truncate max-w-[160px]">{file.name}</span>
+                    <span className="text-slate-500 shrink-0">
+                      ({formatBytes(file.size)})
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeCertFileAt(idx)}
@@ -1176,10 +1414,15 @@ export default function QualificationWorkExperienceModal({
               variant="outline"
               size="sm"
               className="w-full"
+              disabled={isPreparingCertFiles}
               onClick={() => certFileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-2" />
-              {certFiles.length > 0 ? "Add more files" : "Choose files"}
+              {isPreparingCertFiles
+                ? "Checking files…"
+                : certFiles.length > 0
+                  ? "Add more files"
+                  : "Choose files"}
             </Button>
           </div>
         </div>
@@ -1187,7 +1430,11 @@ export default function QualificationWorkExperienceModal({
           <Button type="button" variant="outline" onClick={closeCertModal}>
             Cancel
           </Button>
-          <Button type="button" onClick={confirmCertModal}>
+          <Button
+            type="button"
+            onClick={confirmCertModal}
+            disabled={isPreparingCertFiles || certFiles.length === 0}
+          >
             Add to list
           </Button>
         </DialogFooter>

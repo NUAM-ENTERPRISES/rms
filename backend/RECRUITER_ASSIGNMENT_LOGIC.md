@@ -15,13 +15,13 @@ When a candidate is created, the system automatically assigns a recruiter using 
    - This ensures recruiters own the candidates they create
 
 2. **If the candidate’s `source` is `agent` (after normalizing legacy `agents` to `agent`) and the creator is not already handled by rule 1:**
-   - ✅ The candidate is assigned **directly to the creating user** (e.g. **Client Coordinator** agent pipeline)
+   - ✅ The candidate is assigned **directly to the creating user** (e.g. **Agent Coordinator** agent pipeline)
    - ❌ **No round-robin assignment** for agent-sourced creates
 
 3. **If the creator is NOT a Recruiter and the source is not agent-channel (e.g., Manager, Team Head, Admin creating a manual or meta candidate):**
    - ✅ The system uses **automatic assignment** with **`isRoundRobin: true`** on the result (for notifications / audit semantics)
    - ✅ **`getRecruiterWithLanguageAwareRoundRobin`** runs first: if **`STATE_RECRUITMENT_LANGUAGES`** maps the candidate’s **address state** to target language codes, recruiters are filtered by **`userLanguages`**, ranked by **proficiency tier** (`PRIMARY` beats `SECONDARY` beats `TERTIARY`), then tie-broken by **fewest active** `candidate_recruiter_assignments`
-   - ✅ If there is **no** state map, **no** targets, or **no** recruiter matches any target language → **`getRecruiterWithLeastWorkload()`** picks the recruiter with the **least active assignments** among all Recruiters
+   - ✅ If there is **no** state map, **no** targets, or **no** recruiter matches any target language → **`getRecruiterWithLeastWorkload()`** picks the recruiter with the **least active assignments** among recruiters with **`accountStatus = ACTIVE`** (inactive and blocked recruiters are excluded from the pool)
    - This is **not** the same as the cursor-based **`RoundRobinService`** used for project role allocation (see [Recruiter capabilities & assignment](../docs/FEATURE_RECRUITER_CAPABILITIES.md#automatic-assignment--language-aware-matching))
 
 ## Implementation Details

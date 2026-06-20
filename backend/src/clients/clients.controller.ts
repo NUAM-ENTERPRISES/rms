@@ -173,8 +173,8 @@ export class ClientsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryClientsDto) {
-    return this.clientsService.findAll(query);
+  async findAll(@Query() query: QueryClientsDto, @Request() req) {
+    return this.clientsService.findAll(query, req.user.id, req.user.roles);
   }
 
   @Get('stats')
@@ -217,8 +217,8 @@ export class ClientsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async getStats() {
-    return this.clientsService.getClientStats();
+  async getStats(@Request() req) {
+    return this.clientsService.getClientStats(req.user.id, req.user.roles);
   }
 
   @Get(':id')
@@ -265,8 +265,8 @@ export class ClientsController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findOne(@Param('id') id: string) {
-    return this.clientsService.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req) {
+    return this.clientsService.findOne(id, req.user.id, req.user.roles);
   }
 
   @Patch(':id')

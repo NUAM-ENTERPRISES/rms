@@ -20,6 +20,7 @@ import { CountriesModule } from './countries/countries.module';
 import { RoleCatalogModule } from './role-catalog/role-catalog.module';
 import { RoleDepartmentsModule } from './role-departments/role-departments.module';
 import { QualificationsModule } from './qualifications/qualifications.module';
+import { ProfessionTypesModule } from './profession-types/profession-types.module';
 import { AuditModule } from './common/audit/audit.module';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { SystemModule } from './system/system.module';
@@ -39,6 +40,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CandidateStatusModule } from './candidate-status/candidate-status.module';
 import { CandidateStatusHistoryModule } from './candidate-status-history/candidate-status-history.module';
 import { RnrRemindersModule } from './rnr-reminders/rnr-reminders.module';
+import { CallbackRemindersModule } from './callback-reminders/callback-reminders.module';
 import { SystemConfigModule } from './system-config/system-config.module';
 import { CandidateProjectStatusModule } from './candidate-project-status/candidate-project-status.module';
 import { CandidateProjectsModule } from './candidate-projects/candidate-projects.module';
@@ -47,8 +49,12 @@ import { ProcessingModule } from './processing/processing.module';
 import { ProcessingRemindersModule } from './processing-reminders/processing-reminders.module';
 import { GoogleDriveModule } from './google-drive/google-drive.module';
 import { AdminDashboardModule } from './admin-dashboard/admin-dashboard.module';
+import { ProjectCoordinatorDashboardModule } from './project-coordinator-dashboard/project-coordinator-dashboard.module';
 import { RecruiterAnalyticsModule } from './analytics/recruiter/recruiter-analytics.module';
 import { AgentsModule } from './agents/agents.module';
+import { IntroductionVideosModule } from './introduction-videos/introduction-videos.module';
+import { OriginalDocumentCollectionsModule } from './original-document-collections/original-document-collections.module';
+import { CourierShipmentsModule } from './courier-shipments/courier-shipments.module';
 
 @Module({
   imports: [
@@ -80,6 +86,7 @@ import { AgentsModule } from './agents/agents.module';
     RoleCatalogModule,
     RoleDepartmentsModule,
     QualificationsModule,
+    ProfessionTypesModule,
     AuditModule,
     SystemModule,
     UploadModule,
@@ -93,6 +100,7 @@ import { AgentsModule } from './agents/agents.module';
     CandidateStatusModule,
     CandidateStatusHistoryModule,
     RnrRemindersModule,
+    CallbackRemindersModule,
     CandidateProjectStatusModule,
     CandidateProjectsModule,
     CandidateProjectStatusHistoryModule,
@@ -101,8 +109,12 @@ import { AgentsModule } from './agents/agents.module';
     ProcessingRemindersModule,
     GoogleDriveModule,
     AdminDashboardModule,
+    ProjectCoordinatorDashboardModule,
     RecruiterAnalyticsModule,
     AgentsModule,
+    IntroductionVideosModule,
+    OriginalDocumentCollectionsModule,
+    CourierShipmentsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,30 +32,107 @@ import {
   User,
   Building2,
   FileText,
+  Mail,
+  Phone,
   ChevronLeft,
   ChevronRight,
   Eye,
   ArrowUpRight,
-  FilterX,
+  RotateCcw,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import { motion } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 import { useGetVerificationCandidatesQuery, useGetVerifiedRejectedDocumentsQuery } from "@/features/documents";
-import { useGetApprovedScreeningDocumentsQuery } from "@/features/screening-coordination";
 import { useCan } from "@/hooks/useCan";
 import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import VerificationActionsMenu from "../components/VerificationActionsMenu";
 import { ProjectRoleFilter, type ProjectRoleFilterValue } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import { BulkSendToClientModal } from "../components/BulkSendToClientModal";
 import { ClientForwardHistoryModal } from "../components/ClientForwardHistoryModal";
+// import TypedHeader from "@/components/molecules/TypedHeader";
+type VerificationCountsPayload = {
+  pending?: number;
+  verified?: number;
+  rejected?: number;
+  client_revision_requested?: number;
+  verification_in_progress_document?: number;
+};
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? candidate.contact ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
+
+function formatPhoneDisplay(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+  contact?: string;
+}): string | null {
+  const code = candidate.countryCode?.trim();
+  const mobile = candidate.mobileNumber?.trim() || candidate.contact?.trim();
+  if (!mobile) return null;
+  return `${code ? `${code} ` : ""}${mobile}`;
+}
+
+function extractVerificationCounts(queryResult: unknown): VerificationCountsPayload {
+  if (!queryResult || typeof queryResult !== "object") {
+    return {};
+  }
+
+  const root = queryResult as {
+    data?: { counts?: VerificationCountsPayload } | VerificationCountsPayload;
+    counts?: VerificationCountsPayload;
+  };
+
+  const nestedData = root.data;
+  if (nestedData && typeof nestedData === "object" && "counts" in nestedData) {
+    return nestedData.counts ?? {};
+  }
+
+  if (nestedData && typeof nestedData === "object" && "pending" in nestedData) {
+    return nestedData as VerificationCountsPayload;
+  }
+
+  return root.counts ?? {};
+}
+
+/** Oldest candidates first (FIFO), matching verification queue order. */
+function sortVerificationCandidatesAscending(rows: any[]): any[] {
+  return [...rows].sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (aTime !== bTime) return aTime - bTime;
+
+    const aName = `${a.candidate?.firstName ?? ""} ${a.candidate?.lastName ?? ""}`
+      .trim()
+      .toLowerCase();
+    const bName = `${b.candidate?.firstName ?? ""} ${b.candidate?.lastName ?? ""}`
+      .trim()
+      .toLowerCase();
+    return aName.localeCompare(bName);
+  });
+}
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
   blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
   emerald: { card: "from-emerald-50 via-white to-emerald-50/30 border-emerald-100", icon: "text-emerald-600", iconBg: "bg-emerald-100", value: "text-emerald-700", ring: "ring-emerald-400/50", dot: "bg-emerald-500" },
   red: { card: "from-red-50 via-white to-red-50/30 border-red-100", icon: "text-red-600", iconBg: "bg-red-100", value: "text-red-700", ring: "ring-red-400/50", dot: "bg-red-500" },
+  orange: { card: "from-orange-50 via-white to-orange-50/30 border-orange-100", icon: "text-orange-600", iconBg: "bg-orange-100", value: "text-orange-700", ring: "ring-orange-400/50", dot: "bg-orange-500" },
 };
 
 export default function DocumentVerificationPage() {
@@ -79,6 +156,22 @@ export default function DocumentVerificationPage() {
   const [verificationNotes, setVerificationNotes] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const handleStatusTileClick = (
+    status:
+      | "verification_in_progress_document"
+      | "documents_verified"
+      | "rejected_documents"
+      | "client_revision_requested"
+  ) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const [screeningFilter, setScreeningFilter] = useState(false);
   const [projectRoleFilter, setProjectRoleFilter] = useState<ProjectRoleFilterValue>({
     projectId: "all",
@@ -128,20 +221,47 @@ export default function DocumentVerificationPage() {
     setBulkSendModalOpen(true);
   };
 
+  const sharedListFilters = {
+    projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
+    roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
+    search: searchTerm || undefined,
+    recruiterId: isStrictRecruiter ? user?.id : undefined,
+    screening: screeningFilter || undefined,
+  };
+
+  // Always fetch tile counts (regardless of active tile) so badges stay in sync.
+  // `forTileCounts` is ignored by the backend but keeps a dedicated RTK cache entry.
+  const tileCountsQuery = useGetVerificationCandidatesQuery(
+    {
+      ...sharedListFilters,
+      page: 1,
+      limit: 1,
+      forTileCounts: true,
+    },
+    { refetchOnMountOrArgChange: true },
+  );
+
+  // Always fetch verified/rejected tile counts (verification history semantics).
+  const verifiedRejectedCountsQuery = useGetVerifiedRejectedDocumentsQuery(
+    {
+      status: "verified",
+      ...sharedListFilters,
+      page: 1,
+      limit: 1,
+    },
+    { refetchOnMountOrArgChange: true },
+  );
+
   // Pending (verification candidates) query — only call when viewing pending / in-progress
   const verificationCandidatesQuery = useGetVerificationCandidatesQuery(
     {
+      ...sharedListFilters,
       status: statusFilter === "all" ? undefined : statusFilter,
-      projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
-      roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
-      search: searchTerm || undefined,
       page: currentPage,
       limit: 10,
-      recruiterId: isStrictRecruiter ? user?.id : undefined,
-      screening: screeningFilter || undefined,
     },
     { 
-      skip: statusFilter !== "verification_in_progress_document",
+      skip: statusFilter !== "verification_in_progress_document" && statusFilter !== "client_revision_requested",
     }
   );
 
@@ -153,56 +273,45 @@ export default function DocumentVerificationPage() {
         ? "verified"
         : statusFilter === "rejected_documents"
         ? "rejected"
-        : undefined,
-    projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
-    roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
-    search: searchTerm || undefined,
+        : "verified",
+    ...sharedListFilters,
     page: currentPage,
     limit: 10,
-    recruiterId: isStrictRecruiter ? user?.id : undefined,
-    screening: screeningFilter || undefined,
   }, {
-    skip: statusFilter === "screening_approved"
+    skip:
+      statusFilter !== "documents_verified" &&
+      statusFilter !== "rejected_documents",
   });
-
-  // Screening approved candidates query
-  const approvedScreeningQuery = useGetApprovedScreeningDocumentsQuery(
-    {
-      projectId: projectRoleFilter.projectId === "all" ? undefined : projectRoleFilter.projectId,
-      roleCatalogId: projectRoleFilter.roleCatalogId === "all" ? undefined : projectRoleFilter.roleCatalogId,
-      search: searchTerm || undefined,
-      // fetch full page when viewing the screening_approved tab, otherwise fetch a small page to obtain counts only
-      page: statusFilter === "screening_approved" ? currentPage : 1,
-      limit: statusFilter === "screening_approved" ? 10 : 1,
-      recruiterId: isStrictRecruiter ? user?.id : undefined,
-    }
-  );
 
   // Normalize data for table rendering
   const verificationData = verificationCandidatesQuery.data;
   const verifiedRejectedData = verifiedRejectedQuery.data;
-  const approvedScreeningData = approvedScreeningQuery.data;
 
   const isLoading = 
+    tileCountsQuery.isLoading ||
+    verifiedRejectedCountsQuery.isLoading ||
     verificationCandidatesQuery.isLoading || 
-    verifiedRejectedQuery.isLoading || 
-    approvedScreeningQuery.isLoading;
+    verifiedRejectedQuery.isLoading;
     
   const error = 
+    tileCountsQuery.error ||
+    verifiedRejectedCountsQuery.error ||
     verificationCandidatesQuery.error || 
-    verifiedRejectedQuery.error || 
-    approvedScreeningQuery.error;
+    verifiedRejectedQuery.error;
 
   // Refresh both endpoints to keep counts and lists in sync
   const refetch = () => {
+    if (tileCountsQuery.status !== 'uninitialized') {
+      tileCountsQuery.refetch?.();
+    }
+    if (verifiedRejectedCountsQuery.status !== 'uninitialized') {
+      verifiedRejectedCountsQuery.refetch?.();
+    }
     if (verificationCandidatesQuery.status !== 'uninitialized') {
       verificationCandidatesQuery.refetch?.();
     }
     if (verifiedRejectedQuery.status !== 'uninitialized') {
       verifiedRejectedQuery.refetch?.();
-    }
-    if (approvedScreeningQuery.status !== 'uninitialized') {
-      approvedScreeningQuery.refetch?.();
     }
   };
 
@@ -210,25 +319,10 @@ export default function DocumentVerificationPage() {
   let totalCandidates = 0;
   let totalPages = 1;
 
-  if (statusFilter === "verification_in_progress_document") {
+  if (statusFilter === "verification_in_progress_document" || statusFilter === "client_revision_requested") {
     candidateProjects = verificationData?.data?.items || verificationData?.data?.candidateProjects || [];
     totalCandidates = verificationData?.data?.pagination?.total || candidateProjects.length;
     totalPages = verificationData?.data?.pagination?.totalPages || 1;
-  } else if (statusFilter === "screening_approved") {
-    // Map screening items to extract candidateProjectMap and include screening info
-    const items = approvedScreeningData?.data?.items || [];
-    candidateProjects = items.map((item: any) => ({
-      ...(item.candidateProjectMap || {}),
-      screeningDecision: item.decision,
-      screeningConductedAt: item.conductedAt,
-      screeningRemarks: item.remarks,
-      screeningId: item.id,
-      sendToClient: item.sendToClient,
-      isInInterview: item.isInInterview,
-      documentRequirements: item.candidateProjectMap?.documentRequirements || item.candidateProjectMap?.project?.documentRequirements || []
-    }));
-    totalCandidates = approvedScreeningData?.data?.pagination?.total || candidateProjects.length;
-    totalPages = approvedScreeningData?.data?.pagination?.totalPages || 1;
   } else {
     // Map verified/rejected items into candidateProject-like rows grouped by candidateProjectMap.id
     // Support both shapes: 1) flat verification records with `candidateProjectMap` wrapper
@@ -252,6 +346,8 @@ export default function DocumentVerificationPage() {
           roleNeeded: it.roleNeeded || cpm.roleNeeded,
           // preserve interview state when present so UI can disable selection
           isInInterview: (cpm as any).isInInterview || it.isInInterview || false,
+          awaitingResubmitToClient:
+            it.awaitingResubmitToClient || (cpm as any).awaitingResubmitToClient || false,
           // surface API-provided statuses so UI can show subStatus/mainStatus
           subStatus: (it as any).subStatus || (cpm as any).subStatus || null,
           mainStatus: (it as any).mainStatus || (cpm as any).mainStatus || null,
@@ -267,6 +363,7 @@ export default function DocumentVerificationPage() {
 
       const existing2 = map.get(groupedId) || {
         id: groupedId,
+        createdAt: it.createdAt ?? null,
         candidate: it.candidate || null,
         project: it.project || null,
         documentVerifications: [],
@@ -276,6 +373,7 @@ export default function DocumentVerificationPage() {
         roleNeeded: it.roleNeeded || null,
         // ensure interview flag is preserved when backend provides it
         isInInterview: (it as any).isInInterview || false,
+        awaitingResubmitToClient: (it as any).awaitingResubmitToClient || false,
         // surface API-provided statuses so UI can show subStatus/mainStatus
         subStatus: (it as any).subStatus || null,
         mainStatus: (it as any).mainStatus || null,
@@ -302,6 +400,8 @@ export default function DocumentVerificationPage() {
     totalCandidates = verifiedRejectedData?.data?.pagination?.total || candidateProjects.length;
     totalPages = verifiedRejectedData?.data?.pagination?.totalPages || 1;
   }
+
+  candidateProjects = sortVerificationCandidatesAscending(candidateProjects);
 
   // Permission check
   if (!canReadDocuments) {
@@ -351,19 +451,35 @@ export default function DocumentVerificationPage() {
   };
 
   // Calculate status counts from API data (prefer server-supplied counts when available)
-  const getStatusCounts = () => {
-    // Prefer server-supplied counts when available. We merge counts from both
-    // the verification (pending) endpoint and the verified/rejected endpoint.
-    const verificationCounts = (verificationData?.data)?.counts || {};
-    const verifiedCounts = (verifiedRejectedData?.data)?.counts || {};
-    const screeningApprovedTotal = (approvedScreeningData?.data as any)?.pagination?.total || 0;
+  const statusCounts = useMemo(() => {
+    const tileCounts = extractVerificationCounts(tileCountsQuery.data);
+    const listCounts = extractVerificationCounts(verificationCandidatesQuery.data);
+    const verifiedRejectedTileCounts = extractVerificationCounts(verifiedRejectedCountsQuery.data);
+    const verifiedCounts = extractVerificationCounts(verifiedRejectedQuery.data);
+
+    const counts = { ...listCounts, ...tileCounts };
 
     const pending = Number(
-      verificationCounts.pending ?? verificationCounts.verification_in_progress ?? verificationCounts.verification_in_progress_document ?? 0
+      counts.pending ?? counts.verification_in_progress_document ?? 0
     );
 
-    const verified = Number(verifiedCounts.verified ?? verificationCounts.verified ?? 0);
-    const rejected = Number(verifiedCounts.rejected ?? verificationCounts.rejected ?? 0);
+    const verified = Number(
+      verifiedRejectedTileCounts.verified ?? verifiedCounts.verified ?? counts.verified ?? 0
+    );
+    const rejected = Number(
+      verifiedRejectedTileCounts.rejected ?? verifiedCounts.rejected ?? counts.rejected ?? 0
+    );
+    const clientRevisionFromList =
+      statusFilter === "client_revision_requested"
+        ? Number(verificationData?.data?.pagination?.total ?? 0)
+        : 0;
+    const clientRevisionRequested = Number(
+      tileCounts.client_revision_requested ??
+      counts.client_revision_requested ??
+      verifiedCounts.client_revision_requested ??
+      clientRevisionFromList ??
+      0
+    );
 
     return {
       verification_in_progress_document: pending,
@@ -371,11 +487,16 @@ export default function DocumentVerificationPage() {
       verification_in_progress: pending,
       documents_verified: verified,
       rejected_documents: rejected,
-      screening_approved: screeningApprovedTotal,
+      client_revision_requested: clientRevisionRequested,
     };
-  };
-
-  const statusCounts = getStatusCounts();
+  }, [
+    tileCountsQuery.data,
+    verifiedRejectedCountsQuery.data,
+    verificationCandidatesQuery.data,
+    verifiedRejectedQuery.data,
+    statusFilter,
+    verificationData?.data?.pagination?.total,
+  ]);
 
   // Get candidate data for bulk send modal
   // Only include candidates with verified documents (exclude pending)
@@ -391,13 +512,13 @@ export default function DocumentVerificationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-[98%] mx-auto space-y-4">
         {/* Compact Header */}
-        <TypedHeader 
-          userName={user?.name || "Verifier"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Verifier"}
           subtitle="Review and verify candidate documents with enterprise-grade precision"
         />
 
         {/* Tiles Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Pending Candidates Tile */}
           {(() => {
             const s = accentStyles.blue;
@@ -405,10 +526,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("verification_in_progress_document");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("verification_in_progress_document")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -443,10 +561,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("documents_verified");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("documents_verified")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -460,7 +575,7 @@ export default function DocumentVerificationPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Verified Documents</p>
                     <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.documents_verified}</p>
-                    <p className="text-xs text-slate-500">Approved</p>
+                    <p className="text-xs text-slate-500">Verification history</p>
                   </div>
                   <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
                     <Building2 className={cn("h-5 w-5", s.icon)} />
@@ -481,10 +596,7 @@ export default function DocumentVerificationPage() {
             return (
               <button
                 type="button"
-                onClick={() => {
-                  setStatusFilter("rejected_documents");
-                  setCurrentPage(1);
-                }}
+                onClick={() => handleStatusTileClick("rejected_documents")}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -498,7 +610,7 @@ export default function DocumentVerificationPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Rejected Documents</p>
                     <p className={cn("text-3xl font-bold tabular-nums", s.value)}>{statusCounts.rejected_documents}</p>
-                    <p className="text-xs text-slate-500">Need attention</p>
+                    <p className="text-xs text-slate-500">Rejection history</p>
                   </div>
                   <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
                     <XCircle className={cn("h-5 w-5", s.icon)} />
@@ -511,64 +623,89 @@ export default function DocumentVerificationPage() {
               </button>
             );
           })()}
+
+          {/* Client Revision Requested Tile */}
+          {(() => {
+            const s = accentStyles.orange;
+            const isActive = statusFilter === "client_revision_requested";
+            return (
+              <button
+                type="button"
+                onClick={() => handleStatusTileClick("client_revision_requested")}
+                className={cn(
+                  "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
+                  s.card,
+                  isActive ? `ring-2 shadow-md ${s.ring}` : "hover:-translate-y-0.5 hover:shadow-md"
+                )}
+              >
+                {isActive && (
+                  <span className={cn("absolute top-3 right-3 h-2 w-2 rounded-full animate-pulse", s.dot)} />
+                )}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Client Revision Requested</p>
+                    <p className={cn("text-3xl font-bold tabular-nums", s.value)}>
+                      {tileCountsQuery.isLoading && !tileCountsQuery.data
+                        ? "—"
+                        : statusCounts.client_revision_requested}
+                    </p>
+                    <p className="text-xs text-slate-500">Awaiting corrections</p>
+                  </div>
+                  <div className={cn("shrink-0 rounded-xl p-2.5 shadow-sm", s.iconBg)}>
+                    <RotateCcw className={cn("h-5 w-5", s.icon)} />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition-colors">
+                  <span>{isActive ? "Viewing now" : "Click to filter"}</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </div>
+              </button>
+            );
+          })()}
         </div>
 
         {/* Unified Table Container */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <Input
-                    placeholder="Search candidates or files..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
+        <div
+          ref={tableRef}
+          className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+        >
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+              <div className="relative min-w-0 flex-1 w-full group">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                <Input
+                  placeholder="Search candidates or files..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                />
+              </div>
+
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:shrink-0">
+                <div className="w-full min-w-0 sm:flex-1 lg:w-auto lg:min-w-[280px] lg:max-w-[420px] [&_button]:h-11 [&_button]:rounded-xl">
                   <ProjectRoleFilter
                     value={projectRoleFilter}
                     onChange={handleProjectRoleChange}
-                    className="sm:w-80"
+                    className="w-full gap-2"
                   />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="shrink-0 h-10 w-10 rounded-xl border-slate-200 hover:bg-slate-50"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setProjectRoleFilter({ projectId: "all", roleCatalogId: "all" });
-                      setScreeningFilter(false);
-                      setStatusFilter("verification_in_progress_document");
-                      setCurrentPage(1);
-                    }}
-                    title="Reset Filters"
-                  >
-                    <FilterX className="h-4 w-4 text-slate-500" />
-                  </Button>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "flex items-center space-x-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 transition-all",
-                  statusFilter === "screening_approved" ? "opacity-50 pointer-events-none" : "opacity-100"
-                )}>
+                <div className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3">
                   <Checkbox
                     id="screening-filter"
-                    checked={statusFilter === "screening_approved" ? true : screeningFilter}
+                    checked={screeningFilter}
                     onCheckedChange={(checked) => {
                       setScreeningFilter(checked as boolean);
                       setCurrentPage(1);
                     }}
-                    disabled={statusFilter === "screening_approved"}
                   />
-                  <label htmlFor="screening-filter" className="text-xs font-semibold text-slate-600 cursor-pointer">
+                  <label
+                    htmlFor="screening-filter"
+                    className="cursor-pointer whitespace-nowrap text-xs font-semibold text-slate-600"
+                  >
                     Screening Approved Only
                   </label>
                 </div>
@@ -592,8 +729,8 @@ export default function DocumentVerificationPage() {
                           return "In-progress Candidates";
                         case "rejected_documents":
                           return "Rejected Candidates";
-                        case "screening_approved":
-                          return "Screening Approved Candidates";
+                        case "client_revision_requested":
+                          return "Client Revision Requested";
                         default:
                           return "Candidates for Verification";
                       }
@@ -607,7 +744,7 @@ export default function DocumentVerificationPage() {
               </div>
               <div className="flex items-center gap-2">
                 {isLoading && <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />}
-                {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && selectedCandidatesForModal.length > 0 && (
+                {statusFilter === "documents_verified" && selectedCandidatesForModal.length > 0 && (
                   <Button
                     onClick={handleBulkSendToClient}
                     className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
@@ -646,7 +783,7 @@ export default function DocumentVerificationPage() {
     <Table>
       <TableHeader>
         <TableRow className="bg-gray-50/50 border-b border-gray-200">
-          {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+          {statusFilter === "documents_verified" && (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600 w-12">
               <Checkbox
                 checked={selectAll}
@@ -657,6 +794,9 @@ export default function DocumentVerificationPage() {
           )}
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Candidate
+          </TableHead>
+          <TableHead className="h-11 px-6 text-center text-xs font-medium uppercase tracking-wider text-gray-600">
+            Contact
           </TableHead>
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
             Project
@@ -674,9 +814,9 @@ export default function DocumentVerificationPage() {
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
               Rejected
             </TableHead>
-          ) : statusFilter === "screening_approved" ? (
+          ) : statusFilter === "client_revision_requested" ? (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-              Screening Status
+              Document Status
             </TableHead>
           ) : (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
@@ -685,9 +825,9 @@ export default function DocumentVerificationPage() {
           )}
 
           <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
-            {statusFilter === "screening_approved" ? "Docs Status" : "Screening Details"}
+            Screening Details
           </TableHead>
-          {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+          {statusFilter === "documents_verified" && (
             <TableHead className="h-11 px-6 text-left text-xs font-medium uppercase tracking-wider text-gray-600">
               Sent to Client
             </TableHead>
@@ -717,7 +857,7 @@ export default function DocumentVerificationPage() {
               )}
               data-tooltip={statusFilter === "verification_in_progress_document" ? "Please verify the documents" : undefined}
             >
-              {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+              {statusFilter === "documents_verified" && (
                 <TableCell className="px-6 py-5 w-12 relative group">
                   {candidateProject.isInInterview ? (
                     <div className="flex items-center justify-center">
@@ -755,7 +895,7 @@ export default function DocumentVerificationPage() {
                       {candidateProject.candidate.firstName?.[0]?.toUpperCase() || "A"}
                     </div>
                   )}
-                  <div>
+                  <div className="min-w-0">
                     <button
                       onClick={() =>
                         navigate(
@@ -766,9 +906,102 @@ export default function DocumentVerificationPage() {
                     >
                       {candidateProject.candidate.firstName} {candidateProject.candidate.lastName}
                     </button>
-                    <p className="text-xs text-gray-500">{candidateProject.candidate.email}</p>
+                    {candidateProject.candidate.candidateCode ? (
+                      <p className="text-xs text-muted-foreground font-mono truncate">
+                        {candidateProject.candidate.candidateCode}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
+              </TableCell>
+
+              <TableCell className="px-6 py-5 text-center">
+                {(() => {
+                  const candidate = candidateProject.candidate;
+                  const phoneDigits = formatPhoneForLink(candidate);
+                  const phoneDisplay = formatPhoneDisplay(candidate);
+                  const hasContact = phoneDisplay || candidate.email;
+
+                  if (!hasContact) {
+                    return <span className="text-slate-400 text-xs">—</span>;
+                  }
+
+                  return (
+                    <div className="w-full min-w-0 flex flex-col items-center gap-2 text-xs text-slate-500">
+                      {phoneDisplay ? (
+                        <div className="flex flex-col items-center gap-1.5">
+                          <TooltipProvider>
+                            <div className="flex items-center justify-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-green-600 hover:bg-green-100 hover:text-green-700"
+                                    disabled={!phoneDigits}
+                                    aria-label={`WhatsApp ${candidate.firstName ?? "candidate"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (phoneDigits) {
+                                        window.open(
+                                          `https://wa.me/${phoneDigits}`,
+                                          "_blank",
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">WhatsApp</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                                    disabled={!phoneDigits}
+                                    aria-label={`Call ${candidate.firstName ?? "candidate"}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (phoneDigits) {
+                                        window.location.href = `tel:${phoneDigits}`;
+                                      }
+                                    }}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">Call</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+                            <span className="text-gray-700 whitespace-nowrap">
+                              {phoneDisplay}
+                            </span>
+                          </div>
+                        </div>
+                      ) : null}
+                      {candidate.email ? (
+                        <div className="flex items-center justify-center gap-1.5 max-w-[180px]">
+                          <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                          <span className="text-gray-700 break-all">
+                            {candidate.email}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })()}
               </TableCell>
 
               <TableCell className="px-6 py-5">
@@ -830,16 +1063,51 @@ export default function DocumentVerificationPage() {
                         {lastVerified ? (
                           <div className="text-xs text-gray-500">Last: {new Date(lastVerified).toLocaleDateString()}</div>
                         ) : null}
+                        {candidateProject.awaitingResubmitToClient && (
+                          <Badge
+                            variant="outline"
+                            className="mt-2 bg-orange-50 text-orange-700 border-orange-200 text-[10px] font-semibold"
+                          >
+                            2nd submission pending
+                          </Badge>
+                        )}
                         {renderSubStatus()}
                       </div>
                     );
                   }
 
                   if (statusFilter === "verification_in_progress_document") {
+                    const documentSummary = candidateProject.documentSummary;
+                    const hasMissing =
+                      documentSummary && documentSummary.missingCount > 0;
+
                     return (
                       <div className="text-sm text-gray-700">
                         <div className="font-medium">Pending: {pendingCount}</div>
                         <div className="text-xs text-gray-500">Submitted: {totalDocs}</div>
+                        {hasMissing ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">
+                                <span
+                                  className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                                  aria-hidden
+                                />
+                                {documentSummary.submittedCount}/
+                                {documentSummary.requiredCount} submitted ·{" "}
+                                {documentSummary.missingCount} missing
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-xs">
+                              <p className="font-semibold mb-1">Missing documents</p>
+                              <ul className="list-disc pl-4 space-y-0.5">
+                                {documentSummary.missingDocTypes.map((docType: string) => (
+                                  <li key={docType}>{docType}</li>
+                                ))}
+                              </ul>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
                         {renderSubStatus()}
                       </div>
                     );
@@ -863,20 +1131,15 @@ export default function DocumentVerificationPage() {
                     );
                   }
 
-                  if (statusFilter === "screening_approved") {
+                  if (statusFilter === "client_revision_requested") {
+                    const resubmissionCount = docs.filter((d: any) => d.status === "resubmission_required").length;
+
                     return (
                       <div className="text-sm text-gray-700">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                          {candidateProject.screeningDecision || "Approved"}
-                        </Badge>
-
-                        {candidateProject.screeningConductedAt && (
-                          <p className="text-[10px] text-gray-500 mt-1">
-                            {new Date(candidateProject.screeningConductedAt).toLocaleDateString()}
-                          </p>
-                        )}
-
-                        {/* Show candidate sub-status when available (e.g. documents_verified) */}
+                        <div className="font-medium">
+                          Verified: {verifiedCount} · Rejected: {rejectedCount} · Resubmit: {resubmissionCount}
+                        </div>
+                        <div className="text-xs text-gray-500">Total documents: {totalDocs}</div>
                         {renderSubStatus()}
                       </div>
                     );
@@ -893,25 +1156,8 @@ export default function DocumentVerificationPage() {
 
               {/* Documents / Screening Details */}
               <TableCell className="px-6 py-5 text-sm text-gray-600">
-                {statusFilter === "screening_approved" ? (
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "capitalize",
-                        candidateProject.docsStatus === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                        candidateProject.docsStatus === "pending" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                        candidateProject.docsStatus === "queued" ? "bg-indigo-50 text-indigo-700 border-indigo-200 animate-pulse" :
-                        "bg-slate-50 text-slate-700 border-slate-200"
-                      )}
-                    >
-                      {candidateProject.docsStatus || "—"}
-                    </Badge>
-                  </div>
-                ) : (
-                  <div>
-                    {candidateProject.screening ? (
+                <div>
+                  {candidateProject.screening ? (
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] h-4 px-1.5 capitalize bg-blue-50 text-blue-700 border-blue-200 font-semibold ring-0">
@@ -929,12 +1175,11 @@ export default function DocumentVerificationPage() {
                     ) : (
                       <span className="text-xs text-gray-400">No screening info</span>
                     )}
-                  </div>
-                )}
+                </div>
               </TableCell>
 
               {/* Sent to Client Column (Screening Approved & Verified only) */}
-              {(statusFilter === "screening_approved" || statusFilter === "documents_verified") && (
+              {statusFilter === "documents_verified" && (
                 <TableCell className="px-6 py-5">
                   {candidateProject.sendToClient ? (
                     <div className="flex items-center gap-2 group/sent">

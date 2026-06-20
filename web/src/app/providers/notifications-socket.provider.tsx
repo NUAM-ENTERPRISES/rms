@@ -7,12 +7,38 @@ import { notificationsApi } from "@/features/notifications/data/notifications.en
 import { setMuted } from "@/features/notifications/notificationSettingsSlice";
 import { setCredentials, clearCredentials } from "@/features/auth/authSlice";
 import { toast } from "sonner";
+import { store } from "@/app/store";
 import { handleDocumentNotifications, registerDocumentSocketEvents, handleDocumentSync } from "./notification-handlers/document-handler";
+import { handleIntroductionVideoNotifications, registerIntroductionVideoSocketEvents } from "./notification-handlers/introduction-video-handler";
 import { handleScreeningNotifications, handleScreeningSync } from "./notification-handlers/screening-handler";
 import { handleInterviewNotifications } from "./notification-handlers/interview-handler";
-import { handleCRENotifications, handleCRESync } from "./notification-handlers/cre-handler";
+import { handleOperationsNotifications, handleOperationsSync } from "./notification-handlers/operations-handler";
 import { handleProcessingNotifications, handleProcessingSync } from "./notification-handlers/processing-handler";
 import { handleSessionUpdated, type SessionEventPayload } from "./notification-handlers/session-handler";
+import {
+  handleAccountBlocked,
+  type AccountBlockedPayload,
+} from "./notification-handlers/account-blocked-handler";
+import {
+  handleAccountStatusChanged,
+  handleAccountStatusNotifications,
+  type AccountStatusChangedPayload,
+} from "./notification-handlers/account-status-handler";
+import { handleAgentCandidateRequestNotifications } from "./notification-handlers/agent-candidate-request-handler";
+import {
+  handleOfferLetterNotifications,
+  handleOfferLetterSync,
+} from "./notification-handlers/offer-letter-handler";
+import { handleCandidateProjectStatusChangeNotifications } from "./notification-handlers/candidate-project-status-change-handler";
+import {
+  handleProcessingStatusChangeNotifications,
+  handleProcessingStatusChangeSync,
+} from "./notification-handlers/processing-status-change-handler";
+import {
+  handleDocumentsControlPermissionsChanged,
+  handleDocumentsControlPermissionsSync,
+  type DocumentsControlPermissionsChangedPayload,
+} from "./notification-handlers/documents-control-permissions-handler";
 
 const invalidateTags = baseApi.util.invalidateTags;
 
@@ -87,18 +113,25 @@ export default function NotificationsSocketProvider({ children }: { children: Re
   }, []);
 
   useEffect(() => {
+    // Ensure previous socket is cleaned up properly before creating a new one.
+    // This prevents multiple sockets from being created in development mode
+    // when React Strict Mode unmounts and remounts components.
+    let newSocket: Socket | null = null;
+
     if (!accessToken || !user) {
       if (socketRef.current) {
-        console.log("[Socket] No token, disconnecting...");
+        console.log("[Socket] No token, disconnecting existing socket...");
         socketRef.current.disconnect();
         socketRef.current = null;
       }
       return;
     }
 
-    updateSocketAuthToken(accessToken);
-
-    if (socketRef.current?.connected) return;
+    // If a socket already exists and is connected, just update the token if necessary
+    if (socketRef.current && socketRef.current.connected) {
+      updateSocketAuthToken(accessToken);
+      return;
+    }
 
     // Determine the base WebSocket URL based on environment and current location
     const WS_BASE_URL =
@@ -110,23 +143,23 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     const baseUrl = WS_BASE_URL.replace(/\/$/, "");
     const socketUrl = `${baseUrl}/notifications`;
     
-    console.log("[Socket] Connecting to:", socketUrl);
+    console.log("[Socket] Attempting to connect to:", socketUrl);
 
-    const socket = io(socketUrl, {
+    newSocket = io(socketUrl, {
       auth: { token: accessToken },
       transports: ["websocket", "polling"], // Use websocket first, then poll for compatibility
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      forceNew: true,
+      forceNew: false, // Do not force a new connection if one already exists for the same URL
       autoConnect: true,
     });
 
-    socketRef.current = socket;
+    socketRef.current = newSocket;
 
-    socket.on("connect", () => {
-      console.log("[Socket] CONNECTED SUCCESS (Port 3000):", socket.id);
+    newSocket.on("connect", () => {
+      console.log("[Socket] CONNECTED SUCCESS (Port 3000):", newSocket?.id);
       
       // Force refresh on initial connection or reconnection to sync state from database
       window.dispatchEvent(new CustomEvent("notifications:refresh"));
@@ -143,7 +176,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       ]));
     });
 
-    socket.on("connect_error", async (error) => {
+    newSocket.on("connect_error", async (error) => {
       const errorMessage =
         typeof error === "string"
           ? error
@@ -151,10 +184,11 @@ export default function NotificationsSocketProvider({ children }: { children: Re
 
       console.error("[Socket] CONNECTION ERROR:", errorMessage);
 
+      // Attempt token refresh only if not already in progress and the error is due to JWT expiration
       if (errorMessage.includes("jwt expired") && !refreshInProgressRef.current) {
         refreshInProgressRef.current = true;
+        console.log("[Socket] Access token expired, attempting refresh...");
         try {
-          console.log("[Socket] Access token expired, refreshing before reconnect...");
           const refreshResponse = await dispatch(
             authApi.endpoints.refresh.initiate()
           ).unwrap();
@@ -163,7 +197,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           const newRefreshToken = refreshResponse.data.refreshToken;
           const newUser = refreshResponse.data.user;
 
-          if (newAccessToken && newUser) {
+          if (newAccessToken && newUser && newSocket) {
             dispatch(
               setCredentials({
                 user: newUser,
@@ -171,9 +205,10 @@ export default function NotificationsSocketProvider({ children }: { children: Re
                 refreshToken: newRefreshToken,
               })
             );
-
             updateSocketAuthToken(newAccessToken);
-            socket.connect();
+            // Disconnect old socket and reconnect with new token
+            newSocket.disconnect();
+            newSocket.connect(); 
             console.log("[Socket] Reconnected with refreshed token");
             return;
           }
@@ -186,30 +221,36 @@ export default function NotificationsSocketProvider({ children }: { children: Re
           refreshInProgressRef.current = false;
         }
 
+        // If refresh fails or token is invalid, clear credentials and disconnect
         dispatch(clearCredentials());
-        socket.disconnect();
+        newSocket?.disconnect();
         socketRef.current = null;
       }
     });
 
-    socket.on("reconnect_attempt", (attempt) => {
+    newSocket.on("reconnect_attempt", (attempt) => {
       updateSocketAuthToken(accessToken);
       console.log(`[Socket] RECONNECT ATTEMPT ${attempt}`);
     });
 
-    socket.on("reconnect_error", (error) => {
+    newSocket.on("reconnect_error", (error) => {
       console.warn("[Socket] RECONNECT ERROR:", error?.message || error);
     });
 
-    socket.on("reconnect_failed", () => {
+    newSocket.on("reconnect_failed", () => {
       console.error("[Socket] RECONNECT FAILED, connection is down");
+      dispatch(clearCredentials());
+      socketRef.current?.disconnect();
+      socketRef.current = null;
     });
 
-    socket.on("disconnect", (reason) => {
+    newSocket.on("disconnect", (reason) => {
       console.warn("[Socket] DISCONNECTED:", reason);
+      // If the disconnect is not due to a deliberate action (e.g., login/logout),
+      // attempt to reconnect or ensure proper cleanup.
     });
 
-    socket.on("notification:new", (notification: any) => {
+    newSocket.on("notification:new", (notification: any) => {
       console.log("[Socket] Notif Received:", notification);
       
       const isProcessingReminder = 
@@ -251,6 +292,58 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         }));
       }
 
+      if (notification.type === "CALLBACK_REMINDER") {
+        const meta = notification.meta ?? {};
+        const metaCandidate = meta.candidate as Record<string, unknown> | undefined;
+        const nameParts = String(meta.candidateName ?? "").trim().split(/\s+/);
+
+        dispatch(
+          baseApi.util.invalidateTags(["CallbackReminder", "Notification"]),
+        );
+
+        window.dispatchEvent(
+          new CustomEvent("callback:reminder", {
+            detail: {
+              show: true,
+              reminder: {
+                id: meta.reminderId ?? notification.id,
+                candidateId: meta.candidateId,
+                statusHistoryId: meta.statusHistoryId,
+                scheduledFor: meta.scheduledFor,
+                sentAt: notification.createdAt,
+                status: "sent",
+                createdAt: notification.createdAt,
+                updatedAt: notification.createdAt,
+                statusHistory: meta.statusHistory ?? {
+                  statusUpdatedAt: meta.scheduledFor,
+                  reason:
+                    (meta.statusHistory as { reason?: string } | undefined)
+                      ?.reason ??
+                    (typeof meta.reason === "string" ? meta.reason : undefined),
+                },
+                candidate: metaCandidate
+                  ? {
+                      id: metaCandidate.id ?? meta.candidateId,
+                      firstName: metaCandidate.firstName,
+                      lastName: metaCandidate.lastName,
+                      countryCode: metaCandidate.countryCode ?? meta.countryCode,
+                      mobileNumber:
+                        metaCandidate.mobileNumber ?? meta.mobileNumber,
+                      currentStatus: metaCandidate.currentStatus,
+                    }
+                  : {
+                      id: meta.candidateId,
+                      firstName: nameParts[0] ?? "",
+                      lastName: nameParts.slice(1).join(" ") ?? "",
+                      countryCode: meta.countryCode,
+                      mobileNumber: meta.mobileNumber,
+                    },
+              },
+            },
+          }),
+        );
+      }
+
       // Dispatch a specific event for processing reminders so the processing followup modal opens
       if (notification.type === "processing.reminder" || isProcessingReminder) {
         window.dispatchEvent(new CustomEvent("processing:reminder", {
@@ -262,6 +355,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (
         notification.type !== "candidate_sent_for_verification" &&
         notification.type !== "processing.reminder" &&
+        notification.type !== "account_status_changed" &&
         !notification.type?.endsWith("_REMINDER")
       ) {
         toast(notification.title || "New Notification", {
@@ -274,21 +368,38 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       // Handle domain-specific notifications
       handleScreeningNotifications(context);
       handleDocumentNotifications(context);
+      handleIntroductionVideoNotifications(context);
       handleInterviewNotifications(context);
-      handleCRENotifications(context);
+      handleOperationsNotifications(context);
       handleProcessingNotifications(context);
+      handleAccountStatusNotifications(context);
+      handleAgentCandidateRequestNotifications(context);
+      handleOfferLetterNotifications(context);
+      handleCandidateProjectStatusChangeNotifications(context);
+      handleProcessingStatusChangeNotifications(context);
     });
 
-    socket.on("data:sync", (payload: any) => {
+    newSocket.on("data:sync", (payload: any) => {
       console.log("[Socket] Sync Received:", payload);
       
       const context = { dispatch, invalidateTags };
       
       if (handleScreeningSync(payload, context)) return;
       if (handleDocumentSync(payload, context)) return;
-      if (handleCRESync(payload, context)) return;
+      if (handleOperationsSync(payload, context)) return;
+      if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
-      
+      if (handleProcessingStatusChangeSync(payload, context)) return;
+      if (
+        handleDocumentsControlPermissionsSync(
+          payload,
+          dispatch,
+          store.getState,
+        )
+      ) {
+        return;
+      }
+
       if (payload.type) {
         dispatch(baseApi.util.invalidateTags([{ type: payload.type, id: "LIST" }]));
       }
@@ -296,15 +407,43 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     });
 
     // Handle domain-specific direct socket events
-    registerDocumentSocketEvents(socket, { dispatch, invalidateTags });
+    registerDocumentSocketEvents(newSocket, { dispatch, invalidateTags });
+    registerIntroductionVideoSocketEvents(newSocket, { dispatch, invalidateTags });
 
-    socket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
+    newSocket.on("INTERVIEW_STATS_UPDATE", (payload: any) => {
       console.log("[Socket] Interview stats update received:", payload);
       dispatch(baseApi.util.invalidateTags([{ type: "Interview", id: "LIST" }]));
     });
 
+    newSocket.on("account:blocked", (payload: AccountBlockedPayload) => {
+      handleAccountBlocked(payload, dispatch);
+    });
+
+    newSocket.on("account:status-changed", (payload: AccountStatusChangedPayload) => {
+      handleAccountStatusChanged(payload, dispatch);
+      if (payload.message) {
+        const isInactive = payload.accountStatus === "INACTIVE";
+        if (isInactive) {
+          toast.warning(payload.message);
+        } else {
+          toast.success(payload.message);
+        }
+      }
+    });
+
+    newSocket.on(
+      "user:documents-control-permissions-changed",
+      (payload: DocumentsControlPermissionsChangedPayload) => {
+        handleDocumentsControlPermissionsChanged(
+          payload,
+          dispatch,
+          store.getState,
+        );
+      },
+    );
+
     // Session monitoring — debounced to prevent refetch storms on rapid events
-    socket.on("session:updated", (payload: SessionEventPayload) => {
+    newSocket.on("session:updated", (payload: SessionEventPayload) => {
       if (sessionInvalidateTimerRef.current) {
         clearTimeout(sessionInvalidateTimerRef.current);
       }
@@ -320,10 +459,10 @@ export default function NotificationsSocketProvider({ children }: { children: Re
         clearTimeout(sessionInvalidateTimerRef.current);
         sessionInvalidateTimerRef.current = null;
       }
-      socket.disconnect();
+      newSocket?.disconnect(); // Disconnect the newly created socket on cleanup
       socketRef.current = null;
     };
-  }, [accessToken, user, dispatch]);
+  }, [accessToken, user?.id, dispatch]);
 
   return <>{children}</>;
 }

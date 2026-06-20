@@ -11,110 +11,219 @@ const CANDIDATE_SOURCE_IDS = CANDIDATE_SOURCES.map((s) => s.id) as [
   ...string[],
 ];
 
-export const createCandidateSchema = z
-  .object({
-    firstName: z.string().min(1, "First name is required").max(50),
-    lastName: z.string().min(1, "Last name is required").max(50),
-    countryCode: z.string().min(1, "Country code is required"),
-    mobileNumber: z
-      .string()
-      .min(10, "Mobile number must be at least 10 characters")
-      .max(15, "Mobile number must not exceed 15 characters"),
-    email: z.string().email("Invalid email address").optional().or(z.literal("")),
-    source: z.enum(CANDIDATE_SOURCE_IDS),
-    agentId: z.string().optional(),
-    declaredProjectIds: z.array(z.string()).optional().default([]),
-    gender: z.enum(["MALE", "FEMALE", "OTHER"]),
-    dateOfBirth: z.string().optional(),
-    expectedSalary: z.preprocess(
-      (val) => {
-        if (val === "" || val === null || val === undefined) return undefined;
-        const num = Number(val);
-        return isNaN(num) ? undefined : num;
-      },
-      z.number().min(0).optional().nullable()
-    ),
+export type CreateCandidateSchemaOptions = {
+  isAgentCoordinator?: boolean;
+};
 
-    preferredCountries: z.array(z.string()).optional(),
-    facilityPreferences: z.array(z.string()).optional(),
-    sectorType: z.string().optional(),
-    visaType: z.string().optional(),
-    height: z.preprocess(
-      (val) => {
-        if (val === "" || val === undefined || val === null) return undefined;
-        const num = Number(val);
-        return isNaN(num) ? undefined : num;
-      },
-      z.number().optional()
-    ),
-    weight: z.preprocess(
-      (val) => {
-        if (val === "" || val === undefined || val === null) return undefined;
-        const num = Number(val);
-        return isNaN(num) ? undefined : num;
-      },
-      z.number().optional()
-    ),
-    skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional().or(z.literal("")),
-    languageProficiency: z.enum([...LANGUAGE_PROFICIENCY_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
-    smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
-    licensingExam: z.string().optional(),
-    dataFlow: z.boolean().optional().default(false),
-    eligibility: z.boolean().optional().default(false),
+export function buildCreateCandidateSchema(
+  options: CreateCandidateSchemaOptions = {},
+) {
+  const isAgentCoordinator = options.isAgentCoordinator ?? false;
 
-    referralCompanyName: z.string().optional(),
-    referralEmail: z
-      .string()
-      .email("Invalid email address")
-      .optional()
-      .or(z.literal("")),
-    referralCountryCode: z.string().optional(),
-    referralPhone: z.string().optional(),
-    referralDescription: z.string().optional(),
+  return z
+    .object({
+      firstName: z.string().min(1, "First name is required").max(50),
+      lastName: z.string().min(1, "Last name is required").max(50),
+      countryCode: isAgentCoordinator
+        ? z.string().optional().or(z.literal(""))
+        : z.string().min(1, "Country code is required"),
+      mobileNumber: isAgentCoordinator
+        ? z.string().optional().or(z.literal(""))
+        : z
+            .string()
+            .min(10, "Mobile number must be at least 10 characters")
+            .max(15, "Mobile number must not exceed 15 characters"),
+      passportNumber: isAgentCoordinator
+        ? z
+            .string()
+            .min(3, "Passport number is required")
+            .max(50, "Passport number is too long")
+        : z.string().max(50).optional().or(z.literal("")),
+      email: z.string().email("Invalid email address").optional().or(z.literal("")),
+      source: z.enum(CANDIDATE_SOURCE_IDS),
+      agentId: z.string().optional(),
+      declaredProjectIds: z.array(z.string()).optional().default([]),
+      gender: z.enum(["MALE", "FEMALE", "OTHER"]),
+      dateOfBirth: z.string().optional(),
+      expectedSalary: z.preprocess(
+        (val) => {
+          if (val === "" || val === null || val === undefined) return undefined;
+          const num = Number(val);
+          return isNaN(num) ? undefined : num;
+        },
+        z.number().min(0).optional().nullable()
+      ),
 
-    addressCountryCode: z.string().max(8).optional().or(z.literal("")),
-    addressStateId: z.string().optional().or(z.literal("")),
-    address: z.string().max(500).optional().or(z.literal("")),
+      professionTypeId: z.string().min(1, "Profession type is required"),
+      preferredCountries: z.array(z.string()).optional(),
+      facilityPreferences: z.array(z.string()).optional(),
+      preferredRoles: z.array(z.string()).optional(),
+      sectorType: z.string().optional(),
+      visaType: z.string().optional(),
+      height: z.preprocess(
+        (val) => {
+          if (val === "" || val === undefined || val === null) return undefined;
+          const num = Number(val);
+          return isNaN(num) ? undefined : num;
+        },
+        z.number().optional()
+      ),
+      weight: z.preprocess(
+        (val) => {
+          if (val === "" || val === undefined || val === null) return undefined;
+          const num = Number(val);
+          return isNaN(num) ? undefined : num;
+        },
+        z.number().optional()
+      ),
+      skinTone: z.enum([...SKIN_TONES] as [string, ...string[]]).optional().or(z.literal("")),
+      languageProficiency: z
+        .enum([...LANGUAGE_PROFICIENCY_LEVELS] as [string, ...string[]])
+        .optional()
+        .or(z.literal("")),
+      smartness: z.enum([...SMARTNESS_LEVELS] as [string, ...string[]]).optional().or(z.literal("")),
+      religionId: z.string().optional().or(z.literal("")),
+      licensingExam: z.string().optional(),
+      dataFlow: z.boolean().optional().default(false),
+      eligibility: z.boolean().optional().default(false),
+      eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+      eligibilityIssuedDate: z.string().optional().or(z.literal("")),
+      eligibilityExpiryDate: z.string().optional().or(z.literal("")),
 
-    highestEducation: z.string().max(100).optional(),
-    university: z.string().max(200).optional(),
-    graduationYear: z.number().min(1950).max(2030).optional(),
-    gpa: z.number().min(0).max(4).optional(),
+      referralCompanyName: z.string().optional(),
+      referralEmail: z
+        .string()
+        .email("Invalid email address")
+        .optional()
+        .or(z.literal("")),
+      referralCountryCode: z.string().optional(),
+      referralPhone: z.string().optional(),
+      referralDescription: z.string().optional(),
 
-    qualifications: z
-      .array(
-        z.object({
-          id: z.string(),
-          qualificationId: z.string(),
-          university: z.string().optional(),
-          graduationYear: z.number().min(1950).max(2030).optional(),
-          gpa: z.number().min(0).max(4).optional(),
-          isCompleted: z.boolean(),
-          notes: z.string().optional(),
-        })
-      )
-      .optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (
-      data.source === "agent" &&
-      (!data.agentId || !String(data.agentId).trim())
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Select an agent",
-        path: ["agentId"],
-      });
-    }
-  })
-  .superRefine((data, ctx) => {
-    if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Select a country before state",
-        path: ["addressCountryCode"],
-      });
-    }
-  });
+      addressCountryCode: z.string().max(8).optional().or(z.literal("")),
+      addressStateId: z.string().optional().or(z.literal("")),
+      address: z.string().max(500).optional().or(z.literal("")),
+      addressPincode: z.string().max(12).optional().or(z.literal("")),
+      alternatePhone: z
+        .string()
+        .max(15)
+        .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
+        .optional()
+        .or(z.literal("")),
+
+      highestEducation: z.string().max(100).optional(),
+      university: z.string().max(200).optional(),
+      graduationYear: z.number().min(1950).max(2030).optional(),
+      gpa: z.number().min(0).max(4).optional(),
+
+      qualifications: z
+        .array(
+          z.object({
+            id: z.string(),
+            qualificationId: z.string(),
+            university: z.string().optional(),
+            graduationYear: z.number().min(1950).max(2030).optional(),
+            gpa: z.number().min(0).max(4).optional(),
+            isCompleted: z.boolean(),
+            notes: z.string().optional(),
+          })
+        )
+        .optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (
+        data.source === "agent" &&
+        (!data.agentId || !String(data.agentId).trim())
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select an agent",
+          path: ["agentId"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country before state",
+          path: ["addressCountryCode"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      if (!isAgentCoordinator) return;
+      const cc = data.countryCode?.trim() || "";
+      const mn = data.mobileNumber?.trim() || "";
+      // Optional contact: empty mobile means no phone (ignore default country code in UI)
+      if (!mn) return;
+      if (!cc) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select a country code when entering a mobile number",
+          path: ["countryCode"],
+        });
+        return;
+      }
+      if (mn.length < 6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Mobile number must be at least 6 digits",
+          path: ["mobileNumber"],
+        });
+      }
+      if (mn.length > 15) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Mobile number must not exceed 15 characters",
+          path: ["mobileNumber"],
+        });
+      }
+    })
+    .superRefine((data, ctx) => {
+      if (!data.eligibility) return;
+
+      if (!data.eligibilityNumber?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility number is required when eligibility is enabled",
+          path: ["eligibilityNumber"],
+        });
+      }
+      if (!data.eligibilityIssuedDate?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility issued date is required when eligibility is enabled",
+          path: ["eligibilityIssuedDate"],
+        });
+      }
+      if (!data.eligibilityExpiryDate?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Eligibility expiry date is required when eligibility is enabled",
+          path: ["eligibilityExpiryDate"],
+        });
+      }
+
+      if (data.eligibilityIssuedDate?.trim() && data.eligibilityExpiryDate?.trim()) {
+        const issued = new Date(data.eligibilityIssuedDate);
+        const expiry = new Date(data.eligibilityExpiryDate);
+        if (
+          !Number.isNaN(issued.getTime()) &&
+          !Number.isNaN(expiry.getTime()) &&
+          expiry <= issued
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Eligibility expiry date must be after the issued date",
+            path: ["eligibilityExpiryDate"],
+          });
+        }
+      }
+    });
+}
+
+/** Default schema (non–Agent Coordinator rules). */
+export const createCandidateSchema = buildCreateCandidateSchema();
 
 export type CreateCandidateFormData = z.infer<typeof createCandidateSchema>;

@@ -1,17 +1,19 @@
-// Load environment variables from .env when running ts-node scripts
-import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
-import * as argon2 from 'argon2';
-import * as fs from 'fs';
 import * as path from 'path';
-import { seedSystemConfig } from './seeds/system-config.seed';
-import { seedLanguages } from './seeds/languages.seed';
+import * as fs from 'fs';
+import { seedProfessionTypes } from './seeds/profession-types.seed';
+import { seedUserProfessionScopes } from './seeds/user-profession-scopes.seed';
+import { seedRoleCatalog } from './seeds/role-catalog.seed';
+import { seedPermissionsAndRoles } from './seeds/permissions-roles.seed';
+import { seedUsers, logSeedUserCredentials } from './seeds/users.seed';
+import { seedClients } from './seeds/clients.seed';
 import { seedCRERole } from './seeds/cre-role.seed';
 import { seedCandidateProjectWorkflow } from './seeds/seed-candidate-project-status';
-import { seedRoleCatalog } from './seeds/role-catalog.seed';
-import { seedCountryDocuments } from './seeds/country-documents.seed';
+import { seedSystemConfig } from './seeds/system-config.seed';
 import { seedProcessingStepTemplates } from './seeds/processing-step-templates.seed';
 import { seedProcessingCountrySteps } from './seeds/processing-country-steps.seed';
+import { seedCountryDocuments } from './seeds/country-documents.seed';
+import { seedLanguages } from './seeds/languages.seed';
 
 const prisma = new PrismaClient();
 
@@ -33,12 +35,99 @@ const roles = [
     permissions: ['*'],
   },
   {
+    name: 'Processing Manager',
+    description: 'Processing Manager - Manager access focused on processing',
+    permissions: [
+      'read:processing',
+      'write:processing',
+      'manage:processing',
+      'transfer:processing',
+      'read:candidates',
+      'write:candidates',
+      'manage:candidates',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'read:projects',
+      'write:projects',
+      'manage:projects',
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'manage:documents',
+      'request:resubmission',
+      'read:interviews',
+      'write:interviews',
+      'schedule:interviews',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
+      'read:users',
+      'read:teams',
+      'read:assigned_teams',
+      'read:analytics',
+      'read:roles',
+    ],
+  },
+  {
+    name: 'Recruiter Manager',
+    description:
+      'Recruiter Manager - Manager scope without processing and administration',
+    permissions: [
+      'read:projects',
+      'write:projects',
+      'manage:projects',
+      'read:candidates',
+      'write:candidates',
+      'manage:candidates',
+      'read:assigned_candidates',
+      'write:assigned_candidates',
+      'nominate:candidates',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'transfer:candidates',
+      'transfer_back:candidates',
+      'manage:recruiters',
+      'read:recruiters',
+      'write:recruiters',
+      'read:teams',
+      'write:teams',
+      'manage:teams',
+      'read:assigned_teams',
+      'write:assigned_teams',
+      'read:clients',
+      'write:clients',
+      'manage:clients',
+      'read:documents',
+      'write:documents',
+      'verify:documents',
+      'manage:documents',
+      'request:resubmission',
+      'read:interviews',
+      'write:interviews',
+      'manage:interviews',
+      'schedule:interviews',
+      'read:screenings',
+      'read:interview_templates',
+      'read:training',
+      'read:analytics',
+      'read:admin-dashboard',
+      'read:users',
+      'manage:users',
+      'read:system_config',
+      'read:roles',
+      'read:operations_call_history',
+    ],
+  },
+  {
     name: 'Team Head',
     description: 'Team Head - Access to assigned teams',
     permissions: [
       'read:assigned_teams',
       'write:assigned_teams',
       'manage:candidates',
+      'read:operations_call_history',
       'nominate:candidates',
       'approve:candidates',
       'reject:candidates',
@@ -68,6 +157,7 @@ const roles = [
       'write:candidates',
       'nominate:candidates',
       'shortlist:candidates',
+      'read:operations_call_history',
       'read:teams',
       'read:interviews',
       'schedule:interviews',
@@ -126,6 +216,20 @@ const roles = [
       'read:screenings',
       'read:interview_templates',
       'read:training',
+    ],
+  },
+  {
+    name: 'Documents Control Executive',
+    description: 'Physical original document intake, scanning, and locker management',
+    permissions: [
+      'read:documents',
+      'write:documents',
+      'read:candidates',
+      'read:agents',
+      'read:original_document_intake',
+      'write:original_document_intake',
+      'read:courier_management',
+      'write:courier_management',
     ],
   },
   {
@@ -191,9 +295,9 @@ const roles = [
     ],
   },
   {
-    name: 'Client Coordinator',
+    name: 'Agent Coordinator',
     description:
-      'Client Coordinator - Manages external agents and agent-sourced candidates',
+      'Agent Coordinator - Manages external agents and agent-sourced candidates',
     permissions: [
       'read:candidates',
       'read:assigned_candidates',
@@ -217,6 +321,32 @@ const roles = [
       'write:agents',
       'edit:agents',
       'delete:agents',
+    ],
+  },
+  {
+    name: 'Project Coordinator',
+    description:
+      'Project Coordinator - Manages clients, projects, and candidate pipeline overview',
+    permissions: [
+      'read:projects',
+      'write:projects',
+      'manage:projects',
+      'read:assigned_projects',
+      'write:assigned_projects',
+      'read:candidates',
+      'write:candidates',
+      'manage:candidates',
+      'read:assigned_candidates',
+      'write:assigned_candidates',
+      'nominate:candidates',
+      'approve:candidates',
+      'reject:candidates',
+      'shortlist:candidates',
+      'transfer:candidates',
+      'transfer_back:candidates',
+      'read:clients',
+      'write:clients',
+      'manage:clients',
     ],
   },
   {
@@ -272,6 +402,10 @@ const allPermissions = [
   'verify:documents',
   'manage:documents',
   'request:resubmission',
+  'read:original_document_intake',
+  'write:original_document_intake',
+  'read:courier_management',
+  'write:courier_management',
 
   // Processing management
   'read:processing',
@@ -290,6 +424,7 @@ const allPermissions = [
   'manage:cre',
   'assign:cre',
   'handle:rnr_candidates',
+  'read:operations_call_history',
 
   // Role management
   'read:roles',
@@ -798,6 +933,7 @@ async function seedCandidateStatus() {
     'RNR',
     'Qualified',
     'Deployed',
+    'Call Back',
   ];
 
   for (const statusName of statuses) {
@@ -818,18 +954,20 @@ async function seedCandidateStatus() {
 async function seedScreeningTemplates() {
   console.log('📋 Seeding screening checklist templates...');
   try {
-    // Get sample roles to create templates for
-    // role catalog no longer exposes `slug` in the schema; match by `name`
+    // Get sample roles to create templates for (match catalog by type)
     const registeredNurse = await prisma.roleCatalog.findFirst({
-      where: { name: { contains: 'Registered Nurse' } },
+      where: { type: 'nurse', isActive: true },
+      orderBy: { name: 'asc' },
     });
     const doctor = await prisma.roleCatalog.findFirst({
-      where: { name: { contains: 'Doctor' } },
+      where: { type: 'doctor', isActive: true },
+      orderBy: { name: 'asc' },
     });
 
     if (!registeredNurse && !doctor) {
-      console.log('⚠️  No roles found, skipping template seeding');
-      return;
+      throw new Error(
+        'No nurse or doctor roles found in role catalog — run seedRoleCatalog first',
+      );
     }
 
     const templates: Array<{
@@ -1008,688 +1146,38 @@ async function seedScreeningTemplates() {
 async function main() {
   console.log('🌱 Starting database seeding...');
 
-  // Seed countries first
   await seedCountries();
-
-  // Seed religions
-  await seedReligions();
-
-  // Seed states
-  await seedStates();
-
-  await seedLanguages(prisma);
-
-  // Seed candidate statuses
-  await seedCandidateStatus();
-
-  // Seed candidate project statuses
-  await seedCandidateProjectStatuses();
-
-  // Project roles seeding removed
-  // Seed healthcare roles catalog
   await seedRoleCatalog();
   await seedQualifications();
   await seedQualificationAliases();
-  // seedRoleRecommendedQualifications depends on role slugs, disabled for now
-  // await seedRoleRecommendedQualifications();
+  await seedRoleRecommendedQualifications();
 
-  // Seed system configuration
-  await seedSystemConfig();
+  await seedPermissionsAndRoles(prisma, roles, allPermissions);
 
-  // Seed CRE role and permissions
-  await seedCRERole();
+  await seedProfessionTypes(prisma);
+  const { adminPassword } = await seedUsers(prisma);
+  await seedCRERole(prisma);
+  await seedUserProfessionScopes(prisma);
 
-  // Seed screening interview templates
+  await seedClients(prisma);
+  await seedReligions();
+  await seedStates();
+  await seedCandidateProjectStatuses();
+  await seedCandidateProjectWorkflow(prisma);
+  await seedCandidateStatus();
   await seedScreeningTemplates();
-
-  // Seed candidate project workflow
-  await seedCandidateProjectWorkflow();
-
-  // Seed processing step templates BEFORE country document requirements
-  // (some country document requirements reference processing step templates)
-  await seedProcessingStepTemplates();
-
-  // Seed country document requirements (now that templates exist)
-  await seedCountryDocuments(prisma);
-
-  // Country-specific ordered step plans (Gulf countries: full plan; India: trimmed plan)
+  await seedSystemConfig(prisma);
+  await seedProcessingStepTemplates(prisma);
   await seedProcessingCountrySteps(prisma);
+  await seedCountryDocuments(prisma);
+  await seedLanguages(prisma);
 
-  // Create permissions
-  console.log('📝 Creating permissions...');
-  for (const permissionKey of allPermissions) {
-    await prisma.permission.upsert({
-      where: { key: permissionKey },
-      update: {},
-      create: {
-        key: permissionKey,
-        description: `Permission to ${permissionKey.replace(':', ' ')}`,
-      },
-    });
-  }
-
-  // Create roles and their permissions
-  console.log('👥 Creating roles and permissions...');
-  for (const roleData of roles) {
-    // Create or update role
-    const role = await prisma.role.upsert({
-      where: { name: roleData.name },
-      update: {
-        description: roleData.description,
-      },
-      create: {
-        name: roleData.name,
-        description: roleData.description,
-      },
-    });
-
-    // Clear existing permissions for this role
-    await prisma.rolePermission.deleteMany({
-      where: { roleId: role.id },
-    });
-
-    // Add permissions to role
-    const permissionsToAdd = roleData.permissions.includes('*')
-      ? allPermissions
-      : roleData.permissions;
-
-    for (const permissionKey of permissionsToAdd) {
-      const permission = await prisma.permission.findUnique({
-        where: { key: permissionKey },
-      });
-
-      if (permission) {
-        await prisma.rolePermission.create({
-          data: {
-            roleId: role.id,
-            permissionId: permission.id,
-          },
-        });
-      }
-    }
-  }
-
-  // Create default team
-  console.log('🏢 Creating default team...');
-  let defaultTeam = await prisma.team.findFirst({
-    where: { name: 'Default Team' },
-  });
-
-  if (!defaultTeam) {
-    defaultTeam = await prisma.team.create({
-      data: {
-        id: 'mhvfuykewhjnhgsevcj',
-        name: 'Default Team',
-      },
-    });
-  }
-
-  // Create bootstrap admin user (CEO)
-  console.log('👑 Creating bootstrap admin user...');
-  const adminPassword = 'admin123';
-  const hashedPassword = await argon2.hash(adminPassword);
-
-  // Find user by email or phone to avoid unique constraint issues (common in CI/CD environments)
-  let adminUser = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: 'admin@nuam.com' },
-        { countryCode: '+91', mobileNumber: '9876543210' },
-      ],
-    },
-  });
-
-  if (adminUser) {
-    adminUser = await prisma.user.update({
-      where: { id: adminUser.id },
-      data: {
-        email: 'admin@nuam.com',
-        name: 'System Administrator',
-        password: hashedPassword,
-        countryCode: '+91',
-        mobileNumber: '9876543210',
-      },
-    });
-  } else {
-    adminUser = await prisma.user.create({
-      data: {
-        email: 'admin@nuam.com',
-        name: 'System Administrator',
-        password: hashedPassword,
-        countryCode: '+91',
-        mobileNumber: '9876543210',
-      },
-    });
-  }
-
-  // Assign CEO role to admin user
-  const ceoRole = await prisma.role.findUnique({
-    where: { name: 'CEO' },
-  });
-
-  if (ceoRole) {
-    await prisma.userRole.upsert({
-      where: {
-        userId_roleId: {
-          userId: adminUser.id,
-          roleId: ceoRole.id,
-        },
-      },
-      update: {},
-      create: {
-        userId: adminUser.id,
-        roleId: ceoRole.id,
-      },
-    });
-  }
-
-  // Assign admin user to default team
-  await prisma.userTeam.upsert({
-    where: {
-      userId_teamId: {
-        userId: adminUser.id,
-        teamId: defaultTeam.id,
-      },
-    },
-    update: {},
-    create: {
-      userId: adminUser.id,
-      teamId: defaultTeam.id,
-    },
-  });
-
-  // Create test users for each role
-  console.log('👥 Creating test users for each role...');
-
-  const testUsers = [
-    {
-      email: 'director@nuam.com',
-      name: 'Sarah Director',
-      password: 'director123',
-      countryCode: '+91',
-      phone: '9876543211',
-      role: 'Director',
-    },
-    {
-      email: 'manager@nuam.com',
-      name: 'Mike Manager',
-      password: 'manager123',
-      countryCode: '+91',
-      phone: '9876543212',
-      role: 'Manager',
-    },
-    {
-      email: 'teamhead@nuam.com',
-      name: 'Lisa Team Head',
-      password: 'teamhead123',
-      countryCode: '+91',
-      phone: '9876543213',
-      role: 'Team Head',
-    },
-    {
-      email: 'teamlead@nuam.com',
-      name: 'David Team Lead',
-      password: 'teamlead123',
-      countryCode: '+91',
-      phone: '9876543214',
-      role: 'Team Lead',
-    },
-    {
-      email: 'recruiter1@nuam.com',
-      name: 'Emma Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543215',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter2@nuam.com',
-      name: 'John Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543216',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter3@nuam.com',
-      name: 'Sarah Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543217',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter4@nuam.com',
-      name: 'Mike Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543218',
-      role: 'Recruiter',
-    },
-    {
-      email: 'recruiter5@nuam.com',
-      name: 'Lisa Recruiter',
-      password: 'recruiter123',
-      countryCode: '+91',
-      phone: '9876543219',
-      role: 'Recruiter',
-    },
-    {
-      email: 'docs@nuam.com',
-      name: 'Alex Documentation',
-      password: 'docs123',
-      countryCode: '+91',
-      phone: '9876543220',
-      role: 'Documentation Executive',
-    },
-    {
-      email: 'processing@nuam.com',
-      name: 'Jordan Processing',
-      password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543221',
-      role: 'Processing Executive',
-    },
-    {
-      email: 'processing1@nuam.com',
-      name: 'Michael Processing',
-      password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543231',
-      role: 'Processing Executive',
-    },
-    {
-      email: 'processing2@nuam.com',
-      name: 'Sarah Processing',
-      password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543232',
-      role: 'Processing Executive',
-    },
-    {
-      email: 'processing3@nuam.com',
-      name: 'Robert Processing',
-      password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543233',
-      role: 'Processing Executive',
-    },
-    {
-      email: 'processing4@nuam.com',
-      name: 'Emily Processing',
-      password: 'processing123',
-      countryCode: '+91',
-      phone: '9876543234',
-      role: 'Processing Executive',
-    },
-    {
-      email: 'coordinator@nuam.com',
-      name: 'Rachel Interview Coordinator',
-      password: 'coordinator123',
-      countryCode: '+91',
-      phone: '9876543223',
-      role: 'Interview Coordinator',
-    },
-    {
-      email: 'trainer@nuam.com',
-      name: 'Tom Trainer',
-      password: 'trainer123',
-      countryCode: '+91',
-      phone: '9876543224',
-      role: 'Screening Trainer',
-    },
-    {
-      email: 'trainer2@nuam.com',
-      name: 'Priya Trainer',
-      password: 'trainer123',
-      countryCode: '+91',
-      phone: '9876543240',
-      role: 'Screening Trainer',
-    },
-    {
-      email: 'trainer3@nuam.com',
-      name: 'Arun Trainer',
-      password: 'trainer123',
-      countryCode: '+91',
-      phone: '9876543241',
-      role: 'Screening Trainer',
-    },
-    {
-      email: 'sysadmin@nuam.com',
-      name: 'Alex System Admin',
-      password: 'sysadmin123',
-      countryCode: '+91',
-      phone: '9876543222',
-      role: 'System Admin',
-    },
-    {
-      email: 'clientcoordinator@nuam.com',
-      name: 'Alex Client Coordinator',
-      password: 'client123',
-      countryCode: '+91',
-      phone: '9876543242',
-      role: 'Client Coordinator',
-    },
-  ];
-
-  for (const userData of testUsers) {
-    const hashedPassword = await argon2.hash(userData.password);
-
-    // Find user by email or phone to avoid unique constraint issues
-    let user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: userData.email },
-          { countryCode: userData.countryCode, mobileNumber: userData.phone },
-        ],
-      },
-    });
-
-    if (user) {
-      user = await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          email: userData.email,
-          name: userData.name,
-          password: hashedPassword,
-          countryCode: userData.countryCode,
-          mobileNumber: userData.phone,
-        },
-      });
-    } else {
-      user = await prisma.user.create({
-        data: {
-          email: userData.email,
-          name: userData.name,
-          password: hashedPassword,
-          countryCode: userData.countryCode,
-          mobileNumber: userData.phone,
-        },
-      });
-    }
-
-    // Get the role
-    const role = await prisma.role.findUnique({
-      where: { name: userData.role },
-    });
-
-    if (role) {
-      // Assign role to user
-      await prisma.userRole.upsert({
-        where: {
-          userId_roleId: {
-            userId: user.id,
-            roleId: role.id,
-          },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          roleId: role.id,
-        },
-      });
-    }
-
-    // Only assign eligible roles to default team (Team Lead and below)
-    const eligibleRolesForTeamMembership = [
-      'Team Lead',
-      'Recruiter',
-      'Documentation Executive',
-      'Processing Executive',
-    ];
-
-    if (eligibleRolesForTeamMembership.includes(userData.role)) {
-      // Assign user to default team
-      await prisma.userTeam.upsert({
-        where: {
-          userId_teamId: {
-            userId: user.id,
-            teamId: defaultTeam.id,
-          },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          teamId: defaultTeam.id,
-        },
-      });
-    }
-  }
-
-  // Create sample clients (DIRECT_CLIENT / SUB_AGENT / FREELANCE)
-  console.log('🏥 Creating sample clients...');
-
-  const healthcareClient = await prisma.client.upsert({
-    where: { id: 'healthcare-client-id' },
-    update: {
-      name: 'City General Hospital',
-      type: 'DIRECT_CLIENT',
-      pointOfContact: 'Dr. John Smith',
-      email: 'contact@citygeneral.com',
-      phone: '+1234567890',
-      address: '123 Medical Center Dr, Healthcare City, HC 12345',
-      facilityType: 'HOSPITAL',
-      facilitySize: 'LARGE',
-      locations: ['Healthcare City', 'Medical District'],
-      relationshipType: 'DIRECT_CLIENT',
-      commissionRate: 0,
-      paymentTerms: 'Net 30',
-    },
-    create: {
-      id: 'healthcare-client-id',
-      name: 'City General Hospital',
-      type: 'DIRECT_CLIENT',
-      pointOfContact: 'Dr. John Smith',
-      email: 'contact@citygeneral.com',
-      phone: '+1234567890',
-      address: '123 Medical Center Dr, Healthcare City, HC 12345',
-      facilityType: 'HOSPITAL',
-      facilitySize: 'LARGE',
-      locations: ['Healthcare City', 'Medical District'],
-      relationshipType: 'DIRECT_CLIENT',
-      commissionRate: 0,
-      paymentTerms: 'Net 30',
-    },
-  });
-
-  const individualClient = await prisma.client.upsert({
-    where: { id: 'individual-client-id' },
-    update: {
-      name: 'Sarah Johnson',
-      type: 'DIRECT_CLIENT',
-      pointOfContact: 'Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '+1987654321',
-      profession: 'Registered Nurse',
-      organization: 'Metro Medical Center',
-      relationship: 'CURRENT_EMPLOYEE',
-      relationshipType: 'REFERRAL',
-      commissionRate: 10.0,
-    },
-    create: {
-      id: 'individual-client-id',
-      name: 'Sarah Johnson',
-      type: 'DIRECT_CLIENT',
-      pointOfContact: 'Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '+1987654321',
-      profession: 'Registered Nurse',
-      organization: 'Metro Medical Center',
-      relationship: 'CURRENT_EMPLOYEE',
-      relationshipType: 'REFERRAL',
-      commissionRate: 10.0,
-    },
-  });
-
-  const agencyClient = await prisma.client.upsert({
-    where: { id: 'agency-client-id' },
-    update: {
-      name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENT',
-      pointOfContact: 'Mike Wilson',
-      email: 'mike@regionalstaffing.com',
-      phone: '+1555123456',
-      address: '456 Business Ave, Corporate City, CC 67890',
-      agencyType: 'REGIONAL',
-      specialties: ['Healthcare', 'Nursing', 'Administrative'],
-      relationshipType: 'PARTNERSHIP',
-      commissionRate: 25.0,
-      paymentTerms: 'Net 45',
-    },
-    create: {
-      id: 'agency-client-id',
-      name: 'Regional Staffing Solutions',
-      type: 'SUB_AGENT',
-      pointOfContact: 'Mike Wilson',
-      email: 'mike@regionalstaffing.com',
-      phone: '+1555123456',
-      address: '456 Business Ave, Corporate City, CC 67890',
-      agencyType: 'REGIONAL',
-      specialties: ['Healthcare', 'Nursing', 'Administrative'],
-      relationshipType: 'PARTNERSHIP',
-      commissionRate: 25.0,
-      paymentTerms: 'Net 45',
-    },
-  });
-
-  const agencySubClient = await prisma.client.upsert({
-    where: { id: 'agency-sub-client-id' },
-    update: {
-      name: 'Metro End Client (via Agency)',
-      type: 'DIRECT_CLIENT',
-      email: 'hr@metro-end.example.com',
-    },
-    create: {
-      id: 'agency-sub-client-id',
-      name: 'Metro End Client (via Agency)',
-      type: 'DIRECT_CLIENT',
-      email: 'hr@metro-end.example.com',
-    },
-  });
-
-  await prisma.clientSubClient.upsert({
-    where: {
-      parentClientId_childClientId: {
-        parentClientId: agencyClient.id,
-        childClientId: agencySubClient.id,
-      },
-    },
-    update: { linkType: 'SUB_AGENT' },
-    create: {
-      parentClientId: agencyClient.id,
-      childClientId: agencySubClient.id,
-      linkType: 'SUB_AGENT',
-    },
-  });
-
-  const externalClient = await prisma.client.upsert({
-    where: { id: 'external-client-id' },
-    update: {
-      name: 'LinkedIn Healthcare Jobs',
-      type: 'FREELANCE',
-      pointOfContact: 'LinkedIn Team',
-      email: 'healthcare@linkedin.com',
-      sourceType: 'SOCIAL_MEDIA',
-      sourceName: 'LinkedIn',
-      acquisitionMethod: 'ORGANIC',
-      sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
-      relationshipType: 'EXTERNAL_SOURCE',
-    },
-    create: {
-      id: 'external-client-id',
-      name: 'LinkedIn Healthcare Jobs',
-      type: 'FREELANCE',
-      pointOfContact: 'LinkedIn Team',
-      email: 'healthcare@linkedin.com',
-      sourceType: 'SOCIAL_MEDIA',
-      sourceName: 'LinkedIn',
-      acquisitionMethod: 'ORGANIC',
-      sourceNotes: 'Organic leads from LinkedIn healthcare job postings',
-      relationshipType: 'EXTERNAL_SOURCE',
-    },
-  });
-
-  const freelanceSubClient = await prisma.client.upsert({
-    where: { id: 'freelance-sub-client-id' },
-    update: {
-      name: 'End Client (via Freelance)',
-      type: 'DIRECT_CLIENT',
-    },
-    create: {
-      id: 'freelance-sub-client-id',
-      name: 'End Client (via Freelance)',
-      type: 'DIRECT_CLIENT',
-    },
-  });
-
-  await prisma.clientSubClient.upsert({
-    where: {
-      parentClientId_childClientId: {
-        parentClientId: externalClient.id,
-        childClientId: freelanceSubClient.id,
-      },
-    },
-    update: { linkType: 'FREELANCE' },
-    create: {
-      parentClientId: externalClient.id,
-      childClientId: freelanceSubClient.id,
-      linkType: 'FREELANCE',
-    },
-  });
-
-  console.log('✅ Database seeding completed successfully!');
-  console.log('\n🔑 Test Users Created (Login with Phone + Password):');
-  console.log(`👑 CEO: +919876543210 / ${adminPassword} (admin@nuam.com)`);
-  console.log(
-    `👔 Director: +919876543211 / director123 (director@nuam.com)`,
-  );
-  console.log(`📊 Manager: +919876543212 / manager123 (manager@nuam.com)`);
-  console.log(
-    `👥 Team Head: +919876543213 / teamhead123 (teamhead@nuam.com)`,
-  );
-  console.log(
-    `🎯 Team Lead: +919876543214 / teamlead123 (teamlead@nuam.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 1: +919876543215 / recruiter123 (recruiter1@nuam.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 2: +919876543216 / recruiter123 (recruiter2@nuam.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 3: +919876543217 / recruiter123 (recruiter3@nuam.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 4: +919876543218 / recruiter123 (recruiter4@nuam.com)`,
-  );
-  console.log(
-    `🔍 Recruiter 5: +919876543219 / recruiter123 (recruiter5@nuam.com)`,
-  );
-  console.log(`📄 Documentation: +919876543220 / docs123 (docs@nuam.com)`);
-  console.log(
-    `⚙️ Processing: +919876543221 / processing123 (processing@nuam.com)`,
-  );
-  console.log(
-    `🎤 Interview Coordinator: +919876543223 / coordinator123 (coordinator@nuam.com)`,
-  );
-  console.log(
-    `🔧 System Admin: +919876543222 / sysadmin123 (sysadmin@nuam.com)`,
-  );
-  console.log(
-    `🤝 Client Coordinator: +919876543242 / clientcoord123 (clientcoordinator@nuam.com)`,
-  );
-  console.log('\n🎯 Each user has their respective role permissions!');
-  console.log(
-    '👥 Only eligible roles (Team Lead, Recruiter, Documentation Executive, Processing Executive) are assigned to the Default Team!',
-  );
-  console.log(
-    '🔒 Higher roles (CEO, Director, Manager, Team Head, System Admin) are not team members and can manage teams!',
-  );
+  logSeedUserCredentials(adminPassword);
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Error during seeding:', e);
+  .catch((error) => {
+    console.error('❌ Error during seeding:', error);
     process.exit(1);
   })
   .finally(async () => {

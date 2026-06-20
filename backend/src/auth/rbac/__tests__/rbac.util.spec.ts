@@ -17,6 +17,9 @@ describe('RbacUtil', () => {
     user: {
       findUnique: jest.fn(),
     },
+    userPermission: {
+      findMany: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -37,6 +40,7 @@ describe('RbacUtil', () => {
   afterEach(() => {
     jest.clearAllMocks();
     service.clearAllCache();
+    mockPrismaService.userPermission.findMany.mockResolvedValue([]);
   });
 
   describe('getUserRolesAndPermissions', () => {
@@ -65,6 +69,7 @@ describe('RbacUtil', () => {
 
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
       mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
       const result = await service.getUserRolesAndPermissions('user1');
@@ -96,6 +101,7 @@ describe('RbacUtil', () => {
 
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
       mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
       // First call - should hit database
@@ -113,6 +119,52 @@ describe('RbacUtil', () => {
 
       // Should only call database once
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('should merge direct user permissions with role permissions', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams: { teamId: string }[] = [];
+      const mockUser = {
+        updatedAt: new Date('2024-01-01T00:00:00Z'),
+      };
+      const mockUserPermissions = [
+        {
+          permission: { key: 'read:original_document_intake' },
+        },
+        {
+          permission: { key: 'write:original_document_intake' },
+        },
+      ];
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.userPermission.findMany.mockResolvedValue(
+        mockUserPermissions,
+      );
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const result = await service.getUserRolesAndPermissions('user1');
+
+      expect(result.permissions).toEqual(
+        expect.arrayContaining([
+          'read:users',
+          'read:original_document_intake',
+          'write:original_document_intake',
+        ]),
+      );
+      expect(result.permissions).not.toContain('read:candidates');
     });
   });
 

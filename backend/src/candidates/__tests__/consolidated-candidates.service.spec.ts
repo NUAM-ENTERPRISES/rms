@@ -8,6 +8,7 @@ import { RecruiterAssignmentService } from '../services/recruiter-assignment.ser
 import { RnrRemindersService } from '../../rnr-reminders/rnr-reminders.service';
 import { WhatsAppService } from '../../notifications/whatsapp.service';
 import { WhatsAppNotificationService } from '../../notifications/whatsapp-notification.service';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 describe('CandidatesService - getConsolidatedCandidates role scoping', () => {
   let service: CandidatesService;
@@ -43,11 +44,11 @@ describe('CandidatesService - getConsolidatedCandidates role scoping', () => {
     mockPrisma.candidate.count.mockResolvedValue(0);
   });
 
-  it('adds recruiterAssignments scope for Client Coordinator without management roles', async () => {
+  it('adds recruiterAssignments scope for Agent Coordinator without management roles', async () => {
     await service.getConsolidatedCandidates(
       { projectId: 'p1', page: 1, limit: 10 } as any,
       'user-cc',
-      ['Client Coordinator'],
+      [ROLE_NAMES.AGENT_COORDINATOR],
     );
 
     expect(mockPrisma.candidate.findMany).toHaveBeenCalledWith(

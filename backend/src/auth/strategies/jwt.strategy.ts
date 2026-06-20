@@ -3,6 +3,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { assertUserNotBlocked } from '../assert-user-not-blocked';
+import { collectEffectivePermissions } from '../rbac/documents-control-permissions.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -39,6 +41,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             },
           },
         },
+        userPermissions: {
+          include: {
+            permission: true,
+          },
+        },
       },
     });
 
@@ -46,10 +53,18 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
-    // Extract roles and permissions
+    assertUserNotBlocked(user);
+
     const roles = user.userRoles.map((ur) => ur.role.name);
-    const permissions = user.userRoles.flatMap((ur) =>
+    const rolePermissionKeys = user.userRoles.flatMap((ur) =>
       ur.role.rolePermissions.map((rp) => rp.permission.key),
+    );
+    const directPermissionKeys = user.userPermissions.map(
+      (up) => up.permission.key,
+    );
+    const permissions = collectEffectivePermissions(
+      rolePermissionKeys,
+      directPermissionKeys,
     );
 
     return {

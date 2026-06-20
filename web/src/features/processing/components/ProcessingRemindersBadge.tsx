@@ -40,11 +40,18 @@ export function ProcessingRemindersBadge() {
   useEffect(() => {
     const handleRefresh = () => {
       setPage(1);
-      refetch();
+      // Only refetch if query has been started (user is authenticated and is processing user)
+      if (accessToken && isProcessingUser) {
+        try {
+          refetch();
+        } catch (error) {
+          console.warn("Failed to refetch processing reminders:", error);
+        }
+      }
     };
     window.addEventListener("notifications:refresh", handleRefresh);
     return () => window.removeEventListener("notifications:refresh", handleRefresh);
-  }, [refetch]);
+  }, [refetch, accessToken, isProcessingUser]);
 
   if (!accessToken || !isProcessingUser) return null;
 

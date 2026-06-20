@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { useGetAssignedInterviewsQuery } from "../api";
 import { useGetProjectsQuery, useGetProjectQuery } from "@/services/projectsApi";
+import { ProjectStatus } from "@/entities/project/constants";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +66,7 @@ export default function AssignedInterviewsListPage() {
 
   const { data: projectsData } = useGetProjectsQuery({ 
     limit: 10, 
-    status: "active" 
+    status: ProjectStatus.IN_PROGRESS 
   });
   
   const { data: projectDetails } = useGetProjectQuery(filters.projectId || "", {

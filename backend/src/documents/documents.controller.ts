@@ -30,12 +30,15 @@ import { QueryDocumentsDto } from './dto/query-documents.dto';
 import { VerifyDocumentDto } from './dto/verify-document.dto';
 import { RequestResubmissionDto } from './dto/request-resubmission.dto';
 import { RequestClientReuploadDto } from './dto/request-client-reupload.dto';
+import { RequestMissingDocumentDto } from './dto/request-missing-document.dto';
+import { RequestOfferLetterUploadDto } from './dto/request-offer-letter-upload.dto';
 import { ReuseDocumentDto } from './dto/reuse-document.dto';
 import { ReuploadDocumentDto } from './dto/reupload-document.dto';
 import { UploadOfferLetterDto, UpdateOfferLetterReceivedDto } from './dto/upload-offer-letter.dto';
 import { VerifyOfferLetterDto } from './dto/verify-offer-letter.dto';
 import { ForwardToClientDto } from './dto/forward-to-client.dto';
 import { BulkForwardToClientDto } from './dto/bulk-forward-to-client.dto';
+import { BulkSendCsvProfilesDto } from './dto/bulk-send-csv-profiles.dto';
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { UploadService } from '../upload/upload.service';
@@ -227,7 +230,7 @@ export class DocumentsController {
   })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
-  @ApiQuery({ name: 'status', required: false, description: "Optional filter: 'InScreening' to see candidates in screening phase" })
+  @ApiQuery({ name: 'status', required: false, description: "Optional filter: 'nominated' | 'pending_documents' | 'mandatory_documents' | 'InScreening'" })
   @ApiQuery({ name: 'projectId', required: false, description: 'Filter results by project id' })
   @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter results by role catalog id' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
@@ -254,7 +257,7 @@ export class DocumentsController {
   })
   @ApiQuery({ name: 'recruiterId', required: false, description: 'Filter results to a specific recruiter by id' })
   @ApiQuery({ name: 'search', required: false, description: 'Search term for candidate name or project title' })
-  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'pending_documents' | 'InScreening'. Defaults to 'verified'." })
+  @ApiQuery({ name: 'status', required: false, description: "Filter by status: 'verified' | 'rejected' | 'nominated' | 'pending_documents' | 'InScreening'. Defaults to 'verified'." })
   @ApiQuery({ name: 'projectId', required: false, description: 'Filter results by project id' })
   @ApiQuery({ name: 'roleCatalogId', required: false, description: 'Filter results by role catalog id' })
   @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', example: 1 })
@@ -465,6 +468,20 @@ export class DocumentsController {
     @Request() req,
   ) {
     return this.documentsService.bulkForwardToClient(bulkForwardDto, req.user.sub);
+  }
+
+  @Post('bulk-send-csv-profiles')
+  @Permissions(PERMISSIONS.READ_DOCUMENTS)
+  @ApiOperation({
+    summary: 'Get candidate profile rows for bulk-send CSV generation',
+    description:
+      'Returns normalized profile fields for the given candidate-project map IDs, used to auto-generate bulk-send CSV attachments.',
+  })
+  @ApiResponse({ status: 200, description: 'Profile rows returned successfully' })
+  @ApiResponse({ status: 404, description: 'One or more candidate-project maps not found' })
+  async getBulkSendCsvProfiles(@Body() dto: BulkSendCsvProfilesDto) {
+    const data = await this.documentsService.getBulkSendCsvProfiles(dto);
+    return { success: true, data };
   }
 
   @Get('forward-latest')
@@ -699,6 +716,32 @@ export class DocumentsController {
     };
   }
 
+  @Post('request-missing-upload')
+  @Permissions('request:resubmission')
+  @ApiOperation({
+    summary: 'Request recruiter to upload a missing required document',
+    description:
+      'Notifies the assigned recruiter when a mandatory project document was never submitted.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Missing document upload request sent to recruiter',
+  })
+  async requestMissingDocumentUpload(
+    @Body() dto: RequestMissingDocumentDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.requestMissingDocumentUpload(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Missing document upload request sent successfully',
+    };
+  }
+
   @Post('request-client-reupload')
   @Permissions('write:documents')
   @ApiOperation({
@@ -828,6 +871,59 @@ export class DocumentsController {
   }
 
   // ==================== ENHANCED DOCUMENT VERIFICATION ====================
+
+  @Post('request-offer-letter-upload')
+  @Permissions('write:interviews')
+  @ApiOperation({
+    summary: 'Request recruiter to upload a missing offer letter',
+    description:
+      'Notifies the assigned recruiter to call the candidate and upload the signed offer letter for a project nomination.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter upload request sent to recruiter',
+  })
+  async requestOfferLetterUpload(
+    @Body() dto: RequestOfferLetterUploadDto,
+    @Request() req,
+  ) {
+    const result = await this.documentsService.requestOfferLetterUpload(
+      dto,
+      req.user.sub,
+    );
+    return {
+      success: true,
+      data: result,
+      message: 'Offer letter upload request sent successfully',
+    };
+  }
+
+  @Get('candidates/:candidateId/offer-letter-upload-requests')
+  @Permissions('read:documents', 'read:candidates', 'write:documents')
+  @ApiOperation({
+    summary: 'Get pending offer letter upload requests for a candidate',
+    description:
+      'Returns recruiter upload requests created when a candidate was sent for processing without an offer letter.',
+  })
+  @ApiParam({
+    name: 'candidateId',
+    description: 'Candidate ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Offer letter upload requests retrieved successfully',
+  })
+  async getOfferLetterUploadRequests(@Param('candidateId') candidateId: string) {
+    const data =
+      await this.documentsService.getOfferLetterUploadRequestsForCandidate(
+        candidateId,
+      );
+    return {
+      success: true,
+      data,
+      message: 'Offer letter upload requests retrieved successfully',
+    };
+  }
 
   @Get('candidates/:candidateId/projects')
   @Permissions('read:documents')

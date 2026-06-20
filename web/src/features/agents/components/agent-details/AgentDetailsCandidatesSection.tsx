@@ -8,10 +8,12 @@ import type { AgentCandidate } from "../../api";
 import { AgentDetailsCandidateTableRow } from "./AgentDetailsCandidateTableRow";
 import { EditDeclaredProjectsModal } from "./EditDeclaredProjectsModal";
 import { CandidatesTableSkeleton } from "./AgentDetailsSkeletons";
+import type { CandidateListFilter } from "./AgentDetailsStats";
 
-const TABLE_COL_COUNT = 6;
+const TABLE_COL_COUNT = 7;
 
 type AgentDetailsCandidatesSectionProps = {
+  candidateFilter: CandidateListFilter;
   search: string;
   onSearchChange: (value: string) => void;
   onClearSearch: () => void;
@@ -33,6 +35,7 @@ type AgentDetailsCandidatesSectionProps = {
 };
 
 export function AgentDetailsCandidatesSection({
+  candidateFilter,
   search,
   onSearchChange,
   onClearSearch,
@@ -54,6 +57,13 @@ export function AgentDetailsCandidatesSection({
   const [candidateForDeclaredEdit, setCandidateForDeclaredEdit] =
     useState<AgentCandidate | null>(null);
 
+  const isInterviewPassedFilter = candidateFilter === "interview_passed";
+  const sectionTitle = isInterviewPassedFilter ? "Interview Passed" : "Referred Candidates";
+  const sectionSubtitle = isInterviewPassedFilter
+    ? `${totalCount} candidate${totalCount !== 1 ? "s" : ""} with interview passed status`
+    : `${totalCount} candidate${totalCount !== 1 ? "s" : ""} from this agent`;
+  const projectsColumnLabel = isInterviewPassedFilter ? "Project status" : "Projects linked";
+
   return (
     <div>
       <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -64,10 +74,8 @@ export function AgentDetailsCandidatesSection({
                   <Users className="h-5 w-5 text-white" aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Referred Candidates</h2>
-                  <p className="text-xs text-slate-500">
-                    {totalCount} candidate{totalCount !== 1 ? "s" : ""} from this agent
-                  </p>
+                  <h2 className="text-base font-bold text-gray-900">{sectionTitle}</h2>
+                  <p className="text-xs text-slate-500">{sectionSubtitle}</p>
                 </div>
               </div>
 
@@ -75,7 +83,7 @@ export function AgentDetailsCandidatesSection({
                 <div className="relative flex-1 sm:w-56">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
-                    placeholder="Search by name, email..."
+                    placeholder="Search by name, email, passport..."
                     value={search}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="h-10 pl-10 pr-8 w-full bg-slate-50 border-slate-200 focus:bg-white rounded-xl"
@@ -144,11 +152,14 @@ export function AgentDetailsCandidatesSection({
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Contact
                     </TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Passport
+                    </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Assigned To
                     </TableHead>
-                    <TableHead className="min-w-[200px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                      Projects linked
+                    <TableHead className="min-w-[240px] h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      {projectsColumnLabel}
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Added
@@ -171,12 +182,18 @@ export function AgentDetailsCandidatesSection({
                           </div>
                           <div className="text-center space-y-1">
                             <p className="font-medium text-slate-700">
-                              {hasActiveSearch ? "No matching candidates" : "No candidates yet"}
+                              {hasActiveSearch
+                                ? "No matching candidates"
+                                : isInterviewPassedFilter
+                                  ? "No interview passed candidates"
+                                  : "No candidates yet"}
                             </p>
                             <p className="text-sm text-slate-500 max-w-sm">
                               {hasActiveSearch
                                 ? "Try a different search term."
-                                : "Candidates referred by this agent will appear here."}
+                                : isInterviewPassedFilter
+                                  ? "Candidates with interview passed project status will appear here."
+                                  : "Candidates referred by this agent will appear here."}
                             </p>
                           </div>
                           {hasActiveSearch && (
@@ -194,6 +211,7 @@ export function AgentDetailsCandidatesSection({
                         key={candidate.id}
                         candidate={candidate}
                         index={index}
+                        showProjectStatus={isInterviewPassedFilter}
                         onView={() => onViewCandidate(candidate.id)}
                         canEditDeclaredProjects={Boolean(canEditDeclaredProjects)}
                         onEditDeclaredProjects={

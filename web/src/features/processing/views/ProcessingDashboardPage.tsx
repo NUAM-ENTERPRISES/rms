@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
 import { useGetAllProcessingCandidatesQuery } from "@/features/processing/data/processing.endpoints";
 import { useGetProjectsQuery } from "@/services/projectsApi";
@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import {
     Users,
     XCircle,
@@ -39,9 +39,23 @@ import {
     Loader2,
     UserCheck,
     ArrowUpRight,
-    FilterX,
+    Mail,
+    Phone,
+    SlidersHorizontal,
+    PauseCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
+import { formatProcessingStepLabel } from "../utils/formatProcessingStepLabel";
+import { ProcessingAdvancedFiltersSheet } from "./components/ProcessingAdvancedFiltersSheet";
+import {
+  advancedFiltersToQueryParams,
+  countProcessingAdvancedFilters,
+  DEFAULT_PROCESSING_ADVANCED_FILTERS,
+  parseProcessingAdvancedFiltersFromSearchParams,
+  writeProcessingAdvancedFiltersToSearchParams,
+  type ProcessingAdvancedFilters,
+} from "../utils/processingListQuery";
 
 const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue: { card: "from-blue-50 via-white to-blue-50/30 border-blue-100", icon: "text-blue-600", iconBg: "bg-blue-100", value: "text-blue-700", ring: "ring-blue-400/50", dot: "bg-blue-500" },
@@ -55,6 +69,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
 
 export default function ProcessingDashboardPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tableRef = useRef<HTMLDivElement>(null);
   const { user } = useAppSelector((state) => state.auth);
   
@@ -62,30 +77,82 @@ export default function ProcessingDashboardPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "assigned" | "in_progress" | "completed" | "cancelled"
-  >("assigned");
+    "all" | "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold"
+  >("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<ProcessingAdvancedFilters>(() =>
+    parseProcessingAdvancedFiltersFromSearchParams(searchParams),
+  );
 
   // Pagination state
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [stepFilter, setStepFilter] = useState<string | null>(null);
 
+  const syncAdvancedFiltersToUrl = useCallback(
+    (nextFilters: ProcessingAdvancedFilters) => {
+      const params = new URLSearchParams(searchParams);
+      writeProcessingAdvancedFiltersToSearchParams(params, nextFilters);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleApplyAdvancedFilters = (nextFilters: ProcessingAdvancedFilters) => {
+    setAdvancedFilters(nextFilters);
+    syncAdvancedFiltersToUrl(nextFilters);
+    setPage(1);
+  };
+
+  const handleResetAdvancedFilters = () => {
+    setAdvancedFilters(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+    syncAdvancedFiltersToUrl(DEFAULT_PROCESSING_ADVANCED_FILTERS);
+    setPage(1);
+  };
+
+  const advancedFilterCount = countProcessingAdvancedFilters(advancedFilters);
+
   // Fetch Projects for filter
   const { data: projectsData } = useGetProjectsQuery({ limit: 10 });
   const projects = projectsData?.data?.projects || [];
 
+  const listQueryParams = useMemo(() => {
+    const params: {
+      search?: string;
+      projectId?: string;
+      roleCatalogId?: string;
+      status?: typeof statusFilter;
+      step?: string;
+      filterType?: "total_processing";
+      page: number;
+      limit: number;
+    } = {
+      search: debouncedSearch || undefined,
+      projectId: projectFilter === "all" ? undefined : projectFilter,
+      roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
+      page,
+      limit: pageSize,
+    };
+
+    if (stepFilter) {
+      params.step = stepFilter;
+      params.filterType = "total_processing";
+    } else if (statusFilter === "all") {
+      params.filterType = "total_processing";
+    } else {
+      params.status = statusFilter;
+    }
+
+    return {
+      ...params,
+      ...advancedFiltersToQueryParams(advancedFilters),
+    };
+  }, [debouncedSearch, projectFilter, roleFilter, statusFilter, stepFilter, page, pageSize, advancedFilters]);
+
   // API Call for Candidates
-  const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesQuery({
-    search: debouncedSearch,
-    projectId: projectFilter === "all" ? undefined : projectFilter,
-    roleCatalogId: roleFilter === "all" ? undefined : roleFilter,
-    status: stepFilter ? undefined : (statusFilter === "all" ? undefined : statusFilter) as any,
-    step: stepFilter || undefined,
-    page,
-    limit: pageSize,
-  });
+  const { data: apiResponse, isLoading, isFetching } = useGetAllProcessingCandidatesQuery(listQueryParams);
 
   const candidates = apiResponse?.data?.candidates || [];
   const pagination = apiResponse?.data?.pagination;
@@ -94,7 +161,8 @@ export default function ProcessingDashboardPage() {
     (counts?.assigned || 0) +
     (counts?.in_progress || 0) +
     (counts?.completed || 0) +
-    (counts?.cancelled || 0);
+    (counts?.cancelled || 0) +
+    (counts?.on_hold || 0);
 
   // Extract roles for selected project
   const rolesForSelectedProject = useMemo(() => {
@@ -122,7 +190,7 @@ export default function ProcessingDashboardPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter]);
+  }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, advancedFilters]);
 
   const totalItems = pagination?.total || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -141,14 +209,14 @@ export default function ProcessingDashboardPage() {
     },
     {
       type: "status",
-      label: "Ready for Processing",
+      label: "Untouched",
       status: "assigned",
       icon: UserCheck,
       accent: "blue",
       value: counts?.assigned || 0,
     },
     { type: "step", key: "offer_letter_verified", label: "Offer Letter", gradient: "from-blue-500 to-cyan-500" },
-    { type: "step", key: "document_received", label: "Documents Received", gradient: "from-yellow-400 to-amber-500" },
+    { type: "step", key: "document_received", label: "Document Original Received", gradient: "from-yellow-400 to-amber-500" },
     { type: "step", key: "hrd", label: "HRD", gradient: "from-purple-500 to-violet-500" },
     { type: "step", key: "data_flow", label: "Data Flow", gradient: "from-pink-500 to-rose-500" },
     { type: "step", key: "eligibility", label: "Eligibility", accent: "indigo" },
@@ -160,6 +228,14 @@ export default function ProcessingDashboardPage() {
     { type: "step", key: "visa", label: "Visa", accent: "indigo" },
     { type: "step", key: "emigration", label: "Emigration", accent: "rose" },
     { type: "step", key: "ticket", label: "Ticket", accent: "emerald" },
+    {
+      type: "status",
+      label: "Processing Hold",
+      status: "on_hold",
+      accent: "amber",
+      icon: PauseCircle,
+      value: counts?.on_hold || 0,
+    },
     {
       type: "status",
       label: "Completed",
@@ -188,7 +264,9 @@ export default function ProcessingDashboardPage() {
       setStepFilter(null);
     }
     setPage(1);
-    tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.requestAnimationFrame(() => {
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -196,7 +274,8 @@ export default function ProcessingDashboardPage() {
       "in_progress": "bg-blue-100 text-blue-700 border-blue-200",
       "assigned": "bg-indigo-100 text-indigo-700 border-indigo-200",
       "completed": "bg-emerald-100 text-emerald-700 border-emerald-200",
-      "cancelled": "bg-rose-100 text-rose-700 border-rose-200"
+      "cancelled": "bg-rose-100 text-rose-700 border-rose-200",
+      "on_hold": "bg-amber-100 text-amber-800 border-amber-200",
     };
     return styles[status] || "bg-slate-100 text-slate-700";
   };
@@ -204,19 +283,23 @@ export default function ProcessingDashboardPage() {
   const displayStatus = (status: string) => {
     const labels: Record<string, string> = {
       "all": "All",
-      "assigned": "Ready for Processing",
+      "assigned": "Untouched",
       "in_progress": "In Progress",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "on_hold": "Processing Hold",
     };
     return labels[status] || status;
   };
 
-  const formatStep = (step?: string) => {
-    if (!step) return "—";
-    if (step === "verify_offer_letter") return "Verify Offer Letter";
-    // Fallback: replace underscores and title case
-    return step.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const formatStep = (step?: string) => formatProcessingStepLabel(step);
+
+  const getStepTileCount = (stepKey: string) => {
+    const stepCounts = counts?.steps ?? {};
+    if (stepKey === "offer_letter_verified") {
+      return (stepCounts.offer_letter_verified ?? 0) + (stepCounts.verify_offer_letter ?? 0);
+    }
+    return stepCounts[stepKey] ?? 0;
   };
 
   // Row background mapping to match tile colors (subtle)
@@ -230,6 +313,8 @@ export default function ProcessingDashboardPage() {
         return "bg-emerald-50/40";
       case "cancelled":
         return "bg-rose-50/40";
+      case "on_hold":
+        return "bg-amber-50/60";
       default:
         return "";
     }
@@ -239,8 +324,8 @@ export default function ProcessingDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
-        <TypedHeader 
-          userName={user?.name || "Admin"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Admin"}
           subtitle="Monitor and manage candidate processing workflows"
         />
           
@@ -261,7 +346,7 @@ export default function ProcessingDashboardPage() {
           {processingTiles.map((tile) => {
             const isStepTile = tile.type === "step";
             const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
-            const value = isStepTile ? counts?.steps?.[tile.key] ?? 0 : tile.value;
+            const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
             const s = accentStyles[tile.accent || "blue"];
             const Icon = isStepTile ? ClipboardList : tile.icon;
 
@@ -338,13 +423,23 @@ export default function ProcessingDashboardPage() {
                   )}
 
                   <Button
+                    type="button"
                     variant="outline"
-                    size="icon"
-                    className="shrink-0 h-11 w-11 rounded-xl border-slate-200 hover:bg-slate-50"
-                    onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); setStepFilter(null); }}
-                    title="Reset Filters"
+                    className={cn(
+                      "h-11 shrink-0 gap-2 rounded-xl border px-4 shadow-sm",
+                      isAdvancedFiltersOpen || advancedFilterCount > 0
+                        ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
+                    )}
+                    onClick={() => setIsAdvancedFiltersOpen(true)}
                   >
-                    <FilterX className="h-4 w-4 text-slate-500" />
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filters
+                    {advancedFilterCount > 0 ? (
+                      <Badge className="border-0 bg-white/20 px-1.5 text-[10px] text-white">
+                        {advancedFilterCount}
+                      </Badge>
+                    ) : null}
                   </Button>
                 </div>
               </div>
@@ -371,130 +466,7 @@ export default function ProcessingDashboardPage() {
               </div>
             </div>
           </div>
-              <div className="flex items-center gap-3">
-                {isFetching && <Loader2 className="h-5 w-5 animate-spin text-violet-500" />}
-                <Badge className="bg-violet-100 text-violet-700 border-0 px-4 py-2 text-sm font-bold self-start sm:self-center">
-                  {totalItems} Results
-                </Badge>
-              </div>
-            </div>
 
-            {/* Filter Bar */}
-            <div className="mt-6 p-4 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-2xl border border-slate-100">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Search */}
-                <div className="relative flex-1 max-w-md">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 bg-violet-100 rounded-lg p-1.5">
-                    <Search className="h-4 w-4 text-violet-600" />
-                  </div>
-                  <Input 
-                    placeholder="Search by name, email or project..." 
-                    className="pl-14 h-11 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 transition-all"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
-
-                {/* Divider */}
-                <div className="hidden lg:block w-px h-8 bg-slate-200" />
-
-                {/* Filters Group */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <Filter className="h-4 w-4 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Filters:</span>
-                  </div>
-
-                  <Select value={projectFilter} onValueChange={(val) => {
-                    setProjectFilter(val);
-                    setRoleFilter("all");
-                  }}>
-                    <SelectTrigger className="h-10 w-[220px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors">
-                      <SelectValue placeholder="All Projects" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="all">All Projects</SelectItem>
-                      {projects.map(p => (
-                        <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {projectFilter !== "all" && (
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
-                      <SelectTrigger className="h-10 w-[180px] bg-white border-slate-200 rounded-xl shadow-sm hover:border-violet-300 transition-colors animate-in fade-in slide-in-from-left-2">
-                        <SelectValue placeholder="All Roles" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="all">All Roles</SelectItem>
-                        {rolesForSelectedProject.map(r => (
-                          <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  
-                  {(search || projectFilter !== "all" || statusFilter !== "assigned") && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-10 px-4 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold gap-2 transition-all"
-                      onClick={() => {
-                        setSearch("");
-                        setProjectFilter("all");
-                        setRoleFilter("all");
-                        setStatusFilter("assigned");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                      Clear All
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Active Filters Display */}
-              {((statusFilter && statusFilter !== "all") || projectFilter !== "all" || roleFilter !== "all") && (
-                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-200/60">
-                  <span className="text-xs font-semibold text-slate-500">Active:</span>
-                  {(statusFilter && statusFilter !== "all") && (
-                    <Badge className="bg-violet-100 text-violet-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Status: {displayStatus(statusFilter)}
-                      <button 
-                        className="ml-1 hover:bg-violet-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => setStatusFilter("all")}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {projectFilter !== "all" && (
-                    <Badge className="bg-blue-100 text-blue-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Project: {projects.find(p => p.id === projectFilter)?.title || projectFilter}
-                      <button 
-                        className="ml-1 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => {
-                          setProjectFilter("all");
-                          setRoleFilter("all");
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                  {roleFilter !== "all" && (
-                    <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1.5 pr-1.5 font-semibold">
-                      Role: {rolesForSelectedProject.find(r => r.id === roleFilter)?.name || roleFilter}
-                      <button 
-                        className="ml-1 hover:bg-emerald-200 rounded-full p-0.5 transition-colors"
-                        onClick={() => setRoleFilter("all")}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  )}
-                </div>
-              )}
           <div className="p-0">
             <div className="overflow-auto max-h-[80vh] scrollbar-thin scrollbar-thumb-slate-200">
               <Table>
@@ -502,6 +474,9 @@ export default function ProcessingDashboardPage() {
                 <TableRow className="bg-slate-50/80 hover:bg-slate-50">
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
                     Candidate
+                  </TableHead>
+                  <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider w-[220px]">
+                    Contact
                   </TableHead>
                   <TableHead className="font-bold text-slate-700 text-xs uppercase tracking-wider">
                     Project & Role
@@ -526,7 +501,7 @@ export default function ProcessingDashboardPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                     <TableCell colSpan={6} className="h-64 text-center">
+                     <TableCell colSpan={7} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center space-y-4">
                         <Loader2 className="h-10 w-10 animate-spin text-violet-500" />
                         <p className="text-sm font-medium text-slate-500">Loading candidates...</p>
@@ -556,12 +531,33 @@ export default function ProcessingDashboardPage() {
                             >
                               {procCandidate.candidate.firstName} {procCandidate.candidate.lastName}
                             </button>
-                            <p className="text-xs text-slate-500 truncate flex items-center gap-1">
+                            {procCandidate.candidate.candidateCode && (
+                              <div className="mt-1">
+                                <div className="inline-flex max-w-full items-center rounded-md bg-slate-50 px-2 py-0.5 text-[11px] font-mono font-bold text-slate-700 border border-slate-200">
+                                  {procCandidate.candidate.candidateCode}
+                                </div>
+                              </div>
+                            )}
+                            <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1">
                               <Users className="h-3 w-3" /> {procCandidate.assignedTo?.name || "Unassigned"}
                             </p>
                           </div>
                         </div>
                       </TableCell>
+
+                      <TableCell className="py-4">
+                        <div className="text-xs text-slate-600 flex flex-col gap-1 min-w-0">
+                          <div className="flex items-start gap-2 min-w-0">
+                            <Mail className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                            <span className="min-w-0 whitespace-normal break-all">{procCandidate.candidate.email || "—"}</span>
+                          </div>
+                          <div className="flex items-start gap-2 min-w-0">
+                            <Phone className="h-3 w-3 shrink-0 mt-0.5 text-slate-400" />
+                            <span className="min-w-0 whitespace-normal break-words">{procCandidate.candidate.mobileNumber || "—"}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+
                       <TableCell className="py-4">
                         <div className="space-y-1">
                           <p className="text-sm text-slate-700 font-bold leading-tight">{procCandidate.project.title}</p>
@@ -605,21 +601,13 @@ export default function ProcessingDashboardPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="py-4">
-                        <div className="space-y-1.5">
-                          {/* Use progressCount from API if available (interpreted as a percent 0-100). Fall back to status-based value. */}
-                          {(() => {
-                            const raw = (procCandidate as any).progressCount;
-                            const pct = typeof raw === 'number' ? Math.min(100, Math.max(0, raw)) : (procCandidate.processingStatus === 'completed' ? 100 : 0);
-                            return (
-                              <>
-                                <span className="text-xs font-black text-slate-700">{pct}%</span>
-                                <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-200">
-                                  <div style={{ width: `${pct}%` }} className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
+                        <ProcessingProgressBar
+                          processingStatus={procCandidate.processingStatus}
+                          progressCount={procCandidate.progressCount}
+                          progressCompletedSteps={procCandidate.progressCompletedSteps}
+                          progressTotalSteps={procCandidate.progressTotalSteps}
+                          progressPendingSteps={procCandidate.progressPendingSteps}
+                        />
                       </TableCell>
                       <TableCell className="py-4 text-center">
                         <Button 
@@ -635,7 +623,7 @@ export default function ProcessingDashboardPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-64 text-center">
+                    <TableCell colSpan={7} className="h-64 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-500 space-y-2">
                         <Filter className="h-10 w-10 opacity-20" />
                         <p className="text-lg font-bold">No candidates found</p>
@@ -644,7 +632,8 @@ export default function ProcessingDashboardPage() {
                           setSearch("");
                           setProjectFilter("all");
                           setRoleFilter("all");
-                          setStatusFilter("assigned");
+                          setStatusFilter("all");
+                          setStepFilter(null);
                         }}>Clear all filters</Button>
                       </div>
                     </TableCell>
@@ -682,6 +671,14 @@ export default function ProcessingDashboardPage() {
           </div>
         </div>
       </div>
+
+      <ProcessingAdvancedFiltersSheet
+        isOpen={isAdvancedFiltersOpen}
+        onOpenChange={setIsAdvancedFiltersOpen}
+        filters={advancedFilters}
+        onApply={handleApplyAdvancedFilters}
+        onReset={handleResetAdvancedFilters}
+      />
     </div>
   );
 }

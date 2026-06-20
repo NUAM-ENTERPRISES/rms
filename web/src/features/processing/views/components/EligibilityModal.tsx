@@ -8,8 +8,14 @@ import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, 
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { format } from "date-fns";
+import { format, differenceInMonths } from "date-fns";
 import { toast } from "sonner";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { getUploadErrorMessage } from "@/lib/document-upload";
 
 import {
   useGetEligibilityRequirementsQuery,
@@ -17,19 +23,41 @@ import {
   useReuploadProcessingDocumentMutation,
   useVerifyProcessingDocumentMutation,
   useSubmitHrdDateMutation,
-  useCancelStepMutation,
   useUpdateStepStatusMutation,
 } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE } from "@/constants/document-types";
+
+function parseStoredDate(value?: string | Date | null): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+  const raw = String(value);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+function computeEligibilityDuration(
+  issued?: Date,
+  valid?: Date,
+): string {
+  if (!issued || !valid) return "";
+  const months = differenceInMonths(valid, issued);
+  if (months <= 0) return "";
+  return `${months} month${months === 1 ? "" : "s"}`;
+}
 
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
 const ConfirmSubmitDateModal = React.lazy(() => import("../../components/ConfirmSubmitDateModal"));
 const ConfirmEditSubmitDateModal = React.lazy(() => import("../../components/ConfirmEditSubmitDateModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
 const ConfirmEligibilityMetadataModal = React.lazy(() => import("../../components/ConfirmEligibilityMetadataModal"));
 
 interface EligibilityModalProps {
@@ -41,6 +69,7 @@ interface EligibilityModalProps {
 }
 
 export function EligibilityModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: EligibilityModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetEligibilityRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -53,10 +82,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
   const [updateStepStatus, { isLoading: isUpdatingEligibility }] = useUpdateStepStatusMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
 
   // Eligibility metadata state
   const [eligibilityIssuedDate, setEligibilityIssuedDate] = useState<Date | undefined>(undefined);
@@ -176,6 +201,25 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
 
     return map;
   }, [processingDocs]);
+
+  const candidateEligibilityNumber =
+    (data?.processingCandidate?.candidate as { eligibilityNumber?: string | null } | undefined)
+      ?.eligibilityNumber ?? null;
+
+  const eligibilityLetterDoc = useMemo(() => {
+    const processingEntry =
+      processingDocsByDocType[DOCUMENT_TYPE.ELIGIBILITY_LETTER]?.[0];
+    const verificationDoc = processingEntry?.verification?.document;
+    const candidateDoc =
+      candidateDocsByDocType[DOCUMENT_TYPE.ELIGIBILITY_LETTER]?.[0];
+    const doc = verificationDoc || candidateDoc;
+    if (!doc) return null;
+    return {
+      issuedAt: doc.issuedAt as string | Date | null | undefined,
+      expiryDate: doc.expiryDate as string | Date | null | undefined,
+      documentNumber: doc.documentNumber as string | null | undefined,
+    };
+  }, [processingDocsByDocType, candidateDocsByDocType]);
 
   // Viewer state for inline preview (PDF / images)
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -356,7 +400,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
       await refetch();
     } catch (err: any) {
       console.error("Eligibility upload error", err);
-      toast.error(err?.data?.message || "Failed to upload and attach document");
+      toast.error(getUploadErrorMessage(err));
     }
   };
 
@@ -417,29 +461,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
       console.error("Mark Eligibility complete failed", err);
       const msg = err?.data?.message || err?.error || "Failed to complete Eligibility step";
       toast.error(msg);
-    }
-  };
-
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return;
-    }
-
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-
-      if (onComplete) {
-        await onComplete();
-      }
-
-      onClose();
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || err?.error || "Failed to cancel step");
     }
   };
 
@@ -508,22 +529,36 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
   const certificateButtonLabel = initialHasEligibilityCertificate ? "Update Certificate Info" : "Save Certificate Info";
 
   useEffect(() => {
-    if (!activeStep) return;
-    const issued = activeStep.eligibilityIssuedAt ? new Date(activeStep.eligibilityIssuedAt) : undefined;
-    const valid = activeStep.eligibilityValidAt ? new Date(activeStep.eligibilityValidAt) : undefined;
-    const duration = activeStep.eligibilityDuration || "";
-    const number = activeStep.eligibilityNumber || "";
+    const stepIssued = activeStep?.eligibilityIssuedAt
+      ? parseStoredDate(activeStep.eligibilityIssuedAt)
+      : undefined;
+    const stepValid = activeStep?.eligibilityValidAt
+      ? parseStoredDate(activeStep.eligibilityValidAt)
+      : undefined;
+    const stepDuration = activeStep?.eligibilityDuration?.trim() || "";
+    const stepNumber = activeStep?.eligibilityNumber?.trim() || "";
 
-    setEligibilityIssuedDate(issued);
-    setEligibilityValidDate(valid);
-    setEligibilityDuration(duration);
-    setEligibilityNumber(number);
+    const docIssued = parseStoredDate(eligibilityLetterDoc?.issuedAt);
+    const docValid = parseStoredDate(eligibilityLetterDoc?.expiryDate);
+    const docNumber = eligibilityLetterDoc?.documentNumber?.trim() || "";
+    const candidateNumber = candidateEligibilityNumber?.trim() || "";
 
-    setInitialEligibilityIssuedDate(issued);
-    setInitialEligibilityValidDate(valid);
-    setInitialEligibilityDuration(duration);
-    setInitialEligibilityNumber(number);
-  }, [activeStep]);
+    const mergedIssued = stepIssued ?? docIssued;
+    const mergedValid = stepValid ?? docValid;
+    const mergedDuration =
+      stepDuration || computeEligibilityDuration(mergedIssued, mergedValid);
+    const mergedNumber = stepNumber || candidateNumber || docNumber;
+
+    setEligibilityIssuedDate(mergedIssued);
+    setEligibilityValidDate(mergedValid);
+    setEligibilityDuration(mergedDuration);
+    setEligibilityNumber(mergedNumber);
+
+    setInitialEligibilityIssuedDate(stepIssued);
+    setInitialEligibilityValidDate(stepValid);
+    setInitialEligibilityDuration(stepDuration);
+    setInitialEligibilityNumber(stepNumber);
+  }, [activeStep, eligibilityLetterDoc, candidateEligibilityNumber]);
 
   const saveEligibilityMetadata = async () => {
     if (!activeStep?.id) {
@@ -609,6 +644,8 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
           ) : (
             <div className="space-y-4">
 
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="w-full border-0 shadow-sm bg-rose-50 p-3">
                   <div className="flex items-start gap-3">
@@ -654,7 +691,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         value={eligibilityIssuedDate}
                         onChange={setEligibilityIssuedDate}
                         placeholder="Issued date"
-                        disabled={isEligibilityCompleted || isStepCancelled}
+                        disabled={isEligibilityCompleted || isStepCancelled || isLocked}
                         compact
                       />
                     </div>
@@ -664,7 +701,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         value={eligibilityValidDate}
                         onChange={setEligibilityValidDate}
                         placeholder="Valid date"
-                        disabled={isEligibilityCompleted || isStepCancelled}
+                        disabled={isEligibilityCompleted || isStepCancelled || isLocked}
                         compact
                       />
                     </div>
@@ -677,7 +714,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         value={eligibilityDuration}
                         onChange={(e) => setEligibilityDuration(e.target.value)}
                         placeholder="e.g., 12 months"
-                        disabled={isEligibilityCompleted || isStepCancelled}
+                        disabled={isEligibilityCompleted || isStepCancelled || isLocked}
                         className="w-full text-sm rounded border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-300"
                       />
                     </div>
@@ -688,7 +725,7 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                         value={eligibilityNumber}
                         onChange={(e) => setEligibilityNumber(e.target.value)}
                         placeholder="Enter eligibility number"
-                        disabled={isEligibilityCompleted || isStepCancelled}
+                        disabled={isEligibilityCompleted || isStepCancelled || isLocked}
                         className="w-full text-sm rounded border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-teal-300"
                       />
                     </div>
@@ -696,14 +733,16 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
 
                   {showCertificateButton && (
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveEligibilityMetadata}
-                        disabled={isUpdatingEligibility || isEligibilityCompleted || isStepCancelled}
-                        className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
-                      >
-                        {isUpdatingEligibility ? <Loader2 className="h-4 w-4 animate-spin" /> : certificateButtonLabel}
-                      </Button>
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveEligibilityMetadata}
+                          disabled={isUpdatingEligibility || isEligibilityCompleted || isStepCancelled || isLocked}
+                          className="h-8 bg-teal-600 hover:bg-teal-700 text-white"
+                        >
+                          {isUpdatingEligibility ? <Loader2 className="h-4 w-4 animate-spin" /> : certificateButtonLabel}
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
                 </div>
@@ -711,8 +750,20 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b">
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isEligibilityCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Eligibility"
+                      disabled={isVerifying}
+                    />
+                  )}
                 </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
@@ -794,45 +845,54 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                               {!hasProcessing ? (
                                 <>
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        candidateDoc?.id,
-                                        candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          candidateDoc?.id,
+                                          candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {!candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      Verify
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
                                 </>
                               ) : (
@@ -840,22 +900,25 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                                   <div className="flex items-center gap-2">
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
 
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        processingDoc?.id,
-                                        candidateProjectMapId || processingDoc?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          processingDoc?.id,
+                                          candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   </div>
                                 ) : (
                                   <div className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-1 rounded">In processing</div>
@@ -894,15 +957,26 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
               </Button>
 
               {!isEligibilityCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
-                </Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isEligibilityCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isEligibilityCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Eligibility Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Eligibility Complete
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 !allVerified ? (
                   <TooltipProvider>
@@ -923,9 +997,9 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
                   <Button
                     size="sm"
                     onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete || isLocked}
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete}
+                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Eligibility Complete'}
                   </Button>
@@ -1000,16 +1074,6 @@ export function EligibilityModal({ isOpen, onClose, processingId, candidateProje
           eligibilityDuration={eligibilityDuration}
           eligibilityNumber={eligibilityNumber}
           isSubmitting={isUpdatingEligibility}
-        />
-      </React.Suspense>
-
-      {/* Confirm Cancel Step Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          onConfirm={handleConfirmCancel}
-          isCancelling={isCancelling}
         />
       </React.Suspense>
 

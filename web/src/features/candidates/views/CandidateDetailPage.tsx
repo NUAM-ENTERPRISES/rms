@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
@@ -23,12 +23,15 @@ import {
   Clock,
   RefreshCw,
   Calendar,
+  
 } from "lucide-react";
-import { useCan } from "@/hooks/useCan";
+import { useAppSelector } from "@/app/hooks";
+import { useCan, useHasRole } from "@/hooks/useCan";
+import { ROLE_NAMES } from "@/config/role-names";
 import { cn, formatDate } from "@/lib/utils";
+import { DateUtils } from "@/shared/utils/date";
 import {
   useGetCandidateByIdQuery,
-  useGetCandidateProjectsQuery,
   useGetDocumentsQuery,
   useUploadDocumentMutation,
   useDeleteWorkExperienceMutation,
@@ -39,14 +42,19 @@ import { DOCUMENT_TYPE } from "@/constants/document-types";
 import { useGetCandidateStatusPipelineQuery } from "@/services/candidatesApi";
 import QualificationWorkExperienceModal from "@/components/molecules/QualificationWorkExperienceModal";
 import { ImageViewer, DeleteConfirmationDialog } from "@/components/molecules";
-import { CandidatePipeline } from "../components/CandidatePipeline";
 import { StatusUpdateModal } from "../components/StatusUpdateModal";
 import { UpdateJobPreferenceModal } from "../components/UpdateJobPreferenceModal";
 import { UpdatePersonalInfoModal } from "../components/UpdatePersonalInfoModal";
 import { UpdatePhysicalInfoModal } from "../components/UpdatePhysicalInfoModal";
 import { UpdateLicensingModal } from "../components/UpdateLicensingModal";
 import { StatusBadge } from "../components/StatusBadge";
-import { useAppSelector } from "@/app/hooks";
+import { OperationsReassignedHandoffBadge } from "@/components/molecules/OperationsReassignedHandoffBadge";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { buildPreferredRoleLabels } from "../utils/role-preference";
+import {
+  canRecruiterManageCandidatePipeline,
+  getRecruiterLockedRnrBlockReason,
+} from "../utils/recruiter-candidate-pipeline.util";
 import type {
   CandidateQualification,
   WorkExperience,
@@ -56,22 +64,38 @@ import type {
 import { CandidateOverview } from "../components/tabs/CandidateOverview";
 import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
+import { CandidateCollectionHistory } from "@/features/original-document-collections/components/CandidateCollectionHistory";
+import { CandidateOfferLetterCard } from "../components/CandidateOfferLetterCard";
 import { CandidateHistory } from "../components/tabs/CandidateHistory";
 import { CandidateMetrics } from "../components/tabs/CandidateMetrics";
 import { CandidateProfileCompletion } from "../components/CandidateProfileCompletion";
+import { getPassportDocument, DOCUMENT_REPOSITORY_UPLOAD_TYPE } from "../profileCompletion";
 const CandidateUploadDocumentModal = React.lazy(
   () => import("@/features/recruiter-docs/components/CandidateUploadDocumentModal")
+);
+const CandidatePipeline = React.lazy(() =>
+  import("../components/CandidatePipeline").then((m) => ({
+    default: m.CandidatePipeline,
+  }))
 );
 
 // Fallback avatar used when candidate has no profileImage
 const DEFAULT_PROFILE_IMAGE =
   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg";
 
+export type CandidateDetailNavigateState = {
+  activeTab?: string;
+  uploadDocType?: string;
+};
+
 export default function CandidateDetailPage() { 
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
-  const {} = useAppSelector((state) => state.auth);
+  const [pendingUploadDocType, setPendingUploadDocType] = useState<string | null>(
+    null
+  );
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,8 +137,28 @@ export default function CandidateDetailPage() {
 
   // Image viewer is provided by the reusable `ImageViewer` molecule (handles its own state)
 
-  // All roles can read candidate details
-  const canWriteCandidates = useCan("write:candidates");
+  const hasOperationsRole = useHasRole(ROLE_NAMES.OPERATIONS);
+  const hasLegacyCreRole = useHasRole("CRE");
+  const isOperations = hasOperationsRole || hasLegacyCreRole;
+  const canWriteCandidates = useCan("write:candidates") && !isOperations;
+  const { user } = useAppSelector((state) => state.auth);
+  const isRecruiterPipelineUser =
+    user?.roles?.includes("Recruiter") ||
+    user?.roles?.includes(ROLE_NAMES.AGENT_COORDINATOR);
+  const isLeadership =
+    user?.roles?.some((role) =>
+      [
+        "CEO",
+        "Director",
+        "Manager",
+        "Recruiter Manager",
+        "Team Head",
+        "Team Lead",
+        "Admin",
+        "SuperAdmin",
+        "System Admin",
+      ].includes(role),
+    ) ?? false;
 
   // Mutations
   const [deleteWorkExperience, { isLoading: isDeletingExp }] = useDeleteWorkExperienceMutation();
@@ -127,27 +171,44 @@ export default function CandidateDetailPage() {
   const {
     data: candidate,
     isLoading,
+    isFetching: isCandidateFetching,
     error,
   } = useGetCandidateByIdQuery(id!, {
     skip: !id,
   });
 
-  // Fetch candidate status pipeline
-  const { data: pipelineData, isLoading: isPipelineLoading } =
-    useGetCandidateStatusPipelineQuery(id!, {
-      skip: !id,
-    });
-
-  // Fetch counts for stat cards
-  const { data: projectsData } = useGetCandidateProjectsQuery(
-    { candidateId: id!, page: 1, limit: 1 },
-    { skip: !id }
-  );
+  const { data: pipelineData } = useGetCandidateStatusPipelineQuery(id!, {
+    skip: !id,
+  });
 
   const { data: documentsData } = useGetDocumentsQuery(
-    { candidateId: id!, page: 1, limit: 10 },
+    { candidateId: id!, page: 1, limit: 100 },
     { skip: !id }
   );
+
+  const activityStats = candidate?.activitySnapshot;
+  const isActivityStatsLoading = isLoading;
+  const isActivityStatsFetching = isCandidateFetching;
+
+  const passportDocument = getPassportDocument(
+    documentsData?.data?.documents ?? []
+  );
+
+  const handleOpenPassportDocuments = () => {
+    setActiveTab("documents");
+    setPendingUploadDocType(DOCUMENT_REPOSITORY_UPLOAD_TYPE.passport);
+  };
+
+  useEffect(() => {
+    const state = location.state as CandidateDetailNavigateState | null;
+    if (!state) return;
+    if (state.activeTab) {
+      setActiveTab(state.activeTab);
+    }
+    if (state.uploadDocType) {
+      setPendingUploadDocType(state.uploadDocType);
+    }
+  }, [location.key, location.state]);
 
   // Modal handlers
   const openAddModal = (type: "qualification" | "workExperience") => {
@@ -252,7 +313,6 @@ export default function CandidateDetailPage() {
   }
 
   if (!candidate) {
-    console.log("No candidate data received");
     return (
       <div className="p-8">
         <div className="text-center py-12">
@@ -271,6 +331,25 @@ export default function CandidateDetailPage() {
       </div>
     );
   }
+
+  const operations = getCandidateOperationsState(candidate);
+  const isRecruiterRnrStatusLocked =
+    Boolean(
+      candidate &&
+        isRecruiterPipelineUser &&
+        !isLeadership &&
+        !isOperations &&
+        canWriteCandidates &&
+        !canRecruiterManageCandidatePipeline(candidate),
+    );
+
+  const handleStatusClick = () => {
+    if (isRecruiterRnrStatusLocked) {
+      toast.error(getRecruiterLockedRnrBlockReason());
+      return;
+    }
+    setIsStatusModalOpen(true);
+  };
 
   // isOnHold: check candidate status directly (instant, no waiting on pipeline)
   const isOnHold =
@@ -292,7 +371,10 @@ export default function CandidateDetailPage() {
   const stats: Stat[] = [
     {
       label: "Overview",
-      value: candidate.profileCompletion?.percent ?? 0,
+      value:
+        candidate.activitySnapshot?.profileCompletion ??
+        candidate.profileCompletion?.percent ??
+        0,
       subtitle: "Profile ready",
       icon: Target,
       tab: "overview",
@@ -300,7 +382,7 @@ export default function CandidateDetailPage() {
     },
     {
       label: "Projects Assigned",
-      value: projectsData?.meta?.total ?? 0,
+      value: candidate.activitySnapshot?.projectsAssigned ?? 0,
       subtitle: "Assigned tasks",
       icon: Briefcase,
       tab: "projects",
@@ -316,7 +398,7 @@ export default function CandidateDetailPage() {
     },
     {
       label: "Status History",
-      value: pipelineData?.data?.pipeline?.length ?? 0,
+      value: candidate.activitySnapshot?.pipelineUpdates ?? 0,
       subtitle: "Status changes",
       icon: TrendingUp,
       tab: "history",
@@ -355,66 +437,89 @@ export default function CandidateDetailPage() {
     <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
       {candidate.firstName} {candidate.lastName}
     </h1>
+    {candidate.candidateCode ? (
+      <div className="mt-1 inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-sm font-bold text-red-700 font-mono border border-red-200">
+        {candidate.candidateCode}
+      </div>
+    ) : null}
   </div>
 
   {/* Status (RIGHT - Clickable) */}
   <div
-    onClick={() => setIsStatusModalOpen(true)}
-    className="cursor-pointer group ml-4"
-    title="Click to update status"
+    onClick={handleStatusClick}
+    className={cn(
+      "group ml-4 mb-6",
+      isRecruiterRnrStatusLocked ? "cursor-not-allowed" : "cursor-pointer",
+    )}
+    title={
+      isRecruiterRnrStatusLocked
+        ? getRecruiterLockedRnrBlockReason()
+        : "Click to update status"
+    }
   >
     {isOnHold ? (
-      <div className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
-        <div className="flex flex-col items-start gap-1">
-          <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest leading-none">Status</span>
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+      <div className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">
+        <div className="flex flex-col items-start gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-amber-500">
+            Status
+          </span>
+          <div className="scale-105 origin-left">
+            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+          </div>
         </div>
-        <div className="w-px h-8 bg-amber-200" />
-        <div className="flex flex-col gap-0.5">
+        <div className="h-10 w-px bg-amber-200" />
+        <div className="flex flex-col gap-1">
           {candidate.updatedAt && (
-            <div className="flex items-center gap-1.5 opacity-70">
-              <RefreshCw className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
+            <div className="flex items-center gap-2 opacity-70">
+              <RefreshCw className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
                 Updated {formatDate(candidate.updatedAt)}
               </span>
             </div>
-          )}          {candidate.onHoldDuration != null && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Clock className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
-                Duration: {candidate.onHoldDuration} day{candidate.onHoldDuration !== 1 ? 's' : ''}
+          )}
+          {candidate.onHoldDuration != null && (
+            <div className="flex items-center gap-2 opacity-80">
+              <Clock className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
+                Duration: {candidate.onHoldDuration} day
+                {candidate.onHoldDuration !== 1 ? "s" : ""}
               </span>
             </div>
           )}
           {candidate.onHoldUntil && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Calendar className="h-2.5 w-2.5 text-amber-500" />
-              <span className="text-[9px] font-medium text-amber-600">
+            <div className="flex items-center gap-2 opacity-80">
+              <Calendar className="h-3.5 w-3.5 text-amber-500" aria-hidden />
+              <span className="text-[10px] font-medium text-amber-600">
                 Until: {formatDate(candidate.onHoldUntil)}
               </span>
             </div>
-          )}        </div>
+          )}
+        </div>
       </div>
     ) : isFuture ? (
-      <div className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl px-4 py-2 bg-white/50 shadow-sm group-hover:shadow-md transition-all duration-200">
-        <div className="flex flex-col items-start gap-1">
-          <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none">Status</span>
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+      <div className="flex items-center gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-3 shadow-sm transition-all duration-200 group-hover:shadow-md">
+        <div className="flex flex-col items-start gap-1.5">
+          <span className="text-[10px] font-black uppercase tracking-widest leading-none text-indigo-500">
+            Status
+          </span>
+          <div className="scale-105 origin-left">
+            <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
+          </div>
         </div>
-        <div className="w-px h-8 bg-indigo-200" />
-        <div className="flex flex-col gap-0.5">
+        <div className="h-10 w-px bg-indigo-200" />
+        <div className="flex flex-col gap-1">
           {candidate.updatedAt && (
-            <div className="flex items-center gap-1.5 opacity-70">
-              <RefreshCw className="h-2.5 w-2.5 text-indigo-500" />
-              <span className="text-[9px] font-medium text-indigo-600">
+            <div className="flex items-center gap-2 opacity-70">
+              <RefreshCw className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+              <span className="text-[10px] font-medium text-indigo-600">
                 Updated {formatDate(candidate.updatedAt)}
               </span>
             </div>
           )}
           {candidate.futureDate && (
-            <div className="flex items-center gap-1.5 opacity-80">
-              <Calendar className="h-2.5 w-2.5 text-indigo-500" />
-              <span className="text-[9px] font-medium text-indigo-600">
+            <div className="flex items-center gap-2 opacity-80">
+              <Calendar className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+              <span className="text-[10px] font-medium text-indigo-600">
                 Available: {formatDate(candidate.futureDate)}
               </span>
             </div>
@@ -422,13 +527,14 @@ export default function CandidateDetailPage() {
         </div>
       </div>
     ) : (
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none ml-[15px]">
+      <div className="flex items-center gap-4 rounded-2xl border border-transparent px-4 py-2.5 transition-all duration-200 group-hover:border-slate-200 group-hover:bg-slate-50/80 group-hover:shadow-sm">
+        <span className="ml-1 text-md font-bold uppercase tracking-widest leading-none text-slate-400">
           Status
         </span>
-        <div className="group-hover:scale-105 transition-transform duration-200">
-          <StatusBadge status={candidate.currentStatus?.statusName ?? "unknown"} />
-        </div>
+        <StatusBadge
+          size="lg"
+          status={candidate.currentStatus?.statusName ?? "unknown"}
+        />
       </div>
     )}
   </div>
@@ -436,9 +542,9 @@ export default function CandidateDetailPage() {
 </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm text-slate-500">
+            {/* <span className="text-sm text-slate-500">
               {candidate.currentRole || "No role specified"}
-            </span>
+            </span> */}
             <span className="text-sm text-slate-400">
               Added {formatDate(candidate.createdAt)}
             </span>
@@ -448,6 +554,13 @@ export default function CandidateDetailPage() {
                 <span className="text-xs font-semibold text-blue-700">{candidate.createdBy.name}</span>
                 <span className="text-[10px] text-blue-400 font-medium">({candidate.createdBy.email})</span>
               </div>
+            )}
+            {operations.isOperationsReassigned && (
+              <OperationsReassignedHandoffBadge
+                note={operations.operationsStatusNote}
+                operationsStatus={operations.operationsStatusName}
+                candidateName={`${candidate.firstName} ${candidate.lastName}`}
+              />
             )}
           </div>
         </div>
@@ -535,6 +648,7 @@ export default function CandidateDetailPage() {
         <TabsContent value="overview" className="space-y-6">
           <CandidateOverview
             candidate={candidate}
+            isCandidateLoading={isLoading}
             canWriteCandidates={canWriteCandidates}
             openAddModal={openAddModal}
             openEditModal={openEditModal}
@@ -545,7 +659,39 @@ export default function CandidateDetailPage() {
             onEditPhysicalInfo={() => setIsPhysicalModalOpen(true)}
             onEditLicensing={() => setIsLicensingModalOpen(true)}
             workExperienceDocs={documentsData?.data?.documents ?? []}
+            passportDocument={passportDocument}
+            onOpenPassportDocuments={handleOpenPassportDocuments}
+            activityStats={activityStats}
+            isActivityStatsLoading={isActivityStatsLoading}
+            isActivityStatsFetching={isActivityStatsFetching}
+            onNavigateToTab={setActiveTab}
           />
+
+          {pipelineData?.data?.pipeline && pipelineData.data.pipeline.length > 0 ? (
+            <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-200">
+                <CardTitle className="text-slate-900">Candidate Pipeline</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Status progression for this candidate
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <React.Suspense
+                  fallback={
+                    <div
+                      className="flex justify-center py-8"
+                      role="status"
+                      aria-label="Loading status pipeline"
+                    >
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  }
+                >
+                  <CandidatePipeline pipeline={pipelineData.data.pipeline} />
+                </React.Suspense>
+              </CardContent>
+            </Card>
+          ) : null}
         </TabsContent>
 
         <DeleteConfirmationDialog
@@ -567,7 +713,18 @@ export default function CandidateDetailPage() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
-          <CandidateDocuments candidateId={id!} />
+          <CandidateCollectionHistory candidateId={id!} />
+          <CandidateOfferLetterCard
+            candidateId={id!}
+            candidateName={`${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim()}
+          />
+          <CandidateDocuments
+            candidateId={id!}
+            candidatePassportNumber={candidate?.passportNumber}
+            candidateEligibilityNumber={candidate?.eligibilityNumber}
+            initialUploadDocType={pendingUploadDocType}
+            onInitialUploadDocTypeHandled={() => setPendingUploadDocType(null)}
+          />
         </TabsContent>
 
         {/* History Tab */}
@@ -580,35 +737,6 @@ export default function CandidateDetailPage() {
           <CandidateMetrics candidate={candidate} />
         </TabsContent>
       </Tabs>
-
-      {/* Pipeline */}
-      <Card className="mt-6 border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="flex items-center gap-2 text-slate-900">
-            <Target className="h-5 w-5 text-blue-600" />
-            Candidate Status Pipeline
-          </CardTitle>
-          <CardDescription className="text-slate-600">
-            Track status changes and progression
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {isPipelineLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-sm text-muted-foreground">
-                Loading pipeline...
-              </p>
-            </div>
-          ) : pipelineData?.data ? (
-            <CandidatePipeline pipeline={pipelineData.data.pipeline} />
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No pipeline data available</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Modal for adding/editing qualifications and work experience */}
       <QualificationWorkExperienceModal
@@ -639,6 +767,24 @@ export default function CandidateDetailPage() {
               const formData = new FormData();
               formData.append("file", file);
               formData.append("docType", meta.docType);
+              if (meta.roleCatalogId) {
+                formData.append("roleCatalogId", meta.roleCatalogId);
+              }
+              if (meta.workExperienceId) {
+                formData.append("workExperienceId", meta.workExperienceId);
+              }
+              if (meta.docName) {
+                formData.append("docName", meta.docName);
+              }
+              if (meta.documentNumber) {
+                formData.append("documentNumber", meta.documentNumber);
+              }
+              if (meta.expiryDate) {
+                formData.append("expiryDate", meta.expiryDate);
+              }
+              if (meta.notes) {
+                formData.append("notes", meta.notes);
+              }
 
               const uploadResp = await uploadDocument({ candidateId, formData }).unwrap();
               const uploadData: any = uploadResp.data;
@@ -652,13 +798,14 @@ export default function CandidateDetailPage() {
               const desiredDocName =
                 (meta.docName && meta.docName.trim()) || "";
 
-              if (uploadedDocument) {
-                if (desiredDocName) {
-                  await updateDocument({
-                    id: uploadedDocument.id,
-                    docName: desiredDocName,
-                  }).unwrap();
-                }
+              if (uploadedDocument?.id) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  docName: desiredDocName || undefined,
+                  documentNumber: meta.documentNumber,
+                  expiryDate: DateUtils.toApiDate(meta.expiryDate),
+                  notes: meta.notes,
+                }).unwrap();
               } else {
                 await createDocument({
                   candidateId,
@@ -670,7 +817,7 @@ export default function CandidateDetailPage() {
                   mimeType: uploadData.mimeType,
                   notes: meta.notes,
                   documentNumber: meta.documentNumber,
-                  expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+                  expiryDate: DateUtils.toApiDate(meta.expiryDate),
                   roleCatalogId: meta.roleCatalogId,
                   workExperienceId: meta.workExperienceId,
                 }).unwrap();
@@ -702,11 +849,14 @@ export default function CandidateDetailPage() {
         onClose={() => setIsJobPreferenceModalOpen(false)}
         candidateId={id!}
         initialData={{
+          professionTypeName: candidate.professionType?.name,
           expectedMinSalary: candidate.expectedMinSalary,
           sectorType: candidate.sectorType,
           visaType: candidate.visaType,
           preferredCountries: candidate.preferredCountries?.map(pc => pc.country.code),
           facilityPreferences: candidate.facilityPreferences?.map(fp => fp.facilityType),
+          preferredRoles: candidate.rolePreferences?.map(rp => rp.roleCatalogId),
+          preferredRoleLabels: buildPreferredRoleLabels(candidate.rolePreferences),
         }}
       />
 
@@ -725,9 +875,12 @@ export default function CandidateDetailPage() {
           source: candidate.source,
           gender: candidate.gender,
           dateOfBirth: candidate.dateOfBirth,
+          professionTypeId: candidate.professionTypeId ?? candidate.professionType?.id,
           addressCountryCode: candidate.addressCountryCode,
           addressStateId: candidate.addressStateId,
           address: candidate.address,
+          addressPincode: candidate.addressPincode,
+          alternatePhone: candidate.alternatePhone,
         }}
       />
 
@@ -742,6 +895,7 @@ export default function CandidateDetailPage() {
           skinTone: candidate.skinTone,
           languageProficiency: candidate.languageProficiency,
           smartness: candidate.smartness,
+          religionId: candidate.religionId ?? candidate.religion?.id,
         }}
       />
 
@@ -754,6 +908,7 @@ export default function CandidateDetailPage() {
           licensingExam: candidate.licensingExam,
           dataFlow: candidate.dataFlow,
           eligibility: candidate.eligibility,
+          eligibilityNumber: candidate.eligibilityNumber,
         }}
       />
 

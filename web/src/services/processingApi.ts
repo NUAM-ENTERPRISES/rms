@@ -42,11 +42,48 @@ export interface ProcessingStep {
   dueDate?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  submittedAt?: string | null;
+  visaIssuedAt?: string | null;
+  visaValidAt?: string | null;
   rejectionReason?: string | null;
   meta?: any;
   documents: ProcessingStepDocument[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProcessingMergedCollectionDocument {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  mimeType?: string;
+}
+
+export interface ProcessingOriginalDocumentCollectionSummary {
+  id: string;
+  status: string;
+  lockerFileNumber?: string | null;
+  mergedDocument?: ProcessingMergedCollectionDocument | null;
+}
+
+export interface DocumentReceivedRequirementsResponse {
+  isDocumentReceivedCompleted: boolean;
+  step: ProcessingStep | null;
+  activeStep?: ProcessingStep | null;
+  processingCandidate: Record<string, unknown>;
+  candidate?: Record<string, unknown>;
+  requiredDocuments: Array<Record<string, unknown>>;
+  processing_documents: unknown[];
+  candidateDocuments: unknown[];
+  uploads?: unknown[];
+  originalDocumentCollection: ProcessingOriginalDocumentCollectionSummary | null;
+  counts: {
+    totalConfigured: number;
+    totalMandatory: number;
+    uploadedCount: number;
+    verifiedCount: number;
+    missingCount: number;
+  };
 }
 
 export interface UpdateStepStatusRequest {
@@ -79,6 +116,29 @@ export interface ProcessingCandidateDetails {
   };
   steps: ProcessingStep[];
 }
+
+export interface StepRequirementRule {
+  id: string;
+  docType: string;
+  label: string;
+  mandatory: boolean;
+  description?: string | null;
+  sourceCountryCode: string;
+  isEditable: boolean;
+  overridesGlobal?: boolean;
+}
+
+export interface StepRequirementRulesResponse {
+  processingCandidateId: string;
+  countryCode: string;
+  stepKey: string;
+  stepLabel: string;
+  rules: StepRequirementRule[];
+  existingCountryDocTypes: string[];
+  existingGlobalDocTypes: string[];
+}
+
+export type StepRequirementRuleScope = "country" | "global";
 
 export const processingApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -149,9 +209,82 @@ export const processingApi = baseApi.injectEndpoints({
       ],
     }),
 
+    getStepRequirementRules: builder.query<
+      StepRequirementRulesResponse,
+      { processingId: string; stepKey: string }
+    >({
+      query: ({ processingId, stepKey }) =>
+        `/processing/steps/${processingId}/requirement-rules?stepKey=${encodeURIComponent(stepKey)}`,
+      transformResponse: (response: { success: boolean; data: StepRequirementRulesResponse; message: string }) =>
+        response.data,
+      providesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    createStepRequirementRule: builder.mutation<
+      any,
+      {
+        processingId: string;
+        stepKey: string;
+        docType: string;
+        mandatory?: boolean;
+        label?: string;
+        description?: string;
+        scope?: StepRequirementRuleScope;
+      }
+    >({
+      query: ({ processingId, ...body }) => ({
+        url: `/processing/steps/${processingId}/requirement-rules`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    updateStepRequirementRule: builder.mutation<
+      any,
+      {
+        processingId: string;
+        ruleId: string;
+        stepKey: string;
+        mandatory?: boolean;
+        label?: string;
+        description?: string;
+      }
+    >({
+      query: ({ processingId, ruleId, ...body }) => ({
+        url: `/processing/steps/${processingId}/requirement-rules/${ruleId}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
+    deleteStepRequirementRule: builder.mutation<
+      any,
+      { processingId: string; ruleId: string; stepKey: string }
+    >({
+      query: ({ processingId, ruleId, stepKey }) => ({
+        url: `/processing/steps/${processingId}/requirement-rules/${ruleId}?stepKey=${encodeURIComponent(stepKey)}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, { processingId }) => [
+        { type: "ProcessingSteps", id: processingId },
+        { type: "ProcessingDetails", id: processingId },
+      ],
+    }),
+
     // Get Document Received requirements and uploads for a processing candidate (same shape as HRD)
     getDocumentReceivedRequirements: builder.query<
-      any,
+      DocumentReceivedRequirementsResponse,
       string
     >({
       query: (processingId) => `/processing/steps/${processingId}/document-received-requirements`,
@@ -460,6 +593,10 @@ export const {
   useUpdateStepStatusMutation,
   useCompleteStepMutation,
   useGetHrdRequirementsQuery,
+  useGetStepRequirementRulesQuery,
+  useCreateStepRequirementRuleMutation,
+  useUpdateStepRequirementRuleMutation,
+  useDeleteStepRequirementRuleMutation,
   useGetDocumentReceivedRequirementsQuery,
   useSetProcessingDocumentReceivedDateMutation,
   useGetCouncilRegistrationRequirementsQuery,

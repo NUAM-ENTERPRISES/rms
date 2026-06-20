@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CANDIDATE_PROJECT_STATUS } from '../common/constants/statuses';
@@ -13,6 +14,9 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { CandidateProjectsService } from '../candidate-projects/candidate-projects.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { DocumentsService } from '../documents/documents.service';
+import { ROLE_NAMES } from '../common/constants/role-ids';
+import { DOCUMENT_TYPE } from '../common/constants/document-types';
 
 @Injectable()
 export class InterviewsService {
@@ -20,6 +24,7 @@ export class InterviewsService {
     private readonly prisma: PrismaService,
     private readonly candidateProjectsService: CandidateProjectsService,
     private readonly outboxService: OutboxService,
+    private readonly documentsService: DocumentsService,
   ) {}
 
   private formatCandidateDob(candidate: any) {
@@ -35,10 +40,281 @@ export class InterviewsService {
     return candidate;
   }
 
+  private computeExperienceYearsFromWorkHistory(
+    workExperiences: Array<{ startDate?: string | Date | null; endDate?: string | Date | null; isCurrent?: boolean | null }> | undefined,
+  ): number | null {
+    if (!Array.isArray(workExperiences) || workExperiences.length === 0) return null;
+
+    let totalMonths = 0;
+    for (const exp of workExperiences) {
+      const start = exp?.startDate ? new Date(exp.startDate as any) : null;
+      const end = exp?.endDate
+        ? new Date(exp.endDate as any)
+        : exp?.isCurrent
+          ? new Date()
+          : null;
+      if (!start || Number.isNaN(start.getTime()) || !end || Number.isNaN(end.getTime())) continue;
+      const diffMs = Math.max(0, end.getTime() - start.getTime());
+      // Average month length = 30.44 days (aligned with other services)
+      const months = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.44));
+      totalMonths += months;
+    }
+
+    return Math.floor(totalMonths / 12);
+  }
+
+  private normalizeCandidateExperience(candidate: any) {
+    if (!candidate) return candidate;
+    const te = candidate.totalExperience;
+    const exp = candidate.experience;
+
+    // If either field already has a meaningful value, prefer it.
+    const hasMeaningfulTotal = typeof te === 'number' && te > 0;
+    const hasMeaningfulExp = typeof exp === 'number' && exp > 0;
+    if (hasMeaningfulTotal || hasMeaningfulExp) {
+      candidate.totalExperience = hasMeaningfulTotal ? te : exp;
+      return candidate;
+    }
+
+    const computed = this.computeExperienceYearsFromWorkHistory(candidate.workExperiences);
+    if (typeof computed === 'number' && computed > 0) {
+      candidate.totalExperience = computed;
+    }
+    return candidate;
+  }
+
+  private async assertInterviewCoordinator(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    const isCoordinator = user.userRoles.some(
+      (ur) => ur.role.name === ROLE_NAMES.INTERVIEW_COORDINATOR,
+    );
+
+    if (!isCoordinator) {
+      throw new ForbiddenException(
+        'Only Interview Coordinators can send candidates for processing',
+      );
+    }
+  }
+
+  private enrichInterviewRecord(interview: any) {
+    const formatted = this.formatInterviewCandidateDob(interview);
+    const roleCatalogId =
+      interview.candidateProjectMap?.roleNeeded?.roleCatalogId ||
+      interview.candidateProjectMap?.roleNeeded?.roleCatalog?.id;
+    const allVerifications =
+      interview.candidateProjectMap?.documentVerifications ?? [];
+    const verifications = roleCatalogId
+      ? allVerifications.filter(
+          (verification: { roleCatalogId?: string | null }) =>
+            !verification.roleCatalogId ||
+            verification.roleCatalogId === roleCatalogId,
+        )
+      : allVerifications;
+    return {
+      ...formatted,
+      offerLetterData: verifications[0] || null,
+      isOfferLetterUploaded: verifications.length > 0,
+    };
+  }
+
+  private async enrichInterviewsWithCandidateProcessingStatus(interviews: any[]) {
+    if (!interviews.length) {
+      return interviews;
+    }
+
+    const candidateIds = [
+      ...new Set(
+        interviews
+          .map(
+            (interview) =>
+              interview.candidateProjectMap?.candidateId ||
+              interview.candidateProjectMap?.candidate?.id,
+          )
+          .filter(Boolean),
+      ),
+    ];
+
+    if (!candidateIds.length) {
+      return interviews.map((interview) => ({
+        ...interview,
+        candidateSentForProcessingAt: null,
+        candidateSentForProcessingProjectTitle: null,
+      }));
+    }
+
+    const sentInterviews = await this.prisma.interview.findMany({
+      where: {
+        readyForProcessingAt: { not: null },
+        candidateProjectMap: {
+          candidateId: { in: candidateIds },
+        },
+      },
+      select: {
+        readyForProcessingAt: true,
+        project: { select: { title: true } },
+        candidateProjectMap: {
+          select: {
+            candidateId: true,
+            project: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    const sentInfoByCandidateId = new Map<
+      string,
+      { sentAt: Date; projectTitle: string }
+    >();
+    for (const row of sentInterviews) {
+      const candidateId = row.candidateProjectMap?.candidateId;
+      if (!candidateId || !row.readyForProcessingAt) continue;
+
+      const projectTitle =
+        row.project?.title ||
+        row.candidateProjectMap?.project?.title ||
+        'another project';
+
+      const existing = sentInfoByCandidateId.get(candidateId);
+      if (!existing || row.readyForProcessingAt > existing.sentAt) {
+        sentInfoByCandidateId.set(candidateId, {
+          sentAt: row.readyForProcessingAt,
+          projectTitle,
+        });
+      }
+    }
+
+    return interviews.map((interview) => {
+      const candidateId =
+        interview.candidateProjectMap?.candidateId ||
+        interview.candidateProjectMap?.candidate?.id;
+      const sentInfo = candidateId
+        ? sentInfoByCandidateId.get(candidateId) ?? null
+        : null;
+
+      return {
+        ...interview,
+        candidateSentForProcessingAt: sentInfo?.sentAt ?? null,
+        candidateSentForProcessingProjectTitle: sentInfo?.projectTitle ?? null,
+      };
+    });
+  }
+
+  private buildSentForReadyForProcessingWhere() {
+    return {
+      OR: [
+        { readyForProcessingAt: { not: null } },
+        {
+          readyForProcessingAt: null,
+          candidateProjectMap: {
+            is: {
+              candidate: {
+                projects: {
+                  some: {
+                    interviews: {
+                      some: {
+                        readyForProcessingAt: { not: null },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  private async assertCandidateNotAlreadySentForProcessing(
+    candidateId: string,
+    excludeInterviewId: string,
+  ) {
+    const existingSent = await this.prisma.interview.findFirst({
+      where: {
+        id: { not: excludeInterviewId },
+        readyForProcessingAt: { not: null },
+        candidateProjectMap: { candidateId },
+      },
+      include: {
+        project: { select: { title: true } },
+        candidateProjectMap: {
+          include: {
+            project: { select: { title: true } },
+          },
+        },
+      },
+    });
+
+    if (!existingSent) {
+      return;
+    }
+
+    const projectTitle =
+      existingSent.project?.title ||
+      existingSent.candidateProjectMap?.project?.title ||
+      'another project';
+
+    throw new BadRequestException(
+      `This candidate has already been sent for processing on ${projectTitle}. Only one project per candidate can be sent for processing.`,
+    );
+  }
+
+  private async enrichInterviewsWithOfferLetterUploaders(interviews: any[]) {
+    const uploaderIds = new Set<string>();
+    for (const interview of interviews) {
+      const uploadedBy =
+        interview.candidateProjectMap?.documentVerifications?.[0]?.document
+          ?.uploadedBy;
+      if (uploadedBy) uploaderIds.add(uploadedBy);
+    }
+
+    const users =
+      uploaderIds.size > 0
+        ? await this.prisma.user.findMany({
+            where: { id: { in: Array.from(uploaderIds) } },
+            select: { id: true, name: true, email: true },
+          })
+        : [];
+
+    const usersById = new Map(users.map((user) => [user.id, user]));
+
+    return interviews.map((interview) => {
+      const enriched = this.enrichInterviewRecord(interview);
+      const offerLetterData = enriched.offerLetterData;
+      const document = offerLetterData?.document;
+      if (!document?.uploadedBy) return enriched;
+
+      return {
+        ...enriched,
+        offerLetterData: {
+          ...offerLetterData,
+          document: {
+            ...document,
+            uploadedByUser: usersById.get(document.uploadedBy) || null,
+          },
+        },
+      };
+    });
+  }
+
   private formatInterviewCandidateDob(interview: any) {
     if (!interview) return interview;
     if (interview.candidateProjectMap?.candidate) {
       this.formatCandidateDob(interview.candidateProjectMap.candidate);
+      this.normalizeCandidateExperience(interview.candidateProjectMap.candidate);
+    }
+    // Some list endpoints may include a top-level candidate as well.
+    if (interview.candidate) {
+      this.formatCandidateDob(interview.candidate);
+      this.normalizeCandidateExperience(interview.candidate);
     }
     return interview;
   }
@@ -165,6 +441,7 @@ export class InterviewsService {
                   mobileNumber: true,
                   profileImage: true,
                   totalExperience: true,
+                  experience: true,
                   dateOfBirth: true,
                   highestEducation: true,
                   gender: true,
@@ -189,7 +466,7 @@ export class InterviewsService {
           include: { 
             mainStatus: true, 
             subStatus: true,
-            candidate: { select: { firstName: true, lastName: true } },
+            candidate: { select: { firstName: true, lastName: true, candidateCode: true } },
             project: { select: { title: true } },
           },
         });
@@ -313,6 +590,7 @@ export class InterviewsService {
       search,
       mode,
       status,
+      readyForProcessingStatus,
       projectId,
       roleNeededId,
       roleCatalogId,
@@ -367,6 +645,13 @@ export class InterviewsService {
       }
     }
 
+    if (readyForProcessingStatus === 'sent') {
+      where.AND = [
+        ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+        this.buildSentForReadyForProcessingWhere(),
+      ];
+    }
+
     // Search functionality
     if (search) {
       where.OR = [
@@ -384,6 +669,16 @@ export class InterviewsService {
           candidateProjectMap: {
             candidate: {
               lastName: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+        {
+          candidateProjectMap: {
+            candidate: {
+              candidateCode: {
                 contains: search,
                 mode: 'insensitive',
               },
@@ -426,10 +721,13 @@ export class InterviewsService {
                   id: true,
                   firstName: true,
                   lastName: true,
+                  candidateCode: true,
                   email: true,
                   mobileNumber: true,
+                  countryCode: true,
                   profileImage: true,
                   totalExperience: true,
+                  experience: true,
                 },
               },
               project: {
@@ -451,6 +749,7 @@ export class InterviewsService {
                 select: {
                   id: true,
                   designation: true,
+                  roleCatalogId: true,
                   roleCatalog: {
                     select: {
                       id: true,
@@ -467,6 +766,38 @@ export class InterviewsService {
                   name: true,
                   email: true,
                 },
+              },
+              documentVerifications: {
+                where: {
+                  isDeleted: false,
+                  document: {
+                    docType: DOCUMENT_TYPE.OFFER_LETTER,
+                    isDeleted: false,
+                  },
+                },
+                select: {
+                  id: true,
+                  candidateProjectMapId: true,
+                  documentId: true,
+                  roleCatalogId: true,
+                  status: true,
+                  offerLetterReceivedAt: true,
+                  createdAt: true,
+                  updatedAt: true,
+                  document: {
+                    select: {
+                      id: true,
+                      docType: true,
+                      fileName: true,
+                      fileUrl: true,
+                      status: true,
+                      uploadedBy: true,
+                      createdAt: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 3,
               },
             },
           },
@@ -497,8 +828,12 @@ export class InterviewsService {
 
     const totalPages = Math.ceil(total / limit);
 
+    const withOfferLetters =
+      await this.enrichInterviewsWithOfferLetterUploaders(interviews);
+
     return {
-      interviews: interviews.map((interview) => this.formatInterviewCandidateDob(interview)),
+      interviews:
+        await this.enrichInterviewsWithCandidateProcessingStatus(withOfferLetters),
       pagination: {
         page,
         limit,
@@ -558,7 +893,7 @@ export class InterviewsService {
     const items = await this.prisma.candidateProjects.findMany({
       where,
       include: {
-        candidate: { select: { id: true, firstName: true, lastName: true, email: true } },
+        candidate: { select: { id: true, firstName: true, lastName: true, candidateCode: true, email: true, mobileNumber: true, countryCode: true, profileImage: true } },
         project: { select: { id: true, title: true } },
         roleNeeded: {
           include: {
@@ -613,6 +948,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -627,8 +963,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -788,6 +1126,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -802,8 +1141,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -958,6 +1299,7 @@ export class InterviewsService {
         { candidate: { firstName: { contains: s, mode: 'insensitive' } } },
         { candidate: { lastName: { contains: s, mode: 'insensitive' } } },
         { candidate: { email: { contains: s, mode: 'insensitive' } } },
+        { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } },
         { project: { title: { contains: s, mode: 'insensitive' } } },
       ];
     }
@@ -972,8 +1314,10 @@ export class InterviewsService {
             id: true,
             firstName: true,
             lastName: true,
+            candidateCode: true,
             email: true,
             mobileNumber: true,
+            countryCode: true,
             profileImage: true,
             qualifications: {
               select: {
@@ -1334,6 +1678,7 @@ export class InterviewsService {
         { candidateProjectMap: { is: { candidate: { firstName: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { candidate: { lastName: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { candidate: { email: { contains: s, mode: 'insensitive' } } } } },
+        { candidateProjectMap: { is: { candidate: { candidateCode: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { project: { title: { contains: s, mode: 'insensitive' } } } } },
         { candidateProjectMap: { is: { roleNeeded: { designation: { contains: s, mode: 'insensitive' } } } } },
       ];
@@ -1351,10 +1696,12 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
@@ -1562,14 +1909,169 @@ export class InterviewsService {
    * - Supports optional pagination: pass { page, limit } to return paginated result
    * - Backwards-compatible: when `query` is omitted the full array is returned
    */
+  private resolveSentForProcessingActorFromHistory(
+    histories: any[],
+    interview: {
+      readyForProcessingAt?: Date | null;
+      readyForProcessingBy?: { id: string; name: string | null; email: string | null } | null;
+    },
+  ) {
+    if (interview.readyForProcessingBy?.name) {
+      return interview.readyForProcessingBy;
+    }
+
+    const sentAt = interview.readyForProcessingAt?.getTime() ?? null;
+    const actorCandidates = histories.filter(
+      (entry) =>
+        entry.status !== 'sent_for_processing' &&
+        (entry.status === 'passed' || entry.status === 'completed') &&
+        (entry.changedByName || entry.changedBy?.name),
+    );
+
+    if (sentAt && actorCandidates.length) {
+      const closest = actorCandidates
+        .map((entry) => ({
+          entry,
+          delta: Math.abs(
+            new Date(entry.statusAt ?? entry.createdAt).getTime() - sentAt,
+          ),
+        }))
+        .sort((a, b) => a.delta - b.delta)[0];
+
+      if (closest?.entry && closest.delta <= 30 * 60 * 1000) {
+        return (
+          closest.entry.changedBy ?? {
+            id: closest.entry.changedById,
+            name: closest.entry.changedByName,
+            email: closest.entry.changedBy?.email ?? null,
+          }
+        );
+      }
+    }
+
+    const passed = actorCandidates.find((entry) => entry.status === 'passed');
+    if (passed?.changedByName || passed?.changedBy?.name) {
+      return (
+        passed.changedBy ?? {
+          id: passed.changedById,
+          name: passed.changedByName,
+          email: null,
+        }
+      );
+    }
+
+    return interview.readyForProcessingBy ?? null;
+  }
+
+  private enrichSentForProcessingHistoryActor(
+    histories: any[],
+    actor?: { id: string; name: string | null; email: string | null } | null,
+  ) {
+    if (!actor?.name) {
+      return histories;
+    }
+
+    return histories.map((entry) => {
+      if (entry.status !== 'sent_for_processing') {
+        return entry;
+      }
+      if (entry.changedByName || entry.changedBy?.name) {
+        return entry;
+      }
+
+      return {
+        ...entry,
+        changedById: actor.id,
+        changedByName: actor.name,
+        changedBy: entry.changedBy ?? actor,
+      };
+    });
+  }
+
+  private appendSentForProcessingHistoryIfMissing(
+    interview: {
+      id: string;
+      candidateProjectMapId?: string | null;
+      outcome?: string | null;
+      readyForProcessingAt?: Date | null;
+      readyForProcessingBy?: { id: string; name: string | null; email: string | null } | null;
+      project?: { title: string | null } | null;
+      candidateProjectMap?: { project?: { title: string | null } | null } | null;
+    },
+    histories: any[],
+  ) {
+    if (!interview.readyForProcessingAt) {
+      return histories;
+    }
+
+    const hasSentForProcessingHistory = histories.some(
+      (entry) =>
+        entry.status === 'sent_for_processing' &&
+        entry.interviewId === interview.id,
+    );
+    if (hasSentForProcessingHistory) {
+      return histories;
+    }
+
+    const projectName =
+      interview.project?.title ||
+      interview.candidateProjectMap?.project?.title ||
+      'project';
+
+    const syntheticEntry = {
+      id: `sent-for-processing-${interview.id}`,
+      interviewType: 'client',
+      interviewId: interview.id,
+      candidateProjectMapId: interview.candidateProjectMapId ?? null,
+      previousStatus: interview.outcome ?? 'passed',
+      status: 'sent_for_processing',
+      statusSnapshot: 'Sent for Processing',
+      statusAt: interview.readyForProcessingAt,
+      changedById: interview.readyForProcessingBy?.id ?? null,
+      changedByName: interview.readyForProcessingBy?.name ?? null,
+      changedBy: interview.readyForProcessingBy ?? null,
+      reason: `Sent for processing on ${projectName} project`,
+      createdAt: interview.readyForProcessingAt,
+    };
+
+    return [...histories, syntheticEntry].sort(
+      (a, b) =>
+        new Date(b.statusAt ?? b.createdAt).getTime() -
+        new Date(a.statusAt ?? a.createdAt).getTime(),
+    );
+  }
+
   async getInterviewHistory(interviewId: string, query?: { page?: number; limit?: number }) {
     // Ensure interview exists and get the associated candidate project map if any
     const interview = await this.prisma.interview.findUnique({
       where: { id: interviewId },
-      select: { id: true, candidateProjectMapId: true },
+      select: {
+        id: true,
+        candidateProjectMapId: true,
+        outcome: true,
+        readyForProcessingAt: true,
+        readyForProcessingById: true,
+        readyForProcessingBy: {
+          select: { id: true, name: true, email: true },
+        },
+        project: { select: { title: true } },
+        candidateProjectMap: {
+          select: {
+            project: { select: { title: true } },
+          },
+        },
+      },
     });
     if (!interview) {
       throw new NotFoundException('Interview not found');
+    }
+
+    let sentForProcessingActor = interview.readyForProcessingBy;
+    if (!sentForProcessingActor?.name && interview.readyForProcessingById) {
+      sentForProcessingActor = await this.prisma.user.findUnique({
+        where: { id: interview.readyForProcessingById },
+        select: { id: true, name: true, email: true },
+      });
     }
 
     const historyWhere: any = {
@@ -1580,37 +2082,48 @@ export class InterviewsService {
       historyWhere.OR.push({ candidateProjectMapId: interview.candidateProjectMapId });
     }
 
+    const histories = await this.prisma.interviewStatusHistory.findMany({
+      where: historyWhere,
+      orderBy: { statusAt: 'desc' },
+      include: {
+        changedBy: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    const resolvedSentForProcessingActor =
+      sentForProcessingActor?.name
+        ? sentForProcessingActor
+        : this.resolveSentForProcessingActorFromHistory(histories, {
+            readyForProcessingAt: interview.readyForProcessingAt,
+            readyForProcessingBy: sentForProcessingActor,
+          });
+
+    const historiesWithActor = this.enrichSentForProcessingHistoryActor(
+      histories,
+      resolvedSentForProcessingActor,
+    );
+
+    const mergedHistories = this.appendSentForProcessingHistoryIfMissing(
+      {
+        ...interview,
+        readyForProcessingBy: resolvedSentForProcessingActor,
+      },
+      historiesWithActor,
+    );
+
     // If caller did not request pagination, return full history array (preserve existing behavior)
     const wantsPagination = !!(query && (query.page !== undefined || query.limit !== undefined));
     if (!wantsPagination) {
-      const histories = await this.prisma.interviewStatusHistory.findMany({
-        where: historyWhere,
-        orderBy: { statusAt: 'desc' },
-        include: {
-          changedBy: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      });
-      return histories;
+      return mergedHistories;
     }
 
     const page = Math.max(1, Number(query?.page) || 1);
     const limit = Math.max(1, Number(query?.limit) || 10);
     const skip = (page - 1) * limit;
-
-    const [total, items] = await Promise.all([
-      this.prisma.interviewStatusHistory.count({ where: historyWhere }),
-      this.prisma.interviewStatusHistory.findMany({
-        where: historyWhere,
-        orderBy: { statusAt: 'desc' },
-        skip,
-        take: limit,
-        include: {
-          changedBy: { select: { id: true, name: true, email: true } },
-        },
-      }),
-    ]);
+    const total = mergedHistories.length;
+    const items = mergedHistories.slice(skip, skip + limit);
 
     return {
       items,
@@ -1631,6 +2144,16 @@ export class InterviewsService {
     const interview = await this.prisma.interview.findUnique({ where: { id } });
     if (!interview) {
       throw new NotFoundException('Interview not found');
+    }
+
+    if (dto.interviewStatus === 'passed' && !dto.subStatus) {
+      dto.subStatus = 'interview_passed';
+    } else if (dto.interviewStatus === 'failed' && !dto.subStatus) {
+      dto.subStatus = 'interview_failed';
+    } else if (dto.interviewStatus === 'backout' && !dto.subStatus) {
+      dto.subStatus = 'interview_backout';
+    } else if (dto.interviewStatus === 'completed' && !dto.subStatus) {
+      dto.subStatus = 'interview_completed';
     }
 
     // Resolve changer's name if provided
@@ -1772,33 +2295,6 @@ export class InterviewsService {
           tx,
         );
 
-        // If candidate passed or subStatus is 'interview_passed', notify admins, system admins, managers, and team leads
-        if (dto.interviewStatus === 'passed' || dto.subStatus === 'interview_passed') {
-          // Use 'interview_passed' as the primary event type if that's the subStatus
-          const eventType = dto.subStatus === 'interview_passed' ? 'interview_passed' : 'CandidateReadyForProcessing';
-          
-          await this.outboxService.publishEvent(
-            eventType,
-            {
-              candidateProjectMapId: updatedInterview.candidateProjectMapId,
-              candidateName,
-              projectName,
-              projectId: updatedInterview.candidateProjectMap.project.id,
-              changedBy: changerName,
-            },
-            tx,
-          );
-
-          // Also trigger a DataSync event for the processing list
-          await this.outboxService.publishEvent(
-            'DataSync',
-            {
-              type: 'ProcessingSummary',
-              message: `Candidate ${candidateName} is now ready for processing`,
-            },
-            tx,
-          );
-        }
       }
 
       return updatedInterview;
@@ -1850,13 +2346,23 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
+                workExperiences: {
+                  select: {
+                    id: true,
+                    startDate: true,
+                    endDate: true,
+                    isCurrent: true,
+                  },
+                },
               },
             },
             project: {
@@ -1917,6 +2423,9 @@ export class InterviewsService {
             },
           },
         },
+        readyForProcessingBy: {
+          select: { id: true, name: true, email: true },
+        },
       },
     });
 
@@ -1924,7 +2433,10 @@ export class InterviewsService {
       throw new NotFoundException('Interview not found');
     }
 
-    return this.formatInterviewCandidateDob(interview);
+    const [enriched] = await this.enrichInterviewsWithCandidateProcessingStatus([
+      this.formatInterviewCandidateDob(interview),
+    ]);
+    return enriched;
   }
 
   async update(id: string, updateInterviewDto: UpdateInterviewDto) {
@@ -1971,13 +2483,23 @@ export class InterviewsService {
                 id: true,
                 firstName: true,
                 lastName: true,
+                candidateCode: true,
                 email: true,
                 mobileNumber: true,
                 profileImage: true,
                 totalExperience: true,
+                experience: true,
                 dateOfBirth: true,
                 highestEducation: true,
                 gender: true,
+                workExperiences: {
+                  select: {
+                    id: true,
+                    startDate: true,
+                    endDate: true,
+                    isCurrent: true,
+                  },
+                },
               },
             },
             project: {
@@ -2006,6 +2528,247 @@ export class InterviewsService {
     });
 
     return this.formatInterviewCandidateDob(updatedInterview);
+  }
+
+  /**
+   * Mark a passed interview as ready for processing (manual coordinator action).
+   */
+  async sendForProcessing(id: string, userId: string) {
+    await this.assertInterviewCoordinator(userId);
+
+    const interview = await this.prisma.interview.findUnique({
+      where: { id },
+      include: {
+        candidateProjectMap: {
+          include: {
+            candidate: {
+              select: { id: true, firstName: true, lastName: true },
+            },
+            project: { select: { id: true, title: true } },
+            recruiter: { select: { id: true, name: true, email: true } },
+            roleNeeded: {
+              select: {
+                roleCatalogId: true,
+                roleCatalog: { select: { id: true } },
+              },
+            },
+          },
+        },
+        project: { select: { id: true, title: true } },
+      },
+    });
+
+    if (!interview) {
+      throw new NotFoundException('Interview not found');
+    }
+
+    const existingOfferLetter =
+      await this.prisma.candidateProjectDocumentVerification.findFirst({
+        where: {
+          candidateProjectMapId: interview.candidateProjectMapId ?? undefined,
+          isDeleted: false,
+          document: {
+            docType: DOCUMENT_TYPE.OFFER_LETTER,
+            isDeleted: false,
+          },
+        },
+      });
+
+    if (interview.outcome !== 'passed') {
+      throw new BadRequestException(
+        'Only interviews with outcome "passed" can be sent for processing',
+      );
+    }
+
+    if (interview.readyForProcessingAt) {
+      throw new BadRequestException(
+        'This interview has already been sent for processing',
+      );
+    }
+
+    const candidateProjectMap = interview.candidateProjectMap;
+    if (!candidateProjectMap) {
+      throw new BadRequestException(
+        'Interview is not linked to a candidate project nomination',
+      );
+    }
+
+    await this.assertCandidateNotAlreadySentForProcessing(
+      candidateProjectMap.candidate.id,
+      id,
+    );
+
+    const changer = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+    const changerName = changer?.name ?? null;
+
+    const candidateName = `${candidateProjectMap.candidate.firstName} ${candidateProjectMap.candidate.lastName}`;
+    const projectName =
+      interview.project?.title || candidateProjectMap.project.title;
+    const projectId =
+      interview.project?.id || candidateProjectMap.project.id;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const sentAt = new Date();
+      const updatedInterview = await tx.interview.update({
+        where: { id },
+        data: {
+          readyForProcessingAt: sentAt,
+          readyForProcessingById: userId,
+        },
+        include: {
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  mobileNumber: true,
+                  profileImage: true,
+                  totalExperience: true,
+                  dateOfBirth: true,
+                  highestEducation: true,
+                  gender: true,
+                },
+              },
+              project: { select: { id: true, title: true } },
+              roleNeeded: {
+                select: {
+                  id: true,
+                  designation: true,
+                  roleCatalog: {
+                    select: { id: true, name: true, label: true, shortName: true },
+                  },
+                },
+              },
+              recruiter: { select: { id: true, name: true, email: true } },
+              mainStatus: true,
+              subStatus: true,
+              documentVerifications: {
+                where: {
+                  isDeleted: false,
+                  document: {
+                    docType: DOCUMENT_TYPE.OFFER_LETTER,
+                    isDeleted: false,
+                  },
+                },
+                select: {
+                  id: true,
+                  status: true,
+                  offerLetterReceivedAt: true,
+                  document: {
+                    select: {
+                      id: true,
+                      fileName: true,
+                      fileUrl: true,
+                      status: true,
+                      uploadedBy: true,
+                      createdAt: true,
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+          project: { select: { id: true, title: true } },
+          readyForProcessingBy: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
+
+      await tx.interviewStatusHistory.create({
+        data: {
+          interviewId: id,
+          interviewType: 'client',
+          candidateProjectMapId: interview.candidateProjectMapId ?? null,
+          previousStatus: interview.outcome ?? 'passed',
+          status: 'sent_for_processing',
+          statusSnapshot: 'Sent for Processing',
+          statusAt: sentAt,
+          changedById: userId,
+          changedByName: changerName,
+          reason: `Sent for processing on ${projectName} project`,
+        },
+      });
+
+      const recruiterId = candidateProjectMap.recruiter?.id;
+
+      await this.outboxService.publishCandidateReadyForProcessing(
+        {
+          candidateProjectMapId: interview.candidateProjectMapId!,
+          candidateId: candidateProjectMap.candidate.id,
+          candidateName,
+          projectName,
+          projectId,
+          recruiterId,
+          changedBy: changerName,
+          changedById: userId,
+        },
+        tx,
+      );
+      const roleCatalogId =
+        candidateProjectMap.roleNeeded?.roleCatalogId ||
+        candidateProjectMap.roleNeeded?.roleCatalog?.id;
+
+      if (
+        !existingOfferLetter &&
+        recruiterId &&
+        interview.candidateProjectMapId
+      ) {
+        await this.documentsService.requestOfferLetterUploadAfterSendForProcessing(
+          {
+            candidateProjectMapId: interview.candidateProjectMapId,
+            candidateId: candidateProjectMap.candidate.id,
+            projectId,
+            recruiterId,
+            roleCatalogId,
+            requesterId: userId,
+            requesterName: changerName,
+            candidateName,
+            projectName,
+          },
+          tx,
+        );
+      }
+
+      return updatedInterview;
+    });
+
+    const [enriched] = await this.enrichInterviewsWithOfferLetterUploaders([
+      updated,
+    ]);
+    return enriched;
+  }
+
+  /**
+   * Bulk send passed interviews for processing.
+   */
+  async bulkSendForProcessing(interviewIds: string[], userId: string) {
+    await this.assertInterviewCoordinator(userId);
+
+    const results: Array<{ id: string; success: boolean; data?: any; error?: string }> = [];
+
+    for (const id of interviewIds) {
+      try {
+        const data = await this.sendForProcessing(id, userId);
+        results.push({ id, success: true, data });
+      } catch (err: any) {
+        results.push({
+          id,
+          success: false,
+          error: err?.message ?? String(err),
+        });
+      }
+    }
+
+    return results;
   }
 
   async remove(id: string) {

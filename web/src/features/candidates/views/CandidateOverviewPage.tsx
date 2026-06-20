@@ -37,8 +37,6 @@ import {
   Calendar,
   Filter,
   FilterX,
-  Edit,
-  Trash2,
   SlidersHorizontal,
   Building2,
   AlertCircle,
@@ -46,37 +44,75 @@ import {
   Repeat,
   ArrowRightLeft,
   ArrowUpRight,
+  ClipboardCheck,
+  GraduationCap,
+  Target,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { useGetCandidateOverviewQuery, useTransferCandidateMutation, useBulkTransferCandidatesMutation } from "@/features/candidates/api";
+import {
+  useGetCandidateOverviewQuery,
+  useGetCandidateOverviewStatsQuery,
+  useTransferCandidateMutation,
+  useBulkTransferCandidatesMutation,
+} from "@/features/candidates/api";
 import { useAppSelector } from "@/app/hooks";
-import { useCan } from "@/hooks/useCan";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ImageViewer } from "@/components/molecules";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
+import RecruiterPerformanceRatingSection from "../components/RecruiterPerformanceRatingSection";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
 import { BulkTransferCandidateDialog } from "../components/BulkTransferCandidateDialog";
 import { UserSelect } from "../components/UserSelect";
 import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
-import { WorkflowStatusDropdown } from "../components/WorkflowStatusDropdown";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
+import { CandidateListIdentityCell } from "@/components/molecules/CandidateListIdentityCell";
+import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
+import { resolveCandidatePassportNumber } from "../utils/candidate-passport.util";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { getCandidateExperienceLabel } from "../utils/experience-display";
+import { ROLE_NAMES,isOperationsRole } from "@/config/role-names";
+import { hasAllCandidatesView } from "@/config/role-capabilities";
+import { useCan } from "@/hooks/useCan";
+import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
+import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
+import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
+import {
+  canOpenOperationsCallModal,
+  getOperationsFollowUpStage,
+} from "../utils/operations-follow-up.util";
+import {
+  WorkflowSubStatusMiniTiles,
+  type WorkflowSubStatusTileStyle,
+} from "../components/WorkflowSubStatusMiniTiles";
 
 export default function CandidateOverviewPage() {
   const navigate = useNavigate();
   const tableRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAppSelector((state) => state.auth);
 
-  const isManagerOrAdmin = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin", "CRE"].includes(role)
-  );
+  const isManagerOrAdmin =
+    hasAllCandidatesView(currentUser?.roles) ||
+    currentUser?.roles?.some((role) =>
+      ["System Admin", ROLE_NAMES.OPERATIONS, "CRE"].includes(role)
+    );
 
   const isRecruiter = currentUser?.roles?.includes("Recruiter");
-  const isCRE = currentUser?.roles?.includes("CRE");
 
-  const canWriteCandidates = useCan("write:candidates") && !isCRE;
+  const isOperationsUser = currentUser?.roles?.some(isOperationsRole) ?? false;
+  const canReadOperationsCallHistory = useCan("read:operations_call_history");
+
   const canTransferCandidates = currentUser?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead", "System Admin"].includes(role)
+    [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter Manager",
+      "Team Head",
+      "Team Lead",
+      "System Admin",
+      ROLE_NAMES.PROJECT_COORDINATOR,
+    ].includes(role)
   );
 
   // Transfer candidate state
@@ -168,14 +204,29 @@ export default function CandidateOverviewPage() {
   ].filter(Boolean).length;
 
   // Fetch live statuses from API only when a workflow tile is active
-  const isWorkflowActive = ["registered", "documentation", "interview", "processing"].includes(filters.status);
-  
-  // Use the new simplified endpoint for sub-statuses for the main stage
-  const activeMainStage = filters.status === 'documentation' ? 'documents' : filters.status;
+  const isWorkflowActive = [
+    "profile_shortlisting",
+    "nominated",
+    "registered",
+    "screening",
+    "interview",
+    "processing",
+  ].includes(filters.status);
+
+  const activeMainStage = (() => {
+    if (filters.status === "registered") {
+      return "documents";
+    }
+    if (filters.status === "profile_shortlisting" || filters.status === "nominated") {
+      return "nominated";
+    }
+    return filters.status;
+  })();
 
   // Main Query
   const requestPayload = {
     ...filters,
+    status: filters.status === "all" ? undefined : filters.status,
     recruiterId: filters.recruiterId === "all" ? undefined : filters.recruiterId,
     gender: filters.gender === "all" ? undefined : filters.gender,
     dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
@@ -188,14 +239,55 @@ export default function CandidateOverviewPage() {
     maxAge: filters.maxAge,
   };
 
+  const {
+    status: _tileStatus,
+    currentStatus: _currentStatus,
+    mainStatus: _mainStatus,
+    subStatus: _subStatus,
+    processingStep: _processingStep,
+    page: _page,
+    limit: _limit,
+    ...statsRequestPayload
+  } = requestPayload;
+
+  const { data: statsResponse } = useGetCandidateOverviewStatsQuery(statsRequestPayload);
   const { data, isLoading, refetch } = useGetCandidateOverviewQuery(requestPayload);
 
+  const {
+    openLogCall,
+    openCallHistory,
+    resolveAssignment,
+    isLoggingCall,
+    handleLogOperationsCall,
+    handleInterestedReassign,
+    handleNotInterestedJunk,
+    callModalCandidate,
+    logCallAttempts,
+    logCallNextAttempt,
+    logCallFollowUpStage,
+    canOpenCallModal,
+    canLogNoAnswerCall,
+    logCallCandidateName,
+    logCallRecruiterName,
+    logCallCurrentStatus,
+    isTransferring: isOperationsTransferring,
+    isMarkingNotInterested,
+    closeCallModal,
+    callModalState,
+  } = useOperationsCallModal({
+    operationsUserId: isOperationsUser ? currentUser?.id : undefined,
+    onLogged: () => refetch(),
+  });
+
   const candidates = data?.data || [];
-  const statsData = data?.stats || {
+  const statsData = statsResponse?.stats || {
     total: 0,
     positive: 0,
+    untouched: 0,
     negative: 0,
     nominated: 0,
+    profileShortlisting: 0,
+    registered: 0,
     interviewAssigned: 0,
     documentReceived: 0,
     medical: 0,
@@ -203,6 +295,57 @@ export default function CandidateOverviewPage() {
     deployed: 0,
   };
   const pagination = data?.pagination || { page: 1, totalPages: 1, total: 0 };
+
+  const registeredSubStatusTiles = [
+    { key: "send_for_verification", icon: FileSearch, color: "text-purple-600", bg: "bg-purple-50", ring: "ring-purple-100" },
+    { key: "documents_verified", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "rejected_documents", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+    { key: "submitted_to_client", icon: Building2, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+  ] as const;
+
+  const registeredSubStatusStatsByKey = Object.fromEntries(
+    (statsData.registeredSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
+  const screeningSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "assigned", icon: ClipboardCheck, color: "text-cyan-600", bg: "bg-cyan-50", ring: "ring-cyan-100" },
+    { key: "scheduled", icon: Calendar, color: "text-teal-600", bg: "bg-teal-50", ring: "ring-teal-100" },
+    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "passed", icon: UserCheck, color: "text-green-600", bg: "bg-green-50", ring: "ring-green-100" },
+    { key: "needs_training", icon: Target, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+    { key: "on_hold", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
+    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+    { key: "training", icon: GraduationCap, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+  ];
+
+  const screeningSubStatusStatsByKey = Object.fromEntries(
+    (statsData.screeningSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
+  const interviewSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "shortlisted", icon: Filter, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+    { key: "not_shortlisted", icon: XCircle, color: "text-orange-600", bg: "bg-orange-50", ring: "ring-orange-100" },
+    { key: "scheduled", icon: Calendar, color: "text-blue-600", bg: "bg-blue-50", ring: "ring-blue-100" },
+    { key: "completed", icon: Clock, color: "text-slate-600", bg: "bg-slate-50", ring: "ring-slate-100" },
+    { key: "passed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "failed", icon: XCircle, color: "text-red-600", bg: "bg-red-50", ring: "ring-red-100" },
+  ];
+
+  const interviewSubStatusStatsByKey = Object.fromEntries(
+    (statsData.interviewSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
+
+  const processingSubStatusTiles: readonly WorkflowSubStatusTileStyle[] = [
+    { key: "transferred", icon: ArrowRightLeft, color: "text-indigo-600", bg: "bg-indigo-50", ring: "ring-indigo-100" },
+    { key: "in_progress", icon: Repeat, color: "text-fuchsia-600", bg: "bg-fuchsia-50", ring: "ring-fuchsia-100" },
+    { key: "completed", icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50", ring: "ring-emerald-100" },
+    { key: "hold", icon: Clock, color: "text-amber-600", bg: "bg-amber-50", ring: "ring-amber-100" },
+    { key: "cancelled", icon: XCircle, color: "text-rose-600", bg: "bg-rose-50", ring: "ring-rose-100" },
+  ];
+
+  const processingSubStatusStatsByKey = Object.fromEntries(
+    (statsData.processingSubStatus?.tiles ?? []).map((tile) => [tile.key, tile]),
+  );
 
   const accentStyles: Record<string, { card: string; icon: string; iconBg: string; value: string; ring: string; dot: string }> = {
     blue:    { card: "from-blue-50 via-white to-blue-50/30 border-blue-100",       icon: "text-blue-600",    iconBg: "bg-blue-100",    value: "text-blue-700",    ring: "ring-blue-400/50",    dot: "bg-blue-500"    },
@@ -213,26 +356,33 @@ export default function CandidateOverviewPage() {
     lime:    { card: "from-lime-50 via-white to-lime-50/30 border-lime-100",       icon: "text-lime-700",    iconBg: "bg-lime-100",    value: "text-lime-700",    ring: "ring-lime-400/50",    dot: "bg-lime-500"    },
     fuchsia: { card: "from-fuchsia-50 via-white to-fuchsia-50/30 border-fuchsia-100", icon: "text-fuchsia-600", iconBg: "bg-fuchsia-100", value: "text-fuchsia-700", ring: "ring-fuchsia-400/50", dot: "bg-fuchsia-500" },
     teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
+    cyan:    { card: "from-cyan-50 via-white to-cyan-50/30 border-cyan-100",       icon: "text-cyan-600",    iconBg: "bg-cyan-100",    value: "text-cyan-700",    ring: "ring-cyan-400/50",    dot: "bg-cyan-500"    },
+    amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",     icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
   };
 
   const statTiles = [
-    { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",           statusFilter: "all"           },
-    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold",  statusFilter: "positive"      },
-    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR",        statusFilter: "negative"      },
-    { label: "Registered",          value: statsData.registered ?? statsData.nominated,                 icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",     statusFilter: "registered"    },
-    { label: "Documentation",       value: statsData.documentation ?? statsData.documentReceived,       icon: FileSearch,accent: "purple",  subtitle: "Main status: Documents",    statusFilter: "documentation" },
-    { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Main status: Interview",    statusFilter: "interview"     },
+    { label: "Total Candidates",    value: statsData.total,                                             icon: Users,     accent: "blue",    subtitle: "All candidates",                    statusFilter: "all"           },
+    { label: "Untouched",           value: statsData.untouched ?? 0,                                    icon: UserCheck, accent: "amber",   subtitle: "Not yet contacted",               statusFilter: "untouched"     },
+    { label: "Positive Candidates", value: statsData.positive,                                          icon: UserCheck, accent: "emerald", subtitle: "Interested/Future/On Hold/Call Back — stays after nomination", statusFilter: "positive"      },
+    { label: "Negative Candidates", value: statsData.negative,                                          icon: XCircle,   accent: "orange",  subtitle: "Not Interested/RNR/Not Eligible/Other Enquiry", statusFilter: "negative"      },
+    { label: "Profile Shortlisting", value: statsData.profileShortlisting ?? statsData.nominated,     icon: Filter,    accent: "indigo",  subtitle: "Nominated to projects",           statusFilter: "profile_shortlisting" },
+    { label: "Registered",           value: statsData.registered ?? 0,                                  icon: FileSearch,accent: "purple",  subtitle: "CV/docs sent for verification",   statusFilter: "registered"         },
+    { label: "Screening",           value: statsData.screening ?? 0,                                    icon: ClipboardCheck, accent: "cyan", subtitle: "Screening & training",          statusFilter: "screening"     },
+    { label: "Interview",           value: statsData.interview ?? statsData.interviewAssigned,          icon: Phone,     accent: "lime",    subtitle: "Client interview pipeline",     statusFilter: "interview"     },
     { label: "Processing",          value: statsData.processing ?? (statsData.medical + statsData.visa),icon: Repeat,    accent: "fuchsia", subtitle: "Main status: Processing",   statusFilter: "processing"    },
     { label: "Deployed",            value: statsData.deployed,                                          icon: Building2, accent: "teal",    subtitle: "Placements / Hired",        statusFilter: "deployed"      },
   ];
 
   const handleTileClick = (statusFilter?: string) => {
     setFilters((prev) => {
-      const isWorkflowStatus = statusFilter && ["documentation", "interview", "processing"].includes(statusFilter);
+      const isWorkflowStatus =
+        statusFilter &&
+        ["registered", "screening", "interview", "processing"].includes(statusFilter);
       let mainStatus = undefined;
-      
+
       if (isWorkflowStatus) {
-        if (statusFilter === 'documentation') mainStatus = 'documents';
+        if (statusFilter === "registered") mainStatus = "documents";
+        else if (statusFilter === "screening") mainStatus = "interview";
         else mainStatus = statusFilter;
       }
       
@@ -391,6 +541,15 @@ export default function CandidateOverviewPage() {
           bgColor: "bg-amber-50",
           borderColor: "border-amber-200",
         };
+      case "call back":
+      case "call_back":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-cyan-700",
+          bgColor: "bg-cyan-50",
+          borderColor: "border-cyan-200",
+        };
       case "qualified":
         return {
           variant: "outline" as const,
@@ -441,10 +600,14 @@ export default function CandidateOverviewPage() {
     <div className="min-h-screen">
       <div className="w-full mx-auto space-y-6 mt-2 px-6">
         {/* Welcome Header */}
-        <TypedHeader 
-          userName={displayedRecruiterName || currentUser?.name || "Recruiter"} 
+        <DashboardWelcomeHeader
+          userName={displayedRecruiterName || currentUser?.name || "Recruiter"}
           subtitle={Array.isArray(currentUser?.roles) ? currentUser.roles.join(", ") : ""}
         />
+
+        {isRecruiter && filters.recruiterId === currentUser?.id && (
+          <RecruiterPerformanceRatingSection />
+        )}
 
         {/* Performance Chart Section - Only if a specific recruiter is selected or it's a recruiter's own dashboard */}
         {/* {(filters.recruiterId !== "all") && (
@@ -458,8 +621,71 @@ export default function CandidateOverviewPage() {
           />
         )} */}
 
+        {/* Search & Filter Bar */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                placeholder="Search candidates by name, email or role..."
+                value={filters.search}
+                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
+                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(isManagerOrAdmin && !isRecruiter) && (
+                <div className="w-full sm:w-[200px]">
+                  <UserSelect
+                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
+                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
+                    placeholder="All Recruiters"
+                    role="Recruiter"
+                    allowClear={true}
+                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
+                  />
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
+                >
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
+
+              <Button
+                onClick={() => navigate("/candidates/create")}
+                className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 font-medium shrink-0"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Candidate</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Dashboard Tiles */}
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {statTiles.map((stat, i) => {
             const Icon = stat.icon;
             const s = accentStyles[stat.accent];
@@ -498,66 +724,11 @@ export default function CandidateOverviewPage() {
           })}
         </div>
 
-        {/* Search & Filter Bar */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 p-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-              <Input
-                placeholder="Search candidates by name, email or role..."
-                value={filters.search}
-                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value, page: 1 }))}
-                className="h-11 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
-              />
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              {(isManagerOrAdmin && !isRecruiter) && (
-                <div className="w-full sm:w-[200px]">
-                  <UserSelect
-                    value={filters.recruiterId === "all" ? "" : filters.recruiterId}
-                    onChange={(val) => setFilters(f => ({ ...f, recruiterId: val || "all", page: 1 }))}
-                    placeholder="All Recruiters"
-                    role="Recruiter"
-                    allowClear={true}
-                    className="h-11 shadow-none bg-white border-slate-200 rounded-xl focus:ring-blue-500/10"
-                  />
-                </div>
-              )}
-              
-              <Button
-                variant="outline"
-                onClick={() => setIsFilterSheetOpen(true)}
-                className="flex items-center gap-2 h-11 px-4 rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-medium text-slate-600"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                <span>Advanced Filters</span>
-                {activeFilterCount > 0 && (
-                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
-                    {activeFilterCount}
-                  </Badge>
-                )}
-              </Button>
-
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  onClick={handleResetFilters}
-                  className="h-11 px-4 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-all font-medium gap-2"
-                >
-                  <FilterX className="h-4 w-4" />
-                  <span>Reset</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Candidates Table */}
         <div ref={tableRef} className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           {/* Table Header Bar */}
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="shrink-0 rounded-xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-2.5 shadow-md">
                   <Users className="h-5 w-5 text-white" />
@@ -567,14 +738,43 @@ export default function CandidateOverviewPage() {
                   <p className="text-xs text-gray-500 mt-0.5">{pagination.total} candidate{pagination.total !== 1 ? "s" : ""} found</p>
                 </div>
               </div>
+              {filters.status === "registered" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={registeredSubStatusTiles}
+                  statsByKey={registeredSubStatusStatsByKey}
+                  gridClassName="grid-cols-2 sm:grid-cols-4 lg:max-w-xl"
+                  selectedSubStatus={filters.subStatus}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {filters.status === "screening" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={screeningSubStatusTiles}
+                  statsByKey={screeningSubStatusStatsByKey}
+                  gridClassName="grid-cols-4 sm:grid-cols-8 lg:max-w-4xl"
+                  selectedSubStatus={filters.subStatus}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {filters.status === "interview" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={interviewSubStatusTiles}
+                  statsByKey={interviewSubStatusStatsByKey}
+                  gridClassName="grid-cols-3 sm:grid-cols-6 lg:max-w-3xl"
+                  selectedSubStatus={filters.subStatus}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
+              {filters.status === "processing" && (
+                <WorkflowSubStatusMiniTiles
+                  tileStyles={processingSubStatusTiles}
+                  statsByKey={processingSubStatusStatsByKey}
+                  gridClassName="grid-cols-3 sm:grid-cols-5 lg:max-w-3xl"
+                  selectedSubStatus={filters.subStatus}
+                  onSubStatusSelect={handleSubStatusClick}
+                />
+              )}
               <div className="flex items-center gap-2 shrink-0">
-                {["processing"].includes(filters.status) && (
-                  <WorkflowStatusDropdown
-                    mainStatusName={activeMainStage as string}
-                    selectedSubStatus={filters.subStatus}
-                    onSubStatusSelect={handleSubStatusClick}
-                  />
-                )}
                 {canTransferCandidates && selectedCandidateIds.size > 0 && (
                   <Button
                     onClick={() => setBulkTransferDialog(true)}
@@ -585,13 +785,6 @@ export default function CandidateOverviewPage() {
                     Transfer ({selectedCandidateIds.size})
                   </Button>
                 )}
-                <Button
-                  onClick={() => navigate("/candidates/create")}
-                  size="sm"
-                  className="h-9 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-1.5"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add Candidate
-                </Button>
               </div>
             </div>
           </div>
@@ -619,7 +812,10 @@ export default function CandidateOverviewPage() {
                         />
                       </TableHead>
                     )}
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Experience</TableHead>
+                    <TableHead className="h-10 px-4 min-w-[7.5rem] text-[10px] font-bold uppercase tracking-widest text-slate-500">Passport</TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Recruiter</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Created By</TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -629,7 +825,6 @@ export default function CandidateOverviewPage() {
                       Profile
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">Last Updated</TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                     <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -637,12 +832,12 @@ export default function CandidateOverviewPage() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i} className="animate-pulse">
-                        <TableCell colSpan={canTransferCandidates ? 9 : 8} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
+                        <TableCell colSpan={canTransferCandidates ? 11 : 10} className="px-4 py-3"><div className="h-10 bg-slate-100 rounded" /></TableCell>
                       </TableRow>
                     ))
                   ) : candidates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canTransferCandidates ? 9 : 8} className="h-64 text-center">
+                      <TableCell colSpan={canTransferCandidates ? 11 : 10} className="h-64 text-center">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="h-16 w-16 rounded-2xl bg-slate-100 flex items-center justify-center">
                             <UserCheck className="h-8 w-8 text-slate-300" />
@@ -661,7 +856,22 @@ export default function CandidateOverviewPage() {
                         // Determine active recruiter assignment
                         const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const createdBy = (candidate as any).createdBy || activeAssignment?.createdByUser || null;
+                      const createdBy =
+                        (candidate as any).createdBy ||
+                        activeAssignment?.createdByUser ||
+                        activeAssignment?.assignedByUser ||
+                        null;
+                      const operations = getCandidateOperationsState(candidate);
+                      const operationsAssignment = resolveAssignment(candidate);
+                      const showOperationsFollowUp =
+                        Boolean(operationsAssignment) &&
+                        (isOperationsUser ||
+                          operations.isHandledByOperations ||
+                          canReadOperationsCallHistory);
+                      const followUpStage = getOperationsFollowUpStage(operationsAssignment);
+                      const canLogCall =
+                        isOperationsUser &&
+                        canOpenOperationsCallModal(followUpStage);
 
                       return (
                         <TableRow
@@ -691,47 +901,104 @@ export default function CandidateOverviewPage() {
                             </TableCell>
                           )}
                           {/* Candidate */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-3">
+                          <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                            <div className="flex items-start gap-3">
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
                                 src={candidate.profileImage || null}
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-10 w-10 rounded-full"
+                                className="h-10 w-10 shrink-0 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true}
                               />
-                              <div className="flex-1 min-w-0">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/candidates/${candidate.id}`);
-                                  }}
-                                  className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-xs"
-                                >
-                                  {candidate.firstName} {candidate.lastName}
-                                </button>
-                                <div className="text-[11px] text-slate-500 mt-0.5 font-medium truncate">
-                                  {candidate.currentRole || ""}
-                                </div>
-                                <div className="text-[11px] text-slate-500 mt-1.5 space-y-0.5">
-                                  {candidate.email && (
-                                    <div className="flex items-center gap-1.5">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="text-gray-700 truncate">{candidate.email}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1.5">
-                                    <Phone className="h-3 w-3 text-gray-400" />
-                                    <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
-                                  </div>
-                                </div>
+                              <div className="min-w-0 flex-1">
+                                <CandidateListIdentityCell
+                                  firstName={candidate.firstName}
+                                  lastName={candidate.lastName}
+                                  candidateCode={candidate.candidateCode}
+                                  currentRole={candidate.currentRole}
+                                  isHandledByOperations={operations.isHandledByOperations}
+                                  isOperationsReassigned={operations.isOperationsReassigned}
+                                  operationsStatusNote={operations.operationsStatusNote}
+                                  operationsStatusName={operations.operationsStatusName}
+                                  onNameClick={() =>
+                                    navigate(`/candidates/${candidate.id}`)
+                                  }
+                                  nameClassName="text-xs font-semibold text-gray-900"
+                                  codeClassName="text-[11px] text-muted-foreground font-mono"
+                                />
                               </div>
                             </div>
                           </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium tabular-nums">
+                              <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" aria-hidden />
+                              <span>{getCandidateExperienceLabel(candidate)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="px-4 py-3 min-w-[7.5rem] align-middle">
+                            <TruncatedPassportText
+                              passportNumber={resolveCandidatePassportNumber(
+                                candidate,
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-center">
+                            <div className="flex flex-col items-stretch gap-2">
+                              <div className="flex items-center justify-center gap-1.5 w-full">
+                              {(() => {
+                                const phoneDigits = formatPhoneForLink(candidate);
+                                return (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
+                                      onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
+                                      disabled={!phoneDigits}
+                                      title="WhatsApp"
+                                    >
+                                      <FaWhatsapp className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
+                                      onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
+                                      disabled={!phoneDigits}
+                                      title="Call"
+                                    >
+                                      <Phone className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                );
+                              })()}
+                            </div>
 
+                            <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                              {candidate.email ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Mail className="h-3 w-3 text-gray-400" />
+                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                    {candidate.email}
+                                  </span>
+                                </div>
+                              ) : null}
+                              {(candidate.countryCode?.trim() ||
+                                candidate.mobileNumber?.trim()) && (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-gray-400" />
+                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                    {[candidate.countryCode, candidate.mobileNumber]
+                                      .filter(Boolean)
+                                      .join(" ")
+                                      .trim()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          </TableCell>
                           {/* Recruiter */}
                           <TableCell className="px-4 py-3">
                             <div className="text-xs">
@@ -780,8 +1047,10 @@ export default function CandidateOverviewPage() {
                                   className="h-7 px-3 bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800 font-bold transition-all shadow-sm rounded-full gap-1.5"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (filters.status === "documentation") {
+                                    if (filters.status === "registered") {
                                       navigate(`/candidates/${candidate.id}/documentation-workflow`);
+                                    } else if (filters.status === "screening") {
+                                      navigate(`/candidates/${candidate.id}/screening-workflow`);
                                     } else if (filters.status === "interview") {
                                       navigate(`/candidates/${candidate.id}/interview-workflow`);
                                     } else if (filters.status === "processing") {
@@ -798,16 +1067,28 @@ export default function CandidateOverviewPage() {
                                 </Button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
-                                  <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-2">
+                                  <div className={`p-1 rounded-full ${statusInfo.bgColor}`}>
+                                    <StatusIcon className={`h-3.5 w-3.5 ${statusInfo.textColor.replace("700", "600")}`} />
+                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
+                                  >
+                                    {statusName || "Unknown"}
+                                  </Badge>
                                 </div>
-                                <Badge
-                                  variant="outline"
-                                  className={`${statusInfo.textColor} ${statusInfo.bgColor} ${statusInfo.borderColor} border font-medium text-[10px] px-2 py-0.5`}
-                                >
-                                  {statusName || "Unknown"}
-                                </Badge>
+                                {showOperationsFollowUp && (
+                                  <OperationsCallFollowUpIndicators
+                                    assignment={operationsAssignment}
+                                    canLogCall={canLogCall}
+                                    onLogCall={() => openLogCall(candidate)}
+                                    onViewHistory={() => openCallHistory(candidate)}
+                                    showLogCallButton={isOperationsUser}
+                                    isLoggingCall={isLoggingCall}
+                                  />
+                                )}
                               </div>
                             )}
                           </TableCell>
@@ -825,35 +1106,7 @@ export default function CandidateOverviewPage() {
                           </TableCell>
 
                           {/* Contact */}
-                          <TableCell className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {(() => {
-                                const phoneDigits = formatPhoneForLink(candidate);
-                                return (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && window.open(`https://wa.me/${phoneDigits}`, "_blank")}
-                                      disabled={!phoneDigits}
-                                      title="WhatsApp"
-                                    >
-                                      <FaWhatsapp className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm transition-all"
-                                      onClick={() => phoneDigits && (window.location.href = `tel:${phoneDigits}`)}
-                                      disabled={!phoneDigits}
-                                      title="Call"
-                                    >
-                                      <Phone className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </TableCell>
+                       
 
                           {/* Actions */}
                           <TableCell className="px-4 py-3 text-right">
@@ -869,15 +1122,18 @@ export default function CandidateOverviewPage() {
                                 <DropdownMenuItem onClick={() => navigate(`/candidates/${candidate.id}`)}>
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
-                                {canWriteCandidates && (
-                                  <>
-                                    <DropdownMenuItem onClick={() => navigate(`/candidates/${candidate.id}/edit`)}>
-                                      <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-500">
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                  </>
+                                {showOperationsFollowUp && canLogCall && (
+                                  <DropdownMenuItem
+                                    onClick={() => openLogCall(candidate)}
+                                    className="text-green-700"
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" /> Log Call
+                                  </DropdownMenuItem>
+                                )}
+                                {showOperationsFollowUp && (
+                                  <DropdownMenuItem onClick={() => openCallHistory(candidate)}>
+                                    <Clock className="mr-2 h-4 w-4" /> View Call History
+                                  </DropdownMenuItem>
                                 )}
                                 {canTransferCandidates && (
                                   <>
@@ -986,6 +1242,26 @@ export default function CandidateOverviewPage() {
         }
         onConfirm={handleBulkTransfer}
         isLoading={isBulkTransferring}
+      />
+
+      <LogOperationsCallModal
+        isOpen={!!callModalState}
+        onClose={closeCallModal}
+        candidateId={callModalCandidate?.id}
+        candidateName={logCallCandidateName}
+        callAttempts={logCallAttempts}
+        nextAttempt={logCallNextAttempt}
+        followUpStage={logCallFollowUpStage}
+        canLog={!!canOpenCallModal}
+        canLogNoAnswer={!!canLogNoAnswerCall}
+        isSubmitting={isLoggingCall}
+        isSubmittingReassign={isOperationsTransferring}
+        isSubmittingJunk={isMarkingNotInterested}
+        currentRecruiterName={logCallRecruiterName}
+        currentStatus={logCallCurrentStatus}
+        onConfirm={handleLogOperationsCall}
+        onReassign={handleInterestedReassign}
+        onMarkNotInterested={handleNotInterestedJunk}
       />
     </div>
   );

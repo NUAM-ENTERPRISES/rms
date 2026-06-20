@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { clearCredentials } from "@/features/auth/authSlice";
@@ -20,6 +20,7 @@ import { LogoutSuccess } from "@/components/organisms/LogoutSuccess";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { useGetProfileQuery } from "@/features/profile/api";
 
 export default function UserMenu() {
   const navigate = useNavigate();
@@ -29,32 +30,34 @@ export default function UserMenu() {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
 
-  if (!user) return null;
+  const { data: profileData } = useGetProfileQuery(undefined, {
+    skip: !user,
+  });
+  const employeeCode = profileData?.data?.employeeCode ?? null;
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await dispatch(authApi.endpoints.logout.initiate()).unwrap();
-    } 
-    catch (error) {
-      
+    } catch (error) {
       toast.error("Failed to log out from server. Please try again.");
       console.error("Logout API error:", error);
-      // Ignore logout API errors; session is cleared below regardless.
     }
     dispatch(clearCredentials());
     dispatch(baseApi.util.resetApiState());
-    toast.success("Logged out successfully");
     navigate("/login");
-  };
+    setShowLogoutSuccess(false);
+  }, [dispatch, navigate]);
+
+  const handleLogoutTransitionComplete = useCallback(() => {
+    void handleLogout();
+  }, [handleLogout]);
 
   const handleConfirmLogout = () => {
     setIsLogoutDialogOpen(false);
     setShowLogoutSuccess(true);
-
-    window.setTimeout(() => {
-      handleLogout();
-    }, 700);
   };
+
+  if (!user) return null;
 
   const handleProfile = () => {
     navigate("/profile");
@@ -126,6 +129,16 @@ export default function UserMenu() {
               {user.name}
             </p>
             <p className="text-xs text-gray-500 leading-none">{user.email}</p>
+            {employeeCode?.trim() ? (
+              <div className="pt-1">
+                <Badge
+                  variant="outline"
+                  className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200 w-fit"
+                >
+                  {employeeCode}
+                </Badge>
+              </div>
+            ) : null}
             {/* Role badges */}
             {user.roles.includes("CEO") && (
               <Badge variant="destructive" className="text-xs w-fit mt-1">
@@ -216,7 +229,11 @@ export default function UserMenu() {
         cancelText="Cancel"
         variant="destructive"
       />
-      <LogoutSuccess isVisible={showLogoutSuccess} />
+      <LogoutSuccess
+        isVisible={showLogoutSuccess}
+        userName={user.name}
+        onComplete={handleLogoutTransitionComplete}
+      />
     </DropdownMenu>
   );
 }

@@ -7,6 +7,7 @@ export {
   useDeleteDocumentMutation,
   useVerifyDocumentMutation,
   useRequestResubmissionMutation,
+  useRequestMissingDocumentUploadMutation,
   useGetDocumentStatsQuery,
   useGetDocumentSummaryQuery,
 } from "./api";

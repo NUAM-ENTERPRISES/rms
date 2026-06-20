@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Mail,
+  Phone,
   X,
   Search,
   CalendarDays,
@@ -22,13 +23,16 @@ import {
   Eye,
   Users,
   ExternalLink,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion } from "framer-motion";
-import { useCan } from "@/hooks/useCan";
+import { useCan, useHasRole } from "@/hooks/useCan";
 import { ImageViewer } from "@/components/molecules/ImageViewer";
-import TypedHeader from "@/components/molecules/TypedHeader";
+import DashboardWelcomeHeader from "@/components/molecules/DashboardWelcomeHeader";
 import ReviewInterviewModal from "@/components/molecules/ReviewInterviewModal";
 import CompleteInterviewModal from "@/components/molecules/CompleteInterviewModal";
 import ProjectDetailsModal from "@/components/molecules/ProjectDetailsModal";
@@ -37,6 +41,22 @@ import {
   ArrowUpRight,
   SlidersHorizontal,
 } from "lucide-react";
+import { OfferLetterBadge } from "../components/OfferLetterBadge";
+import {
+  getOfferLetterOverrideKey,
+  getOfferLetterUploaderName,
+  getOfferLetterUrlFromUpload,
+  hasOfferLetter,
+  resolveOfferLetterFileUrl,
+} from "../utils/offerLetter";
+import {
+  buildCandidateSentForProcessingLookup,
+  canSendInterviewForProcessing,
+  getCandidateSentViaAnotherProjectTitle,
+  getInterviewCandidateId,
+  isCandidateSentViaAnotherProject,
+  shouldHidePassedInterviewReviewOutcome,
+} from "../utils/sendForProcessing";
 import {
   useGetInterviewsQuery,
   useUpdateClientDecisionMutation,
@@ -49,7 +69,16 @@ import {
   useGetShortlistedQuery,
   useGetNotShortlistedQuery,
   useCreateBulkInterviewsMutation,
+  useSendForProcessingMutation,
+  useSendBulkForProcessingMutation,
 } from "../api";
+import { OfferLetterUploadModal } from "@/features/documents/components/OfferLetterUploadModal";
+import { PDFViewer } from "@/components/molecules/PDFViewer";
+import {
+  SendForProcessingModal,
+  mapInterviewToSendForProcessingCandidate,
+  type SendForProcessingCandidate,
+} from "../components/SendForProcessingModal";
 import { useGetScreeningsQuery } from "@/features/screening-coordination/interviews/data";
 import { useGetProjectQuery } from "@/features/projects/api";
 import ScheduleInterviewDialog from "../components/ScheduleInterviewDialog";
@@ -60,6 +89,7 @@ import { BulkScheduleInterviewModal } from "../components/BulkScheduleInterviewM
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FaWhatsapp } from "react-icons/fa";
 
 type TileDef = {
   key: string;
@@ -237,9 +267,26 @@ const STATUS_BADGE: Record<
   },
 };
 
+function formatPhoneForLink(candidate: {
+  countryCode?: string | null;
+  mobileNumber?: string | null;
+  mobile?: string | null;
+  contact?: string | null;
+}) {
+  const raw =
+    String(candidate?.countryCode ?? "") +
+    String(candidate?.mobileNumber ?? candidate?.mobile ?? candidate?.contact ?? "");
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
+
 export default function InterviewsPage() {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
+  const isInterviewCoordinator = useHasRole("Interview Coordinator");
+  const isRecruiter = useHasRole("Recruiter");
+  const canUploadOfferLetterOnPassedInterview =
+    isInterviewCoordinator || isRecruiter;
 
   // Basic search & filter states
   const [activeFilter, setActiveFilter] = useState("shortlistPending");
@@ -264,6 +311,7 @@ export default function InterviewsPage() {
 
   // Date filter state
   const [dateRange, setDateRange] = useState<string>("all");
+  const [showSentForProcessing, setShowSentForProcessing] = useState(false);
 
   const { data: summaryStatsData, refetch: refetchStats } = useGetSummaryStatsQuery();
 
@@ -284,6 +332,12 @@ export default function InterviewsPage() {
             activeFilter === "interviewRejected" ? "failed" : 
             activeFilter === "interviewBackout" ? "backout" : 
             activeFilter === "interviewScheduled" ? "scheduled" : undefined,
+    readyForProcessingStatus:
+      activeFilter === "interviewPassed" &&
+      isInterviewCoordinator &&
+      showSentForProcessing
+        ? "sent"
+        : undefined,
   }, { skip: !["interviewScheduled", "interviewCompleted", "interviewPassed", "interviewRejected", "interviewBackout"].includes(activeFilter) });
 
   const {
@@ -551,6 +605,50 @@ export default function InterviewsPage() {
     screeningOnHoldData,
   ]);
 
+  const candidateSentForProcessingLookup = useMemo(
+    () => buildCandidateSentForProcessingLookup(candidates),
+    [candidates],
+  );
+
+  const sendablePassedInterviewIds = useMemo(() => {
+    if (activeFilter !== "interviewPassed") return [];
+
+    return candidates
+      .filter((item) =>
+        canSendInterviewForProcessing(item, candidateSentForProcessingLookup),
+      )
+      .map((item) => item.id);
+  }, [activeFilter, candidates, candidateSentForProcessingLookup]);
+
+  useEffect(() => {
+    if (activeFilter !== "interviewPassed") return;
+
+    setOfferLetterOverrides((prev) => {
+      let changed = false;
+      const next = { ...prev };
+
+      for (const item of candidates) {
+        const serverUrl = item.offerLetterData?.document?.fileUrl;
+        if (!serverUrl) continue;
+
+        const key = getOfferLetterOverrideKey(item);
+        if (next[key] !== serverUrl) {
+          next[key] = serverUrl;
+          changed = true;
+        }
+
+        const legacyCandidateId =
+          item.candidateProjectMap?.candidate?.id || item.candidate?.id;
+        if (legacyCandidateId && next[legacyCandidateId] !== serverUrl) {
+          delete next[legacyCandidateId];
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [activeFilter, candidates]);
+
   const meta = useMemo(() => {
     if (activeFilter === "shortlistPending") {
       return (shortlistPendingData as any)?.data?.pagination;
@@ -639,6 +737,33 @@ export default function InterviewsPage() {
   const { data: projectDetailData } = useGetProjectQuery(selectedProjectId as string, {
     skip: !selectedProjectId,
   });
+
+  const [offerLetterModal, setOfferLetterModal] = useState<{
+    isOpen: boolean;
+    candidateId: string;
+    candidateName: string;
+    projectId: string;
+    projectTitle: string;
+    roleCatalogId: string;
+    roleDesignation: string;
+    existingFileUrl?: string;
+    isAlreadyUploaded?: boolean;
+  } | null>(null);
+  const [offerLetterOverrides, setOfferLetterOverrides] = useState<Record<string, string>>({});
+
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({ isOpen: false, fileUrl: "", fileName: "" });
+
+  const [sendForProcessing, { isLoading: isSendingForProcessing }] = useSendForProcessingMutation();
+  const [sendBulkForProcessing, { isLoading: isBulkSendingForProcessing }] = useSendBulkForProcessingMutation();
+  const [sendForProcessingModal, setSendForProcessingModal] = useState<{
+    mode: "single" | "bulk";
+    candidates: SendForProcessingCandidate[];
+    primaryInterviewId?: string;
+  } | null>(null);
 
   const handleClientDecision = async (decision: "shortlisted" | "not_shortlisted", reason: string) => {
     if (!selectedShortlisting) return;
@@ -755,12 +880,134 @@ export default function InterviewsPage() {
     }
   };
 
+  const openOfferLetterModal = (item: any) => {
+    const candidateProjectMap = item.candidateProjectMap || item;
+    const candidate = candidateProjectMap?.candidate || item.candidate;
+    const project = candidateProjectMap?.project || item.project;
+    const roleCatalogId =
+      candidateProjectMap?.roleNeeded?.roleCatalog?.id ||
+      candidateProjectMap?.roleNeeded?.roleCatalogId;
+    const candidateId = candidate?.id;
+    const projectId = project?.id || item.projectId;
+
+    if (!candidateId || !projectId || !roleCatalogId) {
+      toast.error("Missing project or role information for offer letter upload");
+      return;
+    }
+
+    const existingFileUrl = resolveOfferLetterFileUrl(item, offerLetterOverrides);
+
+    setOfferLetterModal({
+      isOpen: true,
+      candidateId,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      projectId,
+      projectTitle: project.title || "Project",
+      roleCatalogId,
+      roleDesignation: candidateProjectMap?.roleNeeded?.designation || "Role",
+      existingFileUrl,
+      isAlreadyUploaded: isRecruiter
+        ? false
+        : hasOfferLetter(item, offerLetterOverrides),
+    });
+  };
+
+  const toSendForProcessingCandidate = (item: any): SendForProcessingCandidate =>
+    mapInterviewToSendForProcessingCandidate(item, offerLetterOverrides);
+
+  const openSendForProcessingModal = (item: any) => {
+    if (!canSendInterviewForProcessing(item, candidateSentForProcessingLookup)) {
+      return;
+    }
+
+    const candidateId = getInterviewCandidateId(item);
+    const relatedOnPage = candidates.filter(
+      (candidate) =>
+        getInterviewCandidateId(candidate) === candidateId &&
+        canSendInterviewForProcessing(candidate, candidateSentForProcessingLookup),
+    );
+    const orderedItems = [
+      item,
+      ...relatedOnPage.filter((candidate) => candidate.id !== item.id),
+    ];
+
+    setSendForProcessingModal({
+      mode: "single",
+      primaryInterviewId: item.id,
+      candidates: orderedItems.map(toSendForProcessingCandidate),
+    });
+  };
+
+  const openBulkSendForProcessingModal = () => {
+    const unsent = candidates.filter(
+      (item) =>
+        selectedBulkIds.includes(item.id) &&
+        canSendInterviewForProcessing(item, candidateSentForProcessingLookup),
+    );
+
+    if (unsent.length === 0) {
+      toast.error("No unsent interviews selected");
+      return;
+    }
+
+    setSendForProcessingModal({
+      mode: "bulk",
+      candidates: unsent.map(toSendForProcessingCandidate),
+    });
+  };
+
+  const handleConfirmSendForProcessing = async (selectedInterviewIds: string[]) => {
+    if (!sendForProcessingModal || selectedInterviewIds.length === 0) return;
+
+    try {
+      if (selectedInterviewIds.length === 1) {
+        await sendForProcessing(selectedInterviewIds[0]).unwrap();
+        toast.success("Candidate sent for processing");
+      } else {
+        const res = await sendBulkForProcessing({ interviewIds: selectedInterviewIds }).unwrap();
+        const results = res?.data ?? [];
+        const succeeded = results.filter((r) => r.success).length;
+        const failed = results.filter((r) => !r.success).length;
+
+        if (failed > 0) {
+          toast.error(`Sent ${succeeded}, failed ${failed}`);
+        } else {
+          toast.success(`${succeeded} nomination(s) sent for processing`);
+        }
+        setSelectedBulkIds([]);
+      }
+
+      setSendForProcessingModal(null);
+      refetchCurrent();
+      refetchStats();
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to send for processing");
+    }
+  };
+
   useEffect(() => {
     if (activeFilter !== "shortlistPending") {
       setSelectedBulkIds([]);
       setBulkDecisionModalOpen(false);
     }
   }, [activeFilter]);
+
+  const sendablePassedInterviewIdsKey = sendablePassedInterviewIds.join("|");
+
+  useEffect(() => {
+    if (activeFilter !== "interviewPassed") return;
+
+    setSelectedBulkIds((prev) => {
+      const next = prev.filter((id) => sendablePassedInterviewIds.includes(id));
+      if (
+        next.length === prev.length &&
+        next.every((id, index) => id === prev[index])
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [activeFilter, showSentForProcessing, sendablePassedInterviewIdsKey, sendablePassedInterviewIds]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -777,8 +1024,8 @@ export default function InterviewsPage() {
     <div className="min-h-screen">
       <div className="w-full space-y-4 mt-2 px-1">
         {/* ── Page Header ── */}
-        <TypedHeader 
-          userName={user?.name || "Recruiter"} 
+        <DashboardWelcomeHeader
+          userName={user?.name || "Recruiter"}
           subtitle="Orchestrate every panel with clarity and track candidate progress"
         />
 
@@ -826,11 +1073,11 @@ export default function InterviewsPage() {
 
         {/* ── Candidates Table ── */}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white px-4 sm:px-6 py-4">
+            <div className="flex flex-col gap-3 lg:gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+                <div className="relative min-w-0 flex-1 w-full group">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <Input
                     placeholder="Search candidates by name, project, or role..."
                     value={search}
@@ -838,41 +1085,73 @@ export default function InterviewsPage() {
                       setSearch(e.target.value);
                       setPage(1);
                     }}
-                    className="h-10 pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all h-10"
+                    className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
                   />
                 </div>
-                <ProjectRoleFilter
-                  value={projectRoleFilter}
-                  onChange={(value) => {
-                    setProjectRoleFilter(value);
-                    setPage(1);
-                  }}
-                  className="sm:w-72"
-                />
-              </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <div className="flex items-center gap-1.5 mr-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Filters</span>
-                </div>
-                {["all", "today", "this_week", "this_month"].map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setDateRange(preset);
+                <div className="w-full min-w-0 lg:w-auto lg:min-w-[280px] lg:max-w-[420px] [&_button]:h-11 [&_button]:rounded-xl">
+                  <ProjectRoleFilter
+                    value={projectRoleFilter}
+                    onChange={(value) => {
+                      setProjectRoleFilter(value);
                       setPage(1);
                     }}
+                    className="w-full gap-2"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex h-11 shrink-0 items-center gap-1.5 pr-1">
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" aria-hidden />
+                    <span className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      Date
+                    </span>
+                  </div>
+                  {["all", "today", "this_week", "this_month"].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setDateRange(preset);
+                        setPage(1);
+                      }}
+                      className={cn(
+                        "h-9 shrink-0 px-3 text-xs font-medium rounded-full border transition-all",
+                        dateRange === preset
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      )}
+                    >
+                      {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
+                    </button>
+                  ))}
+                </div>
+
+                {activeFilter === "interviewPassed" && isInterviewCoordinator && (
+                  <label
+                    htmlFor="show-sent-for-processing"
                     className={cn(
-                      "px-3 py-1 text-xs font-medium rounded-full border transition-all",
-                      dateRange === preset
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                      "ml-auto flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-medium transition-all",
+                      showSentForProcessing
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50",
                     )}
                   >
-                    {preset.charAt(0).toUpperCase() + preset.slice(1).replace("_", " ")}
-                  </button>
-                ))}
+                    <Checkbox
+                      id="show-sent-for-processing"
+                      checked={showSentForProcessing}
+                      onCheckedChange={(checked) => {
+                        setShowSentForProcessing(checked === true);
+                        setSelectedBulkIds([]);
+                        setPage(1);
+                      }}
+                      className={showSentForProcessing ? "border-white data-[state=checked]:bg-white data-[state=checked]:text-emerald-600" : undefined}
+                    />
+                    Sent for Ready For Processing
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -886,7 +1165,12 @@ export default function InterviewsPage() {
                 <div>
                   <h2 className="text-base font-bold text-gray-900">{getActiveTileLabel()}</h2>
                   <p className="text-xs text-slate-500">
-                    {meta?.total ?? 0} candidate{(meta?.total ?? 0) !== 1 ? "s" : ""} found
+                    {meta?.total ?? candidates.length} candidate{(meta?.total ?? candidates.length) !== 1 ? "s" : ""} found
+                    {activeFilter === "interviewPassed" &&
+                      isInterviewCoordinator &&
+                      showSentForProcessing && (
+                        <span className="text-slate-400"> (sent for ready for processing)</span>
+                      )}
                   </p>
                 </div>
               </div>
@@ -964,16 +1248,36 @@ export default function InterviewsPage() {
                   )}
 
                   {activeFilter === "interviewPassed" && (
-                    <Button
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white h-8"
-                      onClick={() => {
-                        setSelectedReviewInterview(candidates.filter((item) => selectedBulkIds.includes(item.id)));
-                        setIsReviewModalOpen(true);
-                      }}
-                    >
-                      Bulk Review
-                    </Button>
+                    <>
+                      {isInterviewCoordinator && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 w-8"
+                                disabled={isBulkSendingForProcessing}
+                                onClick={openBulkSendForProcessingModal}
+                                aria-label="Send for Processing"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Send for Processing</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white h-8"
+                        onClick={() => {
+                          setSelectedReviewInterview(candidates.filter((item) => selectedBulkIds.includes(item.id)));
+                          setIsReviewModalOpen(true);
+                        }}
+                      >
+                        Bulk Review
+                      </Button>
+                    </>
                   )}
 
                   <Button
@@ -1013,10 +1317,23 @@ export default function InterviewsPage() {
                           <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">
                             <Checkbox
                               id="select-all-candidates"
-                              checked={candidates.length > 0 && candidates.every((it) => selectedBulkIds.includes(it.id))}
+                              aria-label="Select all candidates"
+                              checked={
+                                activeFilter === "interviewPassed"
+                                  ? sendablePassedInterviewIds.length > 0 &&
+                                    sendablePassedInterviewIds.every((id) =>
+                                      selectedBulkIds.includes(id),
+                                    )
+                                  : candidates.length > 0 &&
+                                    candidates.every((it) => selectedBulkIds.includes(it.id))
+                              }
                               onCheckedChange={(value) => {
                                 if (value) {
-                                  setSelectedBulkIds(candidates.map((it) => it.id));
+                                  setSelectedBulkIds(
+                                    activeFilter === "interviewPassed"
+                                      ? sendablePassedInterviewIds
+                                      : candidates.map((it) => it.id),
+                                  );
                                 } else {
                                   setSelectedBulkIds([]);
                                 }
@@ -1025,6 +1342,7 @@ export default function InterviewsPage() {
                           </TableHead>
                         )}
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Candidate</TableHead>
+                        <TableHead className="h-10 min-w-[10rem] whitespace-normal px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Contact</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Current Stage</TableHead>
                         <TableHead className="h-10 px-4 text-left text-[10px] font-bold uppercase tracking-widest text-slate-500">Project / Role</TableHead>
                         {(activeFilter === "interviewScheduled" || activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected") && (
@@ -1122,6 +1440,13 @@ export default function InterviewsPage() {
                               <TableCell className="px-4 py-3">
                                 <Checkbox
                                   checked={selectedBulkIds.includes(item.id)}
+                                  disabled={
+                                    activeFilter === "interviewPassed" &&
+                                    !canSendInterviewForProcessing(
+                                      item,
+                                      candidateSentForProcessingLookup,
+                                    )
+                                  }
                                   onCheckedChange={(checked) => {
                                     if (checked) {
                                       setSelectedBulkIds((prev) => [...prev, item.id]);
@@ -1164,8 +1489,68 @@ export default function InterviewsPage() {
                                       {candidate?.firstName} {candidate?.lastName}
                                     </p>
                                   )}
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.email || "—"}</p>
-                                  <p className="text-[11px] text-slate-500 truncate">{candidate?.mobileNumber || "—"}</p>
+                                  {candidate?.candidateCode ? (
+                                    <p className="text-[11px] text-muted-foreground font-mono truncate">
+                                      {candidate.candidateCode}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="min-w-[10rem] whitespace-normal px-4 py-3 text-center">
+                              <div className="flex flex-col items-stretch gap-2">
+                                <div className="flex items-center justify-center gap-1.5 w-full">
+                                  {(() => {
+                                    const phoneDigits = formatPhoneForLink(candidate ?? {});
+                                    return (
+                                      <>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-green-600 flex items-center justify-center hover:bg-green-100 shadow-sm border border-green-100/50"
+                                          onClick={() =>
+                                            phoneDigits &&
+                                            window.open(`https://wa.me/${phoneDigits}`, "_blank")
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`WhatsApp ${candidate?.firstName ?? ""}`}
+                                          aria-label={`WhatsApp ${candidate?.firstName ?? "candidate"}`}
+                                        >
+                                          <FaWhatsapp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          className="h-7 w-7 p-0 rounded-full text-blue-600 flex items-center justify-center hover:bg-blue-100 shadow-sm border border-blue-100/50"
+                                          onClick={() =>
+                                            phoneDigits && (window.location.href = `tel:${phoneDigits}`)
+                                          }
+                                          disabled={!phoneDigits}
+                                          title={`Call ${candidate?.firstName ?? ""}`}
+                                          aria-label={`Call ${candidate?.firstName ?? "candidate"}`}
+                                        >
+                                          <Phone className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                                <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                  {candidate?.email ? (
+                                    <div className="flex items-center justify-center gap-1.5">
+                                      <Mail className="h-3 w-3 shrink-0 text-gray-400" />
+                                      <span className="break-all text-gray-700">
+                                        {candidate.email}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <Phone className="h-3 w-3 shrink-0 text-gray-400" />
+                                    <span className="text-gray-700">
+                                      {candidate?.countryCode ? `${candidate.countryCode} ` : ""}
+                                      {candidate?.mobileNumber || "—"}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </TableCell>
@@ -1177,6 +1562,41 @@ export default function InterviewsPage() {
                                 >
                                   {stageLabel}
                                 </Badge>
+                                {activeFilter === "interviewPassed" && item.readyForProcessingAt && (
+                                  <Badge className="bg-indigo-100 text-indigo-700 border-indigo-300 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
+                                    Sent
+                                  </Badge>
+                                )}
+                                {activeFilter === "interviewPassed" &&
+                                  isCandidateSentViaAnotherProject(
+                                    item,
+                                    candidateSentForProcessingLookup,
+                                  ) && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge className="bg-slate-100 text-slate-600 border-slate-200 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit cursor-help">
+                                          Sent via another project
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        Candidate was submitted through{" "}
+                                        {getCandidateSentViaAnotherProjectTitle(
+                                          item,
+                                          candidateSentForProcessingLookup,
+                                        )}{" "}
+                                        project and cannot be sent for processing again.
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                {activeFilter === "interviewPassed" &&
+                                  hasOfferLetter(item, offerLetterOverrides) && (
+                                  <OfferLetterBadge
+                                    className="mt-1"
+                                    uploaderName={getOfferLetterUploaderName(item)}
+                                  />
+                                )}
                                 {(activeFilter === "shortlistPending" || activeFilter === "shortlisted" || activeFilter === "shortlistRejected") && candidateProjectMap.screening && (
                                   <Badge className="bg-emerald-100 text-emerald-700 border-emerald-300 text-[10px] px-2 py-0.5 mt-1 font-bold rounded-md w-fit">
                                     Screened
@@ -1444,7 +1864,118 @@ export default function InterviewsPage() {
                                       <ClipboardCheck className="h-4 w-4" />
                                     </Button>
                                   </div>
-                                ) : activeFilter === "interviewCompleted" || activeFilter === "interviewPassed" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" ? (
+                                ) : activeFilter === "interviewPassed" ? (
+                                  (() => {
+                                    const showSendForProcessing =
+                                      isInterviewCoordinator &&
+                                      canSendInterviewForProcessing(
+                                        item,
+                                        candidateSentForProcessingLookup,
+                                      );
+                                    const offerLetterUploaded = hasOfferLetter(
+                                      item,
+                                      offerLetterOverrides,
+                                    );
+                                    const offerLetterUploader = getOfferLetterUploaderName(item);
+
+                                    const iconActions = (
+                                      <>
+                                        <Button
+                                          size="icon"
+                                          variant="outline"
+                                          className="h-8 w-8 p-0 text-slate-600 hover:text-slate-700"
+                                          onClick={() => {
+                                            if (item.id) navigate(`/interviews/detail/${item.id}`);
+                                          }}
+                                          title="View Interview"
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {offerLetterUploaded && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                                            onClick={() => {
+                                              const fileUrl = resolveOfferLetterFileUrl(
+                                                item,
+                                                offerLetterOverrides,
+                                              );
+                                              if (fileUrl) {
+                                                setPdfViewerState({
+                                                  isOpen: true,
+                                                  fileUrl,
+                                                  fileName: `Offer Letter - ${candidate?.firstName} ${candidate?.lastName}`,
+                                                });
+                                              }
+                                            }}
+                                            title={
+                                              offerLetterUploader
+                                                ? `View Offer Letter (uploaded by ${offerLetterUploader})`
+                                                : "View Offer Letter"
+                                            }
+                                          >
+                                            <FileText className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        {canUploadOfferLetterOnPassedInterview &&
+                                          (!isRecruiter || !offerLetterUploaded) && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => openOfferLetterModal(item)}
+                                            title="Upload Offer Letter"
+                                          >
+                                            <Upload className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        {!shouldHidePassedInterviewReviewOutcome(
+                                          item,
+                                          candidateSentForProcessingLookup,
+                                        ) && (
+                                          <Button
+                                            size="icon"
+                                            variant="outline"
+                                            className="h-8 w-8 p-0 text-indigo-600 hover:text-indigo-700"
+                                            onClick={() => {
+                                              setSelectedReviewInterview(item);
+                                              setIsReviewModalOpen(true);
+                                            }}
+                                            title="Review Interview"
+                                          >
+                                            <UserCheck className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        {showSendForProcessing && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  size="icon"
+                                                  variant="outline"
+                                                  className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                                  disabled={isSendingForProcessing}
+                                                  onClick={() => openSendForProcessingModal(item)}
+                                                  aria-label="Send for Processing"
+                                                >
+                                                  <Send className="h-4 w-4" />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>Send for Processing</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                      </>
+                                    );
+
+                                    return (
+                                      <div className="flex items-center justify-end gap-2">
+                                        {iconActions}
+                                      </div>
+                                    );
+                                  })()
+                                ) : activeFilter === "interviewCompleted" || activeFilter === "interviewBackout" || activeFilter === "interviewRejected" ? (
                                   <div className="flex items-center justify-end gap-2">
                                     <Button
                                       size="icon"
@@ -1611,6 +2142,58 @@ export default function InterviewsPage() {
         isOpen={!!selectedProjectId}
         onClose={() => setSelectedProjectId(null)}
         project={projectDetailData?.data}
+      />
+
+      {offerLetterModal && (
+        <OfferLetterUploadModal
+          isOpen={offerLetterModal.isOpen}
+          onClose={() => setOfferLetterModal(null)}
+          candidateId={offerLetterModal.candidateId}
+          candidateName={offerLetterModal.candidateName}
+          projectId={offerLetterModal.projectId}
+          projectTitle={offerLetterModal.projectTitle}
+          roleCatalogId={offerLetterModal.roleCatalogId}
+          roleDesignation={offerLetterModal.roleDesignation}
+          isAlreadyUploaded={offerLetterModal.isAlreadyUploaded}
+          existingFileUrl={offerLetterModal.existingFileUrl}
+          onSuccess={(uploadData) => {
+            const fileUrl = getOfferLetterUrlFromUpload(uploadData);
+            if (fileUrl && offerLetterModal) {
+              const overrideKey = `${offerLetterModal.candidateId}:${offerLetterModal.projectId}:${offerLetterModal.roleCatalogId}`;
+              setOfferLetterOverrides((prev) => ({
+                ...prev,
+                [overrideKey]: fileUrl,
+              }));
+            }
+            refetchCurrent();
+          }}
+        />
+      )}
+
+      <PDFViewer
+        isOpen={pdfViewerState.isOpen}
+        onClose={() => setPdfViewerState({ isOpen: false, fileUrl: "", fileName: "" })}
+        fileUrl={pdfViewerState.fileUrl}
+        fileName={pdfViewerState.fileName}
+      />
+
+      <SendForProcessingModal
+        isOpen={!!sendForProcessingModal}
+        onClose={() => setSendForProcessingModal(null)}
+        onConfirm={handleConfirmSendForProcessing}
+        isLoading={isSendingForProcessing || isBulkSendingForProcessing}
+        mode={sendForProcessingModal?.mode ?? "single"}
+        candidates={sendForProcessingModal?.candidates ?? []}
+        primaryInterviewId={sendForProcessingModal?.primaryInterviewId}
+        onOfferLetterUploaded={(interviewId, fileUrl) => {
+          const item = candidates.find((c) => c.id === interviewId);
+          if (!item) return;
+          const overrideKey = getOfferLetterOverrideKey(item);
+          setOfferLetterOverrides((prev) => ({
+            ...prev,
+            [overrideKey]: fileUrl,
+          }));
+        }}
       />
     </div>
   );

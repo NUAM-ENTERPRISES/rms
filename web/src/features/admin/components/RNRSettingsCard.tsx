@@ -398,10 +398,10 @@ export function RNRSettingsCard() {
 
                 <Separator className="my-6" />
 
-                {/* CRE Assignment */}
+                {/* Operations Assignment */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <SectionHeader icon={Users} title="CRE Assignment" />
+                    <SectionHeader icon={Users} title="Operations Assignment" />
                     <FormField
                       control={form.control}
                       name="creAssignment.enabled"
@@ -541,11 +541,11 @@ export function RNRSettingsCard() {
 
               <Separator />
 
-              {/* CRE Assignment Display */}
+              {/* Operations Assignment Display */}
               <div className="space-y-4">
                 <SectionHeader
                   icon={Users}
-                  title="CRE Assignment"
+                  title="Operations Assignment"
                   badge={settings?.creAssignment?.enabled ? "Enabled" : "Disabled"}
                   badgeVariant={settings?.creAssignment?.enabled ? "default" : "secondary"}
                 />

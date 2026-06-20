@@ -24,6 +24,7 @@ import RequirementCriteriaStep from "../components/steps/RequirementCriteriaStep
 import CandidateCriteriaStep from "../components/steps/CandidateCriteriaStep";
 import DocumentRequirementsStep from "../components/steps/DocumentRequirementsStep";
 import PreviewStep from "../components/steps/PreviewStep";
+import { normalizeProjectRoleVisaType } from "../constants/project-role-visa-types";
 
 const STEPS = [
   { id: "details", title: "Project Details", description: "Basic information" },
@@ -199,7 +200,9 @@ export default function MultiStepEditProjectPage() {
         resumeEditable: (project as any).resumeEditable ?? true,
         groomingRequired: (project as any).groomingRequired ?? "formal",
         hideContactInfo: (project as any).hideContactInfo ?? true,
-        requiredScreening: (project as any).requiredScreening ?? false,        licensingExam: (project as any).licensingExam || "",
+        requiredScreening: (project as any).requiredScreening ?? false,
+        introductionVideoRequired: (project as any).introductionVideoRequired ?? false,
+        licensingExam: (project as any).licensingExam || "",
         dataFlow: (project as any).dataFlow ?? false,
         eligibility: (project as any).eligibility ?? false,
         rolesNeeded:
@@ -289,11 +292,7 @@ export default function MultiStepEditProjectPage() {
               role.shiftType === "flexible"
                 ? role.shiftType
                 : undefined,
-            visaType:
-              (role as any).visaType === "contract" ||
-              (role as any).visaType === "permanent"
-                ? (role as any).visaType
-                : "contract",
+            visaType: normalizeProjectRoleVisaType((role as any).visaType),
             requiredSkills: Array.isArray((role as any).requiredSkills)
               ? (role as any).requiredSkills
               : (role as any).requiredSkills

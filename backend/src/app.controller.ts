@@ -16,6 +16,12 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('health')
+  @Public()
+  health() {
+    return { status: 'ok' };
+  }
+
   @Get('test-db')
   @Public()
   async testDatabase() {
@@ -30,7 +36,7 @@ export class AppController {
       console.error('Database test failed:', error);
       return {
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
         message: 'Database connection failed',
       };
     }

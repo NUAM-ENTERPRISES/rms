@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { DocumentUploadSection } from "../DocumentUploadSection";
+import { CandidatesIntroductionVideos } from "../CandidatesIntroductionVideos";
 import { useGetDocumentsQuery } from "../../api";
 import { getCandidateProfileCompletion } from "../../profileCompletion";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, FileText, Loader2, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { FileText, Loader2, AlertCircle, CheckCircle2, Info } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,18 +14,30 @@ import {
 } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useDebounce } from "@/hooks";
 
 interface CandidateDocumentsProps {
   candidateId: string;
+  candidatePassportNumber?: string | null;
+  candidateEligibilityNumber?: string | null;
+  initialUploadDocType?: string | null;
+  onInitialUploadDocTypeHandled?: () => void;
 }
 
 const RING = 2 * Math.PI * 40;
 
 export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
   candidateId,
+  candidatePassportNumber,
+  candidateEligibilityNumber,
+  initialUploadDocType,
+  onInitialUploadDocTypeHandled,
 }) => {
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [docType, setDocType] = useState("all");
   const limit = 10;
+  const debouncedSearch = useDebounce(search, 300);
 
   const {
     data: fullData,
@@ -47,6 +59,8 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
     candidateId,
     page,
     limit,
+    search: debouncedSearch.trim() || undefined,
+    docType: docType !== "all" ? docType : undefined,
   });
 
   const allForCompletion = fullData?.data?.documents ?? [];
@@ -61,6 +75,10 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
     void refetchPaged();
     void refetchFull();
   };
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, docType]);
 
   return (
     <div className="space-y-8">
@@ -224,78 +242,25 @@ export const CandidateDocuments: React.FC<CandidateDocumentsProps> = ({
 
       <DocumentUploadSection
         candidateId={candidateId}
+        candidatePassportNumber={candidatePassportNumber}
+        candidateEligibilityNumber={candidateEligibilityNumber}
         data={pagedDocuments}
+        pagination={meta}
+        currentPage={page}
+        onPageChange={setPage}
+        isFetching={isFetching}
+        search={search}
+        onSearchChange={setSearch}
+        selectedDocType={docType}
+        onDocTypeChange={setDocType}
         completionSourceDocuments={allForCompletion}
         isLoading={isLoading}
         onRefresh={refetchAll}
+        initialUploadDocType={initialUploadDocType}
+        onInitialUploadDocTypeHandled={onInitialUploadDocTypeHandled}
       />
 
-      {meta && meta.total > 0 && (
-        <div className="flex items-center justify-between rounded-3xl border border-slate-100 bg-white/50 p-6 shadow-sm backdrop-blur-sm">
-          <p className="text-sm font-bold uppercase tracking-widest text-slate-500">
-            Page <span className="text-slate-900">{page}</span> of{" "}
-            {meta.totalPages}
-          </p>
-          {meta.totalPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || isFetching}
-                className="h-10 w-10 rounded-xl"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (p) =>
-                      p === 1 ||
-                      p === meta.totalPages ||
-                      Math.abs(p - page) <= 1
-                  )
-                  .map((p, i, arr) => (
-                    <React.Fragment key={p}>
-                      {i > 0 && arr[i - 1] !== p - 1 && (
-                        <span className="mx-1 text-slate-300">...</span>
-                      )}
-                      <Button
-                        variant={p === page ? "default" : "ghost"}
-                        size="icon"
-                        onClick={() => setPage(p)}
-                        disabled={isFetching}
-                        className={cn(
-                          "h-10 w-10 rounded-xl font-bold",
-                          p === page
-                            ? "bg-primary text-primary-foreground shadow-lg"
-                            : "hover:bg-white hover:shadow-md"
-                        )}
-                        aria-label={`Page ${p}`}
-                        aria-current={p === page ? "page" : undefined}
-                      >
-                        {p}
-                      </Button>
-                    </React.Fragment>
-                  ))}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  setPage((p) => Math.min(meta.totalPages, p + 1))
-                }
-                disabled={page === meta.totalPages || isFetching}
-                className="h-10 w-10 rounded-xl"
-                aria-label="Next page"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+      <CandidatesIntroductionVideos candidateId={candidateId} />
     </div>
   );
 };

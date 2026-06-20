@@ -46,7 +46,14 @@ import { useCan } from "@/hooks/useCan";
 import { Can } from "@/components/auth/Can";
 import { CandidateStatusBadge } from "@/components/molecules";
 import { format } from "date-fns";
+// import { toast } from "sonner";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 import { toast } from "sonner";
+import { getCandidateOperationsState } from "@/features/candidates/utils/operations-candidate";
 
 // Mock data for demonstration
 const mockEligibleCandidates = [
@@ -160,7 +167,10 @@ export default function ProjectEligibleCandidatesPage() {
     );
   }
 
-  const project = projectData;
+  const project = projectData?.data ?? projectData;
+  const pipelineOpen = isProjectOpenForPipelineActions(project);
+  const pipelineClosureMessage = getProjectClosureMessage(project);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(project);
   const eligibleCandidates = eligibleCandidatesData || mockEligibleCandidates;
 
   // Filter and sort candidates
@@ -206,6 +216,13 @@ export default function ProjectEligibleCandidatesPage() {
     });
 
   const handleNominateCandidate = (candidateId: string) => {
+    if (!pipelineOpen) {
+      toast.error(
+        pipelineClosureMessage ??
+          "This project is closed. New candidate nominations are disabled."
+      );
+      return;
+    }
     navigate(`/projects/${projectId}/nominate/${candidateId}`);
   };
 
@@ -315,12 +332,41 @@ export default function ProjectEligibleCandidatesPage() {
             </div>
           </div>
           <Can anyOf={["nominate:candidates"]}>
-            <Button onClick={() => navigate(`/projects/${projectId}/nominate`)}>
+            <Button
+              disabled={!pipelineOpen}
+              onClick={() => {
+                if (!pipelineOpen) {
+                  toast.error(
+                    pipelineClosureMessage ??
+                      "This project is closed. New candidate nominations are disabled."
+                  );
+                  return;
+                }
+                navigate(`/projects/${projectId}/nominate`);
+              }}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
               Nominate Candidates
             </Button>
           </Can>
         </div>
+
+        {deadlineNoticeMessage ? (
+          <div
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            role="status"
+          >
+            {deadlineNoticeMessage}
+          </div>
+        ) : null}
+        {!pipelineOpen && pipelineClosureMessage ? (
+          <div
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            role="status"
+          >
+            {pipelineClosureMessage}
+          </div>
+        ) : null}
 
         {/* Project Summary */}
         <Card>
@@ -546,18 +592,30 @@ export default function ProjectEligibleCandidatesPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Can anyOf={["nominate:candidates"]}>
+                            {(() => {
+                              const handledByOperations =
+                                getCandidateOperationsState(candidate).isHandledByOperations;
+                              return (
                             <Button
                               variant="ghost"
                               size="sm"
-                              disabled={candidate.isHandledByCRE}
-                              title={candidate.isHandledByCRE ? "Candidate is currently being handled by CRE" : "Nominate Candidate"}
+                              disabled={handledByOperations || !pipelineOpen}
+                              title={
+                                !pipelineOpen
+                                  ? pipelineClosureMessage ?? "Project closed"
+                                  : handledByOperations
+                                    ? "Candidate is currently being handled by Operations"
+                                    : "Nominate Candidate"
+                              }
                               onClick={() =>
                                 handleNominateCandidate(candidate.id)
                               }
-                              className={candidate.isHandledByCRE ? "text-gray-400" : "text-green-600 hover:text-green-700"}
+                              className={handledByOperations ? "text-gray-400" : "text-green-600 hover:text-green-700"}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>
+                              );
+                            })()}
                           </Can>
                         </div>
                       </TableCell>

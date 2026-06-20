@@ -3,6 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AlertCircle, Loader2, FileCheck, Upload, CheckCircle2, XCircle, Clock, RefreshCw, File, Eye, Calendar } from "lucide-react";
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
@@ -11,14 +18,25 @@ import React, { useState, useMemo } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
 
-import { useGetPrometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateProcessingStepMutation } from "@/services/processingApi";
+import { useGetPrometricRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useUpdateProcessingStepMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
+import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { LICENSING_EXAMS } from "@/constants/candidate-constants";
+import { useUpdateCandidateMutation } from "@/features/candidates/api";
+
+function formatLicensingExamLabel(value: string): string {
+  const entry = Object.entries(LICENSING_EXAMS).find(([, examValue]) => examValue === value);
+  return entry ? entry[0].replace(/_/g, " ") : value.replace(/_/g, " ");
+}
 
 interface PrometricModalProps {
   isOpen: boolean;
@@ -29,6 +47,7 @@ interface PrometricModalProps {
 }
 
 export function PrometricModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: PrometricModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetPrometricRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -40,14 +59,12 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [updateStep, { isLoading: isUpdatingStep }] = useUpdateProcessingStepMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
+  const [updateCandidate, { isLoading: isUpdatingCandidate }] = useUpdateCandidateMutation();
 
   // Licensing Exam date fields
   const [prometricPassedAt, setPrometricPassedAt] = useState<Date | undefined>(undefined);
   const [prometricValidAt, setPrometricValidAt] = useState<Date | undefined>(undefined);
+  const [licensingExam, setLicensingExam] = useState<string>("");
 
   // Sync state when data is loaded
   React.useEffect(() => {
@@ -55,24 +72,46 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
       setPrometricPassedAt(data.step.prometricPassedAt ? new Date(data.step.prometricPassedAt) : undefined);
       setPrometricValidAt(data.step.prometricValidAt ? new Date(data.step.prometricValidAt) : undefined);
     }
-  }, [data?.step?.id]);
+    if (data?.processingCandidate?.candidate) {
+      setLicensingExam(data.processingCandidate.candidate.licensingExam || "");
+    }
+  }, [data?.step?.id, data?.processingCandidate?.candidate?.licensingExam]);
 
   const handleSavePrometricDates = async (): Promise<boolean> => {
     if (!activeStep?.id) {
       toast.error("No active step found");
       return false;
     }
+
+    const candidateId = candidate?.candidate?.id;
+    const savedLicensingExam = candidate?.candidate?.licensingExam || "";
+    const licensingExamChanged = licensingExam !== savedLicensingExam;
+
     try {
-      await updateStep({
-        stepId: activeStep.id,
-        ...(prometricPassedAt && { prometricPassedAt: prometricPassedAt.toISOString() }),
-        ...(prometricValidAt && { prometricValidAt: prometricValidAt.toISOString() }),
-      }).unwrap();
-      toast.success("Licensing Exam dates saved");
+      if (licensingExamChanged) {
+        if (!candidateId) {
+          toast.error("Missing candidate id");
+          return false;
+        }
+        await updateCandidate({
+          id: candidateId,
+          licensingExam: licensingExam || undefined,
+        }).unwrap();
+      }
+
+      if (prometricPassedAt || prometricValidAt || activeStep.prometricPassedAt || activeStep.prometricValidAt) {
+        await updateStep({
+          stepId: activeStep.id,
+          ...(prometricPassedAt && { prometricPassedAt: prometricPassedAt.toISOString() }),
+          ...(prometricValidAt && { prometricValidAt: prometricValidAt.toISOString() }),
+        }).unwrap();
+      }
+
+      toast.success("Licensing Exam details saved");
       await refetch();
       return true;
     } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to save dates");
+      toast.error(err?.data?.message || "Failed to save licensing exam details");
       return false;
     }
   };
@@ -403,8 +442,13 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
     }
 
     // Require pass date before allowing completion
-    if (!prometricPassedAt) {
+    if (!prometricPassedAt && !activeStep?.prometricPassedAt) {
       toast.error("Cannot complete — Licensing Exam pass date is required");
+      return;
+    }
+
+    if (!hasLicensingExam) {
+      toast.error("Cannot complete — Licensing exam type is required");
       return;
     }
 
@@ -434,29 +478,6 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
     }
   };
 
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return;
-    }
-
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-
-      if (onComplete) {
-        await onComplete();
-      }
-
-      onClose();
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || err?.error || "Failed to cancel step");
-    }
-  };
-
 
 
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
@@ -473,14 +494,21 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
   // Require all MANDATORY documents verified and pass date set before allowing completion
   const allVerified = statTotal > 0 ? statVerified >= statTotal : statMissing === 0;
   const hasPassDate = Boolean(prometricPassedAt || activeStep?.prometricPassedAt);
-  const canMarkComplete = allVerified && hasPassDate;
+  const hasLicensingExam = Boolean(licensingExam || candidate?.candidate?.licensingExam);
+  const canMarkComplete = allVerified && hasPassDate && hasLicensingExam;
 
   // Show Save Dates button only when local state differs from saved state
   const savedPassStr = activeStep?.prometricPassedAt ? new Date(activeStep.prometricPassedAt).toDateString() : undefined;
   const savedValidStr = activeStep?.prometricValidAt ? new Date(activeStep.prometricValidAt).toDateString() : undefined;
   const localPassStr = prometricPassedAt?.toDateString();
   const localValidStr = prometricValidAt?.toDateString();
-  const isDirty = savedPassStr !== localPassStr || savedValidStr !== localValidStr;
+  const savedLicensingExam = candidate?.candidate?.licensingExam || "";
+  const isDirty =
+    savedPassStr !== localPassStr ||
+    savedValidStr !== localValidStr ||
+    licensingExam !== savedLicensingExam;
+  const isSavingDetails = isUpdatingStep || isUpdatingCandidate;
+  const projectLicensingExam = candidate?.project?.licensingExam;
 
 
 
@@ -523,6 +551,8 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
           ) : (
             <div className="space-y-4">
 
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="w-full border-0 shadow-sm bg-rose-50 p-3">
                   <div className="flex items-start gap-3">
@@ -563,6 +593,41 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                   </h4>
                 </div>
                 <div className="p-3 space-y-3">
+                  <div className="flex flex-col">
+                    <Label className="text-[11px] text-slate-600 mb-1 block">
+                      Licensing Exam <span className="text-rose-500">*</span>
+                    </Label>
+                    <Select
+                      value={licensingExam || "none"}
+                      onValueChange={(value) => setLicensingExam(value === "none" ? "" : value)}
+                      disabled={isPrometricCompleted || isStepCancelled || isLocked}
+                    >
+                      <SelectTrigger className="h-7 w-full bg-white px-2 text-[11px]">
+                        <SelectValue placeholder="Select licensing exam" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56 w-[--radix-select-trigger-width]">
+                        <SelectItem value="none" className="py-1 text-[11px]">
+                          None / Not set
+                        </SelectItem>
+                        {Object.entries(LICENSING_EXAMS).map(([key, value]) => (
+                          <SelectItem key={value} value={value} className="py-1 text-[11px]">
+                            {key.replace(/_/g, " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {projectLicensingExam ? (
+                      <p className="mt-1 text-[10px] text-slate-500">
+                        Project requirement: {formatLicensingExamLabel(projectLicensingExam)}
+                      </p>
+                    ) : null}
+                    {!licensingExam && !savedLicensingExam ? (
+                      <p className="text-[10px] text-rose-600 mt-1 flex items-center gap-1">
+                        <XCircle className="h-3 w-3" /> Required
+                      </p>
+                    ) : null}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Pass Date */}
                     <div className="flex flex-col">
@@ -574,7 +639,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                         onChange={setPrometricPassedAt}
                         placeholder="Pick pass date"
                         showTime={false}
-                        disabled={isPrometricCompleted || isStepCancelled}
+                        disabled={isPrometricCompleted || isStepCancelled || isLocked}
                         className="w-full h-7 text-xs"
                         align="start"
                         compact
@@ -594,7 +659,7 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                         onChange={setPrometricValidAt}
                         placeholder="Pick validity date"
                         showTime={false}
-                        disabled={isPrometricCompleted || isStepCancelled}
+                        disabled={isPrometricCompleted || isStepCancelled || isLocked}
                         className="w-full h-7 text-xs"
                         align="start"
                         compact
@@ -604,20 +669,30 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
                   {!isPrometricCompleted && !isStepCancelled && isDirty && (
                     <div className="flex justify-end pt-1">
-                      <Button
-                        size="sm"
-                        onClick={handleSavePrometricDates}
-                        disabled={isUpdatingStep}
-                        className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4"
-                      >
-                        {isUpdatingStep ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                        Save Dates
-                      </Button>
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSavePrometricDates}
+                          disabled={isSavingDetails || isLocked}
+                          className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs px-4"
+                        >
+                          {isSavingDetails ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                          Save Details
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
 
-                  {(activeStep?.prometricPassedAt || activeStep?.prometricValidAt) && (
+                  {(activeStep?.prometricPassedAt || activeStep?.prometricValidAt || savedLicensingExam) && (
                     <div className="flex flex-wrap gap-3 text-xs text-slate-600 bg-white rounded p-2 border border-slate-100">
+                      {savedLicensingExam ? (
+                        <span>
+                          Exam:{" "}
+                          <span className="font-semibold text-slate-800">
+                            {formatLicensingExamLabel(savedLicensingExam)}
+                          </span>
+                        </span>
+                      ) : null}
                       {activeStep?.prometricPassedAt && (
                         <span>Pass Date: <span className="font-semibold text-slate-800">{format(new Date(activeStep.prometricPassedAt), "PPP")}</span></span>
                       )}
@@ -633,8 +708,20 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
 
               {/* Document List */}
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b">
+                <div className="bg-slate-100 px-4 py-2 border-b flex items-center justify-between gap-2">
                   <h4 className="text-xs font-black uppercase tracking-wider text-slate-600">Required Documents</h4>
+                  {!isPrometricCompleted && !isStepCancelled && (
+                    <VerifyAllDocumentsControl
+                      processingStepId={activeStep?.id}
+                      requiredDocuments={requiredDocuments}
+                      candidateDocsByDocType={candidateDocsByDocType}
+                      processingDocsByDocType={processingDocsByDocType}
+                      verifyProcessingDocument={verifyProcessingDocument}
+                      refetch={refetch}
+                      stepLabel="Licensing Exam"
+                      disabled={isVerifying}
+                    />
+                  )}
                 </div>
                 <div className="divide-y max-h-[320px] overflow-auto">
                   {requiredDocuments.map((req) => {
@@ -717,44 +804,53 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                               {!hasProcessing ? (
                                 <>
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        candidateDoc?.id,
-                                        candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          candidateDoc?.id,
+                                          candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {!candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      Verify
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        disabled={isLocked}
+                                        onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
                                 </>
                               ) : (
@@ -762,22 +858,25 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                                   <div className="flex items-center gap-2">
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
 
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        processingDoc?.id,
-                                        candidateProjectMapId || processingDoc?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          processingDoc?.id,
+                                          candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
 
                                   </div>
                                 ) : (
@@ -816,15 +915,26 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
               </Button>
 
               {!isPrometricCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
-                </Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isPrometricCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isPrometricCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Prometric Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Save Licensing Exam
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 // Show contextual tooltip when disabled: prefer verification requirement, then pass date
                 !allVerified ? (
@@ -863,13 +973,34 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                ) : !hasLicensingExam ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button
+                            size="sm"
+                            onClick={handleMarkComplete}
+                            disabled={true}
+                            className="opacity-80"
+                            aria-disabled={true}
+                          >
+                            {'Save Licensing Exam'}
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Select a licensing exam type and save details before completing this step.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                   <Button
                     size="sm"
                     onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete || isLocked}
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete}
+                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save Licensing Exam'}
                   </Button>
@@ -902,16 +1033,6 @@ export function PrometricModal({ isOpen, onClose, processingId, candidateProject
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
-        />
-      </React.Suspense>
-
-      {/* Confirm Cancel Step Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          onConfirm={handleConfirmCancel}
-          isCancelling={isCancelling}
         />
       </React.Suspense>
 

@@ -1,4 +1,5 @@
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useMemo, type ComponentType } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
@@ -39,6 +40,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ConfirmationDialog } from "@/components/ui";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import {
   Select,
   SelectTrigger,
@@ -58,6 +60,13 @@ import {
   useAssignToProjectMutation,
 } from "@/features/candidates";
 import CandidateCard from "./CandidateCard";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  getProcessingBlockReasonForCandidate,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 interface RecruiterCandidatesTabProps {
   projectId: string;
@@ -98,7 +107,7 @@ export default function RecruiterCandidatesTab({
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
   const isManager = user?.roles?.some(role => 
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    ["CEO", "Director", "Manager", "Recruiter Manager", "Team Head", "Team Lead"].includes(role)
   );
 
   // Use different APIs based on role
@@ -129,6 +138,17 @@ export default function RecruiterCandidatesTab({
 
   // Get project details for comparison
   const { data: projectData } = useGetProjectQuery(projectId);
+  const pipelineOpen = isProjectOpenForPipelineActions(projectData?.data);
+  const pipelineClosureMessage = getProjectClosureMessage(projectData?.data);
+  const deadlineNoticeMessage = getProjectDeadlineNoticeMessage(projectData?.data);
+  const DEFAULT_PIPELINE_CLOSURE_MESSAGE =
+    "The pipeline to this project is closed.";
+
+  const ensurePipelineOpen = (): boolean => {
+    if (pipelineOpen) return true;
+    toast.error(pipelineClosureMessage ?? DEFAULT_PIPELINE_CLOSURE_MESSAGE);
+    return false;
+  };
 
   useEffect(() => {
     if (isAssignDialogOpen) {
@@ -163,6 +183,29 @@ export default function RecruiterCandidatesTab({
 
   // Candidates are already filtered by the API based on user role
   const recruiterCandidates = allCandidates;
+
+  const recruiterCandidateIds = useMemo(
+    () =>
+      recruiterCandidates
+        .map((c: { id?: string }) => c.id)
+        .filter((id): id is string => Boolean(id))
+        .sort(),
+    [recruiterCandidates]
+  );
+  const debouncedRecruiterIds = useDebounce(recruiterCandidateIds, 500);
+  const { data: bulkEligibilityResponse } = useCheckBulkCandidateEligibilityQuery(
+    { projectId, candidateIds: debouncedRecruiterIds },
+    { skip: !projectId || debouncedRecruiterIds.length === 0 }
+  );
+  const eligibilityMap = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof assignEligibilityData>>();
+    if (bulkEligibilityResponse?.data && Array.isArray(bulkEligibilityResponse.data)) {
+      bulkEligibilityResponse.data.forEach((item) => {
+        map.set(item.candidateId, item);
+      });
+    }
+    return map;
+  }, [bulkEligibilityResponse]);
 
   // Filter candidates (show all recruiter's candidates)
   const filteredCandidates = recruiterCandidates.filter((candidate: any) => {
@@ -200,6 +243,7 @@ export default function RecruiterCandidatesTab({
   );
 
   const showVerifyConfirmation = (candidateId: string, candidateName: string) => {
+    if (!ensurePipelineOpen()) return;
     setVerifyConfirm({ isOpen: true, candidateId, candidateName, roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id, notes: "" });
   };
 
@@ -231,6 +275,7 @@ export default function RecruiterCandidatesTab({
   };
 
   const showAssignConfirmation = (candidateId: string, candidateName: string) => {
+    if (!ensurePipelineOpen()) return;
     // Find candidate to determine top matched role
     const candidate = getCandidateById(candidateId);
     let bestRoleNeededId = projectData?.data?.rolesNeeded?.[0]?.id;
@@ -288,6 +333,7 @@ export default function RecruiterCandidatesTab({
   };
 
   const handleAssignCandidates = async () => {
+    if (!ensurePipelineOpen()) return;
     if (selectedCandidates.length === 0) {
       toast.error("Please select at least one candidate");
       return;
@@ -359,6 +405,22 @@ export default function RecruiterCandidatesTab({
 
   return (
     <div className="space-y-6">
+      {deadlineNoticeMessage ? (
+        <div
+          className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="status"
+        >
+          {deadlineNoticeMessage}
+        </div>
+      ) : null}
+      {!pipelineOpen && pipelineClosureMessage ? (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          {pipelineClosureMessage}
+        </div>
+      ) : null}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -623,8 +685,32 @@ export default function RecruiterCandidatesTab({
                   ((currentProjectInCandidate?.currentProjectStatus?.statusName || projectAssignment?.currentProjectStatus?.statusName || "").toLowerCase().includes("verification"))
                 );
 
+                const mainStatusName =
+                  currentProjectInCandidate?.mainStatus?.name ||
+                  projectAssignment?.mainStatus?.name;
+                const isPipelineBlocked =
+                  isCandidateProjectPipelineBlocked(mainStatusName);
+
+                const candidateEligibility = eligibilityMap.get(candidate.id);
+                const pipelineBlockedByProcessing = Boolean(
+                  candidateEligibility?.pipelineBlockedOnThisProject,
+                );
+                const processingBlockReason = getProcessingBlockReasonForCandidate({
+                  eligibilityData: candidateEligibility,
+                  projectId,
+                  projectTitle: projectData?.data?.title,
+                  context: isAssignedToProject ? "pipeline" : "assign",
+                  isAssignedOnProject: isAssignedToProject,
+                });
+
                 // Show verify button if: in project and nominated AND not already in verification
-                const showVerifyBtn = isAssignedToProject && isNominated && !isVerificationInProgress;
+                const showVerifyBtn =
+                  pipelineOpen &&
+                  isAssignedToProject &&
+                  isNominated &&
+                  !isVerificationInProgress &&
+                  !isPipelineBlocked &&
+                  !pipelineBlockedByProcessing;
 
                 const actions: {
                   label: string;
@@ -639,6 +725,9 @@ export default function RecruiterCandidatesTab({
                     candidate={candidate}
                     projectId={projectId}
                     isRecruiter={isRecruiter}
+                    processingBlockReason={processingBlockReason}
+                    pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+                    assignmentBlockReason={processingBlockReason?.fullMessage}
                     onView={handleViewCandidate}
                     onAction={(candidateId, action) => {
                       if (action === "assign") {
@@ -657,7 +746,7 @@ export default function RecruiterCandidatesTab({
                         `${candidate.firstName} ${candidate.lastName}`
                       )
                     }
-                    showAssignButton={!isAssignedToProject}
+                    showAssignButton={pipelineOpen && !isAssignedToProject}
                     onAssignToProject={(candidateId) =>
                       showAssignConfirmation(
                         candidateId,
@@ -667,6 +756,7 @@ export default function RecruiterCandidatesTab({
                     isAlreadyInProject={isAssignedToProject}
                     className="hover:scale-100"
                     showDocumentStatus={isAssignedToProject}
+                    eligibilityData={eligibilityMap.get(candidate.id)}
                   />
                 );
               })}
@@ -733,12 +823,21 @@ export default function RecruiterCandidatesTab({
       {/* Verification Confirmation Dialog */}
       <ConfirmationDialog
         isOpen={verifyConfirm.isOpen}
+        className="sm:max-w-3xl"
         onClose={() => setVerifyConfirm({ isOpen: false, candidateId: "", candidateName: "", roleNeededId: undefined, notes: "" })}
         onConfirm={handleSendForVerification}
         title="Send for Verification"
         description={
           <div className="space-y-4">
             <p>Are you sure you want to send {verifyConfirm.candidateName} for verification? This will notify the verification team.</p>
+
+            {verifyConfirm.candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={verifyConfirm.candidateId}
+                projectId={projectId}
+                isActive={verifyConfirm.isOpen}
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
@@ -847,6 +946,21 @@ export default function RecruiterCandidatesTab({
         description={
           <div className="space-y-4">
             <p>Are you sure you want to assign {assignConfirm.candidateName} to this project?</p>
+
+            {(() => {
+              const processingBlockReason = getProcessingBlockReasonForCandidate({
+                eligibilityData: assignEligibilityData,
+                projectId,
+                projectTitle: projectData?.data?.title,
+                context: "assign",
+              });
+              if (!processingBlockReason) return null;
+              return (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">
+                  {processingBlockReason.fullMessage}
+                </div>
+              );
+            })()}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
@@ -1016,6 +1130,14 @@ export default function RecruiterCandidatesTab({
         confirmText="Assign to Project"
         cancelText="Cancel"
         isLoading={isAssigning}
+        confirmDisabled={Boolean(
+          getProcessingBlockReasonForCandidate({
+            eligibilityData: assignEligibilityData,
+            projectId,
+            projectTitle: projectData?.data?.title,
+            context: "assign",
+          }),
+        )}
         variant="default"
         icon={
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

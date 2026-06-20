@@ -18,6 +18,7 @@ export interface Document {
   rejectedBy?: string;
   rejectedAt?: string;
   expiryDate?: string;
+  issuedAt?: string;
   notes?: string;
   rejectionReason?: string;
   documentNumber?: string;
@@ -191,6 +192,7 @@ export interface CreateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
@@ -202,6 +204,7 @@ export interface UpdateDocumentRequest {
   fileSize?: number;
   mimeType?: string;
   expiryDate?: string;
+  issuedAt?: string;
   documentNumber?: string;
   notes?: string;
   roleCatalogId?: string;
@@ -227,6 +230,7 @@ export interface QueryDocumentsParams {
   status?: string;
   uploadedBy?: string;
   verifiedBy?: string;
+  roleCatalogId?: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -247,18 +251,10 @@ export const documentsApi = baseApi.injectEndpoints({
       { success: boolean; data: PaginatedDocuments },
       QueryDocumentsParams | void
     >({
-      query: (params) => {
-        const searchParams = new URLSearchParams();
-        if (params) {
-          Object.entries(params).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              searchParams.append(key, String(value));
-            }
-          });
-        }
-        const queryString = searchParams.toString();
-        return `/documents${queryString ? `?${queryString}` : ""}`;
-      },
+      query: (params) => ({
+        url: "/documents",
+        params,
+      }),
       providesTags: ["Document"],
     }),
 

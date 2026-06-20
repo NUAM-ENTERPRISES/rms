@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/app/hooks";
-import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -35,21 +34,34 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
-  Filter,
   Eye,
   FileText,
-  CheckCircle,
   Clock,
   MoreHorizontal,
   BarChart3,
   Phone,
   Mail,
   AlertCircle,
-  Calendar,
   User,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useGetDocumentVerificationCandidatesQuery } from "@/features/projects";
 import { format } from "date-fns";
+
+function formatPhoneForLink(candidate: {
+  countryCode?: string;
+  mobileNumber?: string;
+}) {
+  const raw = `${candidate.countryCode ?? ""}${candidate.mobileNumber ?? ""}`;
+  const digits = raw.replace(/\D/g, "");
+  return digits || null;
+}
 
 const DocumentStatusBadge = ({ status }: { status: string }) => {
   const getStatusConfig = (status: string) => {
@@ -165,15 +177,21 @@ export default function DocumentVerificationDashboard() {
     error,
   } = useGetDocumentVerificationCandidatesQuery("all"); // This would need to be implemented to get all projects
 
-  const candidates = candidatesData?.data?.candidateProjects || [];
+  const candidates =
+    (Array.isArray((candidatesData as any)?.data)
+      ? (candidatesData as any).data
+      : (candidatesData as any)?.data?.candidateProjects) || [];
 
   // Filter candidates
-  const filteredCandidates = candidates.filter((candidate) => {
+  const filteredCandidates = candidates.filter((candidate: any) => {
     const matchesSearch =
       candidate.candidate?.firstName
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       candidate.candidate?.lastName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      candidate.candidate?.candidateCode
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       candidate.candidate?.email
@@ -320,7 +338,8 @@ export default function DocumentVerificationDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Candidate</TableHead>
+                    {/* <TableHead>Candidate</TableHead> */}
+                    <TableHead>Contact</TableHead>
                     <TableHead>Project</TableHead>
                     <TableHead>Experience</TableHead>
                     <TableHead>Match Score</TableHead>
@@ -331,7 +350,11 @@ export default function DocumentVerificationDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCandidates.map((candidate) => (
+                  {filteredCandidates.map((candidate: any) => {
+                    const phoneDigits = formatPhoneForLink(candidate.candidate);
+                    const candidateName = `${candidate.candidate.firstName ?? ""} ${candidate.candidate.lastName ?? ""}`.trim();
+
+                    return (
                     <TableRow key={candidate.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -340,24 +363,94 @@ export default function DocumentVerificationDashboard() {
                               ?.charAt(0)
                               .toUpperCase() || "?"}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="font-medium text-gray-900">
                               {candidate.candidate.firstName}{" "}
                               {candidate.candidate.lastName}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-2">
-                              {candidate.candidate.email && (
-                                <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {candidate.candidate.email}
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
+                            {candidate.candidate.candidateCode ? (
+                              <div className="text-xs text-muted-foreground font-mono truncate">
+                                {candidate.candidate.candidateCode}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm text-gray-500 space-y-1.5 min-w-0">
+                          {candidate.candidate.email ? (
+                            <div className="flex items-center gap-1 min-w-0">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {candidate.candidate.email}
+                              </span>
+                            </div>
+                          ) : null}
+                          {(candidate.candidate.countryCode ||
+                            candidate.candidate.mobileNumber) && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span>
                                 {candidate.candidate.countryCode}{" "}
                                 {candidate.candidate.mobileNumber}
-                              </div>
+                              </span>
                             </div>
+                          )}
+                          <div
+                            className="flex items-center gap-1.5 pt-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <TooltipProvider delayDuration={200}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full text-green-600 hover:bg-green-100 border border-green-100/50"
+                                    onClick={() =>
+                                      phoneDigits &&
+                                      window.open(
+                                        `https://wa.me/${phoneDigits}`,
+                                        "_blank",
+                                      )
+                                    }
+                                    disabled={!phoneDigits}
+                                    aria-label={`WhatsApp ${candidateName || "candidate"}`}
+                                  >
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">
+                                    {phoneDigits ? "WhatsApp" : "No phone number"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-full text-blue-600 hover:bg-blue-100 border border-blue-100/50"
+                                    onClick={() =>
+                                      phoneDigits &&
+                                      (window.location.href = `tel:${phoneDigits}`)
+                                    }
+                                    disabled={!phoneDigits}
+                                    aria-label={`Call ${candidateName || "candidate"}`}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <p className="text-xs">
+                                    {phoneDigits ? "Call" : "No phone number"}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </TableCell>
@@ -453,7 +546,8 @@ export default function DocumentVerificationDashboard() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

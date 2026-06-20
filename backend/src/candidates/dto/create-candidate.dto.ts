@@ -13,7 +13,9 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsNotEmpty,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
@@ -23,6 +25,12 @@ export enum Gender {
   MALE = 'MALE',
   FEMALE = 'FEMALE',
   OTHER = 'OTHER',
+}
+
+/** Treat empty strings as absent so optional phone/passport fields validate correctly. */
+function emptyToUndefined({ value }: { value: unknown }): unknown {
+  if (value === '' || value === null) return undefined;
+  return value;
 }
 
 export class CreateCandidateDto {
@@ -43,25 +51,50 @@ export class CreateCandidateDto {
   lastName!: string;
 
   @ApiProperty({
-    description: 'Country calling code',
+    description: 'Profession type ID (Nurse, Doctor, Technician, etc.)',
+    example: 'pt_nurse_seed001',
+  })
+  @IsString()
+  @IsNotEmpty()
+  professionTypeId!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country calling code (required for non–Agent Coordinator create)',
     example: '+91',
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @Matches(/^\+[1-9]\d{0,3}$/, {
     message: 'Please provide a valid country code (e.g., +91, +1, +44)',
   })
-  countryCode!: string;
+  countryCode?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
-      'Mobile number without country code (must be unique with country code)',
+      'Mobile number without country code (required for non–Agent Coordinator create)',
     example: '9876543210',
   })
+  @Transform(emptyToUndefined)
+  @IsOptional()
   @IsString()
   @Matches(/^\d{6,15}$/, {
     message: 'Please provide a valid mobile number (6-15 digits)',
   })
-  mobileNumber!: string;
+  mobileNumber?: string;
+
+  @ApiProperty({
+    description:
+      'Passport number (required when created by Agent Coordinator)',
+    example: 'A1234567',
+    minLength: 3,
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  passportNumber?: string;
 
   @ApiPropertyOptional({
     description: 'Email address',
@@ -104,6 +137,41 @@ export class CreateCandidateDto {
   @IsString()
   @MaxLength(500)
   address?: string;
+
+  @ApiPropertyOptional({
+    description: 'Postal / PIN code for mailing address',
+    example: '682016',
+  })
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    const normalized =
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number'
+          ? String(value)
+          : value;
+    if (typeof normalized !== 'string') return undefined;
+    const trimmed = normalized.trim();
+    return trimmed ? trimmed : undefined;
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  addressPincode?: string;
+
+  @ApiPropertyOptional({
+    description: 'Alternate contact phone number',
+    example: '9876543211',
+  })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MaxLength(15)
+  @Matches(/^[\d+\-\s()]*$/, {
+    message: 'Alternate phone may only contain digits, spaces, and + - ( )',
+  })
+  alternatePhone?: string;
 
   @ApiPropertyOptional({
     description: 'Source of the candidate',
@@ -331,10 +399,10 @@ export class CreateCandidateDto {
     example: 'Professional',
     enum: ['Basic', 'Conversational', 'Professional', 'Native'],
   })
+  @Transform(({ value }) => (value === '' ? null : value))
   @IsOptional()
-  @IsString()
   @IsEnum(['Basic', 'Conversational', 'Professional', 'Native'])
-  languageProficiency?: string;
+  languageProficiency?: string | null;
 
   @ApiPropertyOptional({
     description: 'Candidate smartness/personality rating',
@@ -367,6 +435,23 @@ export class CreateCandidateDto {
   @IsOptional()
   @IsBoolean()
   eligibility?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Eligibility reference number (required when eligibility is true)',
+    example: 'ELIG-2024-001',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  eligibilityNumber?: string;
+
+  @ApiPropertyOptional({
+    description: 'Religion id from religions lookup',
+    example: 'clxyz123',
+  })
+  @IsOptional()
+  @IsString()
+  religionId?: string;
 
   @ApiPropertyOptional({
     description: 'On hold duration in days',
@@ -402,6 +487,15 @@ export class CreateCandidateDto {
   @IsArray()
   @IsString({ each: true })
   facilityPreferences?: string[];
+
+  @ApiPropertyOptional({
+    description: 'List of preferred role catalog IDs (department derived from role)',
+    example: ['clxyz_icu_staff_nurse', 'clxyz_emergency_staff_nurse'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  preferredRoles?: string[];
 
   // Educational Qualifications
   @ApiPropertyOptional({
@@ -563,6 +657,16 @@ export class CandidateQualificationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the qualification was obtained (`countries.code`).',
+    example: 'IN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string;
 }
 
 // DTO for work experiences during candidate creation (no candidateId needed)
@@ -632,6 +736,16 @@ export class CandidateWorkExperienceDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Country where the role was held (`countries.code`). Distinct from phone dial `countryCode`.',
+    example: 'IN',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  countryCode?: string;
 
   @ApiPropertyOptional({
     description: 'Skills gained/used in this role as JSON array',

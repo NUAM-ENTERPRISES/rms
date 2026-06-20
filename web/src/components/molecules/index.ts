@@ -17,17 +17,36 @@ export { RoleSelect } from "./RoleSelect";
 export { UpdatePasswordDialog } from "./UpdatePasswordDialog";
 export { ProfileImageUpload } from "./ProfileImageUpload";
 export { ImageViewer } from "./ImageViewer";
+export { CandidateListIdentityCell } from "./CandidateListIdentityCell";
+export type { CandidateListIdentityCellProps } from "./CandidateListIdentityCell";
 export { DocumentUpload } from "./DocumentUpload";
 export { WorkExperienceForm } from "./WorkExperienceForm";
 export { default as CandidateQualificationSelect } from "./CandidateQualificationSelect";
 export { default as QualificationWorkExperienceModal } from "./QualificationWorkExperienceModal";
 export { CandidateResumeList } from "./CandidateResumeList";
+export { ResumeUploadRoleModal } from "./ResumeUploadRoleModal";
+export type { ResumeRoleSelection } from "./ResumeUploadRoleModal";
+export { ResumeReuploadModal } from "./ResumeReuploadModal";
 export { PDFViewer } from "./PDFViewer";
+export { VideoPlayerModal } from "./VideoPlayerModal";
+export type { VideoPlayerModalProps } from "./VideoPlayerModal";
+export { VerificationDocumentActions } from "./VerificationDocumentActions";
+export type { VerificationDocumentActionsProps, VerificationRecord } from "./VerificationDocumentActions";
+export { VerificationDocumentStatusBadge, getVerificationStatusBadge } from "./VerificationDocumentStatusBadge";
 export { ClientSelect } from "./ClientSelect";
 export { SelectAgent } from "./SelectAgent";
 export type { SelectAgentProps } from "./SelectAgent";
+export { SelectCandidate } from "./SelectCandidate";
+export type { SelectCandidateProps } from "./SelectCandidate";
 export { JobTitleSelect } from "./JobTitleSelect";
 export { DepartmentSelect } from "./DepartmentSelect";
+export { PreferredRoleMultiSelect } from "./PreferredRoleMultiSelect";
+export { ProfessionTypeSelect } from "./ProfessionTypeSelect";
+export type { ProfessionTypeSelectProps } from "./ProfessionTypeSelect";
+export { ProfessionTypeMultiSelect } from "./ProfessionTypeMultiSelect";
+export type { ProfessionTypeMultiSelectProps } from "./ProfessionTypeMultiSelect";
+export { ProfessionCoverageBadges } from "./ProfessionCoverageBadges";
+export type { ProfessionCoverageBadgesProps } from "./ProfessionCoverageBadges";
 export { QualificationSelect } from "./QualificationSelect";
 export type { UploadedDocument } from "./DocumentUpload";
 export type { CandidateQualification } from "./CandidateQualificationSelect";
@@ -38,3 +57,13 @@ export { DeleteConfirmationDialog } from "./DeleteConfirmationDialog";
 export type { DeleteConfirmationDialogProps } from "./DeleteConfirmationDialog";
 // Tile used across dashboards
 export { StatusTile } from "./StatusTile";
+export { default as ProjectFilters } from "./ProjectFilters";
+export {
+  TruncatedBadgeList,
+  DocumentTypeTruncatedBadges,
+} from "./TruncatedBadgeList";
+export type {
+  TruncatedBadgeListItem,
+  TruncatedBadgeListProps,
+  DocumentTypeTruncatedBadgesProps,
+} from "./TruncatedBadgeList";

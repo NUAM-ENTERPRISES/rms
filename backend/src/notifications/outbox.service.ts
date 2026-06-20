@@ -1,11 +1,70 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { ROLE_NAMES } from '../common/constants/role-ids';
+import { isProcessingStatusChangeRequestType } from '../common/constants/statuses';
+
+/** Leadership roles notified when an interview coordinator sends a candidate for processing. */
+const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Recruiter Manager',
+  'Processing Manager',
+  ROLE_NAMES.SYSTEM_ADMIN,
+  'Admin',
+  'System Administrator',
+] as const;
 
 @Injectable()
 export class OutboxService {
   private readonly logger = new Logger(OutboxService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  private buildReadyForProcessingPageLink(
+    projectId: string,
+    candidateName: string,
+  ): string {
+    const params = new URLSearchParams({
+      projectId,
+      search: candidateName,
+    });
+    return `/ready-for-processing?${params.toString()}`;
+  }
+
+  private buildCandidateDetailLink(candidateId: string): string {
+    return `/candidates/${candidateId}`;
+  }
+
+  private buildSentForProcessingRoleLink(
+    roleName: string,
+    projectId: string,
+    candidateId: string,
+    candidateName: string,
+  ): string {
+    if (roleName === 'Recruiter Manager') {
+      return this.buildCandidateDetailLink(candidateId);
+    }
+
+    return this.buildReadyForProcessingPageLink(projectId, candidateName);
+  }
+
+  private buildSentForProcessingRoleMeta(
+    roleName: string,
+    leadershipMeta: Record<string, unknown>,
+  ): Record<string, unknown> {
+    if (roleName === 'Recruiter Manager') {
+      return {
+        ...leadershipMeta,
+        targetRole: roleName,
+        navigationTarget: 'candidate_detail',
+      };
+    }
+
+    return {
+      ...leadershipMeta,
+      targetRole: roleName,
+      navigationTarget: 'ready_for_processing',
+    };
+  }
 
   /**
    * Publish an event to the outbox for async processing
@@ -131,6 +190,90 @@ export class OutboxService {
       {
         documentId,
         resubmittedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video rejected event
+   */
+  async publishIntroductionVideoRejected(
+    documentId: string,
+    rejectedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoRejected',
+      {
+        documentId,
+        rejectedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video resubmission requested event
+   */
+  async publishIntroductionVideoResubmissionRequested(
+    documentId: string,
+    requestedBy: string,
+    candidateProjectMapId: string,
+    reason?: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoResubmissionRequested',
+      {
+        documentId,
+        requestedBy,
+        candidateProjectMapId,
+        reason,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video resubmitted event
+   */
+  async publishIntroductionVideoResubmitted(
+    documentId: string,
+    resubmittedBy: string,
+    candidateProjectMapId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoResubmitted',
+      {
+        documentId,
+        resubmittedBy,
+        candidateProjectMapId,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish introduction video verified event
+   */
+  async publishIntroductionVideoVerified(
+    documentId: string,
+    verifiedBy: string,
+    candidateProjectMapId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'IntroductionVideoVerified',
+      {
+        documentId,
+        verifiedBy,
         candidateProjectMapId,
       },
       tx,
@@ -364,6 +507,112 @@ export class OutboxService {
   }
 
   /**
+   * Publish candidate sent for ready-for-processing by interview coordinator.
+   * Notifies manager, recruiter manager, processing manager, admin, and the assigned recruiter.
+   */
+  async publishCandidateReadyForProcessing(
+    payload: {
+      candidateProjectMapId: string;
+      candidateId: string;
+      candidateName: string;
+      projectName: string;
+      projectId: string;
+      recruiterId?: string | null;
+      changedBy?: string | null;
+      changedById?: string | null;
+    },
+    tx?: any,
+  ): Promise<void> {
+    const {
+      candidateProjectMapId,
+      candidateId,
+      candidateName,
+      projectName,
+      projectId,
+      recruiterId,
+      changedBy,
+      changedById,
+    } = payload;
+
+    await this.publishEvent(
+      'CandidateReadyForProcessing',
+      {
+        candidateProjectMapId,
+        candidateId,
+        candidateName,
+        projectName,
+        projectId,
+        recruiterId: recruiterId ?? null,
+        changedBy: changedBy ?? null,
+        changedById: changedById ?? null,
+      },
+      tx,
+    );
+
+    const changedBySuffix = changedBy ? ` by ${changedBy}` : '';
+    const leadershipMessage = `${candidateName} has been sent to ready for processing on project "${projectName}"${changedBySuffix}.`;
+    const recruiterLink = this.buildCandidateDetailLink(candidateId);
+    const leadershipMeta = {
+      type: 'candidate_ready_for_processing',
+      candidateId,
+      candidateName,
+      projectId,
+      candidateProjectMapId,
+      changedById: changedById ?? null,
+      excludeUserId: changedById ?? undefined,
+      syncTags: [
+        'Interview',
+        'ProcessingSummary',
+        'Candidate',
+        'Processing',
+        'RecruiterDocuments',
+      ],
+    };
+    const recruiterMeta = {
+      ...leadershipMeta,
+      navigationTarget: 'candidate_detail',
+    };
+
+    for (const roleName of READY_FOR_PROCESSING_LEADERSHIP_ROLES) {
+      await this.publishRoleNotification(
+        roleName,
+        leadershipMessage,
+        'Sent to Ready for Processing',
+        this.buildSentForProcessingRoleLink(
+          roleName,
+          projectId,
+          candidateId,
+          candidateName,
+        ),
+        this.buildSentForProcessingRoleMeta(roleName, leadershipMeta),
+        tx,
+      );
+    }
+
+    if (recruiterId) {
+      await this.publishRecruiterNotification(
+        recruiterId,
+        leadershipMessage,
+        'Sent to Ready for Processing',
+        recruiterLink,
+        recruiterMeta,
+        tx,
+      );
+    }
+
+    await this.publishDataSync(
+      {
+        type: 'ProcessingSummary',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        message: `Candidate ${candidateName} is now ready for processing`,
+      },
+      tx,
+    );
+  }
+
+  /**
    * Publish candidate transferred to processing event
    */
   async publishCandidateTransferredToProcessing(
@@ -512,5 +761,176 @@ export class OutboxService {
     );
   }
 
+  /**
+   * Publish offer letter uploaded event (notifies recruiter, admin, managers, interview coordinators, and processing roles)
+   */
+  async publishOfferLetterUploaded(
+    payload: {
+      candidateId: string;
+      projectId: string;
+      candidateProjectMapId: string;
+      documentId: string;
+      recruiterId?: string | null;
+      candidateName: string;
+      projectTitle: string;
+      roleDesignation: string;
+      uploadedBy: string;
+      uploadedByName?: string | null;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('OfferLetterUploaded', payload, tx);
+
+    await this.publishDataSync(
+      {
+        type: 'OfferLetterUploaded',
+        candidateId: payload.candidateId,
+        projectId: payload.projectId,
+        candidateProjectMapId: payload.candidateProjectMapId,
+        message: `Offer letter uploaded for ${payload.candidateName}`,
+      },
+      tx,
+    );
+  }
+
+  /**
+   * Publish offer letter upload required event (notifies assigned recruiter)
+   */
+  async publishOfferLetterUploadRequested(
+    payload: {
+      candidateId: string;
+      projectId: string;
+      candidateProjectMapId: string;
+      recruiterId: string;
+      roleCatalogId?: string | null;
+      candidateName: string;
+      projectTitle: string;
+      requestedBy: string;
+      requestedByName?: string | null;
+      reason: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('OfferLetterUploadRequested', payload, tx);
+  }
+
+  async publishAgentCandidateRequestCreated(
+    payload: {
+      requestId: string;
+      projectId: string;
+      projectTitle: string;
+      requestedById: string;
+      items: Array<{
+        roleNeededId: string;
+        requestedCount: number;
+        roleDesignation: string;
+      }>;
+      notes?: string | null;
+      link?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent('AgentCandidateRequestCreated', payload, tx);
+  }
+
+  async publishCandidateProjectStatusChangeRequested(
+    payload: {
+      requestId: string;
+      candidateProjectMapId: string;
+      candidateId: string;
+      projectId: string;
+      candidateName: string;
+      projectTitle: string;
+      requestType: string;
+      requestedStatus?: string;
+      requestedBy: string;
+      requesterName: string;
+      reason: string;
+      processingStepId?: string;
+      stepKey?: string;
+      processingCandidateId?: string;
+      countryCode?: string;
+      countryName?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateProjectStatusChangeRequested',
+      payload,
+      tx,
+    );
+
+    if (isProcessingStatusChangeRequestType(payload.requestType)) {
+      await this.publishDataSync(
+        {
+          type: 'ProcessingStatusChange',
+          processingCandidateId: payload.processingCandidateId,
+          candidateId: payload.candidateId,
+          projectId: payload.projectId,
+          requestId: payload.requestId,
+          requestType: payload.requestType,
+          phase: 'requested',
+        },
+        tx,
+      );
+    }
+  }
+
+  async publishCandidateProjectStatusChangeReviewed(
+    payload: {
+      requestId: string;
+      candidateProjectMapId: string;
+      candidateId: string;
+      projectId: string;
+      candidateName: string;
+      projectTitle: string;
+      requestType?: string;
+      requestedStatus?: string;
+      requestedBy: string;
+      outcome: 'approved' | 'rejected';
+      reviewNotes?: string | null;
+      processingStepId?: string;
+      stepKey?: string;
+      processingCandidateId?: string;
+    },
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CandidateProjectStatusChangeReviewed',
+      payload,
+      tx,
+    );
+
+    if (
+      payload.requestType &&
+      isProcessingStatusChangeRequestType(payload.requestType)
+    ) {
+      await this.publishDataSync(
+        {
+          type: 'ProcessingStatusChange',
+          processingCandidateId: payload.processingCandidateId,
+          candidateId: payload.candidateId,
+          projectId: payload.projectId,
+          requestId: payload.requestId,
+          requestType: payload.requestType,
+          outcome: payload.outcome,
+          phase: 'reviewed',
+        },
+        tx,
+      );
+    }
+  }
+
+  async publishCourierShipmentReceived(
+    shipmentId: string,
+    receivedByUserId: string,
+    tx?: any,
+  ): Promise<void> {
+    await this.publishEvent(
+      'CourierShipmentReceived',
+      { shipmentId, receivedByUserId },
+      tx,
+    );
+  }
 }
 

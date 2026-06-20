@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DatePicker } from "@/components/molecules";
 import { MapPin, Video, PhoneCall, Plus, Users } from "lucide-react";
 import { useGetProjectsQuery } from "@/features/projects/api";
+import { ProjectStatus } from "@/entities/project/constants";
 import { useCreateInterviewMutation, useCreateBulkInterviewsMutation } from "../api";
 import { toast } from "sonner";
 
@@ -77,7 +78,7 @@ export default function ScheduleInterviewDialog({
 }: ScheduleInterviewDialogProps) {
   const { data: projectsData } = useGetProjectsQuery(
     {
-      status: "active",
+      status: ProjectStatus.IN_PROGRESS,
       page: 1,
       limit: 10,
     },

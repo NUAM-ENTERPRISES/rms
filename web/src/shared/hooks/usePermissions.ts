@@ -57,7 +57,7 @@ export const usePermissions = () => {
   };
 
   const isManager = (): boolean => {
-    return hasRole(["CEO", "Director", "Manager"]);
+    return hasRole(["CEO", "Director", "Manager", "Recruiter Manager"]);
   };
 
   return {

@@ -24,6 +24,7 @@ import {
   X,
   Plus,
 } from "lucide-react";
+import { CountrySelect } from "./CountrySelect";
 
 // Validation schema for work experience
 const workExperienceSchema = z.object({
@@ -35,6 +36,7 @@ const workExperienceSchema = z.object({
   description: z.string().max(1000).optional(),
   salary: z.number().min(0).optional(),
   location: z.string().max(200).optional(),
+  countryCode: z.string().optional(),
   skills: z.array(z.string()),
   achievements: z.string().max(500).optional(),
 });
@@ -70,6 +72,7 @@ export function WorkExperienceForm({
       description: initialData?.description || "",
       salary: initialData?.salary || undefined,
       location: initialData?.location || "",
+      countryCode: initialData?.countryCode || "",
       achievements: initialData?.achievements || "",
       skills: initialData?.skills || [],
     },
@@ -259,6 +262,13 @@ export function WorkExperienceForm({
                 />
               </div>
             </div>
+
+            <CountrySelect
+              label="Country (optional)"
+              value={form.watch("countryCode") || ""}
+              onValueChange={(code) => form.setValue("countryCode", code)}
+              allowEmpty
+            />
           </div>
 
           {/* Description */}

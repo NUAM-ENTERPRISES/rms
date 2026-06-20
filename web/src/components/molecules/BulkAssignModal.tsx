@@ -30,6 +30,7 @@ import {
   Building2,
   X,
 } from "lucide-react";
+import { buildProcessingAssignmentBlockMessage } from "@/features/projects/utils/project-assignment";
 
 // ─── Helpers ────────────────────────────────────────────
 const getMatchScoreColor = (score: number) => {
@@ -96,6 +97,19 @@ interface BulkAssignModalProps {
   eligibilityMap?: Record<string, any>;
   onRemoveCandidate?: (candidateId: string) => void;
 }
+
+const getProcessingBlockMessage = (
+  eligibilityMap: Record<string, any>,
+  candidateId: string,
+): string | null => {
+  const data = eligibilityMap[candidateId];
+  if (!data?.processingConflict || !data?.pipelineBlockedOnThisProject) {
+    return null;
+  }
+  return buildProcessingAssignmentBlockMessage(
+    data.processingConflict.projectTitle,
+  );
+};
 
 // ─── Component ──────────────────────────────────────────
 export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
@@ -489,6 +503,10 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
                               (rm: any) => rm.designation === selectedRole?.name
                             );
                             const candidateEligibility = eligibilityMap[assignment.candidateId];
+                            const processingBlockMessage = getProcessingBlockMessage(
+                              eligibilityMap,
+                              assignment.candidateId,
+                            );
                             const roleEligibility = candidateEligibility?.roleEligibility?.find(
                               (re: any) => re.designation === selectedRole?.name || re.roleId === selectedRole?.id
                             );
@@ -500,6 +518,11 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
 
                             return (
                               <div className="space-y-2">
+                                {processingBlockMessage && (
+                                  <div className="rounded-md border border-orange-200 bg-orange-50 p-2.5 text-[10px] text-orange-900">
+                                    {processingBlockMessage}
+                                  </div>
+                                )}
                                 {/* Role match score badge */}
                                 {roleMatch && (
                                   <div
@@ -593,7 +616,13 @@ export const BulkAssignModal: React.FC<BulkAssignModalProps> = ({
           <Button
             onClick={handleConfirm}
             className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 px-6 text-sm font-semibold shadow-sm"
-            disabled={isSubmitting || candidateAssignments.some((a) => !a.roleNeededId)}
+            disabled={
+              isSubmitting ||
+              candidateAssignments.some((a) => !a.roleNeededId) ||
+              candidateAssignments.some((a) =>
+                Boolean(getProcessingBlockMessage(eligibilityMap, a.candidateId)),
+              )
+            }
           >
             {isSubmitting ? (
               <>

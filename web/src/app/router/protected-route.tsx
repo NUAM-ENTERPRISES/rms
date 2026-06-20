@@ -6,6 +6,8 @@ import LoadingScreen from "@/components/atoms/LoadingScreen";
 import { authApi } from "@/services/authApi";
 import { setCredentials } from "@/features/auth/authSlice";
 
+import { ROLE_NAMES } from "@/config/role-names";
+
 interface ProtectedRouteProps {
   children: ReactNode;
   roles?: string[];
@@ -73,8 +75,16 @@ export default function ProtectedRoute({
 
   function denyAccessToastAndRedirect(): React.ReactElement {
     toast.error("Insufficient permissions to access this page");
+    if (user?.roles.includes("Processing Manager")) {
+      return <Navigate to="/processing-admin" replace />;
+    }
+    if (user?.roles.includes(ROLE_NAMES.PROJECT_COORDINATOR)) {
+      return <Navigate to="/project-coordinator/dashboard" replace />;
+    }
     if (
-      user?.roles.some((role) => ["CEO", "Director", "Manager"].includes(role))
+      user?.roles.some((role) =>
+        ["CEO", "Director", "Manager", "Recruiter Manager"].includes(role)
+      )
     ) {
       return <Navigate to="/dashboard" replace />;
     }

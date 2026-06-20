@@ -1,12 +1,18 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CandidateProjectsController } from './candidate-projects.controller';
 import { CandidateProjectsService } from './candidate-projects.service';
 import { PrismaModule } from '../database/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CandidateProjectStatusModule } from '../candidate-project-status/candidate-project-status.module';
+import { ProcessingModule } from '../processing/processing.module';
 
 @Module({
-  imports: [PrismaModule, CandidateProjectStatusModule, NotificationsModule],
+  imports: [
+    PrismaModule,
+    CandidateProjectStatusModule,
+    forwardRef(() => NotificationsModule),
+    forwardRef(() => ProcessingModule),
+  ],
   controllers: [CandidateProjectsController],
   providers: [CandidateProjectsService],
   exports: [CandidateProjectsService],

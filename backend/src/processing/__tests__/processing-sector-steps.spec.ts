@@ -39,6 +39,17 @@ describe('processing-sector-steps', () => {
     expect(filtered.map((s) => s.template.key)).toEqual(['offer_letter']);
   });
 
+  it('filterProcessingStepsForSector can include cancelled steps when requested', () => {
+    const steps = [
+      { status: 'completed', template: { key: 'offer_letter' } },
+      { status: 'cancelled', template: { key: 'hrd' } },
+    ];
+    const filtered = filterProcessingStepsForSector(steps as any, PROJECT_SECTOR.NON_HEALTHCARE, {
+      includeCancelled: true,
+    });
+    expect(filtered.map((s) => s.template.key)).toEqual(['offer_letter', 'hrd']);
+  });
+
   it('computeApplicableStepProgress counts only applicable non-cancelled steps', () => {
     const steps = [
       { status: 'completed', template: { key: 'offer_letter' } },
@@ -46,12 +57,25 @@ describe('processing-sector-steps', () => {
       { status: 'pending', template: { key: 'data_flow' } },
       { status: 'completed', template: { key: 'prometric' } },
     ];
-    const { totalApplicable, completedApplicable, percent } = computeApplicableStepProgress(
+    const { totalApplicable, completedApplicable, percent, pendingSteps } = computeApplicableStepProgress(
       steps,
       PROJECT_SECTOR.NON_HEALTHCARE,
     );
     expect(totalApplicable).toBe(2);
     expect(completedApplicable).toBe(2);
     expect(percent).toBe(100);
+    expect(pendingSteps).toHaveLength(0);
+  });
+
+  it('computeApplicableStepProgress returns pending steps sorted by template order', () => {
+    const steps = [
+      { status: 'completed', template: { key: 'offer_letter', label: 'Offer Letter', order: 1 } },
+      { status: 'pending', template: { key: 'hrd', label: 'HRD', order: 3 } },
+      { status: 'in_progress', template: { key: 'document_received', label: 'Documents Received', order: 2 } },
+    ];
+    const { percent, pendingSteps } = computeApplicableStepProgress(steps, PROJECT_SECTOR.HEALTHCARE);
+    expect(percent).toBe(33);
+    expect(pendingSteps.map((s) => s.key)).toEqual(['document_received', 'hrd']);
+    expect(pendingSteps[0].status).toBe('in_progress');
   });
 });

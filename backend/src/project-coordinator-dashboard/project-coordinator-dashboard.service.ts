@@ -1,0 +1,302 @@
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../database/prisma.service';
+import {
+  buildProjectRoleHiringRows,
+  countFilledCandidatesForProjects,
+} from '../common/dashboard/project-role-hiring.util';
+import { getProjectPipelineCounts } from '../common/dashboard/project-pipeline-status.util';
+import { getProjectCoordinatorClientIds } from '../common/scoping/project-coordinator-scope.util';
+import {
+  MyProjectsQueryDto,
+  ProjectPipelineQueryDto,
+  ProjectRoleHiringStatusQueryDto,
+} from './dto/project-coordinator-dashboard-query.dto';
+import { buildInProgressProjectsWhere } from '../projects/utils/project-deadline.util';
+
+@Injectable()
+export class ProjectCoordinatorDashboardService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private async getMyProjectIds(userId: string): Promise<string[]> {
+    const projects = await this.prisma.project.findMany({
+      where: { createdBy: userId },
+      select: { id: true },
+    });
+    return projects.map((project) => project.id);
+  }
+
+  private async getMyClientIds(userId: string): Promise<string[]> {
+    return getProjectCoordinatorClientIds(this.prisma, userId);
+  }
+
+  async getStats(userId: string) {
+    const [myClients, inProgressProjects, completedProjects, onHoldProjects, cancelledProjects, projectIds] =
+      await Promise.all([
+        this.getMyClientIds(userId).then((ids) => ids.length),
+        this.prisma.project.count({
+          where: { createdBy: userId, ...buildInProgressProjectsWhere() },
+        }),
+        this.prisma.project.count({
+          where: { createdBy: userId, status: 'COMPLETED' },
+        }),
+        this.prisma.project.count({
+          where: { createdBy: userId, status: 'ON_HOLD' },
+        }),
+        this.prisma.project.count({
+          where: { createdBy: userId, status: 'CANCELLED' },
+        }),
+        this.getMyProjectIds(userId),
+      ]);
+
+    const candidatesFilled = await countFilledCandidatesForProjects(
+      this.prisma,
+      projectIds,
+    );
+
+    return {
+      success: true,
+      data: {
+        myClients,
+        activeProjects: inProgressProjects,
+        completedProjects,
+        onHoldProjects,
+        cancelledProjects,
+        totalProjects: inProgressProjects + completedProjects + onHoldProjects + cancelledProjects,
+        candidatesFilled,
+      },
+      message: 'Project coordinator dashboard stats retrieved successfully',
+    };
+  }
+
+  async getProjectsByStatus(userId: string) {
+    const [inProgress, completed, onHold, cancelled] = await Promise.all([
+      this.prisma.project.count({
+        where: { createdBy: userId, ...buildInProgressProjectsWhere() },
+      }),
+      this.prisma.project.count({
+        where: { createdBy: userId, status: 'COMPLETED' },
+      }),
+      this.prisma.project.count({
+        where: { createdBy: userId, status: 'ON_HOLD' },
+      }),
+      this.prisma.project.count({
+        where: { createdBy: userId, status: 'CANCELLED' },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: { inProgress, completed, onHold, cancelled },
+      message: 'Project status breakdown retrieved successfully',
+    };
+  }
+
+  async getClientsOverview(userId: string) {
+    const clientIds = await this.getMyClientIds(userId);
+    if (clientIds.length === 0) {
+      return {
+        success: true,
+        data: [],
+        message: 'Clients overview retrieved successfully',
+      };
+    }
+
+    const clients = await this.prisma.client.findMany({
+      where: { id: { in: clientIds } },
+      select: {
+        id: true,
+        name: true,
+        projects: {
+          where: { createdBy: userId },
+          select: { status: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    const data = clients
+      .map((client) => {
+        const activeProjects = client.projects.filter(
+          (project) => project.status === 'IN_PROGRESS',
+        ).length;
+        const completedProjects = client.projects.filter(
+          (project) => project.status === 'COMPLETED',
+        ).length;
+
+        return {
+          clientId: client.id,
+          clientName: client.name,
+          projectCount: client.projects.length,
+          activeProjects,
+          completedProjects,
+        };
+      })
+      .filter((client) => client.projectCount > 0 || clientIds.includes(client.clientId))
+      .sort((a, b) => b.projectCount - a.projectCount);
+
+    return {
+      success: true,
+      data,
+      message: 'Clients overview retrieved successfully',
+    };
+  }
+
+  async getMyProjects(userId: string, query?: MyProjectsQueryDto) {
+    const { search, page = 1, limit = 10 } = query ?? {};
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ProjectWhereInput = { createdBy: userId };
+
+    if (search) {
+      where.title = { contains: search, mode: 'insensitive' };
+    }
+
+    const [total, projects] = await Promise.all([
+      this.prisma.project.count({ where }),
+      this.prisma.project.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          client: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        projects: projects.map((project) => ({
+          projectId: project.id,
+          projectName: project.title,
+          clientName: project.client?.name ?? 'Unassigned client',
+          status: project.status as 'active' | 'completed' | 'cancelled',
+        })),
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          page,
+          limit,
+        },
+      },
+      message: 'Coordinator projects retrieved successfully',
+    };
+  }
+
+  async getProjectPipeline(userId: string, query: ProjectPipelineQueryDto) {
+    const { projectId } = query;
+
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, createdBy: userId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!project) {
+      const exists = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { id: true },
+      });
+      if (exists) {
+        throw new ForbiddenException('You do not have access to this project');
+      }
+      throw new NotFoundException('Project not found');
+    }
+
+    const { pipeline, stages } = await getProjectPipelineCounts(
+      this.prisma,
+      projectId,
+    );
+
+    return {
+      success: true,
+      data: {
+        project: {
+          projectId: project.id,
+          projectName: project.title,
+          clientName: project.client?.name ?? 'Unassigned client',
+          status: project.status as 'active' | 'completed' | 'cancelled',
+        },
+        pipeline,
+        stages,
+      },
+      message: 'Project pipeline retrieved successfully',
+    };
+  }
+
+  async getProjectRoleHiringStatus(
+    userId: string,
+    query?: ProjectRoleHiringStatusQueryDto,
+  ) {
+    const { projectId, search, page = 1, limit = 10 } = query ?? {};
+    const skip = (page - 1) * limit;
+
+    const projectWhere: Prisma.ProjectWhereInput = {
+      createdBy: userId,
+      status: 'IN_PROGRESS',
+    };
+
+    if (projectId) {
+      projectWhere.id = projectId;
+    }
+
+    if (search) {
+      projectWhere.title = { contains: search, mode: 'insensitive' };
+    }
+
+    const [total, projects] = await Promise.all([
+      this.prisma.project.count({ where: projectWhere }),
+      this.prisma.project.findMany({
+        where: projectWhere,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          rolesNeeded: {
+            select: {
+              id: true,
+              designation: true,
+              quantity: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const projectRoles = await buildProjectRoleHiringRows(this.prisma, projects);
+
+    return {
+      success: true,
+      data: {
+        projectRoles,
+        pagination: {
+          total,
+          totalPages: Math.ceil(total / limit),
+          page,
+          limit,
+        },
+      },
+      message: 'Project role hiring status retrieved successfully',
+    };
+  }
+}

@@ -5,14 +5,18 @@ import { CandidateQualificationController } from './candidate-qualification.cont
 import { CandidateQualificationService } from './candidate-qualification.service';
 import { CandidateAssignmentController } from './controllers/candidate-assignment.controller';
 import { CandidateAssignmentValidatorService } from './services/candidate-assignment-validator.service';
+import { CandidateCodeService } from './services/candidate-code.service';
+import { CandidateListFilterService } from './services/candidate-list-filter.service';
 import { RecruiterAssignmentService } from './services/recruiter-assignment.service';
 import { RnrCreAssignmentService } from './services/rnr-cre-assignment.service';
+import { OperationsFollowUpSweeperService } from './services/operations-follow-up-sweeper.service';
 import { PipelineService } from './pipeline.service';
 import { PrismaModule } from '../database/prisma.module';
 import { WorkExperienceModule } from './work-experience.module';
 import { OutboxService } from '../notifications/outbox.service';
 import { UnifiedEligibilityService } from '../candidate-eligibility/unified-eligibility.service';
 import { RnrRemindersModule } from '../rnr-reminders/rnr-reminders.module';
+import { CallbackRemindersModule } from '../callback-reminders/callback-reminders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
 
@@ -21,6 +25,7 @@ import { RolesModule } from '../roles/roles.module';
     PrismaModule,
     WorkExperienceModule,
     RnrRemindersModule,
+    CallbackRemindersModule,
     NotificationsModule,
     RolesModule,
   ],
@@ -33,8 +38,11 @@ import { RolesModule } from '../roles/roles.module';
     CandidatesService,
     CandidateQualificationService,
     CandidateAssignmentValidatorService,
+    CandidateCodeService,
+    CandidateListFilterService,
     RecruiterAssignmentService,
     RnrCreAssignmentService,
+    OperationsFollowUpSweeperService,
     PipelineService,
     OutboxService,
     UnifiedEligibilityService,
@@ -42,6 +50,7 @@ import { RolesModule } from '../roles/roles.module';
   exports: [
     CandidatesService, 
     CandidateQualificationService,
+    CandidateCodeService,
     RecruiterAssignmentService, // Export for RNR CRE assignment
   ],
 })

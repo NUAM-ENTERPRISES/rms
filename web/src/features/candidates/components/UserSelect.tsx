@@ -52,6 +52,7 @@ export function UserSelect({
     roles: role,
     page,
     limit,
+    accountStatus: "ACTIVE",
   });
 
   const allUsers = data?.data?.users || [];

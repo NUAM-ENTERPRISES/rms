@@ -38,10 +38,12 @@ import { useGetAdminSessionsQuery } from "@/features/admin/api";
 import type { AdminSession, AdminSessionsQuery } from "@/features/admin/api";
 import { formatDistanceToNow } from "date-fns";
 import type { SessionAvailability } from "@/shared/types/session-availability";
+import { ROLE_NAMES, LEGACY_CRE_ROLE_NAME } from "@/config/role-names";
 
 // All staff roles that can be monitored (excludes executive leadership)
 const MONITORED_ROLES = [
   "Recruiter",
+  ROLE_NAMES.OPERATIONS,
   "CRE",
   "Interview Coordinator",
   "Screening Trainer",
@@ -58,6 +60,8 @@ const MONITORED_ROLES = [
 const ROLE_COLORS: Record<string, string> = {
   Recruiter:
     "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800",
+  Operations:
+    "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   CRE: "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800",
   "Interview Coordinator":
     "bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800",
@@ -79,6 +83,18 @@ const ROLE_COLORS: Record<string, string> = {
   "System Admin":
     "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
 };
+
+function displayRoleName(role: string): string {
+  return role === LEGACY_CRE_ROLE_NAME ? ROLE_NAMES.OPERATIONS : role;
+}
+
+function roleBadgeClass(role: string): string {
+  const key = role === LEGACY_CRE_ROLE_NAME ? ROLE_NAMES.OPERATIONS : role;
+  return (
+    ROLE_COLORS[key] ??
+    "bg-slate-100 text-slate-600 border border-slate-200"
+  );
+}
 
 // Avatar accent colors cycled by name hash
 const AVATAR_PALETTES = [
@@ -863,12 +879,9 @@ export default function SessionsMonitoringPage() {
                               session.roles.map((r) => (
                                 <span
                                   key={r}
-                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight ${
-                                    ROLE_COLORS[r] ??
-                                    "bg-slate-100 text-slate-600 border border-slate-200"
-                                  }`}
+                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-tight ${roleBadgeClass(r)}`}
                                 >
-                                  {r}
+                                  {displayRoleName(r)}
                                 </span>
                               ))
                             )}

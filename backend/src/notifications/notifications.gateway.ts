@@ -12,10 +12,12 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
+import { UserAccountStatus } from '@prisma/client';
+import { buildCorsOriginAllowlist } from '../common/cors.util';
 
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: buildCorsOriginAllowlist(),
     credentials: true,
     methods: ['GET', 'POST'],
   },
@@ -68,6 +70,19 @@ export class NotificationsGateway
       }
 
       const userId = payload.sub;
+
+      const accountUser = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { accountStatus: true },
+      });
+
+      if (accountUser?.accountStatus === UserAccountStatus.BLOCKED) {
+        this.logger.warn(
+          `Connection rejected: blocked account for user ${userId}`,
+        );
+        client.disconnect();
+        return;
+      }
 
       // Join user to their personal room
       await client.join(`user:${userId}`);

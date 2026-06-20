@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger';
 import { RecruiterAnalyticsService } from './recruiter-analytics.service';
 import { Permissions } from '../../auth/rbac/permissions.decorator';
+import { PerformanceRatingQueryDto } from './dto/performance-rating-query.dto';
 
 @ApiTags('Recruiter Analytics')
 @ApiBearerAuth()
@@ -239,6 +240,45 @@ export class RecruiterAnalyticsController {
       search: search || undefined,
       page: page ? parseInt(page, 10) : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
+    });
+  }
+
+  @Get('performance-rating')
+  @Permissions('read:candidates', 'read:analytics')
+  @ApiOperation({
+    summary: 'Get recruiter performance rating',
+    description:
+      'Returns weighted monthly and yearly performance scores and ratings based on candidate stage progression in the selected periods.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Recruiter performance rating retrieved successfully',
+  })
+  async getPerformanceRating(
+    @Query() query: PerformanceRatingQueryDto,
+    @Request() req: { user: { id: string; roles?: string[] } },
+  ) {
+    const roles = req.user.roles ?? [];
+    const canViewOtherRecruiters = roles.some((r) =>
+      [
+        'CEO',
+        'Director',
+        'Manager',
+        'Recruiter Manager',
+        'Team Head',
+        'Team Lead',
+        'System Admin',
+      ].includes(r),
+    );
+
+    const recruiterId =
+      canViewOtherRecruiters && query.recruiterId
+        ? query.recruiterId
+        : req.user.id;
+
+    return this.recruiterAnalyticsService.getPerformanceRating(recruiterId, {
+      year: query.year,
+      month: query.month,
     });
   }
 }

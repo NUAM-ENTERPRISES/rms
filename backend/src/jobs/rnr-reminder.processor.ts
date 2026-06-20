@@ -6,6 +6,7 @@ import { SystemConfigService, RNRSettings } from '../system-config/system-config
 import { NotificationsService } from '../notifications/notifications.service';
 import { RecruiterAssignmentService } from '../candidates/services/recruiter-assignment.service';
 import { CANDIDATE_STATUS } from '../common/constants/statuses';
+import { ROLE_NAMES } from '../common/constants/role-ids';
 
 /**
  * RNR Reminder Job Processor
@@ -96,7 +97,7 @@ export class RnrReminderProcessor extends WorkerHost {
               userRoles: {
                 some: {
                   role: {
-                    name: 'CRE',
+                    name: ROLE_NAMES.OPERATIONS,
                   },
                 },
               },
@@ -346,7 +347,7 @@ export class RnrReminderProcessor extends WorkerHost {
             userRoles: {
               some: {
                 role: {
-                  name: 'CRE',
+                  name: ROLE_NAMES.OPERATIONS,
                 },
               },
             },
@@ -389,7 +390,7 @@ export class RnrReminderProcessor extends WorkerHost {
           payload: {
             type: 'Candidate',
             candidateId,
-            message: `Candidate ${candidate.firstName} ${candidate.lastName} has been escalated to CRE ${assignedCRE.name}`,
+            message: `Candidate ${candidate.firstName} ${candidate.lastName} has been escalated to Operations ${assignedCRE.name}`,
           },
         },
       });
@@ -456,8 +457,8 @@ export class RnrReminderProcessor extends WorkerHost {
       data: {
         userId: originalRecruiterId,
         type: 'RNR_ESCALATION',
-        title: 'RNR Candidate Escalated to CRE',
-        message: `Candidate ${candidateName} has been escalated to CRE team member ${creName} after ${daysInRNR} days in RNR status.`,
+        title: 'RNR Candidate Escalated to Operations',
+        message: `Candidate ${candidateName} has been escalated to Operations team member ${creName} after ${daysInRNR} days in RNR status.`,
         link: `/candidates/${candidateId}`,
         status: 'unread',
         idemKey: `rnr_escalation_${candidateId}_${Date.now()}`,

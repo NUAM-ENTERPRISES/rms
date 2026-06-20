@@ -47,7 +47,48 @@ import {
   Award,
   Plus,
   Replace,
+  Video,
 } from "lucide-react";
+import { ProjectStatus } from "@/entities/project/constants";
+
+const normalizeProjectStatus = (status?: string) =>
+  status?.toLowerCase().replace(/-/g, "_") ?? "";
+
+const getProjectStatusBadgeConfig = (status?: string) => {
+  switch (normalizeProjectStatus(status)) {
+    case ProjectStatus.IN_PROGRESS:
+      return {
+        className:
+          "border-orange-300 bg-orange-100 text-orange-800 font-semibold uppercase tracking-wide",
+        label: "IN_PROGRESS",
+        showPulse: true,
+      };
+    case ProjectStatus.COMPLETED:
+      return {
+        className: "border-blue-200 bg-blue-50 text-blue-700",
+        label: "COMPLETED",
+        showPulse: false,
+      };
+    case ProjectStatus.ON_HOLD:
+      return {
+        className: "border-amber-200 bg-amber-50 text-amber-700",
+        label: "ON_HOLD",
+        showPulse: false,
+      };
+    case ProjectStatus.CANCELLED:
+      return {
+        className: "border-rose-200 bg-rose-50 text-rose-700",
+        label: "CANCELLED",
+        showPulse: false,
+      };
+    default:
+      return {
+        className: "border-slate-200 bg-slate-50 text-slate-700",
+        label: status ? status.toUpperCase().replace(/-/g, "_") : "N/A",
+        showPulse: false,
+      };
+  }
+};
 import {
   Tabs,
   TabsContent,
@@ -96,79 +137,42 @@ import {
   useReuploadRecruiterDocumentMutation as useReuploadDocumentMutation
 } from "@/features/documents/api";
 import { useUploadDocumentMutation, useGetCandidateByIdQuery, WorkExperience, CandidateQualification, Document as CandidateDocument } from "@/features/candidates/api";
+import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import type { Document as DocsApiDocument } from "@/features/documents/api";
 import { DOCUMENT_TYPE_CONFIG } from "@/constants/document-types";
+import { getPassportDocument } from "@/features/candidates/profileCompletion";
 import { useAppSelector } from "@/app/hooks";
 import { toast } from "sonner";
+import { DateUtils } from "@/shared/utils/date";
+import { getUploadErrorMessage, formatBytes } from "@/lib/document-upload";
 import { UploadDocumentModal } from "@/features/documents/components/UploadDocumentModal";
+import { LinkExistingDocumentModal } from "@/features/documents/components/LinkExistingDocumentModal";
 
 
 const CandidateUploadDocumentModal = React.lazy(() => import("../components/CandidateUploadDocumentModal"));
 import { ConfirmationDialog } from "@/components/molecules/ConfirmationDialog";
+import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import LoadingScreen from "@/components/atoms/LoadingScreen";
-import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
 import { ImageViewer } from "@/components/molecules";
-
-// Minimal colorful badge classes for match scores
-const getMinimalScoreBadgeClass = (score?: number) => {
-  if (typeof score !== "number") return "bg-slate-50 text-slate-700";
-  if (score >= 90) return "bg-green-50 text-green-700";
-  if (score >= 80) return "bg-blue-50 text-blue-700";
-  if (score >= 70) return "bg-amber-50 text-amber-700";
-  return "bg-red-50 text-red-700";
-};
-
-// Format a single work experience item for display. Some records use
-// explicit yearsOfExperience while others provide start/end dates.
-const formatWorkExperienceEntry = (exp: {
-  jobTitle?: string;
-  designation?: string;
-  position?: string;
-  role?: string;
-  companyName?: string;
-  company?: string;
-  yearsOfExperience?: number;
-  startDate?: string;
-  endDate?: string;
-  isCurrent?: boolean;
-}) => {
-  const title = exp.jobTitle || exp.designation || exp.position || exp.role || "";
-  const company = exp.companyName || exp.company || "";
-
-  // If yearsOfExperience provided, show it, otherwise compute from dates
-  let yearsLabel = "";
-  if (typeof exp.yearsOfExperience === "number") {
-    yearsLabel = ` (${exp.yearsOfExperience} years)`;
-  } else if (exp.startDate) {
-    try {
-      const start = new Date(exp.startDate);
-      const end = exp.endDate ? new Date(exp.endDate) : (exp.isCurrent ? new Date() : null);
-      if (end) {
-        const diffMs = Math.max(0, end.getTime() - start.getTime());
-        const years = Math.round((diffMs / (1000 * 60 * 60 * 24 * 365)) * 10) / 10;
-        if (!Number.isNaN(years) && years > 0) {
-          yearsLabel = ` (${years} years)`;
-        }
-      }
-    } catch (e) {
-      // ignore and leave blank
-    }
-  }
-
-  // Prefer showing title and company first, then years
-  const parts = [] as string[];
-  if (title) parts.push(title);
-  if (company) parts.push(`at ${company}`);
-  return `${parts.join(" ")}${yearsLabel}`.trim();
-};
+import { VideoPlayerModal } from "@/components/molecules/VideoPlayerModal";
+import { IntroductionVideoUploadModal } from "@/components/molecules/IntroductionVideoUploadModal";
+import { IntroductionVideoReuseModal } from "@/components/molecules/IntroductionVideoReuseModal";
+import { CandidateOfferLetterCard } from "@/features/candidates/components/CandidateOfferLetterCard";
+import {
+  useUploadIntroductionVideoMutation,
+  useReuseIntroductionVideoMutation,
+  useReuploadIntroductionVideoMutation,
+} from "@/features/introduction-videos/api";
 
 interface UploadData {
   fileName: string;
   fileUrl: string;
   fileSize?: number;
   mimeType?: string;
+  compressionApplied?: boolean;
+  originalFileSize?: number;
 }
 
 interface DocumentRequirement {
@@ -180,6 +184,9 @@ interface DocumentRequirement {
   documentName?: string;
   /** Same as docType; stable binding for the Document Type column */
   documentType?: string;
+  uploadRequested?: boolean;
+  uploadRequestReason?: string;
+  uploadRequestedAt?: string;
 }
 
 interface DocumentVerification {
@@ -201,6 +208,10 @@ interface DocumentVerification {
 interface CandidateProjectMap {
   id: string;
   status: string;
+  mainStatus?: {
+    name: string;
+    label?: string;
+  };
   subStatus?: {
     name: string;
   };
@@ -218,6 +229,8 @@ interface CandidateProjectRequirementsData {
   requirements: DocumentRequirement[];
   verifications: DocumentVerification[];
   candidateProject: CandidateProjectMap;
+  introductionVideoRequired?: boolean;
+  introductionVideo?: DocumentVerification | null;
   summary: {
     totalVerified: number;
     totalRequired: number;
@@ -246,7 +259,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
   const { data: requirementsData, isLoading: isRequirementsLoading, refetch: refetchRequirements } = useGetCandidateProjectRequirementsQuery(
     { candidateId: candidateId || "", projectId: projectId || "" },
-    { skip: !candidateId || !projectId }
+    {
+      skip: !candidateId || !projectId,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
+    },
   );
 
   const { data: candidate } = useGetCandidateByIdQuery(candidateId || "", { skip: !candidateId });
@@ -261,11 +279,22 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const [showUploadDialog, setShowUploadDialog] = React.useState(false);
   const [showReuseDialog, setShowReuseDialog] = React.useState(false);
   const [uploadDocType, setUploadDocType] = React.useState("");
-  const [selectedExistingDocId, setSelectedExistingDocId] = React.useState("");
   const [selectedRequirement, setSelectedRequirement] = React.useState<DocumentRequirement | null>(null);
   const [isReuploadMode, setIsReuploadMode] = React.useState(false);
   const [reuploadDocId, setReuploadDocId] = React.useState<string | null>(null);
   const [reuploadMeta, setReuploadMeta] = React.useState<{ previousFileName: string } | null>(null);
+  const [showIntroVideoUploadDialog, setShowIntroVideoUploadDialog] = React.useState(false);
+  const [showIntroVideoReuseDialog, setShowIntroVideoReuseDialog] = React.useState(false);
+  const [isIntroVideoReuploadMode, setIsIntroVideoReuploadMode] = React.useState(false);
+  const [introVideoUploadProgress, setIntroVideoUploadProgress] = React.useState(0);
+  const [showIntroVideoModal, setShowIntroVideoModal] = React.useState(false);
+
+  const [uploadIntroductionVideo, { isLoading: isUploadingIntroVideo }] =
+    useUploadIntroductionVideoMutation();
+  const [reuseIntroductionVideo, { isLoading: isReusingIntroVideo }] =
+    useReuseIntroductionVideoMutation();
+  const [reuploadIntroductionVideo, { isLoading: isReuploadingIntroVideo }] =
+    useReuploadIntroductionVideoMutation();
 
   // Verification Confirmation State
   const [isVerifyConfirmOpen, setIsVerifyConfirmOpen] = React.useState(false);
@@ -323,6 +352,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
   const requirementsDataTyped = requirementsData?.data as CandidateProjectRequirementsData | undefined;
   const requirements = requirementsDataTyped?.requirements || [];
   const verifications = requirementsDataTyped?.verifications || [];
+  const introductionVideo = requirementsDataTyped?.introductionVideo;
+  const introductionVideoRequired =
+    project?.introductionVideoRequired ??
+    requirementsDataTyped?.introductionVideoRequired ??
+    false;
   const candidateProject = requirementsDataTyped?.candidateProject;
   const summary = requirementsDataTyped?.summary;
   const allCandidateDocuments = requirementsDataTyped?.allCandidateDocuments || [];
@@ -350,7 +384,12 @@ const RecruiterDocsDetailPage: React.FC = () => {
     candidateProject?.subStatus?.name === "verification_in_progress_document" ||
     candidateProject?.status === "verification_in_progress_document";
 
-  const shouldDisableItemVerification = isVerificationSent || isInScreeningOrTraining;
+  const isPipelineBlocked = isCandidateProjectPipelineBlocked(
+    candidateProject?.mainStatus?.name,
+  );
+
+  const shouldDisableItemVerification =
+    isVerificationSent || isInScreeningOrTraining || isPipelineBlocked;
 
   const canReuploadCandidateRowDoc = React.useCallback(
     (doc: DocsApiDocument) => {
@@ -403,6 +442,13 @@ const RecruiterDocsDetailPage: React.FC = () => {
       // The upload API can return either { fileName, fileUrl, ... } or { data: { fileName, fileUrl, ... } }
       const uploadData = (uploadResult && 'data' in uploadResult) ? (uploadResult.data as UploadData) : (uploadResult as unknown as UploadData);
 
+      const compressionToast =
+        uploadData?.compressionApplied &&
+        uploadData.originalFileSize &&
+        uploadData.fileSize
+          ? `File compressed from ${formatBytes(uploadData.originalFileSize)} to ${formatBytes(uploadData.fileSize)} and uploaded.`
+          : null;
+
       if (isReuploadMode && reuploadDocId) {
         // Handle Reupload
         const desiredDocName = (meta?.docName && meta.docName.trim()) || undefined;
@@ -415,6 +461,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
         }).unwrap();
+
         toast.success("Document re-uploaded successfully!");
       } else {
         // Step 2: Create Document record in database
@@ -436,7 +483,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
           roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
         }).unwrap();
 
-        toast.success("Document uploaded and linked successfully!");
+        toast.success(
+          compressionToast ?? "Document uploaded and linked successfully!"
+        );
       }
 
       setShowUploadDialog(false);
@@ -449,27 +498,91 @@ const RecruiterDocsDetailPage: React.FC = () => {
       void refetchCandidateDocs();
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
-  const handleReuseDocument = async () => {
-    if (!selectedExistingDocId || !projectId) return;
+  const handleReuseDocument = async (documentId: string) => {
+    if (!documentId || !projectId) return;
 
     try {
       await reuseDocument({
-        documentId: selectedExistingDocId,
+        documentId,
         projectId,
         roleCatalogId: candidateProject?.roleNeeded?.roleCatalog?.id || "",
       }).unwrap();
       
       toast.success("Document linked successfully!");
       setShowReuseDialog(false);
-      setSelectedExistingDocId("");
       setSelectedRequirement(null);
       refetchRequirements();
     } catch (error) {
       toast.error("Failed to link document");
+    }
+  };
+
+  const handleIntroVideoUpload = async ({
+    file,
+    remarks,
+  }: {
+    file: File;
+    remarks?: string;
+  }) => {
+    if (!candidateId || !projectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      setIntroVideoUploadProgress(0);
+      if (isIntroVideoReuploadMode && introductionVideo) {
+        await reuploadIntroductionVideo({
+          candidateId,
+          projectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video re-uploaded successfully");
+      } else {
+        await uploadIntroductionVideo({
+          candidateId,
+          projectId,
+          file,
+          remarks,
+          onProgress: setIntroVideoUploadProgress,
+        }).unwrap();
+        toast.success("Introduction video uploaded successfully");
+      }
+      setShowIntroVideoUploadDialog(false);
+      setIsIntroVideoReuploadMode(false);
+      setIntroVideoUploadProgress(0);
+      refetchRequirements();
+      refetchCandidateDocs();
+    } catch (error: any) {
+      setIntroVideoUploadProgress(0);
+      toast.error(error?.data?.message || "Failed to upload introduction video");
+    }
+  };
+
+  const handleIntroVideoReuse = async (documentId: string) => {
+    if (!candidateId || !projectId) {
+      toast.error("Missing candidate or project context");
+      return;
+    }
+
+    try {
+      await reuseIntroductionVideo({
+        candidateId,
+        projectId,
+        documentId,
+      }).unwrap();
+      toast.success("Introduction video linked successfully");
+      setShowIntroVideoReuseDialog(false);
+      refetchRequirements();
+      refetchCandidateDocs();
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to link introduction video");
     }
   };
 
@@ -512,13 +625,14 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
       const desiredDocName = (meta.docName && meta.docName.trim()) || "";
 
-      if (uploadedDocument) {
-        if (desiredDocName) {
-          await updateDocument({
-            id: uploadedDocument.id,
-            docName: desiredDocName,
-          }).unwrap();
-        }
+      if (uploadedDocument?.id) {
+        await updateDocument({
+          id: uploadedDocument.id,
+          docName: desiredDocName || undefined,
+          documentNumber: meta.documentNumber,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
+          notes: meta.notes,
+        }).unwrap();
       } else {
         await createDocument({
           candidateId,
@@ -529,7 +643,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
           fileSize: uploadData.fileSize,
           mimeType: uploadData.mimeType,
           documentNumber: meta.documentNumber,
-          expiryDate: meta.expiryDate ? new Date(meta.expiryDate).toISOString() : undefined,
+          expiryDate: DateUtils.toApiDate(meta.expiryDate),
           notes: meta.notes,
           roleCatalogId: meta.roleCatalogId || "",
           workExperienceId: meta.workExperienceId,
@@ -542,7 +656,7 @@ const RecruiterDocsDetailPage: React.FC = () => {
       refetchRequirements();
     } catch (error) {
       console.error("Candidate upload error:", error);
-      toast.error("Failed to upload document");
+      toast.error(getUploadErrorMessage(error));
     }
   };
 
@@ -626,13 +740,31 @@ const RecruiterDocsDetailPage: React.FC = () => {
                 <Calendar className="h-4 w-4" />
                 Deadline: {new Date(project.deadline).toLocaleDateString()}
               </div>
-              <Badge className={
-                project.status === "active" ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
-                project.status === "completed" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                "bg-slate-50 text-slate-700 border-slate-200"
-              }>
-                {project.status ? project.status.charAt(0).toUpperCase() + project.status.slice(1) : "N/A"}
-              </Badge>
+              {(() => {
+                const statusBadge = getProjectStatusBadgeConfig(project.status);
+                return (
+                  <Badge
+                    className={cn(
+                      "gap-1.5 border px-2.5 py-0.5 shadow-none",
+                      statusBadge.className,
+                    )}
+                  >
+                    {statusBadge.showPulse ? (
+                      <>
+                        <span
+                          className="relative flex h-2 w-2 shrink-0"
+                          aria-hidden
+                        >
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-600" />
+                        </span>
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-orange-600" aria-hidden />
+                      </>
+                    ) : null}
+                    {statusBadge.label}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -682,7 +814,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent side="top" align="start" className="max-w-xs bg-red-50 border border-red-200 text-red-700 transform -translate-x-6">
                     <p className="font-semibold text-sm">Verification disabled</p>
-                    <p className="text-xs mt-1">The candidate is currently in screening/training status and cannot be sent for document verification yet.</p>
+                    <p className="text-xs mt-1">
+                      {isPipelineBlocked
+                        ? "This candidate's project is currently Withdrawn or On Hold. Pipeline actions are disabled."
+                        : "The candidate is currently in screening/training status and cannot be sent for document verification yet."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -734,7 +870,14 @@ const RecruiterDocsDetailPage: React.FC = () => {
                     const verification = verifications.find((v: DocumentVerification) => v.document.docType === requirement.docType);
                     
                     return (
-                      <TableRow key={requirement.id}>
+                      <TableRow
+                        key={requirement.id}
+                        className={
+                          !verification && requirement.uploadRequested
+                            ? "bg-amber-50/40"
+                            : undefined
+                        }
+                      >
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -798,6 +941,31 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 </TooltipProvider>
                               )}
                             </div>
+                          ) : requirement.uploadRequested ? (
+                            <div className="space-y-1">
+                              <Badge
+                                variant="outline"
+                                className="border-amber-200 bg-amber-50 text-amber-800 text-[10px] font-semibold"
+                              >
+                                Upload requested
+                              </Badge>
+                              {requirement.uploadRequestReason ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-amber-800 font-medium italic mt-1 line-clamp-2 max-w-[220px] cursor-help">
+                                        Reason: {requirement.uploadRequestReason}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <p className="text-xs whitespace-pre-wrap">
+                                        {requirement.uploadRequestReason}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : null}
+                            </div>
                           ) : (
                             <Badge variant="outline" className="text-slate-400 border-slate-200">Not Submitted</Badge>
                           )}
@@ -816,6 +984,10 @@ const RecruiterDocsDetailPage: React.FC = () => {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
+                          ) : requirement.uploadRequested ? (
+                            <span className="text-xs text-amber-700 italic">
+                              Awaiting recruiter upload
+                            </span>
                           ) : (
                             <span className="text-xs text-muted-foreground italic">No file</span>
                           )}
@@ -911,7 +1083,187 @@ const RecruiterDocsDetailPage: React.FC = () => {
                       </TableRow>
                     );
                   })}
-                  {requirements.length === 0 && (
+                  {introductionVideoRequired && candidateId && projectId ? (
+                    <TableRow>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4 text-violet-600 shrink-0" />
+                          <span>Introduction Video</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-900">
+                              Introduction Video
+                            </span>
+                            <Badge
+                              variant="destructive"
+                              className="h-5 shrink-0 px-1.5 text-[9px] uppercase font-bold tracking-tighter"
+                            >
+                              Required
+                            </Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground font-normal">
+                            Candidate introduction video for this project
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo ? (
+                          <div className="space-y-1">
+                            <Badge
+                              className={
+                                introductionVideo.status === "verified"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : introductionVideo.status === "rejected"
+                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                    : introductionVideo.status === "resubmission_required"
+                                      ? "bg-amber-50 text-amber-700 border-amber-200"
+                                      : "bg-amber-50 text-amber-700 border-amber-200"
+                              }
+                            >
+                              {introductionVideo.status === "resubmission_required"
+                                ? "Resubmission Needed"
+                                : introductionVideo.status.charAt(0).toUpperCase() +
+                                  introductionVideo.status.slice(1)}
+                            </Badge>
+                            {introductionVideo.status === "resubmission_required" &&
+                              introductionVideo.rejectionReason && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <p className="text-xs text-red-600 font-medium italic mt-1 truncate max-w-[200px] cursor-help">
+                                        Reason: {introductionVideo.rejectionReason}
+                                      </p>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs">
+                                      <p className="text-xs">
+                                        Reason: {introductionVideo.rejectionReason}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-400 border-slate-200">
+                            Not Submitted
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo?.document ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-xs text-muted-foreground truncate max-w-[150px] block cursor-help">
+                                  {introductionVideo.document.fileName}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs break-all">
+                                {introductionVideo.document.fileName}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No file</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {introductionVideo?.createdAt
+                          ? new Date(introductionVideo.createdAt).toLocaleDateString(
+                              "en-GB",
+                              {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              },
+                            )
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {introductionVideo?.document ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="View video"
+                                onClick={() => setShowIntroVideoModal(true)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Download video"
+                                onClick={() =>
+                                  window.open(introductionVideo.document!.fileUrl, "_blank")
+                                }
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {(!isVerificationSent ||
+                                introductionVideo.status === "resubmission_required") && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={
+                                    introductionVideo.status === "resubmission_required"
+                                      ? "Re-upload (Requested)"
+                                      : "Re-upload video"
+                                  }
+                                  className={
+                                    introductionVideo.status === "resubmission_required"
+                                      ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      : "text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  }
+                                  onClick={() => {
+                                    setIsIntroVideoReuploadMode(true);
+                                    setShowIntroVideoUploadDialog(true);
+                                  }}
+                                >
+                                  {introductionVideo.status === "resubmission_required" ? (
+                                    <Upload className="h-4 w-4" />
+                                  ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </>
+                          ) : !isVerificationSent ? (
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-violet-600 hover:bg-violet-50"
+                                onClick={() => setShowIntroVideoReuseDialog(true)}
+                              >
+                                <Link2 className="h-4 w-4 mr-2" />
+                                Add Existing
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:bg-primary/10"
+                                onClick={() => {
+                                  setIsIntroVideoReuploadMode(false);
+                                  setShowIntroVideoUploadDialog(true);
+                                }}
+                              >
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload
+                              </Button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  {requirements.length === 0 && !introductionVideoRequired && (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                         No document requirements found for this project.
@@ -1140,6 +1492,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
         </TabsContent>
       </Tabs>
 
+      {candidateId ? (
+        <CandidateOfferLetterCard
+          candidateId={candidateId}
+          candidateName={
+            `${candidate?.firstName ?? ""} ${candidate?.lastName ?? ""}`.trim() || "Candidate"
+          }
+        />
+      ) : null}
+
       {/* Summary Sidebar/Bottom Section */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="md:col-span-2">
@@ -1201,6 +1562,15 @@ const RecruiterDocsDetailPage: React.FC = () => {
                   <ShieldCheck className="h-3.5 w-3.5" /> Screening
                 </span>
                 <p className="text-sm font-medium">{project.requiredScreening ? "Required" : "Not Required"}</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wider">
+                  <Video className="h-3.5 w-3.5" /> Introduction Video
+                </span>
+                <p className="text-sm font-medium">
+                  {project.introductionVideoRequired ? "Required" : "Not Required"}
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -1373,6 +1743,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
 
                   <div>
                     <h3 className="font-bold text-lg leading-none">{candidate.firstName} {candidate.lastName}</h3>
+                    {candidate.candidateCode ? (
+                      <div className="text-xs text-muted-foreground font-mono mt-1">
+                        {candidate.candidateCode}
+                      </div>
+                    ) : null}
                     <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-100">
                       {candidate.currentStatus?.statusName || "N/A"}
                     </Badge>
@@ -1422,6 +1797,9 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {qual.university || qual.institution} • {qual.graduationYear || qual.yearOfCompletion}
+                              {(qual.country?.name || qual.countryCode)
+                                ? ` • ${qual.country?.name || qual.countryCode}`
+                                : ""}
                             </span>
                           </div>
                         </div>
@@ -1446,6 +1824,11 @@ const RecruiterDocsDetailPage: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-muted-foreground truncate">
                               {exp.companyName} • {new Date(exp.startDate).getFullYear()} - {exp.isCurrent ? 'Present' : (exp.endDate ? new Date(exp.endDate).getFullYear() : 'N/A')}
+                              {(exp.country?.name || exp.countryCode)
+                                ? ` • ${exp.country?.name || exp.countryCode}`
+                                : exp.location
+                                  ? ` • ${exp.location}`
+                                  : ""}
                             </span>
                           </div>
                         </div>
@@ -1521,78 +1904,23 @@ const RecruiterDocsDetailPage: React.FC = () => {
           onUpload={handleUploadCandidateDocument}
           isUploading={isUploading || isCreating}
           workExperiences={candidate?.workExperiences}
+          existingPassportDocument={getPassportDocument(allCandidateDocuments)}
         />
       </React.Suspense>
 
-      <Dialog open={showReuseDialog} onOpenChange={setShowReuseDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 text-violet-600" />
-              Link Existing {uploadDocType}
-            </DialogTitle>
-            <DialogDescription>
-              Select an existing {uploadDocType} from the candidate's profile to link to this project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Available {uploadDocType} Documents</Label>
-              <Select value={selectedExistingDocId} onValueChange={setSelectedExistingDocId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={`Select a ${uploadDocType}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  <TooltipProvider>
-                    {allCandidateDocuments
-                      .filter((doc: CandidateDocument) => doc.docType.toLowerCase() === uploadDocType.toLowerCase())
-                      .map((doc: CandidateDocument) => (
-                        <SelectItem key={doc.id} value={doc.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex flex-col max-w-[280px]">
-                                <span className="font-medium truncate">{doc.fileName}</span>
-                                <span className="text-xs text-muted-foreground">
-                                  Uploaded on {new Date(doc.createdAt).toLocaleDateString()}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs break-all">
-                              {doc.fileName}
-                            </TooltipContent>
-                          </Tooltip>
-                        </SelectItem>
-                      ))}
-                  </TooltipProvider>
-                  {allCandidateDocuments.filter((doc: CandidateDocument) => doc.docType.toLowerCase() === uploadDocType.toLowerCase()).length === 0 && (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
-                      <FileX className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                      No existing {uploadDocType} found.
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReuseDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleReuseDocument} 
-              disabled={!selectedExistingDocId || isReusing}
-              className="bg-violet-600 hover:bg-violet-700 text-white"
-            >
-              {isReusing ? (
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-2" />
-              )}
-              Link Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinkExistingDocumentModal
+        isOpen={showReuseDialog}
+        onClose={() => setShowReuseDialog(false)}
+        candidateId={candidateId || ""}
+        docType={uploadDocType}
+        roleCatalogId={candidateProject?.roleNeeded?.roleCatalog?.id}
+        roleLabel={
+          candidateProject?.roleNeeded?.designation ||
+          candidateProject?.roleNeeded?.roleCatalog?.label
+        }
+        isLinking={isReusing}
+        onConfirm={handleReuseDocument}
+      />
 
       <PDFViewer
         fileUrl={selectedDocument?.fileUrl || ""}
@@ -1608,9 +1936,45 @@ const RecruiterDocsDetailPage: React.FC = () => {
         showFullscreenToggle={true}
       />
 
+      <IntroductionVideoUploadModal
+        isOpen={showIntroVideoUploadDialog}
+        onClose={() => {
+          setShowIntroVideoUploadDialog(false);
+          setIsIntroVideoReuploadMode(false);
+          setIntroVideoUploadProgress(0);
+        }}
+        onSubmit={handleIntroVideoUpload}
+        isSubmitting={isUploadingIntroVideo || isReuploadingIntroVideo}
+        uploadProgress={introVideoUploadProgress}
+        variant={isIntroVideoReuploadMode ? "reupload" : "upload"}
+        idPrefix="recruiter-intro-video"
+      />
+
+      {candidateId && projectId ? (
+        <IntroductionVideoReuseModal
+          isOpen={showIntroVideoReuseDialog}
+          onClose={() => setShowIntroVideoReuseDialog(false)}
+          candidateId={candidateId}
+          excludeProjectId={projectId}
+          onReuse={handleIntroVideoReuse}
+          isReusing={isReusingIntroVideo}
+        />
+      ) : null}
+
+      {introductionVideo?.document ? (
+        <VideoPlayerModal
+          isOpen={showIntroVideoModal}
+          onClose={() => setShowIntroVideoModal(false)}
+          fileUrl={introductionVideo.document.fileUrl}
+          fileName={introductionVideo.document.fileName}
+          title="Introduction Video"
+          subtitle={project?.title}
+        />
+      ) : null}
+
       <ConfirmationDialog
         isOpen={isVerifyConfirmOpen}
-        className="sm:max-w-2xl"
+        className="sm:max-w-3xl"
         onClose={() => {
           setIsVerifyConfirmOpen(false);
           setVerificationNotes("");
@@ -1626,76 +1990,24 @@ const RecruiterDocsDetailPage: React.FC = () => {
               verification? This will notify the verification team.
             </p>
 
-            {/* Candidate Details */}
-            {candidate && (
-              <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                {/* Match score summary */}
-                <MatchScoreSummary candidate={candidate} />
-
-                <h4 className="text-sm font-semibold text-slate-700 mt-2">Candidate Profile</h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
-                  {/* Education column */}
-                  <div>
-                    <p className="text-xs font-medium text-slate-600 mb-1">Education</p>
-                    <div className="space-y-1">
-                      {(candidate?.qualifications || candidate?.candidateQualifications || []).length > 0 ? (
-                        (candidate?.qualifications || candidate?.candidateQualifications || []).map((qual, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {qual.qualification?.name || qual.name || qual.qualification?.shortName || 'N/A'}
-                            {qual.qualification?.field || qual.field ? ` - ${qual.qualification?.field || qual.field}` : ''}
-                            {qual.graduationYear || qual.yearOfCompletion ? ` (${qual.graduationYear || qual.yearOfCompletion})` : ''}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-xs text-slate-500">No education details</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Experience column */}
-                  <div>
-                    <p className="text-xs font-medium text-slate-600 mb-1">Experience</p>
-                    <div className="space-y-1">
-                      {candidate?.workExperiences && candidate?.workExperiences.length > 0 ? (
-                        candidate?.workExperiences.map((exp: WorkExperience, idx: number) => (
-                          <p key={idx} className="text-xs text-slate-700">
-                            {formatWorkExperienceEntry(exp)}
-                          </p>
-                        ))
-                      ) : candidate?.candidateExperience ? (
-                        <p className="text-xs text-slate-700">{candidate?.candidateExperience} yrs</p>
-                      ) : (
-                        <p className="text-xs text-slate-500">No experience details</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Role match scores */}
-                {candidate?.roleMatches && candidate?.roleMatches.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-medium text-slate-600 mb-2">Role match scores</p>
-                    <div className="flex flex-wrap gap-2">
-                      {candidate?.roleMatches.map((rm: { designation?: string; score?: number }, idx: number) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-2 rounded-full px-2 py-1 border border-slate-100 bg-white/60"
-                        >
-                          <span className="text-xs text-slate-700 max-w-[160px] truncate">
-                            {rm.designation || "Role"}
-                          </span>
-                          <span
-                            className={`${getMinimalScoreBadgeClass(rm.score)} text-xs font-semibold px-2 py-0.5 rounded-full`}
-                          >
-                            {rm.score ?? "-"}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {candidateId && projectId ? (
+              <SendForVerificationDocumentsChecklist
+                candidateId={candidateId}
+                projectId={projectId}
+                isActive={isVerifyConfirmOpen}
+                preloadedData={
+                  isVerifyConfirmOpen
+                    ? {
+                        requirements,
+                        verifications,
+                        introductionVideoRequired,
+                        introductionVideo: introductionVideo ?? null,
+                        summary,
+                      }
+                    : null
+                }
+              />
+            ) : null}
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>

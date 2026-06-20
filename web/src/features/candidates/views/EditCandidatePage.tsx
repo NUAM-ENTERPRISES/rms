@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,16 +22,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck } from "lucide-react";
-import { CountryCodeSelect, MultiCountrySelect, MultiSelect } from "@/components/molecules";
+import { User, Phone, Mail, Calendar, Save, ArrowLeft, Briefcase, CheckSquare, FileCheck, Upload } from "lucide-react";
+import {
+  CountryCodeSelect,
+  MultiCountrySelect,
+  MultiSelect,
+  PreferredRoleMultiSelect,
+  ProfessionTypeSelect,
+} from "@/components/molecules";
+import { buildPreferredRoleLabels } from "@/features/candidates/utils/role-preference";
 import {
   useGetCandidateByIdQuery,
+  useGetProfessionTypesQuery,
   useUpdateCandidateMutation,
+  useUploadDocumentMutation,
 } from "@/features/candidates";
+import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { DOCUMENT_TYPE, getAllowedFormatsString } from "@/constants/document-types";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { ProfileImageUpload } from "@/components/molecules";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCan, useHasRole } from "@/hooks/useCan";
+import { ROLE_NAMES } from "@/config/role-names";
 import { FACILITY_TYPES, SECTOR_TYPES, VISA_TYPES, LICENSING_EXAMS, SKIN_TONES, SMARTNESS_LEVELS } from "@/constants/candidate-constants";
 
 // ==================== VALIDATION SCHEMA ====================
@@ -65,6 +77,8 @@ const updateCandidateSchema = z.object({
   ),
   preferredCountries: z.array(z.string()).optional(),
   facilityPreferences: z.array(z.string()).optional(),
+  preferredRoles: z.array(z.string()).optional(),
+  professionTypeId: z.string().min(1, "Profession type is required"),
   sectorType: z.string().optional(),
   visaType: z.string().optional(),
   height: z.preprocess((val) => (val === "" ? undefined : Number(val)), z.number().optional()),
@@ -75,6 +89,9 @@ const updateCandidateSchema = z.object({
   licensingExam: z.string().optional(),
   dataFlow: z.boolean().optional(),
   eligibility: z.boolean().optional(),
+  eligibilityNumber: z.string().max(100).optional().or(z.literal("")),
+  eligibilityIssuedDate: z.string().optional().or(z.literal("")),
+  eligibilityExpiryDate: z.string().optional().or(z.literal("")),
 
   referralCompanyName: z.string().optional(),
   referralEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
@@ -94,6 +111,46 @@ const updateCandidateSchema = z.object({
       path: ["referralCompanyName"],
     });
   }
+  if (data.eligibility && !data.eligibilityNumber?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility number is required when eligibility is enabled",
+      path: ["eligibilityNumber"],
+    });
+  }
+  if (data.eligibility && !data.eligibilityIssuedDate?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility issued date is required when eligibility is enabled",
+      path: ["eligibilityIssuedDate"],
+    });
+  }
+  if (data.eligibility && !data.eligibilityExpiryDate?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Eligibility expiry date is required when eligibility is enabled",
+      path: ["eligibilityExpiryDate"],
+    });
+  }
+  if (
+    data.eligibility &&
+    data.eligibilityIssuedDate?.trim() &&
+    data.eligibilityExpiryDate?.trim()
+  ) {
+    const issued = new Date(data.eligibilityIssuedDate);
+    const expiry = new Date(data.eligibilityExpiryDate);
+    if (
+      !Number.isNaN(issued.getTime()) &&
+      !Number.isNaN(expiry.getTime()) &&
+      expiry <= issued
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Eligibility expiry date must be after the issued date",
+        path: ["eligibilityExpiryDate"],
+      });
+    }
+  }
 });
 
 type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
@@ -103,8 +160,10 @@ type UpdateCandidateFormData = z.infer<typeof updateCandidateSchema>;
 export default function EditCandidatePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isCRE = useHasRole("CRE");
-  const canWriteCandidates = useCan("write:candidates") && !isCRE;
+  const hasOperationsRole = useHasRole(ROLE_NAMES.OPERATIONS);
+  const hasLegacyCreRole = useHasRole("CRE");
+  const isOperations = hasOperationsRole || hasLegacyCreRole;
+  const canWriteCandidates = useCan("write:candidates") && !isOperations;
 
   // API
   const { data: candidateData, isLoading: isLoadingCandidate } =
@@ -113,11 +172,36 @@ export default function EditCandidatePage() {
     useUpdateCandidateMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadCandidateProfileImageMutation();
+  const [uploadDocument] = useUploadDocumentMutation();
+  const [createDocument] = useCreateDocumentMutation();
+  const [updateDocument] = useUpdateDocumentMutation();
 
   // Local state for uploads
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [eligibilityLetterFile, setEligibilityLetterFile] = useState<File | null>(null);
 
   const candidate = candidateData;
+
+  const existingEligibilityDocument = useMemo(() => {
+    const docs = (candidate as { documents?: Array<{
+      id: string;
+      docType: string;
+      fileName?: string;
+      issuedAt?: string | null;
+      expiryDate?: string | null;
+      isDeleted?: boolean;
+    }> })?.documents ?? [];
+    return docs
+      .filter(
+        (doc) =>
+          doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER && !doc.isDeleted,
+      )
+      .sort(
+        (a, b) =>
+          new Date((b as { createdAt?: string }).createdAt ?? 0).getTime() -
+          new Date((a as { createdAt?: string }).createdAt ?? 0).getTime(),
+      )[0];
+  }, [candidate]);
 
   // Form
   const form = useForm<UpdateCandidateFormData>({
@@ -136,6 +220,8 @@ export default function EditCandidatePage() {
       expectedMaxSalary: undefined,
       preferredCountries: [],
       facilityPreferences: [],
+      preferredRoles: [],
+      professionTypeId: "",
       sectorType: SECTOR_TYPES.ANY_PREFERENCE,
       visaType: VISA_TYPES.NOT_APPLICABLE,
       teamId: "none",
@@ -146,6 +232,15 @@ export default function EditCandidatePage() {
       referralDescription: "",
     },
   });
+
+  const professionTypeId = form.watch("professionTypeId");
+  const { data: professionTypesData } = useGetProfessionTypesQuery();
+  const selectedProfessionTypeName = useMemo(
+    () =>
+      professionTypesData?.professionTypes.find((type) => type.id === professionTypeId)
+        ?.name,
+    [professionTypeId, professionTypesData?.professionTypes],
+  );
 
   // Helper function to parse contact into countryCode and mobileNumber (for backward compatibility)
   const parseContact = (contact: string) => {
@@ -195,6 +290,8 @@ export default function EditCandidatePage() {
         expectedMaxSalary: candidate.expectedMaxSalary ?? undefined,
         preferredCountries: candidate.preferredCountries?.map((pc) => pc.country.code) || [],
         facilityPreferences: candidate.facilityPreferences?.map((fp) => fp.facilityType) || [],
+        preferredRoles: candidate.rolePreferences?.map((rp) => rp.roleCatalogId) || [],
+        professionTypeId: candidate.professionTypeId || candidate.professionType?.id || "",
         sectorType: candidate.sectorType || SECTOR_TYPES.ANY_PREFERENCE,
         visaType: candidate.visaType || VISA_TYPES.NOT_APPLICABLE,
         height: candidate.height ?? undefined,
@@ -205,6 +302,13 @@ export default function EditCandidatePage() {
         licensingExam: candidate.licensingExam || "",
         dataFlow: candidate.dataFlow ?? false,
         eligibility: candidate.eligibility ?? false,
+        eligibilityNumber: candidate.eligibilityNumber || "",
+        eligibilityIssuedDate: existingEligibilityDocument?.issuedAt
+          ? new Date(existingEligibilityDocument.issuedAt).toISOString().split("T")[0]
+          : "",
+        eligibilityExpiryDate: existingEligibilityDocument?.expiryDate
+          ? new Date(existingEligibilityDocument.expiryDate).toISOString().split("T")[0]
+          : "",
         teamId: candidate.assignedTo || "none",
         referralCompanyName: candidate.referralCompanyName || "",
         referralEmail: candidate.referralEmail || "",
@@ -213,7 +317,7 @@ export default function EditCandidatePage() {
         referralDescription: candidate.referralDescription || "",
       });
     }
-  }, [candidate, form]);
+  }, [candidate, form, existingEligibilityDocument]);
 
   // Permission check
   if (!canWriteCandidates) {
@@ -281,6 +385,15 @@ export default function EditCandidatePage() {
   // Form submission
   const onSubmit = async (data: UpdateCandidateFormData) => {
     try {
+      if (
+        data.eligibility &&
+        !eligibilityLetterFile &&
+        !existingEligibilityDocument
+      ) {
+        toast.error("Eligibility letter upload is required when eligibility is enabled");
+        return;
+      }
+
       // Build payload using the backend's preferred fields.
       // The API rejects a top-level `name` property in updates in newer versions
       // (it expects `firstName` / `lastName`), so we split the single `name`
@@ -320,6 +433,12 @@ export default function EditCandidatePage() {
       if (data.facilityPreferences && data.facilityPreferences.length > 0) {
         payload.facilityPreferences = data.facilityPreferences;
       }
+      if (data.preferredRoles) {
+        payload.preferredRoles = data.preferredRoles;
+      }
+      if (data.professionTypeId) {
+        payload.professionTypeId = data.professionTypeId;
+      }
       if (data.sectorType) {
         payload.sectorType = data.sectorType;
       }
@@ -334,11 +453,17 @@ export default function EditCandidatePage() {
       payload.height = data.height;
       payload.weight = data.weight;
       payload.skinTone = data.skinTone;
-      payload.languageProficiency = data.languageProficiency;
+      payload.languageProficiency = data.languageProficiency?.trim()
+        ? data.languageProficiency.trim()
+        : null;
       payload.smartness = data.smartness;
       payload.licensingExam = data.licensingExam;
       payload.dataFlow = data.dataFlow;
       payload.eligibility = data.eligibility;
+      payload.eligibilityNumber =
+        data.eligibility && data.eligibilityNumber?.trim()
+          ? data.eligibilityNumber.trim()
+          : null;
 
       // Referral fields
       if (data.source === "referral") {
@@ -365,6 +490,66 @@ export default function EditCandidatePage() {
           } catch (uploadError: any) {
             console.error("Profile image upload failed:", uploadError);
             toast.warning("Candidate updated but profile image upload failed");
+          }
+        }
+
+        if (data.eligibility) {
+          const issuedAt = data.eligibilityIssuedDate
+            ? new Date(data.eligibilityIssuedDate).toISOString()
+            : undefined;
+          const expiryDate = data.eligibilityExpiryDate
+            ? new Date(data.eligibilityExpiryDate).toISOString()
+            : undefined;
+          const documentNumber = data.eligibilityNumber?.trim();
+
+          try {
+            if (eligibilityLetterFile) {
+              const formData = new FormData();
+              formData.append("file", eligibilityLetterFile);
+              formData.append("docType", DOCUMENT_TYPE.ELIGIBILITY_LETTER);
+              const uploadResult = await uploadDocument({
+                candidateId: id!,
+                formData,
+              }).unwrap();
+              const uploadData: any = (uploadResult as any).data;
+              const uploadedDocument =
+                uploadData?.document && uploadData.document.id
+                  ? uploadData.document
+                  : uploadData?.id
+                    ? uploadData
+                    : null;
+
+              const documentPayload = {
+                candidateId: id!,
+                docType: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+                fileName: uploadData.fileName,
+                fileUrl: uploadData.fileUrl,
+                fileSize: uploadData.fileSize,
+                mimeType: uploadData.mimeType,
+                documentNumber,
+                issuedAt,
+                expiryDate,
+              };
+
+              if (uploadedDocument?.id) {
+                await updateDocument({
+                  id: uploadedDocument.id,
+                  ...documentPayload,
+                }).unwrap();
+              } else {
+                await createDocument(documentPayload).unwrap();
+              }
+            } else if (existingEligibilityDocument?.id) {
+              await updateDocument({
+                id: existingEligibilityDocument.id,
+                documentNumber,
+                issuedAt,
+                expiryDate,
+              }).unwrap();
+            }
+          } catch (uploadError) {
+            console.error("Eligibility document update failed:", uploadError);
+            toast.warning("Candidate updated but eligibility document save failed");
           }
         }
 
@@ -526,6 +711,23 @@ export default function EditCandidatePage() {
                       />
                     </div>
                   </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Controller
+                      name="professionTypeId"
+                      control={form.control}
+                      render={({ field }) => (
+                        <ProfessionTypeSelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isUpdating}
+                          required
+                          error={form.formState.errors.professionTypeId?.message}
+                        />
+                      )}
+                    />
+                  </div>
+
                   {/* Salary Range */}
                   <div className="space-y-2">
                     <FormLabel htmlFor="expectedMinSalary" className="text-slate-700 font-medium">
@@ -591,6 +793,21 @@ export default function EditCandidatePage() {
                           ]}
                           value={field.value}
                           onValueChange={field.onChange}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Controller
+                      name="preferredRoles"
+                      control={form.control}
+                      render={({ field }) => (
+                        <PreferredRoleMultiSelect
+                          value={field.value ?? []}
+                          onValueChange={field.onChange}
+                          optionLabels={buildPreferredRoleLabels(candidate.rolePreferences)}
+                          professionTypeName={selectedProfessionTypeName}
+                          disabled={isUpdating}
                         />
                       )}
                     />
@@ -965,13 +1182,121 @@ export default function EditCandidatePage() {
                         htmlFor="eligibility"
                         className="text-sm font-medium leading-none cursor-pointer text-slate-700"
                       >
-                        Eligible
+                        Eligibility
                       </FormLabel>
                       <p className="text-xs text-slate-500">
                         Candidate meets the eligibility criteria.
                       </p>
                     </div>
                   </div>
+
+                  {form.watch("eligibility") ? (
+                    <div className="space-y-4 p-4 rounded-lg border border-emerald-100 bg-emerald-50/40">
+                      <div className="space-y-2">
+                        <FormLabel htmlFor="eligibilityNumber" className="text-slate-700 font-medium">
+                          Eligibility Number
+                        </FormLabel>
+                        <Controller
+                          name="eligibilityNumber"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="eligibilityNumber"
+                              placeholder="Enter eligibility number"
+                              className="h-11 bg-white border-slate-200"
+                            />
+                          )}
+                        />
+                        {form.formState.errors.eligibilityNumber?.message ? (
+                          <p className="text-sm text-red-600">
+                            {form.formState.errors.eligibilityNumber.message as string}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="eligibilityIssuedDate" className="text-slate-700 font-medium">
+                            Issued Date
+                          </FormLabel>
+                          <Controller
+                            name="eligibilityIssuedDate"
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="eligibilityIssuedDate"
+                                type="date"
+                                className="h-11 bg-white border-slate-200"
+                              />
+                            )}
+                          />
+                          {form.formState.errors.eligibilityIssuedDate?.message ? (
+                            <p className="text-sm text-red-600">
+                              {form.formState.errors.eligibilityIssuedDate.message as string}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="space-y-2">
+                          <FormLabel htmlFor="eligibilityExpiryDate" className="text-slate-700 font-medium">
+                            Expiry Date
+                          </FormLabel>
+                          <Controller
+                            name="eligibilityExpiryDate"
+                            control={form.control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="eligibilityExpiryDate"
+                                type="date"
+                                className="h-11 bg-white border-slate-200"
+                              />
+                            )}
+                          />
+                          {form.formState.errors.eligibilityExpiryDate?.message ? (
+                            <p className="text-sm text-red-600">
+                              {form.formState.errors.eligibilityExpiryDate.message as string}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <FormLabel
+                          htmlFor="eligibilityLetterFile"
+                          className="text-slate-700 font-medium flex items-center gap-2"
+                        >
+                          <Upload className="h-4 w-4 text-emerald-600" />
+                          Eligibility Letter
+                        </FormLabel>
+                        <Input
+                          id="eligibilityLetterFile"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          className="h-11 bg-white border-slate-200 cursor-pointer"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] ?? null;
+                            setEligibilityLetterFile(file);
+                            event.target.value = "";
+                          }}
+                        />
+                        <p className="text-xs text-slate-500">
+                          Allowed: {getAllowedFormatsString(DOCUMENT_TYPE.ELIGIBILITY_LETTER)}
+                        </p>
+                        {eligibilityLetterFile ? (
+                          <p className="text-sm text-slate-700">
+                            Selected: {eligibilityLetterFile.name}
+                          </p>
+                        ) : existingEligibilityDocument?.fileName ? (
+                          <p className="text-sm text-slate-600">
+                            Current file: {existingEligibilityDocument.fileName}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </CardContent>

@@ -70,12 +70,13 @@ export const PERMISSIONS = {
   READ_RECRUITERS: 'read:recruiters',
   WRITE_RECRUITERS: 'write:recruiters',
 
-  // CRE (Customer Relationship Executive) management
+  // Operations (RNR escalation) management
   READ_CRE: 'read:cre',
   WRITE_CRE: 'write:cre',
   MANAGE_CRE: 'manage:cre',
   ASSIGN_CRE: 'assign:cre',
   HANDLE_RNR_CANDIDATES: 'handle:rnr_candidates',
+  READ_OPERATIONS_CALL_HISTORY: 'read:operations_call_history',
 
   // Role management
   READ_ROLES: 'read:roles',
@@ -122,6 +123,12 @@ export const PERMISSIONS = {
   // System configuration (RNR / HRD) - admin only
   READ_SYSTEM_CONFIG: 'read:system_config',
   MANAGE_SYSTEM_CONFIG: 'manage:system_config',
+
+  // Documents control
+  READ_ORIGINAL_DOCUMENT_INTAKE: 'read:original_document_intake',
+  WRITE_ORIGINAL_DOCUMENT_INTAKE: 'write:original_document_intake',
+  READ_COURIER_MANAGEMENT: 'read:courier_management',
+  WRITE_COURIER_MANAGEMENT: 'write:courier_management',
 
   // Audit
   READ_AUDIT: 'read:audit',
@@ -202,12 +209,13 @@ export const PERMISSION_GROUPS = {
     PERMISSIONS.WRITE_RECRUITERS,
     PERMISSIONS.MANAGE_RECRUITERS,
   ],
-  CRE: [
+  OPERATIONS: [
     PERMISSIONS.READ_CRE,
     PERMISSIONS.WRITE_CRE,
     PERMISSIONS.MANAGE_CRE,
     PERMISSIONS.ASSIGN_CRE,
     PERMISSIONS.HANDLE_RNR_CANDIDATES,
+    PERMISSIONS.READ_OPERATIONS_CALL_HISTORY,
   ],
   AGENT: [
     PERMISSIONS.READ_AGENTS,

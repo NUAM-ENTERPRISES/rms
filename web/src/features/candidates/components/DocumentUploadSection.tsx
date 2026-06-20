@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-const CandidateUploadDocumentModal = React.lazy(() => import("../../recruiter-docs/components/CandidateUploadDocumentModal"));
+
+const CandidateUploadDocumentModal = React.lazy(
+  () => import("../../recruiter-docs/components/CandidateUploadDocumentModal")
+);
+const PassportDocumentDetailsDialog = React.lazy(
+  () =>
+    import("../../recruiter-docs/components/PassportDocumentDetailsDialog").then(
+      (m) => ({ default: m.PassportDocumentDetailsDialog })
+    )
+);
 import {
   Card,
   CardContent,
@@ -9,6 +18,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,25 +45,40 @@ import {
   Check,
   Clock,
   X,
+  RefreshCw,
   Plus,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DOCUMENT_TYPE } from "@/constants/document-types";
+import { ResumeUploadRoleModal } from "@/components/molecules/ResumeUploadRoleModal";
+import type { ResumeRoleSelection } from "@/components/molecules/ResumeUploadRoleModal";
 import {
   getCandidateProfileCompletion,
   getDocumentRepositorySlots,
+  getPassportDocument,
 } from "../profileCompletion";
+import { isPassportDocumentType } from "@/constants/document-types";
 import { useGetDocumentsQuery, useUploadDocumentMutation, useGetWorkExperiencesQuery } from "../api";
 import { useCreateDocumentMutation, useUpdateDocumentMutation } from "@/features/documents/api";
+import { useUploadResumeMutation } from "@/services/uploadApi";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { DateUtils } from "@/shared/utils/date";
+import { truncateFileName } from "@/lib/formatFileName";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Document type options based on backend constants
 const DOCUMENT_TYPES = [
-  { value: "passport", label: "Passport", category: "identity" },
-  { value: "passport_copy", label: "Passport Copy", category: "identity" },
-  { value: "passport_photo", label: "Passport Photo", category: "other" },
+  { value: DOCUMENT_TYPE.PASSPORT, label: "Passport Copy", category: "identity" },
+  { value: DOCUMENT_TYPE.PASSPORT_PHOTO, label: "Passport Photo", category: "other" },
   { value: "aadhaar", label: "Aadhaar Card", category: "identity" },
   { value: "pan_card", label: "PAN Card", category: "identity" },
   { value: "driving_license", label: "Driving License", category: "identity" },
@@ -71,12 +103,7 @@ const DOCUMENT_TYPES = [
     label: "Registration Certificate",
     category: "professional",
   },
-  { value: "degree", label: "Degree Certificate", category: "educational" },
-  {
-    value: "degree_certificate",
-    label: "Degree Certificate",
-    category: "educational",
-  },
+  { value: DOCUMENT_TYPE.DEGREE, label: "Degree Certificate", category: "educational" },
   { value: "diploma", label: "Diploma Certificate", category: "educational" },
   { value: "certificate", label: "Certificate", category: "educational" },
   { value: "transcript", label: "Transcript", category: "educational" },
@@ -105,13 +132,23 @@ const DOCUMENT_TYPES = [
     category: "verification",
   },
   {
-    value: "police_clearance",
-    label: "Police Clearance",
+    value: DOCUMENT_TYPE.PCC,
+    label: "Police Clearance (PCC)",
     category: "verification",
   },
   {
     value: "reference_letter",
     label: "Reference Letter",
+    category: "verification",
+  },
+  {
+    value: DOCUMENT_TYPE.DATAFLOW_REPORT,
+    label: "Dataflow Report",
+    category: "verification",
+  },
+  {
+    value: DOCUMENT_TYPE.ELIGIBILITY_LETTER,
+    label: "Eligibility Letter",
     category: "verification",
   },
   {
@@ -139,29 +176,97 @@ const DOCUMENT_TYPES = [
     label: "Medical Insurance",
     category: "medical",
   },
-  { value: "photo", label: "Photograph", category: "other" },
-  { value: "bank_details", label: "Bank Account Details", category: "other" },
-  { value: "offer_letter", label: "Offer Letter", category: "other" },
-  { value: "joining_letter", label: "Joining Letter", category: "other" },
-  { value: "other", label: "Other Document", category: "other" },
+  { value: DOCUMENT_TYPE.BANK_DETAILS, label: "Bank Account Details", category: "other" },
+  { value: DOCUMENT_TYPE.OFFER_LETTER, label: "Offer Letter", category: "other" },
+  { value: DOCUMENT_TYPE.JOINING_LETTER, label: "Joining Letter", category: "other" },
+  { value: DOCUMENT_TYPE.OTHER, label: "Other Document", category: "other" },
 ];
 
 interface DocumentUploadSectionProps {
   candidateId: string;
   /** Rows for the table (may be paginated). */
   data?: any[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  isFetching?: boolean;
+  search?: string;
+  onSearchChange?: (value: string) => void;
+  selectedDocType?: string;
+  onDocTypeChange?: (value: string) => void;
   /** All documents used only for mandatory-type completion (omit to derive from `data` / local fetch). */
   completionSourceDocuments?: any[];
   isLoading?: boolean;
   onRefresh?: () => void;
+  /** When set, opens the upload modal for this doc type (e.g. from overview passport link). */
+  initialUploadDocType?: string | null;
+  onInitialUploadDocTypeHandled?: () => void;
+  /** Passport stored on the candidate record (e.g. AC create) before a passport doc exists. */
+  candidatePassportNumber?: string | null;
+  /** Eligibility number from candidate record for prefill on eligibility letter upload. */
+  candidateEligibilityNumber?: string | null;
+}
+
+const DOCUMENT_NAME_MAX_LENGTH = 40;
+
+function FileNameCell({ fileName }: { fileName: string }) {
+  const { display, full, isTruncated } = truncateFileName(
+    fileName,
+    DOCUMENT_NAME_MAX_LENGTH,
+  );
+
+  const label = (
+    <p
+      className="font-semibold text-slate-900 truncate max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem]"
+      title={full}
+    >
+      {display}
+    </p>
+  );
+
+  if (!isTruncated) {
+    return label;
+  }
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="block min-w-0 max-w-[12rem] sm:max-w-[14rem] md:max-w-[16rem] cursor-help">
+            {label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-md break-all">
+          <p className="text-xs">{full}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export function DocumentUploadSection({
   candidateId,
   data: externalDocuments,
+  pagination: externalPagination,
+  currentPage,
+  onPageChange,
+  isFetching = false,
+  search = "",
+  onSearchChange,
+  selectedDocType = "all",
+  onDocTypeChange,
   completionSourceDocuments,
   isLoading: isExternalLoading,
   onRefresh,
+  initialUploadDocType,
+  onInitialUploadDocTypeHandled,
+  candidatePassportNumber,
+  candidateEligibilityNumber,
 }: DocumentUploadSectionProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadModalDocType, setUploadModalDocType] = useState<
@@ -169,6 +274,16 @@ export function DocumentUploadSection({
   >(undefined);
   const [isPDFViewerOpen, setIsPDFViewerOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{ fileUrl: string; fileName: string } | null>(null);
+  const [editPassportDoc, setEditPassportDoc] = useState<any | null>(null);
+  const [isSavingPassportDetails, setIsSavingPassportDetails] = useState(false);
+  const [showResumeUploadModal, setShowResumeUploadModal] = useState(false);
+  const [selectedResumeFile, setSelectedResumeFile] = useState<File | null>(null);
+  const [resumeDocName, setResumeDocName] = useState("");
+  const [resumeDocNameMode, setResumeDocNameMode] = useState<"common" | "individual">("common");
+  const [resumeRoleSelections, setResumeRoleSelections] = useState<ResumeRoleSelection[]>([
+    { id: crypto.randomUUID() },
+  ]);
+  const [isResumeUploading, setIsResumeUploading] = useState(false);
 
   // If external data is provided, use it. Otherwise fetch (for backward compatibility if needed, though we're refactoring)
   const {
@@ -185,16 +300,45 @@ export function DocumentUploadSection({
   );
 
   const documents = externalDocuments || documentsData?.data?.documents || [];
+  const pagination = externalPagination || documentsData?.data?.pagination;
+  const page = currentPage ?? pagination?.page ?? 1;
   const isLoading = isExternalLoading || isLocalLoading;
 
   const completionDocs =
     completionSourceDocuments ?? documents;
+  const filterDocTypes = React.useMemo(
+    () =>
+      Array.from(
+        new Set((completionDocs || []).map((d: any) => d?.docType).filter(Boolean)),
+      ) as string[],
+    [completionDocs],
+  );
+
   const completion = getCandidateProfileCompletion(completionDocs);
   const repositorySlots = getDocumentRepositorySlots(completionDocs);
+  const passportDocument = getPassportDocument(completionDocs);
+  const eligibilityDocument = React.useMemo(
+    () =>
+      (completionDocs || [])
+        .filter(
+          (doc: any) =>
+            doc?.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER && !doc?.isDeleted,
+        )
+        .sort(
+          (a: any, b: any) =>
+            new Date(b?.createdAt ?? 0).getTime() -
+            new Date(a?.createdAt ?? 0).getTime(),
+        )[0],
+    [completionDocs],
+  );
+  const storedPassportNumber = candidatePassportNumber?.trim() || null;
+  const passportDocNumber = passportDocument?.documentNumber?.trim() || null;
+  const displayedPassportNumber = passportDocNumber || storedPassportNumber;
 
   const { data: workExperiences } = useGetWorkExperiencesQuery(candidateId);
 
   const [uploadDocument] = useUploadDocumentMutation();
+  const [uploadResume] = useUploadResumeMutation();
   const [createDocument] = useCreateDocumentMutation();
   const [updateDocument] = useUpdateDocumentMutation();
 
@@ -209,6 +353,8 @@ export function DocumentUploadSection({
         return <X className="h-4 w-4 text-red-600" />;
       case "resubmission_required":
         return <AlertCircle className="h-4 w-4 text-amber-600" />;
+      case "resubmitted":
+        return <RefreshCw className="h-4 w-4 text-blue-600" />;
       default:
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
@@ -237,19 +383,199 @@ export function DocumentUploadSection({
             Waiting for re-submission
           </Badge>
         );
+      case "resubmitted":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            Resubmitted
+          </Badge>
+        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
+  const getActorLabel = (actor: any): string => {
+    if (!actor) return "—";
+    if (typeof actor === "string") return actor;
+    if (typeof actor === "object") {
+      return actor.name || actor.email || actor.id || "—";
+    }
+    return "—";
+  };
+
+  const getLatestDecisionActor = (doc: any): string => {
+    const normalized = (doc?.status || "").toLowerCase();
+    const latestVerification = doc?.verifications?.[0];
+    if (normalized === "verified") {
+      return getActorLabel(
+        doc?.verifiedByUser ||
+          doc?.verifiedBy ||
+          latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName,
+      );
+    }
+    if (normalized === "rejected") {
+      return getActorLabel(
+        doc?.rejectedByUser ||
+          doc?.rejectedBy ||
+          latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName,
+      );
+    }
+    if (normalized === "resubmitted") {
+      return getActorLabel(
+        latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName ||
+          doc?.uploadedByUser ||
+          doc?.uploadedBy,
+      );
+    }
+    if (normalized === "resubmission_required") {
+      return getActorLabel(
+        latestVerification?.latestActionBy ||
+          latestVerification?.latestActionByName ||
+          latestVerification?.resubmissionRequestedBy,
+      );
+    }
+    return "—";
+  };
+
   const openUploadModal = (presetDocType?: string) => {
+    if (presetDocType === DOCUMENT_TYPE.RESUME) {
+      setShowResumeUploadModal(true);
+      return;
+    }
     setUploadModalDocType(presetDocType);
     setShowUploadModal(true);
   };
 
+  React.useEffect(() => {
+    if (!initialUploadDocType) return;
+    setUploadModalDocType(initialUploadDocType);
+    setShowUploadModal(true);
+    onInitialUploadDocTypeHandled?.();
+  }, [initialUploadDocType, onInitialUploadDocTypeHandled]);
+
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setUploadModalDocType(undefined);
+  };
+
+  const closeResumeUploadModal = () => {
+    setShowResumeUploadModal(false);
+    setSelectedResumeFile(null);
+    setResumeDocName("");
+    setResumeDocNameMode("common");
+    setResumeRoleSelections([{ id: crypto.randomUUID() }]);
+  };
+
+  const addResumeRoleSelection = () => {
+    setResumeRoleSelections((prev) => [...prev, { id: crypto.randomUUID() }]);
+  };
+
+  const removeResumeRoleSelection = (id: string) => {
+    setResumeRoleSelections((prev) =>
+      prev.length === 1 ? prev : prev.filter((entry) => entry.id !== id),
+    );
+  };
+
+  const handleResumeUpload = async () => {
+    if (!selectedResumeFile) {
+      toast.error("Please select a resume file");
+      return;
+    }
+
+    const selectedRoles = Array.from(
+      new Set(
+        resumeRoleSelections
+          .map((entry) => entry.roleCatalogId?.trim())
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (!selectedRoles.length) {
+      toast.error("Please select at least one department and role");
+      return;
+    }
+
+    setIsResumeUploading(true);
+    try {
+      await Promise.all(
+        selectedRoles.map((roleCatalogId) => {
+          const selection = resumeRoleSelections.find(
+            (entry) => entry.roleCatalogId === roleCatalogId,
+          );
+          const individualDocName = selection?.docName?.trim();
+          return uploadResume({
+            candidateId,
+            file: selectedResumeFile,
+            roleCatalogId,
+            docName:
+              resumeDocNameMode === "common"
+                ? resumeDocName.trim() || undefined
+                : individualDocName || undefined,
+          }).unwrap();
+        }),
+      );
+
+      toast.success("Resume uploaded successfully");
+      closeResumeUploadModal();
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        refetch();
+      }
+    } catch (error) {
+      console.error("Resume upload error:", error);
+      toast.error("Failed to upload resume");
+    } finally {
+      setIsResumeUploading(false);
+    }
+  };
+
+  const persistUploadedDocument = async (
+    uploadData: any,
+    uploadedDocument: any,
+    meta: {
+      docType: string;
+      docName?: string;
+      documentNumber?: string;
+      issuedAt?: string;
+      expiryDate?: string;
+      notes?: string;
+      roleCatalogId?: string;
+      workExperienceId?: string;
+    }
+  ) => {
+    const desiredDocName = (meta.docName && meta.docName.trim()) || "";
+
+    if (uploadedDocument?.id) {
+      await updateDocument({
+        id: uploadedDocument.id,
+        docName: desiredDocName || undefined,
+        documentNumber: meta.documentNumber,
+        issuedAt: DateUtils.toApiDate(meta.issuedAt),
+        expiryDate: DateUtils.toApiDate(meta.expiryDate),
+        notes: meta.notes,
+      }).unwrap();
+      return;
+    }
+
+    await createDocument({
+      candidateId,
+      docType: meta.docType,
+      docName: desiredDocName || undefined,
+      fileName: uploadData.fileName,
+      fileUrl: uploadData.fileUrl,
+      fileSize: uploadData.fileSize,
+      mimeType: uploadData.mimeType,
+      documentNumber: meta.documentNumber,
+      issuedAt: DateUtils.toApiDate(meta.issuedAt),
+      expiryDate: DateUtils.toApiDate(meta.expiryDate),
+      notes: meta.notes,
+      roleCatalogId: meta.roleCatalogId,
+      workExperienceId: meta.workExperienceId,
+    }).unwrap();
   };
 
   return (
@@ -292,26 +618,78 @@ export function DocumentUploadSection({
             className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3"
             aria-label="Mandatory document types checklist"
           >
-            {repositorySlots.map((slot) => (
+            {repositorySlots.map((slot) => {
+              const slotPassportDoc =
+                slot.key === "passport" ? passportDocument : undefined;
+              const passportNumberMissing =
+                slot.key === "passport" &&
+                slot.satisfied &&
+                !displayedPassportNumber;
+              const passportNumberFromCandidateOnly =
+                slot.key === "passport" &&
+                !slot.satisfied &&
+                Boolean(storedPassportNumber);
+
+              return (
               <li
                 key={slot.key}
                 className={cn(
                   "flex h-full flex-col gap-3 rounded-xl border p-3 transition-colors",
                   slot.satisfied
-                    ? "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
-                    : "border-border bg-muted/20"
+                    ? passportNumberMissing
+                      ? "border-amber-200/70 bg-gradient-to-br from-amber-50/90 via-background to-background shadow-sm"
+                      : "border-emerald-200/70 bg-gradient-to-br from-emerald-50/90 via-background to-background shadow-sm"
+                    : passportNumberFromCandidateOnly
+                      ? "border-sky-200/70 bg-gradient-to-br from-sky-50/90 via-background to-background shadow-sm"
+                      : "border-border bg-muted/20"
                 )}
               >
                 <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="font-semibold text-foreground">{slot.label}</p>
                   <p className="text-xs text-muted-foreground">
                     {slot.satisfied
-                      ? "Document on file for this type"
-                      : "Mandatory document missing"}
+                      ? passportNumberMissing
+                        ? "Passport on file — number missing"
+                        : slot.key === "passport" && displayedPassportNumber
+                          ? "Passport on file with number recorded"
+                          : "Document on file for this type"
+                      : passportNumberFromCandidateOnly
+                        ? "Passport number on file — upload copy to complete"
+                        : "Mandatory document missing"}
                   </p>
+                  {slot.key === "passport" && displayedPassportNumber && (
+                    <p className="text-xs font-medium text-foreground">
+                      #{displayedPassportNumber}
+                      {slotPassportDoc?.expiryDate
+                        ? ` · Exp ${DateUtils.formatDate(slotPassportDoc.expiryDate)}`
+                        : ""}
+                    </p>
+                  )}
                 </div>
                 <div className="mt-auto flex shrink-0 justify-end">
                   {slot.satisfied ? (
+                    passportNumberMissing ? (
+                      <div className="flex w-full flex-col gap-2">
+                        <p className="text-[11px] text-amber-800">
+                          Re-upload or edit to add passport number.
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 w-fit max-w-full gap-2 rounded-full border-amber-200 bg-amber-50/60 px-2.5 text-[11px] font-bold tracking-wide text-amber-900 shadow-sm hover:bg-amber-100"
+                          onClick={() => {
+                            if (slotPassportDoc?.id) {
+                              setEditPassportDoc(slotPassportDoc);
+                            } else {
+                              openUploadModal(slot.uploadDocType);
+                            }
+                          }}
+                        >
+                          Add passport number
+                        </Button>
+                      </div>
+                    ) : (
                     <div
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-emerald-950 shadow-sm ring-1 ring-emerald-500/10"
                       role="status"
@@ -325,6 +703,7 @@ export function DocumentUploadSection({
                       </span>
                       <span className="uppercase tracking-wider">Uploaded</span>
                     </div>
+                    )
                   ) : (
                     <Button
                       type="button"
@@ -344,7 +723,8 @@ export function DocumentUploadSection({
                   )}
                 </div>
               </li>
-            ))}
+            );
+            })}
           </ul>
         </CardContent>
       </Card>
@@ -373,11 +753,42 @@ export function DocumentUploadSection({
             <Plus className="mr-2 h-4 w-4" />
             Upload New Document
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-2"
+            onClick={() => setShowResumeUploadModal(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Resume
+          </Button>
         </div>
       </div>
     </CardHeader>
 
     <CardContent className="p-0">
+      <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/40 px-4 py-3 sm:flex-row sm:items-center">
+        <Input
+          value={search}
+          onChange={(e) => onSearchChange?.(e.target.value)}
+          placeholder="Search by file name, doc name, number..."
+          className="sm:max-w-sm"
+        />
+        <Select value={selectedDocType} onValueChange={(value) => onDocTypeChange?.(value)}>
+          <SelectTrigger className="sm:w-[220px]">
+            <SelectValue placeholder="Filter by document type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All document types</SelectItem>
+            {filterDocTypes.map((docType) => (
+              <SelectItem key={docType} value={docType}>
+                {DOCUMENT_TYPES.find((t) => t.value === docType)?.label || docType}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-indigo-600" />
@@ -401,25 +812,40 @@ export function DocumentUploadSection({
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/70">
-              <TableHead className="font-semibold text-slate-700">Document</TableHead>
+              <TableHead className="min-w-0 max-w-[14rem] font-semibold text-slate-700 sm:max-w-[16rem] md:max-w-[18rem]">
+                Document
+              </TableHead>
               <TableHead className="font-semibold text-slate-700">Type</TableHead>
               <TableHead className="font-semibold text-slate-700">Status</TableHead>
+              <TableHead className="font-semibold text-slate-700">Issued Date</TableHead>
+              <TableHead className="font-semibold text-slate-700">Expiry Date</TableHead>
               <TableHead className="font-semibold text-slate-700">Uploaded</TableHead>
+              <TableHead className="font-semibold text-slate-700">Activity</TableHead>
               <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {documents.map((doc: any) => (
               <TableRow key={doc.id} className="hover:bg-indigo-50/30 transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
+                <TableCell className="min-w-0 max-w-[14rem] sm:max-w-[16rem] md:max-w-[18rem]">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="shrink-0 rounded-lg bg-red-100 p-2">
                       <FileText className="h-5 w-5 text-red-600" />
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">{doc.fileName}</p>
+                    <div className="min-w-0 flex-1">
+                      <FileNameCell
+                        fileName={
+                          (doc.docName && String(doc.docName).trim()) ||
+                          doc.fileName ||
+                          "Untitled"
+                        }
+                      />
                       {doc.documentNumber && (
-                        <p className="text-sm text-slate-600">#{doc.documentNumber}</p>
+                        <p className="truncate text-sm text-slate-600">
+                          {doc.docType === DOCUMENT_TYPE.ELIGIBILITY_LETTER
+                            ? `Eligibility #${doc.documentNumber}`
+                            : `#${doc.documentNumber}`}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -449,14 +875,57 @@ export function DocumentUploadSection({
                 </TableCell>
 
                 <TableCell className="text-slate-700">
+                  {doc.issuedAt ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" />
+                      {DateUtils.formatDate(doc.issuedAt)}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+
+                <TableCell className="text-slate-700">
+                  {doc.expiryDate ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" />
+                      {DateUtils.formatDate(doc.expiryDate)}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+
+                <TableCell className="text-slate-700">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-slate-500" />
                     {DateUtils.formatDateTime(doc.createdAt)}
                   </div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    By: {getActorLabel(doc.uploadedByUser || doc.uploadedBy)}
+                  </p>
+                </TableCell>
+
+                <TableCell className="text-slate-700">
+                  <div className="text-sm capitalize">{doc.status?.replaceAll("_", " ") || "—"}</div>
+                  <p className="mt-1 text-xs text-slate-500">
+                    By: {getLatestDecisionActor(doc)}
+                  </p>
                 </TableCell>
 
                 <TableCell>
                   <div className="flex items-center justify-end gap-2">
+                    {isPassportDocumentType(doc.docType) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditPassportDoc(doc)}
+                        className="hover:bg-amber-100 hover:text-amber-800"
+                        aria-label="Edit passport details"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -498,14 +967,55 @@ export function DocumentUploadSection({
     </CardContent>
   </Card>
 
+  {pagination && pagination.totalPages > 1 && (
+    <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white/60 p-4 shadow-sm">
+      <p className="text-sm font-semibold text-slate-600">
+        Page {page} of {pagination.totalPages}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1 || isFetching}
+          onClick={() => onPageChange?.(Math.max(1, page - 1))}
+        >
+          <ChevronLeft className="mr-1 h-4 w-4" />
+          Prev
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= pagination.totalPages || isFetching}
+          onClick={() => onPageChange?.(Math.min(pagination.totalPages, page + 1))}
+        >
+          Next
+          <ChevronRight className="ml-1 h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )}
+
   {/* Lazy-loaded Upload Modal */}
   <React.Suspense fallback={null}>
     <CandidateUploadDocumentModal
       isOpen={showUploadModal}
       initialDocType={uploadModalDocType}
+      existingPassportDocument={passportDocument}
+      initialEligibilityNumber={candidateEligibilityNumber}
+      existingEligibilityDocument={eligibilityDocument}
       onClose={closeUploadModal}
       onUpload={async (file: File, meta: any) => {
         try {
+          if (meta?.docType === DOCUMENT_TYPE.RESUME) {
+            setShowUploadModal(false);
+            setSelectedResumeFile(file);
+            setResumeDocName(meta?.docName || "");
+            setResumeDocNameMode("common");
+            setResumeRoleSelections([{ id: crypto.randomUUID() }]);
+            setShowResumeUploadModal(true);
+            return;
+          }
+
           const formData = new FormData();
           formData.append("file", file);
           formData.append("docType", meta.docType);
@@ -519,33 +1029,7 @@ export function DocumentUploadSection({
                 ? uploadData
                 : null;
 
-          const desiredDocName = (meta.docName && meta.docName.trim()) || "";
-
-          if (uploadedDocument) {
-            if (desiredDocName) {
-              await updateDocument({
-                id: uploadedDocument.id,
-                docName: desiredDocName,
-              }).unwrap();
-            }
-          } else {
-            await createDocument({
-              candidateId,
-              docType: meta.docType,
-              docName: desiredDocName || undefined,
-              fileName: uploadData.fileName,
-              fileUrl: uploadData.fileUrl,
-              fileSize: uploadData.fileSize,
-              mimeType: uploadData.mimeType,
-              documentNumber: meta.documentNumber,
-              expiryDate: meta.expiryDate
-                ? new Date(meta.expiryDate).toISOString()
-                : undefined,
-              notes: meta.notes,
-              roleCatalogId: meta.roleCatalogId,
-              workExperienceId: meta.workExperienceId,
-            }).unwrap();
-          }
+          await persistUploadedDocument(uploadData, uploadedDocument, meta);
 
           toast.success("Document uploaded successfully");
           setShowUploadModal(false);
@@ -560,6 +1044,70 @@ export function DocumentUploadSection({
         }
       }}
       workExperiences={workExperiences}
+    />
+  </React.Suspense>
+
+  <ResumeUploadRoleModal
+    mode="upload"
+    isOpen={showResumeUploadModal}
+    selectedFile={selectedResumeFile}
+    docName={resumeDocName}
+    docNameMode={resumeDocNameMode}
+    roleSelections={resumeRoleSelections}
+    isUploading={isResumeUploading}
+    onClose={closeResumeUploadModal}
+    onFileSelect={(event) => {
+      const file = event.target.files?.[0];
+      if (file && file.type !== "application/pdf") {
+        toast.error("Please select a PDF file");
+        return;
+      }
+      setSelectedResumeFile(file || null);
+    }}
+    onPreview={() => {
+      if (!selectedResumeFile) return;
+      setPreviewDoc({
+        fileUrl: URL.createObjectURL(selectedResumeFile),
+        fileName: selectedResumeFile.name,
+      });
+      setIsPDFViewerOpen(true);
+    }}
+    onAddRole={addResumeRoleSelection}
+    onRemoveRole={removeResumeRoleSelection}
+    onRoleSelectionsChange={setResumeRoleSelections}
+    onDocNameModeChange={setResumeDocNameMode}
+    onDocNameChange={setResumeDocName}
+    onUpload={handleResumeUpload}
+  />
+
+  <React.Suspense fallback={null}>
+    <PassportDocumentDetailsDialog
+      isOpen={Boolean(editPassportDoc)}
+      documentId={editPassportDoc?.id || ""}
+      initialDocumentNumber={editPassportDoc?.documentNumber}
+      initialExpiryDate={editPassportDoc?.expiryDate}
+      isSaving={isSavingPassportDetails}
+      onClose={() => setEditPassportDoc(null)}
+      onSave={async ({ documentNumber, expiryDate }) => {
+        if (!editPassportDoc?.id) return;
+        try {
+          setIsSavingPassportDetails(true);
+          await updateDocument({
+            id: editPassportDoc.id,
+            documentNumber,
+            expiryDate: DateUtils.toApiDate(expiryDate),
+          }).unwrap();
+          toast.success("Passport details updated");
+          setEditPassportDoc(null);
+          if (onRefresh) {
+            onRefresh();
+          } else {
+            refetch();
+          }
+        } finally {
+          setIsSavingPassportDetails(false);
+        }
+      }}
     />
   </React.Suspense>
 

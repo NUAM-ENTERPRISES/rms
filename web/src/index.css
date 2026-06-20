@@ -1,7 +1,301 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@config "../tailwind.config.ts";
 
 @custom-variant dark (&:is(.dark *));
+
+@keyframes project-deadline-blink-urgent {
+  0%,
+  100% {
+    background-color: rgb(254 242 242);
+    border-color: rgb(254 202 202);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  35% {
+    background-color: rgb(254 236 236);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 2px rgb(239 68 68 / 0.12);
+  }
+  50% {
+    background-color: rgb(254 230 230);
+    border-color: rgb(251 146 146);
+    box-shadow: 0 0 10px 1px rgb(239 68 68 / 0.22);
+  }
+  65% {
+    background-color: rgb(254 236 236);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 2px rgb(239 68 68 / 0.12);
+  }
+}
+
+@keyframes project-deadline-blink {
+  0%,
+  100% {
+    background-color: rgb(255 251 235);
+    border-color: rgb(253 230 138);
+    box-shadow: 0 0 0 0 rgb(245 158 11 / 0%);
+  }
+  35% {
+    background-color: rgb(254 248 220);
+    border-color: rgb(252 211 77);
+    box-shadow: 0 0 0 2px rgb(245 158 11 / 0.1);
+  }
+  50% {
+    background-color: rgb(254 243 199);
+    border-color: rgb(251 191 36);
+    box-shadow: 0 0 10px 1px rgb(245 158 11 / 0.2);
+  }
+  65% {
+    background-color: rgb(254 248 220);
+    border-color: rgb(252 211 77);
+    box-shadow: 0 0 0 2px rgb(245 158 11 / 0.1);
+  }
+}
+
+@keyframes project-status-blink-hold {
+  0%,
+  100% {
+    background-color: rgb(255 247 237);
+    border-color: rgb(253 186 116);
+    box-shadow: 0 0 0 0 rgb(249 115 22 / 0%);
+  }
+  50% {
+    background-color: rgb(254 215 170);
+    border-color: rgb(249 115 22);
+    box-shadow: 0 0 16px 3px rgb(249 115 22 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-completed {
+  0%,
+  100% {
+    background-color: rgb(236 253 245);
+    border-color: rgb(134 239 172);
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0%);
+  }
+  50% {
+    background-color: rgb(134 239 172);
+    border-color: rgb(34 197 94);
+    box-shadow: 0 0 16px 3px rgb(34 197 94 / 0.35);
+  }
+}
+
+@keyframes project-status-blink-cancelled {
+  0%,
+  100% {
+    background-color: rgb(254 242 242);
+    border-color: rgb(252 165 165);
+    box-shadow: 0 0 0 0 rgb(239 68 68 / 0%);
+  }
+  50% {
+    background-color: rgb(252 165 165);
+    border-color: rgb(239 68 68);
+    box-shadow: 0 0 16px 3px rgb(239 68 68 / 0.35);
+  }
+}
+
+@keyframes login-panel-border-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-login-panel-border {
+  animation: login-panel-border-spin 6s linear infinite;
+}
+
+@keyframes nav-recruiter-star-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+}
+
+@keyframes nav-recruiter-star-glow {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px rgb(251 191 36 / 0.35));
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgb(251 191 36 / 0.9));
+  }
+}
+
+.animate-nav-recruiter-star-pulse {
+  animation: nav-recruiter-star-pulse 2.2s ease-in-out infinite;
+}
+
+.animate-nav-recruiter-star-glow {
+  animation: nav-recruiter-star-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes merged-document-ready-glow {
+  0%,
+  100% {
+    background-color: rgb(236 253 245);
+    border-color: rgb(167 243 208);
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0%);
+  }
+  50% {
+    background-color: rgb(209 250 229);
+    border-color: rgb(52 211 153);
+    box-shadow: 0 0 20px 4px rgb(16 185 129 / 0.45);
+  }
+}
+
+.animate-merged-document-ready-glow {
+  animation: merged-document-ready-glow 2s ease-in-out infinite;
+}
+
+@keyframes collection-completed-banner-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 12px 40px rgb(16 185 129 / 0.12),
+      0 0 0 1px rgb(167 243 208);
+  }
+  50% {
+    box-shadow:
+      0 16px 48px rgb(16 185 129 / 0.26),
+      0 0 28px 4px rgb(16 185 129 / 0.18);
+  }
+}
+
+.animate-collection-completed-banner {
+  animation: collection-completed-banner-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes project-country-badge-glow {
+  0%,
+  100% {
+    background-color: rgb(255 251 235);
+    box-shadow:
+      0 0 0 0 rgb(245 158 11 / 0%),
+      0 0 10px 0 rgb(250 204 21 / 0.1);
+    border-color: rgb(253 230 138);
+  }
+  50% {
+    background-color: rgb(254 243 199);
+    box-shadow:
+      0 0 22px 4px rgb(245 158 11 / 0.38),
+      0 0 32px 6px rgb(250 204 21 / 0.28);
+    border-color: rgb(251 191 36);
+  }
+}
+
+@keyframes project-country-badge-sheen {
+  0% {
+    transform: translateX(-140%) skewX(-14deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(240%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+.animate-project-country-badge-glow {
+  animation: project-country-badge-glow 2.5s ease-in-out infinite;
+}
+
+.animate-project-country-badge-sheen {
+  animation: project-country-badge-sheen 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-project-country-badge-glow,
+  .animate-project-country-badge-sheen {
+    animation: none;
+  }
+}
+
+@keyframes courier-wizard-bar-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 24px rgb(20 184 166 / 0.08),
+      0 0 0 1px rgb(153 246 228 / 0.4);
+  }
+  50% {
+    box-shadow:
+      0 8px 32px rgb(20 184 166 / 0.18),
+      0 0 20px 2px rgb(45 212 191 / 0.22);
+  }
+}
+
+@keyframes courier-wizard-step-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgb(153 246 228 / 0.5),
+      0 0 12px 2px rgb(20 184 166 / 0.35),
+      0 0 24px 4px rgb(20 184 166 / 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgb(94 234 212 / 0.7),
+      0 0 20px 6px rgb(20 184 166 / 0.55),
+      0 0 36px 8px rgb(20 184 166 / 0.25);
+  }
+}
+
+@keyframes courier-wizard-step-complete-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px 1px rgb(16 185 129 / 0.25),
+      0 0 16px 2px rgb(16 185 129 / 0.1);
+  }
+  50% {
+    box-shadow:
+      0 0 14px 3px rgb(16 185 129 / 0.4),
+      0 0 24px 4px rgb(16 185 129 / 0.18);
+  }
+}
+
+@keyframes courier-wizard-line-glow {
+  0%,
+  100% {
+    opacity: 0.85;
+    box-shadow: 0 0 6px 0 rgb(52 211 153 / 0.35);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 12px 2px rgb(52 211 153 / 0.55);
+  }
+}
+
+.animate-courier-wizard-bar-glow {
+  animation: courier-wizard-bar-glow 3s ease-in-out infinite;
+}
+
+.animate-courier-wizard-step-glow {
+  animation: courier-wizard-step-glow 2s ease-in-out infinite;
+}
+
+.animate-courier-wizard-step-complete-glow {
+  animation: courier-wizard-step-complete-glow 2.5s ease-in-out infinite;
+}
+
+.animate-courier-wizard-line-glow {
+  animation: courier-wizard-line-glow 2s ease-in-out infinite;
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -116,5 +410,42 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-project-deadline-blink-urgent {
+    animation: project-deadline-blink-urgent 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-deadline-blink {
+    animation: project-deadline-blink 3s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-status-blink-hold {
+    animation: project-status-blink-hold 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-status-blink-completed {
+    animation: project-status-blink-completed 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  .animate-project-status-blink-cancelled {
+    animation: project-status-blink-cancelled 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+    will-change: background-color, border-color, box-shadow;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-project-deadline-blink-urgent,
+    .animate-project-deadline-blink,
+    .animate-project-status-blink-hold,
+    .animate-project-status-blink-completed,
+    .animate-project-status-blink-cancelled {
+      animation: none;
+    }
   }
 }

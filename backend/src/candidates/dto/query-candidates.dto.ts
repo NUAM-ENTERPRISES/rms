@@ -7,11 +7,22 @@ import {
   Max,
   IsDateString,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
-import { CANDIDATE_STATUS } from '../../common/constants/statuses';
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender } from './create-candidate.dto';
+
+export enum DateFilterType {
+  ALL = 'all',
+  TODAY = 'today',
+  YESTERDAY = 'yesterday',
+  THIS_WEEK = 'this_week',
+  LAST_WEEK = 'last_week',
+  THIS_MONTH = 'this_month',
+  THIS_YEAR = 'this_year',
+  CUSTOM = 'custom',
+}
 
 export class QueryCandidatesDto {
   @ApiPropertyOptional({
@@ -302,6 +313,54 @@ export class QueryCandidatesDto {
   dateOfBirthTo?: string;
 
   @ApiPropertyOptional({
+    description: 'Preset date filter for candidate createdAt',
+    enum: DateFilterType,
+  })
+  @IsOptional()
+  @IsEnum(DateFilterType)
+  dateFilter?: DateFilterType;
+
+  @ApiPropertyOptional({
+    description: 'Filter by preferred countries (country codes)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  countryPreferences?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by sector types',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  sectorTypes?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by facility preferences',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  facilityPreferences?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Filter by multiple sources',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @Transform(({ value }) => (Array.isArray(value) ? value : value?.split(',')))
+  sources?: string[];
+
+  @ApiPropertyOptional({
     description: 'Filter by candidate createdAt (from) - ISO datetime',
     example: '2026-02-19T00:00:00.000Z',
   })
@@ -316,6 +375,20 @@ export class QueryCandidatesDto {
   @IsOptional()
   @IsDateString()
   dateTo?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Filter Operations assignments by CRE call count (0/3, 1/3, 2/3, 3/3) via operationsCallAttempts',
+    example: 1,
+    minimum: 0,
+    maximum: 3,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(3)
+  operationsCallAttempts?: number;
 
   @ApiPropertyOptional({
     description: 'Page number (1-based)',

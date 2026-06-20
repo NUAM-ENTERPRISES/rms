@@ -1,21 +1,21 @@
 import { PrismaClient } from '@prisma/client';
+import { ROLE_NAMES } from '../../src/common/constants/role-ids';
 
 const prisma = new PrismaClient();
 
 async function cleanupCREPermissions() {
-  console.log('🧹 Cleaning up old CRE permissions...');
+  console.log('🧹 Cleaning up old Operations permissions...');
 
-  // Get CRE role
-  const creRole = await prisma.role.findUnique({
-    where: { name: 'CRE' },
+  const operationsRole = await prisma.role.findUnique({
+    where: { name: ROLE_NAMES.OPERATIONS },
   });
 
-  if (!creRole) {
-    console.log('❌ CRE role not found');
+  if (!operationsRole) {
+    console.log('❌ Operations role not found');
     return;
   }
 
-  console.log(`✅ Found CRE role: ${creRole.id}`);
+  console.log(`✅ Found Operations role: ${operationsRole.id}`);
 
   // Permissions to REMOVE (old ones with wrong format)
   const permissionsToRemove = [
@@ -41,7 +41,7 @@ async function cleanupCREPermissions() {
       // Remove from role
       await prisma.rolePermission.deleteMany({
         where: {
-          roleId: creRole.id,
+          roleId: operationsRole.id,
           permissionId: permission.id,
         },
       });
@@ -51,7 +51,7 @@ async function cleanupCREPermissions() {
 
   // Verify final permissions
   const finalPermissions = await prisma.rolePermission.findMany({
-    where: { roleId: creRole.id },
+    where: { roleId: operationsRole.id },
     include: {
       permission: true,
     },
@@ -59,7 +59,7 @@ async function cleanupCREPermissions() {
 
   console.log('\n✅ Cleanup completed!');
   console.log('───────────────────────────────────────');
-  console.log('Remaining CRE permissions:');
+  console.log('Remaining Operations permissions:');
   finalPermissions.forEach((rp) => {
     console.log(`  - ${rp.permission.key}: ${rp.permission.description}`);
   });

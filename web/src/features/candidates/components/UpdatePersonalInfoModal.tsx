@@ -22,7 +22,12 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { User, Save, X, Mail, Phone, Calendar } from "lucide-react";
-import { CountryCodeSelect, ProfileImageUpload, PhysicalAddressFields } from "@/components/molecules";
+import {
+  CountryCodeSelect,
+  PhysicalAddressFields,
+  ProfessionTypeSelect,
+  ProfileImageUpload,
+} from "@/components/molecules";
 import { useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useUploadCandidateProfileImageMutation } from "@/services/uploadApi";
 import { toast } from "sonner";
@@ -39,7 +44,7 @@ const normalizeLegacySource = (source: string) =>
 
 const personalInfoSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters").max(50),
-  lastName: z.string().min(2, "Last name must be at least 2 characters").max(50),
+  lastName: z.string(),
   countryCode: z.string().min(1, "Country code is required"),
   mobileNumber: z
     .string()
@@ -48,10 +53,18 @@ const personalInfoSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   source: z.enum(CANDIDATE_SOURCE_IDS),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
+  professionTypeId: z.string().min(1, "Profession type is required"),
   dateOfBirth: z.string().optional().or(z.literal("")),
   addressCountryCode: z.string().max(8).optional().or(z.literal("")),
   addressStateId: z.string().optional().or(z.literal("")),
   address: z.string().max(500).optional().or(z.literal("")),
+  addressPincode: z.string().max(12).optional().or(z.literal("")),
+  alternatePhone: z
+    .string()
+    .max(15)
+    .regex(/^[\d+\-\s()]*$/, "Invalid alternate phone format")
+    .optional()
+    .or(z.literal("")),
 }).superRefine((data, ctx) => {
   if (data.addressStateId?.trim() && !data.addressCountryCode?.trim()) {
     ctx.addIssue({
@@ -77,10 +90,13 @@ interface UpdatePersonalInfoModalProps {
     email?: string;
     source: string;
     gender?: string;
+    professionTypeId?: string | null;
     dateOfBirth?: string | null;
     addressCountryCode?: string | null;
     addressStateId?: string | null;
     address?: string | null;
+    addressPincode?: string | null;
+    alternatePhone?: string | null;
   };
 }
 
@@ -101,9 +117,11 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<PersonalInfoFormData>({
     resolver: zodResolver(personalInfoSchema),
+    shouldUnregister: false,
     defaultValues: {
       firstName: initialData.firstName || "",
       lastName: initialData.lastName || "",
@@ -112,10 +130,13 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
       email: initialData.email || "",
       source: normalizeLegacySource(initialData.source || "manual"),
       gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
+      professionTypeId: initialData.professionTypeId || "",
       dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
       addressCountryCode: initialData.addressCountryCode ?? "",
       addressStateId: initialData.addressStateId ?? "",
       address: initialData.address ?? "",
+      addressPincode: initialData.addressPincode ?? "",
+      alternatePhone: initialData.alternatePhone ?? "",
     },
   });
 
@@ -127,8 +148,10 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
 
   const source = watch("source");
 
+  const wasOpenRef = React.useRef(false);
+
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !wasOpenRef.current) {
       setSelectedImage(null);
       reset({
         firstName: initialData.firstName || "",
@@ -138,12 +161,18 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         email: initialData.email || "",
         source: normalizeLegacySource(initialData.source || "manual"),
         gender: (initialData.gender as "MALE" | "FEMALE" | "OTHER") || "MALE",
-        dateOfBirth: initialData.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split("T")[0] : "",
+        professionTypeId: initialData.professionTypeId || "",
+        dateOfBirth: initialData.dateOfBirth
+          ? new Date(initialData.dateOfBirth).toISOString().split("T")[0]
+          : "",
         addressCountryCode: initialData.addressCountryCode ?? "",
         addressStateId: initialData.addressStateId ?? "",
         address: initialData.address ?? "",
+        addressPincode: initialData.addressPincode ?? "",
+        alternatePhone: initialData.alternatePhone ?? "",
       });
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen, initialData, reset]);
 
   const onSubmit = async (data: PersonalInfoFormData) => {
@@ -155,6 +184,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         mobileNumber: data.mobileNumber,
         source: data.source,
         gender: data.gender,
+        professionTypeId: data.professionTypeId,
         dateOfBirth: data.dateOfBirth && data.dateOfBirth.trim() ? data.dateOfBirth : null,
       };
 
@@ -172,6 +202,15 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
         ? data.addressStateId.trim()
         : null;
       payload.address = data.address?.trim() ? data.address.trim() : null;
+      const addressPincode = (
+        data.addressPincode ??
+        getValues("addressPincode") ??
+        ""
+      ).trim();
+      payload.addressPincode = addressPincode || null;
+      payload.alternatePhone = data.alternatePhone?.trim()
+        ? data.alternatePhone.trim()
+        : null;
 
       await updateCandidate({
         id: candidateId,
@@ -255,7 +294,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
             {/* Last Name */}
             <div className="space-y-2">
               <Label htmlFor="lastName" className="text-slate-700 font-medium">
-                Last Name *
+                Last Name
               </Label>
               <Controller
                 name="lastName"
@@ -343,6 +382,30 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="alternatePhone" className="text-slate-700 font-medium flex items-center gap-2">
+                <Phone className="h-4 w-4 text-slate-400" />
+                Alternate phone
+              </Label>
+              <Controller
+                name="alternatePhone"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    id="alternatePhone"
+                    type="tel"
+                    placeholder="9876543211"
+                    disabled={isLoading}
+                    className="h-11 bg-white border-slate-200"
+                  />
+                )}
+              />
+              {errors.alternatePhone && (
+                <p className="text-sm text-red-600">{errors.alternatePhone.message}</p>
+              )}
+            </div>
+
             {/* Date of Birth */}
             <div className="space-y-2">
               <Label htmlFor="dateOfBirth" className="text-slate-700 font-medium flex items-center gap-2">
@@ -395,6 +458,22 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
               )}
             </div>
 
+            <div className="space-y-2 md:col-span-2">
+              <Controller
+                name="professionTypeId"
+                control={control}
+                render={({ field }) => (
+                  <ProfessionTypeSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={isLoading}
+                    required
+                    error={errors.professionTypeId?.message}
+                  />
+                )}
+              />
+            </div>
+
             {/* Source */}
             <div className="space-y-2">
               <Label className="text-slate-700 font-medium">Source</Label>
@@ -431,6 +510,7 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                 setValue={setValue}
                 errors={errors}
                 disabled={isLoading}
+                includePincode={false}
                 title="Candidate address (optional)"
                 initialCountryData={
                   addressCountryMeta
@@ -441,6 +521,39 @@ export const UpdatePersonalInfoModal: React.FC<UpdatePersonalInfoModalProps> = (
                     : undefined
                 }
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="addressPincode"
+                className="text-slate-700 font-medium"
+              >
+                Pincode
+              </Label>
+              <Controller
+                name="addressPincode"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    id="addressPincode"
+                    name={field.name}
+                    ref={field.ref}
+                    value={field.value ?? ""}
+                    onBlur={field.onBlur}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    placeholder="e.g. 682016"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    disabled={isLoading}
+                    className="h-11 bg-white border-slate-200"
+                  />
+                )}
+              />
+              {errors.addressPincode && (
+                <p className="text-sm text-red-600">
+                  {errors.addressPincode.message}
+                </p>
+              )}
             </div>
 
             <div className="md:col-span-2">

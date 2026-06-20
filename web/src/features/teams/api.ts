@@ -1,3 +1,4 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 
 export interface Team {
@@ -33,7 +34,7 @@ export interface TeamProject {
   id: string;
   title: string;
   description: string;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   client: {

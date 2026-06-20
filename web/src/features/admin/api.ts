@@ -8,6 +8,8 @@ interface ApiResponse<T> {
   message: string;
 }
 
+export type UserAccountStatus = "ACTIVE" | "INACTIVE" | "BLOCKED";
+
 // User Types matching backend structure
 export interface UserRole {
   id: string;
@@ -17,12 +19,15 @@ export interface UserRole {
 
 export interface UserWithRoles {
   id: string;
+  employeeCode?: string | null;
   email: string;
   name: string;
   countryCode: string;
   mobileNumber: string;
   dateOfBirth?: string;
   profileImage?: string;
+  accountStatus?: UserAccountStatus;
+  accountStatusUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
   userRoles: Array<{
@@ -46,6 +51,15 @@ export interface UserWithRoles {
     sectorScopes: string[];
     country?: { code: string; name: string } | null;
   }>;
+  userProfessionScopes?: Array<{
+    id: string;
+    professionTypeId: string;
+    professionType: { id: string; name: string; label: string };
+  }>;
+  documentsControlAccess?: {
+    originalDocumentIntakeEnabled: boolean;
+    courierManagementEnabled: boolean;
+  };
 }
 
 export interface PaginatedUsersData {
@@ -58,6 +72,7 @@ export interface PaginatedUsersData {
 
 export interface CreateUserRequest {
   name: string;
+  employeeCode?: string;
   email: string;
   password: string;
   countryCode: string;
@@ -67,10 +82,12 @@ export interface CreateUserRequest {
   addressCountryCode?: string;
   addressStateId?: string;
   address?: string;
+  professionTypeIds: string[];
 }
 
 export interface UpdateUserRequest {
   name?: string;
+  employeeCode?: string | null;
   email?: string;
   countryCode?: string;
   mobileNumber?: string;
@@ -79,6 +96,7 @@ export interface UpdateUserRequest {
   addressCountryCode?: string | null;
   addressStateId?: string | null;
   address?: string | null;
+  professionTypeIds?: string[];
 }
 
 export type LanguageProficiencyApi = "PRIMARY" | "SECONDARY" | "TERTIARY";
@@ -97,6 +115,11 @@ export interface RecruiterCapabilityCountryItem {
 export interface UpdateRecruiterCapabilitiesRequest {
   languages: RecruiterCapabilityLanguageItem[];
   countryCoverages: RecruiterCapabilityCountryItem[];
+}
+
+export interface UpdateDocumentsControlPermissionsRequest {
+  originalDocumentIntakeEnabled: boolean;
+  courierManagementEnabled: boolean;
 }
 
 export interface UserLanguagesResponse {
@@ -148,6 +171,40 @@ export interface QueryUsersRequest {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   roles?: string | string[];
+  accountStatus?: UserAccountStatus;
+}
+
+export interface UpdateUserAccountStatusRequest {
+  status: UserAccountStatus;
+  remarks: string;
+}
+
+export interface UserAccountStatusHistoryItem {
+  id: string;
+  previousStatus: UserAccountStatus | null;
+  newStatus: UserAccountStatus;
+  remarks: string;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    name: string;
+    email: string;
+    employeeCode: string | null;
+  } | null;
+}
+
+export interface PaginatedAccountStatusHistoryData {
+  items: UserAccountStatusHistoryItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface AccountStatusHistoryResponse {
+  success: boolean;
+  data: PaginatedAccountStatusHistoryData;
+  message: string;
 }
 
 export interface UsersResponse {
@@ -162,9 +219,22 @@ export interface UserResponse {
   message: string;
 }
 
+export interface SuggestEmployeeCodeResponse {
+  success: boolean;
+  data: { employeeCode: string };
+  message: string;
+}
+
 // Users API using baseApi injection pattern (FE_GUIDELINES compliance)
 export const usersApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    suggestEmployeeCode: builder.mutation<SuggestEmployeeCodeResponse, void>({
+      query: () => ({
+        url: '/users/employee-code/suggest',
+        method: 'POST',
+      }),
+    }),
+
     // Get all users with pagination and search
     getUsers: builder.query<UsersResponse, QueryUsersRequest | void>({
       query: (params) => {
@@ -224,6 +294,53 @@ export const usersApi = baseApi.injectEndpoints({
         body,
       }),
       invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateDocumentsControlPermissions: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateDocumentsControlPermissionsRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/documents-control-permissions`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [{ type: "User", id }, "User"],
+    }),
+
+    updateUserAccountStatus: builder.mutation<
+      UserResponse,
+      { id: string; body: UpdateUserAccountStatusRequest }
+    >({
+      query: ({ id, body }) => ({
+        url: `/users/${id}/account-status`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        { type: "User", id },
+        "User",
+        { type: "UserAccountStatusHistory", id },
+      ],
+    }),
+
+    getUserAccountStatusHistory: builder.query<
+      AccountStatusHistoryResponse,
+      { userId: string; page?: number; limit?: number }
+    >({
+      query: ({ userId, page, limit }) => {
+        const searchParams = new URLSearchParams();
+        if (page) searchParams.set("page", String(page));
+        if (limit) searchParams.set("limit", String(limit));
+        const qs = searchParams.toString();
+        return {
+          url: `/users/${userId}/account-status/history${qs ? `?${qs}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: (_, __, { userId }) => [
+        { type: "UserAccountStatusHistory", id: userId },
+      ],
     }),
 
     // Update existing user
@@ -441,12 +558,16 @@ export const usersApi = baseApi.injectEndpoints({
 
 // Export hooks
 export const {
+  useSuggestEmployeeCodeMutation,
   useGetUsersQuery,
   useGetUserQuery,
   useCreateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
+  useUpdateDocumentsControlPermissionsMutation,
   useUpdateUserMutation,
+  useUpdateUserAccountStatusMutation,
+  useGetUserAccountStatusHistoryQuery,
   useDeleteUserMutation,
   useGetUserRolesQuery,
   useGetUserPermissionsQuery,

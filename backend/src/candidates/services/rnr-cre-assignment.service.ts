@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { RecruiterAssignmentService } from './recruiter-assignment.service';
 import { CANDIDATE_STATUS } from '../../common/constants/statuses';
+import { ROLE_NAMES } from '../../common/constants/role-ids';
 
 @Injectable()
 export class RnrCreAssignmentService {
@@ -41,7 +42,7 @@ export class RnrCreAssignmentService {
                 userRoles: {
                   some: {
                     role: {
-                      name: 'CRE',
+                      name: ROLE_NAMES.OPERATIONS,
                     },
                   },
                 },
@@ -111,7 +112,7 @@ export class RnrCreAssignmentService {
                 userRoles: {
                   some: {
                     role: {
-                      name: 'CRE',
+                      name: ROLE_NAMES.OPERATIONS,
                     },
                   },
                 },
@@ -179,7 +180,7 @@ export class RnrCreAssignmentService {
               userRoles: {
                 some: {
                   role: {
-                    name: 'CRE',
+                    name: ROLE_NAMES.OPERATIONS,
                   },
                 },
               },

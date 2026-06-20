@@ -13,7 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useGetProjectsQuery } from "@/services/projectsApi";
+import { useGetProjectsQuery, type QueryProjectsRequest } from "@/services/projectsApi";
 import { Search, ChevronDown, ChevronLeft, ChevronRight, X, Building2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -31,6 +31,11 @@ export interface ProjectRoleFilterProps {
   projectLabel?: string;
   roleLabel?: string;
   defaultProject?: boolean;
+  showProjectFilter?: boolean;
+  projectTriggerClassName?: string;
+  roleTriggerClassName?: string;
+  projectTriggerHighlighted?: boolean;
+  projectQueryFilters?: QueryProjectsRequest;
 }
 
 export function ProjectRoleFilter({
@@ -41,6 +46,11 @@ export function ProjectRoleFilter({
   projectLabel = "Project Filter",
   roleLabel = "Role Filter",
   defaultProject = false,
+  showProjectFilter = true,
+  projectTriggerClassName,
+  roleTriggerClassName,
+  projectTriggerHighlighted = false,
+  projectQueryFilters,
 }: ProjectRoleFilterProps) {
   const [projectSearch, setProjectSearch] = useState("");
   const [projectPage, setProjectPage] = useState(1);
@@ -49,18 +59,22 @@ export function ProjectRoleFilter({
   const debouncedProjectSearch = useDebounce(projectSearch, 300);
 
   // Fetch projects with pagination and search
-  const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery({
+  const projectQueryBase = {
     limit: 10,
     page: projectPage,
     ...(debouncedProjectSearch ? { search: debouncedProjectSearch } : {}),
-  });
+    ...(projectQueryFilters?.status !== undefined && { status: projectQueryFilters.status }),
+    ...(projectQueryFilters?.isUrgent !== undefined && { isUrgent: projectQueryFilters.isUrgent }),
+  };
+
+  const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery(projectQueryBase);
 
   const projects = projectsData?.data?.projects || [];
   const projectsPagination = projectsData?.data?.pagination || { total: 0, totalPages: 1, page: 1 };
 
   // Get the selected project details (for displaying the name and getting roles)
   const { data: selectedProjectData } = useGetProjectsQuery(
-    { limit: 10, page: 1 }, // Align with Query 1 to share cache
+    { limit: 10, page: 1, ...projectQueryFilters },
     { skip: value.projectId === "all" }
   );
 
@@ -138,6 +152,7 @@ export function ProjectRoleFilter({
   return (
     <div className={cn("flex flex-wrap gap-2", className)}>
       {/* Project Filter with Search and Pagination */}
+      {showProjectFilter && (
       <div className="w-full md:w-auto min-w-[220px]">
         <Popover open={isProjectOpen} onOpenChange={setIsProjectOpen}>
           <PopoverTrigger asChild>
@@ -145,13 +160,30 @@ export function ProjectRoleFilter({
               variant="outline"
               role="combobox"
               aria-expanded={isProjectOpen}
-              className="h-9 w-full justify-between text-sm font-normal"
+              aria-label="Select project"
+              className={cn(
+                "h-9 w-full justify-between text-sm rounded-full border shadow-sm transition-all duration-200",
+                projectTriggerHighlighted
+                  ? "border-blue-400 bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 font-semibold text-blue-900 ring-2 ring-blue-200/70 shadow-md hover:border-blue-500 hover:from-blue-100 hover:via-indigo-100 hover:to-blue-100 data-[state=open]:border-blue-500 data-[state=open]:ring-blue-300/80"
+                  : "border-slate-200 bg-white font-normal text-slate-900 hover:bg-slate-50",
+                projectTriggerClassName
+              )}
             >
               <div className="flex items-center gap-2 truncate">
-                <Building2 className="h-4 w-4 text-gray-500 shrink-0" />
+                <Building2
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    projectTriggerHighlighted ? "text-blue-600" : "text-slate-500"
+                  )}
+                />
                 <span className="truncate">{selectedProjectName}</span>
               </div>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronDown
+                className={cn(
+                  "ml-2 h-4 w-4 shrink-0",
+                  projectTriggerHighlighted ? "text-blue-600 opacity-80" : "opacity-50"
+                )}
+              />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-0" align="start">
@@ -265,12 +297,18 @@ export function ProjectRoleFilter({
           </PopoverContent>
         </Popover>
       </div>
+      )}
 
       {/* Role Filter */}
       {showRoleFilter && (
         <div className="w-full md:w-auto min-w-[180px]">
           <Select value={value.roleCatalogId} onValueChange={handleRoleChange}>
-            <SelectTrigger className="h-9 text-sm">
+            <SelectTrigger
+              className={cn(
+                "h-9 text-sm rounded-full border-slate-200 bg-white shadow-sm",
+                roleTriggerClassName
+              )}
+            >
               <SelectValue placeholder={roleLabel} />
             </SelectTrigger>
             <SelectContent>

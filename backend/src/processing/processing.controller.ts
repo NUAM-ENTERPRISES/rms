@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Query,
   Param,
@@ -10,6 +11,7 @@ import {
   Req,
   HttpStatus,
   HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -35,6 +37,11 @@ import { Permissions } from '../auth/rbac/permissions.decorator';
 import { PERMISSIONS } from '../common/constants/permissions';
 import { CompleteProcessingDto } from './dto/complete-processing.dto';
 import { SubmitProcessingStepDateDto } from './dto/submit-processing-step-date.dto';
+import {
+  CreateStepRequirementRuleDto,
+  StepRequirementRulesQueryDto,
+  UpdateStepRequirementRuleDto,
+} from './dto/manage-step-requirement-rule.dto';
 
 @ApiTags('Processing Department')
 @ApiBearerAuth()
@@ -96,10 +103,10 @@ export class ProcessingController {
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
     summary: 'Admin: Get all processing candidates across users with additional filters',
-    description: 'Admin view: Retrieve processing candidates across all users. Supports filters: status (assigned,in_progress,completed,cancelled,all), filterType (visa_stamped, total_processing), search, projectId, roleCatalogId, page and limit.',
+    description: 'Admin view: Retrieve processing candidates across all users. Supports filters: status (assigned,in_progress,completed,cancelled,all), filterType (visa_stamped, total_processing, awaiting_requests), search, projectId, roleCatalogId, page and limit.',
   })
-  @ApiQuery({ name: 'filterType', required: false, description: "Optional special filters: 'visa_stamped' returns candidates whose visa step is completed; 'total_processing' is equivalent to 'all'" })
-  @ApiQuery({ name: 'status', required: false, enum: ['assigned','in_progress','completed','cancelled','all','visa_stamped'], description: 'Filter by processing status or special visa_stamped', example: 'all' })
+  @ApiQuery({ name: 'filterType', required: false, description: "Optional special filters: 'visa_stamped', 'total_processing', or 'awaiting_requests'" })
+  @ApiQuery({ name: 'status', required: false, enum: ['assigned','in_progress','completed','cancelled','on_hold','all','visa_stamped'], description: 'Filter by processing status or special visa_stamped', example: 'all' })
   @ApiQuery({ name: 'step', required: false, description: 'Filter by current processing step key (e.g., offer_letter, hrd, visa, completed)' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -201,6 +208,39 @@ export class ProcessingController {
     };
   }
 
+  @Get('candidate/:candidateId/processing-projects')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'List all processing project nominations for a candidate',
+    description:
+      'Returns every ProcessingCandidate record for the given candidate, including current and past projects. Supports optional currentProcessingId to mark the active record and sort it first.',
+  })
+  @ApiParam({ name: 'candidateId', type: 'string', description: 'The candidate ID' })
+  @ApiQuery({ name: 'currentProcessingId', required: false, description: 'Processing record ID being viewed (sorted first)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing projects retrieved successfully',
+  })
+  async getCandidateProcessingProjects(
+    @Param('candidateId') candidateId: string,
+    @Query('currentProcessingId') currentProcessingId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getCandidateProcessingProjects(candidateId, {
+      currentProcessingId,
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data,
+      message: 'Processing projects retrieved successfully',
+    };
+  }
+
   @Get('candidate/:processingId/history')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
@@ -221,6 +261,53 @@ export class ProcessingController {
       success: true,
       data,
       message: 'Processing history retrieved successfully',
+    };
+  }
+
+  @Get('candidate/:processingId/document-collection-history')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get document collection intake history for a processing candidate',
+    description: 'Read-only proxy of original document collection events for the candidate linked to this processing record.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getDocumentCollectionHistory(
+    @Param('processingId') processingId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getDocumentCollectionHistory(processingId, {
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data,
+      message: 'Document collection history retrieved successfully',
+    };
+  }
+
+  @Get('candidate/:processingId/courier-history')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'Get courier leg history for a processing candidate',
+    description: 'Read-only proxy of courier shipment legs for the candidate linked to this processing record.',
+  })
+  @ApiParam({ name: 'processingId', type: 'string' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  async getCourierHistory(
+    @Param('processingId') processingId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getCourierHistory(processingId, { page, limit });
+    return {
+      success: true,
+      data,
+      message: 'Courier history retrieved successfully',
     };
   }
 
@@ -528,6 +615,77 @@ export class ProcessingController {
     return { success: true, data, message: 'Ticket requirements retrieved' };
   }
 
+  @Get('steps/:processingId/requirement-rules')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Get editable document requirement rules for a processing step',
+    description:
+      'Returns merged requirement rules (global + country override) for the given processing candidate country and step key.',
+  })
+  async getStepRequirementRules(
+    @Param('processingId') processingId: string,
+    @Query() query: StepRequirementRulesQueryDto,
+  ) {
+    const data = await this.processingService.getStepRequirementRules(
+      processingId,
+      query.stepKey,
+    );
+    return { success: true, data, message: 'Requirement rules retrieved' };
+  }
+
+  @Post('steps/:processingId/requirement-rules')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Add a document requirement rule for a processing step',
+  })
+  async createStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Body() body: CreateStepRequirementRuleDto,
+  ) {
+    const data = await this.processingService.createStepRequirementRule(
+      processingId,
+      body,
+    );
+    return { success: true, data, message: 'Requirement rule created' };
+  }
+
+  @Patch('steps/:processingId/requirement-rules/:ruleId')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Update a document requirement rule for a processing step',
+  })
+  async updateStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Param('ruleId') ruleId: string,
+    @Body() body: UpdateStepRequirementRuleDto,
+  ) {
+    const data = await this.processingService.updateStepRequirementRule(
+      processingId,
+      ruleId,
+      body,
+    );
+    return { success: true, data, message: 'Requirement rule updated' };
+  }
+
+  @Delete('steps/:processingId/requirement-rules/:ruleId')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({
+    summary: 'Remove/exclude a document requirement rule for a processing step',
+  })
+  async deleteStepRequirementRule(
+    @Param('processingId') processingId: string,
+    @Param('ruleId') ruleId: string,
+    @Query() query: StepRequirementRulesQueryDto,
+  ) {
+    const data = await this.processingService.deleteStepRequirementRule(
+      processingId,
+      ruleId,
+      query.stepKey,
+    );
+    return { success: true, data, message: 'Requirement rule removed' };
+  }
+
   @Post('steps/:stepId/cancel')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
   @ApiOperation({ summary: 'Cancel a processing step and the entire processing flow' })
@@ -535,8 +693,73 @@ export class ProcessingController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
   @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Processing step not found' })
   async cancelStep(@Param('stepId') stepId: string, @Body() body: import('./dto/cancel-processing-step.dto').CancelProcessingStepDto, @Req() req: any) {
-    const data = await this.processingService.cancelProcessingStep(stepId, req.user.id, body?.reason);
-    return { success: true, data, message: 'Processing step and processing cancelled' };
+    const reason = body?.reason?.trim();
+    if (!reason || reason.length < 10) {
+      throw new BadRequestException('Cancel reason is required (minimum 10 characters)');
+    }
+
+    const canDirect = await this.processingService.userCanDirectApplyProcessingStatusChange(req.user.id);
+    if (canDirect) {
+      const data = await this.processingService.cancelProcessingStep(stepId, req.user.id, reason);
+      return { success: true, data, message: 'Processing step and processing cancelled' };
+    }
+
+    const request = await this.processingService.createProcessingStatusChangeRequest(
+      {
+        processingStepId: stepId,
+        requestType: 'processing_cancel',
+        reason,
+      },
+      req.user.id,
+    );
+    return {
+      success: true,
+      data: request,
+      message: 'Processing cancellation request submitted for approval',
+    };
+  }
+
+  @Post('status-change-requests')
+  @Permissions(PERMISSIONS.WRITE_PROCESSING)
+  @ApiOperation({ summary: 'Create a processing status change request (cancel, hold, or reactivate)' })
+  async createProcessingStatusChangeRequest(
+    @Body() body: import('./dto/create-processing-status-change-request.dto').CreateProcessingStatusChangeRequestDto,
+    @Req() req: any,
+  ) {
+    const data = await this.processingService.createProcessingStatusChangeRequest(body, req.user.id);
+    return { success: true, data, message: 'Processing status change request created' };
+  }
+
+  @Get('status-change-requests/pending')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'List pending processing cancel/hold requests' })
+  async getPendingProcessingStatusChangeRequests(@Query() query: any) {
+    const data = await this.processingService.getPendingProcessingStatusChangeRequests(query);
+    return { success: true, data };
+  }
+
+  @Get(':processingId/status-update-context')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get available processing status update options for cancelled/on-hold candidates' })
+  async getProcessingStatusUpdateContext(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getProcessingStatusUpdateContext(processingId);
+    return { success: true, data };
+  }
+
+  @Get(':processingId/status-change-requests/pending')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get pending processing status change request for a candidate' })
+  async getPendingProcessingStatusChangeRequestForCandidate(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getPendingProcessingStatusChangeRequestForCandidate(processingId);
+    return { success: true, data };
+  }
+
+  @Get(':processingId/status-change-requests/latest-reviewed')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get latest reviewed processing status change request' })
+  async getLatestReviewedProcessingStatusChangeRequest(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getLatestReviewedProcessingStatusChangeRequest(processingId);
+    return { success: true, data };
   }
 
   @Post('steps/:stepId/submit-date')

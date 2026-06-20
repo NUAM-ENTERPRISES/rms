@@ -1,4 +1,8 @@
 import { baseApi } from "@/app/api/baseApi";
+import {
+  appendCandidateListQueryParams,
+  type CandidateListQueryParams,
+} from "@/features/candidates/api";
 
 interface Candidate {
   id: string;
@@ -15,6 +19,8 @@ interface Candidate {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
+  professionTypeId?: string;
   assignedTo?: string;
   createdAt: string;
   updatedAt: string;
@@ -64,6 +70,7 @@ interface CandidateProjectMap {
 interface CreateCandidateRequest {
   name: string;
   contact: string;
+  professionTypeId?: string;
   email?: string;
   source?: string;
   dateOfBirth?: string;
@@ -74,6 +81,7 @@ interface CreateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string;
@@ -87,6 +95,7 @@ interface UpdateCandidateRequest {
   id: string;
   name?: string;
   contact?: string;
+  professionTypeId?: string;
   email?: string;
   currentStatus?: string;
   experience?: number;
@@ -96,6 +105,7 @@ interface UpdateCandidateRequest {
   expectedMaxSalary?: number;
   preferredCountries?: string[];
   facilityPreferences?: string[];
+  preferredRoles?: string[];
   assignedTo?: string;
 
   referralCompanyName?: string | null;
@@ -105,11 +115,8 @@ interface UpdateCandidateRequest {
   referralDescription?: string | null;
 }
 
-interface GetMyAssignedCandidatesParams {
-  search?: string;
+interface GetMyAssignedCandidatesParams extends CandidateListQueryParams {
   currentStatus?: string;
-  page?: number;
-  limit?: number;
 }
 
 interface PaginatedCandidatesResponse {
@@ -146,11 +153,8 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.currentStatus) queryParams.append("currentStatus", params.currentStatus.toString());
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
-        
+        appendCandidateListQueryParams(queryParams, params);
+
         return `/candidates/my-assigned?${queryParams.toString()}`;
       },
       transformResponse: (response: MyAssignedCandidatesApiResponse) => ({
@@ -162,7 +166,7 @@ export const candidatesApi = baseApi.injectEndpoints({
       }),
       providesTags: ["Candidate"],
     }),
-    getCREAssignedSummary: builder.query<
+    getOperationsAssignedSummary: builder.query<
       {
         total: number;
         roleCounters: {
@@ -173,6 +177,8 @@ export const candidatesApi = baseApi.injectEndpoints({
           onHold: number;
           untouched: number;
           junk: number;
+          weekOne: number;
+          weekTwo: number;
           other: number;
           created: number;
         };
@@ -183,15 +189,13 @@ export const candidatesApi = baseApi.injectEndpoints({
       transformResponse: (response: { success: boolean; data: any }) => response.data,
       providesTags: ["Candidate"],
     }),
-    getCREReassignedCandidates: builder.query<
+    getOperationsReassignedCandidates: builder.query<
       PaginatedCandidatesResponse,
       GetMyAssignedCandidatesParams
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
+        appendCandidateListQueryParams(queryParams, params);
 
         return `/candidates/my-assigned/reassigned?${queryParams.toString()}`;
       },
@@ -210,9 +214,7 @@ export const candidatesApi = baseApi.injectEndpoints({
     >({
       query: (params) => {
         const queryParams = new URLSearchParams();
-        if (params.search) queryParams.append("search", params.search);
-        if (params.page) queryParams.append("page", params.page.toString());
-        if (params.limit) queryParams.append("limit", params.limit.toString());
+        appendCandidateListQueryParams(queryParams, params);
 
         return `/candidates/user-candidates?${queryParams.toString()}`;
       },
@@ -235,7 +237,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: candidateData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
     updateCandidate: builder.mutation<Candidate, UpdateCandidateRequest>({
       query: ({ id, ...candidateData }) => ({
@@ -253,7 +255,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         url: `/candidates/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     markCandidateConverted: builder.mutation<Candidate, string>({
@@ -266,15 +268,126 @@ export const candidatesApi = baseApi.injectEndpoints({
         "Candidate",
       ],
     }),
-    transferCandidateToRecruiter: builder.mutation<Candidate, { id: string; notes?: string }>({
-      query: ({ id, notes }) => ({
+    transferCandidateToRecruiter: builder.mutation<
+      Candidate,
+      {
+        id: string;
+        currentStatusId: number;
+        reason: string;
+        onHoldUntil?: string;
+        futureDate?: string;
+        operationsCallNote?: string;
+        usedPhone?: boolean;
+        usedWhatsapp?: boolean;
+      }
+    >({
+      query: ({ id, ...body }) => ({
         url: `/candidates/${id}/transfer-to-recruiter`,
         method: "POST",
-        body: { notes },
+        body,
       }),
       invalidatesTags: (_, __, { id }) => [
         { type: "Candidate", id },
+        { type: "Candidate", id: `${id}-operations-calls` },
         "Candidate",
+      ],
+    }),
+    logOperationsCall: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          startedWeekOneWait?: boolean;
+          markedJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
+    >({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
+        url: `/candidates/${id}/operations/log-call`,
+        method: "POST",
+        body: { note, usedPhone, usedWhatsapp },
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
+      ],
+    }),
+    getOperationsCallHistory: builder.query<
+      {
+        success: boolean;
+        data: Array<{
+          id: string;
+          attemptNumber: number;
+          note: string;
+          usedPhone: boolean;
+          usedWhatsapp: boolean;
+          followUpStage?: string;
+          callOutcome?: string | null;
+          loggedAt: string;
+          loggedBy: { id: string; name: string };
+        }>;
+      },
+      string
+    >({
+      query: (candidateId) => `/candidates/${candidateId}/operations/call-history`,
+      providesTags: (_, __, candidateId) => [
+        { type: "Candidate", id: `${candidateId}-operations-calls` },
+      ],
+    }),
+    moveOperationsToWeekOne: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-one`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    moveOperationsToWeekTwo: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/move-to-week-two`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    markOperationsJunk: builder.mutation<
+      { success: boolean; data: { assignment: Record<string, unknown> }; message: string },
+      string
+    >({
+      query: (id) => ({
+        url: `/candidates/${id}/operations/mark-junk`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Candidate"],
+    }),
+    markOperationsNotInterested: builder.mutation<
+      {
+        success: boolean;
+        data: {
+          assignment: Record<string, unknown>;
+          callLog: Record<string, unknown>;
+          markedJunk?: boolean;
+          alreadyJunk?: boolean;
+        };
+        message: string;
+      },
+      { id: string; note: string; usedPhone: boolean; usedWhatsapp: boolean }
+    >({
+      query: ({ id, note, usedPhone, usedWhatsapp }) => ({
+        url: `/candidates/${id}/operations/mark-not-interested`,
+        method: "POST",
+        body: { note, usedPhone, usedWhatsapp },
+      }),
+      invalidatesTags: (_, __, { id }) => [
+        "Candidate",
+        { type: "Candidate", id: `${id}-operations-calls` },
       ],
     }),
     assignToProject: builder.mutation<
@@ -286,7 +399,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: { projectId, roleNeededId, recruiterId, notes },
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     nominateCandidate: builder.mutation<
@@ -298,7 +411,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: nominationData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     approveOrRejectCandidate: builder.mutation<
@@ -315,7 +428,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "POST",
         body: approvalData,
       }),
-      invalidatesTags: ["Candidate"],
+      invalidatesTags: ["Candidate", "RecruiterPerformanceRating", "AdminDashboard"],
     }),
 
     getEligibleCandidates: builder.query<
@@ -414,8 +527,8 @@ export const candidatesApi = baseApi.injectEndpoints({
 export const {
   useGetCandidatesQuery,
   useGetMyAssignedCandidatesQuery,
-  useGetCREAssignedSummaryQuery,
-  useGetCREReassignedCandidatesQuery,
+  useGetOperationsAssignedSummaryQuery,
+  useGetOperationsReassignedCandidatesQuery,
   useGetUserCandidatesQuery,
   useGetCandidateByIdQuery,
   useCreateCandidateMutation,
@@ -423,6 +536,12 @@ export const {
   useDeleteCandidateMutation,
   useMarkCandidateConvertedMutation,
   useTransferCandidateToRecruiterMutation,
+  useLogOperationsCallMutation,
+  useGetOperationsCallHistoryQuery,
+  useMoveOperationsToWeekOneMutation,
+  useMoveOperationsToWeekTwoMutation,
+  useMarkOperationsJunkMutation,
+  useMarkOperationsNotInterestedMutation,
   useAssignToProjectMutation,
   useNominateCandidateMutation,
   useApproveOrRejectCandidateMutation,

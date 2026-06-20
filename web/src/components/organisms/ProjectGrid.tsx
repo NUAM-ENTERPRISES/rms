@@ -1,8 +1,10 @@
 import React from "react";
 import { Project } from "@/features/projects";
+import { getProjectStatusBlinkClass } from "@/features/projects/constants/statusBadges";
 import ProjectCard from "./ProjectCard";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, FolderOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProjectGridProps {
   projects: Project[];
@@ -68,16 +70,26 @@ export default function ProjectGrid({
     <div className={className}>
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-        {projects.map((project) => (
-          <div
-            key={project.id}
-            className="group transition-all duration-300 hover:-translate-y-2"
-          >
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-white shadow-md transition-shadow">
-              <ProjectCard project={project} onView={onView} />
+        {projects.map((project) => {
+          const statusBlinkClass = getProjectStatusBlinkClass(project.status);
+
+          return (
+            <div
+              key={project.id}
+              className="group transition-transform duration-300 hover:-translate-y-2"
+            >
+              <div
+                className={cn(
+                  "rounded-2xl overflow-hidden border shadow-md",
+                  statusBlinkClass ?? "border-gray-200 bg-white",
+                  !statusBlinkClass && "transition-shadow hover:shadow-lg"
+                )}
+              >
+                <ProjectCard project={project} onView={onView} />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Premium Pagination */}

@@ -26,7 +26,19 @@ vi.mock("sonner", () => ({
 
 // Mock candidates API statuses hook (used via services/candidatesApi)
 vi.mock("@/services/candidatesApi", () => ({
-  useGetCandidateStatusesQuery: () => ({ data: { data: [ { id: 1, statusName: "Interested" }, { id: 2, statusName: "Not Interested" }, { id: 3, statusName: "RNR" } ] }, isLoading: false }),
+  useGetCandidateStatusesQuery: () => ({
+    data: {
+      data: [
+        { id: 1, statusName: "Interested" },
+        { id: 2, statusName: "Not Interested" },
+        { id: 3, statusName: "RNR" },
+        { id: 4, statusName: "Call Back" },
+        { id: 5, statusName: "On Hold" },
+        { id: 6, statusName: "Future" },
+      ],
+    },
+    isLoading: false,
+  }),
 }));
 
 describe("StatusUpdateModal", () => {
@@ -41,7 +53,9 @@ describe("StatusUpdateModal", () => {
   it("renders the modal when open", () => {
     render(<StatusUpdateModal {...defaultProps} />);
 
-    expect(screen.getByText("Update Status")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Update Status/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Changing status for/i)).toBeInTheDocument();
     expect(screen.getByText("John Doe")).toBeInTheDocument();
   });
@@ -96,7 +110,7 @@ describe("StatusUpdateModal", () => {
       fireEvent.click(interestedOption!);
     });
 
-    const submitButton = screen.getByText("Update Status");
+    const submitButton = screen.getByRole("button", { name: /Update Status/i });
     fireEvent.click(submitButton);
 
     await waitFor(() => {
@@ -124,7 +138,7 @@ describe("StatusUpdateModal", () => {
     // Select on hold status
     fireEvent.click(screen.getAllByRole("option").find((o) => /On Hold/i.test(o.textContent || ""))!);
 
-    expect(screen.getByLabelText(/On Hold Duration \(Days\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/On Hold Until/i)).toBeInTheDocument();
 
     // Select future status
     fireEvent.click(selectTrigger);
@@ -135,6 +149,31 @@ describe("StatusUpdateModal", () => {
       fireEvent.click(futureOption!);
     });
 
-    expect(screen.getByLabelText(/Future Year/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Available From Date/i)).toBeInTheDocument();
+  });
+
+  it("requires callback datetime when Call Back is selected", async () => {
+    const { toast } = await import("sonner");
+    render(<StatusUpdateModal {...defaultProps} />);
+
+    const selectTrigger = screen.getByRole("combobox");
+    fireEvent.click(selectTrigger);
+
+    await waitFor(() => {
+      const options = screen.getAllByRole("option");
+      const callBackOption = options.find((o) => /Call Back/i.test(o.textContent || ""));
+      expect(callBackOption).toBeTruthy();
+      fireEvent.click(callBackOption!);
+    });
+
+    expect(screen.getByLabelText(/Call back at/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Update Status/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Please select when to call back.",
+      );
+    });
   });
 });

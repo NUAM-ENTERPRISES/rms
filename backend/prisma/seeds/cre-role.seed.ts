@@ -1,42 +1,34 @@
 import { PrismaClient } from '@prisma/client';
+import { ROLE_NAMES } from '../../src/common/constants/role-ids';
 
-const prisma = new PrismaClient();
+export async function seedCRERole(prisma: PrismaClient) {
+  console.log('🌱 Seeding Operations Role and Permissions...');
 
-export async function seedCRERole() {
-  console.log('🌱 Seeding CRE Role and Permissions...');
-
-  // 1. Create CRE Role
-  const creRole = await prisma.role.upsert({
-    where: { name: 'CRE' },
+  const operationsRole = await prisma.role.upsert({
+    where: { name: ROLE_NAMES.OPERATIONS },
     update: {
-      description: 'Candidate Relationship Executive - Handles escalated RNR candidates',
+      description: 'Operations team - handles escalated RNR candidates',
     },
     create: {
-      name: 'CRE',
-      description: 'Candidate Relationship Executive - Handles escalated RNR candidates',
+      name: ROLE_NAMES.OPERATIONS,
+      description: 'Operations team - handles escalated RNR candidates',
     },
   });
 
-  console.log(`✅ CRE Role created/updated: ${creRole.id}`);
+  console.log(`✅ Operations Role created/updated: ${operationsRole.id}`);
 
-  // 2. Define CRE Permissions (Candidate access only - read and manage assigned candidates)
-  const crePermissions = [
-    // Candidate Permissions
+  const operationsPermissions = [
     { key: 'read:candidates', description: 'View candidates' },
     { key: 'write:candidates', description: 'Create candidates' },
     { key: 'manage:candidates', description: 'Manage candidates (full access)' },
     { key: 'update:candidates', description: 'Update candidates' },
     { key: 'transfer_back:candidates', description: 'Can transfer candidate back to previous recruiter' },
-    
-    // Document Permissions
     { key: 'read:documents', description: 'Read candidate documents' },
-    
-    // View their own notifications
     { key: 'read:notifications', description: 'View notifications' },
+    { key: 'read:operations_call_history', description: 'View Operations call log history for any Operations-handled candidate' },
   ];
 
-  // 3. Create permissions if they don't exist
-  for (const perm of crePermissions) {
+  for (const perm of operationsPermissions) {
     await prisma.permission.upsert({
       where: { key: perm.key },
       update: { description: perm.description },
@@ -47,10 +39,9 @@ export async function seedCRERole() {
     });
   }
 
-  console.log(`✅ Created/Updated ${crePermissions.length} permissions for CRE role`);
+  console.log(`✅ Created/Updated ${operationsPermissions.length} permissions for Operations role`);
 
-  // 4. Assign permissions to CRE role
-  for (const perm of crePermissions) {
+  for (const perm of operationsPermissions) {
     const permission = await prisma.permission.findUnique({
       where: { key: perm.key },
     });
@@ -59,73 +50,71 @@ export async function seedCRERole() {
       await prisma.rolePermission.upsert({
         where: {
           roleId_permissionId: {
-            roleId: creRole.id,
+            roleId: operationsRole.id,
             permissionId: permission.id,
           },
         },
         update: {},
         create: {
-          roleId: creRole.id,
+          roleId: operationsRole.id,
           permissionId: permission.id,
         },
       });
     }
   }
 
-  console.log(`✅ Assigned ${crePermissions.length} permissions to CRE role`);
+  console.log(`✅ Assigned ${operationsPermissions.length} permissions to Operations role`);
 
-  // 5. Create a sample CRE user (optional - check both email and phone for CI/CD robustness)
-  let creUser = await prisma.user.findFirst({
+  let operationsUser = await prisma.user.findFirst({
     where: {
       OR: [
+        { email: 'operations@affiniks.com' },
         { email: 'cre@affiniks.com' },
         { countryCode: '+91', mobileNumber: '9988776655' },
       ],
     },
   });
 
-  if (creUser) {
-    creUser = await prisma.user.update({
-      where: { id: creUser.id },
+  if (operationsUser) {
+    operationsUser = await prisma.user.update({
+      where: { id: operationsUser.id },
       data: {
-        email: 'cre@affiniks.com',
-        name: 'CRE User',
+        email: 'operations@affiniks.com',
+        name: 'Operations User',
         countryCode: '+91',
         mobileNumber: '9988776655',
       },
     });
   } else {
-    creUser = await prisma.user.create({
+    operationsUser = await prisma.user.create({
       data: {
-        email: 'cre@affiniks.com',
-        password: '$2b$10$2zD38atLNjqCY.dDy1V0GOTtY9YTnFk2RreS5Fa8qJdujLTUZRqOW', // Password: cre123
-        name: 'CRE User',
+        email: 'operations@affiniks.com',
+        password: '$2b$10$2zD38atLNjqCY.dDy1V0GOTtY9YTnFk2RreS5Fa8qJdujLTUZRqOW',
+        name: 'Operations User',
         countryCode: '+91',
         mobileNumber: '9988776655',
       },
     });
   }
 
-  console.log(`✅ CRE User created/updated: ${creUser.id} (${creUser.email})`);
+  console.log(`✅ Operations User created/updated: ${operationsUser.id} (${operationsUser.email})`);
 
-  // 6. Assign CRE role to user
   await prisma.userRole.upsert({
     where: {
       userId_roleId: {
-        userId: creUser.id,
-        roleId: creRole.id,
+        userId: operationsUser.id,
+        roleId: operationsRole.id,
       },
     },
     update: {},
     create: {
-      userId: creUser.id,
-      roleId: creRole.id,
+      userId: operationsUser.id,
+      roleId: operationsRole.id,
     },
   });
 
-  console.log(`✅ Assigned CRE role to user ${creUser.email}`);
+  console.log(`✅ Assigned Operations role to user ${operationsUser.email}`);
 
-  // 7. Update SystemConfig with CRE role ID
   const rnrSettings = await prisma.systemConfig.findUnique({
     where: { key: 'RNR_SETTINGS' },
   });
@@ -136,7 +125,7 @@ export async function seedCRERole() {
       ...currentSettings,
       creAssignment: {
         ...currentSettings.creAssignment,
-        creRoleId: creRole.id,
+        creRoleId: operationsRole.id,
       },
     };
 
@@ -145,21 +134,21 @@ export async function seedCRERole() {
       data: { value: updatedSettings },
     });
 
-    console.log(`✅ Updated RNR_SETTINGS with CRE role ID`);
+    console.log(`✅ Updated RNR_SETTINGS with Operations role ID`);
   }
 
-  console.log('\n✅ CRE Role seeding completed successfully!');
+  console.log('\n✅ Operations Role seeding completed successfully!');
   console.log('───────────────────────────────────────');
-  console.log(`Role Name: ${creRole.name}`);
-  console.log(`Role ID: ${creRole.id}`);
-  console.log(`Permissions: ${crePermissions.length} (candidate access only)`);
-  console.log(`Sample User: ${creUser.email}`);
+  console.log(`Role Name: ${operationsRole.name}`);
+  console.log(`Role ID: ${operationsRole.id}`);
+  console.log(`Permissions: ${operationsPermissions.length} (candidate access only)`);
+  console.log(`Sample User: ${operationsUser.email}`);
   console.log('───────────────────────────────────────\n');
 }
 
-// Run if executed directly
 if (require.main === module) {
-  seedCRERole()
+  const prisma = new PrismaClient();
+  seedCRERole(prisma)
     .then(() => {
       console.log('✅ Seeding completed');
       process.exit(0);

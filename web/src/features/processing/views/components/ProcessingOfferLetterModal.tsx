@@ -23,11 +23,26 @@ import {
   ShieldCheck,
   AlertTriangle,
   RefreshCw,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
+import { useAppSelector } from "@/app/hooks";
+import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
+import { useGetUserByIdQuery } from "@/services/usersApi";
 import { useUploadOfferLetterMutation, useUpdateOfferLetterReceivedDateMutation } from "@/services/uploadApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { useGetProcessingStepsQuery } from "@/services/processingApi";
+
+export interface OfferLetterUploader {
+  id: string;
+  name: string;
+  email?: string;
+}
 
 export interface OfferLetterDocument {
   id: string;
@@ -36,6 +51,7 @@ export interface OfferLetterDocument {
   fileName: string;
   fileUrl: string;
   uploadedBy: string;
+  uploadedByUser?: OfferLetterUploader | null;
   verifiedBy: string | null;
   status: "pending" | "verified" | "rejected";
   notes: string | null;
@@ -74,8 +90,26 @@ interface ProcessingOfferLetterModalProps {
   roleCatalogId: string;
   roleDesignation: string;
   documentVerification?: DocumentVerification | null;
+  uploadedByName?: string | null;
   onVerify?: (data: { documentId: string; candidateProjectMapId: string; notes: string }) => Promise<void>;
   isVerifying?: boolean;
+  processingId?: string;
+  onComplete?: () => void | Promise<void>;
+}
+
+function getUploaderLabel(
+  uploadedByUser?: OfferLetterUploader | null,
+  uploadedBy?: string | null,
+  uploadedByName?: string | null,
+  resolvedName?: string | null,
+): string | null {
+  if (resolvedName?.trim()) return resolvedName.trim();
+  if (uploadedByName?.trim() && uploadedByName.trim() !== uploadedBy?.trim()) {
+    return uploadedByName.trim();
+  }
+  if (uploadedByUser?.name?.trim()) return uploadedByUser.name.trim();
+  if (uploadedByUser?.email?.trim()) return uploadedByUser.email.trim();
+  return null;
 }
 
 export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProps> = ({
@@ -88,9 +122,15 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
   roleCatalogId,
   roleDesignation,
   documentVerification,
+  uploadedByName,
   onVerify,
   isVerifying = false,
+  processingId,
+  onComplete,
 }) => {
+  const { isLocked } = useProcessingActionLock();
+  const currentUser = useAppSelector((state) => state.auth.user);
+  const { getUserById } = useUsersLookup();
   const [notes, setNotes] = useState("");
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
@@ -101,11 +141,45 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
 
   const [uploadOfferLetter, { isLoading: isUploading }] = useUploadOfferLetterMutation();
   const [updateOfferLetterReceivedDate, { isLoading: isUpdatingReceivedDate }] = useUpdateOfferLetterReceivedDateMutation();
+  const { data: processingSteps = [], refetch: refetchProcessingSteps } = useGetProcessingStepsQuery(processingId || "", {
+    skip: !isOpen || !processingId,
+  });
+  const offerLetterStep = processingSteps.find(
+    (step: { template?: { key?: string } }) => step.template?.key === "offer_letter",
+  );
+  const isStepCancelled = offerLetterStep?.status === "cancelled";
+  const isStepCompleted = offerLetterStep?.status === "completed";
 
   // Use uploaded document if available, otherwise use the prop
   const activeDocumentVerification = uploadedDocument || documentVerification;
   const offerLetterDoc = activeDocumentVerification?.document;
   const hasOfferLetter = !!offerLetterDoc;
+  const lookedUpUploader = offerLetterDoc?.uploadedBy
+    ? getUserById(offerLetterDoc.uploadedBy)
+    : undefined;
+  const shouldFetchUploader =
+    !!offerLetterDoc?.uploadedBy &&
+    !offerLetterDoc?.uploadedByUser?.name &&
+    !offerLetterDoc?.uploadedByUser?.email &&
+    !uploadedByName &&
+    !lookedUpUploader?.name &&
+    !lookedUpUploader?.email;
+  const { data: fetchedUploaderResponse } = useGetUserByIdQuery(
+    offerLetterDoc?.uploadedBy || "",
+    { skip: !shouldFetchUploader },
+  );
+  const fetchedUploader = (fetchedUploaderResponse as { data?: OfferLetterUploader } | undefined)
+    ?.data;
+  const uploaderLabel = getUploaderLabel(
+    offerLetterDoc?.uploadedByUser,
+    offerLetterDoc?.uploadedBy,
+    uploadedByName,
+    lookedUpUploader?.name ||
+      lookedUpUploader?.email ||
+      fetchedUploader?.name ||
+      fetchedUploader?.email ||
+      null,
+  );
   const isPending = offerLetterDoc?.status === "pending";
   const isVerified = offerLetterDoc?.status === "verified";
   const isRejected = offerLetterDoc?.status === "rejected";
@@ -164,7 +238,16 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
           notes: response.data.verification.notes,
           rejectionReason: response.data.verification.rejectionReason,
           resubmissionRequested: response.data.verification.resubmissionRequested,
-          document: response.data.document,
+          document: {
+            ...response.data.document,
+            uploadedByUser: currentUser
+              ? {
+                  id: currentUser.id,
+                  name: currentUser.name,
+                  email: currentUser.email,
+                }
+              : null,
+          },
         };
         
         setUploadedDocument(newDocumentVerification);
@@ -291,6 +374,8 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
           </DialogHeader>
 
           <div className="grid gap-5 py-4">
+            <ProcessingActionLockBanner />
+
             {/* Project & Role Info */}
             <div className="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm">
               <div className="space-y-1">
@@ -336,6 +421,21 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                         <p className="text-xs text-muted-foreground">
                           {formatFileSize(offerLetterDoc.fileSize)} • Uploaded {formatDate(offerLetterDoc.createdAt)}
                         </p>
+                        {uploaderLabel ? (
+                          <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg border border-orange-200 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 px-3 py-2 shadow-sm">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-700 ring-2 ring-orange-200/80">
+                              <User className="h-3.5 w-3.5" aria-hidden="true" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-orange-700/80">
+                                Uploaded by
+                              </p>
+                              <p className="truncate text-sm font-semibold text-orange-950">
+                                {uploaderLabel}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
                         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700 mt-1">
                           <span className="font-semibold">Original hardcopy received date:</span>
                           {isVerified ? (
@@ -352,16 +452,19 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                                 className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
                                 value={offerLetterReceivedAt}
                                 onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                                disabled={isLocked}
                               />
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={handleSaveReceivedDate}
-                                disabled={!offerLetterReceivedAt || isUpdatingReceivedDate}
-                              >
-                                {isUpdatingReceivedDate ? "Saving..." : "Save Date"}
-                              </Button>
+                              <LockedProcessingActionButton forceDisabled={isLocked}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={handleSaveReceivedDate}
+                                  disabled={!offerLetterReceivedAt || isUpdatingReceivedDate || isLocked}
+                                >
+                                  {isUpdatingReceivedDate ? "Saving..." : "Save Date"}
+                                </Button>
+                              </LockedProcessingActionButton>
                             </>
                           )}
                         </div>
@@ -377,15 +480,18 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                           View Document
                         </Button>
                         {isPending && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50"
-                            onClick={() => setIsReuploadMode(true)}
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                            Re-upload
-                          </Button>
+                          <LockedProcessingActionButton forceDisabled={isLocked}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs gap-1.5 text-amber-600 border-amber-200 hover:bg-amber-50"
+                              disabled={isLocked}
+                              onClick={() => setIsReuploadMode(true)}
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                              Re-upload
+                            </Button>
+                          </LockedProcessingActionButton>
                         )}
                       </div>
                     </div>
@@ -464,23 +570,30 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                     className="border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
                     value={offerLetterReceivedAt}
                     onChange={(e) => setOfferLetterReceivedAt(e.target.value)}
+                    disabled={isLocked}
                   />
                 </div>
-                <div
-                  className={cn(
-                    "border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer",
-                    newFile
-                      ? "border-emerald-300 bg-emerald-50/30"
-                      : "border-slate-200 hover:border-orange-400 bg-slate-50/30 hover:bg-orange-50/30"
-                  )}
-                  onClick={() => document.getElementById("processing-offer-letter-file")?.click()}
-                >
+                <LockedProcessingActionButton forceDisabled={isLocked}>
+                  <div
+                    className={cn(
+                      "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                      isLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                      newFile
+                        ? "border-emerald-300 bg-emerald-50/30"
+                        : "border-slate-200 hover:border-orange-400 bg-slate-50/30 hover:bg-orange-50/30"
+                    )}
+                    onClick={() => {
+                      if (isLocked) return;
+                      document.getElementById("processing-offer-letter-file")?.click();
+                    }}
+                  >
                   <input
                     id="processing-offer-letter-file"
                     type="file"
                     className="hidden"
                     accept=".pdf"
                     onChange={handleFileChange}
+                    disabled={isLocked}
                   />
                   {newFile ? (
                     <div className="flex flex-col items-center gap-2">
@@ -520,68 +633,83 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
                       </div>
                     </div>
                   )}
-                </div>
+                  </div>
+                </LockedProcessingActionButton>
               </div>
             ) : null}
           </div>
 
           <DialogFooter className="flex items-center gap-2 flex-wrap">
+            <ProcessingStepActionButtons
+              processingStepId={offerLetterStep?.id}
+              show={!isStepCompleted && !isStepCancelled}
+              onSubmitted={async () => {
+                await refetchProcessingSteps();
+                if (onComplete) await onComplete();
+              }}
+            />
             <Button variant="outline" onClick={onClose} className="text-xs">
               Close
             </Button>
 
             {/* Upload button for initial upload (when no existing offer letter) */}
             {!isReuploadMode && newFile && (
-              <Button
-                onClick={handleReupload}
-                disabled={isUploading}
-                className="bg-orange-600 hover:bg-orange-700 text-white text-xs gap-1.5"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    Upload Offer Letter
-                  </>
-                )}
-              </Button>
+              <LockedProcessingActionButton forceDisabled={isLocked}>
+                <Button
+                  onClick={handleReupload}
+                  disabled={isUploading || isLocked}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs gap-1.5"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Upload Offer Letter
+                    </>
+                  )}
+                </Button>
+              </LockedProcessingActionButton>
             )}
 
             {/* Re-upload button when in reupload mode */}
             {isReuploadMode && newFile && (
-              <Button
-                onClick={handleReupload}
-                disabled={isUploading}
-                className="bg-orange-600 hover:bg-orange-700 text-white text-xs gap-1.5"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    Upload New Version
-                  </>
-                )}
-              </Button>
+              <LockedProcessingActionButton forceDisabled={isLocked}>
+                <Button
+                  onClick={handleReupload}
+                  disabled={isUploading || isLocked}
+                  className="bg-orange-600 hover:bg-orange-700 text-white text-xs gap-1.5"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Upload New Version
+                    </>
+                  )}
+                </Button>
+              </LockedProcessingActionButton>
             )}
 
             {/* Verification actions (only for pending status) */}
             {isPending && !isReuploadMode && (
-              <Button
-                onClick={() => setShowVerifyConfirm(true)}
-                disabled={isVerifying}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
-              >
-                <ShieldCheck className="h-4 w-4" />
-                Verify Offer Letter
-              </Button>
+              <LockedProcessingActionButton forceDisabled={isLocked}>
+                <Button
+                  onClick={() => setShowVerifyConfirm(true)}
+                  disabled={isVerifying || isLocked}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Verify Offer Letter
+                </Button>
+              </LockedProcessingActionButton>
             )}
           </DialogFooter>
         </DialogContent>

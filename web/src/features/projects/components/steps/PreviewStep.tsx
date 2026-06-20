@@ -25,6 +25,7 @@ import { formatSalaryRangeWithINRBracket } from "@/lib/utils";
 import { useGetClientQuery } from "@/features/clients";
 import { useGetQualificationsQuery } from "@/shared/hooks/useQualificationsLookup";
 import { ProjectFormData } from "../../schemas/project-schemas";
+import { getProjectRoleVisaTypeLabel } from "../../constants/project-role-visa-types";
 import { LICENSING_EXAMS } from "@/constants/candidate-constants";
 import { PROJECT_SECTOR } from "@/entities/project/constants";
 
@@ -227,6 +228,15 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
               </div>
             )}
 
+            {formData.introductionVideoRequired && (
+              <div className="mt-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-md text-sm font-medium">
+                  <CheckCircle className="h-4 w-4" />
+                  Introduction Video Required
+                </div>
+              </div>
+            )}
+
             {/* Licensing and Verification Summary */}
             {(formData.licensingExam || formData.dataFlow || formData.eligibility) && (
               <div className="mt-4 pt-4 border-t border-slate-200">
@@ -331,11 +341,16 @@ export const PreviewStep: React.FC<PreviewStepProps> = ({
                     Positions: {role.quantity}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {role.visaType === "contract" && role.contractDurationYears
-                      ? `Contract (${role.contractDurationYears} years)`
-                      : role.visaType === "contract"
-                      ? "Contract"
-                      : "Permanent"}
+                    {(() => {
+                      const label = getProjectRoleVisaTypeLabel(role.visaType);
+                      if (
+                        (role.visaType === "company_visa" || role.visaType === "contract") &&
+                        role.contractDurationYears
+                      ) {
+                        return `${label} (${role.contractDurationYears} years)`;
+                      }
+                      return label;
+                    })()}
                   </Badge>
                 </div>
               </div>

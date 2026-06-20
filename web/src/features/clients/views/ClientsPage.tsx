@@ -470,7 +470,7 @@
 //     </div>
 //   );
 // }
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -556,6 +556,18 @@ export default function ClientsPage() {
     page: 1,
     limit: 12,
   });
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const handleTileClick = (typeFilter: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      type: typeFilter,
+      page: 1,
+    }));
+    window.requestAnimationFrame(() => {
+      listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const handlePageChange = (page: number) => {
     setFilters((prev) => ({ ...prev, page }));
@@ -673,13 +685,7 @@ export default function ClientsPage() {
               <button
                 key={stat.label}
                 type="button"
-                onClick={() => {
-                  setFilters((prev) => ({
-                    ...prev,
-                    type: stat.typeFilter,
-                    page: 1,
-                  }));
-                }}
+                onClick={() => handleTileClick(stat.typeFilter)}
                 className={cn(
                   "group relative text-left rounded-2xl border bg-gradient-to-br p-5 shadow-sm transition-all duration-200 focus:outline-none",
                   s.card,
@@ -710,71 +716,75 @@ export default function ClientsPage() {
           })}
         </div>
 
-        {/* ── Toolbar ──────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <Input
-              placeholder="Search clients by name, contact…"
-              value={filters.search}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-11 h-11 rounded-xl border border-gray-200 bg-white shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:border-blue-400 transition-all"
-            />
-          </div>
+        {/* ── Toolbar + list ───────────────────────────────────────── */}
+        <div ref={listRef} className="space-y-5 scroll-mt-4">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
+              <div className="relative min-w-0 flex-1 w-full group">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <Input
+                  placeholder="Search clients by name, contact…"
+                  value={filters.search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="h-11 w-full pl-10 bg-slate-50/50 border-slate-200 focus:bg-white focus:ring-blue-500/10 rounded-xl transition-all"
+                />
+              </div>
 
-          {/* Type filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400 shrink-0" />
-            <Select
-              value={filters.type}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, type: value, page: 1 }))
-              }
-            >
-              <SelectTrigger className="h-11 w-44 rounded-xl border border-gray-200 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/40">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl shadow-xl border-0">
-                <SelectItem value="all">
-                  <span className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
-                    All Types
-                  </span>
-                </SelectItem>
-                {clientTypeOptions.map((opt) => {
-                  const badge = TYPE_BADGE[opt.value];
-                  return (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      <span className="flex items-center gap-2">
-                        <span className={cn("w-2 h-2 rounded-full inline-block", badge?.dot)} />
-                        {opt.label}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:w-auto lg:shrink-0">
+                <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                  <Filter className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                  <Select
+                    value={filters.type}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({ ...prev, type: value, page: 1 }))
+                    }
+                  >
+                    <SelectTrigger className="h-11 w-full min-w-[10rem] sm:w-44 rounded-xl border border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-blue-500/40">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl shadow-xl border-0">
+                      <SelectItem value="all">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                          All Types
+                        </span>
+                      </SelectItem>
+                      {clientTypeOptions.map((opt) => {
+                        const badge = TYPE_BADGE[opt.value];
+                        return (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <span className="flex items-center gap-2">
+                              <span className={cn("w-2 h-2 rounded-full inline-block", badge?.dot)} />
+                              {opt.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2">
-            {canWriteClients && (
-              <Button
-                onClick={() => navigate("/clients/create")}
-                className="h-11 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Client
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              className="h-11 px-4 rounded-xl border-gray-200 shadow-sm gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {canWriteClients && (
+                    <Button
+                      onClick={() => navigate("/clients/create")}
+                      className="h-11 shrink-0 px-4 gap-2 rounded-xl bg-blue-600 font-medium text-white shadow-sm hover:bg-blue-700"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Client</span>
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="h-11 shrink-0 gap-2 rounded-xl border-slate-200 px-4 shadow-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1053,6 +1063,7 @@ export default function ClientsPage() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

@@ -19,13 +19,16 @@ import {
   RoleSelect,
   ProfileImageUpload,
   PhysicalAddressFields,
+  ProfessionTypeMultiSelect,
 } from "@/components/molecules";
 import { RecruiterCapabilitiesFormCard } from "@/features/admin/components/RecruiterCapabilitiesFormCard";
+import { DocumentsControlPermissionsFormCard } from "@/features/admin/components/DocumentsControlPermissionsFormCard";
 import {
   useGetUserQuery,
   useUpdateUserMutation,
   useListUserLanguagesQuery,
   useUpdateRecruiterCapabilitiesMutation,
+  useUpdateDocumentsControlPermissionsMutation,
 } from "@/features/admin/api";
 import {
   useUploadUserProfileImageMutation,
@@ -53,6 +56,8 @@ export default function EditUserPage() {
   const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [updateRecruiterCapabilities, { isLoading: savingRecruiterCaps }] =
     useUpdateRecruiterCapabilitiesMutation();
+  const [updateDocumentsControlPermissions, { isLoading: savingDocControlCaps }] =
+    useUpdateDocumentsControlPermissionsMutation();
   const [uploadProfileImage, { isLoading: uploadingImage }] =
     useUploadUserProfileImageMutation();
   const [deleteFile] = useDeleteFileMutation();
@@ -76,12 +81,15 @@ export default function EditUserPage() {
   };
 
   const form = useForm<UpdateUserFormData>({
-    resolver: zodResolver(buildUpdateUserSchema(true)),
+    resolver: zodResolver(buildUpdateUserSchema(true)) as any,
     mode: "onChange",
     reValidateMode: "onChange",
     defaultValues: {
       recruiterLanguages: [],
       recruiterCountryCoverages: [],
+      professionTypeIds: [],
+      originalDocumentIntakeEnabled: false,
+      courierManagementEnabled: false,
     },
   });
 
@@ -94,6 +102,14 @@ export default function EditUserPage() {
   const isRecruiterCapabilitiesRole = roleNameHasRecruiterCapabilities(
     selectedRoleForCaps?.name
   );
+  const isDocumentsControlExecutiveRole =
+    selectedRoleForCaps?.name === "Documents Control Executive";
+
+  useEffect(() => {
+    if (!isDocumentsControlExecutiveRole) return;
+    form.setValue("originalDocumentIntakeEnabled", true, { shouldDirty: true });
+    form.setValue("courierManagementEnabled", true, { shouldDirty: true });
+  }, [isDocumentsControlExecutiveRole, form]);
 
   const { data: languagesResponse } = useListUserLanguagesQuery(undefined, {
     skip: !isRecruiterCapabilitiesRole,
@@ -132,6 +148,7 @@ export default function EditUserPage() {
 
       const formData = {
         name: user.name || "",
+        employeeCode: user.employeeCode || "",
         email: user.email || "",
         countryCode: user.countryCode || "",
         mobileNumber: user.mobileNumber || "",
@@ -163,6 +180,13 @@ export default function EditUserPage() {
           countryCode: uc.countryCode,
           sectorScopes: [...(uc.sectorScopes as RecruiterSectorScopeValue[])],
         })),
+        professionTypeIds: (user.userProfessionScopes ?? []).map(
+          (scope) => scope.professionTypeId,
+        ),
+        originalDocumentIntakeEnabled:
+          user.documentsControlAccess?.originalDocumentIntakeEnabled ?? false,
+        courierManagementEnabled:
+          user.documentsControlAccess?.courierManagementEnabled ?? false,
       };
 
       console.log("EditUserPage - Form data being set:", formData);
@@ -231,6 +255,10 @@ export default function EditUserPage() {
       // Prepare form data - convert empty strings to undefined
       const formData = {
         name: data.name && data.name.trim() !== "" ? data.name : undefined,
+        employeeCode:
+          data.employeeCode && data.employeeCode.trim() !== ""
+            ? data.employeeCode
+            : null,
         email: data.email && data.email.trim() !== "" ? data.email : undefined,
         countryCode:
           data.countryCode && data.countryCode.trim() !== ""
@@ -255,6 +283,7 @@ export default function EditUserPage() {
           ? data.addressStateId.trim()
           : null,
         address: data.address?.trim() ? data.address.trim() : null,
+        professionTypeIds: data.professionTypeIds,
       };
 
       console.log("Edit User - Form Data:", formData);
@@ -290,6 +319,21 @@ export default function EditUserPage() {
           console.error(capErr);
           toast.warning(
             "Profile was updated, but languages / country coverage could not be saved."
+          );
+        }
+
+        try {
+          await updateDocumentsControlPermissions({
+            id: id!,
+            body: {
+              originalDocumentIntakeEnabled: data.originalDocumentIntakeEnabled,
+              courierManagementEnabled: data.courierManagementEnabled,
+            },
+          }).unwrap();
+        } catch (capErr: unknown) {
+          console.error(capErr);
+          toast.warning(
+            "Profile was updated, but documents control permissions could not be saved."
           );
         }
 
@@ -475,6 +519,37 @@ export default function EditUserPage() {
                         {form.formState.errors.name.message}
                       </p>
                     )}
+                  </div>
+
+                  {/* Employee Code */}
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="employeeCode"
+                      className="text-sm font-medium text-slate-700 flex items-center gap-2"
+                    >
+                      Employee Code
+                    </Label>
+                    <Controller
+                      name="employeeCode"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Input
+                          {...field}
+                          id="employeeCode"
+                          placeholder="e.g., AFFEMP012026"
+                          className="h-11 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+                        />
+                      )}
+                    />
+                    {form.formState.errors.employeeCode && (
+                      <p className="text-sm text-red-600">
+                        {form.formState.errors.employeeCode.message}
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Format: AFFEMP + 2 digits + year (e.g., AFFEMP012026). Leave
+                      empty to remove.
+                    </p>
                   </div>
 
                   {/* Email */}
@@ -663,6 +738,22 @@ export default function EditUserPage() {
                   }}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Controller
+                  name="professionTypeIds"
+                  control={form.control}
+                  render={({ field }) => (
+                    <ProfessionTypeMultiSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      required
+                      disabled={isUpdating}
+                      error={form.formState.errors.professionTypeIds?.message}
+                    />
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -677,6 +768,11 @@ export default function EditUserPage() {
               description="Set languages and country coverage for this user. Changes are saved when you click Save changes."
             />
           )}
+
+          <DocumentsControlPermissionsFormCard
+            control={form.control}
+            disabled={isUpdating || savingDocControlCaps}
+          />
 
           {/* Action Buttons */}
           <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
@@ -697,6 +793,7 @@ export default function EditUserPage() {
                     isUpdating ||
                     uploadingImage ||
                     savingRecruiterCaps ||
+                    savingDocControlCaps ||
                     (!form.formState.isDirty && !hasImageChanged)
                   }
                   className="h-11 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"

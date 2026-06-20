@@ -11,7 +11,7 @@ import { GoogleDriveModule } from '../google-drive/google-drive.module';
 @Module({
   imports: [
     PrismaModule,
-    ProcessingModule,
+    forwardRef(() => ProcessingModule),
     forwardRef(() => UploadModule),
     forwardRef(() => NotificationsModule),
     GoogleDriveModule,

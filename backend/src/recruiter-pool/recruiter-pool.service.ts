@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface RecruiterInfo {
   id: string;
@@ -15,13 +16,21 @@ export class RecruiterPoolService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Get all available recruiters (users with Recruiter role)
+   * Get all available recruiters (users with Recruiter role).
+   * When `professionTypeId` is provided, only recruiters with matching profession coverage are returned.
    */
-  async getRecruiters(): Promise<RecruiterInfo[]> {
+  async getRecruiters(professionTypeId?: string): Promise<RecruiterInfo[]> {
     this.logger.debug('Fetching recruiter pool');
 
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
+        ...(professionTypeId
+          ? {
+              userProfessionScopes: {
+                some: { professionTypeId },
+              },
+            }
+          : {}),
         userRoles: {
           some: {
             role: {
@@ -29,7 +38,7 @@ export class RecruiterPoolService {
             },
           },
         },
-      },
+      }),
       include: {
         _count: {
           select: {
@@ -68,8 +77,10 @@ export class RecruiterPoolService {
   /**
    * Get recruiters sorted by workload (ascending)
    */
-  async getRecruitersByWorkload(): Promise<RecruiterInfo[]> {
-    const recruiters = await this.getRecruiters();
+  async getRecruitersByWorkload(
+    professionTypeId?: string,
+  ): Promise<RecruiterInfo[]> {
+    const recruiters = await this.getRecruiters(professionTypeId);
     return recruiters.sort((a, b) => a.workload - b.workload);
   }
 

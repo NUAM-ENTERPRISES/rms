@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -33,29 +34,23 @@ import { useUpdateCandidateStatusMutation } from "../api";
 import { useGetCandidateStatusesQuery } from "@/services/candidatesApi";
 import {
   Loader2,
-  AlertCircle,
-  UserCheck,
-  XCircle,
-  Mail,
-  Calendar,
-  Clock,
-  CheckCircle2,
-  Briefcase,
-  CheckCircle,
-  FileText,
-  Award,
-  UserX,
   Target,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  getCandidateStatusVisualConfig,
+  normalizeCandidateStatusKey,
+} from "../utils/candidateStatusVisualConfig";
 
 const statusUpdateSchema = z.object({
   currentStatusId: z.string().min(1, "Please select a status"),
   reason: z.string().optional(),
   onHoldUntil: z.string().optional(),
   futureDate: z.string().optional(),
+  callbackAt: z.string().optional(),
 });
 
 type StatusUpdateFormData = z.infer<typeof statusUpdateSchema>;
@@ -67,134 +62,6 @@ interface StatusUpdateModalProps {
   currentStatus: string;
   candidateName: string;
 }
-
-const statusConfigMap: Record<string, any> = {
-  untouched: {
-    color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
-    iconColor: "text-orange-500",
-    icon: AlertCircle,
-  },
-  interested: {
-    color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
-    iconColor: "text-green-500",
-    icon: UserCheck,
-  },
-  "not interested": {
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-    icon: XCircle,
-  },
-  "not eligible": {
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-    icon: XCircle,
-  },
-  "other enquiry": {
-    color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
-    iconColor: "text-purple-500",
-    icon: Mail,
-  },
-  future: {
-    color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
-    iconColor: "text-indigo-500",
-    icon: Calendar,
-  },
-  "on hold": {
-    color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
-    iconColor: "text-yellow-500",
-    icon: Clock,
-  },
-  onhold: {
-    color: "from-yellow-400 to-yellow-600",
-    bgColor: "bg-yellow-50",
-    iconColor: "text-yellow-500",
-    icon: Clock,
-  },
-  rnr: {
-    color: "from-pink-400 to-pink-600",
-    bgColor: "bg-pink-50",
-    iconColor: "text-pink-500",
-    icon: AlertCircle,
-  },
-  qualified: {
-    color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-    icon: CheckCircle2,
-  },
-  working: {
-    color: "from-blue-400 to-blue-600",
-    bgColor: "bg-blue-50",
-    iconColor: "text-blue-500",
-    icon: Briefcase,
-  },
-  selected: {
-    icon: CheckCircle,
-    color: "from-green-400 to-green-600",
-    bgColor: "bg-green-50",
-    iconColor: "text-green-500",
-  },
-  rejected: {
-    icon: XCircle,
-    color: "from-red-400 to-red-600",
-    bgColor: "bg-red-50",
-    iconColor: "text-red-500",
-  },
-  "in-process": {
-    icon: FileText,
-    color: "from-indigo-400 to-indigo-600",
-    bgColor: "bg-indigo-50",
-    iconColor: "text-indigo-500",
-  },
-  shortlisted: {
-    icon: UserCheck,
-    color: "from-cyan-400 to-cyan-600",
-    bgColor: "bg-cyan-50",
-    iconColor: "text-cyan-500",
-  },
-  interviewed: {
-    icon: Calendar,
-    color: "from-purple-400 to-purple-600",
-    bgColor: "bg-purple-50",
-    iconColor: "text-purple-500",
-  },
-  offered: {
-    icon: Award,
-    color: "from-orange-400 to-orange-600",
-    bgColor: "bg-orange-50",
-    iconColor: "text-orange-500",
-  },
-  placed: {
-    icon: Briefcase,
-    color: "from-emerald-400 to-emerald-600",
-    bgColor: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-  },
-  withdrawn: {
-    icon: UserX,
-    color: "from-rose-400 to-rose-600",
-    bgColor: "bg-rose-50",
-    iconColor: "text-rose-500",
-  },
-  default: {
-    color: "from-gray-400 to-gray-600",
-    bgColor: "bg-gray-50",
-    iconColor: "text-gray-500",
-    icon: AlertCircle,
-  },
-};
-
-const getStatusConfig = (statusName?: string) => {
-  const name = (statusName || "").toLowerCase().trim();
-  return statusConfigMap[name] || statusConfigMap.default;
-};
 
 export function StatusUpdateModal({
   isOpen,
@@ -214,11 +81,55 @@ export function StatusUpdateModal({
       reason: "",
       onHoldUntil: "",
       futureDate: "",
+      callbackAt: "",
     },
   });
+  const { reset, setValue, getValues } = form;
+  const wasOpenRef = useRef(false);
 
-  const currentConfig = getStatusConfig(currentStatus);
+  const statuses = useMemo(() => {
+    const rawStatuses = statusesData?.data || [];
+    return rawStatuses.filter(
+      (status) => (status.statusName || "").toLowerCase() !== "qualified",
+    );
+  }, [statusesData?.data]);
+
+  const normalizeStatusKey = normalizeCandidateStatusKey;
+
+  const currentConfig = getCandidateStatusVisualConfig(currentStatus);
   const CurrentIcon = currentConfig.icon;
+
+  useEffect(() => {
+    if (!isOpen) {
+      if (wasOpenRef.current) {
+        reset({
+          currentStatusId: "",
+          reason: "",
+          onHoldUntil: "",
+          futureDate: "",
+          callbackAt: "",
+        });
+      }
+      wasOpenRef.current = false;
+      return;
+    }
+
+    wasOpenRef.current = true;
+
+    if (isLoadingStatuses || statuses.length === 0) return;
+
+    const match = statuses.find(
+      (status) =>
+        normalizeStatusKey(status.statusName) ===
+        normalizeStatusKey(currentStatus),
+    );
+    if (!match) return;
+
+    const nextId = String(match.id);
+    if (getValues("currentStatusId") === nextId) return;
+
+    setValue("currentStatusId", nextId, { shouldValidate: true });
+  }, [isOpen, isLoadingStatuses, statuses, currentStatus, reset, setValue, getValues]);
 
   const handleSubmit = async (data: StatusUpdateFormData) => {
     const selectedStatus = statuses.find(
@@ -265,6 +176,24 @@ export function StatusUpdateModal({
       futureDateValue = data.futureDate;
     }
 
+    let callbackAtValue: string | undefined;
+    if (
+      selectedStatusName === "call back" ||
+      selectedStatusName === "call_back"
+    ) {
+      if (!data.callbackAt) {
+        toast.error("Please select when to call back.");
+        return;
+      }
+      const callbackDate = new Date(data.callbackAt);
+      const minTime = Date.now() + 60 * 1000;
+      if (callbackDate.getTime() < minTime) {
+        toast.error("Call back time must be at least 1 minute in the future.");
+        return;
+      }
+      callbackAtValue = callbackDate.toISOString();
+    }
+
     try {
       await updateStatus({
         candidateId,
@@ -274,6 +203,7 @@ export function StatusUpdateModal({
           onHoldDurationDays: onHoldDuration,
           onHoldUntil: onHoldUntilDate,
           futureDate: futureDateValue,
+          callbackAt: callbackAtValue,
         },
       }).unwrap();
 
@@ -291,16 +221,13 @@ export function StatusUpdateModal({
     onClose();
   };
 
-  const rawStatuses = statusesData?.data || [];
-  const statuses = rawStatuses.filter(
-    (status) => (status.statusName || '').toLowerCase() !== 'qualified',
+  const selectedStatusId = form.watch("currentStatusId");
+  const selectedStatus = statuses.find(
+    (status) => String(status.id) === selectedStatusId,
   );
-
-  const selectedStatusId = form.watch('currentStatusId');
-  const selectedStatusName = (
-    statuses.find((status) => String(status.id) === selectedStatusId)?.statusName ||
-    ''
-  ).toLowerCase();
+  const selectedStatusName = (selectedStatus?.statusName || "").toLowerCase();
+  const selectedConfig = getCandidateStatusVisualConfig(selectedStatus?.statusName);
+  const SelectedIcon = selectedConfig.icon;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -351,10 +278,24 @@ export function StatusUpdateModal({
 
                 <div className="flex-1 flex flex-col items-center">
                     <span className="text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest">To</span>
-                    <div className="p-2.5 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 text-slate-400 shadow-inner ring-4 ring-white">
-                        <Sparkles className="h-5 w-5" />
+                    <div className={cn(
+                      "p-2.5 rounded-xl shadow-md ring-4 ring-white transition-transform",
+                      selectedStatusId
+                        ? cn("bg-gradient-to-br", selectedConfig.color)
+                        : "bg-slate-100 border-2 border-dashed border-slate-300"
+                    )}>
+                        {selectedStatusId ? (
+                          <SelectedIcon className="h-5 w-5 text-white" />
+                        ) : (
+                          <Sparkles className="h-5 w-5 text-slate-400" />
+                        )}
                     </div>
-                    <span className="mt-2 font-bold text-slate-400 text-xs">Selection</span>
+                    <span className={cn(
+                      "mt-2 font-bold text-xs capitalize",
+                      selectedStatusId ? "text-slate-700" : "text-slate-400"
+                    )}>
+                      {selectedStatus?.statusName || "Selection"}
+                    </span>
                 </div>
             </div>
 
@@ -369,7 +310,7 @@ export function StatusUpdateModal({
                     </FormLabel>
                     <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         disabled={isLoadingStatuses}
                     >
                         <FormControl>
@@ -384,7 +325,7 @@ export function StatusUpdateModal({
                             </div>
                         ) : (
                             statuses.map((status) => {
-                            const config = getStatusConfig(status.statusName);
+                            const config = getCandidateStatusVisualConfig(status.statusName);
                             const Icon = config.icon;
                             return (
                                 <SelectItem 
@@ -470,6 +411,32 @@ export function StatusUpdateModal({
                           <Input
                             type="date"
                             className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {(selectedStatusName === "call back" ||
+                  selectedStatusName === "call_back") && (
+                  <FormField
+                    control={form.control}
+                    name="callbackAt"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">
+                          Call back at
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="datetime-local"
+                            className="h-14 bg-white border-slate-200/80 shadow-sm transition-all focus:ring-4 focus:ring-indigo-500/10 rounded-2xl text-base font-medium"
+                            min={new Date(Date.now() + 60 * 1000)
+                              .toISOString()
+                              .slice(0, 16)}
                             {...field}
                           />
                         </FormControl>

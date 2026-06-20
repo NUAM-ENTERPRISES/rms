@@ -1,0 +1,2 @@
+-- Empty migration created by prisma migrate dev --name init
+-- No schema changes were applied in this migration.

@@ -1,15 +1,18 @@
 import { Eye, ExternalLink, Pencil, FolderKanban } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TableCell } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import type { AgentCandidate } from "../../api";
 import { formatAgentDetailDate, getAgentDetailInitials } from "./agent-details-utils";
+import { TruncatedPassportText } from "@/components/molecules/TruncatedPassportText";
+import { resolveCandidatePassportNumber } from "../../utils/candidate-passport.util";
+import { InterviewPassedProjectsBadges } from "./InterviewPassedProjectsBadges";
 
 type AgentDetailsCandidateTableRowProps = {
   candidate: AgentCandidate;
   index: number;
+  showProjectStatus?: boolean;
   onView: () => void;
   /** When true, show control to edit declared (linked) projects only — not nominations. */
   canEditDeclaredProjects?: boolean;
@@ -18,16 +21,16 @@ type AgentDetailsCandidateTableRowProps = {
 
 export function AgentDetailsCandidateTableRow({
   candidate,
-  index,
+  index: _index,
+  showProjectStatus = false,
   onView,
   canEditDeclaredProjects,
   onEditDeclaredProjects,
 }: AgentDetailsCandidateTableRowProps) {
+  const passport = resolveCandidatePassportNumber(candidate);
+
   return (
-    <motion.tr
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.03 }}
+    <TableRow
       className="group border-b border-slate-100 transition-colors hover:bg-blue-50/30"
     >
       <TableCell className="px-5 py-4">
@@ -55,9 +58,15 @@ export function AgentDetailsCandidateTableRow({
       <TableCell className="px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-600 ml-1">
-            {candidate.countryCode} {candidate.mobileNumber}
+            {candidate.countryCode?.trim() || candidate.mobileNumber?.trim()
+              ? [candidate.countryCode, candidate.mobileNumber].filter(Boolean).join(" ")
+              : "—"}
           </span>
         </div>
+      </TableCell>
+
+      <TableCell className="px-5 py-4 min-w-[7.5rem] align-middle">
+        <TruncatedPassportText passportNumber={passport} />
       </TableCell>
 
       <TableCell className="px-5 py-4">
@@ -79,10 +88,15 @@ export function AgentDetailsCandidateTableRow({
         )}
       </TableCell>
 
-      <TableCell className="max-w-[300px] px-5 py-4 align-middle">
+      <TableCell className="max-w-[340px] px-5 py-4 align-middle">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            {candidate.declaredProjects && candidate.declaredProjects.length > 0 ? (
+            {showProjectStatus ? (
+              <InterviewPassedProjectsBadges
+                interviewPassedProjects={candidate.interviewPassedProjects}
+                interviewPassedCount={candidate.interviewPassedCount}
+              />
+            ) : candidate.declaredProjects && candidate.declaredProjects.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {candidate.declaredProjects.slice(0, 3).map((p) => (
                   <Badge
@@ -111,7 +125,7 @@ export function AgentDetailsCandidateTableRow({
               </span>
             )}
           </div>
-          {canEditDeclaredProjects && onEditDeclaredProjects ? (
+          {!showProjectStatus && canEditDeclaredProjects && onEditDeclaredProjects ? (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -154,6 +168,6 @@ export function AgentDetailsCandidateTableRow({
           <ExternalLink className="h-3 w-3" />
         </Button>
       </TableCell>
-    </motion.tr>
+    </TableRow>
   );
 }

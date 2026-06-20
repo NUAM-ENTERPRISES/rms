@@ -1,3 +1,4 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 
 // Types
@@ -5,7 +6,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   createdAt: string;
@@ -142,13 +143,13 @@ export interface CreateRoleNeededRequest {
   notes?: string;
 }
 
-export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: "active" | "completed" | "cancelled";
-}
+export type UpdateProjectRequest = Partial<CreateProjectRequest>;
 
 export interface QueryProjectsRequest {
   search?: string;
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
+  priority?: "low" | "medium" | "high" | "urgent";
+  isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
   page?: number;
@@ -169,19 +170,20 @@ export interface PaginatedProjectsResponse {
 
 export interface ProjectStats {
   totalProjects: number;
-  activeProjects: number;
+  inProgressProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
   cancelledProjects: number;
   projectsByStatus: {
-    active: number;
-    completed: number;
-    cancelled: number;
+    IN_PROGRESS?: number;
+    COMPLETED?: number;
+    ON_HOLD?: number;
+    CANCELLED?: number;
   };
   projectsByClient: {
     [clientId: string]: number;
   };
   urgentProjectsCount?: number;
-  upcomingDeadlines: Project[];
 }
 
 // API Response types
@@ -244,11 +246,16 @@ export const projectsApi = baseApi.injectEndpoints({
       ApiResponse<Project>,
       { id: string; data: UpdateProjectRequest }
     >({
-      query: ({ id, data }) => ({
-        url: `/projects/${id}`,
-        method: "PATCH",
-        body: data,
-      }),
+      query: ({ id, data }) => {
+        const { status: _status, ...body } = data as UpdateProjectRequest & {
+          status?: ProjectStatusType;
+        };
+        return {
+          url: `/projects/${id}`,
+          method: "PATCH",
+          body,
+        };
+      },
       invalidatesTags: (_, __, { id }) => [
         { type: "Project", id },
         { type: "Project", id: "LIST" },

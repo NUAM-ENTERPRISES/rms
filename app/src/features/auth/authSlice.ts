@@ -151,7 +151,7 @@ export const ROLE_PRIORITY = [
   "Recruiter",
   "Documentation Executive",
   "Processing Executive",
-  "CRE",
+  "Operations",
 ] as const;
 
 /**

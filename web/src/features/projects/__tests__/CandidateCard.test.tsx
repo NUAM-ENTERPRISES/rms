@@ -2,11 +2,23 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 
-vi.mock("react-router-dom", async () => ({ useNavigate: () => vi.fn() }));
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => ({ useNavigate: () => mockNavigate }));
 
 import CandidateCard from "../components/CandidateCard";
 
 describe("CandidateCard", () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
+  const hoverDocumentStatusTooltip = async (fullName = "Intro Tester") => {
+    const card = screen.getByRole("button", { name: `View candidate ${fullName}` });
+    const fileIcon = card.querySelector(".lucide-file-text");
+    expect(fileIcon).toBeTruthy();
+    await userEvent.hover(fileIcon!.closest("div")!);
+    await screen.findAllByText("Project Documents");
+  };
   it("shows concise eligible role tooltip when matchScore is object", async () => {
     render(
       <CandidateCard
@@ -127,5 +139,85 @@ describe("CandidateCard", () => {
     );
 
     expect(screen.queryByText("Hidden Agent")).not.toBeInTheDocument();
+  });
+
+  it("shows introduction video as pending when required and not uploaded", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-intro",
+          candidateId: "c-intro",
+          firstName: "Intro",
+          lastName: "Tester",
+          project: { id: "proj-1", introductionVideoRequired: true },
+        }}
+        projectId="proj-1"
+      />,
+    );
+
+    await hoverDocumentStatusTooltip();
+
+    expect((await screen.findAllByText("Introduction Video")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Missing")).length).toBeGreaterThan(0);
+  });
+
+  it("shows introduction video verification status when uploaded", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-intro-up",
+          candidateId: "c-intro-up",
+          firstName: "Intro",
+          lastName: "Uploaded",
+          project: { id: "proj-1", introductionVideoRequired: true },
+          documentVerifications: [
+            {
+              id: "v1",
+              status: "verified",
+              document: {
+                id: "d1",
+                docType: "introduction_video",
+                fileName: "intro.mp4",
+                fileUrl: "https://example.com/intro.mp4",
+                status: "verified",
+              },
+            },
+          ],
+        }}
+        projectId="proj-1"
+      />,
+    );
+
+    const card = screen.getByRole("button", { name: "View candidate Intro Uploaded" });
+    const checkIcon = card.querySelector(".lucide-circle-check-big, .lucide-check-circle");
+    expect(checkIcon).toBeTruthy();
+    await userEvent.hover(checkIcon!.closest("div")!);
+    await screen.findAllByText("Project Documents");
+
+    expect((await screen.findAllByText("Introduction Video")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Uploaded")).length).toBeGreaterThan(0);
+  });
+
+  it("navigates to recruiter docs when recruiter clicks upload documents", async () => {
+    render(
+      <CandidateCard
+        candidate={{
+          id: "c-intro-upload",
+          candidateId: "c-intro-upload",
+          firstName: "Intro",
+          lastName: "Uploader",
+          project: { id: "proj-1", introductionVideoRequired: true },
+        }}
+        projectId="proj-1"
+        isRecruiter
+      />,
+    );
+
+    await hoverDocumentStatusTooltip("Intro Uploader");
+
+    const uploadButtons = await screen.findAllByRole("button", { name: /Upload Documents/i });
+    await userEvent.click(uploadButtons[0]);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/recruiter-docs/proj-1/c-intro-upload");
   });
 });

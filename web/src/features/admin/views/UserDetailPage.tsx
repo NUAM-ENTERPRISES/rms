@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   Languages,
   Globe2,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,11 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteConfirmationDialog } from "@/components/ui";
-import { UpdatePasswordDialog, ImageViewer } from "@/components/molecules";
+import {
+  UpdatePasswordDialog,
+  ImageViewer,
+  ProfessionCoverageBadges,
+} from "@/components/molecules";
 import { toast } from "sonner";
 import { useCan } from "@/hooks/useCan";
 import { useSystemConfig, getRoleBadgeVariant } from "@/hooks/useSystemConfig";
@@ -49,6 +54,9 @@ import {
   useUpdateUserPasswordMutation,
 } from "@/features/admin/api";
 import { roleNameHasRecruiterCapabilities } from "@/features/admin/constants/recruiter-capability-roles";
+import { UserAccountStatusCard } from "@/features/admin/components/UserAccountStatusCard";
+import { UserAccountStatusHistoryCard } from "@/features/admin/components/UserAccountStatusHistoryCard";
+import { UserRecruiterPerformanceCard } from "@/features/admin/components/UserRecruiterPerformanceCard";
 
 // Permission display mapping
 const PERMISSION_LABELS: Record<string, { label: string; description?: string }> = {
@@ -79,6 +87,10 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "reject:candidates": { label: "Reject Candidates" },
   "read:documents": { label: "View Documents" },
   "write:documents": { label: "Upload Documents" },
+  "read:original_document_intake": { label: "View Original Document Intake" },
+  "write:original_document_intake": { label: "Manage Original Document Intake" },
+  "read:courier_management": { label: "View Courier Management" },
+  "write:courier_management": { label: "Manage Courier Management" },
   "verify:documents": { label: "Verify Documents" },
   "manage:documents": { label: "Manage Documents" },
   "request:resubmission": { label: "Request Resubmission" },
@@ -93,11 +105,12 @@ const PERMISSION_LABELS: Record<string, { label: string; description?: string }>
   "read:recruiters": { label: "View Recruiters" },
   "write:recruiters": { label: "Edit Recruiters" },
   "manage:recruiters": { label: "Manage Recruiters" },
-  "read:cre": { label: "View CRE" },
-  "write:cre": { label: "Edit CRE" },
-  "manage:cre": { label: "Manage CRE" },
-  "assign:cre": { label: "Assign CRE" },
+  "read:cre": { label: "View Operations" },
+  "write:cre": { label: "Edit Operations" },
+  "manage:cre": { label: "Manage Operations" },
+  "assign:cre": { label: "Assign Operations" },
   "handle:rnr_candidates": { label: "Handle RNR Candidates" },
+  "read:operations_call_history": { label: "View Operations Call History" },
   "read:roles": { label: "View Roles" },
   "write:roles": { label: "Edit Roles" },
   "manage:roles": { label: "Manage Roles" },
@@ -129,11 +142,11 @@ const PERMISSION_CATEGORIES: Record<string, { label: string; icon: React.Element
   teams: { label: "Teams", icon: Users, patterns: ["teams", "assigned_teams"] },
   projects: { label: "Projects", icon: Briefcase, patterns: ["projects", "assigned_projects"] },
   candidates: { label: "Candidates", icon: UserCheck, patterns: ["candidates", "assigned_candidates"] },
-  documents: { label: "Documents", icon: FileText, patterns: ["documents", "resubmission"] },
+  documents: { label: "Documents", icon: FileText, patterns: ["documents", "resubmission", "original_document_intake", "courier_management"] },
   processing: { label: "Processing", icon: ClipboardCheck, patterns: ["processing"] },
   interviews: { label: "Interviews", icon: Headphones, patterns: ["interviews"] },
   recruiters: { label: "Recruiters", icon: UserCheck, patterns: ["recruiters"] },
-  cre: { label: "CRE", icon: Headphones, patterns: ["cre", "rnr_candidates"] },
+  cre: { label: "Operations", icon: Headphones, patterns: ["cre", "operations", "rnr_candidates"] },
   roles: { label: "Roles", icon: Shield, patterns: ["roles"] },
   clients: { label: "Clients", icon: Briefcase, patterns: ["clients"] },
   analytics: { label: "Analytics", icon: BarChart3, patterns: ["analytics"] },
@@ -214,6 +227,13 @@ export default function UserDetailPage() {
   );
 
   const groupedPermissions = useMemo(() => groupPermissions(permissions), [permissions]);
+
+  const hasIntakeAccess = permissions.includes("read:original_document_intake");
+  const hasCourierAccess = permissions.includes("read:courier_management");
+  const hasDirectIntakeGrant =
+    user?.documentsControlAccess?.originalDocumentIntakeEnabled ?? false;
+  const hasDirectCourierGrant =
+    user?.documentsControlAccess?.courierManagementEnabled ?? false;
 
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -362,6 +382,16 @@ export default function UserDetailPage() {
                     {user.name}
                   </h1>
                   <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                  {user.employeeCode?.trim() ? (
+                    <div className="mt-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[11px] font-semibold tracking-wide bg-blue-50 text-blue-700 border-blue-200"
+                      >
+                        {user.employeeCode}
+                      </Badge>
+                    </div>
+                  ) : null}
                   {roles.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2">
                       {roles
@@ -444,6 +474,15 @@ export default function UserDetailPage() {
 
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                      Employee Code
+                    </p>
+                    <p className="text-sm font-medium text-slate-800">
+                      {user.employeeCode?.trim() ? user.employeeCode : "N/A"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                       Email Address
                     </p>
                     <p className="text-sm text-slate-800 flex items-center gap-1.5">
@@ -478,6 +517,17 @@ export default function UserDetailPage() {
                       </p>
                     </div>
                   )}
+
+                  <div className="space-y-1 sm:col-span-2">
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                      Profession Coverage
+                    </p>
+                    <ProfessionCoverageBadges
+                      scopes={user.userProfessionScopes}
+                      emptyMessage="No profession coverage assigned."
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-6 pt-4 border-t border-slate-200">
@@ -537,6 +587,16 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {canReadUsers && user && (
+              <>
+                <UserAccountStatusCard
+                  user={user}
+                  canManage={canManageUsers}
+                />
+                <UserAccountStatusHistoryCard userId={user.id} />
+              </>
+            )}
 
             {showRecruiterCapabilities && (
               <Card className="border border-slate-200 shadow-sm">
@@ -610,6 +670,45 @@ export default function UserDetailPage() {
                 </CardContent>
               </Card>
             )}
+
+            <Card className="border border-slate-200 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  Documents control permissions
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Effective access from role and direct user permissions.
+                  Documents Control Executive role users receive full access via
+                  their role.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant={hasIntakeAccess ? "default" : "outline"}
+                    className="text-xs font-normal"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Original Document Intake
+                    {hasDirectIntakeGrant ? " (direct grant)" : ""}
+                  </Badge>
+                  <Badge
+                    variant={hasCourierAccess ? "default" : "outline"}
+                    className="text-xs font-normal"
+                  >
+                    <Truck className="h-3 w-3 mr-1" />
+                    Courier Management
+                    {hasDirectCourierGrant ? " (direct grant)" : ""}
+                  </Badge>
+                </div>
+                {!hasIntakeAccess && !hasCourierAccess && (
+                    <p className="text-sm text-slate-500">
+                      No documents control permissions for this user.
+                    </p>
+                  )}
+              </CardContent>
+            </Card>
 
             {/* Permissions Card - Grouped & Human-Readable */}
             <Card className="border border-slate-200 shadow-sm">
@@ -758,6 +857,11 @@ export default function UserDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Recruiter Performance Card */}
+            {showRecruiterCapabilities && (
+              <UserRecruiterPerformanceCard userId={user.id} userName={user.name} />
+            )}
           </div>
         </div>
       </div>

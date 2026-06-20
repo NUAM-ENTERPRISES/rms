@@ -45,6 +45,10 @@ interface CandidatePreviewProps {
     expectedSalary?: number;
     preferredCountries?: string[];
     facilityPreferences?: string[];
+    preferredRoles?: string[];
+    preferredRoleLabels?: Record<string, string>;
+    professionTypeId?: string;
+    professionTypeLabel?: string;
     sectorType?: string;
     visaType?: string;
     skinTone?: string;
@@ -55,6 +59,11 @@ interface CandidatePreviewProps {
     languageProficiency?: string;
     dataFlow?: boolean;
     eligibility?: boolean;
+    eligibilityNumber?: string;
+    eligibilityIssuedDate?: string;
+    eligibilityExpiryDate?: string;
+    eligibilityLetterFileName?: string;
+    religionName?: string;
   };
   onConfirm: () => void;
   onCancel: () => void;
@@ -167,6 +176,14 @@ export default function CandidatePreview({
                   {candidateData.gender}
                 </Badge>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 uppercase">
+                  Profession
+                </label>
+                <p className="mt-1 text-sm font-medium text-slate-900">
+                  {candidateData.professionTypeLabel || "Not specified"}
+                </p>
+              </div>
               {candidateData.height != null && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 uppercase">
@@ -204,6 +221,16 @@ export default function CandidatePreview({
                   </label>
                   <p className="mt-1 text-sm font-medium text-slate-900">
                     {candidateData.languageProficiency}
+                  </p>
+                </div>
+              )}
+              {candidateData.religionName && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Religion
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.religionName}
                   </p>
                 </div>
               )}
@@ -361,6 +388,26 @@ export default function CandidatePreview({
                     <span className="text-sm text-slate-400">None selected</span>
                   )}
                 </div>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">
+                Department Preferences
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {candidateData.preferredRoles && candidateData.preferredRoles.length > 0 ? (
+                  candidateData.preferredRoles.map((roleId) => (
+                    <Badge
+                      key={roleId}
+                      variant="secondary"
+                      className="bg-teal-50 text-teal-700 border-teal-100"
+                    >
+                      {candidateData.preferredRoleLabels?.[roleId] || roleId}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-slate-400">None selected</span>
+                )}
               </div>
             </div>
           </CardContent>
@@ -641,6 +688,46 @@ export default function CandidatePreview({
                   )}
                 </div>
               </div>
+              {candidateData.eligibility && candidateData.eligibilityNumber ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Number
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.eligibilityNumber}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityIssuedDate ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Issued Date
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityIssuedDate)}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityExpiryDate ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Expiry Date
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {formatDate(candidateData.eligibilityExpiryDate)}
+                  </p>
+                </div>
+              ) : null}
+              {candidateData.eligibility && candidateData.eligibilityLetterFileName ? (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">
+                    Eligibility Letter
+                  </label>
+                  <p className="mt-1 text-sm font-medium text-slate-900">
+                    {candidateData.eligibilityLetterFileName}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>

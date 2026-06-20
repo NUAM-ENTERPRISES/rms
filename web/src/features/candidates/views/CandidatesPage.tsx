@@ -32,8 +32,6 @@ import {
   Plus,
   MoreHorizontal,
   Eye,
-  Edit,
-  Trash2,
   UserCheck,
   Calendar,
   Phone,
@@ -45,10 +43,13 @@ import {
   AlertCircle,
   Users,
   ArrowUpRight,
+  SlidersHorizontal,
+  FilterX,
+  UserX,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
-import { ImageViewer } from "@/components/molecules";
-import { parseISO, startOfDay, endOfDay, format } from "date-fns";
+import { CandidateListIdentityCell, ImageViewer } from "@/components/molecules";
+import { format } from "date-fns";
 import { useCan } from "@/hooks/useCan";
 import {
   useGetCandidatesQuery,
@@ -58,10 +59,22 @@ import {
   type AllCandidatesResponse,
 } from "@/features/candidates";
 import { useAppSelector } from "@/app/hooks";
+import { hasAllCandidatesView } from "@/config/role-capabilities";
+import { ROLE_NAMES } from "@/config/role-names";
 import { motion } from "framer-motion";
 import { TransferCandidateDialog } from "../components/TransferCandidateDialog";
+import { AdvancedFiltersSheet } from "../components/AdvancedFiltersSheet";
 import { CandidateProfileCompletionCell } from "../components/CandidateProfileCompletion";
 import { toast } from "sonner";
+import { getCandidateOperationsState } from "../utils/operations-candidate";
+import { isOperationsRole } from "@/config/role-names";
+import { LogOperationsCallModal } from "../components/LogOperationsCallModal";
+import { OperationsCallFollowUpIndicators } from "../components/OperationsCallFollowUpIndicators";
+import { useOperationsCallModal } from "../hooks/useOperationsCallModal";
+import {
+  canOpenOperationsCallModal,
+  getOperationsFollowUpStage,
+} from "../utils/operations-follow-up.util";
 
 
 
@@ -73,14 +86,22 @@ export default function CandidatesPage() {
 
   // Check if user is a recruiter (non-manager)
   const isRecruiter = user?.roles?.includes("Recruiter");
-  const isManager = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
-  );
+  const isManager = hasAllCandidatesView(user?.roles);
+  const isOperationsUser = user?.roles?.some(isOperationsRole) ?? false;
+  const canReadOperationsCallHistory = useCan("read:operations_call_history");
   // All roles can read candidates
   const canReadCandidates = true;
   const canWriteCandidates = useCan("write:candidates");
   const canTransferCandidates = user?.roles?.some((role) =>
-    ["CEO", "Director", "Manager", "Team Head", "Team Lead"].includes(role)
+    [
+      "CEO",
+      "Director",
+      "Manager",
+      "Recruiter Manager",
+      "Team Head",
+      "Team Lead",
+      ROLE_NAMES.PROJECT_COORDINATOR,
+    ].includes(role)
   );
 
   // Transfer candidate state
@@ -93,31 +114,164 @@ export default function CandidatesPage() {
 
   const [transferCandidate, { isLoading: isTransferring }] = useTransferCandidateMutation();
 
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+
   // State for filters and pagination
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
-    experience: "all",
     source: "all" as string,
-    // date range filter (date added)
-    dateRange: "all" as string,
+    dateFilter: "all",
     dateFrom: undefined as Date | undefined,
     dateTo: undefined as Date | undefined,
+    countryPreferences: [] as string[],
+    sectorTypes: [] as string[],
+    facilityPreferences: [] as string[],
+    gender: "all",
+    sources: [] as string[],
+    minExperience: undefined as number | undefined,
+    maxExperience: undefined as number | undefined,
+    minSalary: undefined as number | undefined,
+    maxSalary: undefined as number | undefined,
+    minAge: undefined as number | undefined,
+    maxAge: undefined as number | undefined,
+    visaType: undefined as string | undefined,
+    qualification: "",
+    departmentId: undefined as string | undefined,
+    roleCatalogId: undefined as string | undefined,
+    heightMin: undefined as number | undefined,
+    heightMax: undefined as number | undefined,
+    weightMin: undefined as number | undefined,
+    weightMax: undefined as number | undefined,
+    skinTone: "",
+    languageProficiency: "",
+    smartness: "",
+    licensingExam: "",
+    dataFlow: undefined as boolean | undefined,
+    eligibility: undefined as boolean | undefined,
+    workExperienceCompany: "",
+    workExperienceTitle: "",
     page: 1,
     limit: 10,
   });
 
-  // Fetch candidates - use different API for Recruiter users
-  const allCandidatesQuery = useGetCandidatesQuery(
-    {
+  const listRequestPayload = useMemo(() => {
+    const sourceParam =
+      filters.sources.length > 0
+        ? undefined
+        : filters.source !== "all"
+          ? filters.source
+          : undefined;
+
+    return {
       page: filters.page,
       limit: filters.limit,
+      search: filters.search || undefined,
       status: filters.status !== "all" ? filters.status : undefined,
-      source: filters.source !== "all" ? filters.source : undefined,
-      // send server-side date filters as date-only (YYYY-MM-DD) to avoid timezone shifts
-      dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
-      dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
-    },
+      dateFilter: filters.dateFilter !== "all" ? filters.dateFilter : undefined,
+      dateFrom: filters.dateFrom ? format(filters.dateFrom, "yyyy-MM-dd") : undefined,
+      dateTo: filters.dateTo ? format(filters.dateTo, "yyyy-MM-dd") : undefined,
+      gender: filters.gender === "all" ? undefined : filters.gender,
+      sources: filters.sources.length > 0 ? filters.sources : undefined,
+      source: sourceParam,
+      countryPreferences:
+        filters.countryPreferences.length > 0 ? filters.countryPreferences : undefined,
+      sectorTypes: filters.sectorTypes.length > 0 ? filters.sectorTypes : undefined,
+      facilityPreferences:
+        filters.facilityPreferences.length > 0 ? filters.facilityPreferences : undefined,
+      minExperience: filters.minExperience,
+      maxExperience: filters.maxExperience,
+      minSalary: filters.minSalary,
+      maxSalary: filters.maxSalary,
+      minAge: filters.minAge,
+      maxAge: filters.maxAge,
+      visaType: filters.visaType,
+      qualification: filters.qualification || undefined,
+      roleCatalogId: filters.roleCatalogId || undefined,
+      heightMin: filters.heightMin,
+      heightMax: filters.heightMax,
+      weightMin: filters.weightMin,
+      weightMax: filters.weightMax,
+      skinTone: filters.skinTone || undefined,
+      languageProficiency: filters.languageProficiency || undefined,
+      smartness: filters.smartness || undefined,
+      licensingExam: filters.licensingExam || undefined,
+      dataFlow: filters.dataFlow,
+      eligibility: filters.eligibility,
+      workExperienceCompany: filters.workExperienceCompany || undefined,
+      workExperienceTitle: filters.workExperienceTitle || undefined,
+    };
+  }, [filters]);
+
+  const activeFilterCount = [
+    filters.countryPreferences.length > 0,
+    filters.sectorTypes.length > 0,
+    filters.facilityPreferences.length > 0,
+    filters.sources.length > 0,
+    filters.dateFilter !== "all",
+    filters.gender !== "all",
+    filters.minExperience !== undefined,
+    filters.maxExperience !== undefined,
+    filters.minSalary !== undefined,
+    filters.maxSalary !== undefined,
+    filters.minAge !== undefined,
+    filters.maxAge !== undefined,
+    !!filters.visaType,
+    !!filters.qualification,
+    !!filters.workExperienceCompany,
+    !!filters.workExperienceTitle,
+    !!filters.skinTone,
+    !!filters.languageProficiency,
+    !!filters.smartness,
+    !!filters.licensingExam,
+    filters.dataFlow !== undefined,
+    filters.eligibility !== undefined,
+    !!filters.roleCatalogId,
+  ].filter(Boolean).length;
+
+  const handleResetFilters = () => {
+    setFilters({
+      search: "",
+      status: "all",
+      source: "all",
+      dateFilter: "all",
+      dateFrom: undefined,
+      dateTo: undefined,
+      countryPreferences: [],
+      sectorTypes: [],
+      facilityPreferences: [],
+      gender: "all",
+      sources: [],
+      minExperience: undefined,
+      maxExperience: undefined,
+      minSalary: undefined,
+      maxSalary: undefined,
+      minAge: undefined,
+      maxAge: undefined,
+      visaType: undefined,
+      qualification: "",
+      departmentId: undefined,
+      roleCatalogId: undefined,
+      heightMin: undefined,
+      heightMax: undefined,
+      weightMin: undefined,
+      weightMax: undefined,
+      skinTone: "",
+      languageProficiency: "",
+      smartness: "",
+      licensingExam: "",
+      dataFlow: undefined,
+      eligibility: undefined,
+      workExperienceCompany: "",
+      workExperienceTitle: "",
+      page: 1,
+      limit: 10,
+    });
+  };
+
+  // Fetch candidates - use different API for Recruiter users
+  const allCandidatesQuery = useGetCandidatesQuery(
+    listRequestPayload,
     { skip: isRecruiter && !isManager } // Skip this query if user is recruiter without manager role
   );
 
@@ -130,16 +284,7 @@ export default function CandidatesPage() {
   const allCandidatesRefetch = allCandidatesQuery.refetch;
 
   const recruiterCandidatesQuery = useGetRecruiterMyCandidatesQuery(
-    {
-      page: filters.page,
-      limit: filters.limit,
-      search: filters.search || undefined,
-      status: filters.status !== "all" ? filters.status : undefined,
-      source: filters.source !== "all" ? filters.source : undefined,
-      // server-side date filtering: send date-only strings (YYYY-MM-DD)
-      dateFrom: filters.dateFrom ? format(filters.dateFrom, 'yyyy-MM-dd') : undefined,
-      dateTo: filters.dateTo ? format(filters.dateTo, 'yyyy-MM-dd') : undefined,
-    },
+    listRequestPayload,
     { skip: !isRecruiter || isManager } // Skip this query if user is not recruiter or is manager
   );
 
@@ -163,6 +308,40 @@ export default function CandidatesPage() {
 
   const isLoading = isLoadingRecruiter || isLoadingAll;
   const error = errorRecruiter || errorAll;
+
+  const refetchCandidates = () => {
+    if (isRecruiter && !isManager) {
+      recruiterRefetch();
+    } else {
+      allCandidatesRefetch();
+    }
+  };
+
+  const {
+    openLogCall,
+    openCallHistory,
+    resolveAssignment,
+    isLoggingCall,
+    handleLogOperationsCall,
+    handleInterestedReassign,
+    handleNotInterestedJunk,
+    callModalCandidate,
+    logCallAttempts,
+    logCallNextAttempt,
+    logCallFollowUpStage,
+    canOpenCallModal,
+    canLogNoAnswerCall,
+    logCallCandidateName,
+    logCallRecruiterName,
+    logCallCurrentStatus,
+    isTransferring: isOperationsTransferring,
+    isMarkingNotInterested,
+    closeCallModal,
+    callModalState,
+  } = useOperationsCallModal({
+    operationsUserId: isOperationsUser ? user?.id : undefined,
+    onLogged: refetchCandidates,
+  });
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -200,104 +379,15 @@ export default function CandidatesPage() {
 
 
 
-  // Filter and paginate candidates
-  const { filteredCandidates, paginatedCandidates } =
-    useMemo(() => {
-      // Ensure candidates is an array
-      if (!Array.isArray(candidates)) {
-        console.warn("Candidates data is not an array:", candidates);
-        return {
-          filteredCandidates: [],
-          paginatedCandidates: [],
-        };
-      }
-
-      let filtered = candidates;
-
-      if (filters.search) {
-        filtered = filtered.filter(
-          (candidate) =>
-            `${candidate.firstName} ${candidate.lastName}`
-              .toLowerCase()
-              .includes(filters.search.toLowerCase()) ||
-            (candidate.email &&
-              candidate.email
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())) ||
-            candidate?.skills?.some((skill: string) =>
-              skill.toLowerCase().includes(filters.search.toLowerCase())
-            )
-        );
-      }
-
-      // if (filters.status !== "all") {
-      //   filtered = filtered.filter(
-      //     (candidate) => candidate.currentStatus === filters.status
-      //   );
-      // }
-
-      if (filters.experience !== "all") {
-        const experienceMap: { [key: string]: [number, number] } = {
-          "0-2": [0, 2],
-          "3-5": [3, 5],
-          "6-8": [6, 8],
-          "9+": [9, 999],
-        };
-        const [min, max] = experienceMap[filters.experience] || [0, 999];
-        filtered = filtered.filter((candidate) => {
-          const experience =
-            candidate.totalExperience || candidate.experience || 0;
-          return experience >= min && experience <= max;
-        });
-      }
-
-      // Date range filter (client-side fallback)
-      if (filters.dateFrom || filters.dateTo) {
-        const from = filters.dateFrom ? startOfDay(filters.dateFrom) : null;
-        const to = filters.dateTo ? endOfDay(filters.dateTo) : null;
-        filtered = filtered.filter((candidate) => {
-          const dStr = candidate.createdAt || candidate.updatedAt;
-          if (!dStr) return false;
-          const d = parseISO(dStr);
-          if (from && to) return d >= from && d <= to;
-          if (from) return d >= from;
-          if (to) return d <= to;
-          return true;
-        });
-      }
-
-      // Note: availability filter removed as it's not in the API interface
-      // if (filters.availability !== "all") {
-      //   filtered = filtered.filter(
-      //     (candidate) => candidate.availability === filters.availability
-      //   );
-      // }
-
-      // Calculate pagination
-      const startIndex = (filters.page - 1) * filters.limit;
-      const endIndex = startIndex + filters.limit;
-      const paginated = filtered.slice(startIndex, endIndex);
-
-      return {
-        filteredCandidates: filtered,
-        paginatedCandidates: paginated,
-      };
-    }, [candidates, filters]);
-
   const pagination =
     isRecruiter && !isManager
       ? recruiterCandidatesData?.pagination
       : allCandidatesData?.pagination;
-  const hasServerPagination = Boolean(
-    pagination &&
-      (pagination.totalPages !== undefined ||
-        pagination.totalCount !== undefined ||
-        pagination.total !== undefined)
-  );
-  const pageItems = hasServerPagination ? candidates : paginatedCandidates;
+  const pageItems = candidates;
   const totalCount =
-    pagination?.totalCount ?? pagination?.total ?? filteredCandidates.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / filters.limit));
+    pagination?.totalCount ?? pagination?.total ?? candidates.length;
+  const totalPages =
+    pagination?.totalPages ?? Math.max(1, Math.ceil(totalCount / filters.limit));
 
   // Format date - following FE guidelines: DD MMM YYYY
   const formatDate = (dateString?: string) => {
@@ -398,6 +488,15 @@ export default function CandidatesPage() {
           textColor: "text-yellow-700",
           bgColor: "bg-yellow-100",
           borderColor: "border-yellow-300",
+        };
+      case "call back":
+      case "call_back":
+        return {
+          variant: "outline" as const,
+          icon: Phone,
+          textColor: "text-cyan-700",
+          bgColor: "bg-cyan-100",
+          borderColor: "border-cyan-300",
         };
       case "qualified":
         return {
@@ -505,23 +604,30 @@ export default function CandidatesPage() {
       serverCounts?.totalAssigned ??
       totalCount,
     handledByCRE: serverCounts?.handledByCRE ?? 0,
-    untouched: serverCounts?.untouched ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
-    rnr: serverCounts?.rnr ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    untouched: serverCounts?.untouched ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "untouched").length,
+    rnr: serverCounts?.rnr ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "rnr").length,
+    callBack:
+      serverCounts?.callBack ??
+      candidates.filter((c: any) => {
+        const s = (c?.currentStatus?.statusName || "").toLowerCase();
+        return s === "call back" || s === "call_back";
+      }).length,
     rnrHandledByCRE: serverCounts?.rnrHandledByCRE ?? 0,
-    onHold: serverCounts?.onHold ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
-    interested: serverCounts?.interested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
-    qualified: serverCounts?.qualified ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
-    future: serverCounts?.future ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
-    deployed: serverCounts?.deployed ?? serverCounts?.working ?? filteredCandidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
-    notInterested: serverCounts?.notInterested ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
-    otherEnquiry: serverCounts?.otherEnquiry ?? filteredCandidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
+    onHold: serverCounts?.onHold ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "on hold" || (c?.currentStatus?.statusName || "").toLowerCase() === "on_hold").length,
+    interested: serverCounts?.interested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "interested").length,
+    qualified: serverCounts?.qualified ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "qualified").length,
+    future: serverCounts?.future ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "future").length,
+    deployed: serverCounts?.deployed ?? serverCounts?.working ?? candidates.filter((c: any) => ((c?.currentStatus?.statusName || "").toLowerCase() === "deployed") || ((c?.currentStatus?.statusName || "").toLowerCase() === "working")).length,
+    notInterested: serverCounts?.notInterested ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not interested" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_interested").length,
+    notEligible: serverCounts?.notEligible ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "not eligible" || (c?.currentStatus?.statusName || "").toLowerCase() === "not_eligible").length,
+    otherEnquiry: serverCounts?.otherEnquiry ?? candidates.filter((c: any) => (c?.currentStatus?.statusName || "").toLowerCase() === "other enquiry" || (c?.currentStatus?.statusName || "").toLowerCase() === "other_enquiry").length,
   };
 
   let stats: Stat[] = [
     {
       label: "Assigned to Me",
       value: derivedCounts.totalAssigned,
-      subtitle: derivedCounts.handledByCRE > 0 ? `${derivedCounts.handledByCRE} with CRE handler` : "Assigned candidates",
+      subtitle: derivedCounts.handledByCRE > 0 ? `${derivedCounts.handledByCRE} with Operations handler` : "Assigned candidates",
       icon: Users,
       statusFilter: "all",
       color: "from-blue-500 to-cyan-500",
@@ -535,12 +641,20 @@ export default function CandidatesPage() {
       color: "from-emerald-500 to-teal-500",
     },
     {
-      label: "Call Back (RNR)",
+      label: "RNR",
       value: derivedCounts.rnr,
-      subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with CRE handler` : "Ring not responded",
+      subtitle: derivedCounts.rnrHandledByCRE > 0 ? `${derivedCounts.rnrHandledByCRE} with Operations handler` : "Ring not responded",
       icon: Phone,
       statusFilter: "rnr",
       color: "from-orange-500 to-red-500",
+    },
+    {
+      label: "Call Back",
+      value: derivedCounts.callBack,
+      subtitle: "Scheduled callbacks",
+      icon: Phone,
+      statusFilter: "call_back",
+      color: "from-cyan-500 to-teal-500",
     },
     {
       label: "On Hold",
@@ -583,6 +697,14 @@ export default function CandidatesPage() {
       color: "from-slate-500 to-stone-400",
     },
     {
+      label: "Not Eligible",
+      value: derivedCounts.notEligible,
+      subtitle: "Does not meet requirements",
+      icon: UserX,
+      statusFilter: "not_eligible",
+      color: "from-rose-500 to-red-500",
+    },
+    {
       label: "Other Enquiry",
       value: derivedCounts.otherEnquiry,
       subtitle: "Other enquiries",
@@ -598,11 +720,13 @@ export default function CandidatesPage() {
     const assignedCount = recruiterCounts?.totalAssigned ?? totalCount;
     const untouchedCount = recruiterCounts?.untouched ?? 0;
     const rnrCount = recruiterCounts?.rnr ?? 0;
+    const callBackCount = recruiterCounts?.callBack ?? 0;
     const onHoldCount = recruiterCounts?.onHold ?? 0;
     const interestedCount = recruiterCounts?.interested ?? 0;
     const futureCount = recruiterCounts?.future ?? 0;
     const workingCount = recruiterCounts?.working ?? 0;
     const notInterestedCount = recruiterCounts?.notInterested ?? 0;
+    const notEligibleCount = recruiterCounts?.notEligible ?? 0;
     const otherEnquiryCount = recruiterCounts?.otherEnquiry ?? 0;
 
     stats = [
@@ -623,12 +747,20 @@ export default function CandidatesPage() {
         color: "from-emerald-500 to-teal-500",
       },
       {
-        label: "Call Back (RNR)",
+        label: "Ring Not Responded (RNR)",
         value: rnrCount,
         subtitle: "Ring not responded",
         icon: Phone,
         statusFilter: "rnr",
         color: "from-orange-500 to-red-500",
+      },
+      {
+        label: "Call Back",
+        value: callBackCount,
+        subtitle: "Scheduled callbacks",
+        icon: Phone,
+        statusFilter: "call_back",
+        color: "from-cyan-500 to-teal-500",
       },
       {
         label: "On Hold",
@@ -671,6 +803,14 @@ export default function CandidatesPage() {
         color: "from-slate-500 to-stone-400",
       },
       {
+        label: "Not Eligible",
+        value: notEligibleCount,
+        subtitle: "Does not meet requirements",
+        icon: UserX,
+        statusFilter: "not_eligible",
+        color: "from-rose-500 to-red-500",
+      },
+      {
         label: "Other Enquiry",
         value: otherEnquiryCount,
         subtitle: "Other enquiries",
@@ -687,11 +827,13 @@ export default function CandidatesPage() {
       const assignedCount = (allCounts as any)?.total ?? (allCounts as any)?.totalAssigned ?? totalCount;
       const untouchedCount = allCounts?.untouched ?? 0;
       const rnrCount = allCounts?.rnr ?? 0;
+      const callBackCount = allCounts?.callBack ?? 0;
       const onHoldCount = allCounts?.onHold ?? 0;
       const interestedCount = allCounts?.interested ?? 0;
       const futureCount = allCounts?.future ?? 0;
       const workingCount = allCounts?.working ?? 0;
       const notInterestedCount = allCounts?.notInterested ?? 0;
+      const notEligibleCount = allCounts?.notEligible ?? 0;
       const otherEnquiryCount = allCounts?.otherEnquiry ?? 0;
 
       stats = [
@@ -712,12 +854,20 @@ export default function CandidatesPage() {
           color: "from-emerald-500 to-teal-500",
         },
         {
-          label: "Call Back (RNR)",
+          label: "RNR",
           value: rnrCount,
           subtitle: "Ring not responded",
           icon: Phone,
           statusFilter: "rnr",
           color: "from-orange-500 to-red-500",
+        },
+        {
+          label: "Call Back",
+          value: callBackCount,
+          subtitle: "Scheduled callbacks",
+          icon: Phone,
+          statusFilter: "call_back",
+          color: "from-cyan-500 to-teal-500",
         },
         {
           label: "On Hold",
@@ -760,6 +910,14 @@ export default function CandidatesPage() {
           color: "from-slate-500 to-stone-400",
         },
         {
+          label: "Not Eligible",
+          value: notEligibleCount,
+          subtitle: "Does not meet requirements",
+          icon: UserX,
+          statusFilter: "not_eligible",
+          color: "from-rose-500 to-red-500",
+        },
+        {
           label: "Other Enquiry",
           value: otherEnquiryCount,
           subtitle: "Other enquiries",
@@ -795,11 +953,15 @@ export default function CandidatesPage() {
       case "untouched":
         return "Untouched";
       case "rnr":
-        return "Call Back (RNR)";
+        return "RNR";
+      case "call_back":
+        return "Call Back";
       case "interested":
         return "Interested";
       case "not_interested":
         return "Not Interested";
+      case "not_eligible":
+        return "Not Eligible";
       case "other_enquiry":
         return "Other Enquiries";
       case "qualified":
@@ -822,11 +984,15 @@ export default function CandidatesPage() {
       case "untouched":
         return "Candidates who want to work today";
       case "rnr":
-        return "Candidates to call back (no response)";
+        return "Ring not responded candidates";
+      case "call_back":
+        return "Candidates with scheduled callbacks";
       case "interested":
         return "Candidates who expressed interest";
       case "not_interested":
         return "Candidates who declined or are not interested";
+      case "not_eligible":
+        return "Candidates who do not meet role requirements";
       case "other_enquiry":
         return "Candidates with other enquiries";
       case "qualified":
@@ -859,10 +1025,35 @@ export default function CandidatesPage() {
                 className="pl-9 h-9 text-sm border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all rounded-xl"
               />
             </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setIsFilterSheetOpen(true)}
+                className="flex items-center gap-2 h-9 px-3 rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-medium"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span>Advanced Filters</span>
+                {activeFilterCount > 0 && (
+                  <Badge className="ml-0.5 h-5 w-5 p-0 flex items-center justify-center bg-blue-600 text-white rounded-full text-[10px]">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  onClick={handleResetFilters}
+                  className="h-9 px-3 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 text-sm font-medium gap-1.5"
+                >
+                  <FilterX className="h-4 w-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
               <Select
                 value={filters.source}
-                onValueChange={(value) => setFilters((prev) => ({ ...prev, source: value, page: 1 }))}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, source: value, sources: [], page: 1 }))
+                }
               >
                 <SelectTrigger className="h-9 text-sm border-slate-200 rounded-xl bg-white min-w-[130px]">
                   <SelectValue placeholder="All Sources" />
@@ -903,11 +1094,12 @@ export default function CandidatesPage() {
             teal:    { card: "from-teal-50 via-white to-teal-50/30 border-teal-100",       icon: "text-teal-600",    iconBg: "bg-teal-100",    value: "text-teal-700",    ring: "ring-teal-400/50",    dot: "bg-teal-500"    },
             slate:   { card: "from-slate-50 via-white to-slate-50/30 border-slate-200",    icon: "text-slate-600",   iconBg: "bg-slate-100",   value: "text-slate-700",   ring: "ring-slate-400/50",   dot: "bg-slate-500"   },
             amber:   { card: "from-amber-50 via-white to-amber-50/30 border-amber-100",   icon: "text-amber-600",   iconBg: "bg-amber-100",   value: "text-amber-700",   ring: "ring-amber-400/50",   dot: "bg-amber-500"   },
+            rose:    { card: "from-rose-50 via-white to-rose-50/30 border-rose-100",       icon: "text-rose-600",    iconBg: "bg-rose-100",    value: "text-rose-700",    ring: "ring-rose-400/50",    dot: "bg-rose-500"    },
           };
           const statusToAccent: Record<string, string> = {
             all: "blue", untouched: "emerald", rnr: "orange", on_hold: "purple",
             interested: "lime", future: "indigo", deployed: "teal",
-            not_interested: "slate", other_enquiry: "amber",
+            not_interested: "slate", not_eligible: "rose", other_enquiry: "amber",
           };
           return (
             <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -977,8 +1169,11 @@ export default function CandidatesPage() {
               <Table>
                 <TableHeader className="sticky">
                   <TableRow className="bg-slate-50/80 border-b border-gray-200 hover:bg-slate-50/80">
-                    <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <TableHead className="h-10 min-w-[14rem] whitespace-normal px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Candidate
+                    </TableHead>
+                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Contact
                     </TableHead>
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Recruiter
@@ -999,9 +1194,7 @@ export default function CandidatesPage() {
                     <TableHead className="h-10 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Last Updated
                     </TableHead>
-                    <TableHead className="h-10 px-4 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                      Contact
-                    </TableHead>
+                  
                     <TableHead className="h-10 px-4 text-right text-[10px] font-bold uppercase tracking-widest text-slate-500">
                       Actions
                     </TableHead>
@@ -1018,8 +1211,17 @@ export default function CandidatesPage() {
                       // Determine active recruiter assignment
                       const activeAssignment = (candidate.recruiterAssignments || [])?.find((a: any) => a.isActive);
                       const recruiter = activeAssignment?.recruiter || (candidate as any).recruiter || null;
-                      const isHandledByCRE = candidate.isHandledByCRE;
-                      const isCREReassigned = candidate.isCREReassigned;
+                      const operations = getCandidateOperationsState(candidate);
+                      const operationsAssignment = resolveAssignment(candidate);
+                      const showOperationsFollowUp =
+                        Boolean(operationsAssignment) &&
+                        (isOperationsUser ||
+                          operations.isHandledByOperations ||
+                          canReadOperationsCallHistory);
+                      const followUpStage = getOperationsFollowUpStage(operationsAssignment);
+                      const canLogCall =
+                        isOperationsUser &&
+                        canOpenOperationsCallModal(followUpStage);
 
                       return (
                         <TableRow
@@ -1027,8 +1229,8 @@ export default function CandidatesPage() {
                           className="border-b border-gray-100 hover:bg-blue-50/30 transition-colors last:border-b-0"
                         >
                           {/* Candidate */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-3">
+                          <TableCell className="min-w-[14rem] whitespace-normal align-top px-4 py-3">
+                            <div className="flex items-start gap-3">
                               {/* FULL VIBRANT COLOR AVATAR */}
                               <ImageViewer
                                 title={`${candidate.firstName} ${candidate.lastName}`}
@@ -1036,159 +1238,34 @@ export default function CandidatesPage() {
                                 fallbackSrc={
                                   "https://img.freepik.com/free-vector/isolated-young-handsome-man-different-poses-white-background-illustration_632498-859.jpg"
                                 }
-                                className="h-10 w-10 rounded-full"
+                                className="h-10 w-10 shrink-0 rounded-full"
                                 ariaLabel={`View full image for ${candidate.firstName} ${candidate.lastName}`}
                                 enableHoverPreview={true} /* show hover preview on desktop */
                               />
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/candidates/${candidate.id}`);
-                                    }}
-                                    className="font-semibold text-gray-900 hover:text-blue-600 hover:underline transition-all duration-200 truncate block text-sm"
-                                  >
-                                    {candidate.firstName} {candidate.lastName}
-                                  </button>
-
-                                  {isHandledByCRE && (
-                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-red-100 text-red-700 border border-red-200">
-                                      CRE Assigned
-                                    </Badge>
-                                  )}
-
-                                  {isCREReassigned && (
-                                    <Badge className="text-[10px] font-semibold px-2 py-0.5 bg-green-100 text-green-700 border border-green-200">
-                                      CRE Reassigned
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                <div className="text-xs text-slate-500 mt-0.5 font-medium truncate">
-                                  {candidate.currentRole || ""}
-                                </div>
-
-                                {/* Contact moved below profile */}
-                                <div className="text-xs text-slate-500 mt-1.5 space-y-0.5">
-                                  {candidate.email && (
-                                    <div className="flex items-center gap-1.5">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="text-gray-700 truncate">{candidate.email}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1.5">
-                                    <Phone className="h-3 w-3 text-gray-400" />
-                                    <span className="text-gray-700">{candidate.countryCode} {candidate.mobileNumber}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-
-                          {/* Recruiter */}
-                          <TableCell className="px-4 py-3">
-                            <div className="text-xs">
-                              {recruiter ? (
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-slate-900">{recruiter.name}</span>
-                                  </div>
-                                  {recruiter.email && (
-                                    <div className="flex items-center gap-1.5 text-slate-700">
-                                      <Mail className="h-3 w-3 text-gray-400" />
-                                      <span className="truncate max-w-[120px]">{recruiter.email}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-slate-500">Unassigned</span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                        {/* Created By */}
-                        <TableCell className="px-4 py-3">
-                          <div className="text-xs">
-                            {(candidate as any).createdBy || activeAssignment?.createdByUser ? (
-                              <div className="space-y-0.5">
-                                <div className="font-medium text-slate-900">
-                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name)}
-                                </div>
-                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email) && (
-                                  <div className="flex items-center gap-1.5 text-slate-700">
-                                    <Mail className="h-3 w-3 text-gray-400" />
-                                    <span className="truncate max-w-[120px]">
-                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email)}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-slate-500 text-[10px]">System / Admin</span>
-                            )}
-                          </div>
-                        </TableCell>
-
-                          {/* Created At */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                              {formatDateTime(candidate.createdAt)}
-                            </div>
-                          </TableCell>
-
-                          {/* Status Column (single source of truth) */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              {/* Colored icon in a tiny circle */}
-                              <div
-                                className={`p-1 rounded-full ${statusInfo.bgColor}`}
-                              >
-                                <StatusIcon
-                                  className={`h-3.5 w-3.5 ${statusInfo.textColor.replace(
-                                    "700",
-                                    "600"
-                                  )} `}
+                              <div className="min-w-0 flex-1">
+                                <CandidateListIdentityCell
+                                  firstName={candidate.firstName}
+                                  lastName={candidate.lastName}
+                                  candidateCode={candidate.candidateCode}
+                                  currentRole={candidate.currentRole}
+                                  isHandledByOperations={operations.isHandledByOperations}
+                                  isOperationsReassigned={operations.isOperationsReassigned}
+                                  operationsStatusNote={operations.operationsStatusNote}
+                                  operationsStatusName={operations.operationsStatusName}
+                                  onNameClick={() =>
+                                    navigate(`/candidates/${candidate.id}`)
+                                  }
                                 />
                               </div>
-
-                              {/* Colored Badge – looks premium */}
-                              <Badge
-                                variant="outline"
-                                title={candidate.currentStatus?.statusName || "Unknown"}
-                                className={`
-                        ${statusInfo.textColor} 
-                        ${statusInfo.bgColor} 
-                        ${statusInfo.borderColor} 
-                        border 
-                        font-medium 
-                        text-[10px] 
-                        px-2 py-0.5
-                      `}
-                              >
-                                {candidate.currentStatus?.statusName || "Unknown"}
-                              </Badge>
                             </div>
                           </TableCell>
-
-                          <TableCell className="px-2 py-3 w-[4.5rem] text-center">
-                            <CandidateProfileCompletionCell candidate={candidate} />
-                          </TableCell>
-
-                          {/* Last Updated */}
-                          <TableCell className="px-4 py-3">
-                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
-                              {formatDate(candidate.updatedAt)}
-                            </div>
-                          </TableCell>
-
-                          {/* Contact */}
+                             
+                                   {/* Contact */}
                           <TableCell className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              {(() => {
+                            <div className="flex flex-col items-stretch gap-2">
+                              <div className="flex items-center justify-center gap-1.5 w-full">
+                                {(() => {
                                 const phoneDigits = formatPhoneForLink(candidate);
                                 return (
                                   <>
@@ -1218,9 +1295,139 @@ export default function CandidatesPage() {
                                     </Button>
                                   </>
                                 );
-                              })()}
+                                })()}
+                              </div>
+
+                              <div className="w-full min-w-0 text-center text-xs text-slate-500 space-y-1">
+                                {candidate.email ? (
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <Mail className="h-3 w-3 text-gray-400" />
+                                    <span className="text-gray-700 truncate max-w-[220px]">
+                                      {candidate.email}
+                                    </span>
+                                  </div>
+                                ) : null}
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <Phone className="h-3 w-3 text-gray-400" />
+                                  <span className="text-gray-700 truncate max-w-[220px]">
+                                    {candidate.countryCode} {candidate.mobileNumber}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </TableCell>
+
+                          {/* Recruiter */}
+                          <TableCell className="px-4 py-3">
+                            <div className="text-xs">
+                              {recruiter ? (
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-slate-900">{recruiter.name}</span>
+                                  </div>
+                                  {recruiter.email && (
+                                    <div className="flex items-center gap-1.5 text-slate-700">
+                                      <Mail className="h-3 w-3 text-gray-400" />
+                                      <span className="truncate max-w-[120px]">{recruiter.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-slate-500">Unassigned</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                        {/* Created By */}
+                        <TableCell className="px-4 py-3">
+                          <div className="text-xs">
+                            {(candidate as any).createdBy || activeAssignment?.createdByUser || activeAssignment?.assignedByUser ? (
+                              <div className="space-y-0.5">
+                                <div className="font-medium text-slate-900">
+                                  {((candidate as any).createdBy?.name || activeAssignment?.createdByUser?.name || activeAssignment?.assignedByUser?.name)}
+                                </div>
+                                {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email) && (
+                                  <div className="flex items-center gap-1.5 text-slate-700">
+                                    <Mail className="h-3 w-3 text-gray-400" />
+                                    <span className="truncate max-w-[120px]">
+                                      {((candidate as any).createdBy?.email || activeAssignment?.createdByUser?.email || activeAssignment?.assignedByUser?.email)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-500 text-[10px]">System / Admin</span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                          {/* Created At */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                              {formatDateTime(candidate.createdAt)}
+                            </div>
+                          </TableCell>
+
+                          {/* Status Column (single source of truth) */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex flex-col items-start gap-1">
+                              <div className="flex items-center gap-2">
+                                {/* Colored icon in a tiny circle */}
+                                <div
+                                  className={`p-1 rounded-full ${statusInfo.bgColor}`}
+                                >
+                                  <StatusIcon
+                                    className={`h-3.5 w-3.5 ${statusInfo.textColor.replace(
+                                      "700",
+                                      "600"
+                                    )} `}
+                                  />
+                                </div>
+
+                                {/* Colored Badge – looks premium */}
+                                <Badge
+                                  variant="outline"
+                                  title={candidate.currentStatus?.statusName || "Unknown"}
+                                  className={`
+                        ${statusInfo.textColor} 
+                        ${statusInfo.bgColor} 
+                        ${statusInfo.borderColor} 
+                        border 
+                        font-medium 
+                        text-[10px] 
+                        px-2 py-0.5
+                      `}
+                                >
+                                  {candidate.currentStatus?.statusName || "Unknown"}
+                                </Badge>
+                              </div>
+                              {showOperationsFollowUp && (
+                                <OperationsCallFollowUpIndicators
+                                  assignment={operationsAssignment}
+                                  canLogCall={canLogCall}
+                                  onLogCall={() => openLogCall(candidate)}
+                                  onViewHistory={() => openCallHistory(candidate)}
+                                  showLogCallButton={isOperationsUser}
+                                  isLoggingCall={isLoggingCall}
+                                />
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="px-2 py-3 w-[4.5rem] text-center">
+                            <CandidateProfileCompletionCell candidate={candidate} />
+                          </TableCell>
+
+                          {/* Last Updated */}
+                          <TableCell className="px-4 py-3">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                              <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                              {formatDate(candidate.updatedAt)}
+                            </div>
+                          </TableCell>
+
+                       
 
                           {/* Actions */}
                           <TableCell className="px-4 py-3 text-right">
@@ -1240,21 +1447,18 @@ export default function CandidatesPage() {
                                 >
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </DropdownMenuItem>
-                                {canWriteCandidates && (
-                                  <>
-                                    <DropdownMenuItem
-                                      onClick={() =>
-                                        navigate(
-                                          `/candidates/${candidate.id}/edit`
-                                        )
-                                      }
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-red-600">
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                  </>
+                                {showOperationsFollowUp && canLogCall && (
+                                  <DropdownMenuItem
+                                    onClick={() => openLogCall(candidate)}
+                                    className="text-green-700"
+                                  >
+                                    <Phone className="mr-2 h-4 w-4" /> Log Call
+                                  </DropdownMenuItem>
+                                )}
+                                {showOperationsFollowUp && (
+                                  <DropdownMenuItem onClick={() => openCallHistory(candidate)}>
+                                    <Clock className="mr-2 h-4 w-4" /> View Call History
+                                  </DropdownMenuItem>
                                 )}
                                 {canTransferCandidates && (
                                   <>
@@ -1361,6 +1565,16 @@ export default function CandidatesPage() {
           </div>
         </div>
 
+      <AdvancedFiltersSheet
+        isOpen={isFilterSheetOpen}
+        onOpenChange={setIsFilterSheetOpen}
+        filters={filters as any}
+        setFilters={setFilters as any}
+        isManagerOrAdmin={!!isManager}
+        isRecruiter={!!isRecruiter}
+        handleResetFilters={handleResetFilters}
+      />
+
       {/* Transfer Candidate Dialog */}
       {transferDialog.isOpen && transferDialog.candidateId && (
         <TransferCandidateDialog
@@ -1372,6 +1586,26 @@ export default function CandidatesPage() {
           isLoading={isTransferring}
         />
       )}
+
+      <LogOperationsCallModal
+        isOpen={!!callModalState}
+        onClose={closeCallModal}
+        candidateId={callModalCandidate?.id}
+        candidateName={logCallCandidateName}
+        callAttempts={logCallAttempts}
+        nextAttempt={logCallNextAttempt}
+        followUpStage={logCallFollowUpStage}
+        canLog={!!canOpenCallModal}
+        canLogNoAnswer={!!canLogNoAnswerCall}
+        isSubmitting={isLoggingCall}
+        isSubmittingReassign={isOperationsTransferring}
+        isSubmittingJunk={isMarkingNotInterested}
+        currentRecruiterName={logCallRecruiterName}
+        currentStatus={logCallCurrentStatus}
+        onConfirm={handleLogOperationsCall}
+        onReassign={handleInterestedReassign}
+        onMarkNotInterested={handleNotInterestedJunk}
+      />
     </div>
   );
 }

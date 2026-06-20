@@ -3,8 +3,9 @@ import { RecruiterAssignmentService } from '../recruiter-assignment.service';
 import { PrismaService } from '../../../database/prisma.service';
 import { OutboxService } from '../../../notifications/outbox.service';
 import { RolesService } from '../../../roles/roles.service';
+import { CandidateListFilterService } from '../candidate-list-filter.service';
 import { ROLE_NAMES } from '../../../common/constants/role-ids';
-import { LanguageProficiency } from '@prisma/client';
+import { LanguageProficiency, UserAccountStatus } from '@prisma/client';
 
 describe('RecruiterAssignmentService', () => {
   let service: RecruiterAssignmentService;
@@ -45,6 +46,8 @@ describe('RecruiterAssignmentService', () => {
     findIdByName: jest.fn(),
   };
 
+  const mockCandidateListFilterService = {};
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockRolesService.findIdByName.mockImplementation(async (name: string) => {
@@ -58,6 +61,10 @@ describe('RecruiterAssignmentService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: OutboxService, useValue: mockOutboxService },
         { provide: RolesService, useValue: mockRolesService },
+        {
+          provide: CandidateListFilterService,
+          useValue: mockCandidateListFilterService,
+        },
       ],
     }).compile();
 
@@ -70,8 +77,10 @@ describe('RecruiterAssignmentService', () => {
     email: 'cc@test.com',
     mobileNumber: '9876543210',
     countryCode: '+91',
-    userRoles: [{ roleId: 'role-cc', role: { name: 'Client Coordinator' } }],
+    userRoles: [{ roleId: 'role-cc', role: { name: ROLE_NAMES.AGENT_COORDINATOR } }],
   };
+
+  const nurseProfessionTypeId = 'pt_nurse_seed001';
 
   const recruiterUser = {
     id: 'user-rec',
@@ -80,11 +89,15 @@ describe('RecruiterAssignmentService', () => {
     mobileNumber: '9876543211',
     countryCode: '+91',
     userRoles: [{ roleId: recruiterRoleId, role: { name: 'Recruiter' } }],
+    userProfessionScopes: [{ professionTypeId: nurseProfessionTypeId }],
   };
 
   describe('getBestRecruiterForAssignment', () => {
-    it('assigns directly to creator when creator is Recruiter', async () => {
+    it('assigns directly to creator when creator is Recruiter with matching profession coverage', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
+      mockPrismaService.candidate.findUnique.mockResolvedValue({
+        professionTypeId: nurseProfessionTypeId,
+      });
 
       const result = await service.getBestRecruiterForAssignment(
         'cand-1',
@@ -94,7 +107,32 @@ describe('RecruiterAssignmentService', () => {
       expect(result.isRoundRobin).toBe(false);
       expect(result.directAssignmentKind).toBe('recruiter');
       expect(result.id).toBe('user-rec');
-      expect(mockPrismaService.candidate.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('uses round-robin when creator is Recruiter without matching profession coverage', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(recruiterUser);
+      mockPrismaService.candidate.findUnique
+        .mockResolvedValueOnce({ professionTypeId: 'pt_doctor_seed01' })
+        .mockResolvedValueOnce({ source: 'manual' })
+        .mockResolvedValue({ professionTypeId: 'pt_doctor_seed01' });
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'user-doctor-rec',
+          name: 'Doctor Recruiter',
+          email: 'dr@test.com',
+          mobileNumber: '111',
+          countryCode: '+1',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      const result = await service.getBestRecruiterForAssignment(
+        'cand-doctor',
+        'user-rec',
+      );
+
+      expect(result.isRoundRobin).toBe(true);
+      expect(result.id).toBe('user-doctor-rec');
     });
 
     it('assigns directly to creator when candidate source is agent (non-recruiter)', async () => {
@@ -134,6 +172,7 @@ describe('RecruiterAssignmentService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(coordinatorLikeUser);
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         source: 'manual',
+        professionTypeId: nurseProfessionTypeId,
       });
       mockPrismaService.user.findMany.mockResolvedValue([
         {
@@ -175,6 +214,7 @@ describe('RecruiterAssignmentService', () => {
     beforeEach(() => {
       mockPrismaService.candidate.findUnique.mockResolvedValue({
         addressState: { code: 'KL' },
+        professionTypeId: nurseProfessionTypeId,
       });
       mockPrismaService.systemConfig.findUnique.mockResolvedValue({
         value: { KL: ['ml'] },
@@ -368,6 +408,56 @@ describe('RecruiterAssignmentService', () => {
                 OR: expect.any(Array),
               }),
             ]),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('getRecruiterWithLeastWorkload', () => {
+    it('filters recruiters by profession type when provided', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rec-nurse',
+          name: 'Nurse Recruiter',
+          email: 'nurse@test.com',
+          mobileNumber: '1',
+          countryCode: '+91',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      await service.getRecruiterWithLeastWorkload(nurseProfessionTypeId);
+
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userProfessionScopes: {
+              some: { professionTypeId: nurseProfessionTypeId },
+            },
+          }),
+        }),
+      );
+    });
+
+    it('only queries recruiters with ACTIVE account status', async () => {
+      mockPrismaService.user.findMany.mockResolvedValue([
+        {
+          id: 'rec-1',
+          name: 'Active Rec',
+          email: 'a@test.com',
+          mobileNumber: '1',
+          countryCode: '+91',
+          candidateRecruiterAssignments: [],
+        },
+      ]);
+
+      await service.getRecruiterWithLeastWorkload();
+
+      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            accountStatus: UserAccountStatus.ACTIVE,
           }),
         }),
       );

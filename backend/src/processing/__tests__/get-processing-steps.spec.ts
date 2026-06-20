@@ -86,6 +86,9 @@ describe('ProcessingService - getProcessingSteps', () => {
     jest.spyOn(prisma.document, 'findMany' as any).mockResolvedValue([
       { id: 'd1', fileName: 'offer.pdf', fileUrl: 'https://s3/off.pdf', createdAt: new Date('2025-01-01T00:00:00Z'), uploadedBy: 'u1', docType: 'offer_letter', verifications: [{ id: 'ver-1', status: 'verified', documentId: 'd1', candidateProjectMapId: 'cpm-1', roleCatalogId: 'rc-1', createdAt: new Date('2025-01-01T00:00:00Z') }] },
     ]);
+    jest.spyOn(prisma.user, 'findMany' as any).mockResolvedValue([
+      { id: 'u1', name: 'Recruiter One', email: 'recruiter@example.com' },
+    ]);
 
     const out = (await service.getProcessingSteps('pc-1')) as any[];
 
@@ -100,6 +103,11 @@ describe('ProcessingService - getProcessingSteps', () => {
 
     const doc = step!.offerLetters.candidateDocument;
     expect(doc.fileName).toBe('offer.pdf');
+    expect(doc.uploadedByUser).toEqual({
+      id: 'u1',
+      name: 'Recruiter One',
+      email: 'recruiter@example.com',
+    });
     expect(doc.verifications[0].id).toBe('ver-1');
     expect(doc.verifications[0].candidateProjectMapId).toBe('cpm-1');
     // Nested project/role objects should NOT be present in the verification shape
@@ -141,5 +149,45 @@ describe('ProcessingService - getProcessingSteps', () => {
 
     expect(out).toHaveLength(1);
     expect((out[0] as any).template.key).toBe('hrd');
+  });
+
+  it('returns cancelled steps when processing candidate status is cancelled', async () => {
+    const completedStep = {
+      id: 'offer-step',
+      processingCandidateId: 'pc-1',
+      templateId: 'tmpl-offer',
+      template: { key: 'offer_letter', order: 0 },
+      status: 'completed',
+      documents: [],
+    };
+    const cancelledStep = {
+      id: 'hrd-step',
+      processingCandidateId: 'pc-1',
+      templateId: 'tmpl-hrd',
+      template: { key: 'hrd', order: 2 },
+      status: 'cancelled',
+      documents: [],
+    };
+
+    jest.spyOn(prisma.processingCandidate, 'findUnique' as any).mockResolvedValue({
+      id: 'pc-1',
+      processingStatus: 'cancelled',
+      candidate: { id: 'cand-1', countryCode: 'QA' },
+      project: { id: 'proj-1', countryCode: 'QA', sector: PROJECT_SECTOR.HEALTHCARE },
+      role: { id: 'role-1', roleCatalogId: 'rc-1' },
+    });
+    jest.spyOn(service, 'createStepsForProcessingCandidate' as any).mockResolvedValue(undefined);
+    jest.spyOn(prisma.countryDocumentRequirement, 'findMany' as any).mockResolvedValue([]);
+    jest.spyOn(prisma.processingStep, 'findMany' as any).mockResolvedValue([
+      completedStep,
+      cancelledStep,
+    ]);
+    jest.spyOn(prisma.candidateProjects, 'findFirst' as any).mockResolvedValue(null);
+    jest.spyOn(prisma.document, 'findMany' as any).mockResolvedValue([]);
+
+    const out = (await service.getProcessingSteps('pc-1')) as any[];
+
+    expect(out).toHaveLength(2);
+    expect(out.map((s) => s.template.key).sort()).toEqual(['hrd', 'offer_letter']);
   });
 });

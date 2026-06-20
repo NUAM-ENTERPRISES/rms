@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -29,17 +30,27 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
 import { UsersService } from './users.service';
 import { UploadService } from '../upload/upload.service';
+import { PrismaService } from '../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { SetSessionAvailabilityDto } from './dto/set-session-availability.dto';
 import { UpdateRecruiterCapabilitiesDto } from './dto/update-recruiter-capabilities.dto';
+import { UpdateDocumentsControlPermissionsDto } from './dto/update-documents-control-permissions.dto';
 import { QueryProfileSessionsDto } from './dto/query-profile-sessions.dto';
+import { EmployeeCodeService } from './services/employee-code.service';
+import { RbacUtil } from '../auth/rbac/rbac.util';
 
 import { Permissions } from '../auth/rbac/permissions.decorator';
 import { SkipAudit } from '../common/audit/skip-audit.decorator';
-import { UserWithRoles, PaginatedUsers } from './types';
+import {
+  UserWithRoles,
+  PaginatedUsers,
+  PaginatedAccountStatusHistory,
+} from './types';
+import { UpdateUserAccountStatusDto } from './dto/update-user-account-status.dto';
+import { QueryAccountStatusHistoryDto } from './dto/query-account-status-history.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -48,7 +59,37 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly uploadService: UploadService,
+    private readonly prisma: PrismaService,
+    private readonly employeeCodeService: EmployeeCodeService,
+    private readonly rbacUtil: RbacUtil,
   ) {}
+
+  @Post('employee-code/suggest')
+  @Permissions('manage:users')
+  @ApiOperation({
+    summary: 'Suggest next employee code',
+    description:
+      'Reserve and return the next available employee code. This is an explicit admin action (not automatic during user creation).',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Employee code reserved successfully',
+  })
+  async suggestEmployeeCode(@Request() req): Promise<{
+    success: boolean;
+    data: { employeeCode: string };
+    message: string;
+  }> {
+    const employeeCode = await this.prisma.$transaction((tx) =>
+      this.employeeCodeService.reserveNextCode(tx as any),
+    );
+
+    return {
+      success: true,
+      data: { employeeCode },
+      message: 'Employee code reserved successfully',
+    };
+  }
 
   @Post()
   @Permissions('manage:users')
@@ -162,6 +203,12 @@ export class UsersController {
     type: String,
     isArray: true,
   })
+  @ApiQuery({
+    name: 'accountStatus',
+    required: false,
+    enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'],
+    description: 'Filter by account status',
+  })
   @ApiResponse({
     status: 200,
     description: 'Users retrieved successfully',
@@ -217,12 +264,22 @@ export class UsersController {
     status: 403,
     description: 'Forbidden - Insufficient permissions',
   })
-  async findAll(@Query() query: QueryUsersDto): Promise<{
+  async findAll(
+    @Query() query: QueryUsersDto,
+    @Request() req: { user?: { id?: string } },
+  ): Promise<{
     success: boolean;
     data: PaginatedUsers;
     message: string;
   }> {
-    const result = await this.usersService.findAll(query);
+    const userId = req.user?.id;
+    const listAllAccountStatuses = userId
+      ? await this.rbacUtil.hasPermission(userId, ['manage:users'])
+      : false;
+
+    const result = await this.usersService.findAll(query, {
+      listAllAccountStatuses,
+    });
     return {
       success: true,
       data: result,
@@ -514,7 +571,7 @@ export class UsersController {
     summary: 'Admin — all user sessions with role filter',
     description: 'CEO / Director / Manager can monitor all login sessions, optionally filtered by role.',
   })
-  @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, CRE)' })
+  @ApiQuery({ name: 'role', required: false, description: 'Filter by role name (e.g. Recruiter, Operations)' })
   @ApiQuery({ name: 'search', required: false, description: 'Search by user name or email' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter active/inactive sessions' })
   @ApiQuery({ name: 'status', required: false, description: 'Derived status filter: ACTIVE | IDLE | ENDED' })
@@ -569,7 +626,7 @@ export class UsersController {
   @ApiQuery({
     name: 'role',
     required: false,
-    description: 'Filter by role name (e.g. Recruiter, CRE)',
+    description: 'Filter by role name (e.g. Recruiter, Operations)',
   })
   @ApiQuery({
     name: 'search',
@@ -627,6 +684,65 @@ export class UsersController {
       success: true,
       data,
       message: 'Languages retrieved successfully',
+    };
+  }
+
+  @Patch(':id/account-status')
+  @Permissions('manage:users')
+  @ApiOperation({
+    summary: 'Update user account status',
+    description:
+      'Set account status to ACTIVE, INACTIVE, or BLOCKED with required remarks. Revokes sessions when deactivating.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Account status updated' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateAccountStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserAccountStatusDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateAccountStatus(
+      id,
+      dto,
+      req.user.id,
+    );
+    return {
+      success: true,
+      data: user,
+      message: 'Account status updated successfully',
+    };
+  }
+
+  @Get(':id/account-status/history')
+  @Permissions('read:users')
+  @ApiOperation({
+    summary: 'Get user account status change history',
+    description:
+      'Paginated audit trail of account status changes with remarks and actor.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'History retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async getAccountStatusHistory(
+    @Param('id') id: string,
+    @Query() query: QueryAccountStatusHistoryDto,
+  ): Promise<{
+    success: boolean;
+    data: PaginatedAccountStatusHistory;
+    message: string;
+  }> {
+    const data = await this.usersService.getAccountStatusHistory(id, query);
+    return {
+      success: true,
+      data,
+      message: 'Account status history retrieved successfully',
     };
   }
 
@@ -719,6 +835,38 @@ export class UsersController {
       success: true,
       data: user,
       message: 'Recruiter capabilities updated successfully',
+    };
+  }
+
+  @Put(':id/documents-control-permissions')
+  @Permissions('manage:users', 'write:users')
+  @ApiOperation({
+    summary: 'Update documents control permissions for a user',
+    description:
+      'Grant or revoke direct Original Document Intake and Courier Management permissions independently. Documents Control Executive role users retain full access via role permissions.',
+  })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Permissions updated' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateDocumentsControlPermissions(
+    @Param('id') id: string,
+    @Body() dto: UpdateDocumentsControlPermissionsDto,
+    @Request() req,
+  ): Promise<{
+    success: boolean;
+    data: UserWithRoles;
+    message: string;
+  }> {
+    const user = await this.usersService.updateDocumentsControlPermissions(
+      id,
+      dto,
+      req.user.id,
+    );
+    this.rbacUtil.clearUserCache(id);
+    return {
+      success: true,
+      data: user,
+      message: 'Documents control permissions updated successfully',
     };
   }
 

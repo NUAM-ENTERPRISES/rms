@@ -5,6 +5,15 @@ import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
+import { isOperationsRole, ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  buildCandidateProjectNotificationLink,
+  getProcessingStatusChangeActionLabel,
+  getProcessingStatusChangeRecruiterNotification,
+  isProcessingStatusChangeRequestType,
+} from '../common/constants/statuses';
+import { OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES } from '../common/constants/offer-letter-notifications';
+import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
 export interface NotificationJobData {
   type: string;
@@ -46,6 +55,14 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleDocumentResubmissionRequested(job);
         case 'DocumentResubmitted':
           return await this.handleDocumentResubmitted(job);
+        case 'IntroductionVideoRejected':
+          return await this.handleIntroductionVideoRejected(job);
+        case 'IntroductionVideoResubmissionRequested':
+          return await this.handleIntroductionVideoResubmissionRequested(job);
+        case 'IntroductionVideoResubmitted':
+          return await this.handleIntroductionVideoResubmitted(job);
+        case 'IntroductionVideoVerified':
+          return await this.handleIntroductionVideoVerified(job);
         case 'CandidateSentForVerification':
           return await this.handleCandidateSentForVerification(job);
         case 'CandidateAssignedToRecruiter':
@@ -79,18 +96,32 @@ export class NotificationsProcessor extends WorkerHost {
           return await this.handleDocumentationNotification(job);
         case 'RoleNotification':
           return await this.handleRoleNotification(job);
+        case 'AgentCandidateRequestCreated':
+          return await this.handleAgentCandidateRequestCreated(job);
+        case 'OfferLetterUploaded':
+          return await this.handleOfferLetterUploaded(job);
+        case 'OfferLetterUploadRequested':
+          return await this.handleOfferLetterUploadRequested(job);
+        case 'CandidateProjectStatusChangeRequested':
+          return await this.handleCandidateProjectStatusChangeRequested(job);
+        case 'CandidateProjectStatusChangeReviewed':
+          return await this.handleCandidateProjectStatusChangeReviewed(job);
+        case 'CourierShipmentReceived':
+          return await this.handleCourierShipmentReceived(job);
         case 'DataSync':
           return await this.handleDataSyncJob(job);
         default:
           this.logger.warn(`Unknown notification type: ${type}`);
           return { success: false, message: `Unknown type: ${type}` };
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process notification ${type}: ${error.message}`,
-        error.stack,
+        `Failed to process notification ${type}: ${err.message}`,
+        err.stack,
       );
-      throw error;
+      throw err;
     }
   }
 
@@ -155,12 +186,14 @@ export class NotificationsProcessor extends WorkerHost {
       this.logger.log(
         `Transfer request notifications created for ${recipients.length} recipients`,
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process transfer request: ${error.message}`,
-        error.stack,
+        `Failed to process transfer request: ${err.message}`,
+        err.stack,
       );
-      throw error;
+      throw err;
     }
   }
 
@@ -795,6 +828,322 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
+  private async loadIntroductionVideoNotificationContext(
+    documentId: string,
+    candidateProjectMapId: string,
+  ) {
+    const document = await this.prisma.document.findUnique({
+      where: { id: documentId },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!document) {
+      return null;
+    }
+
+    const candidateProjectMap =
+      await this.prisma.candidateProjects.findUnique({
+        where: { id: candidateProjectMapId },
+        include: {
+          project: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+    if (!candidateProjectMap) {
+      return null;
+    }
+
+    return { document, candidateProjectMap };
+  }
+
+  async handleIntroductionVideoRejected(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing introduction video rejected event: ${eventId}`);
+
+    try {
+      const { documentId, rejectedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          rejectedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video rejected event (${documentId})`,
+        );
+        return;
+      }
+
+      const messageBase = `Introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been rejected for project ${candidateProjectMap.project.title}.`;
+      const message = reason ? `${messageBase} Reason: ${reason}` : messageBase;
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_rejected',
+        title: 'Introduction Video Rejected',
+        message,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          rejectedBy,
+          reason,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_rejected`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video rejected: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoResubmissionRequested(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing introduction video resubmission requested event: ${eventId}`,
+    );
+
+    try {
+      const { documentId, requestedBy, candidateProjectMapId, reason } =
+        payload as {
+          documentId: string;
+          requestedBy: string;
+          candidateProjectMapId: string;
+          reason?: string;
+        };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video resubmission request (${documentId})`,
+        );
+        return;
+      }
+
+      const messageBase = `Resubmission requested for introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} for project ${candidateProjectMap.project.title}.`;
+      const message = reason ? `${messageBase} Reason: ${reason}` : messageBase;
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_resubmission_requested',
+        title: 'Introduction Video Resubmission Required',
+        message,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          requestedBy,
+          reason,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_resubmission_requested`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video resubmission requested: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoResubmitted(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing introduction video resubmitted event: ${eventId}`,
+    );
+
+    try {
+      const { documentId, resubmittedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        resubmittedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+
+      const verification =
+        await this.prisma.candidateProjectDocumentVerification.findFirst({
+          where: {
+            candidateProjectMapId,
+            documentId,
+          },
+          include: {
+            verificationHistory: {
+              where: { action: 'resubmission_required' },
+              orderBy: { performedAt: 'desc' },
+              take: 1,
+            },
+          },
+        });
+
+      const requesterId =
+        verification?.verificationHistory[0]?.performedBy ?? null;
+      if (!requesterId) {
+        this.logger.warn(
+          `No documentation requester found for introduction video resubmitted event ${documentId}`,
+        );
+        return;
+      }
+
+      await this.notificationsService.createNotification({
+        userId: requesterId,
+        type: 'introduction_video_resubmitted',
+        title: 'Introduction Video Resubmitted',
+        message: `Recruiter has re-uploaded the introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} in project ${candidateProjectMap.project.title}.`,
+        link: `/candidates/${document.candidate.id}/documents/${candidateProjectMap.project.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          resubmittedBy,
+        },
+        idemKey: `${eventId}:${requesterId}:introduction_video_resubmitted`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video resubmitted: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  async handleIntroductionVideoVerified(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing introduction video verified event: ${eventId}`);
+
+    try {
+      const { documentId, verifiedBy, candidateProjectMapId } = payload as {
+        documentId: string;
+        verifiedBy: string;
+        candidateProjectMapId: string;
+      };
+
+      const context = await this.loadIntroductionVideoNotificationContext(
+        documentId,
+        candidateProjectMapId,
+      );
+      if (!context) {
+        this.logger.error(
+          `Introduction video context not found for document ${documentId}`,
+        );
+        return;
+      }
+
+      const { document, candidateProjectMap } = context;
+      const recruiterId = candidateProjectMap.recruiterId;
+      const uploader = await this.prisma.user.findUnique({
+        where: { id: document.uploadedBy },
+        select: { id: true },
+      });
+      const recipientId = recruiterId || uploader?.id;
+
+      if (!recipientId) {
+        this.logger.error(
+          `No valid recipient found for introduction video verified event (${documentId})`,
+        );
+        return;
+      }
+
+      const verifierUser = await this.prisma.user.findUnique({
+        where: { id: verifiedBy },
+        select: { name: true },
+      });
+      const verifierName = verifierUser?.name || 'Documentation team';
+
+      await this.notificationsService.createNotification({
+        userId: recipientId,
+        type: 'introduction_video_verified',
+        title: 'Introduction Video Verified',
+        message: `Introduction video "${document.fileName}" for candidate ${document.candidate.firstName} ${document.candidate.lastName} has been verified by ${verifierName} for project ${candidateProjectMap.project.title}.`,
+        link: `/recruiter-docs/${candidateProjectMap.project.id}/${document.candidate.id}`,
+        meta: {
+          documentId,
+          candidateId: document.candidate.id,
+          projectId: candidateProjectMap.project.id,
+          verifiedBy,
+        },
+        idemKey: `${eventId}:${recipientId}:introduction_video_verified`,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to process introduction video verified: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   async handleCandidateSentForVerification(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
     this.logger.log(
@@ -840,7 +1189,7 @@ export class NotificationsProcessor extends WorkerHost {
       if (!assignedToExecutive) {
         // Find all users with 'Documentation Executive' role
         const documentationExecutives = await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -848,7 +1197,7 @@ export class NotificationsProcessor extends WorkerHost {
                 },
               },
             },
-          },
+          }),
           select: { id: true },
         });
 
@@ -1075,8 +1424,8 @@ export class NotificationsProcessor extends WorkerHost {
         select: { name: true },
       });
       const assignerName = creatingUserId === 'system' ? 'System' : (creatingUser?.name || 'A team member');
-      const isCreAssignment = newRecruiter?.userRoles.some(
-        (ur) => ur.role.name.toUpperCase() === 'CRE',
+      const isCreAssignment = newRecruiter?.userRoles.some((ur) =>
+        isOperationsRole(ur.role.name),
       );
       const isNewAssignment = !previousRecruiterId;
 
@@ -1087,7 +1436,7 @@ export class NotificationsProcessor extends WorkerHost {
         ? 'New RNR Candidate Assigned'
         : isNewAssignment
           ? 'Candidate Created Successfully'
-          : 'Candidate Ready from CRE';
+          : 'Candidate Ready from Operations';
 
       let notificationMessage = isCreAssignment
         ? `Candidate ${candidate.firstName} ${candidate.lastName} has been assigned to you for RNR handling.`
@@ -1141,8 +1490,8 @@ export class NotificationsProcessor extends WorkerHost {
           await this.notificationsService.createNotification({
             userId: previousRecruiterId,
             type: 'candidate_moved_to_cre',
-            title: 'Candidate in CRE Handling',
-            message: `Your candidate ${candidate.firstName} ${candidate.lastName} is now being handled by CRE ${newRecruiter?.name || 'team'} for RNR follow-up.`,
+            title: 'Candidate in Operations Handling',
+            message: `Your candidate ${candidate.firstName} ${candidate.lastName} is now being handled by Operations ${newRecruiter?.name || 'team'} for RNR follow-up.`,
             link: `/candidates/${candidateId}`,
             meta: { candidateId, creId: recruiterId },
             idemKey: idemKeyPrev,
@@ -1153,14 +1502,16 @@ export class NotificationsProcessor extends WorkerHost {
             where: { id: previousRecruiterId },
             include: { userRoles: { include: { role: true } } }
           });
-          const wasPrevCre = prevUser?.userRoles.some(ur => ur.role.name.toUpperCase() === 'CRE');
+          const wasPrevCre = prevUser?.userRoles.some((ur) =>
+            isOperationsRole(ur.role.name),
+          );
 
           if (wasPrevCre) {
             const idemKeyPrev = `${eventId}:${previousRecruiterId}:candidate_transferred_back`;
             await this.notificationsService.createNotification({
               userId: previousRecruiterId,
               type: 'candidate_transferred',
-              title: 'CRE Handoff Successful',
+              title: 'Operations Handoff Successful',
               message: `Candidate ${candidate.firstName} ${candidate.lastName} has been successfully handed back to recruiter ${newRecruiter?.name || 'team'}.`,
               link: `/candidates/${candidateId}`,
               meta: { candidateId, recruiterId: recruiterId },
@@ -1496,7 +1847,7 @@ export class NotificationsProcessor extends WorkerHost {
 
         // Notify all Interview Coordinators (if different from the person who scheduled)
         const allInterviewCoordinators = await this.prisma.user.findMany({
-          where: {
+          where: withActiveAccountStatus({
             userRoles: {
               some: {
                 role: {
@@ -1504,7 +1855,7 @@ export class NotificationsProcessor extends WorkerHost {
                 },
               },
             },
-          },
+          }),
         });
 
         for (const ic of allInterviewCoordinators) {
@@ -1697,7 +2048,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Interview Coordinator role members (case-insensitive match)
       const coordinatorUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -1708,7 +2059,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -1756,7 +2107,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Documentation role members
       const documentationUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -1767,7 +2118,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -1792,7 +2143,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Documentation Executive role members
       const documentationExecutives = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -1803,7 +2154,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -1975,63 +2326,10 @@ export class NotificationsProcessor extends WorkerHost {
   }
 
   async handleCandidateReadyForProcessing(job: Job<NotificationJobData>) {
-    const { eventId, payload } = job.data;
-    this.logger.log(`Processing candidate ready for processing event: ${eventId}`);
-
-    try {
-      const { candidateProjectMapId, candidateName, projectName, projectId, changedBy } =
-        payload as {
-          candidateProjectMapId: string;
-          candidateName: string;
-          projectName: string;
-          projectId: string;
-          changedBy?: string | null;
-        };
-
-      // Get target roles (Manager, System Admin, Director, CEO, Admin, Team Lead)
-      const targetRoles = [
-        'Manager',
-        'System Admin',
-        'System Administrator',
-        'Director',
-        'CEO',
-        'Admin',
-        'Team Lead',
-      ];
-      const targetUsers = await this.prisma.user.findMany({
-        where: {
-          userRoles: {
-            some: {
-              role: {
-                name: { in: targetRoles },
-              },
-            },
-          },
-        },
-        select: { id: true },
-      });
-
-      this.logger.log(`Found ${targetUsers.length} users to notify for Ready for Processing`);
-
-      for (const user of targetUsers) {
-        const idemKey = `${eventId}:ready_processing:${candidateProjectMapId}:${user.id}`;
-        
-        await this.notificationsService.createNotification({
-          userId: user.id,
-          type: 'candidate_ready_for_processing',
-          title: 'Candidate Ready for Processing',
-          message: `${candidateName} is now ready for processing for project "${projectName}"${changedBy ? ` (marked by ${changedBy})` : ''}`,
-          link: '/ready-for-processing',
-          meta: { candidateProjectMapId, projectId },
-          idemKey,
-        });
-      }
-
-      this.logger.log(`Ready for processing notifications created for ${targetUsers.length} users`);
-    } catch (err) {
-      this.logger.error(`Failed to process CandidateReadyForProcessing event ${eventId}: ${err?.message || err}`, err?.stack);
-      throw err;
-    }
+    const { eventId } = job.data;
+    this.logger.log(
+      `Candidate ready for processing event ${eventId} acknowledged; leadership notifications are dispatched via RoleNotification from outbox`,
+    );
   }
 
   async handleDocumentsForwardedToClient(job: Job<NotificationJobData>) {
@@ -2057,7 +2355,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // 3. Find Interview Coordinators, Directors, and CEOs
       const recipients = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2065,7 +2363,7 @@ export class NotificationsProcessor extends WorkerHost {
               }
             }
           }
-        },
+        }),
         select: { id: true },
       });
 
@@ -2192,7 +2490,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Notify all Interview Coordinator role members (case-insensitive match)
       const coordinatorUsers = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2203,7 +2501,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: { id: true },
       });
 
@@ -2306,7 +2604,7 @@ export class NotificationsProcessor extends WorkerHost {
 
       // Find all users with this role
       const users = await this.prisma.user.findMany({
-        where: {
+        where: withActiveAccountStatus({
           userRoles: {
             some: {
               role: {
@@ -2314,7 +2612,7 @@ export class NotificationsProcessor extends WorkerHost {
               },
             },
           },
-        },
+        }),
         select: {
           id: true,
         },
@@ -2325,13 +2623,28 @@ export class NotificationsProcessor extends WorkerHost {
         return;
       }
 
+      const excludeUserId =
+        meta && typeof meta === 'object' && 'excludeUserId' in meta
+          ? (meta as { excludeUserId?: string }).excludeUserId
+          : undefined;
+
       // Create notifications for each user
       for (const user of users) {
+        if (excludeUserId && user.id === excludeUserId) {
+          continue;
+        }
+
         const idemKey = `${eventId}:${user.id}:role_notification`;
 
         await this.notificationsService.createNotification({
           userId: user.id,
-          type: 'role_notification',
+          type:
+            meta &&
+            typeof meta === 'object' &&
+            'type' in meta &&
+            typeof (meta as { type?: string }).type === 'string'
+              ? (meta as { type: string }).type
+              : 'role_notification',
           title: (title as string) || 'Notification',
           message: message as string,
           link: typeof link === 'string' ? link : undefined,
@@ -2352,9 +2665,581 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
+  async handleOfferLetterUploadRequested(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing offer letter upload requested event: ${eventId}`);
+
+    try {
+      const {
+        recruiterId,
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        roleCatalogId,
+        candidateName,
+        projectTitle,
+        requestedBy,
+        requestedByName,
+        reason,
+      } = payload as {
+        recruiterId: string;
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId: string;
+        roleCatalogId?: string | null;
+        candidateName: string;
+        projectTitle: string;
+        requestedBy: string;
+        requestedByName?: string | null;
+        reason: string;
+      };
+
+      const link = `/recruiter-docs/${projectId}/${candidateId}`;
+      const meta = {
+        type: 'offer_letter_upload_requested',
+        docType: 'offer_letter',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        roleCatalogId: roleCatalogId ?? null,
+        requestedBy,
+        requestedByName,
+        candidateName,
+        projectName: projectTitle,
+        reason,
+        syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+      };
+
+      const idemKey = `${eventId}:offer_letter_upload_requested:${candidateProjectMapId}:${recruiterId}`;
+      await this.notificationsService.createNotification({
+        userId: recruiterId,
+        type: 'offer_letter_upload_requested',
+        title: 'Offer Letter Upload Required',
+        message: reason,
+        link,
+        meta,
+        idemKey,
+      });
+
+      this.logger.log(
+        `Offer letter upload requested notification created for recruiter ${recruiterId}`,
+      );
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process OfferLetterUploadRequested event ${eventId}: ${err?.message || err}`,
+        err?.stack,
+      );
+      throw err;
+    }
+  }
+
+  async handleOfferLetterUploaded(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing offer letter uploaded event: ${eventId}`);
+
+    try {
+      const {
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        documentId,
+        recruiterId,
+        candidateName,
+        projectTitle,
+        roleDesignation,
+        uploadedBy,
+        uploadedByName,
+      } = payload as {
+        candidateId: string;
+        projectId: string;
+        candidateProjectMapId: string;
+        documentId: string;
+        recruiterId?: string | null;
+        candidateName: string;
+        projectTitle: string;
+        roleDesignation: string;
+        uploadedBy: string;
+        uploadedByName?: string | null;
+      };
+
+      const targetRoles = [
+        ...OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES,
+        ROLE_NAMES.INTERVIEW_COORDINATOR,
+        ROLE_NAMES.PROCESSING_EXECUTIVE,
+      ];
+
+      const roleUsers = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: { in: [...targetRoles] },
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      const recipientIds = new Set<string>();
+      for (const user of roleUsers) {
+        if (user.id !== uploadedBy) {
+          recipientIds.add(user.id);
+        }
+      }
+      if (recruiterId && recruiterId !== uploadedBy) {
+        recipientIds.add(recruiterId);
+      }
+
+      const uploaderSuffix = uploadedByName ? ` by ${uploadedByName}` : '';
+      const message = `Offer letter uploaded for ${candidateName} (${roleDesignation}) on project "${projectTitle}"${uploaderSuffix}.`;
+      const link = `/recruiter-docs/${projectId}/${candidateId}`;
+      const meta = {
+        type: 'offer_letter_uploaded',
+        candidateId,
+        projectId,
+        candidateProjectMapId,
+        documentId,
+        syncTags: ['Interview', 'ProcessingSummary', 'Candidate', 'Document'],
+      };
+
+      for (const userId of recipientIds) {
+        const idemKey = `${eventId}:offer_letter_uploaded:${candidateProjectMapId}:${userId}`;
+        await this.notificationsService.createNotification({
+          userId,
+          type: 'offer_letter_uploaded',
+          title: 'Offer Letter Uploaded',
+          message,
+          link,
+          meta,
+          idemKey,
+        });
+      }
+
+      this.logger.log(
+        `Offer letter uploaded notifications created for ${recipientIds.size} users`,
+      );
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to process OfferLetterUploaded event ${eventId}: ${err?.message || err}`,
+        err?.stack,
+      );
+      throw err;
+    }
+  }
+
+  async handleAgentCandidateRequestCreated(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing agent candidate request created event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        projectId,
+        projectTitle,
+        requestedById,
+        items,
+        notes,
+        link,
+      } = payload as {
+        requestId: string;
+        projectId: string;
+        projectTitle: string;
+        requestedById: string;
+        items: Array<{
+          roleNeededId: string;
+          requestedCount: number;
+          roleDesignation: string;
+        }>;
+        notes?: string | null;
+        link?: string;
+      };
+
+      const requestedBy = await this.prisma.user.findUnique({
+        where: { id: requestedById },
+        select: { name: true },
+      });
+
+      const recipients = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: 'Agent Coordinator',
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      if (recipients.length === 0) {
+        this.logger.warn('No Agent Coordinator users found for notification');
+        return;
+      }
+
+      const roleSummary = items
+        .map((item) => `${item.roleDesignation}: ${item.requestedCount}`)
+        .join(', ');
+      const requesterName = requestedBy?.name || 'A manager';
+
+      for (const recipient of recipients) {
+        await this.notificationsService.createNotification({
+          userId: recipient.id,
+          type: 'agent_candidate_request_created',
+          title: 'New Agent Candidate Request',
+          message: `${requesterName} requested agent candidates for ${projectTitle} (${roleSummary})${notes ? `. Notes: ${notes}` : ''}`,
+          link: link || `/projects/${projectId}`,
+          meta: {
+            requestId,
+            projectId,
+            requestedById,
+            routeTarget: `/projects/${projectId}`,
+            roleSummary,
+          },
+          idemKey: `${eventId}:${recipient.id}:agent_candidate_request_created`,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to process agent candidate request created: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
   /**
    * Handle generic DataSync events for real-time UI updates
    */
+  async handleCandidateProjectStatusChangeRequested(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate project status change request event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        candidateProjectMapId,
+        candidateId,
+        projectId,
+        candidateName,
+        projectTitle,
+        requestType,
+        requestedStatus,
+        requesterName,
+        reason,
+        processingCandidateId,
+        stepKey,
+        countryCode,
+        countryName,
+      } = payload as {
+        requestId: string;
+        candidateProjectMapId: string;
+        candidateId: string;
+        projectId: string;
+        candidateName: string;
+        projectTitle: string;
+        requestType: string;
+        requestedStatus?: string;
+        requesterName: string;
+        reason: string;
+        processingCandidateId?: string;
+        stepKey?: string;
+        countryCode?: string;
+        countryName?: string;
+      };
+
+      const isProcessingRequest =
+        !!requestType && isProcessingStatusChangeRequestType(requestType);
+
+      if (isProcessingRequest && requestType) {
+        const actionLabel = getProcessingStatusChangeActionLabel(requestType);
+        const countrySuffix =
+          countryName || countryCode
+            ? ` (${countryName ?? countryCode})`
+            : '';
+        const stepSuffix = stepKey ? ` at step ${stepKey.replace(/_/g, ' ')}` : '';
+
+        const targetUsers = await this.prisma.user.findMany({
+          where: withActiveAccountStatus({
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: ['Manager', 'Processing Manager'] },
+                },
+              },
+            },
+          }),
+          select: { id: true },
+        });
+
+        const link = processingCandidateId
+          ? `/processingCandidateDetails/${processingCandidateId}?reviewRequest=${requestId}`
+          : `/processing-admin?filter=awaiting_requests`;
+
+        for (const user of targetUsers) {
+          const idemKey = `${eventId}:processing_status_change_request:${requestId}:${user.id}`;
+          await this.notificationsService.createNotification({
+            userId: user.id,
+            type: 'processing_status_change_request',
+            title: `Processing ${actionLabel} request`,
+            message: `${requesterName} requested processing ${actionLabel} for ${candidateName} — ${projectTitle}${countrySuffix}${stepSuffix}. Reason: ${reason}`,
+            link,
+            meta: {
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestType,
+              requestedStatus,
+              processingCandidateId,
+              stepKey,
+              countryCode,
+            },
+            idemKey,
+          });
+        }
+
+        this.logger.log(
+          `Processing status change request notifications created for ${targetUsers.length} approvers`,
+        );
+        return;
+      }
+
+      const statusLabel =
+        requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
+
+      const targetRoles = [
+        'Manager',
+        'Recruiter Manager',
+        'System Admin',
+        'Admin',
+        'CEO',
+        'Director',
+      ];
+
+      const targetUsers = await this.prisma.user.findMany({
+        where: withActiveAccountStatus({
+          userRoles: {
+            some: {
+              role: {
+                name: { in: targetRoles },
+              },
+            },
+          },
+        }),
+        select: { id: true },
+      });
+
+      const link = `/candidate-project/${candidateId}/projects/${projectId}?statusRequest=${requestId}`;
+
+      for (const user of targetUsers) {
+        const idemKey = `${eventId}:status_change_request:${requestId}:${user.id}`;
+        await this.notificationsService.createNotification({
+          userId: user.id,
+          type: 'candidate_project_status_change_request',
+          title: `Candidate Project ${statusLabel} Request`,
+          message: `${requesterName} requested to mark ${candidateName} as ${statusLabel} for project "${projectTitle}". Remarks: ${reason}`,
+          link,
+          meta: {
+            requestId,
+            candidateProjectMapId,
+            candidateId,
+            projectId,
+            requestedStatus,
+          },
+          idemKey,
+        });
+      }
+
+      this.logger.log(
+        `Status change request notifications created for ${targetUsers.length} approvers`,
+      );
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.error(
+        `Failed to process status change request: ${err.message}`,
+        err.stack,
+      );
+      throw err;
+    }
+  }
+
+  async handleCandidateProjectStatusChangeReviewed(
+    job: Job<NotificationJobData>,
+  ) {
+    const { eventId, payload } = job.data;
+    this.logger.log(
+      `Processing candidate project status change reviewed event: ${eventId}`,
+    );
+
+    try {
+      const {
+        requestId,
+        candidateProjectMapId,
+        candidateId,
+        projectId,
+        candidateName,
+        projectTitle,
+        requestType,
+        requestedStatus,
+        requestedBy,
+        outcome,
+        reviewNotes,
+        processingCandidateId,
+      } = payload as {
+        requestId: string;
+        candidateProjectMapId: string;
+        candidateId: string;
+        projectId: string;
+        candidateName: string;
+        projectTitle: string;
+        requestType?: string;
+        requestedStatus?: string;
+        requestedBy: string;
+        outcome: 'approved' | 'rejected';
+        reviewNotes?: string | null;
+        processingCandidateId?: string;
+      };
+
+      const isProcessingRequest =
+        !!requestType && isProcessingStatusChangeRequestType(requestType);
+
+      if (isProcessingRequest && requestType) {
+        const actionLabel = getProcessingStatusChangeActionLabel(requestType);
+        const processingTeamLink = processingCandidateId
+          ? `/processingCandidateDetails/${processingCandidateId}?actionOutcome=${requestId}`
+          : `/processing-admin?filter=awaiting_requests`;
+
+        const candidateProject = await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          select: { recruiterId: true },
+        });
+        const recruiterId = candidateProject?.recruiterId ?? null;
+        const recruiterLink = buildCandidateProjectNotificationLink(
+          candidateId,
+          projectId,
+        );
+
+        const notifyUserIds = new Set<string>([requestedBy]);
+        if (processingCandidateId) {
+          const pc = await this.prisma.processingCandidate.findUnique({
+            where: { id: processingCandidateId },
+            select: { assignedProcessingTeamUserId: true },
+          });
+          if (pc?.assignedProcessingTeamUserId) {
+            notifyUserIds.add(pc.assignedProcessingTeamUserId);
+          }
+        }
+        if (recruiterId) {
+          notifyUserIds.delete(recruiterId);
+        }
+
+        for (const userId of notifyUserIds) {
+          const idemKey = `${eventId}:processing_status_change_reviewed:${requestId}:${userId}`;
+          await this.notificationsService.createNotification({
+            userId,
+            type: 'processing_status_change_reviewed',
+            title:
+              outcome === 'approved'
+                ? `Processing ${actionLabel} approved`
+                : `Processing ${actionLabel} rejected`,
+            message:
+              outcome === 'approved'
+                ? `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was approved.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`
+                : `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was rejected.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`,
+            link: processingTeamLink,
+            meta: {
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestedStatus,
+              outcome,
+              processingCandidateId,
+              requestType,
+            },
+            idemKey,
+          });
+        }
+
+        if (recruiterId) {
+          const recruiterCopy = getProcessingStatusChangeRecruiterNotification({
+            requestType,
+            outcome,
+            candidateName,
+            projectTitle,
+            reviewNotes,
+          });
+
+          await this.notificationsService.createNotification({
+            userId: recruiterId,
+            type: 'recruiter_notification',
+            title: recruiterCopy.title,
+            message: recruiterCopy.message,
+            link: recruiterLink,
+            meta: {
+              type: 'processing_status_change_reviewed',
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestedStatus,
+              outcome,
+              processingCandidateId,
+              requestType,
+            },
+            idemKey: `${eventId}:processing_status_change_recruiter:${requestId}:${recruiterId}`,
+          });
+        }
+        return;
+      }
+
+      const statusLabel =
+        requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
+      const link = `/candidate-project/${candidateId}/projects/${projectId}`;
+
+      const idemKey = `${eventId}:status_change_reviewed:${requestId}:${requestedBy}`;
+      await this.notificationsService.createNotification({
+        userId: requestedBy,
+        type: 'candidate_project_status_change_reviewed',
+        title:
+          outcome === 'approved'
+            ? `${statusLabel} Request Approved`
+            : `${statusLabel} Request Rejected`,
+        message:
+          outcome === 'approved'
+            ? `Your request to mark ${candidateName} as ${statusLabel} for project "${projectTitle}" was approved.`
+            : `Your request to mark ${candidateName} as ${statusLabel} for project "${projectTitle}" was rejected.`,
+        link,
+        meta: {
+          requestId,
+          candidateProjectMapId,
+          candidateId,
+          projectId,
+          requestedStatus,
+          outcome,
+        },
+        idemKey,
+      });
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
+      this.logger.error(
+        `Failed to process status change reviewed: ${err.message}`,
+        err.stack,
+      );
+      throw err;
+    }
+  }
+
   async handleDataSyncJob(job: Job<NotificationJobData>) {
     const { eventId, payload } = job.data;
     this.logger.log(`Processing DataSync event: ${eventId}`);
@@ -2380,11 +3265,83 @@ export class NotificationsProcessor extends WorkerHost {
       }
 
       this.logger.debug(`DataSync event processed for type: ${type}`);
-    } catch (error) {
+    } catch (error: unknown) {
+      const err =
+        error instanceof Error ? error : new Error(String(error ?? 'Unknown'));
       this.logger.error(
-        `Failed to process DataSync event: ${error.message}`,
-        error.stack,
+        `Failed to process DataSync event: ${err.message}`,
+        err.stack,
       );
     }
+  }
+
+  async handleCourierShipmentReceived(job: Job<NotificationJobData>) {
+    const { eventId, payload } = job.data;
+    this.logger.log(`Processing courier shipment received event: ${eventId}`);
+
+    const { shipmentId, receivedByUserId } = payload as {
+      shipmentId: string;
+      receivedByUserId: string;
+    };
+
+    const shipment = await this.prisma.courierShipment.findUnique({
+      where: { id: shipmentId },
+      include: {
+        candidate: {
+          select: { firstName: true, lastName: true, candidateCode: true },
+        },
+        receivedBy: { select: { name: true } },
+      },
+    });
+
+    if (!shipment) {
+      this.logger.warn(`Courier shipment ${shipmentId} not found for notification`);
+      return;
+    }
+
+    const candidateName = `${shipment.candidate.firstName} ${shipment.candidate.lastName}`;
+    const code = shipment.candidate.candidateCode ?? '';
+    const receiverName = shipment.receivedBy?.name ?? 'Office team';
+    const title = 'Courier documents received';
+    const message = `Original documents for ${candidateName}${code ? ` (${code})` : ''} were received by ${receiverName} (Leg ${shipment.legNumber}).`;
+    const link = `/courier-management/candidates/${shipment.candidateId}?leg=${shipmentId}`;
+
+    const recipientIds = new Set<string>();
+    if (shipment.sentByUserId) recipientIds.add(shipment.sentByUserId);
+    if (shipment.createdByUserId) recipientIds.add(shipment.createdByUserId);
+    recipientIds.delete(receivedByUserId);
+
+    const processingManagers = await this.prisma.user.findMany({
+      where: withActiveAccountStatus({
+        userRoles: {
+          some: { role: { name: 'Processing Manager' } },
+        },
+      }),
+      select: { id: true },
+    });
+
+    for (const pm of processingManagers) {
+      recipientIds.add(pm.id);
+    }
+
+    for (const userId of recipientIds) {
+      await this.notificationsService.createNotification({
+        userId,
+        type: 'courier_shipment_received',
+        title,
+        message,
+        link,
+        meta: {
+          shipmentId,
+          candidateId: shipment.candidateId,
+          legNumber: shipment.legNumber,
+        },
+        idemKey: `${eventId}:${userId}:courier_received`,
+      });
+    }
+
+    this.logger.log(
+      `Courier received notifications sent to ${recipientIds.size} users for shipment ${shipmentId}`,
+    );
   }
 }

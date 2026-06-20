@@ -1,5 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { withActiveAccountStatus } from '../../users/user-account-status.filter';
+import {
+  computePerformanceScore,
+  DEPLOYED_CRM_STATUS_NAMES,
+  getMonthPeriodBounds,
+  getYearPeriodBounds,
+  PERFORMANCE_PROJECT_SUB_STATUSES,
+  PERFORMANCE_STAGE_ACTIVITY_LABELS,
+  PerformanceStageCounts,
+  POSITIVE_CRM_STATUS_NAMES,
+  resolvePerformanceRating,
+} from './recruiter-performance-rating.constants';
 
 @Injectable()
 export class RecruiterAnalyticsService {
@@ -217,7 +230,7 @@ export class RecruiterAnalyticsService {
    */
   async getRecruiters() {
     const recruiters = await this.prisma.user.findMany({
-      where: {
+      where: withActiveAccountStatus({
         userRoles: {
           some: {
             role: {
@@ -225,7 +238,7 @@ export class RecruiterAnalyticsService {
             },
           },
         },
-      },
+      }),
       select: {
         id: true,
         name: true,
@@ -415,6 +428,7 @@ export class RecruiterAnalyticsService {
           OR: [
             { firstName: { contains: search, mode: 'insensitive' as const } },
             { lastName: { contains: search, mode: 'insensitive' as const } },
+            { candidateCode: { contains: search, mode: 'insensitive' as const } },
             { email: { contains: search, mode: 'insensitive' as const } },
             { mobileNumber: { contains: search } },
           ],
@@ -437,6 +451,7 @@ export class RecruiterAnalyticsService {
           candidate: {
             select: {
               id: true,
+              candidateCode: true,
               firstName: true,
               lastName: true,
               email: true,
@@ -466,6 +481,7 @@ export class RecruiterAnalyticsService {
     const candidates = assignments.map((a) => ({
       id: a.candidate.id,
       fullName: `${a.candidate.firstName} ${a.candidate.lastName}`,
+      candidateCode: a.candidate.candidateCode ?? null,
       phone: `${a.candidate.countryCode} ${a.candidate.mobileNumber}`,
       email: a.candidate.email || '',
       status: a.candidate.currentStatus?.statusName || 'Untouched',
@@ -486,5 +502,362 @@ export class RecruiterAnalyticsService {
       },
       message: 'Recruiter candidates retrieved successfully',
     };
+  }
+
+  /** Candidates owned by recruiter (active assignment or project mapping). */
+  private buildRecruiterCandidateScope(
+    recruiterId: string,
+  ): Prisma.CandidateWhereInput {
+    return {
+      OR: [
+        {
+          recruiterAssignments: {
+            some: { recruiterId, isActive: true },
+          },
+        },
+        {
+          projects: {
+            some: { recruiterId },
+          },
+        },
+      ],
+    };
+  }
+
+  private buildCrmStatusSnapshotFilter(
+    statusNames: readonly string[],
+  ): Prisma.CandidateStatusHistoryWhereInput {
+    return {
+      OR: statusNames.map((statusName) => ({
+        statusNameSnapshot: { equals: statusName, mode: 'insensitive' },
+      })),
+    };
+  }
+
+  private async countDistinctCandidatesWithCrmStatusInPeriod(
+    recruiterId: string,
+    statusNames: readonly string[],
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    return this.prisma.candidate.count({
+      where: {
+        ...this.buildRecruiterCandidateScope(recruiterId),
+        statusHistories: {
+          some: {
+            statusUpdatedAt: { gte: periodStart, lte: periodEnd },
+            ...this.buildCrmStatusSnapshotFilter(statusNames),
+          },
+        },
+      },
+    });
+  }
+
+  private async countDistinctCandidatesWithProjectSubStatusInPeriod(
+    recruiterId: string,
+    subStatusName: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    return this.prisma.candidate.count({
+      where: {
+        ...this.buildRecruiterCandidateScope(recruiterId),
+        projects: {
+          some: {
+            recruiterId,
+            projectStatusHistory: {
+              some: {
+                subStatus: { name: subStatusName },
+                statusChangedAt: { gte: periodStart, lte: periodEnd },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  private async countDistinctDeployedInPeriod(
+    recruiterId: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<number> {
+    const scope = this.buildRecruiterCandidateScope(recruiterId);
+    const [projectDeployed, crmDeployed] = await Promise.all([
+      this.prisma.candidate.findMany({
+        where: {
+          ...scope,
+          projects: {
+            some: {
+              recruiterId,
+              projectStatusHistory: {
+                some: {
+                  subStatus: {
+                    name: PERFORMANCE_PROJECT_SUB_STATUSES.deployed,
+                  },
+                  statusChangedAt: { gte: periodStart, lte: periodEnd },
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+        distinct: ['id'],
+      }),
+      this.prisma.candidate.findMany({
+        where: {
+          ...scope,
+          statusHistories: {
+            some: {
+              statusUpdatedAt: { gte: periodStart, lte: periodEnd },
+              ...this.buildCrmStatusSnapshotFilter(DEPLOYED_CRM_STATUS_NAMES),
+            },
+          },
+        },
+        select: { id: true },
+        distinct: ['id'],
+      }),
+    ]);
+
+    const uniqueIds = new Set([
+      ...projectDeployed.map((c) => c.id),
+      ...crmDeployed.map((c) => c.id),
+    ]);
+    return uniqueIds.size;
+  }
+
+  async getStageCountsForPeriod(
+    recruiterId: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ): Promise<PerformanceStageCounts> {
+    const [
+      positiveCandidate,
+      documentVerified,
+      interviewShortlisted,
+      interviewPassed,
+      processing,
+      deployed,
+    ] = await Promise.all([
+      this.countDistinctCandidatesWithCrmStatusInPeriod(
+        recruiterId,
+        POSITIVE_CRM_STATUS_NAMES,
+        periodStart,
+        periodEnd,
+      ),
+      this.countDistinctCandidatesWithProjectSubStatusInPeriod(
+        recruiterId,
+        PERFORMANCE_PROJECT_SUB_STATUSES.documentVerified,
+        periodStart,
+        periodEnd,
+      ),
+      this.countDistinctCandidatesWithProjectSubStatusInPeriod(
+        recruiterId,
+        PERFORMANCE_PROJECT_SUB_STATUSES.interviewShortlisted,
+        periodStart,
+        periodEnd,
+      ),
+      this.countDistinctCandidatesWithProjectSubStatusInPeriod(
+        recruiterId,
+        PERFORMANCE_PROJECT_SUB_STATUSES.interviewPassed,
+        periodStart,
+        periodEnd,
+      ),
+      this.countDistinctCandidatesWithProjectSubStatusInPeriod(
+        recruiterId,
+        PERFORMANCE_PROJECT_SUB_STATUSES.processing,
+        periodStart,
+        periodEnd,
+      ),
+      this.countDistinctDeployedInPeriod(
+        recruiterId,
+        periodStart,
+        periodEnd,
+      ),
+    ]);
+
+    return {
+      positiveCandidate,
+      documentVerified,
+      interviewShortlisted,
+      interviewPassed,
+      processing,
+      deployed,
+    };
+  }
+
+  private buildRatingBlock(
+    stageCounts: PerformanceStageCounts,
+    period: { year: number; month?: number },
+  ) {
+    const score = computePerformanceScore(stageCounts);
+    return {
+      score,
+      rating: resolvePerformanceRating(score),
+      stageCounts,
+      period,
+    };
+  }
+
+  /**
+   * Weighted performance rating for a recruiter (monthly + yearly).
+   */
+  async getPerformanceRating(
+    recruiterId: string,
+    options: { year?: number; month?: number } = {},
+  ) {
+    const now = new Date();
+    const year = options.year ?? now.getFullYear();
+    const month = options.month ?? now.getMonth() + 1;
+
+    const recruiter = await this.prisma.user.findUnique({
+      where: { id: recruiterId },
+      select: { id: true, name: true, email: true },
+    });
+
+    if (!recruiter) {
+      return {
+        success: false,
+        data: null,
+        message: 'Recruiter not found',
+      };
+    }
+
+    const monthlyBounds = getMonthPeriodBounds(year, month);
+    const yearlyBounds = getYearPeriodBounds(year);
+
+    const [monthlyCounts, yearlyCounts] = await Promise.all([
+      this.getStageCountsForPeriod(
+        recruiterId,
+        monthlyBounds.start,
+        monthlyBounds.end,
+      ),
+      this.getStageCountsForPeriod(
+        recruiterId,
+        yearlyBounds.start,
+        yearlyBounds.end,
+      ),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        recruiter: {
+          id: recruiter.id,
+          name: recruiter.name,
+          email: recruiter.email,
+        },
+        monthly: this.buildRatingBlock(monthlyCounts, { year, month }),
+        yearly: this.buildRatingBlock(yearlyCounts, { year }),
+      },
+      message: 'Recruiter performance rating retrieved successfully',
+    };
+  }
+
+  /**
+   * Rank recruiters by monthly performance score (for admin dashboard).
+   */
+  async getPerformanceLeaderboard(
+    options: {
+      year?: number;
+      month?: number;
+      limit?: number;
+      period?: 'monthly' | 'yearly';
+    } = {},
+  ) {
+    const now = new Date();
+    const year = options.year ?? now.getFullYear();
+    const month = options.month ?? now.getMonth() + 1;
+    const limit = options.limit ?? 10;
+    const period = options.period ?? 'monthly';
+    const { start, end } =
+      period === 'yearly'
+        ? getYearPeriodBounds(year)
+        : getMonthPeriodBounds(year, month);
+
+    const recruiters = await this.prisma.user.findMany({
+      where: withActiveAccountStatus({
+        userRoles: {
+          some: {
+            role: { name: 'Recruiter' },
+          },
+        },
+      }),
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        countryCode: true,
+        mobileNumber: true,
+        profileImage: true,
+      },
+    });
+
+    const entries = await Promise.all(
+      recruiters.map(async (recruiter) => {
+        const stageCounts = await this.getStageCountsForPeriod(
+          recruiter.id,
+          start,
+          end,
+        );
+        const score = computePerformanceScore(stageCounts);
+        return {
+          id: recruiter.id,
+          name: recruiter.name,
+          email: recruiter.email,
+          phone: recruiter.mobileNumber
+            ? `${recruiter.countryCode ?? ''}${recruiter.mobileNumber}`
+            : undefined,
+          role: 'Affinks Recruiter',
+          avatarUrl: recruiter.profileImage || undefined,
+          performanceScore: score,
+          rating: resolvePerformanceRating(score),
+          stageCounts,
+          placementsThisMonth: stageCounts.deployed,
+        };
+      }),
+    );
+
+    const sorted = entries.sort((a, b) => {
+      if (b.performanceScore !== a.performanceScore) {
+        return b.performanceScore - a.performanceScore;
+      }
+      if (b.stageCounts.deployed !== a.stageCounts.deployed) {
+        return b.stageCounts.deployed - a.stageCounts.deployed;
+      }
+      if (b.stageCounts.interviewPassed !== a.stageCounts.interviewPassed) {
+        return b.stageCounts.interviewPassed - a.stageCounts.interviewPassed;
+      }
+      if (b.stageCounts.documentVerified !== a.stageCounts.documentVerified) {
+        return b.stageCounts.documentVerified - a.stageCounts.documentVerified;
+      }
+      return b.stageCounts.positiveCandidate - a.stageCounts.positiveCandidate;
+    });
+
+    const leaderboard = sorted.slice(0, limit);
+
+    return {
+      success: true,
+      data: {
+        year,
+        month: period === 'yearly' ? undefined : month,
+        period,
+        leaderboard,
+      },
+      message: 'Recruiter performance leaderboard retrieved successfully',
+    };
+  }
+
+  stageCountsToActivities(
+    stageCounts: PerformanceStageCounts,
+  ): Array<{ activity: string; value: number }> {
+    return (
+      Object.keys(PERFORMANCE_STAGE_ACTIVITY_LABELS) as Array<
+        keyof PerformanceStageCounts
+      >
+    ).map((key) => ({
+      activity: PERFORMANCE_STAGE_ACTIVITY_LABELS[key],
+      value: stageCounts[key],
+    }));
   }
 }

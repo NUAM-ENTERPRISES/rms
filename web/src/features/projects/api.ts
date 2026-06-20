@@ -1,3 +1,4 @@
+import { ProjectStatusType } from "@/entities/project/constants";
 import { baseApi } from "@/app/api/baseApi";
 import { Candidate } from "@/features/candidates";
 
@@ -6,7 +7,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
-  status: "active" | "completed" | "cancelled";
+  status: ProjectStatusType;
   priority: "low" | "medium" | "high" | "urgent";
   deadline: string;
   createdAt: string;
@@ -38,6 +39,7 @@ export interface Project {
   groomingRequired?: "formal" | "casual" | "not_specified";
   hideContactInfo?: boolean;
   requiredScreening?: boolean;
+  introductionVideoRequired?: boolean;
   licensingExam?: string;
   dataFlow?: boolean;
   eligibility?: boolean;
@@ -72,7 +74,7 @@ export interface RoleNeeded {
   requiredSkills?: string[];
   employmentType: "contract" | "permanent";
   contractDurationYears?: number;
-  visaType?: "contract" | "permanent";
+  visaType?: "company_visa" | "direct_visa";
   genderRequirement: "female" | "male" | "all" | "other";
   minAge?: number;
   maxAge?: number;
@@ -106,6 +108,70 @@ export interface RoleNeeded {
       shortName: string;
     };
   };
+}
+
+export interface AgentCandidateRequestItemInput {
+  roleNeededId: string;
+  requestedCount: number;
+}
+
+export interface CreateAgentCandidateRequestPayload {
+  projectId: string;
+  items: AgentCandidateRequestItemInput[];
+  notes?: string;
+}
+
+export type AgentCandidateRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface AgentCandidateRequestListItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  project: {
+    id: string;
+    title: string;
+    countryCode: string | null;
+    country: { name: string } | null;
+    client: { name: string } | null;
+  };
+  requestedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
+}
+
+export interface GetAgentCandidateRequestsParams {
+  page?: number;
+  limit?: number;
+  status?: AgentCandidateRequestStatus;
+}
+
+export interface RoleFillSummaryItem {
+  roleNeededId: string;
+  designation: string;
+  priority: string;
+  targetCount: number;
+  filledCount: number;
+}
+
+export interface ProjectAgentCandidateRequestHistoryItem {
+  id: string;
+  status: AgentCandidateRequestStatus;
+  notes: string | null;
+  createdAt: string;
+  requestedBy: { id: string; name: string; email: string };
+  items: Array<{
+    id: string;
+    requestedCount: number;
+    roleNeeded: { designation: string } | null;
+  }>;
 }
 
 export interface EducationRequirement {
@@ -233,18 +299,17 @@ export interface CreateRoleNeededRequest {
   genderRequirement?: "female" | "male" | "all" | "other";
 }
 
-export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
-  status?: "active" | "completed" | "cancelled";
-}
+export type UpdateProjectRequest = Partial<CreateProjectRequest>;
 
 export interface QueryProjectsRequest {
   search?: string;
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   priority?: "low" | "medium" | "high" | "urgent";
   isUrgent?: boolean;
   clientId?: string;
   teamId?: string;
-  countryCode?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
   page?: number;
   limit?: number;
   sortBy?: string;
@@ -310,7 +375,7 @@ export interface PaginatedProjectPickerResponse {
 }
 
 export interface QueryProjectPickerRequest {
-  status?: "active" | "completed" | "cancelled";
+  status?: ProjectStatusType;
   search?: string;
   page?: number;
   limit?: number;
@@ -318,19 +383,20 @@ export interface QueryProjectPickerRequest {
 
 export interface ProjectStats {
   totalProjects: number;
-  activeProjects: number;
+  inProgressProjects: number;
   completedProjects: number;
+  onHoldProjects: number;
   cancelledProjects: number;
   projectsByStatus: {
-    active: number;
-    completed: number;
-    cancelled: number;
+    IN_PROGRESS?: number;
+    COMPLETED?: number;
+    ON_HOLD?: number;
+    CANCELLED?: number;
   };
   projectsByClient: {
     [clientId: string]: number;
   };
   urgentProjectsCount?: number;
-  upcomingDeadlines: Project[];
 }
 
 // Eligible Candidate with match score
@@ -488,10 +554,40 @@ export const projectsApi = baseApi.injectEndpoints({
       ApiResponse<Project>,
       { id: string; data: UpdateProjectRequest }
     >({
-      query: ({ id, data }) => ({
-        url: `/projects/${id}`,
+      query: ({ id, data }) => {
+        const { status: _status, ...body } = data as UpdateProjectRequest & {
+          status?: ProjectStatusType;
+        };
+        return {
+          url: `/projects/${id}`,
+          method: "PATCH",
+          body,
+        };
+      },
+      invalidatesTags: (result, _, { id }) => {
+        const tags: Array<
+          "ProjectStats" | { type: "Project"; id: string } | { type: "Client"; id: string }
+        > = [
+          { type: "Project", id },
+          { type: "Project", id: "LIST" },
+          "ProjectStats",
+        ];
+        const cid = result?.data?.clientId;
+        if (cid) {
+          tags.push({ type: "Client", id: cid });
+        }
+        return tags;
+      },
+    }),
+
+    updateProjectStatus: builder.mutation<
+      ApiResponse<Project>,
+      { id: string; status: ProjectStatusType }
+    >({
+      query: ({ id, status }) => ({
+        url: `/projects/${id}/status`,
         method: "PATCH",
-        body: data,
+        body: { status },
       }),
       invalidatesTags: (result, _, { id }) => {
         const tags: Array<
@@ -915,6 +1011,85 @@ export const projectsApi = baseApi.injectEndpoints({
         "CandidateProject",
       ],
     }),
+
+    getAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: AgentCandidateRequestListItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      GetAgentCandidateRequestsParams
+    >({
+      query: ({ page = 1, limit = 20, status } = {}) => ({
+        url: "/projects/agent-candidate-requests",
+        params: { page, limit, ...(status ? { status } : {}) },
+      }),
+      providesTags: [{ type: "Project", id: "AGENT_REQUESTS" }],
+    }),
+
+    getProjectAgentCandidateRequests: builder.query<
+      {
+        success: boolean;
+        data: ProjectAgentCandidateRequestHistoryItem[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      },
+      { projectId: string; page?: number; limit?: number }
+    >({
+      query: ({ projectId, page = 1, limit = 10 }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        params: { page, limit },
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
+      ],
+    }),
+
+    getProjectRoleFillSummary: builder.query<
+      {
+        success: boolean;
+        data: RoleFillSummaryItem[];
+        summary: { totalFilled: number; totalTarget: number };
+      },
+      { projectId: string }
+    >({
+      query: ({ projectId }) => ({
+        url: `/projects/${projectId}/role-fill-summary`,
+      }),
+      providesTags: (_, __, { projectId }) => [
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: projectId },
+      ],
+    }),
+
+    createAgentCandidateRequest: builder.mutation<
+      ApiResponse<{
+        id: string;
+        projectId: string;
+        requestedById: string;
+        status: string;
+        notes?: string | null;
+        items: Array<{
+          id: string;
+          roleNeededId: string;
+          requestedCount: number;
+        }>;
+        createdAt: string;
+      }>,
+      CreateAgentCandidateRequestPayload
+    >({
+      query: ({ projectId, ...body }) => ({
+        url: `/projects/${projectId}/agent-candidate-requests`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: (_, __, { projectId }) => [
+        { type: "Project", id: projectId },
+        { type: "Project", id: "LIST" },
+        { type: "Project", id: "AGENT_REQUESTS" },
+        { type: "Project", id: `ROLE_FILL_${projectId}` },
+        { type: "Project", id: `AGENT_REQUESTS_${projectId}` },
+      ],
+    }),
   }),
 });
 
@@ -927,6 +1102,7 @@ export const {
   useGetEligibleCandidatesQuery,
   useCreateProjectMutation,
   useUpdateProjectMutation,
+  useUpdateProjectStatusMutation,
   useDeleteProjectMutation,
   useAssignCandidateMutation,
   useGetProjectCandidatesByRoleQuery,
@@ -943,4 +1119,8 @@ export const {
   useGetRoleDepartmentsQuery,
   useBulkSendForInterviewMutation,
   useBulkAssignToProjectMutation,
+  useCreateAgentCandidateRequestMutation,
+  useGetAgentCandidateRequestsQuery,
+  useGetProjectAgentCandidateRequestsQuery,
+  useGetProjectRoleFillSummaryQuery,
 } = projectsApi;

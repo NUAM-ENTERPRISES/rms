@@ -12,7 +12,8 @@ web/src/app/providers/
 └── notification-handlers/             # Specialized domain logic
     ├── types.ts                       # Shared interfaces & types
     ├── document-handler.ts            # Logic for document-related events
-    └── screening-handler.ts           # Logic for screening-related events
+    ├── screening-handler.ts           # Logic for screening-related events
+    └── agent-candidate-request-handler.ts  # Agent candidate request + role fill sync
 ```
 
 ---
@@ -81,6 +82,134 @@ socket.on("notification:new", (notification: any) => {
   handleMyFeatureNotifications(context); // Add yours here
 });
 ```
+
+---
+
+## Offer letter uploaded (recruiter or interview coordinator)
+
+When a recruiter or interview coordinator uploads an offer letter, the backend calls `OutboxService.publishOfferLetterUploaded`, which emits:
+
+| Event | Recipients |
+|-------|------------|
+| `OfferLetterUploaded` | System Admin, Admin, Manager, Recruiter Manager, CEO, Director, Processing Manager, Interview Coordinator, Processing Executive, and the assigned recruiter (uploader excluded) |
+| `DataSync` (`OfferLetterUploaded`) | All connected clients (global broadcast) |
+
+**Bell notification**
+
+- Type: `offer_letter_uploaded`
+- Title: `Offer Letter Uploaded`
+- Link: `/recruiter-docs/{projectId}/{candidateId}`
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `Interview` | Interview passed / send-for-processing lists |
+| `ProcessingSummary` | Ready-for-processing lists |
+| `Processing` | Processing workspace |
+| `Candidate` | Candidate detail |
+| `Document` | Offer letter cards and document lists |
+| `RecruiterDocuments` | Recruiter docs nomination view |
+| `DocumentVerification` | Verification views |
+| `{ type: "Document", id: "offer-letter-requests-{candidateId}" }` | Pending upload request banners |
+
+**Handlers**
+
+- `notification-handlers/offer-letter-handler.ts` — handles `notification:new` with type `offer_letter_uploaded` and `data:sync` with type `OfferLetterUploaded`
+- Also resolves `role_notification` / `recruiter_notification` when `meta.type` is `offer_letter_uploaded`
+
+---
+
+## Send for processing (interview coordinator)
+
+When an interview coordinator marks a passed interview as **ready for processing**, the backend calls `OutboxService.publishCandidateReadyForProcessing`, which emits:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateReadyForProcessing` | Outbox job ack only (leadership bell notifications are sent via `RoleNotification`) |
+| `RoleNotification` | Manager, Recruiter Manager, Processing Manager, System Admin, Admin, System Administrator (interview coordinator excluded) |
+| `RecruiterNotification` | Assigned recruiter for that nomination |
+| `DataSync` (`ProcessingSummary`) | Connected clients (list refresh) |
+
+**Leadership / recruiter bell notification**
+
+- Title: `Sent to Ready for Processing`
+- Type / `meta.type`: `candidate_ready_for_processing`
+- Processing leadership link (Manager, Processing Manager, Admin): `/ready-for-processing?projectId={projectId}&search={candidateName}`
+- Recruiter Manager + assigned recruiter link: `/candidates/{candidateId}`
+
+If no offer letter exists, the recruiter may also receive a separate `offer_letter_upload_requested` notification.
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `ProcessingSummary` | Ready-for-processing / processing lists |
+| `Processing` | Processing workspace |
+| `Interview` | Interview passed lists |
+| `Candidate` | Candidate detail |
+| `RecruiterDocuments` | Recruiter docs for the nomination |
+
+**Handler:** `notification-handlers/processing-handler.ts` (handles `candidate_ready_for_processing`, `candidate_sent_for_processing`, and resolves `role_notification` / `recruiter_notification` via `meta.type`).
+
+---
+
+## Agent candidate requests (example)
+
+When a manager submits **Request Agent Candidates**, the backend emits `agent_candidate_request_created` to Agent Coordinators.
+
+**RTK tags to invalidate:**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `{ type: "Project", id: "AGENT_REQUESTS" }` | Agents dashboard candidate-requests list + tile count |
+| `{ type: "Project", id: "<projectId>" }` | Project detail |
+| `{ type: "Project", id: "ROLE_FILL_<projectId>" }` | Role Fill Progress card (Agent Coordinator) |
+| `{ type: "Project", id: "AGENT_REQUESTS_<projectId>" }` | Request history modal |
+
+**Handler:** `notification-handlers/agent-candidate-request-handler.ts` (registered in `notifications-socket.provider.tsx`).
+
+**Mutation:** `createAgentCandidateRequest` invalidates the same tags so the submitter’s UI updates immediately without waiting for the socket.
+
+---
+
+## Processing status change requests (cancel / hold / reactivate)
+
+When processing submits a cancel, hold, or reactivate request, the backend publishes:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateProjectStatusChangeRequested` | Manager + Processing Manager (bell notification) |
+| `DataSync` (`ProcessingStatusChange`, `phase: requested`) | All connected clients |
+
+When a request is approved or rejected:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateProjectStatusChangeReviewed` | Requester + assigned processing team user + **candidate recruiter** |
+| `DataSync` (`ProcessingStatusChange`, `phase: reviewed`) | All connected clients |
+
+**Bell notification types**
+
+- `processing_status_change_request` — new request for approvers
+- `processing_status_change_reviewed` — outcome for requester / processing team
+- `recruiter_notification` (`meta.type: processing_status_change_reviewed`) — outcome for the candidate’s assigned recruiter; link opens `/candidate-project/{candidateId}/projects/{projectId}`
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `ProcessingSummary` / `{ type: "ProcessingSummary", id: "LIST" }` | Processing team dashboard, admin dashboard, awaiting-requests tile |
+| `Processing` / `{ type: "Processing", id: "<processingCandidateId>" }` | Candidate processing detail |
+| `ProcessingDetails` / `{ type: "ProcessingDetails", id: "<processingCandidateId>" }` | Pending request banner, status-update context |
+| `ProcessingSteps` / `{ type: "ProcessingSteps", id: "<processingCandidateId>" }` | Step cards and action locks |
+| `{ type: "Candidate", id: "<candidateId>" }` | Candidate pipeline views |
+
+**Handlers**
+
+- `notification-handlers/processing-status-change-handler.ts` — handles `notification:new` types above and `data:sync` with `type: ProcessingStatusChange`
+
+**Mutations:** `createProcessingStatusChangeRequest`, `approveCandidateProjectStatusChangeRequest`, and `rejectCandidateProjectStatusChangeRequest` invalidate the same tags so submitters and approvers see updates immediately without waiting for the socket.
 
 ---
 

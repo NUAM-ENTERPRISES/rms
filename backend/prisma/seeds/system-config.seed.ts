@@ -4,9 +4,7 @@ declare const process: any;
 declare const require: any;
 declare const module: any;
 
-const prisma = new PrismaClient();
-
-export async function seedSystemConfig() {
+export async function seedSystemConfig(prisma: PrismaClient) {
   console.log('🌱 Seeding System Configuration...');
 
   // RNR Settings
@@ -258,6 +256,43 @@ export async function seedSystemConfig() {
     },
   });
 
+  const affiniksOfficeAddresses = {
+    kochi: {
+      label: 'Kochi Office',
+      address: 'Affiniks Kochi Office, MG Road, Kochi',
+      addressCountryCode: 'IN',
+      addressStateId: null,
+      pincode: '682016',
+      altPhone: '+91 484 000 0001',
+      phone: '+91 484 000 0000',
+    },
+    delhi: {
+      label: 'Delhi Office',
+      address: 'Affiniks Delhi Office, Connaught Place, New Delhi',
+      addressCountryCode: 'IN',
+      addressStateId: null,
+      pincode: '110001',
+      altPhone: '+91 11 0000 0001',
+      phone: '+91 11 0000 0000',
+    },
+  };
+
+  await prisma.systemConfig.upsert({
+    where: { key: 'AFFINIKS_OFFICE_ADDRESSES' },
+    update: {
+      value: affiniksOfficeAddresses,
+      description: 'Preset physical addresses for Affiniks Kochi and Delhi offices (courier management)',
+      isActive: true,
+      updatedAt: new Date(),
+    },
+    create: {
+      key: 'AFFINIKS_OFFICE_ADDRESSES',
+      value: affiniksOfficeAddresses,
+      description: 'Preset physical addresses for Affiniks Kochi and Delhi offices (courier management)',
+      isActive: true,
+    },
+  });
+
   console.log('✅ System Config seeded successfully!');
   console.log(`   - RNR delay between reminders: ${rnrSettings.delayBetweenReminders} minutes`);
   console.log(`   - Reminders per day: ${rnrSettings.remindersPerDay}`);
@@ -277,7 +312,8 @@ export async function seedSystemConfig() {
 
 // Run if executed directly
 if (require.main === module) {
-  seedSystemConfig()
+  const prisma = new PrismaClient();
+  seedSystemConfig(prisma)
     .then(() => {
       console.log('✅ Seeding completed');
       process.exit(0);
