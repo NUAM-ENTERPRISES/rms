@@ -51,6 +51,7 @@ export const baseApi = createApi({
     "ProcessingSummary",
     "ProcessingHistory",
     "ProcessingDocuments",
+    "ProcessingProjects",
     "VerificationCandidates",
     "Eligibility",
     "Matchmaking",

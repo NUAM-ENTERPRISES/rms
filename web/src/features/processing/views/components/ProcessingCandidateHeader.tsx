@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Phone, Mail, FileStack, Archive, MapPin, Check } from "lucide-react";
+import { ArrowLeft, Phone, Mail, FileStack, Archive, MapPin, Check, FolderKanban } from "lucide-react";
 import { ImageViewer } from "@/components/molecules";
 import { FlagIcon } from "@/shared/components/FlagIcon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -57,6 +57,8 @@ interface ProcessingCandidateHeaderProps {
   };
   originalDocumentCollection?: OriginalDocumentCollectionSummary | null;
   documentReceivedStepStatus?: string | null;
+  onOpenPreviousProjects?: () => void;
+  previousProjectsCount?: number;
 }
 
 export function ProcessingCandidateHeader({
@@ -69,6 +71,8 @@ export function ProcessingCandidateHeader({
   recruiter,
   originalDocumentCollection,
   documentReceivedStepStatus,
+  onOpenPreviousProjects,
+  previousProjectsCount = 0,
 }: ProcessingCandidateHeaderProps) {
   const navigate = useNavigate();
   const [originalDocsOpen, setOriginalDocsOpen] = useState(false);
@@ -109,8 +113,8 @@ export function ProcessingCandidateHeader({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-4 bg-white rounded-2xl shadow-xl border border-slate-100">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-xl xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex min-w-0 items-start gap-4">
         <Button
           variant="ghost"
           size="icon"
@@ -129,35 +133,38 @@ export function ProcessingCandidateHeader({
         />
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
-            <h1 className="shrink-0 text-xl font-black text-slate-900 whitespace-nowrap">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="max-w-full truncate text-xl font-black text-slate-900">
               {candidate.firstName} {candidate.lastName}
             </h1>
             {candidate.candidateCode && (
-              <div className="inline-flex shrink-0 items-center rounded-md bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700 border border-red-200 whitespace-nowrap">
+              <div className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-mono font-bold text-red-700">
                 {candidate.candidateCode}
               </div>
             )}
-            <Badge className={`shrink-0 whitespace-nowrap px-2 py-0.5 text-[10px] font-bold border ${getStatusBadge(processingStatus)}`}>
+            <Badge
+              className={`whitespace-nowrap border px-2 py-0.5 text-[10px] font-bold ${getStatusBadge(processingStatus)}`}
+            >
               {displayStatus(processingStatus)}
             </Badge>
+          </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 flex-nowrap">
-              {showOriginalDocumentBadge ? (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setOriginalDocsOpen(true)}
-                        className={cn(
-                          "relative inline-flex shrink-0 items-center gap-1.5 overflow-hidden rounded-xl border px-2.5 py-1.5 text-[10px] font-black shadow-sm whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          useGreenDocsBadge
-                            ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 text-emerald-900 hover:shadow-md hover:bg-emerald-50"
-                            : "border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 text-amber-950 hover:shadow-md hover:bg-amber-50",
-                        )}
-                        aria-label="View original document collection details"
-                      >
+          {showOriginalDocumentBadge ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setOriginalDocsOpen(true)}
+                      className={cn(
+                        "relative inline-flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-1 overflow-hidden rounded-xl border px-2.5 py-1.5 text-[10px] font-black shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        useGreenDocsBadge
+                          ? "border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 text-emerald-900 hover:bg-emerald-50 hover:shadow-md"
+                          : "border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-50 text-amber-950 hover:bg-amber-50 hover:shadow-md",
+                      )}
+                      aria-label="View original document collection details"
+                    >
                         {/* Glow + glancing sheen (motion-safe) */}
                         <span
                           aria-hidden="true"
@@ -266,9 +273,8 @@ export function ProcessingCandidateHeader({
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ) : null}
             </div>
-          </div>
+          ) : null}
 
           <OriginalDocumentCollectionModal
             open={originalDocsOpen}
@@ -334,42 +340,78 @@ export function ProcessingCandidateHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3 shrink-0">
-        {recruiter && (
-          <p className="text-xs text-slate-400 hidden md:block">
-            Recruited by <span className="font-bold text-slate-600">{recruiter.name}</span>
-          </p>
-        )}
-
-        {(projectCountry?.flag || projectCountryCode) ? (
+      <div className="flex w-full min-w-0 flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end xl:w-auto xl:border-t-0 xl:pt-0">
+        {onOpenPreviousProjects ? (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div
-                  className="flex items-center bg-transparent px-1"
-                  aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full gap-2 rounded-xl border-slate-200 font-bold text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 sm:w-auto"
+                  onClick={onOpenPreviousProjects}
+                  aria-label="View previous projects processing"
                 >
-                  {projectCountry?.flag ? (
-                    <span className="text-4xl leading-none drop-shadow-sm" aria-hidden="true">
-                      {projectCountry.flag}
-                    </span>
-                  ) : (
-                    <FlagIcon
-                      countryCode={projectCountryCode}
-                      size="2xl"
-                      showFallback={false}
-                      aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
-                    />
-                  )}
-                </div>
+                  <FolderKanban className="h-4 w-4 shrink-0" />
+                  <span className="hidden lg:inline">Previous Projects Processing</span>
+                  <span className="lg:hidden">Previous Projects</span>
+                  {previousProjectsCount > 0 ? (
+                    <Badge className="border-0 bg-violet-100 text-xs font-bold text-violet-700">
+                      {previousProjectsCount}
+                    </Badge>
+                  ) : null}
+                </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-slate-800 text-white border-slate-700">
-                <p className="font-bold">{projectCountry?.flagName || projectCountryName || "Project destination"}</p>
-                <p className="text-xs text-slate-300">Project destination</p>
+              <TooltipContent side="bottom" className="border-slate-700 bg-slate-800 text-white">
+                <p className="font-bold">Previous Projects Processing</p>
+                <p className="text-xs text-slate-300">
+                  {previousProjectsCount > 0
+                    ? `Processed on ${previousProjectsCount} other project${previousProjectsCount === 1 ? "" : "s"}`
+                    : "View current and past processing nominations"}
+                </p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : null}
+
+        <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
+          {recruiter ? (
+            <p className="min-w-0 truncate text-xs text-slate-400">
+              Recruited by{" "}
+              <span className="font-bold text-slate-600">{recruiter.name}</span>
+            </p>
+          ) : null}
+
+          {(projectCountry?.flag || projectCountryCode) ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="flex shrink-0 items-center bg-transparent px-1"
+                    aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                  >
+                    {projectCountry?.flag ? (
+                      <span className="text-3xl leading-none drop-shadow-sm" aria-hidden="true">
+                        {projectCountry.flag}
+                      </span>
+                    ) : (
+                      <FlagIcon
+                        countryCode={projectCountryCode}
+                        size="xl"
+                        showFallback={false}
+                        aria-label={projectCountry?.flagName || projectCountryName || "Project country flag"}
+                      />
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="border-slate-700 bg-slate-800 text-white">
+                  <p className="font-bold">{projectCountry?.flagName || projectCountryName || "Project destination"}</p>
+                  <p className="text-xs text-slate-300">Project destination</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : null}
+        </div>
       </div>
     </div>
   );

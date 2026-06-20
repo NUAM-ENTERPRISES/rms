@@ -28,6 +28,46 @@ type Paginated<T> = {
   };
 };
 
+export type CandidateProcessingProjectItem = {
+  id: string;
+  processingStatus: string;
+  joinedAt: string;
+  isCurrent: boolean;
+  project: {
+    id: string;
+    title: string;
+    countryCode?: string | null;
+    country?: {
+      code?: string;
+      name?: string;
+      flag?: string | null;
+      flagName?: string | null;
+    } | null;
+  };
+  role: {
+    id: string;
+    designation: string;
+    roleCatalog?: { name: string } | null;
+  };
+};
+
+export type CandidateProcessingProjectsResponse = {
+  items: CandidateProcessingProjectItem[];
+  pagination: Paginated<CandidateProcessingProjectItem>["pagination"];
+  summary: {
+    totalProjects: number;
+    previousProjectsCount: number;
+    hasPreviousProcessing: boolean;
+  };
+};
+
+export type CandidateProcessingProjectsQuery = {
+  candidateId: string;
+  currentProcessingId?: string;
+  page?: number;
+  limit?: number;
+};
+
 export type ProcessingCandidatesQuery = {
   search?: string;
   projectId?: string;
@@ -625,6 +665,23 @@ export const processingApi = baseApi.injectEndpoints({
       }),
       providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
     }),
+
+    getCandidateProcessingProjects: builder.query<
+      ApiResponse<CandidateProcessingProjectsResponse>,
+      CandidateProcessingProjectsQuery
+    >({
+      query: ({ candidateId, currentProcessingId, page = 1, limit = 10 }) => ({
+        url: `/processing/candidate/${candidateId}/processing-projects`,
+        params: {
+          currentProcessingId,
+          page,
+          limit,
+        },
+      }),
+      providesTags: (_result, _error, { candidateId }) => [
+        { type: "ProcessingProjects", id: candidateId },
+      ],
+    }),
   }),
 });
 
@@ -650,4 +707,5 @@ export const {
   useGetProcessingStatusUpdateContextQuery,
   useGetPendingProcessingStatusChangeRequestForCandidateQuery,
   useGetLatestReviewedProcessingStatusChangeRequestQuery,
+  useGetCandidateProcessingProjectsQuery,
 } = processingApi;

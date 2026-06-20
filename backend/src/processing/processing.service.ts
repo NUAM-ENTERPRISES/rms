@@ -5518,6 +5518,98 @@ export class ProcessingService {
   }
 
   /**
+   * List all processing project nominations for a candidate (current + past).
+   */
+  async getCandidateProcessingProjects(
+    candidateId: string,
+    opts?: { currentProcessingId?: string; page?: number; limit?: number },
+  ) {
+    const page = Math.max(1, opts?.page || 1);
+    const limit = Math.min(100, Math.max(1, opts?.limit || 10));
+    const currentProcessingId = opts?.currentProcessingId;
+
+    const candidate = await this.prisma.candidate.findUnique({
+      where: { id: candidateId },
+      select: { id: true },
+    });
+    if (!candidate) {
+      throw new NotFoundException(`Candidate with ID ${candidateId} not found`);
+    }
+
+    const records = await this.prisma.processingCandidate.findMany({
+      where: { candidateId },
+      include: {
+        project: {
+          select: { id: true, title: true, countryCode: true, country: true },
+        },
+        role: {
+          select: {
+            id: true,
+            designation: true,
+            roleCatalog: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const mapped = records.map((record) => {
+      let project: any = record.project;
+      if (project?.country) {
+        const country = project.country as { code?: string; name?: string };
+        const flag = this.getCountryFlagEmoji(country.code);
+        project = {
+          ...project,
+          country: {
+            ...country,
+            flag,
+            flagName: flag ? `${flag} ${country.name}` : country.name,
+          },
+        };
+      }
+
+      return {
+        id: record.id,
+        processingStatus: record.processingStatus,
+        joinedAt: record.createdAt.toISOString(),
+        isCurrent: currentProcessingId ? record.id === currentProcessingId : false,
+        project,
+        role: record.role,
+      };
+    });
+
+    mapped.sort((a, b) => {
+      if (currentProcessingId) {
+        if (a.id === currentProcessingId) return -1;
+        if (b.id === currentProcessingId) return 1;
+      }
+      return new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime();
+    });
+
+    const total = mapped.length;
+    const start = (page - 1) * limit;
+    const items = mapped.slice(start, start + limit);
+    const currentExists = currentProcessingId
+      ? mapped.some((record) => record.id === currentProcessingId)
+      : false;
+    const previousProjectsCount = currentExists ? Math.max(0, total - 1) : total;
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+      summary: {
+        totalProjects: total,
+        previousProjectsCount,
+        hasPreviousProcessing: previousProjectsCount > 0,
+      },
+    };
+  }
+
+  /**
    * Get verified project document verifications and common candidate documents for a processing candidate
    */
   async getCandidateAllProjectDocuments(

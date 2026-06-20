@@ -50,6 +50,7 @@ import type {
 } from "@/features/candidates/api";
 import { ProcessingStatusChangeOutcomeBanner } from "@/features/processing/components/ProcessingStatusChangeOutcomeBanner";
 import { UpdateProcessingStatusModal } from "@/features/processing/components/UpdateProcessingStatusModal";
+import { PreviousProcessingProjectsModal } from "@/features/processing/components/PreviousProcessingProjectsModal";
 import { useAppSelector } from "@/app/hooks";
 import { ProcessingActionLockProvider } from "@/features/processing/context/ProcessingActionLockContext";
 import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
@@ -61,6 +62,7 @@ export default function ProcessingCandidateDetailsPage() {
   const navigate = useNavigate();
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
+  const [showPreviousProjectsModal, setShowPreviousProjectsModal] = useState(false);
   const { user } = useAppSelector((state) => state.auth);
   const canReviewProcessingRequests =
     user?.roles?.some((role) => ["Manager", "Processing Manager"].includes(role)) ?? false;
@@ -392,6 +394,15 @@ export default function ProcessingCandidateDetailsPage() {
           recruiter={data.candidateProjectMap?.recruiter}
           originalDocumentCollection={data.originalDocumentCollection ?? null}
           documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
+          onOpenPreviousProjects={() => setShowPreviousProjectsModal(true)}
+        />
+
+        <PreviousProcessingProjectsModal
+          open={showPreviousProjectsModal}
+          onOpenChange={setShowPreviousProjectsModal}
+          candidateId={data.candidate.id}
+          currentProcessingId={data.id}
+          candidateName={`${data.candidate.firstName} ${data.candidate.lastName}`}
         />
 
         {pendingRequest && (

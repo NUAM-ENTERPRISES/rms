@@ -208,6 +208,39 @@ export class ProcessingController {
     };
   }
 
+  @Get('candidate/:candidateId/processing-projects')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({
+    summary: 'List all processing project nominations for a candidate',
+    description:
+      'Returns every ProcessingCandidate record for the given candidate, including current and past projects. Supports optional currentProcessingId to mark the active record and sort it first.',
+  })
+  @ApiParam({ name: 'candidateId', type: 'string', description: 'The candidate ID' })
+  @ApiQuery({ name: 'currentProcessingId', required: false, description: 'Processing record ID being viewed (sorted first)' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Processing projects retrieved successfully',
+  })
+  async getCandidateProcessingProjects(
+    @Param('candidateId') candidateId: string,
+    @Query('currentProcessingId') currentProcessingId?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const data = await this.processingService.getCandidateProcessingProjects(candidateId, {
+      currentProcessingId,
+      page,
+      limit,
+    });
+    return {
+      success: true,
+      data,
+      message: 'Processing projects retrieved successfully',
+    };
+  }
+
   @Get('candidate/:processingId/history')
   @Permissions(PERMISSIONS.READ_PROCESSING)
   @ApiOperation({
