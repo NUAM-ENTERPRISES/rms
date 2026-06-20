@@ -688,7 +688,7 @@ export class ProcessingController {
 
   @Post('status-change-requests')
   @Permissions(PERMISSIONS.WRITE_PROCESSING)
-  @ApiOperation({ summary: 'Create a processing cancel or hold status change request' })
+  @ApiOperation({ summary: 'Create a processing status change request (cancel, hold, or reactivate)' })
   async createProcessingStatusChangeRequest(
     @Body() body: import('./dto/create-processing-status-change-request.dto').CreateProcessingStatusChangeRequestDto,
     @Req() req: any,
@@ -702,6 +702,14 @@ export class ProcessingController {
   @ApiOperation({ summary: 'List pending processing cancel/hold requests' })
   async getPendingProcessingStatusChangeRequests(@Query() query: any) {
     const data = await this.processingService.getPendingProcessingStatusChangeRequests(query);
+    return { success: true, data };
+  }
+
+  @Get(':processingId/status-update-context')
+  @Permissions(PERMISSIONS.READ_PROCESSING)
+  @ApiOperation({ summary: 'Get available processing status update options for cancelled/on-hold candidates' })
+  async getProcessingStatusUpdateContext(@Param('processingId') processingId: string) {
+    const data = await this.processingService.getProcessingStatusUpdateContext(processingId);
     return { success: true, data };
   }
 

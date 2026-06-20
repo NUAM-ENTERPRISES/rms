@@ -1,5 +1,8 @@
 import { baseApi } from "@/app/api/baseApi";
 import {
+  buildProcessingStatusChangeInvalidationTags,
+} from "@/app/providers/notification-handlers/processing-status-change-handler";
+import {
   ProcessingCandidateSummary,
   ProcessingHistoryEntry,
   ProcessingStepKey,
@@ -120,7 +123,7 @@ export const processingApi = baseApi.injectEndpoints({
         url: "/processing/admin/all-candidates",
         params: params ?? undefined,
       }),
-      providesTags: ["ProcessingSummary"],
+      providesTags: () => [{ type: "ProcessingSummary", id: "LIST" }],
     }),
     getCandidatesToTransfer: builder.query<
       ApiResponse<{
@@ -273,6 +276,7 @@ export const processingApi = baseApi.injectEndpoints({
         roleNeededId: string;
         assignedProcessingTeamUserId: string;
         processingStatus: string;
+        step?: string | null;
         notes?: string;
         createdAt: string;
         updatedAt: string;
@@ -414,7 +418,10 @@ export const processingApi = baseApi.injectEndpoints({
       query: (processingId) => ({
         url: `/processing/candidate-processing-details/${processingId}`,
       }),
-      providesTags: (_, __, id) => [{ type: "Processing", id }],
+      providesTags: (_, __, id) => [
+        { type: "Processing", id },
+        { type: "ProcessingDetails", id },
+      ],
     }),
 
     updateProcessingCandidate: builder.mutation<
@@ -554,7 +561,10 @@ export const processingApi = baseApi.injectEndpoints({
       ApiResponse<Record<string, unknown>>,
       {
         processingStepId: string;
-        requestType: "processing_cancel" | "processing_hold";
+        requestType:
+          | "processing_cancel"
+          | "processing_hold"
+          | "processing_reactivate";
         reason: string;
       }
     >({
@@ -563,7 +573,37 @@ export const processingApi = baseApi.injectEndpoints({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["ProcessingSummary", "Processing", "ProcessingDetails"],
+      invalidatesTags: (result) => {
+        const data = result?.data as
+          | {
+              processingCandidateId?: string | null;
+              candidateProjectMapId?: string;
+            }
+          | undefined;
+
+        return buildProcessingStatusChangeInvalidationTags({
+          processingCandidateId: data?.processingCandidateId ?? undefined,
+          candidateProjectMapId: data?.candidateProjectMapId,
+        });
+      },
+    }),
+
+    getProcessingStatusUpdateContext: builder.query<
+      ApiResponse<{
+        processingStatus: string;
+        anchorStepId: string;
+        stepKey: string;
+        stepLabel?: string;
+        availableRequestTypes: Array<
+          "processing_cancel" | "processing_hold" | "processing_reactivate"
+        >;
+      }>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-update-context`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
     }),
 
     getPendingProcessingStatusChangeRequestForCandidate: builder.query<
@@ -607,6 +647,7 @@ export const {
   useGetCourierHistoryPaginatedQuery,
   useGetCandidateProcessingDetailsQuery,
   useCreateProcessingStatusChangeRequestMutation,
+  useGetProcessingStatusUpdateContextQuery,
   useGetPendingProcessingStatusChangeRequestForCandidateQuery,
   useGetLatestReviewedProcessingStatusChangeRequestQuery,
 } = processingApi;

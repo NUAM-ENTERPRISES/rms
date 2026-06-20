@@ -8,6 +8,9 @@ describe('NotificationsProcessor', () => {
     candidateProjects: {
       findUnique: jest.fn(),
     },
+    processingCandidate: {
+      findUnique: jest.fn(),
+    },
     user: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -383,6 +386,122 @@ describe('NotificationsProcessor', () => {
         type: 'candidate_ready_for_processing',
         title: 'Sent to Ready for Processing',
         link: '/recruiter-docs/proj-1/cand-1',
+      }),
+    );
+  });
+
+  it('notifies requester, processing team, and recruiter when processing cancel is approved', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-processing-reviewed-1',
+        payload: {
+          requestId: 'req-1',
+          candidateProjectMapId: 'cpm-1',
+          candidateId: 'cand-1',
+          projectId: 'proj-1',
+          candidateName: 'Jane Doe',
+          projectTitle: 'ICU Project',
+          requestType: 'processing_cancel',
+          requestedStatus: 'processing_cancelled',
+          requestedBy: 'requester-1',
+          outcome: 'approved',
+          reviewNotes: null,
+          processingCandidateId: 'pc-1',
+        },
+      },
+    };
+
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      recruiterId: 'recruiter-1',
+    });
+    prisma.processingCandidate.findUnique.mockResolvedValue({
+      assignedProcessingTeamUserId: 'processor-1',
+    });
+
+    await processor.handleCandidateProjectStatusChangeReviewed(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(3);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'requester-1',
+        type: 'processing_status_change_reviewed',
+        link: '/processingCandidateDetails/pc-1?actionOutcome=req-1',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'processor-1',
+        type: 'processing_status_change_reviewed',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-1',
+        type: 'recruiter_notification',
+        title: 'Processing Cancelled',
+        message:
+          'Jane Doe — processing cancelled for project "ICU Project". Please inform the candidate for other details.',
+        link: '/candidate-project/cand-1/projects/proj-1',
+        meta: expect.objectContaining({
+          type: 'processing_status_change_reviewed',
+          requestType: 'processing_cancel',
+          outcome: 'approved',
+        }),
+      }),
+    );
+  });
+
+  it('notifies recruiter with rejection copy when processing cancel is rejected', async () => {
+    const job: any = {
+      data: {
+        eventId: 'event-processing-reviewed-2',
+        payload: {
+          requestId: 'req-2',
+          candidateProjectMapId: 'cpm-2',
+          candidateId: 'cand-2',
+          projectId: 'proj-2',
+          candidateName: 'John Smith',
+          projectTitle: 'ER Project',
+          requestType: 'processing_cancel',
+          requestedStatus: 'processing_cancelled',
+          requestedBy: 'recruiter-2',
+          outcome: 'rejected',
+          reviewNotes: 'Not approved yet',
+          processingCandidateId: 'pc-2',
+        },
+      },
+    };
+
+    prisma.candidateProjects.findUnique.mockResolvedValue({
+      recruiterId: 'recruiter-2',
+    });
+    prisma.processingCandidate.findUnique.mockResolvedValue({
+      assignedProcessingTeamUserId: 'processor-2',
+    });
+
+    await processor.handleCandidateProjectStatusChangeReviewed(job);
+
+    expect(notificationsService.createNotification).toHaveBeenCalledTimes(2);
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'processor-2',
+        type: 'processing_status_change_reviewed',
+      }),
+    );
+    expect(notificationsService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-2',
+        type: 'recruiter_notification',
+        title: 'Processing Cancellation Rejected',
+        message:
+          'Processing cancellation request for John Smith on "ER Project" was rejected. Remarks: Not approved yet',
+        link: '/candidate-project/cand-2/projects/proj-2',
+      }),
+    );
+    expect(notificationsService.createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'recruiter-2',
+        type: 'processing_status_change_reviewed',
       }),
     );
   });

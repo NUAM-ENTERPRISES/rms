@@ -24,6 +24,8 @@ import { resolveProcessingRequestedStatus } from '../candidate-projects/dto/crea
 import {
   STATUS_CHANGE_REQUEST_TYPES,
   CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
+  PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST,
+  isProcessingStatusTransitionAllowed,
 } from '../common/constants/statuses';
 import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES } from '../common/constants/role-ids';
 
@@ -4912,10 +4914,7 @@ export class ProcessingService {
         where: {
           status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
           requestType: {
-            in: [
-              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-            ],
+            in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
           },
           processingCandidateId: { not: null },
         },
@@ -5135,10 +5134,7 @@ export class ProcessingService {
           processingCandidateId: { in: candidates.map((c: any) => c.id) },
           status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
           requestType: {
-            in: [
-              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-            ],
+            in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
           },
         },
         select: {
@@ -5988,6 +5984,30 @@ export class ProcessingService {
       throw new NotFoundException('Processing candidate not found for step');
     }
 
+    if (
+      !isProcessingStatusTransitionAllowed(
+        dto.requestType,
+        processingCandidate.processingStatus,
+      )
+    ) {
+      throw new BadRequestException(
+        `Cannot request ${dto.requestType} while processing status is ${processingCandidate.processingStatus}`,
+      );
+    }
+
+    if (['cancelled', 'on_hold'].includes(processingCandidate.processingStatus)) {
+      const anchorStep = await this.resolveAnchorStepForStatusUpdate(
+        processingCandidate.id,
+        processingCandidate.processingStatus,
+        dto.processingStepId,
+      );
+      if (anchorStep.id !== dto.processingStepId) {
+        throw new BadRequestException(
+          'processingStepId must match the step where processing was cancelled or put on hold',
+        );
+      }
+    }
+
     const candidateProjectMap = processingCandidate.candidateProjectMap;
     if (!candidateProjectMap) {
       throw new NotFoundException('Candidate project mapping not found');
@@ -6010,6 +6030,150 @@ export class ProcessingService {
     );
   }
 
+  async getProcessingStatusUpdateContext(processingId: string) {
+    const processingCandidate = await this.prisma.processingCandidate.findUnique({
+      where: { id: processingId },
+      select: { id: true, processingStatus: true },
+    });
+
+    if (!processingCandidate) {
+      throw new NotFoundException('Processing candidate not found');
+    }
+
+    const { processingStatus } = processingCandidate;
+
+    if (processingStatus === 'cancelled') {
+      const anchorStep = await this.resolveAnchorStepForStatusUpdate(
+        processingId,
+        processingStatus,
+      );
+      return {
+        processingStatus,
+        anchorStepId: anchorStep.id,
+        stepKey: anchorStep.template.key,
+        stepLabel: anchorStep.template.label,
+        availableRequestTypes: [
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
+        ],
+      };
+    }
+
+    if (processingStatus === 'on_hold') {
+      const anchorStep = await this.resolveAnchorStepForStatusUpdate(
+        processingId,
+        processingStatus,
+      );
+      return {
+        processingStatus,
+        anchorStepId: anchorStep.id,
+        stepKey: anchorStep.template.key,
+        stepLabel: anchorStep.template.label,
+        availableRequestTypes: [
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
+        ],
+      };
+    }
+
+    throw new BadRequestException(
+      'Processing status update is only available for cancelled or on-hold candidates',
+    );
+  }
+
+  private async resolveAnchorStepForStatusUpdate(
+    processingCandidateId: string,
+    processingStatus: string,
+    processingStepId?: string,
+  ): Promise<{
+    id: string;
+    template: { key: string; label: string };
+  }> {
+    if (processingStatus === 'on_hold') {
+      const onHoldStep = await this.prisma.processingStep.findFirst({
+        where: { processingCandidateId, status: 'on_hold' },
+        include: { template: true },
+      });
+      if (onHoldStep) {
+        return onHoldStep;
+      }
+
+      const processingCandidate = await this.prisma.processingCandidate.findUnique({
+        where: { id: processingCandidateId },
+        select: { step: true },
+      });
+      if (processingCandidate?.step && processingCandidate.step !== 'cancelled') {
+        const stepByKey = await this.prisma.processingStep.findFirst({
+          where: {
+            processingCandidateId,
+            template: { key: processingCandidate.step },
+          },
+          include: { template: true },
+        });
+        if (stepByKey) {
+          return stepByKey;
+        }
+      }
+
+      throw new BadRequestException('No on-hold processing step found');
+    }
+
+    if (processingStatus === 'cancelled') {
+      if (processingStepId) {
+        const explicitStep = await this.prisma.processingStep.findUnique({
+          where: { id: processingStepId },
+          include: { template: true },
+        });
+        if (
+          explicitStep &&
+          explicitStep.processingCandidateId === processingCandidateId
+        ) {
+          return explicitStep;
+        }
+      }
+
+      const triggerHistory = await this.prisma.processingHistory.findFirst({
+        where: {
+          processingCandidateId,
+          status: 'cancelled',
+          step: { not: 'cancelled' },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (triggerHistory?.step) {
+        const stepFromHistory = await this.prisma.processingStep.findFirst({
+          where: {
+            processingCandidateId,
+            template: { key: triggerHistory.step },
+          },
+          include: { template: true },
+        });
+        if (stepFromHistory) {
+          return stepFromHistory;
+        }
+      }
+
+      const fallbackStep = await this.prisma.processingStep.findFirst({
+        where: { processingCandidateId, status: 'cancelled' },
+        orderBy: { updatedAt: 'asc' },
+        include: { template: true },
+      });
+
+      if (!fallbackStep) {
+        throw new BadRequestException(
+          'No cancelled processing step found for status update',
+        );
+      }
+
+      return fallbackStep;
+    }
+
+    throw new BadRequestException(
+      `Cannot resolve anchor step for processing status ${processingStatus}`,
+    );
+  }
+
   async executeApprovedProcessingStatusChange(
     input: {
       requestType: string;
@@ -6019,26 +6183,329 @@ export class ProcessingService {
     },
     userId: string,
   ) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: input.processingStepId },
+      include: {
+        processingCandidate: true,
+      },
+    });
+
+    if (!step?.processingCandidate) {
+      throw new NotFoundException('Processing step or candidate not found');
+    }
+
+    const processingStatus = step.processingCandidate.processingStatus;
+
     if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
       await this.cancelProcessingStep(input.processingStepId, userId, input.reason);
-      await this.syncCandidateProjectProcessingSubStatus(
-        input.candidateProjectMapId,
-        'processing_cancelled',
-        userId,
-        input.reason,
-      );
       return;
     }
 
     if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
-      await this.holdProcessing(input.processingStepId, userId, input.reason);
+      if (processingStatus === 'cancelled') {
+        await this.holdProcessingFromCancelled(
+          input.processingStepId,
+          userId,
+          input.reason,
+        );
+      } else {
+        await this.holdProcessing(input.processingStepId, userId, input.reason);
+        await this.syncCandidateProjectProcessingSubStatus(
+          input.candidateProjectMapId,
+          'processing_hold',
+          userId,
+          input.reason,
+        );
+      }
+      return;
+    }
+
+    if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+      if (processingStatus === 'on_hold') {
+        await this.reactivateProcessingFromHold(
+          input.processingStepId,
+          input.candidateProjectMapId,
+          userId,
+          input.reason,
+        );
+      } else if (processingStatus === 'cancelled') {
+        await this.reactivateProcessingFromCancelled(
+          input.processingStepId,
+          input.candidateProjectMapId,
+          userId,
+          input.reason,
+        );
+      }
+    }
+  }
+
+  private async restoreCancelledProcessingSteps(
+    tx: any,
+    processingCandidateId: string,
+    anchorStepId: string,
+    anchorStepFinalStatus: 'in_progress' | 'on_hold',
+    reason: string,
+  ) {
+    const anchorStep = await tx.processingStep.findUnique({
+      where: { id: anchorStepId },
+      include: { template: true },
+    });
+
+    if (!anchorStep) {
+      throw new NotFoundException('Anchor processing step not found');
+    }
+
+    const cancelReason = anchorStep.rejectionReason;
+    const allSteps = await tx.processingStep.findMany({
+      where: { processingCandidateId },
+      include: { template: true },
+    });
+
+    for (const step of allSteps) {
+      if (step.status === 'completed') {
+        continue;
+      }
+
+      if (step.id === anchorStepId) {
+        await tx.processingStep.update({
+          where: { id: step.id },
+          data: {
+            status: anchorStepFinalStatus,
+            rejectionReason: anchorStepFinalStatus === 'on_hold' ? reason : null,
+            startedAt:
+              anchorStepFinalStatus === 'in_progress'
+                ? step.startedAt ?? new Date()
+                : step.startedAt,
+          },
+        });
+        continue;
+      }
+
+      if (
+        step.status === 'cancelled' &&
+        (!cancelReason || step.rejectionReason === cancelReason)
+      ) {
+        await tx.processingStep.update({
+          where: { id: step.id },
+          data: {
+            status: 'pending',
+            rejectionReason: null,
+          },
+        });
+      }
+    }
+
+    return anchorStep;
+  }
+
+  async reactivateProcessingFromHold(
+    stepId: string,
+    candidateProjectMapId: string,
+    userId: string,
+    reason: string,
+  ) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: stepId },
+      include: {
+        template: true,
+        processingCandidate: { include: { candidate: true, project: true } },
+      },
+    });
+
+    if (!step) throw new NotFoundException('Processing step not found');
+    if (step.status !== 'on_hold') {
+      throw new BadRequestException('Step is not on hold');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.processingStep.update({
+        where: { id: stepId },
+        data: {
+          status: 'in_progress',
+          rejectionReason: null,
+          startedAt: step.startedAt ?? new Date(),
+        },
+      });
+
+      await tx.processingCandidate.update({
+        where: { id: step.processingCandidateId },
+        data: {
+          processingStatus: 'in_progress',
+          step: step.template.key,
+        },
+      });
+
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: step.processingCandidate?.candidateId,
+          projectId: step.processingCandidate?.projectId,
+          roleNeededId: step.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'in_progress',
+          step: step.template.key,
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: `Processing reactivated from hold at "${step.template.label}": ${reason}`,
+        },
+      });
+    });
+
+    await this.syncCandidateProjectProcessingSubStatus(
+      candidateProjectMapId,
+      'processing_in_progress',
+      userId,
+      reason,
+    );
+
+    return { success: true };
+  }
+
+  async reactivateProcessingFromCancelled(
+    anchorStepId: string,
+    candidateProjectMapId: string,
+    userId: string,
+    reason: string,
+  ) {
+    const anchorStep = await this.prisma.processingStep.findUnique({
+      where: { id: anchorStepId },
+      include: {
+        template: true,
+        processingCandidate: { include: { candidate: true, project: true } },
+      },
+    });
+
+    if (!anchorStep) throw new NotFoundException('Processing step not found');
+
+    await this.prisma.$transaction(async (tx) => {
+      const restoredAnchor = await this.restoreCancelledProcessingSteps(
+        tx,
+        anchorStep.processingCandidateId,
+        anchorStepId,
+        'in_progress',
+        reason,
+      );
+
+      await tx.processingCandidate.update({
+        where: { id: anchorStep.processingCandidateId },
+        data: {
+          processingStatus: 'in_progress',
+          step: restoredAnchor.template.key,
+        },
+      });
+
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: anchorStep.processingCandidate?.candidateId,
+          projectId: anchorStep.processingCandidate?.projectId,
+          roleNeededId: anchorStep.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: anchorStep.processingCandidateId,
+          status: 'in_progress',
+          step: restoredAnchor.template.key,
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: `Processing reactivated from cancellation at "${restoredAnchor.template.label}": ${reason}`,
+        },
+      });
+    });
+
+    await this.syncCandidateProjectProcessingSubStatus(
+      candidateProjectMapId,
+      'processing_in_progress',
+      userId,
+      reason,
+    );
+
+    return { success: true };
+  }
+
+  async holdProcessingFromCancelled(
+    anchorStepId: string,
+    userId: string,
+    reason: string,
+  ) {
+    const anchorStep = await this.prisma.processingStep.findUnique({
+      where: { id: anchorStepId },
+      include: {
+        template: true,
+        processingCandidate: {
+          include: { candidate: true, project: true, candidateProjectMap: true },
+        },
+      },
+    });
+
+    if (!anchorStep) throw new NotFoundException('Processing step not found');
+
+    const candidateProjectMapId = anchorStep.processingCandidate?.candidateProjectMap?.id;
+
+    await this.prisma.$transaction(async (tx) => {
+      const restoredAnchor = await this.restoreCancelledProcessingSteps(
+        tx,
+        anchorStep.processingCandidateId,
+        anchorStepId,
+        'on_hold',
+        reason,
+      );
+
+      await tx.processingCandidate.update({
+        where: { id: anchorStep.processingCandidateId },
+        data: {
+          processingStatus: 'on_hold',
+          step: restoredAnchor.template.key,
+        },
+      });
+
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: anchorStep.processingCandidate?.candidateId,
+          projectId: anchorStep.processingCandidate?.projectId,
+          roleNeededId: anchorStep.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: anchorStep.processingCandidateId,
+          status: 'on_hold',
+          step: restoredAnchor.template.key,
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: `Processing moved to hold from cancellation at "${restoredAnchor.template.label}": ${reason}`,
+        },
+      });
+    });
+
+    if (candidateProjectMapId) {
       await this.syncCandidateProjectProcessingSubStatus(
-        input.candidateProjectMapId,
+        candidateProjectMapId,
         'processing_hold',
         userId,
-        input.reason,
+        reason,
       );
     }
+
+    try {
+      await this.processingRemindersService.cancelReminder(anchorStepId);
+    } catch (err) {
+      this.logger.error(
+        `Failed to cancel reminders after hold-from-cancelled on step ${anchorStepId}:`,
+        err,
+      );
+    }
+
+    return { success: true };
   }
 
   async holdProcessing(stepId: string, userId: string, reason: string) {
@@ -6104,7 +6571,10 @@ export class ProcessingService {
 
   async syncCandidateProjectProcessingSubStatus(
     candidateProjectMapId: string,
-    subStatusName: 'processing_cancelled' | 'processing_hold',
+    subStatusName:
+      | 'processing_cancelled'
+      | 'processing_hold'
+      | 'processing_in_progress',
     userId: string,
     reason: string,
   ) {
@@ -6163,10 +6633,7 @@ export class ProcessingService {
     const where: any = {
       status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
       requestType: {
-        in: [
-          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-        ],
+        in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
       },
     };
 
@@ -6252,10 +6719,7 @@ export class ProcessingService {
         processingCandidateId: processingId,
         status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
         requestType: {
-          in: [
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-          ],
+          in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
         },
       },
       include: {
@@ -6277,10 +6741,7 @@ export class ProcessingService {
           ],
         },
         requestType: {
-          in: [
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-          ],
+          in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
         },
       },
       include: {
@@ -6304,10 +6765,7 @@ export class ProcessingService {
         processingCandidateId: { in: ids },
         status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
         requestType: {
-          in: [
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
-            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
-          ],
+          in: [...PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST],
         },
       },
     });

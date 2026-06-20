@@ -210,6 +210,46 @@ describe("ReviewStatusChangeRequestModal", () => {
     });
   });
 
+  it("shows processing status transition for reactivation review", () => {
+    const processingRequest: PendingStatusChangeRequest = {
+      id: "proc-request-id",
+      requestType: "processing_reactivate",
+      reason: "Candidate is ready to continue visa processing.",
+      createdAt: "2026-06-09T10:30:00Z",
+      stepKey: "visa",
+      requester: {
+        id: "req-123",
+        name: "Alex Processing",
+        email: "alex@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        processingStatus="cancelled"
+        projectTitle="Hospital Project"
+      />,
+    );
+
+    expect(
+      screen.getByText("Review Processing Reactivation Request"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Reactivating processing")).toBeInTheDocument();
+    expect(screen.getByText("Processing Cancelled")).toBeInTheDocument();
+    expect(screen.getByText("Processing In Progress")).toBeInTheDocument();
+    expect(screen.getByText("Resume at: Visa")).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Approving will change processing from Processing Cancelled to Processing In Progress at Visa.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("closes modal after successful approval", async () => {
     const user = userEvent.setup();
     mockApprove.mockReturnValue({ unwrap: vi.fn().mockResolvedValue({}) });

@@ -11,11 +11,10 @@ import { toast } from "sonner";
 import { useAppSelector } from "@/app/hooks";
 import { useCreateProcessingStatusChangeRequestMutation } from "@/features/processing/data/processing.endpoints";
 import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
+import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 import RequestProcessingActionModal, {
   type ProcessingActionType,
 } from "./RequestProcessingActionModal";
-
-const PROCESSING_DIRECT_ROLES = new Set(["Manager", "Processing Manager"]);
 
 interface ProcessingStepActionButtonsProps {
   processingStepId?: string;
@@ -66,8 +65,7 @@ export function ProcessingStepActionButtons({
   size = "sm",
 }: ProcessingStepActionButtonsProps) {
   const { user } = useAppSelector((state) => state.auth);
-  const roleNames = user?.roles ?? [];
-  const isDirectAction = roleNames.some((name) => PROCESSING_DIRECT_ROLES.has(name));
+  const isDirectAction = canDirectApplyProcessingStatusChange(user?.roles);
   const { isLocked, tooltip: lockTooltip } = useProcessingActionLock();
 
   const [modalOpen, setModalOpen] = useState(false);

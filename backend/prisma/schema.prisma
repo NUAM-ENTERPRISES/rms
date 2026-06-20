@@ -1273,7 +1273,7 @@ model CandidateProjectStatusChangeRequest {
   candidateProjectMapId String
   candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   
-  // Request type: 'block' | 'reactivate' | 'processing_cancel' | 'processing_hold'
+  // Request type: 'block' | 'reactivate' | 'processing_cancel' | 'processing_hold' | 'processing_reactivate'
   requestType           String   @default("block")
   
   requestedStatus       String

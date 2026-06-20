@@ -304,6 +304,7 @@ export const STATUS_CHANGE_REQUEST_TYPES = {
   REACTIVATE: 'reactivate',
   PROCESSING_CANCEL: 'processing_cancel',
   PROCESSING_HOLD: 'processing_hold',
+  PROCESSING_REACTIVATE: 'processing_reactivate',
 } as const;
 
 export type StatusChangeRequestType =
@@ -312,18 +313,134 @@ export type StatusChangeRequestType =
 export const PROCESSING_STATUS_CHANGE_TARGET_STATUSES = [
   'processing_cancelled',
   'processing_hold',
+  'processing_in_progress',
 ] as const;
 
 export type ProcessingStatusChangeTargetStatus =
   (typeof PROCESSING_STATUS_CHANGE_TARGET_STATUSES)[number];
+
+export const PROCESSING_STATUS_CHANGE_REQUEST_TYPE_LIST = [
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
+] as const;
 
 export function isProcessingStatusChangeRequestType(
   requestType: string,
 ): boolean {
   return (
     requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL ||
-    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD ||
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE
   );
+}
+
+const PROCESSING_CANCEL_ALLOWED_STATUSES = ['assigned', 'in_progress', 'on_hold'] as const;
+const PROCESSING_HOLD_ALLOWED_STATUSES = ['assigned', 'in_progress', 'cancelled'] as const;
+const PROCESSING_REACTIVATE_ALLOWED_STATUSES = ['cancelled', 'on_hold'] as const;
+
+export function isProcessingStatusTransitionAllowed(
+  requestType: string,
+  processingStatus: string,
+): boolean {
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
+    return (PROCESSING_CANCEL_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
+    return (PROCESSING_HOLD_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+    return (PROCESSING_REACTIVATE_ALLOWED_STATUSES as readonly string[]).includes(
+      processingStatus,
+    );
+  }
+  return false;
+}
+
+export function getProcessingStatusChangeActionLabel(requestType: string): string {
+  switch (requestType) {
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL:
+      return 'cancellation';
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD:
+      return 'hold';
+    case STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE:
+      return 'reactivation';
+    default:
+      return 'status change';
+  }
+}
+
+export function getProcessingStatusChangeRecruiterNotification(params: {
+  requestType: string;
+  outcome: 'approved' | 'rejected';
+  candidateName: string;
+  projectTitle: string;
+  reviewNotes?: string | null;
+}): { title: string; message: string } {
+  const { requestType, outcome, candidateName, projectTitle, reviewNotes } =
+    params;
+  const remarks = reviewNotes?.trim() ? ` Remarks: ${reviewNotes.trim()}` : '';
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing Cancelled',
+        message: `${candidateName} — processing cancelled for project "${projectTitle}". Please inform the candidate for other details.`,
+      };
+    }
+    return {
+      title: 'Processing Cancellation Rejected',
+      message: `Processing cancellation request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing On Hold',
+        message: `${candidateName} — processing put on hold for project "${projectTitle}". Please review candidate project details.`,
+      };
+    }
+    return {
+      title: 'Processing Hold Rejected',
+      message: `Processing hold request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+    if (outcome === 'approved') {
+      return {
+        title: 'Processing Reactivated',
+        message: `${candidateName} — processing reactivated for project "${projectTitle}".`,
+      };
+    }
+    return {
+      title: 'Processing Reactivation Rejected',
+      message: `Processing reactivation request for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+    };
+  }
+
+  return {
+    title:
+      outcome === 'approved'
+        ? 'Processing Status Change Approved'
+        : 'Processing Status Change Rejected',
+    message:
+      outcome === 'approved'
+        ? `Processing status change for ${candidateName} on "${projectTitle}" was approved.${remarks}`
+        : `Processing status change for ${candidateName} on "${projectTitle}" was rejected.${remarks}`,
+  };
+}
+
+export function buildCandidateProjectNotificationLink(
+  candidateId: string,
+  projectId: string,
+): string {
+  return `/candidate-project/${candidateId}/projects/${projectId}`;
 }
 
 export function isCandidateProjectPipelineBlocked(

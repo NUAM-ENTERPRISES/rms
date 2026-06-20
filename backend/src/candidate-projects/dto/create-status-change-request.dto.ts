@@ -20,6 +20,7 @@ const ALL_REQUEST_TYPES = [
   STATUS_CHANGE_REQUEST_TYPES.REACTIVATE,
   STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
   STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+  STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
 ] as const;
 
 export class CreateStatusChangeRequestDto {
@@ -33,7 +34,7 @@ export class CreateStatusChangeRequestDto {
 
   @ApiProperty({
     description:
-      'Type of request: block, reactivate, processing_cancel, or processing_hold',
+      'Type of request: block, reactivate, processing_cancel, processing_hold, or processing_reactivate',
     enum: ALL_REQUEST_TYPES,
     default: 'block',
     example: 'block',
@@ -53,7 +54,7 @@ export class CreateStatusChangeRequestDto {
   requestedStatus?: string;
 
   @ApiPropertyOptional({
-    description: 'Processing step ID (required for processing_cancel / processing_hold)',
+    description: 'Processing step ID (required for processing status change requests)',
   })
   @ValidateIf((o) => isProcessingStatusChangeRequestType(o.requestType))
   @IsString()
@@ -85,6 +86,9 @@ export function resolveProcessingRequestedStatus(
 ): (typeof PROCESSING_STATUS_CHANGE_TARGET_STATUSES)[number] {
   if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
     return 'processing_cancelled';
+  }
+  if (requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE) {
+    return 'processing_in_progress';
   }
   return 'processing_hold';
 }

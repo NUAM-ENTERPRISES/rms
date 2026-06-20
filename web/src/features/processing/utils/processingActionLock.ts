@@ -4,6 +4,7 @@ import { format } from "date-fns";
 export type ProcessingActionLockReason =
   | "pending_cancel"
   | "pending_hold"
+  | "pending_reactivate"
   | "cancelled"
   | "on_hold";
 
@@ -18,6 +19,7 @@ export interface ProcessingActionLockState {
 const LOCK_TOOLTIPS: Record<ProcessingActionLockReason, string> = {
   pending_cancel: "Cancellation request is pending approval",
   pending_hold: "Hold request is pending approval",
+  pending_reactivate: "Reactivation request is pending approval",
   cancelled: "This processing has been cancelled — actions are disabled",
   on_hold: "This processing is on hold — actions are disabled",
 };
@@ -59,6 +61,15 @@ export function getProcessingActionLock(input: {
       isLocked: true,
       reason: "pending_hold",
       tooltip: LOCK_TOOLTIPS.pending_hold,
+    };
+  }
+
+  if (pendingRequest?.requestType === "processing_reactivate") {
+    return {
+      ...base,
+      isLocked: true,
+      reason: "pending_reactivate",
+      tooltip: LOCK_TOOLTIPS.pending_reactivate,
     };
   }
 

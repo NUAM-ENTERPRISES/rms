@@ -5,6 +5,19 @@ const PROCESSING_STATUS_CHANGE_NOTIFICATION_TYPES = [
   "processing_status_change_reviewed",
 ] as const;
 
+const resolveProcessingStatusChangeNotificationType = (notification: {
+  type?: string;
+  meta?: { type?: string };
+}) => {
+  if (
+    notification.type === "recruiter_notification" &&
+    notification.meta?.type === "processing_status_change_reviewed"
+  ) {
+    return "processing_status_change_reviewed";
+  }
+  return notification.type;
+};
+
 export type ProcessingStatusChangeSyncPayload = {
   type: "ProcessingStatusChange";
   processingCandidateId?: string;
@@ -16,16 +29,24 @@ export type ProcessingStatusChangeSyncPayload = {
   phase?: "requested" | "reviewed";
 };
 
-function buildProcessingStatusChangeInvalidationTags(meta: {
+export function buildProcessingStatusChangeInvalidationTags(meta: {
   processingCandidateId?: string;
   candidateId?: string;
   projectId?: string;
+  candidateProjectMapId?: string;
 }): Array<string | { type: string; id: string }> {
-  const { processingCandidateId, candidateId, projectId } = meta;
+  const { processingCandidateId, candidateId, projectId, candidateProjectMapId } =
+    meta;
 
   const tags: Array<string | { type: string; id: string }> = [
+    "ProcessingSummary",
+    "Processing",
+    "ProcessingDetails",
+    "ProcessingSteps",
     { type: "ProcessingSummary", id: "LIST" },
     { type: "Processing", id: "LIST" },
+    { type: "ProcessingDetails", id: "LIST" },
+    { type: "ProcessingSteps", id: "LIST" },
   ];
 
   if (processingCandidateId) {
@@ -47,7 +68,37 @@ function buildProcessingStatusChangeInvalidationTags(meta: {
     });
   }
 
+  if (candidateProjectMapId) {
+    tags.push({
+      type: "Candidate",
+      id: `status-change-history-${candidateProjectMapId}`,
+    });
+  }
+
   return tags;
+}
+
+function resolveProcessingStatusChangeMeta(notification: {
+  meta?: Record<string, unknown>;
+  data?: Record<string, unknown>;
+}) {
+  const meta = notification.meta ?? {};
+  const data = notification.data ?? {};
+
+  return {
+    processingCandidateId:
+      (meta.processingCandidateId as string | undefined) ??
+      (data.processingCandidateId as string | undefined),
+    candidateId:
+      (meta.candidateId as string | undefined) ??
+      (data.candidateId as string | undefined),
+    projectId:
+      (meta.projectId as string | undefined) ??
+      (data.projectId as string | undefined),
+    candidateProjectMapId:
+      (meta.candidateProjectMapId as string | undefined) ??
+      (data.candidateProjectMapId as string | undefined),
+  };
 }
 
 export const handleProcessingStatusChangeNotifications = ({
@@ -55,21 +106,26 @@ export const handleProcessingStatusChangeNotifications = ({
   dispatch,
   invalidateTags,
 }: NotificationHandlerProps) => {
+  const notificationType = resolveProcessingStatusChangeNotificationType(
+    notification,
+  );
+
   if (
+    !notificationType ||
     !PROCESSING_STATUS_CHANGE_NOTIFICATION_TYPES.includes(
-      notification.type as (typeof PROCESSING_STATUS_CHANGE_NOTIFICATION_TYPES)[number],
+      notificationType as (typeof PROCESSING_STATUS_CHANGE_NOTIFICATION_TYPES)[number],
     )
   ) {
     return false;
   }
 
-  const tags = buildProcessingStatusChangeInvalidationTags({
-    processingCandidateId: notification.meta?.processingCandidateId as
-      | string
-      | undefined,
-    candidateId: notification.meta?.candidateId as string | undefined,
-    projectId: notification.meta?.projectId as string | undefined,
-  });
+  console.log(
+    `[Socket] Handling processing status change notification: ${notificationType}`,
+  );
+
+  const tags = buildProcessingStatusChangeInvalidationTags(
+    resolveProcessingStatusChangeMeta(notification),
+  );
 
   dispatch(invalidateTags(tags));
   window.dispatchEvent(new CustomEvent("notifications:refresh"));
@@ -87,6 +143,8 @@ export const handleProcessingStatusChangeSync = (
   if (payload.type !== "ProcessingStatusChange") {
     return false;
   }
+
+  console.log("[Socket] Processing status change data sync", payload);
 
   const tags = buildProcessingStatusChangeInvalidationTags({
     processingCandidateId: payload.processingCandidateId,

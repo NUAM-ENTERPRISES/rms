@@ -32,6 +32,7 @@ import {
   DOCUMENT_TYPE,
   isCandidateProjectPipelineBlocked,
   isProcessingStatusChangeRequestType,
+  isProcessingStatusTransitionAllowed,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
@@ -1976,7 +1977,7 @@ export class CandidateProjectsService {
       }
       if (candidateProject.mainStatus?.name !== 'processing') {
         throw new BadRequestException(
-          'Processing cancel/hold requests are only allowed while candidate is in processing',
+          'Processing status change requests are only allowed while candidate is in processing',
         );
       }
       dto.requestedStatus =
@@ -1990,12 +1991,17 @@ export class CandidateProjectsService {
       });
       if (!processingCandidate?.assignedProcessingTeamUserId) {
         throw new BadRequestException(
-          'Candidate must be assigned to a processing team before requesting cancel/hold',
+          'Candidate must be assigned to a processing team before requesting a status change',
         );
       }
-      if (!['assigned', 'in_progress'].includes(processingCandidate.processingStatus)) {
+      if (
+        !isProcessingStatusTransitionAllowed(
+          dto.requestType,
+          processingCandidate.processingStatus,
+        )
+      ) {
         throw new BadRequestException(
-          'Processing cancel/hold is only allowed while processing is active',
+          `Cannot request ${dto.requestType} while processing status is ${processingCandidate.processingStatus}`,
         );
       }
     }

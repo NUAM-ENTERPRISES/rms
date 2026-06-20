@@ -173,6 +173,46 @@ When a manager submits **Request Agent Candidates**, the backend emits `agent_ca
 
 ---
 
+## Processing status change requests (cancel / hold / reactivate)
+
+When processing submits a cancel, hold, or reactivate request, the backend publishes:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateProjectStatusChangeRequested` | Manager + Processing Manager (bell notification) |
+| `DataSync` (`ProcessingStatusChange`, `phase: requested`) | All connected clients |
+
+When a request is approved or rejected:
+
+| Event | Recipients |
+|-------|------------|
+| `CandidateProjectStatusChangeReviewed` | Requester + assigned processing team user + **candidate recruiter** |
+| `DataSync` (`ProcessingStatusChange`, `phase: reviewed`) | All connected clients |
+
+**Bell notification types**
+
+- `processing_status_change_request` — new request for approvers
+- `processing_status_change_reviewed` — outcome for requester / processing team
+- `recruiter_notification` (`meta.type: processing_status_change_reviewed`) — outcome for the candidate’s assigned recruiter; link opens `/candidate-project/{candidateId}/projects/{projectId}`
+
+**RTK tags to invalidate**
+
+| Tag | Refreshes |
+|-----|-----------|
+| `ProcessingSummary` / `{ type: "ProcessingSummary", id: "LIST" }` | Processing team dashboard, admin dashboard, awaiting-requests tile |
+| `Processing` / `{ type: "Processing", id: "<processingCandidateId>" }` | Candidate processing detail |
+| `ProcessingDetails` / `{ type: "ProcessingDetails", id: "<processingCandidateId>" }` | Pending request banner, status-update context |
+| `ProcessingSteps` / `{ type: "ProcessingSteps", id: "<processingCandidateId>" }` | Step cards and action locks |
+| `{ type: "Candidate", id: "<candidateId>" }` | Candidate pipeline views |
+
+**Handlers**
+
+- `notification-handlers/processing-status-change-handler.ts` — handles `notification:new` types above and `data:sync` with `type: ProcessingStatusChange`
+
+**Mutations:** `createProcessingStatusChangeRequest`, `approveCandidateProjectStatusChangeRequest`, and `rejectCandidateProjectStatusChangeRequest` invalidate the same tags so submitters and approvers see updates immediately without waiting for the socket.
+
+---
+
 ## 📝 Best Practices
 
 1.  **Don't Fetch manually**: Avoid calling `refetch()` manually. Use Tag invalidation; it's cleaner and handles multiple components automatically.

@@ -1,8 +1,8 @@
 import { CheckCircle2, XCircle, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getStatusChangeTargetLabel } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
 import type { ReviewedStatusChangeRequest } from "@/features/candidates/api";
+import { getStatusChangeRequestTitle } from "@/features/candidates/utils/statusChangeRequestDisplay";
 
 interface ReviewedStatusChangeRequestBannerProps {
   request: ReviewedStatusChangeRequest;
@@ -11,12 +11,7 @@ interface ReviewedStatusChangeRequestBannerProps {
 export function ReviewedStatusChangeRequestBanner({
   request,
 }: ReviewedStatusChangeRequestBannerProps) {
-  const statusLabel =
-    request.requestType === "reactivate"
-      ? "Reactivation"
-      : request.requestedStatus
-      ? getStatusChangeTargetLabel(request.requestedStatus)
-      : "Status Change";
+  const statusLabel = getStatusChangeRequestTitle(request);
 
   const isApproved = request.status === "approved";
   const reviewedDate = request.reviewedAt

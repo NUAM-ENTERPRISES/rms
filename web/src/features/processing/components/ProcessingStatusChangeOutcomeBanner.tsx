@@ -1,4 +1,4 @@
-import { AlertCircle, FileText, PauseCircle, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, PauseCircle, RefreshCw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ReviewedStatusChangeRequest } from "@/features/candidates/api";
@@ -12,6 +12,43 @@ function getOutcomeCopy(request: ReviewedStatusChangeRequest) {
   const isApproved = request.status === "approved";
   const isCancel = request.requestType === "processing_cancel";
   const isHold = request.requestType === "processing_hold";
+  const isReactivate = request.requestType === "processing_reactivate";
+
+  if (isReactivate && isApproved) {
+    return {
+      title: "Reactivation request approved",
+      subtitle: "Processing has resumed in progress at the previous step.",
+      badge: "Approved",
+      Icon: RefreshCw,
+      theme: {
+        border: "border-emerald-200",
+        bg: "bg-gradient-to-br from-emerald-50 to-green-50",
+        iconWrap: "bg-emerald-600 text-white",
+        title: "text-emerald-900",
+        meta: "text-emerald-800",
+        badge: "border-emerald-300 bg-emerald-100 text-emerald-900",
+        accent: "text-emerald-700",
+      },
+    };
+  }
+
+  if (isReactivate && !isApproved) {
+    return {
+      title: "Reactivation request rejected",
+      subtitle: "Processing will remain in its current status.",
+      badge: "Rejected",
+      Icon: RefreshCw,
+      theme: {
+        border: "border-amber-200",
+        bg: "bg-gradient-to-br from-amber-50 to-orange-50",
+        iconWrap: "bg-amber-600 text-white",
+        title: "text-amber-900",
+        meta: "text-amber-800",
+        badge: "border-amber-300 bg-amber-100 text-amber-900",
+        accent: "text-amber-700",
+      },
+    };
+  }
 
   if (isCancel && isApproved) {
     return {

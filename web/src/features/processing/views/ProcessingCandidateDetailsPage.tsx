@@ -10,7 +10,7 @@ import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Loader2, FileCheck } from "lucide-react";
+import { AlertCircle, Loader2, FileCheck, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
@@ -49,18 +49,22 @@ import type {
   ReviewedStatusChangeRequest,
 } from "@/features/candidates/api";
 import { ProcessingStatusChangeOutcomeBanner } from "@/features/processing/components/ProcessingStatusChangeOutcomeBanner";
+import { UpdateProcessingStatusModal } from "@/features/processing/components/UpdateProcessingStatusModal";
 import { useAppSelector } from "@/app/hooks";
 import { ProcessingActionLockProvider } from "@/features/processing/context/ProcessingActionLockContext";
 import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
+import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 
 export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showUpdateStatusModal, setShowUpdateStatusModal] = useState(false);
   const { user } = useAppSelector((state) => state.auth);
   const canReviewProcessingRequests =
     user?.roles?.some((role) => ["Manager", "Processing Manager"].includes(role)) ?? false;
+  const canDirectApplyStatusChange = canDirectApplyProcessingStatusChange(user?.roles);
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
@@ -120,10 +124,6 @@ export default function ProcessingCandidateDetailsPage() {
     outcomeRequestId && latestReviewed?.id === outcomeRequestId
       ? latestReviewed
       : latestReviewed;
-  const showOutcomeBanner =
-    !!outcomeReview &&
-    (outcomeReview.status === "approved" || outcomeReview.status === "rejected") &&
-    !pendingRequest;
 
   // --- New: paginated documents and history ---
   const [docsPage, setDocsPage] = useState(1);
@@ -140,6 +140,37 @@ export default function ProcessingCandidateDetailsPage() {
 
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  const showOutcomeBanner =
+    !!outcomeReview &&
+    (outcomeReview.status === "approved" || outcomeReview.status === "rejected") &&
+    !pendingRequest;
+
+  const showUpdateStatusButton =
+    !pendingRequest &&
+    (data?.processingStatus === "cancelled" || data?.processingStatus === "on_hold");
+
+  const getPendingRequestTitle = (requestType?: string) => {
+    switch (requestType) {
+      case "processing_cancel":
+        return "Cancellation request pending approval";
+      case "processing_hold":
+        return "Hold request pending approval";
+      case "processing_reactivate":
+        return "Reactivation request pending approval";
+      default:
+        return "Status change request pending approval";
+    }
+  };
+
+  const refetchStatusChangeData = async () => {
+    await Promise.all([
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
+      refetchCandidateDetails(),
+      refetchProcessingSteps(),
+    ]);
+  };
 
   // Map paginated documents to UI shape expected by DocumentVerificationCard
   const docsTotal = docsResponse?.data?.pagination?.total || 0;
@@ -372,9 +403,7 @@ export default function ProcessingCandidateDetailsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-orange-800">
-                    {pendingRequest.requestType === "processing_cancel"
-                      ? "Cancellation request pending approval"
-                      : "Hold request pending approval"}
+                    {getPendingRequestTitle(pendingRequest.requestType)}
                   </h3>
                   <p className="text-sm text-slate-700 mt-1">{pendingRequest.reason}</p>
                   {pendingRequestSubmittedAt && (
@@ -402,6 +431,31 @@ export default function ProcessingCandidateDetailsPage() {
 
         {showOutcomeBanner && outcomeReview ? (
           <ProcessingStatusChangeOutcomeBanner request={outcomeReview} />
+        ) : null}
+
+        {showUpdateStatusButton ? (
+          <Card className="w-full border-0 shadow-lg bg-white p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Processing status update
+                </h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  {canDirectApplyStatusChange
+                    ? "Change hold, reactivation, or cancellation directly."
+                    : "Request hold, reactivation, or cancellation for manager approval."}
+                </p>
+              </div>
+              <Button
+                type="button"
+                className="bg-violet-600 hover:bg-violet-700 shrink-0"
+                onClick={() => setShowUpdateStatusModal(true)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Update Processing Status
+              </Button>
+            </div>
+          </Card>
         ) : null}
 
         {data.processingStatus === "cancelled" && !showOutcomeBanner ? (
@@ -798,6 +852,15 @@ export default function ProcessingCandidateDetailsPage() {
         stepLabel={manageStepDocsLabel}
       />
 
+      <UpdateProcessingStatusModal
+        isOpen={showUpdateStatusModal}
+        onClose={() => setShowUpdateStatusModal(false)}
+        processingId={data.id}
+        processingStatus={data.processingStatus}
+        stepKey={data.step}
+        onSubmitted={refetchStatusChangeData}
+      />
+
       {highlightedReview && data?.candidate && data?.project && (
         <ReviewStatusChangeRequestModal
           isOpen={showReviewModal}
@@ -813,6 +876,8 @@ export default function ProcessingCandidateDetailsPage() {
               : data.project.country ?? undefined
           }
           stepKey={highlightedReview.stepKey}
+          processingStatus={data.processingStatus}
+          currentStatus={data.processingStatus}
           onReviewed={handleReviewed}
         />
       )}

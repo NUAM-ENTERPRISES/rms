@@ -6,6 +6,12 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { WhatsAppNotificationService } from '../notifications/whatsapp-notification.service';
 import { isOperationsRole, ROLE_NAMES } from '../common/constants/role-ids';
+import {
+  buildCandidateProjectNotificationLink,
+  getProcessingStatusChangeActionLabel,
+  getProcessingStatusChangeRecruiterNotification,
+  isProcessingStatusChangeRequestType,
+} from '../common/constants/statuses';
 import { OFFER_LETTER_UPLOAD_LEADERSHIP_ROLES } from '../common/constants/offer-letter-notifications';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
 
@@ -2950,11 +2956,10 @@ export class NotificationsProcessor extends WorkerHost {
       };
 
       const isProcessingRequest =
-        requestType === 'processing_cancel' || requestType === 'processing_hold';
+        !!requestType && isProcessingStatusChangeRequestType(requestType);
 
-      if (isProcessingRequest) {
-        const actionLabel =
-          requestType === 'processing_cancel' ? 'cancellation' : 'hold';
+      if (isProcessingRequest && requestType) {
+        const actionLabel = getProcessingStatusChangeActionLabel(requestType);
         const countrySuffix =
           countryName || countryCode
             ? ` (${countryName ?? countryCode})`
@@ -3105,14 +3110,23 @@ export class NotificationsProcessor extends WorkerHost {
       };
 
       const isProcessingRequest =
-        requestType === 'processing_cancel' || requestType === 'processing_hold';
+        !!requestType && isProcessingStatusChangeRequestType(requestType);
 
-      if (isProcessingRequest) {
-        const actionLabel =
-          requestType === 'processing_cancel' ? 'cancellation' : 'hold';
-        const link = processingCandidateId
+      if (isProcessingRequest && requestType) {
+        const actionLabel = getProcessingStatusChangeActionLabel(requestType);
+        const processingTeamLink = processingCandidateId
           ? `/processingCandidateDetails/${processingCandidateId}?actionOutcome=${requestId}`
           : `/processing-admin?filter=awaiting_requests`;
+
+        const candidateProject = await this.prisma.candidateProjects.findUnique({
+          where: { id: candidateProjectMapId },
+          select: { recruiterId: true },
+        });
+        const recruiterId = candidateProject?.recruiterId ?? null;
+        const recruiterLink = buildCandidateProjectNotificationLink(
+          candidateId,
+          projectId,
+        );
 
         const notifyUserIds = new Set<string>([requestedBy]);
         if (processingCandidateId) {
@@ -3123,6 +3137,9 @@ export class NotificationsProcessor extends WorkerHost {
           if (pc?.assignedProcessingTeamUserId) {
             notifyUserIds.add(pc.assignedProcessingTeamUserId);
           }
+        }
+        if (recruiterId) {
+          notifyUserIds.delete(recruiterId);
         }
 
         for (const userId of notifyUserIds) {
@@ -3138,7 +3155,7 @@ export class NotificationsProcessor extends WorkerHost {
               outcome === 'approved'
                 ? `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was approved.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`
                 : `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was rejected.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`,
-            link,
+            link: processingTeamLink,
             meta: {
               requestId,
               candidateProjectMapId,
@@ -3150,6 +3167,36 @@ export class NotificationsProcessor extends WorkerHost {
               requestType,
             },
             idemKey,
+          });
+        }
+
+        if (recruiterId) {
+          const recruiterCopy = getProcessingStatusChangeRecruiterNotification({
+            requestType,
+            outcome,
+            candidateName,
+            projectTitle,
+            reviewNotes,
+          });
+
+          await this.notificationsService.createNotification({
+            userId: recruiterId,
+            type: 'recruiter_notification',
+            title: recruiterCopy.title,
+            message: recruiterCopy.message,
+            link: recruiterLink,
+            meta: {
+              type: 'processing_status_change_reviewed',
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestedStatus,
+              outcome,
+              processingCandidateId,
+              requestType,
+            },
+            idemKey: `${eventId}:processing_status_change_recruiter:${requestId}:${recruiterId}`,
           });
         }
         return;

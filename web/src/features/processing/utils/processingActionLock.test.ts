@@ -94,8 +94,26 @@ describe("getProcessingActionLock", () => {
     ).toMatchObject({
       isLocked: true,
       reason: "on_hold",
-      tooltip: "Processing is on hold — actions are disabled",
+      tooltip: "This processing is on hold — actions are disabled",
       submittedAtLabel: null,
+    });
+  });
+
+  it("locks for pending reactivation request", () => {
+    expect(
+      getProcessingActionLock({
+        pendingRequest: {
+          id: "1",
+          requestType: "processing_reactivate",
+          reason: "test",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+        processingStatus: "cancelled",
+      }),
+    ).toMatchObject({
+      isLocked: true,
+      reason: "pending_reactivate",
+      tooltip: "Reactivation request is pending approval",
     });
   });
 

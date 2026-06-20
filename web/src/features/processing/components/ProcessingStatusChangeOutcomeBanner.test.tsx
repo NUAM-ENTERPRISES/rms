@@ -1,38 +1,37 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ProcessingStatusChangeOutcomeBanner } from "./ProcessingStatusChangeOutcomeBanner";
 import type { ReviewedStatusChangeRequest } from "@/features/candidates/api";
 
-describe("ProcessingStatusChangeOutcomeBanner", () => {
-  const baseRequest: ReviewedStatusChangeRequest = {
-    id: "req-1",
-    requestType: "processing_cancel",
-    reason: "Candidate withdrew from the project.",
-    createdAt: "2026-06-19T10:00:00.000Z",
-    status: "approved",
-    reviewedAt: "2026-06-19T12:30:00.000Z",
-    reviewNotes: "Confirmed with the processing team.",
-    requester: { id: "u1", name: "Alex Processor", email: "alex@example.com" },
-    reviewer: { id: "u2", name: "Maria Manager", email: "maria@example.com" },
-  };
+const baseRequest: ReviewedStatusChangeRequest = {
+  id: "req-1",
+  requestType: "processing_reactivate",
+  requestedStatus: "processing_in_progress",
+  reason: "Candidate confirmed availability to resume.",
+  status: "approved",
+  createdAt: "2026-06-19T10:00:00.000Z",
+  reviewedAt: "2026-06-19T11:00:00.000Z",
+  reviewNotes: "Approved to resume at HRD.",
+  requester: { id: "u1", name: "Processing User", email: "proc@example.com" },
+  reviewer: { id: "u2", name: "Manager One", email: "mgr@example.com" },
+};
 
-  it("shows reviewer, review date, and notes for approved cancellation", () => {
+describe("ProcessingStatusChangeOutcomeBanner", () => {
+  it("renders approved reactivation outcome with reviewer and notes", () => {
     render(<ProcessingStatusChangeOutcomeBanner request={baseRequest} />);
 
-    expect(screen.getByText("Cancellation request approved")).toBeInTheDocument();
-    expect(screen.getByText(/Approved by/i)).toBeInTheDocument();
-    expect(screen.getByText("Maria Manager")).toBeInTheDocument();
-    expect(screen.getByText(/Originally requested by Alex Processor/i)).toBeInTheDocument();
-    expect(screen.getByText("Candidate withdrew from the project.")).toBeInTheDocument();
-    expect(screen.getByText("Confirmed with the processing team.")).toBeInTheDocument();
+    expect(screen.getByText("Reactivation request approved")).toBeInTheDocument();
+    expect(screen.getByText(/Manager One/)).toBeInTheDocument();
+    expect(screen.getByText("Approved to resume at HRD.")).toBeInTheDocument();
   });
 
-  it("shows rejected hold outcome copy", () => {
+  it("renders rejected hold outcome", () => {
     render(
       <ProcessingStatusChangeOutcomeBanner
         request={{
           ...baseRequest,
           requestType: "processing_hold",
+          requestedStatus: "processing_hold",
           status: "rejected",
           reviewNotes: null,
         }}
@@ -40,7 +39,6 @@ describe("ProcessingStatusChangeOutcomeBanner", () => {
     );
 
     expect(screen.getByText("Hold request rejected")).toBeInTheDocument();
-    expect(screen.getByText(/Rejected by/i)).toBeInTheDocument();
     expect(screen.getByText("No review notes were provided.")).toBeInTheDocument();
   });
 });

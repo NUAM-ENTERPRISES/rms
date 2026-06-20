@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import { buildProcessingStatusChangeInvalidationTags } from "@/app/providers/notification-handlers/processing-status-change-handler";
 import type { CandidateProfileCompletionPayload } from "./profileCompletion";
 
 /** Aggregated pipeline activity counts from GET /candidates/:id */
@@ -900,7 +901,12 @@ export interface ConsolidatedCandidatesResponse {
 
 export type PendingStatusChangeRequest = {
   id: string;
-  requestType: "block" | "reactivate" | "processing_cancel" | "processing_hold";
+  requestType:
+    | "block"
+    | "reactivate"
+    | "processing_cancel"
+    | "processing_hold"
+    | "processing_reactivate";
   requestedStatus?: string;
   reason: string;
   createdAt: string;
@@ -1433,6 +1439,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         candidateId: string;
         projectId: string;
         candidateProjectMapId?: string;
+        processingCandidateId?: string;
         reviewNotes?: string;
       }
     >({
@@ -1441,15 +1448,17 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { reviewNotes },
       }),
-      invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
-        { type: "Candidate", id: candidateId },
-        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
-        { type: "ProcessingSummary", id: "LIST" },
-        { type: "Processing", id: "LIST" },
-        ...(candidateProjectMapId
-          ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
-          : []),
-      ],
+      invalidatesTags: (
+        _result,
+        _error,
+        { candidateId, projectId, candidateProjectMapId, processingCandidateId },
+      ) =>
+        buildProcessingStatusChangeInvalidationTags({
+          candidateId,
+          projectId,
+          candidateProjectMapId,
+          processingCandidateId,
+        }),
     }),
 
     rejectCandidateProjectStatusChangeRequest: builder.mutation<
@@ -1459,6 +1468,7 @@ export const candidatesApi = baseApi.injectEndpoints({
         candidateId: string;
         projectId: string;
         candidateProjectMapId?: string;
+        processingCandidateId?: string;
         reviewNotes?: string;
       }
     >({
@@ -1467,15 +1477,17 @@ export const candidatesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { reviewNotes },
       }),
-      invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
-        { type: "Candidate", id: candidateId },
-        { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
-        { type: "ProcessingSummary", id: "LIST" },
-        { type: "Processing", id: "LIST" },
-        ...(candidateProjectMapId
-          ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
-          : []),
-      ],
+      invalidatesTags: (
+        _result,
+        _error,
+        { candidateId, projectId, candidateProjectMapId, processingCandidateId },
+      ) =>
+        buildProcessingStatusChangeInvalidationTags({
+          candidateId,
+          projectId,
+          candidateProjectMapId,
+          processingCandidateId,
+        }),
     }),
 
 
