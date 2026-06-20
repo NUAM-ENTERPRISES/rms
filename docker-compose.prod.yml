@@ -5,7 +5,7 @@ name: rms-prod
 
 services:
   postgres:
-    image: public.ecr.aws/docker/library/postgres:16-alpine
+    image: postgres:16-alpine
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -22,7 +22,7 @@ services:
       - rms-network
 
   redis:
-    image: public.ecr.aws/docker/library/redis:7-alpine
+    image: redis:7-alpine
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -72,7 +72,8 @@ services:
         VITE_WS_URL: ${VITE_WS_URL}
     restart: always
     ports:
-      - "80:80"
+      # 8080 on host — host nginx (443) proxies to this port
+      - "8080:80"
     depends_on:
       backend:
         condition: service_healthy
