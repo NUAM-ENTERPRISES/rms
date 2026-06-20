@@ -1273,7 +1273,7 @@ model CandidateProjectStatusChangeRequest {
   candidateProjectMapId String
   candidateProjectMap   CandidateProjects @relation(fields: [candidateProjectMapId], references: [id], onDelete: Cascade)
   
-  // Request type: 'block' (to Withdrawn/On Hold) or 'reactivate' (return to last active)
+  // Request type: 'block' | 'reactivate' | 'processing_cancel' | 'processing_hold'
   requestType           String   @default("block")
   
   requestedStatus       String
@@ -1285,6 +1285,15 @@ model CandidateProjectStatusChangeRequest {
   reviewer              User?    @relation("StatusChangeReviewer", fields: [reviewedBy], references: [id])
   reviewedAt            DateTime?
   reviewNotes           String?  @db.Text
+
+  // Processing-specific context (nullable; set for processing_cancel / processing_hold)
+  processingStepId      String?
+  stepKey               String?
+  processingCandidateId String?
+
+  processingStep      ProcessingStep?      @relation(fields: [processingStepId], references: [id], onDelete: SetNull)
+  processingCandidate ProcessingCandidate? @relation(fields: [processingCandidateId], references: [id], onDelete: SetNull)
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -1292,6 +1301,7 @@ model CandidateProjectStatusChangeRequest {
   @@index([requestedBy])
   @@index([status])
   @@index([requestType])
+  @@index([requestType, status])
   @@map("candidate_project_status_change_requests")
 }
 
@@ -2222,6 +2232,7 @@ model ProcessingStep {
   template            ProcessingStepTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
   documents           ProcessingStepDocument[]
   processingReminders ProcessingStepReminder[]
+  statusChangeRequests CandidateProjectStatusChangeRequest[]
 
   @@index([processingCandidateId])
   @@index([templateId])
@@ -2271,6 +2282,7 @@ model ProcessingCandidate {
   processingSteps     ProcessingStep[]
   processingReminders ProcessingStepReminder[]
   history             ProcessingHistory[]
+  statusChangeRequests CandidateProjectStatusChangeRequest[]
 
   @@unique([candidateId, projectId, roleNeededId])
   @@index([candidateId])

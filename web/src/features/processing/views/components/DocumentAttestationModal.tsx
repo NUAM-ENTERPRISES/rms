@@ -8,13 +8,16 @@ import React, { useState, useMemo } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetDocumentAttestationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { useGetDocumentAttestationRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
 import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 
 interface DocumentAttestationModalProps {
@@ -27,6 +30,7 @@ interface DocumentAttestationModalProps {
 
 
 export function DocumentAttestationModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: DocumentAttestationModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetDocumentAttestationRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -37,10 +41,6 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
   const [reuploadProcessingDocument, { isLoading: isReuploadingProcessing }] = useReuploadProcessingDocumentMutation();
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -390,28 +390,6 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
     }
   };
 
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) {
-      toast.error("No active step found");
-      return;
-    }
-
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-
-      if (onComplete) {
-        await onComplete();
-      }
-
-      onClose();
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || err?.error || "Failed to cancel step");
-    }
-  };
 
 
   // Prefer counts from the API payload when available (keeps UI consistent with backend)
@@ -470,6 +448,8 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
             </Card>
           ) : (
             <div className="space-y-4">
+
+              <ProcessingActionLockBanner />
 
               {isStepCancelled && (
                 <Card className="w-full border-0 shadow-sm bg-rose-50 p-3">
@@ -599,44 +579,53 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                               {!hasProcessing ? (
                                 <>
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        candidateDoc?.id,
-                                        candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          candidateDoc?.id,
+                                          candidateProjectMapId || candidateDoc?.verifications?.[0]?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {!candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      className="h-8 text-xs"
-                                      onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-8 text-xs"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
 
                                   {candidateDoc && (
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
-                                    >
-                                      Verify
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        disabled={isLocked}
+                                        onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.roleCatalog?.label || candidate?.role?.designation)}
+                                      >
+                                        Verify
+                                      </Button>
+                                    </LockedProcessingActionButton>
                                   )}
                                 </>
                               ) : (
@@ -644,22 +633,25 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
                                   <div className="flex items-center gap-2">
                                     <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Verified</Badge>
 
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                                      onClick={() => handleUploadClick(
-                                        req.docType,
-                                        req.label,
-                                        candidate?.role?.roleCatalog?.id,
-                                        candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
-                                        processingDoc?.id,
-                                        candidateProjectMapId || processingDoc?.candidateProjectMapId
-                                      )}
-                                    >
-                                      <Upload className="h-3 w-3 mr-1" />
-                                      Re-upload
-                                    </Button>
+                                    <LockedProcessingActionButton forceDisabled={isLocked}>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-[10px] px-2 font-bold border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                        disabled={isLocked}
+                                        onClick={() => handleUploadClick(
+                                          req.docType,
+                                          req.label,
+                                          candidate?.role?.roleCatalog?.id,
+                                          candidate?.role?.roleCatalog?.label || candidate?.role?.designation,
+                                          processingDoc?.id,
+                                          candidateProjectMapId || processingDoc?.candidateProjectMapId
+                                        )}
+                                      >
+                                        <Upload className="h-3 w-3 mr-1" />
+                                        Re-upload
+                                      </Button>
+                                    </LockedProcessingActionButton>
 
                                   </div>
                                 ) : (
@@ -698,22 +690,33 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
               </Button>
 
               {!isAttestationCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step
-                </Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isAttestationCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isAttestationCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Document Attestation Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Document Attestation Complete
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 <Button
                     size="sm"
                     onClick={handleMarkComplete}
-                    disabled={isCompletingStep || !canMarkComplete}
+                    disabled={isCompletingStep || !canMarkComplete || isLocked}
                     title={!canMarkComplete ? `Cannot complete — Missing: ${missingDocs.slice(0,2).join(', ')}${missingDocs.length > 2 ? ` +${missingDocs.length - 2} more` : ''}` : undefined}
-                    aria-disabled={isCompletingStep || !canMarkComplete}
+                    aria-disabled={isCompletingStep || !canMarkComplete || isLocked}
                   >
                     {isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Mark Document Attestation Complete'}
                   </Button>
@@ -745,16 +748,6 @@ export function DocumentAttestationModal({ isOpen, onClose, processingId, candid
           processingStepId={activeStep?.id || ""}
           onConfirm={handleConfirmVerify}
           isVerifying={isVerifying}
-        />
-      </React.Suspense>
-
-      {/* Confirm Cancel Step Modal */}
-      <React.Suspense fallback={null}>
-        <ConfirmCancelStepModal
-          isOpen={cancelOpen}
-          onClose={() => setCancelOpen(false)}
-          onConfirm={handleConfirmCancel}
-          isCancelling={isCancelling}
         />
       </React.Suspense>
 

@@ -11,14 +11,17 @@ import React, { useState, useMemo, useEffect } from "react";
 const UploadDocumentModal = React.lazy(() => import("../../components/UploadDocumentModal"));
 const VerifyProcessingDocumentModal = React.lazy(() => import("../../components/VerifyProcessingDocumentModal"));
 const CompleteProcessingStepModal = React.lazy(() => import("../../components/CompleteProcessingStepModal"));
-const ConfirmCancelStepModal = React.lazy(() => import("../../components/ConfirmCancelStepModal"));
-import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useCancelStepMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { useGetVisaRequirementsQuery, useCompleteStepMutation, useReuploadProcessingDocumentMutation, useVerifyProcessingDocumentMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
 import { useUploadDocumentMutation, useUpdateCandidateMutation } from "@/features/candidates/api";
 import { useCreateDocumentMutation } from "@/services/documentsApi";
 import { useReuseDocumentMutation } from "@/features/documents/api";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import VerifyAllDocumentsControl from "../../components/VerifyAllDocumentsControl";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { getUploadErrorMessage } from "@/lib/document-upload";
 import { resolveCandidatePassportNumber } from "@/features/candidates/utils/candidate-passport.util";
 
@@ -33,6 +36,7 @@ interface VisaModalProps {
 }
 
 export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId, onComplete }: VisaModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetVisaRequirementsQuery(processingId, {
     skip: !isOpen || !processingId,
   });
@@ -45,10 +49,6 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
   const [verifyProcessingDocument, { isLoading: isVerifying }] = useVerifyProcessingDocumentMutation();
   const [updateStepStatus, { isLoading: isUpdatingVisa }] = useUpdateStepStatusMutation();
   const [updateCandidate, { isLoading: isUpdatingCandidate }] = useUpdateCandidateMutation();
-
-  // Cancel step mutation + UI state
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
-  const [cancelOpen, setCancelOpen] = useState(false);
 
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -299,20 +299,6 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
     }
   };
 
-  const handleConfirmCancel = async (reason: string) => {
-    if (!activeStep?.id) return;
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-      if (onComplete) await onComplete();
-      onClose();
-    } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to cancel step");
-    }
-  };
-
   const handleSaveVisaMetadata = async () => {
     if (!activeStep?.id) return;
 
@@ -401,6 +387,8 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
             <Card className="p-8 text-center text-sm text-slate-600">Could not load Visa requirements.</Card>
           ) : (
             <div className="space-y-4">
+              <ProcessingActionLockBanner />
+
               {isStepCancelled && (
                 <Card className="bg-rose-50 p-3 border-0">
                   <div className="flex items-start gap-3">
@@ -487,15 +475,18 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                       <div className="mt-3 space-y-2">
                         {hasPassportOnFile && !isEditingPassport ? (
                           <div className="flex justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                              onClick={() => setIsEditingPassport(true)}
-                            >
-                              Update passport
-                            </Button>
+                            <LockedProcessingActionButton forceDisabled={isLocked}>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                                disabled={isLocked}
+                                onClick={() => setIsEditingPassport(true)}
+                              >
+                                Update passport
+                              </Button>
+                            </LockedProcessingActionButton>
                           </div>
                         ) : (
                           <>
@@ -508,6 +499,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                               onChange={(event) => setPassportNumber(event.target.value.toUpperCase())}
                               placeholder="e.g., A1234567"
                               autoComplete="off"
+                              disabled={isLocked}
                               className="h-9 bg-white font-mono text-sm tracking-wide"
                             />
                             {hasPassportOnFile ? (
@@ -567,26 +559,28 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Visa issue date</Label>
-                      <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled} compact />
+                      <DatePicker value={visaIssuedDate} onChange={setVisaIssuedDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                     <div>
                       <Label className="text-xs text-slate-600 mb-1 block">Visa expiry date</Label>
-                      <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled} compact />
+                      <DatePicker value={visaExpiryDate} onChange={setVisaExpiryDate} disabled={isVisaCompleted || isStepCancelled || isLocked} compact />
                     </div>
                   </div>
                   {showSaveVisaButton && (
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        onClick={handleSaveVisaMetadata}
-                        disabled={isSavingVisaDetails}
-                        className="h-8 bg-teal-600"
-                      >
+                      <LockedProcessingActionButton forceDisabled={isLocked}>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveVisaMetadata}
+                          disabled={isSavingVisaDetails || isLocked}
+                          className="h-8 bg-teal-600"
+                        >
                         {isSavingVisaDetails ? (
                           <Loader2 className="h-4 w-4 animate-spin mr-1" />
                         ) : null}
                         Save Details
-                      </Button>
+                        </Button>
+                      </LockedProcessingActionButton>
                     </div>
                   )}
                 </div>
@@ -604,7 +598,7 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                       verifyProcessingDocument={verifyProcessingDocument}
                       refetch={refetch}
                       stepLabel="Visa"
-                      disabled={isVerifying}
+                      disabled={isVerifying || isLocked}
                     />
                   )}
                 </div>
@@ -629,9 +623,13 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
                           {!isVisaCompleted && !isStepCancelled && (
                             <>
                               {!pdoc && !cdoc ? (
-                                <Button size="sm" className="h-8 text-xs" onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Upload</Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" className="h-8 text-xs" disabled={isLocked} onClick={() => handleUploadClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Upload</Button>
+                                </LockedProcessingActionButton>
                               ) : !pdoc && cdoc ? (
-                                <Button size="sm" onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Verify</Button>
+                                <LockedProcessingActionButton forceDisabled={isLocked}>
+                                  <Button size="sm" disabled={isLocked} onClick={() => handleVerifyClick(req.docType, req.label, candidate?.role?.roleCatalog?.id, candidate?.role?.designation)}>Verify</Button>
+                                </LockedProcessingActionButton>
                               ) : (
                                 <Badge variant="outline" className="text-[10px]">{pdoc.status}</Badge>
                               )}
@@ -655,8 +653,23 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
             <div className="flex items-center gap-2">
               {!isVisaCompleted && !isStepCancelled && (
                 <>
-                  <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)}>Cancel Step</Button>
-                  <Button size="sm" onClick={handleMarkComplete} disabled={!allVerified || isCompletingStep}>Mark Complete</Button>
+                  <ProcessingStepActionButtons
+                    processingStepId={activeStep?.id}
+                    show={!isVisaCompleted && !isStepCancelled}
+                    onSubmitted={async () => {
+                      await refetch();
+                      if (onComplete) await onComplete();
+                    }}
+                  />
+                  {isLocked ? (
+                    <LockedProcessingActionButton forceDisabled>
+                      <Button size="sm" disabled className="opacity-80" aria-disabled>
+                        Mark Complete
+                      </Button>
+                    </LockedProcessingActionButton>
+                  ) : (
+                    <Button size="sm" onClick={handleMarkComplete} disabled={!allVerified || isCompletingStep || isLocked}>Mark Complete</Button>
+                  )}
                 </>
               )}
               {isVisaCompleted && <Badge className="bg-emerald-100 text-emerald-700 px-2">Completed ✓</Badge>}
@@ -668,7 +681,6 @@ export function VisaModal({ isOpen, onClose, processingId, candidateProjectMapId
       <React.Suspense fallback={null}>
         <UploadDocumentModal isOpen={uploadModalOpen} onClose={() => setUploadModalOpen(false)} docType={selectedDocType} docLabel={selectedDocLabel} onUpload={handleUploadFile} isUploading={isUploading || isReusing || isReuploadingProcessing} />
         <VerifyProcessingDocumentModal isOpen={verifyModalOpen} onClose={() => setVerifyModalOpen(false)} documentId={verifyDocId} documentLabel={verifyDocLabel} processingStepId={activeStep?.id || ""} onConfirm={handleConfirmVerify} isVerifying={isVerifying} />
-        <ConfirmCancelStepModal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} onConfirm={handleConfirmCancel} isCancelling={isCancelling} />
         <CompleteProcessingStepModal isOpen={completeModalOpen} onClose={() => setCompleteModalOpen(false)} onConfirm={handleConfirmComplete} isCompleting={isCompletingStep} requiredDocuments={requiredDocuments} uploadsByDocType={uploadsByDocType} candidateDocsByDocType={candidateDocsByDocType} processingDocsByDocType={processingDocsByDocType} onViewDocument={handleViewDocument} />
       </React.Suspense>
       {viewerUrl && viewerMimeType?.includes("pdf") ? (

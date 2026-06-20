@@ -31,6 +31,10 @@ import {
 } from "./notification-handlers/offer-letter-handler";
 import { handleCandidateProjectStatusChangeNotifications } from "./notification-handlers/candidate-project-status-change-handler";
 import {
+  handleProcessingStatusChangeNotifications,
+  handleProcessingStatusChangeSync,
+} from "./notification-handlers/processing-status-change-handler";
+import {
   handleDocumentsControlPermissionsChanged,
   handleDocumentsControlPermissionsSync,
   type DocumentsControlPermissionsChangedPayload,
@@ -372,6 +376,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       handleAgentCandidateRequestNotifications(context);
       handleOfferLetterNotifications(context);
       handleCandidateProjectStatusChangeNotifications(context);
+      handleProcessingStatusChangeNotifications(context);
     });
 
     newSocket.on("data:sync", (payload: any) => {
@@ -384,6 +389,7 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       if (handleOperationsSync(payload, context)) return;
       if (handleOfferLetterSync(payload, context)) return;
       if (handleProcessingSync(payload, context)) return;
+      if (handleProcessingStatusChangeSync(payload, context)) return;
       if (
         handleDocumentsControlPermissionsSync(
           payload,

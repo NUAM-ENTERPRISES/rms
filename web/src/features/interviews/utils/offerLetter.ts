@@ -4,7 +4,7 @@ export const OFFER_LETTER_UPLOAD_ELIGIBLE_SUB_STATUSES = [
   "transfered_to_processing",
   "processing_in_progress",
   "processing_completed",
-  "processing_failed",
+  "processing_cancelled",
   "ready_for_final",
 ] as const;
 

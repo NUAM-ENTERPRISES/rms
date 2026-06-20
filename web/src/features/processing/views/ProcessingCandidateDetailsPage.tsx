@@ -1,13 +1,17 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
-import { useGetCandidateProcessingDetailsQuery, useGetCandidateDocumentsQuery } from "@/features/processing/data/processing.endpoints";
+import {
+  useGetCandidateProcessingDetailsQuery,
+  useGetCandidateDocumentsQuery,
+  useGetPendingProcessingStatusChangeRequestForCandidateQuery,
+  useGetLatestReviewedProcessingStatusChangeRequestQuery,
+} from "@/features/processing/data/processing.endpoints";
 import { useGetProcessingStepsQuery } from "@/services/processingApi";
 import { useVerifyOfferLetterMutation } from "@/services/documentsApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, FileCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   ProcessingCandidateHeader,
@@ -38,10 +42,25 @@ import DocumentReceivedModal from "./components/DocumentReceivedModal";
 import ManageStepDocumentsModal from "@/features/processing/components/ManageStepDocumentsModal";
 import type { OfferLetterStatus, DocumentVerification } from "./components";
 import { useCan } from "@/hooks/useCan";
+import { Can } from "@/components/auth/Can";
+import { ReviewStatusChangeRequestModal } from "@/features/candidates/components/ReviewStatusChangeRequestModal";
+import type {
+  PendingStatusChangeRequest,
+  ReviewedStatusChangeRequest,
+} from "@/features/candidates/api";
+import { ProcessingStatusChangeOutcomeBanner } from "@/features/processing/components/ProcessingStatusChangeOutcomeBanner";
+import { useAppSelector } from "@/app/hooks";
+import { ProcessingActionLockProvider } from "@/features/processing/context/ProcessingActionLockContext";
+import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
 
 export default function ProcessingCandidateDetailsPage() {
   const { candidateId: processingId } = useParams<{ candidateId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const { user } = useAppSelector((state) => state.auth);
+  const canReviewProcessingRequests =
+    user?.roles?.some((role) => ["Manager", "Processing Manager"].includes(role)) ?? false;
   const [showOfferLetterModal, setShowOfferLetterModal] = useState(false);
   const [showHrdModal, setShowHrdModal] = useState(false);
   const [showBiometricModal, setShowBiometricModal] = useState(false);
@@ -70,6 +89,41 @@ export default function ProcessingCandidateDetailsPage() {
   const { data: processingSteps = [], isLoading: isLoadingSteps, refetch: refetchProcessingSteps } = useGetProcessingStepsQuery(processingId || "", {
     skip: !processingId,
   });
+
+  const { data: pendingRequestResponse, refetch: refetchPendingRequest } =
+    useGetPendingProcessingStatusChangeRequestForCandidateQuery(processingId || "", {
+      skip: !processingId,
+    });
+
+  const { data: latestReviewedResponse, refetch: refetchLatestReviewed } =
+    useGetLatestReviewedProcessingStatusChangeRequestQuery(processingId || "", {
+      skip: !processingId,
+    });
+
+  const pendingRequest = pendingRequestResponse?.data as PendingStatusChangeRequest | null | undefined;
+  const pendingRequestSubmittedAt = useMemo(
+    () => formatProcessingStatusChangeRequestDate(pendingRequest?.createdAt),
+    [pendingRequest?.createdAt],
+  );
+  const latestReviewed = latestReviewedResponse?.data as
+    | ReviewedStatusChangeRequest
+    | null
+    | undefined;
+
+  const outcomeRequestId = searchParams.get("actionOutcome");
+  const reviewRequestId = searchParams.get("reviewRequest");
+  const highlightedReview =
+    reviewRequestId && pendingRequest?.id === reviewRequestId
+      ? pendingRequest
+      : pendingRequest;
+  const outcomeReview: ReviewedStatusChangeRequest | null | undefined =
+    outcomeRequestId && latestReviewed?.id === outcomeRequestId
+      ? latestReviewed
+      : latestReviewed;
+  const showOutcomeBanner =
+    !!outcomeReview &&
+    (outcomeReview.status === "approved" || outcomeReview.status === "rejected") &&
+    !pendingRequest;
 
   // --- New: paginated documents and history ---
   const [docsPage, setDocsPage] = useState(1);
@@ -107,10 +161,15 @@ export default function ProcessingCandidateDetailsPage() {
     },
   }));
 
+  useEffect(() => {
+    if (reviewRequestId && pendingRequest && canReviewProcessingRequests) {
+      setShowReviewModal(true);
+    }
+  }, [reviewRequestId, pendingRequest, canReviewProcessingRequests]);
+
   // Reset paging when processing id changes
   useEffect(() => {
     setDocsPage(1);
-    // history page is managed within the modal; signal it to refresh/reset when processing id changes
     setHistoryRefreshKey((k) => k + 1);
   }, [effectiveProcessingId]);
 
@@ -120,9 +179,29 @@ export default function ProcessingCandidateDetailsPage() {
       refetchCandidateDetails(),
       refetchProcessingSteps(),
       refetchCandidateDocuments(),
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
     ]);
     // signal the history modal to refresh if it's open
     setHistoryRefreshKey((k) => k + 1);
+  };
+
+  const handleReviewed = async () => {
+    await Promise.all([
+      refetchPendingRequest(),
+      refetchLatestReviewed(),
+      refetchCandidateDetails(),
+      refetchProcessingSteps(),
+    ]);
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.delete("reviewRequest");
+        next.delete("actionOutcome");
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   // Backwards compatible HRD handler
@@ -226,11 +305,6 @@ export default function ProcessingCandidateDetailsPage() {
     };
   }, [docsResponse?.data?.items, processingSteps, data?.candidate?.id]);
 
-  // If processing was cancelled, find the most recent cancellation history entry to show the reason
-  // We intentionally avoid fetching history on page load. The history modal fetches history when opened.
-  // Keep a typed placeholder for cancellation entry so TypeScript is happy — we fetch details from history modal when needed.
-  const cancellationEntry: { notes?: string; createdAt?: string; changedBy?: { name?: string } } | null = null;
-
   if (isLoading || isLoadingSteps) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50">
@@ -270,6 +344,10 @@ export default function ProcessingCandidateDetailsPage() {
   }
 
   return (
+    <ProcessingActionLockProvider
+      pendingRequest={pendingRequest}
+      processingStatus={data.processingStatus}
+    >
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-50 p-4 lg:p-6">
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Header */}
@@ -285,8 +363,48 @@ export default function ProcessingCandidateDetailsPage() {
           documentReceivedStepStatus={data.documentReceivedStep?.status ?? null}
         />
 
-        {/* If processing is cancelled, show a clear banner with cancellation reason */}
-        {data.processingStatus === "cancelled" && (
+        {pendingRequest && (
+          <Card className="w-full border-0 shadow-lg bg-orange-100 border-l-4 border-l-orange-400 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="h-10 w-10 rounded-full bg-orange-200 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-orange-800">
+                    {pendingRequest.requestType === "processing_cancel"
+                      ? "Cancellation request pending approval"
+                      : "Hold request pending approval"}
+                  </h3>
+                  <p className="text-sm text-slate-700 mt-1">{pendingRequest.reason}</p>
+                  {pendingRequestSubmittedAt && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Request sent {pendingRequestSubmittedAt}
+                      {pendingRequest.requester?.name
+                        ? ` by ${pendingRequest.requester.name}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {canReviewProcessingRequests && (
+                <Button
+                  size="sm"
+                  className="bg-orange-600 hover:bg-orange-700"
+                  onClick={() => setShowReviewModal(true)}
+                >
+                  Review Request
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {showOutcomeBanner && outcomeReview ? (
+          <ProcessingStatusChangeOutcomeBanner request={outcomeReview} />
+        ) : null}
+
+        {data.processingStatus === "cancelled" && !showOutcomeBanner ? (
           <Card className="w-full border-0 shadow-lg bg-rose-50 p-4">
             <div className="flex items-start gap-4">
               <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center">
@@ -294,14 +412,13 @@ export default function ProcessingCandidateDetailsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-rose-700">Processing Cancelled</h3>
-                <p className="text-sm text-slate-700 mt-1">{(cancellationEntry as any)?.notes || "No reason provided"}</p>
-                {(cancellationEntry as any)?.createdAt && (
-                  <div className="text-xs text-slate-400 mt-2">Cancelled by {(cancellationEntry as any)?.changedBy?.name || "System"} on {format(new Date((cancellationEntry as any).createdAt), "PPP p")}</div>
-                )}
+                <p className="text-sm text-slate-700 mt-1">
+                  This candidate&apos;s processing has been cancelled.
+                </p>
               </div>
             </div>
           </Card>
-        )}
+        ) : null}
 
         {/* Main Content Grid - More Compact */}
         <div className="grid gap-4 grid-cols-1 lg:grid-cols-12">
@@ -311,6 +428,7 @@ export default function ProcessingCandidateDetailsPage() {
             <ProcessingStepsCard
               steps={processingSteps}
               maxHeight="450px"
+              processingStatus={data.processingStatus}
               offerLetterStatus={offerLetterStatus}
               onOfferLetterClick={() => setShowOfferLetterModal(true)}
               onOpenHire={() => setShowHireModal(true)}
@@ -485,6 +603,8 @@ export default function ProcessingCandidateDetailsPage() {
         projectTitle={data.project?.title || ""}
         roleCatalogId={data.role?.roleCatalogId || ""}
         roleDesignation={data.role?.designation || ""}
+        processingId={data.id}
+        onComplete={handleStepComplete}
         documentVerification={offerLetterVerification as DocumentVerification | null}
         uploadedByName={offerLetterUploadedByName}
         isVerifying={isVerifying}
@@ -677,6 +797,26 @@ export default function ProcessingCandidateDetailsPage() {
         stepKey={manageStepDocsKey}
         stepLabel={manageStepDocsLabel}
       />
+
+      {highlightedReview && data?.candidate && data?.project && (
+        <ReviewStatusChangeRequestModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          request={highlightedReview}
+          candidateId={data.candidate.id}
+          projectId={data.project.id}
+          candidateProjectMapId={data.candidateProjectMap?.id}
+          projectTitle={data.project.title}
+          countryName={
+            data.project.country && typeof data.project.country === "object"
+              ? data.project.country.name
+              : data.project.country ?? undefined
+          }
+          stepKey={highlightedReview.stepKey}
+          onReviewed={handleReviewed}
+        />
+      )}
     </div>
+    </ProcessingActionLockProvider>
   );
 }

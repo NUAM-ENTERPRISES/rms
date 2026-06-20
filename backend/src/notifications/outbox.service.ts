@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ROLE_NAMES } from '../common/constants/role-ids';
+import { isProcessingStatusChangeRequestType } from '../common/constants/statuses';
 
 /** Leadership roles notified when an interview coordinator sends a candidate for processing. */
 const READY_FOR_PROCESSING_LEADERSHIP_ROLES = [
@@ -845,6 +846,11 @@ export class OutboxService {
       requestedBy: string;
       requesterName: string;
       reason: string;
+      processingStepId?: string;
+      stepKey?: string;
+      processingCandidateId?: string;
+      countryCode?: string;
+      countryName?: string;
     },
     tx?: any,
   ): Promise<void> {
@@ -853,6 +859,21 @@ export class OutboxService {
       payload,
       tx,
     );
+
+    if (isProcessingStatusChangeRequestType(payload.requestType)) {
+      await this.publishDataSync(
+        {
+          type: 'ProcessingStatusChange',
+          processingCandidateId: payload.processingCandidateId,
+          candidateId: payload.candidateId,
+          projectId: payload.projectId,
+          requestId: payload.requestId,
+          requestType: payload.requestType,
+          phase: 'requested',
+        },
+        tx,
+      );
+    }
   }
 
   async publishCandidateProjectStatusChangeReviewed(
@@ -867,6 +888,10 @@ export class OutboxService {
       requestedStatus?: string;
       requestedBy: string;
       outcome: 'approved' | 'rejected';
+      reviewNotes?: string | null;
+      processingStepId?: string;
+      stepKey?: string;
+      processingCandidateId?: string;
     },
     tx?: any,
   ): Promise<void> {
@@ -875,6 +900,25 @@ export class OutboxService {
       payload,
       tx,
     );
+
+    if (
+      payload.requestType &&
+      isProcessingStatusChangeRequestType(payload.requestType)
+    ) {
+      await this.publishDataSync(
+        {
+          type: 'ProcessingStatusChange',
+          processingCandidateId: payload.processingCandidateId,
+          candidateId: payload.candidateId,
+          projectId: payload.projectId,
+          requestId: payload.requestId,
+          requestType: payload.requestType,
+          outcome: payload.outcome,
+          phase: 'reviewed',
+        },
+        tx,
+      );
+    }
   }
 
   async publishCourierShipmentReceived(

@@ -53,6 +53,18 @@ export const CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES = [
   'Recruiter Manager',
 ] as const;
 
+/** Roles allowed to approve/reject processing cancel/hold requests */
+export const PROCESSING_STATUS_CHANGE_APPROVER_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Processing Manager',
+] as const;
+
+/** Roles that may apply processing cancel/hold directly without approval */
+export const PROCESSING_STATUS_CHANGE_DIRECT_ROLES = [
+  ROLE_NAMES.MANAGER,
+  'Processing Manager',
+] as const;
+
 /** Elevated roles that bypass Project Coordinator ownership scoping on status updates */
 export const PROJECT_STATUS_UPDATE_ELEVATED_ROLES = [
   ROLE_NAMES.CEO,

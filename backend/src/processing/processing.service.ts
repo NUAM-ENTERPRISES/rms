@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
@@ -18,6 +18,14 @@ import {
 } from './processing-sector-steps';
 import { ADDRESS_TYPE_LABELS } from '../courier-shipments/constants/shipment-types';
 import { parseDocumentDate } from '../documents/utils/document-date.util';
+import { CandidateProjectsService } from '../candidate-projects/candidate-projects.service';
+import { CreateProcessingStatusChangeRequestDto } from './dto/create-processing-status-change-request.dto';
+import { resolveProcessingRequestedStatus } from '../candidate-projects/dto/create-status-change-request.dto';
+import {
+  STATUS_CHANGE_REQUEST_TYPES,
+  CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
+} from '../common/constants/statuses';
+import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES } from '../common/constants/role-ids';
 
 const COLLECTION_TYPE_LABELS: Record<string, string> = {
   direct: 'Direct',
@@ -41,6 +49,8 @@ export class ProcessingService {
     private readonly prisma: PrismaService,
     private readonly outbox: OutboxService,
     private readonly processingRemindersService: ProcessingRemindersService,
+    @Inject(forwardRef(() => CandidateProjectsService))
+    private readonly candidateProjectsService: CandidateProjectsService,
   ) {}
 
   /** Progress + merge with processingStatus completed → 100% (matches previous list behavior). */
@@ -536,7 +546,9 @@ export class ProcessingService {
       return rest;
     });
 
-    return filterProcessingStepsForSector(stepsWithoutDocs as any, pc?.project?.sector);
+    return filterProcessingStepsForSector(stepsWithoutDocs as any, pc?.project?.sector, {
+      includeCancelled: pc?.processingStatus === 'cancelled',
+    });
   }
 
   private async resolveRequirementRuleContext(
@@ -3750,6 +3762,22 @@ export class ProcessingService {
       return { success: true };
     });
 
+    const candidateProjectMap = await this.prisma.candidateProjects.findFirst({
+      where: {
+        candidateId: step.processingCandidate?.candidateId,
+        projectId: step.processingCandidate?.projectId,
+        roleNeededId: step.processingCandidate?.roleNeededId,
+      },
+    });
+    if (candidateProjectMap) {
+      await this.syncCandidateProjectProcessingSubStatus(
+        candidateProjectMap.id,
+        'processing_cancelled',
+        userId,
+        reason || 'cancelled',
+      );
+    }
+
     // After transaction: cancel reminders for this step and for any other steps belonging to the processingCandidate
     try {
       // cancel for the specific step (existing behaviour)
@@ -4609,6 +4637,7 @@ export class ProcessingService {
     // Status and step filtering (aligned with admin list behaviour)
     if (step && step !== 'all') {
       where.step = this.resolveProcessingStepFilter(step);
+      where.processingStatus = { not: 'on_hold' };
     } else if (filterType !== 'total_processing') {
       if (status && status !== 'all' && status !== 'visa_stamped') {
         where.processingStatus = status;
@@ -4728,7 +4757,10 @@ export class ProcessingService {
       }),
       this.prisma.processingCandidate.groupBy({
         by: ['step'],
-        where: countsWhere,
+        where: {
+          ...countsWhere,
+          processingStatus: { not: 'on_hold' },
+        },
         _count: {
           _all: true,
         },
@@ -4741,6 +4773,7 @@ export class ProcessingService {
       in_progress: number;
       completed: number;
       cancelled: number;
+      on_hold: number;
       steps: Record<string, number>;
     } = {
       all: 0,
@@ -4748,12 +4781,23 @@ export class ProcessingService {
       in_progress: 0,
       completed: 0,
       cancelled: 0,
+      on_hold: 0,
       steps: {},
     };
 
     statusCounts.forEach((sc) => {
-      const status = sc.processingStatus as 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'all';
-      if (['assigned', 'in_progress', 'completed', 'cancelled', 'all'].includes(status)) {
+      const status = sc.processingStatus as
+        | 'assigned'
+        | 'in_progress'
+        | 'completed'
+        | 'cancelled'
+        | 'on_hold'
+        | 'all';
+      if (
+        ['assigned', 'in_progress', 'completed', 'cancelled', 'on_hold', 'all'].includes(
+          status,
+        )
+      ) {
         counts[status] = sc._count._all;
       }
     });
@@ -4831,10 +4875,14 @@ export class ProcessingService {
       where.projectId = projectId;
     }
 
-    // Filter by step or processing status (unless 'all' or `total_processing` filter is requested)
+    // Filter by step or processing status (unless 'all', `total_processing`, or awaiting-requests filter)
     if (step && step !== 'all') {
       where.step = this.resolveProcessingStepFilter(step);
-    } else if (filterType !== 'total_processing') {
+      where.processingStatus = { not: 'on_hold' };
+    } else if (
+      filterType !== 'total_processing' &&
+      filterType !== 'awaiting_requests'
+    ) {
       if (status && status !== 'all' && status !== 'visa_stamped') {
         where.processingStatus = status;
       }
@@ -4850,12 +4898,33 @@ export class ProcessingService {
     // Special filterType: visa_stamped
     if (filterType === 'visa_stamped' || status === 'visa_stamped') {
       // Find processing candidates where the 'visa' step exists and is completed
+      where.processingStatus = { not: 'on_hold' };
       where.processingSteps = {
         some: {
           template: { key: 'visa' },
           status: 'completed',
         },
       };
+    }
+
+    if (filterType === 'awaiting_requests') {
+      const pendingRequests = await this.prisma.candidateProjectStatusChangeRequest.findMany({
+        where: {
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+          requestType: {
+            in: [
+              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+            ],
+          },
+          processingCandidateId: { not: null },
+        },
+        select: { processingCandidateId: true },
+      });
+      const pendingIds = pendingRequests
+        .map((r) => r.processingCandidateId)
+        .filter((id): id is string => !!id);
+      where.id = pendingIds.length > 0 ? { in: pendingIds } : { in: ['__none__'] };
     }
 
     // Search functionality
@@ -4973,7 +5042,10 @@ export class ProcessingService {
       }),
       this.prisma.processingCandidate.groupBy({
         by: ['step'],
-        where: countsWhere,
+        where: {
+          ...countsWhere,
+          processingStatus: { not: 'on_hold' },
+        },
         _count: {
           _all: true,
         },
@@ -4986,7 +5058,9 @@ export class ProcessingService {
       in_progress: number;
       completed: number;
       cancelled: number;
+      on_hold: number;
       visa_stamped: number;
+      pendingStatusChangeRequests: number;
       steps: Record<string, number>;
     } = {
       all: 0,
@@ -4994,7 +5068,9 @@ export class ProcessingService {
       in_progress: 0,
       completed: 0,
       cancelled: 0,
+      on_hold: 0,
       visa_stamped: 0,
+      pendingStatusChangeRequests: 0,
       steps: {},
     };
 
@@ -5006,8 +5082,18 @@ export class ProcessingService {
     });
 
     stableStatusCounts.forEach((sc) => {
-      const statusKey = sc.processingStatus as 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'all';
-      if (['assigned', 'in_progress', 'completed', 'cancelled', 'all'].includes(statusKey)) {
+      const statusKey = sc.processingStatus as
+        | 'assigned'
+        | 'in_progress'
+        | 'completed'
+        | 'cancelled'
+        | 'on_hold'
+        | 'all';
+      if (
+        ['assigned', 'in_progress', 'completed', 'cancelled', 'on_hold', 'all'].includes(
+          statusKey,
+        )
+      ) {
         counts[statusKey] = sc._count._all;
       }
     });
@@ -5027,6 +5113,7 @@ export class ProcessingService {
     const visaCountsWhere: any = {
       ...(projectId ? { projectId } : {}),
       ...(roleCatalogId ? { role: { roleCatalogId: roleCatalogId } } : {}),
+      processingStatus: { not: 'on_hold' },
       processingSteps: {
         some: {
           template: { key: 'visa' },
@@ -5037,6 +5124,37 @@ export class ProcessingService {
 
     const visaStampedCount = await this.prisma.processingCandidate.count({ where: visaCountsWhere });
     counts.visa_stamped = visaStampedCount;
+
+    counts.pendingStatusChangeRequests =
+      await this.countPendingProcessingStatusChangeRequests(baseCountsWhere);
+
+    const pendingRequestMap = new Map<string, any>();
+    if (candidates.length > 0) {
+      const pendingForPage = await this.prisma.candidateProjectStatusChangeRequest.findMany({
+        where: {
+          processingCandidateId: { in: candidates.map((c: any) => c.id) },
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+          requestType: {
+            in: [
+              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+              STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+            ],
+          },
+        },
+        select: {
+          id: true,
+          requestType: true,
+          reason: true,
+          createdAt: true,
+          processingCandidateId: true,
+        },
+      });
+      pendingForPage.forEach((req) => {
+        if (req.processingCandidateId) {
+          pendingRequestMap.set(req.processingCandidateId, req);
+        }
+      });
+    }
 
     // Attach country flag and display name for each candidate's project (if present)
     const candidatesWithCountry = candidates.map((c: any) => {
@@ -5055,10 +5173,14 @@ export class ProcessingService {
     const candidatesWithProgress = await this.mergeSectorAwareProgress(candidatesWithCountry);
 
     const finalCandidates = candidatesWithProgress.map((c: any) => {
-      if (c.processingStatus === 'completed' && c.progressCount !== 100) {
-        return { ...c, progressCount: 100 };
-      }
-      return c;
+      const pendingRequest = pendingRequestMap.get(c.id);
+      const base =
+        c.processingStatus === 'completed' && c.progressCount !== 100
+          ? { ...c, progressCount: 100 }
+          : c;
+      return pendingRequest
+        ? { ...base, pendingStatusChangeRequest: pendingRequest }
+        : base;
     });
 
     return {
@@ -5826,5 +5948,368 @@ export class ProcessingService {
     } catch (err) {
       return null;
     }
+  }
+
+  async userCanDirectApplyProcessingStatusChange(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { userRoles: { include: { role: true } } },
+    });
+    if (!user) return false;
+    return user.userRoles.some((ur) =>
+      (PROCESSING_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
+        ur.role?.name ?? '',
+      ),
+    );
+  }
+
+  async createProcessingStatusChangeRequest(
+    dto: CreateProcessingStatusChangeRequestDto,
+    userId: string,
+  ) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: dto.processingStepId },
+      include: {
+        template: true,
+        processingCandidate: {
+          include: {
+            candidateProjectMap: true,
+          },
+        },
+      },
+    });
+
+    if (!step) {
+      throw new NotFoundException('Processing step not found');
+    }
+
+    const processingCandidate = step.processingCandidate;
+    if (!processingCandidate) {
+      throw new NotFoundException('Processing candidate not found for step');
+    }
+
+    const candidateProjectMap = processingCandidate.candidateProjectMap;
+    if (!candidateProjectMap) {
+      throw new NotFoundException('Candidate project mapping not found');
+    }
+
+    const requestedStatus = resolveProcessingRequestedStatus(dto.requestType);
+
+    return this.candidateProjectsService.createStatusChangeRequest(
+      candidateProjectMap.id,
+      {
+        candidateProjectMapId: candidateProjectMap.id,
+        requestType: dto.requestType,
+        requestedStatus,
+        reason: dto.reason,
+        processingStepId: dto.processingStepId,
+        stepKey: step.template.key,
+        processingCandidateId: processingCandidate.id,
+      },
+      userId,
+    );
+  }
+
+  async executeApprovedProcessingStatusChange(
+    input: {
+      requestType: string;
+      processingStepId: string;
+      candidateProjectMapId: string;
+      reason: string;
+    },
+    userId: string,
+  ) {
+    if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
+      await this.cancelProcessingStep(input.processingStepId, userId, input.reason);
+      await this.syncCandidateProjectProcessingSubStatus(
+        input.candidateProjectMapId,
+        'processing_cancelled',
+        userId,
+        input.reason,
+      );
+      return;
+    }
+
+    if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD) {
+      await this.holdProcessing(input.processingStepId, userId, input.reason);
+      await this.syncCandidateProjectProcessingSubStatus(
+        input.candidateProjectMapId,
+        'processing_hold',
+        userId,
+        input.reason,
+      );
+    }
+  }
+
+  async holdProcessing(stepId: string, userId: string, reason: string) {
+    const step = await this.prisma.processingStep.findUnique({
+      where: { id: stepId },
+      include: {
+        template: true,
+        processingCandidate: { include: { candidate: true, project: true } },
+      },
+    });
+
+    if (!step) throw new NotFoundException('Processing step not found');
+    if (step.status === 'on_hold') {
+      return { success: true, message: 'Step already on hold' };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.processingStep.update({
+        where: { id: stepId },
+        data: {
+          status: 'on_hold',
+          rejectionReason: reason,
+        },
+      });
+
+      await tx.processingCandidate.update({
+        where: { id: step.processingCandidateId },
+        data: {
+          processingStatus: 'on_hold',
+          step: step.template.key,
+        },
+      });
+
+      const candidateProjectMap = await tx.candidateProjects.findFirst({
+        where: {
+          candidateId: step.processingCandidate?.candidateId,
+          projectId: step.processingCandidate?.projectId,
+          roleNeededId: step.processingCandidate?.roleNeededId,
+        },
+      });
+      const recruiterIdForHistory = candidateProjectMap?.recruiterId || undefined;
+
+      await tx.processingHistory.create({
+        data: {
+          processingCandidateId: step.processingCandidateId,
+          status: 'on_hold',
+          step: step.template.key,
+          changedById: userId,
+          recruiterId: recruiterIdForHistory,
+          notes: `Processing put on hold at "${step.template.label}": ${reason}`,
+        },
+      });
+    });
+
+    try {
+      await this.processingRemindersService.cancelReminder(stepId);
+    } catch (err) {
+      this.logger.error(`Failed to cancel reminders after hold on step ${stepId}:`, err);
+    }
+
+    return { success: true };
+  }
+
+  async syncCandidateProjectProcessingSubStatus(
+    candidateProjectMapId: string,
+    subStatusName: 'processing_cancelled' | 'processing_hold',
+    userId: string,
+    reason: string,
+  ) {
+    const subStatus = await this.prisma.candidateProjectSubStatus.findUnique({
+      where: { name: subStatusName },
+      include: { stage: true },
+    });
+    if (!subStatus) {
+      throw new BadRequestException(`Sub-status ${subStatusName} not configured`);
+    }
+
+    const candidateProject = await this.prisma.candidateProjects.findUnique({
+      where: { id: candidateProjectMapId },
+    });
+    if (!candidateProject) {
+      throw new NotFoundException('Candidate project not found');
+    }
+
+    if (candidateProject.subStatusId === subStatus.id) {
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.candidateProjects.update({
+        where: { id: candidateProjectMapId },
+        data: {
+          mainStatusId: subStatus.stageId,
+          subStatusId: subStatus.id,
+        },
+      });
+
+      await tx.candidateProjectStatusHistory.create({
+        data: {
+          candidateProjectMapId,
+          mainStatusId: subStatus.stageId,
+          subStatusId: subStatus.id,
+          mainStatusSnapshot: subStatus.stage.label,
+          subStatusSnapshot: subStatus.label,
+          changedById: userId,
+          reason,
+        },
+      });
+    });
+  }
+
+  async getPendingProcessingStatusChangeRequests(query: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    projectId?: string;
+  }) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {
+      status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+      requestType: {
+        in: [
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+          STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+        ],
+      },
+    };
+
+    if (query.projectId) {
+      where.candidateProjectMap = { projectId: query.projectId };
+    }
+
+    if (query.search?.trim()) {
+      const term = query.search.trim();
+      where.candidateProjectMap = {
+        ...(where.candidateProjectMap ?? {}),
+        OR: [
+          {
+            candidate: {
+              OR: [
+                { firstName: { contains: term, mode: 'insensitive' } },
+                { lastName: { contains: term, mode: 'insensitive' } },
+                { email: { contains: term, mode: 'insensitive' } },
+              ],
+            },
+          },
+          {
+            project: { title: { contains: term, mode: 'insensitive' } },
+          },
+        ],
+      };
+    }
+
+    const [requests, total] = await Promise.all([
+      this.prisma.candidateProjectStatusChangeRequest.findMany({
+        where,
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          candidateProjectMap: {
+            include: {
+              candidate: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  candidateCode: true,
+                },
+              },
+              project: {
+                select: {
+                  id: true,
+                  title: true,
+                  country: { select: { code: true, name: true } },
+                },
+              },
+            },
+          },
+          processingCandidate: {
+            select: {
+              id: true,
+              assignedProcessingTeamUserId: true,
+              assignedTo: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.candidateProjectStatusChangeRequest.count({ where }),
+    ]);
+
+    return {
+      data: requests,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  async getPendingProcessingStatusChangeRequestForCandidate(processingId: string) {
+    const request = await this.prisma.candidateProjectStatusChangeRequest.findFirst({
+      where: {
+        processingCandidateId: processingId,
+        status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        requestType: {
+          in: [
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+          ],
+        },
+      },
+      include: {
+        requester: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return request;
+  }
+
+  async getLatestReviewedProcessingStatusChangeRequest(processingId: string) {
+    return this.prisma.candidateProjectStatusChangeRequest.findFirst({
+      where: {
+        processingCandidateId: processingId,
+        status: {
+          in: [
+            CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+            CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.REJECTED,
+          ],
+        },
+        requestType: {
+          in: [
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+          ],
+        },
+      },
+      include: {
+        requester: { select: { id: true, name: true, email: true } },
+        reviewer: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { reviewedAt: 'desc' },
+    });
+  }
+
+  async countPendingProcessingStatusChangeRequests(baseWhere: any = {}) {
+    const processingCandidateIds = await this.prisma.processingCandidate.findMany({
+      where: baseWhere,
+      select: { id: true },
+    });
+    const ids = processingCandidateIds.map((p) => p.id);
+    if (ids.length === 0) return 0;
+
+    return this.prisma.candidateProjectStatusChangeRequest.count({
+      where: {
+        processingCandidateId: { in: ids },
+        status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING,
+        requestType: {
+          in: [
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
+            STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
+          ],
+        },
+      },
+    });
   }
 }

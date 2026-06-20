@@ -29,9 +29,9 @@ export type ProcessingCandidatesQuery = {
   search?: string;
   projectId?: string;
   roleCatalogId?: string;
-  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "all" | "visa_stamped";
+  status?: "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold" | "all" | "visa_stamped";
   step?: string;
-  filterType?: "visa_stamped" | "total_processing";
+  filterType?: "visa_stamped" | "total_processing" | "awaiting_requests";
   page?: number;
   limit?: number;
   recruiterId?: string;
@@ -71,6 +71,7 @@ export const processingApi = baseApi.injectEndpoints({
           in_progress: number;
           completed: number;
           cancelled: number;
+          on_hold: number;
           steps?: Record<string, number>;
         };
         pagination: {
@@ -101,7 +102,9 @@ export const processingApi = baseApi.injectEndpoints({
           in_progress: number;
           completed: number;
           cancelled: number;
+          on_hold: number;
           visa_stamped?: number;
+          pendingStatusChangeRequests?: number;
           steps?: Record<string, number>;
         };
         pagination: {
@@ -111,7 +114,7 @@ export const processingApi = baseApi.injectEndpoints({
           totalPages?: number;
         };
       }>,
-      ProcessingCandidatesQuery & { filterType?: "visa_stamped" | "total_processing" }
+      ProcessingCandidatesQuery & { filterType?: "visa_stamped" | "total_processing" | "awaiting_requests" }
     >({
       query: (params) => ({
         url: "/processing/admin/all-candidates",
@@ -318,8 +321,13 @@ export const processingApi = baseApi.injectEndpoints({
         project: {
           id: string;
           title: string;
-          description?: string | null;
-          country?: string | null;
+          country?: string | {
+            code: string;
+            name: string;
+            region?: string;
+            flag?: string;
+            flagName?: string;
+          } | null;
         };
         role: {
           id: string;
@@ -541,6 +549,42 @@ export const processingApi = baseApi.injectEndpoints({
         { type: "ProcessingHistory", id: `${processingId}-courier` },
       ],
     }),
+
+    createProcessingStatusChangeRequest: builder.mutation<
+      ApiResponse<Record<string, unknown>>,
+      {
+        processingStepId: string;
+        requestType: "processing_cancel" | "processing_hold";
+        reason: string;
+      }
+    >({
+      query: (body) => ({
+        url: "/processing/status-change-requests",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["ProcessingSummary", "Processing", "ProcessingDetails"],
+    }),
+
+    getPendingProcessingStatusChangeRequestForCandidate: builder.query<
+      ApiResponse<Record<string, unknown> | null>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-change-requests/pending`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
+    }),
+
+    getLatestReviewedProcessingStatusChangeRequest: builder.query<
+      ApiResponse<Record<string, unknown> | null>,
+      string
+    >({
+      query: (processingId) => ({
+        url: `/processing/${processingId}/status-change-requests/latest-reviewed`,
+      }),
+      providesTags: (_r, _e, id) => [{ type: "ProcessingDetails", id }],
+    }),
   }),
 });
 
@@ -562,4 +606,7 @@ export const {
   useGetDocumentCollectionHistoryPaginatedQuery,
   useGetCourierHistoryPaginatedQuery,
   useGetCandidateProcessingDetailsQuery,
+  useCreateProcessingStatusChangeRequestMutation,
+  useGetPendingProcessingStatusChangeRequestForCandidateQuery,
+  useGetLatestReviewedProcessingStatusChangeRequestQuery,
 } = processingApi;

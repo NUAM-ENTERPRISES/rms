@@ -1035,7 +1035,7 @@ describe('CandidatesService', () => {
           {
             recruiterId: 'all',
             status: 'processing',
-            subStatus: 'processing_failed',
+            subStatus: 'processing_cancelled',
           } as any,
           'user1',
           ['Manager'],
@@ -1047,7 +1047,7 @@ describe('CandidatesService', () => {
         expect(projects.some.mainStatus.name).toBe('processing');
         expect(
           projects.some.projectStatusHistory.some.subStatus.name,
-        ).toBe('processing_failed');
+        ).toBe('processing_cancelled');
       });
 
       it('should scope workflow history list filter by recruiterId on projects', async () => {
@@ -1257,7 +1257,7 @@ describe('CandidatesService', () => {
         });
         expect(result.processingSubStatus.tiles[4]).toMatchObject({
           key: 'cancelled',
-          subStatusName: 'processing_failed',
+          subStatusName: 'processing_cancelled',
           label: 'Cancelled',
           count: 1,
         });
@@ -1267,7 +1267,7 @@ describe('CandidatesService', () => {
           'processing_in_progress',
           'processing_completed',
           'processing_hold',
-          'processing_failed',
+          'processing_cancelled',
         ];
         const countWheres = prismaService.candidate.count.mock.calls.map(
           (call: any) => call[0].where,

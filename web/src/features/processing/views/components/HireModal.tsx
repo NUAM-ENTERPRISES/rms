@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import React, { useState } from "react";
-import { useHireCandidateMutation } from "@/services/processingApi";
+import React, { useMemo, useState } from "react";
+import { useHireCandidateMutation, useGetProcessingStepsQuery } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 import { toast } from "sonner";
 
 interface HireModalProps {
@@ -16,8 +20,18 @@ interface HireModalProps {
 }
 
 export function HireModal({ isOpen, onClose, processingId, candidateName, onComplete }: HireModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const [notes, setNotes] = useState<string>("");
   const [hireCandidate, { isLoading }] = useHireCandidateMutation();
+  const { data: processingSteps = [], refetch } = useGetProcessingStepsQuery(processingId, {
+    skip: !isOpen || !processingId,
+  });
+  const ticketStep = useMemo(
+    () => processingSteps.find((step: { template?: { key?: string } }) => step.template?.key === "ticket"),
+    [processingSteps],
+  );
+  const isStepCancelled = ticketStep?.status === "cancelled";
+  const isStepCompleted = ticketStep?.status === "completed";
 
   const handleConfirm = async () => {
     try {
@@ -48,6 +62,8 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
         </DialogHeader>
 
         <div className="mt-4 space-y-3">
+          <ProcessingActionLockBanner />
+
           <div>
             <Label className="text-sm">Notes (optional)</Label>
             <Textarea
@@ -60,12 +76,22 @@ export function HireModal({ isOpen, onClose, processingId, candidateName, onComp
           <p className="text-xs text-slate-500">Submitting will call the backend to mark the candidate as hired. Empty notes are allowed.</p>
         </div>
 
-        <DialogFooter className="mt-6">
+        <DialogFooter className="mt-6 flex flex-wrap gap-2">
+          <ProcessingStepActionButtons
+            processingStepId={ticketStep?.id}
+            show={!isStepCompleted && !isStepCancelled}
+            onSubmitted={async () => {
+              await refetch();
+              if (onComplete) await onComplete();
+            }}
+          />
           <Button variant="outline" onClick={() => { setNotes(""); onClose(); }} disabled={isLoading}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={isLoading} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Confirm Hire
-          </Button>
+          <LockedProcessingActionButton forceDisabled={isLocked}>
+            <Button onClick={handleConfirm} disabled={isLoading || isLocked} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirm Hire
+            </Button>
+          </LockedProcessingActionButton>
         </DialogFooter>
       </DialogContent>
     </Dialog>

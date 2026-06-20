@@ -8,13 +8,16 @@ import { AlertCircle, Loader2, FileCheck, RefreshCw, Calendar, Send, Edit2, Chec
 import { DatePicker } from "@/components/molecules/DatePicker";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
-import { useGetEmigrationRequirementsQuery, useCompleteStepMutation, useCancelStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { useGetEmigrationRequirementsQuery, useCompleteStepMutation, useSubmitHrdDateMutation, useUpdateStepStatusMutation } from "@/services/processingApi";
+import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ConfirmSubmitDateModal from "../../components/ConfirmSubmitDateModal";
 import ConfirmEditSubmitDateModal from "../../components/ConfirmEditSubmitDateModal";
-import ConfirmCancelStepModal from "../../components/ConfirmCancelStepModal";
 import ConfirmEmigrationModal from "./ConfirmEmigrationModal";
+import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
+import { LockedProcessingActionButton } from "../../components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 
 interface EmigrationModalProps {
   isOpen: boolean;
@@ -24,10 +27,10 @@ interface EmigrationModalProps {
 }
 
 export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: EmigrationModalProps) {
+  const { isLocked } = useProcessingActionLock();
   const { data, isLoading, error, refetch } = useGetEmigrationRequirementsQuery(processingId, { skip: !isOpen || !processingId });
 
   const [completeStep, { isLoading: isCompletingStep }] = useCompleteStepMutation();
-  const [cancelStep, { isLoading: isCancelling }] = useCancelStepMutation();
   const [submitHrdDate, { isLoading: isSubmittingDate }] = useSubmitHrdDateMutation();
   const [updateStepStatus] = useUpdateStepStatusMutation();
 
@@ -43,7 +46,6 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [editSubmitOpen, setEditSubmitOpen] = useState(false);
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
-  const [cancelOpen, setCancelOpen] = useState(false);
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
   const activeStep = data?.step;
@@ -100,23 +102,6 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
     }
   };
 
-  const handleConfirmCancel = async (reason: string): Promise<void> => {
-    if (!activeStep?.id) { toast.error("No active step found"); return; }
-    try {
-      await cancelStep({ stepId: activeStep.id, reason }).unwrap();
-      toast.success("Processing step cancelled");
-      setCancelOpen(false);
-      await refetch();
-      if (onComplete) await onComplete();
-      onClose();
-      return;
-    } catch (err: any) {
-      console.error("Cancel step failed", err);
-      toast.error(err?.data?.message || "Failed to cancel step");
-      return;
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-hidden flex flex-col p-0">
@@ -152,6 +137,8 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
             </Card>
           ) : (
             <div className="space-y-6">
+              <ProcessingActionLockBanner />
+
               <div className="border rounded-lg overflow-hidden bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="bg-blue-100 px-3 py-1 border-b border-blue-200">
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-2">
@@ -171,14 +158,16 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                             <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Submitted</Badge>
                           </div>
                           {!isEmigrationCompleted && !isStepCancelled && (
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-white shadow-sm" onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }} title="Edit submission date">
-                              <Edit2 className="h-4 w-4 text-slate-700" />
-                            </Button>
+                            <LockedProcessingActionButton forceDisabled={isLocked}>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 rounded-full bg-white shadow-sm disabled:opacity-80" disabled={isLocked} onClick={() => { setEditDate(new Date(activeStep.submittedAt)); setEditSubmitOpen(true); }} title="Edit submission date">
+                                <Edit2 className="h-4 w-4 text-slate-700" />
+                              </Button>
+                            </LockedProcessingActionButton>
                           )}
                         </div>
                       ) : (
                         <>
-                          <DatePicker value={emigrationSubmissionDate} onChange={setEmigrationSubmissionDate} placeholder="Pick date and time" compact className="w-full sm:min-w-[220px] h-8" disabled={isEmigrationCompleted} />
+                          <DatePicker value={emigrationSubmissionDate} onChange={setEmigrationSubmissionDate} placeholder="Pick date and time" compact className="w-full sm:min-w-[220px] h-8" disabled={isEmigrationCompleted || isLocked} />
                           <div className="mt-2 text-xs text-slate-500">Pick a date then click <span className="font-medium">Submit Date</span>.</div>
                         </>
                       )}
@@ -186,9 +175,11 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
 
                     {!activeStep?.submittedAt && !isStepCancelled && (
                       <div>
-                        <Button size="sm" className="h-8 bg-blue-600 text-white" onClick={() => setSubmitConfirmOpen(true)} disabled={isSubmittingDate || !emigrationSubmissionDate || isEmigrationCompleted}>
-                          {isSubmittingDate ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}Submit Date
-                        </Button>
+                        <LockedProcessingActionButton forceDisabled={isLocked}>
+                          <Button size="sm" className="h-8 bg-blue-600 text-white" onClick={() => setSubmitConfirmOpen(true)} disabled={isSubmittingDate || !emigrationSubmissionDate || isEmigrationCompleted || isLocked}>
+                            {isSubmittingDate ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}Submit Date
+                          </Button>
+                        </LockedProcessingActionButton>
                       </div>
                     )}
                   </div>
@@ -210,7 +201,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                       id="isEmigrationCompleted"
                       checked={isEmigrationCompletedCheck}
                       onCheckedChange={(checked) => setIsEmigrationCompletedCheck(!!checked)}
-                      disabled={isStepCancelled || isEmigrationCompleted}
+                      disabled={isStepCancelled || isEmigrationCompleted || isLocked}
                       className="h-5 w-5 border-slate-300 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
                     <div className="grid gap-1.5 leading-none">
@@ -238,13 +229,26 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
               <Button variant="ghost" size="sm" onClick={async () => { await refetch(); toast.success('Refreshed'); }}><RefreshCw className="h-3.5 w-3.5 mr-1"/> Refresh</Button>
 
               {!isEmigrationCompleted && !isStepCancelled && (
-                <Button variant="destructive" size="sm" onClick={() => setCancelOpen(true)} disabled={isCancelling}>{isCancelling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Cancel Step</Button>
+                <ProcessingStepActionButtons
+                  processingStepId={activeStep?.id}
+                  show={!isEmigrationCompleted && !isStepCancelled}
+                  onSubmitted={async () => {
+                    await refetch();
+                    if (onComplete) await onComplete();
+                  }}
+                />
               )}
 
               {isEmigrationCompleted ? (
                 <Badge className="text-[11px] bg-emerald-100 text-emerald-700 px-2">Emigration Completed ✓</Badge>
               ) : isStepCancelled ? (
                 <Badge className="text-[11px] bg-rose-100 text-rose-700 px-2">Step Cancelled</Badge>
+              ) : isLocked ? (
+                <LockedProcessingActionButton forceDisabled>
+                  <Button size="sm" disabled className="opacity-80" aria-disabled>
+                    Mark Emigration Complete
+                  </Button>
+                </LockedProcessingActionButton>
               ) : (
                 (!hasSubmittedAt) ? (
                   <TooltipProvider>
@@ -260,7 +264,7 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
                     </Tooltip>
                   </TooltipProvider>
                 ) : (
-                  <Button size="sm" onClick={() => setCompleteConfirmOpen(true)} disabled={isCompletingStep || !canComplete()}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Mark Emigration Complete'}</Button>
+                  <Button size="sm" onClick={() => setCompleteConfirmOpen(true)} disabled={isCompletingStep || !canComplete() || isLocked}>{isCompletingStep ? <Loader2 className="h-4 w-4 animate-spin"/> : 'Mark Emigration Complete'}</Button>
                 )
               )}
             </div>
@@ -272,9 +276,6 @@ export function EmigrationModal({ isOpen, onClose, processingId, onComplete }: E
 
       <ConfirmEditSubmitDateModal isOpen={editSubmitOpen} onClose={() => setEditSubmitOpen(false)} existingDate={editDate ? editDate.toISOString() : activeStep?.submittedAt} onConfirm={async (newDate: Date) => { const ok = await handleSubmitEmigrationDate(newDate); return ok; }} isSubmitting={isSubmittingDate} />
 
-      <ConfirmCancelStepModal isOpen={cancelOpen} onClose={() => setCancelOpen(false)} onConfirm={handleConfirmCancel} isCancelling={isCancelling} />
-
-      {/* Emigration confirmation — requires notes when status=FAILED */}
       <ConfirmEmigrationModal
         isOpen={!!completeConfirmOpen}
         onClose={() => { setCompleteConfirmOpen(false); }}

@@ -743,10 +743,14 @@ const PROJECT_STATUS_PATTERNS: StatusPattern[] = [
     badgeClass: "bg-red-50 text-red-800 border-red-200",
   },
   {
+    match: (u) => u.includes("processing_cancelled"),
+    label: "Cancelled",
+    badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
+  },
+  {
     match: (u, c, l) =>
       u.includes("screening_failed") ||
       u.includes("interview_failed") ||
-      u.includes("processing_failed") ||
       (u.includes("failed") && !l.includes("passed")),
     label: "Failed",
     badgeClass: "bg-red-50 text-red-800 border-red-200",

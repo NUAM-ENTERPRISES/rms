@@ -39,6 +39,17 @@ describe('processing-sector-steps', () => {
     expect(filtered.map((s) => s.template.key)).toEqual(['offer_letter']);
   });
 
+  it('filterProcessingStepsForSector can include cancelled steps when requested', () => {
+    const steps = [
+      { status: 'completed', template: { key: 'offer_letter' } },
+      { status: 'cancelled', template: { key: 'hrd' } },
+    ];
+    const filtered = filterProcessingStepsForSector(steps as any, PROJECT_SECTOR.NON_HEALTHCARE, {
+      includeCancelled: true,
+    });
+    expect(filtered.map((s) => s.template.key)).toEqual(['offer_letter', 'hrd']);
+  });
+
   it('computeApplicableStepProgress counts only applicable non-cancelled steps', () => {
     const steps = [
       { status: 'completed', template: { key: 'offer_letter' } },

@@ -900,11 +900,20 @@ export interface ConsolidatedCandidatesResponse {
 
 export type PendingStatusChangeRequest = {
   id: string;
-  requestType: "block" | "reactivate";
-  requestedStatus?: "withdrawn" | "on_hold";
+  requestType: "block" | "reactivate" | "processing_cancel" | "processing_hold";
+  requestedStatus?: string;
   reason: string;
   createdAt: string;
+  stepKey?: string;
+  processingCandidateId?: string;
+  status?: string;
+  reviewNotes?: string | null;
   requester?: {
+    id: string;
+    name: string;
+    email?: string;
+  };
+  reviewer?: {
     id: string;
     name: string;
     email?: string;
@@ -1435,6 +1444,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
         { type: "Candidate", id: candidateId },
         { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+        { type: "ProcessingSummary", id: "LIST" },
+        { type: "Processing", id: "LIST" },
         ...(candidateProjectMapId
           ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
           : []),
@@ -1459,6 +1470,8 @@ export const candidatesApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { candidateId, projectId, candidateProjectMapId }) => [
         { type: "Candidate", id: candidateId },
         { type: "Candidate", id: `pipeline-${candidateId}-${projectId}` },
+        { type: "ProcessingSummary", id: "LIST" },
+        { type: "Processing", id: "LIST" },
         ...(candidateProjectMapId
           ? [{ type: "Candidate" as const, id: `status-change-history-${candidateProjectMapId}` }]
           : []),

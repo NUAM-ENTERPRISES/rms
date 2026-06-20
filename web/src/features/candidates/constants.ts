@@ -50,7 +50,7 @@ export const WORKFLOW_STATUS_MAPPING = {
       { name: "transfered_to_processing", label: "Transferred" },
       { name: "processing_in_progress", label: "In Progress" },
       { name: "processing_completed", label: "Completed" },
-      { name: "processing_failed", label: "Failed" },
+      { name: "processing_cancelled", label: "Cancelled" },
       { name: "ready_for_final", label: "Ready for Final" },
     ],
   },

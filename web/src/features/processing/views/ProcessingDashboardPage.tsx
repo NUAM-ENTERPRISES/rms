@@ -42,6 +42,7 @@ import {
     Mail,
     Phone,
     SlidersHorizontal,
+    PauseCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProcessingProgressBar } from "../components/ProcessingProgressBar";
@@ -76,7 +77,7 @@ export default function ProcessingDashboardPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 500);
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "assigned" | "in_progress" | "completed" | "cancelled"
+    "all" | "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold"
   >("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -160,7 +161,8 @@ export default function ProcessingDashboardPage() {
     (counts?.assigned || 0) +
     (counts?.in_progress || 0) +
     (counts?.completed || 0) +
-    (counts?.cancelled || 0);
+    (counts?.cancelled || 0) +
+    (counts?.on_hold || 0);
 
   // Extract roles for selected project
   const rolesForSelectedProject = useMemo(() => {
@@ -228,6 +230,14 @@ export default function ProcessingDashboardPage() {
     { type: "step", key: "ticket", label: "Ticket", accent: "emerald" },
     {
       type: "status",
+      label: "Processing Hold",
+      status: "on_hold",
+      accent: "amber",
+      icon: PauseCircle,
+      value: counts?.on_hold || 0,
+    },
+    {
+      type: "status",
       label: "Completed",
       status: "completed",
       accent: "emerald",
@@ -264,7 +274,8 @@ export default function ProcessingDashboardPage() {
       "in_progress": "bg-blue-100 text-blue-700 border-blue-200",
       "assigned": "bg-indigo-100 text-indigo-700 border-indigo-200",
       "completed": "bg-emerald-100 text-emerald-700 border-emerald-200",
-      "cancelled": "bg-rose-100 text-rose-700 border-rose-200"
+      "cancelled": "bg-rose-100 text-rose-700 border-rose-200",
+      "on_hold": "bg-amber-100 text-amber-800 border-amber-200",
     };
     return styles[status] || "bg-slate-100 text-slate-700";
   };
@@ -275,7 +286,8 @@ export default function ProcessingDashboardPage() {
       "assigned": "Untouched",
       "in_progress": "In Progress",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "on_hold": "Processing Hold",
     };
     return labels[status] || status;
   };
@@ -301,6 +313,8 @@ export default function ProcessingDashboardPage() {
         return "bg-emerald-50/40";
       case "cancelled":
         return "bg-rose-50/40";
+      case "on_hold":
+        return "bg-amber-50/60";
       default:
         return "";
     }

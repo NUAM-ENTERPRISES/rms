@@ -2480,7 +2480,7 @@ export class DocumentsService {
       'transfered_to_processing',
       'processing_in_progress',
       'processing_completed',
-      'processing_failed',
+      'processing_cancelled',
       'ready_for_final',
     ];
     const nominationSubStatus = candidateProjectMap.subStatus?.name;

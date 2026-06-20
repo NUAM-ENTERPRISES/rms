@@ -43,13 +43,24 @@ export function allowedTemplateKeysForSector(sector: string | null | undefined):
   return HEALTHCARE_STEP_KEYS;
 }
 
+export type FilterProcessingStepsOptions = {
+  /** Include steps with status `cancelled` (e.g. when entire processing is cancelled). */
+  includeCancelled?: boolean;
+};
+
 /** Steps visible for progress / UI: template key allowed for project sector and not cancelled. */
 export function filterProcessingStepsForSector<T extends { status: string; template: { key: string } }>(
   steps: T[],
   sector: string | null | undefined,
+  options?: FilterProcessingStepsOptions,
 ): T[] {
   const allowed = allowedTemplateKeysForSector(sector);
-  return steps.filter((s) => allowed.has(s.template.key) && s.status !== 'cancelled');
+  const includeCancelled = options?.includeCancelled === true;
+  return steps.filter(
+    (s) =>
+      allowed.has(s.template.key) &&
+      (includeCancelled || s.status !== 'cancelled'),
+  );
 }
 
 export type ApplicableStepProgress = {

@@ -24,6 +24,7 @@ vi.mock("sonner", () => ({
 describe("ReviewStatusChangeRequestModal", () => {
   const mockRequest: PendingStatusChangeRequest = {
     id: "test-request-id",
+    requestType: "block",
     requestedStatus: "withdrawn",
     reason: "Candidate declined to proceed with this project.",
     createdAt: "2026-06-09T10:30:00Z",
@@ -71,11 +72,11 @@ describe("ReviewStatusChangeRequestModal", () => {
 
     expect(screen.getByText("Review Withdrawn Request")).toBeInTheDocument();
     expect(screen.getByText("Emma Recruiter")).toBeInTheDocument();
-    expect(screen.getByText("(emma@example.com)")).toBeInTheDocument();
+    expect(screen.getByText("emma@example.com")).toBeInTheDocument();
     expect(
       screen.getByText("Candidate declined to proceed with this project."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Requested Status:")).toBeInTheDocument();
+    expect(screen.getByText("Requested status")).toBeInTheDocument();
     expect(screen.getByText("Withdrawn")).toBeInTheDocument();
   });
 
@@ -106,11 +107,37 @@ describe("ReviewStatusChangeRequestModal", () => {
     );
 
     const textarea = screen.getByPlaceholderText(
-      "Add notes for the recruiter (optional)...",
+      "Add notes for the requester (optional)...",
     );
     await user.type(textarea, "Approved as requested");
 
     expect(textarea).toHaveValue("Approved as requested");
+  });
+
+  it("shows confirmation step when Approve button is clicked", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen={true}
+        onClose={mockOnClose}
+        request={mockRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /Approve Request/i }),
+    );
+
+    expect(
+      screen.getByText("Approve withdrawn request?"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Go back/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Yes, approve/i }),
+    ).toBeInTheDocument();
   });
 
   it("calls approve mutation when Approve button is clicked", async () => {
@@ -132,6 +159,11 @@ describe("ReviewStatusChangeRequestModal", () => {
       name: /Approve Request/i,
     });
     await user.click(approveButton);
+
+    const confirmApproveButton = screen.getByRole("button", {
+      name: /Yes, approve/i,
+    });
+    await user.click(confirmApproveButton);
 
     await waitFor(() => {
       expect(mockApprove).toHaveBeenCalledWith({
@@ -163,6 +195,11 @@ describe("ReviewStatusChangeRequestModal", () => {
     });
     await user.click(rejectButton);
 
+    const confirmRejectButton = screen.getByRole("button", {
+      name: /Yes, reject/i,
+    });
+    await user.click(confirmRejectButton);
+
     await waitFor(() => {
       expect(mockReject).toHaveBeenCalledWith({
         requestId: "test-request-id",
@@ -192,6 +229,11 @@ describe("ReviewStatusChangeRequestModal", () => {
       name: /Approve Request/i,
     });
     await user.click(approveButton);
+
+    const confirmApproveButton = screen.getByRole("button", {
+      name: /Yes, approve/i,
+    });
+    await user.click(confirmApproveButton);
 
     await waitFor(() => {
       expect(mockOnClose).toHaveBeenCalled();

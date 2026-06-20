@@ -180,7 +180,7 @@ export default function CandidateProjectDetailsPage() {
             transfered_to_processing: <ClipboardList className="h-4 w-4" />,
             processing_in_progress: <Clock className="h-4 w-4" />,
             processing_completed: <CheckCircle2 className="h-4 w-4" />,
-            processing_failed: <XCircle className="h-4 w-4" />,
+            processing_cancelled: <XCircle className="h-4 w-4" />,
             ready_for_final: <CheckCircle2 className="h-4 w-4" />,
 
             // Final/Selection
@@ -246,7 +246,7 @@ export default function CandidateProjectDetailsPage() {
             transfered_to_processing: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             processing_in_progress: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
             processing_completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-            processing_failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
+            processing_cancelled: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
             ready_for_final: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
 
             // Final / selection
@@ -301,7 +301,7 @@ export default function CandidateProjectDetailsPage() {
             transfered_to_processing: 'Transferred to Processing',
             processing_in_progress: 'Processing In Progress',
             processing_completed: 'Processing Completed',
-            processing_failed: 'Processing Failed',
+            processing_cancelled: 'Processing Cancelled',
             ready_for_final: 'Ready For Final',
             selected: 'Selected',
             processing: 'Processing',

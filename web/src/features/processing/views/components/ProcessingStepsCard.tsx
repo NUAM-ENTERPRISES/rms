@@ -34,6 +34,8 @@ import type { ProcessingStep as ApiProcessingStep } from "@/services/processingA
 import { useSubmitHrdDateMutation } from "@/services/processingApi";
 import ConfirmSubmitDateModal from "@/features/processing/components/ConfirmSubmitDateModal";
 import ConfirmEditSubmitDateModal from "@/features/processing/components/ConfirmEditSubmitDateModal";
+import { LockedProcessingActionButton } from "@/features/processing/components/LockedProcessingActionButton";
+import { useProcessingActionLock } from "@/features/processing/context/ProcessingActionLockContext";
 
 // Icon mapping for different step keys
 const STEP_ICON_MAP: Record<string, typeof FileText> = {
@@ -60,11 +62,12 @@ export type ProcessingStepStatus =
   | "in_progress"
   | "completed"
   | "on_hold"
+  | "cancelled"
   | "not_applicable";
 
 // Map API status to component status
 const mapApiStatusToComponentStatus = (
-  apiStatus: "pending" | "in_progress" | "completed" | "rejected" | "resubmission_requested"
+  apiStatus: string,
 ): ProcessingStepStatus => {
   switch (apiStatus) {
     case "pending":
@@ -73,6 +76,10 @@ const mapApiStatusToComponentStatus = (
       return "in_progress";
     case "completed":
       return "completed";
+    case "on_hold":
+      return "on_hold";
+    case "cancelled":
+      return "cancelled";
     case "rejected":
     case "resubmission_requested":
       return "on_hold";
@@ -143,6 +150,8 @@ interface ProcessingStepsCardProps {
   onManageStepDocs?: (stepKey: string) => void;
   /** Whether current user can manage step rules. */
   canManageStepDocs?: boolean;
+  /** Overall processing status (e.g. cancelled, on_hold). */
+  processingStatus?: string;
 }
 
 export function ProcessingStepsCard({
@@ -159,9 +168,11 @@ export function ProcessingStepsCard({
   lockerFileNumber,
   onManageStepDocs,
   canManageStepDocs = false,
+  processingStatus,
 }: ProcessingStepsCardProps) {
   const [openStepKey, setOpenStepKey] = useState<string | null>(null);
   const [localCompleting, setLocalCompleting] = useState(false);
+  const { isLocked: mutationsLocked } = useProcessingActionLock();
 
   // Submitted date editor state: store local overrides and the open editor step id
   const [openSubmittedEditorKey, setOpenSubmittedEditorKey] = useState<string | null>(null);
@@ -322,7 +333,10 @@ export function ProcessingStepsCard({
   const completedCount = mergedSteps.filter((s) => s.status === "completed").length;
   const inProgressCount = mergedSteps.filter((s) => s.status === "in_progress").length;
   const totalSteps = mergedSteps.length;
-  const progressPercent = Math.round((completedCount / totalSteps) * 100);
+  const progressPercent =
+    totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
+  const isProcessingFrozen =
+    processingStatus === "cancelled" || processingStatus === "on_hold";
 
   // Enable hiring even when full workflow is not completed if Visa and Ticket are done
   const isVisaCompleted = mergedSteps.find((s) => s.key === "visa")?.status === "completed";
@@ -337,6 +351,22 @@ export function ProcessingStepsCard({
 
   // Generate status message
   const getStatusMessage = () => {
+    if (processingStatus === "cancelled") {
+      return {
+        message:
+          "Processing cancelled — all steps remain visible. Use the eye icon to view details; step actions are disabled.",
+        type: "cancelled" as const,
+      };
+    }
+
+    if (processingStatus === "on_hold") {
+      return {
+        message:
+          "Processing on hold — all steps remain visible. Use the eye icon to view details; step actions are disabled.",
+        type: "hold" as const,
+      };
+    }
+
     // If the candidate is already hired, show that prominently
     if (isHired) {
       return {
@@ -413,6 +443,12 @@ export function ProcessingStepsCard({
         bg: "bg-violet-100",
         icon: AlertCircle,
         label: "Hold",
+      },
+      cancelled: {
+        color: "text-rose-600",
+        bg: "bg-rose-100",
+        icon: Ban,
+        label: "Cancelled",
       },
       not_applicable: {
         color: "text-slate-400",
@@ -510,6 +546,7 @@ export function ProcessingStepsCard({
           "px-4 py-3 flex items-center gap-3 border-b",
           statusMessage.type === "success" && "bg-emerald-50 border-emerald-100",
           statusMessage.type === "info" && "bg-blue-50 border-blue-100",
+          statusMessage.type === "cancelled" && "bg-rose-50 border-rose-100",
           (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-50 border-violet-100",
         )}
       >
@@ -518,6 +555,7 @@ export function ProcessingStepsCard({
             "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm",
             statusMessage.type === "success" && "bg-emerald-100",
             statusMessage.type === "info" && "bg-blue-100",
+            statusMessage.type === "cancelled" && "bg-rose-100",
             (statusMessage.type === "hold" || statusMessage.type === "warning") && "bg-violet-100",
           )}
         >
@@ -525,6 +563,8 @@ export function ProcessingStepsCard({
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           ) : statusMessage.type === "info" ? (
             <PlayCircle className="h-4 w-4 text-blue-600" />
+          ) : statusMessage.type === "cancelled" ? (
+            <AlertCircle className="h-4 w-4 text-rose-600" />
           ) : statusMessage.type === "hold" ? (
             <AlertCircle className="h-4 w-4 text-violet-600" />
           ) : (
@@ -539,6 +579,7 @@ export function ProcessingStepsCard({
                   "text-sm font-semibold truncate",
                   statusMessage.type === "success" && "text-emerald-800",
                   statusMessage.type === "info" && "text-blue-800",
+                  statusMessage.type === "cancelled" && "text-rose-800",
                   (statusMessage.type === "hold" || statusMessage.type === "warning") && "text-violet-800",
                 )}
                 title={statusMessage.message}
@@ -618,6 +659,12 @@ export function ProcessingStepsCard({
           style={{ minHeight: maxHeight }}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-slate-100">
+            {mergedSteps.length === 0 ? (
+              <div className="col-span-full p-8 text-center text-sm text-muted-foreground">
+                No processing steps are available to display.
+              </div>
+            ) : (
+              <>
             <div className="p-3 space-y-2">
               {mergedSteps.slice(0, 6).map((step, index) => (
                 <StepItem
@@ -627,8 +674,9 @@ export function ProcessingStepsCard({
                   getStatusConfig={getStatusConfig}
                   onOpen={() => setOpenStepKey(step.key)}
                   isCompleted={completedCount === totalSteps ? true : index < activeStepIndex}
-                  isActive={index === activeStepIndex}
+                  isActive={!isProcessingFrozen && index === activeStepIndex}
                   isEnabled={true}
+                  forceViewEnabled={isProcessingFrozen}
                   offerLetterStatus={step.key === "offer_letter" ? offerLetterStatus : undefined}
                   onOfferLetterClick={step.key === "offer_letter" ? onOfferLetterClick : undefined}
                   onStepClick={onStepClick}
@@ -637,6 +685,7 @@ export function ProcessingStepsCard({
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
+                  mutationsLocked={mutationsLocked}
                 />
               ))}
             </div>
@@ -649,17 +698,21 @@ export function ProcessingStepsCard({
                   getStatusConfig={getStatusConfig}
                   onOpen={() => setOpenStepKey(step.key)}
                   isCompleted={completedCount === totalSteps ? true : index + 6 < activeStepIndex}
-                  isActive={index + 6 === activeStepIndex}
+                  isActive={!isProcessingFrozen && index + 6 === activeStepIndex}
                   isEnabled={true}
+                  forceViewEnabled={isProcessingFrozen}
                   onStepClick={onStepClick}
                   onManageStepDocs={onManageStepDocs}
                   canManageStepDocs={canManageStepDocs}
                   submittedAt={submittedDates[step.stepId] ?? step.submittedAt}
                   completedAt={step.completedAt}
                   onEditSubmitted={() => openEditSubmitted(step.stepId, submittedDates[step.stepId] ?? step.submittedAt)}
+                  mutationsLocked={mutationsLocked}
                 />
               ))}
             </div>
+              </>
+            )}
           </div>
         </div>
       </CardContent>
@@ -750,21 +803,19 @@ export function ProcessingStepsCard({
                           </div>
 
                           <div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    className="p-1 rounded-full bg-slate-100 hover:bg-slate-200"
-                                    onClick={() => openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt)}
-                                  >
-                                    <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Edit submitted date</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <LockedProcessingActionButton forceDisabled={mutationsLocked}>
+                              <button
+                                className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-80"
+                                disabled={mutationsLocked}
+                                onClick={() => {
+                                  if (!mutationsLocked) {
+                                    openEditSubmitted(selected.stepId, submittedDates[selected.stepId] ?? selected.submittedAt);
+                                  }
+                                }}
+                              >
+                                <Edit3 className={`h-4 w-4 ${statusCfg.color}`} />
+                              </button>
+                            </LockedProcessingActionButton>
                           </div>
                         </div>
                       )}
@@ -906,6 +957,7 @@ function StepItem({
   isCompleted,
   isActive = false,
   isEnabled,
+  forceViewEnabled = false,
   offerLetterStatus,
   onOfferLetterClick,
   onStepClick,
@@ -914,6 +966,7 @@ function StepItem({
   submittedAt,
   completedAt,
   onEditSubmitted,
+  mutationsLocked = false,
 }: {
   step: {
     key: string;
@@ -946,6 +999,7 @@ function StepItem({
   isCompleted?: boolean;
   isActive?: boolean;
   isEnabled?: boolean;
+  forceViewEnabled?: boolean;
   offerLetterStatus?: OfferLetterStatus;
   onOfferLetterClick?: () => void;
   onStepClick?: (stepKey: string) => void;
@@ -954,6 +1008,7 @@ function StepItem({
   submittedAt?: string | null;
   completedAt?: string | null;
   onEditSubmitted?: () => void;
+  mutationsLocked?: boolean;
 }) {
   const statusConfig = getStatusConfig(step.status);
   const StepIcon = step.icon;
@@ -987,7 +1042,12 @@ function StepItem({
   // Consider the step's actual status as well — mark completed when API reports 'completed' or when `completedAt` is present
   const stepCompleted = isCompleted || offerLetterVerified || step.status === 'completed' || !!completedAt;
   const stepInProgressVisual = !stepCompleted && (isInProgress || offerLetterPending);
-  const stepEnabled = isEnabled || stepCompleted || isPending || isInProgress; // enable pending/in-progress steps by default
+  const stepEnabled =
+    forceViewEnabled ||
+    isEnabled ||
+    stepCompleted ||
+    isPending ||
+    isInProgress;
   const showVisaDatesFooter =
     isVisaStep &&
     (!!step.visaIssuedAt ||
@@ -1218,23 +1278,22 @@ function StepItem({
               </div>
             ) : isSubmissionDateRequired ? (
               <div>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                        className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100"
-                        aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        <span>Set date</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{isDocumentOriginalReceivedStep ? "Set or edit document original received date" : "Set or edit submitted date"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <LockedProcessingActionButton forceDisabled={mutationsLocked}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!mutationsLocked) {
+                        onEditSubmitted?.();
+                      }
+                    }}
+                    disabled={mutationsLocked}
+                    className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-white/50 border border-slate-100 text-xs text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-80"
+                    aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    <span>Set date</span>
+                  </button>
+                </LockedProcessingActionButton>
               </div>
             ) : null}
           </div>
@@ -1338,6 +1397,7 @@ function StepItem({
           <div className="flex items-center gap-1 shrink-0">
           {canManageStepDocs && step.hasDocuments && onManageStepDocs && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onManageStepDocs(step.key);
@@ -1497,22 +1557,21 @@ function StepItem({
             </div>
           ) : isSubmissionDateRequired ? (
             <div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onEditSubmitted && onEditSubmitted(); }}
-                      className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100"
-                      aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
-                    >
-                      <Edit3 className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <LockedProcessingActionButton forceDisabled={mutationsLocked}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!mutationsLocked) {
+                      onEditSubmitted?.();
+                    }
+                  }}
+                  disabled={mutationsLocked}
+                  className="p-1 rounded-md bg-white/50 border border-slate-100 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-80"
+                  aria-label={isDocumentOriginalReceivedStep ? "Edit document original received date" : "Edit submitted date"}
+                >
+                  <Edit3 className="h-4 w-4" />
+                </button>
+              </LockedProcessingActionButton>
             </div>
           ) : null}
         </div>

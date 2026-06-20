@@ -302,10 +302,29 @@ export type CandidateProjectStatusChangeTargetStatus =
 export const STATUS_CHANGE_REQUEST_TYPES = {
   BLOCK: 'block',
   REACTIVATE: 'reactivate',
+  PROCESSING_CANCEL: 'processing_cancel',
+  PROCESSING_HOLD: 'processing_hold',
 } as const;
 
 export type StatusChangeRequestType =
   (typeof STATUS_CHANGE_REQUEST_TYPES)[keyof typeof STATUS_CHANGE_REQUEST_TYPES];
+
+export const PROCESSING_STATUS_CHANGE_TARGET_STATUSES = [
+  'processing_cancelled',
+  'processing_hold',
+] as const;
+
+export type ProcessingStatusChangeTargetStatus =
+  (typeof PROCESSING_STATUS_CHANGE_TARGET_STATUSES)[number];
+
+export function isProcessingStatusChangeRequestType(
+  requestType: string,
+): boolean {
+  return (
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL ||
+    requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD
+  );
+}
 
 export function isCandidateProjectPipelineBlocked(
   mainStatusName: string | null | undefined,

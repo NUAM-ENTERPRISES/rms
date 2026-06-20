@@ -262,7 +262,7 @@ const PROCESSING_SUB_STATUS_TILES = [
   },
   {
     key: 'cancelled',
-    subStatusName: 'processing_failed',
+    subStatusName: 'processing_cancelled',
     label: 'Cancelled',
   },
 ] as const;

@@ -36,6 +36,8 @@ import {
     Phone,
     ArrowUpRight,
     SlidersHorizontal,
+    AlertCircle,
+    PauseCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppSelector } from "@/app/hooks";
@@ -62,7 +64,7 @@ const accentStyles: Record<string, { card: string; icon: string; iconBg: string;
     amber: { card: "from-amber-50 via-white to-amber-50/30 border-amber-100", icon: "text-amber-600", iconBg: "bg-amber-100", value: "text-amber-700", ring: "ring-amber-400/50", dot: "bg-amber-500" },
     rose: { card: "from-rose-50 via-white to-rose-50/30 border-rose-100", icon: "text-rose-600", iconBg: "bg-rose-100", value: "text-rose-700", ring: "ring-rose-400/50", dot: "bg-rose-500" },
     slate: { card: "from-slate-50 via-white to-slate-50/30 border-slate-100", icon: "text-slate-600", iconBg: "bg-slate-100", value: "text-slate-700", ring: "ring-slate-400/50", dot: "bg-slate-500" },
-    purple: { card: "from-purple-50 via-white to-purple-50/30 border-purple-100", icon: "text-purple-600", iconBg: "bg-purple-100", value: "text-purple-700", ring: "ring-purple-400/50", dot: "bg-purple-500" },
+    orange: { card: "from-orange-100 via-orange-50 to-orange-100/50 border-orange-200", icon: "text-orange-700", iconBg: "bg-orange-200", value: "text-orange-800", ring: "ring-orange-500/50", dot: "bg-orange-600" },
 };
 
 // This page is intentionally not wired to any API. It uses local dummy data
@@ -75,10 +77,16 @@ export default function ProcessingAdminDashboardPage() {
     const tableRef = useRef<HTMLDivElement>(null);
 
     const handleTileClick = (tile: any) => {
-        if (tile.type === "step") {
+        if (tile.type === "filter") {
+            setAwaitingRequestsFilter((prev) => !prev);
+            setStepFilter(null);
+            setStatusFilter("all");
+        } else if (tile.type === "step") {
+            setAwaitingRequestsFilter(false);
             setStatusFilter("all");
             setStepFilter((prev) => (prev === tile.key ? null : tile.key));
         } else {
+            setAwaitingRequestsFilter(false);
             setStepFilter(null);
             setStatusFilter((prev) => (prev === tile.status ? "all" : tile.status));
         }
@@ -91,7 +99,10 @@ export default function ProcessingAdminDashboardPage() {
     // Local UI state (same as production page)
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
-    const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "visa_stamped">("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed" | "cancelled" | "on_hold" | "visa_stamped">("all");
+    const [awaitingRequestsFilter, setAwaitingRequestsFilter] = useState(
+        () => searchParams.get("filter") === "awaiting_requests",
+    );
     const [stepFilter, setStepFilter] = useState<string | null>(null);
     const [projectFilter, setProjectFilter] = useState<string>("all");
     const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -135,13 +146,21 @@ export default function ProcessingAdminDashboardPage() {
             ...advancedFiltersToQueryParams(advancedFilters),
         };
 
-        if (stepFilter) {
+        if (awaitingRequestsFilter) {
+            params.filterType = "awaiting_requests";
+            params.status = undefined;
+            params.step = undefined;
+        } else if (stepFilter) {
             params.step = stepFilter;
             params.filterType = "total_processing";
+            params.status = undefined;
         } else if (statusFilter === "all") {
             params.filterType = "total_processing";
+            params.status = undefined;
         } else {
             params.status = statusFilter;
+            params.filterType = undefined;
+            params.step = undefined;
         }
 
         return params;
@@ -153,6 +172,7 @@ export default function ProcessingAdminDashboardPage() {
         pageSize,
         stepFilter,
         statusFilter,
+        awaitingRequestsFilter,
         advancedFilters,
     ]);
 
@@ -166,11 +186,11 @@ export default function ProcessingAdminDashboardPage() {
     // Pagination (driven by API when available)
     const totalItems = pagination?.total ?? candidates.length;
     const totalPages = pagination?.totalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
-    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, projectFilter, roleFilter, pageSize, advancedFilters]);
+    useEffect(() => { setPage(1); }, [debouncedSearch, statusFilter, stepFilter, awaitingRequestsFilter, projectFilter, roleFilter, pageSize, advancedFilters]);
     const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
     const endItem = Math.min(page * pageSize, totalItems);
 
-    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; visa_stamped?: number; steps?: Record<string, number> } = apiResponse?.data?.counts ?? {};
+    const counts: { all?: number; assigned?: number; in_progress?: number; completed?: number; cancelled?: number; on_hold?: number; visa_stamped?: number; pendingStatusChangeRequests?: number; steps?: Record<string, number> } = apiResponse?.data?.counts ?? {};
     const totalProcessing = counts?.all ?? ((counts.assigned || 0) + (counts.in_progress || 0) + (counts.completed || 0) + (counts.cancelled || 0));
 
     const processingTiles: Array<any> = [
@@ -209,6 +229,14 @@ export default function ProcessingAdminDashboardPage() {
       { type: "step", key: "ticket", label: "Ticket", accent: "emerald" },
       {
         type: "status",
+        label: "Processing Hold",
+        status: "on_hold",
+        accent: "amber",
+        icon: PauseCircle,
+        value: counts?.on_hold || 0,
+      },
+      {
+        type: "status",
         label: "Completed",
         status: "completed",
         accent: "emerald",
@@ -223,6 +251,14 @@ export default function ProcessingAdminDashboardPage() {
         icon: XCircle,
         value: counts?.cancelled || 0,
       },
+      {
+        type: "filter",
+        label: "Awaiting Requests",
+        filterType: "awaiting_requests",
+        accent: "orange",
+        icon: AlertCircle,
+        value: counts?.pendingStatusChangeRequests || 0,
+      },
     ];
 
     const getStatusBadge = (status: string) => {
@@ -230,7 +266,8 @@ export default function ProcessingAdminDashboardPage() {
             "in_progress": "bg-blue-100 text-blue-700 border-blue-200",
             "assigned": "bg-indigo-100 text-indigo-700 border-indigo-200",
             "completed": "bg-emerald-100 text-emerald-700 border-emerald-200",
-            "cancelled": "bg-rose-100 text-rose-700 border-rose-200"
+            "cancelled": "bg-rose-100 text-rose-700 border-rose-200",
+            "on_hold": "bg-amber-100 text-amber-800 border-amber-200",
         };
         return styles[status] || "bg-slate-100 text-slate-700";
     };
@@ -241,7 +278,8 @@ export default function ProcessingAdminDashboardPage() {
             "assigned": "Untouched",
             "in_progress": "In Progress",
             "completed": "Completed",
-            "cancelled": "Cancelled"
+            "cancelled": "Cancelled",
+            "on_hold": "Processing Hold",
         };
         return labels[status] || status;
     };
@@ -261,9 +299,26 @@ export default function ProcessingAdminDashboardPage() {
             case "in_progress": return "bg-blue-50/40";
             case "assigned": return "bg-indigo-50/40";
             case "completed": return "bg-emerald-50/40";
-            case "cancelled": return "bg-rose-50/40";
+            case "cancelled": return "bg-rose-50/60";
+            case "on_hold": return "bg-amber-50/60";
             default: return "";
         }
+    };
+
+    const getCandidateRowBgClass = (
+        processingStatus: string,
+        pendingRequest?: { requestType: string } | null,
+    ) => {
+        if (processingStatus === "cancelled") {
+            return "bg-rose-50/60";
+        }
+        if (processingStatus === "on_hold") {
+            return "bg-amber-50/60";
+        }
+        if (pendingRequest) {
+            return "bg-orange-100";
+        }
+        return rowBgClass(processingStatus);
     };
 
     return (
@@ -300,7 +355,11 @@ export default function ProcessingAdminDashboardPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-6">
                         {processingTiles.map((tile) => {
                             const isStepTile = tile.type === "step";
-                            const isActive = isStepTile ? stepFilter === tile.key : statusFilter === tile.status && !stepFilter;
+                            const isActive = tile.type === "filter"
+                                ? awaitingRequestsFilter
+                                : isStepTile
+                                  ? stepFilter === tile.key
+                                  : statusFilter === tile.status && !stepFilter && !awaitingRequestsFilter;
                             const value = isStepTile ? getStepTileCount(tile.key) : tile.value;
                             const s = accentStyles[tile.accent || "blue"];
                             const Icon = isStepTile ? ClipboardList : tile.icon;
@@ -394,7 +453,13 @@ export default function ProcessingAdminDashboardPage() {
                                     </div>
                                     <div>
                                         <h2 className="text-base font-bold text-gray-900">
-                                            {stepFilter ? formatStep(stepFilter) : (statusFilter !== 'all' ? displayStatus(statusFilter) : "Active Candidates")}
+                                            {awaitingRequestsFilter
+                                                ? "Awaiting Requests"
+                                                : stepFilter
+                                                  ? formatStep(stepFilter)
+                                                  : statusFilter !== "all"
+                                                    ? displayStatus(statusFilter)
+                                                    : "Active Candidates"}
                                         </h2>
                                         <p className="text-xs text-slate-500">
                                             <span className="font-semibold text-gray-900">{totalItems}</span> candidate{totalItems !== 1 ? "s" : ""} in processing
@@ -441,13 +506,21 @@ export default function ProcessingAdminDashboardPage() {
                                                         <Filter className="h-10 w-10 opacity-20" />
                                                         <p className="text-lg font-bold">No candidates found</p>
                                                         <p className="text-sm">Try adjusting your filters or search term</p>
-                                                        <Button variant="link" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter('all'); }}>Clear all filters</Button>
+                                                        <Button variant="link" onClick={() => { setSearch(""); setProjectFilter("all"); setRoleFilter("all"); setStatusFilter("all"); setAwaitingRequestsFilter(false); setStepFilter(null); }}>Clear all filters</Button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
                                         ) : (
-                                            candidates.map((procCandidate) => (
-                                                <TableRow key={procCandidate.id} className={`group transition-colors border-b border-slate-100 hover:shadow-sm ${rowBgClass(procCandidate.processingStatus)}`}>
+                                            candidates.map((procCandidate) => {
+                                                const pendingRequest = (procCandidate as { pendingStatusChangeRequest?: { id: string; requestType: string; createdAt: string } }).pendingStatusChangeRequest;
+                                                return (
+                                                <TableRow key={procCandidate.id} className={cn(
+                                                    "group transition-colors border-b border-slate-100 hover:shadow-sm",
+                                                    getCandidateRowBgClass(
+                                                        procCandidate.processingStatus,
+                                                        pendingRequest,
+                                                    ),
+                                                )}>
                                                     <TableCell className="py-4">
                                                         <div className="flex items-center gap-3">
                                                             <ImageViewer title={`${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} src={procCandidate.candidate.profileImage || null} className="h-9 w-9 rounded-full" ariaLabel={`View full image for ${procCandidate.candidate.firstName} ${procCandidate.candidate.lastName}`} enableHoverPreview={true} />
@@ -518,7 +591,18 @@ export default function ProcessingAdminDashboardPage() {
                                                     </TableCell>
 
     
-                                                    <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge></TableCell>
+                                                    <TableCell className="py-4"><Badge className={`text-xs border-2 font-black whitespace-nowrap px-3 py-1 ${getStatusBadge(procCandidate.processingStatus)}`}>{displayStatus(procCandidate.processingStatus)}</Badge>
+                                                        {pendingRequest && (
+                                                            <Badge className="mt-1 block w-fit text-[10px] bg-orange-200 text-orange-900 border-orange-300 font-semibold">
+                                                                Review Request
+                                                            </Badge>
+                                                        )}
+                                                        {!pendingRequest && procCandidate.processingStatus === "on_hold" && (
+                                                            <Badge className="mt-1 block w-fit text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                                                                On hold
+                                                            </Badge>
+                                                        )}
+                                                    </TableCell>
 
                                                     <TableCell className="py-4">
                                                         <ProcessingProgressBar
@@ -530,9 +614,10 @@ export default function ProcessingAdminDashboardPage() {
                                                         />
                                                     </TableCell>
 
-                                                    <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(`/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>
+                                                    <TableCell className="py-4 text-center"><Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-violet-100 hover:text-violet-700 rounded-full transition-all hover:scale-110 shadow-sm" onClick={() => navigate(pendingRequest ? `/processingCandidateDetails/${procCandidate.id}?reviewRequest=${pendingRequest.id}` : `/processingCandidateDetails/${procCandidate.id}`)}><Eye className="h-5 w-5" /></Button></TableCell>
                                                 </TableRow>
-                                            ))
+                                            );
+                                            })
                                         )}
                                     </TableBody>
                                 </Table>

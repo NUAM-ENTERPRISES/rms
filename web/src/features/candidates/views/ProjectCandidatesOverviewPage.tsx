@@ -128,7 +128,7 @@ const PROCESSING_SUB_FILTERS: SubStatusFilterOption[] = [
   { key: "transferred", label: "Transferred", subStatus: "transfered_to_processing" },
   { key: "in_progress", label: "In Progress", subStatus: "processing_in_progress" },
   { key: "completed", label: "Completed", subStatus: "processing_completed" },
-  { key: "failed", label: "Failed", subStatus: "processing_failed" },
+  { key: "cancelled", label: "Cancelled", subStatus: "processing_cancelled" },
   { key: "ready_final", label: "Ready for Final", subStatus: "ready_for_final" },
 ];
 

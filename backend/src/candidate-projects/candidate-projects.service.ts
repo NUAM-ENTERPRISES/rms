@@ -4,6 +4,8 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OutboxService } from '../notifications/outbox.service';
@@ -29,18 +31,22 @@ import {
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
   isCandidateProjectPipelineBlocked,
+  isProcessingStatusChangeRequestType,
 } from '../common/constants';
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
 import {
   CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES,
   CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES,
+  PROCESSING_STATUS_CHANGE_APPROVER_ROLES,
+  PROCESSING_STATUS_CHANGE_DIRECT_ROLES,
   ROLE_NAMES,
 } from '../common/constants/role-ids';
-import { CreateStatusChangeRequestDto } from './dto/create-status-change-request.dto';
+import { CreateStatusChangeRequestDto, resolveProcessingRequestedStatus } from './dto/create-status-change-request.dto';
 import { ReviewStatusChangeRequestDto } from './dto/review-status-change-request.dto';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { withActiveAccountStatus } from '../users/user-account-status.filter';
+import { ProcessingService } from '../processing/processing.service';
 
 /** Project overview sub-status tiles (aligned with web ProjectCandidatesOverviewPage filters). */
 const PROJECT_DOCUMENT_SUB_STATUS_TILES = [
@@ -99,7 +105,7 @@ const PROJECT_PROCESSING_SUB_STATUS_TILES = [
     label: 'Completed',
     subStatusName: 'processing_completed',
   },
-  { key: 'failed', label: 'Failed', subStatusName: 'processing_failed' },
+  { key: 'cancelled', label: 'Cancelled', subStatusName: 'processing_cancelled' },
   {
     key: 'ready_final',
     label: 'Ready for Final',
@@ -116,6 +122,8 @@ export class CandidateProjectsService {
     private readonly notificationsService: NotificationsService,
     private readonly outboxService: OutboxService,
     private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => ProcessingService))
+    private readonly processingService: ProcessingService,
   ) {}
 
   private async ensureInterviewCoordinator(userId: string) {
@@ -1870,13 +1878,15 @@ export class CandidateProjectsService {
     return user.userRoles.map((ur) => ur.role.name);
   }
 
-  private async assertUserCanApproveStatusChange(userId: string): Promise<void> {
+  private async assertUserCanApproveStatusChange(
+    userId: string,
+    requestType: string,
+  ): Promise<void> {
     const roleNames = await this.getUserRoleNames(userId);
-    const canApprove = roleNames.some((name) =>
-      (CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES as readonly string[]).includes(
-        name,
-      ),
-    );
+    const approverRoles = isProcessingStatusChangeRequestType(requestType)
+      ? (PROCESSING_STATUS_CHANGE_APPROVER_ROLES as readonly string[])
+      : (CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES as readonly string[]);
+    const canApprove = roleNames.some((name) => approverRoles.includes(name));
     if (!canApprove) {
       throw new ForbiddenException(
         'You do not have permission to approve or reject status change requests',
@@ -1888,6 +1898,17 @@ export class CandidateProjectsService {
     const roleNames = await this.getUserRoleNames(userId);
     return roleNames.some((name) =>
       (CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
+        name,
+      ),
+    );
+  }
+
+  private async userCanDirectApplyProcessingStatusChange(
+    userId: string,
+  ): Promise<boolean> {
+    const roleNames = await this.getUserRoleNames(userId);
+    return roleNames.some((name) =>
+      (PROCESSING_STATUS_CHANGE_DIRECT_ROLES as readonly string[]).includes(
         name,
       ),
     );
@@ -1905,7 +1926,7 @@ export class CandidateProjectsService {
         previousMainStatus: true,
         previousSubStatus: true,
         candidate: { select: { id: true, firstName: true, lastName: true } },
-        project: { select: { id: true, title: true } },
+        project: { select: { id: true, title: true, country: { select: { code: true, name: true } } } },
       },
     });
 
@@ -1947,6 +1968,36 @@ export class CandidateProjectsService {
           'No previous status to restore. Please contact administrator.',
         );
       }
+    } else if (isProcessingStatusChangeRequestType(dto.requestType)) {
+      if (!dto.processingStepId) {
+        throw new BadRequestException(
+          'processingStepId is required for processing status change requests',
+        );
+      }
+      if (candidateProject.mainStatus?.name !== 'processing') {
+        throw new BadRequestException(
+          'Processing cancel/hold requests are only allowed while candidate is in processing',
+        );
+      }
+      dto.requestedStatus =
+        dto.requestedStatus ?? resolveProcessingRequestedStatus(dto.requestType);
+
+      const processingCandidate = await this.prisma.processingCandidate.findFirst({
+        where: {
+          candidateId: candidateProject.candidateId,
+          projectId: candidateProject.projectId,
+        },
+      });
+      if (!processingCandidate?.assignedProcessingTeamUserId) {
+        throw new BadRequestException(
+          'Candidate must be assigned to a processing team before requesting cancel/hold',
+        );
+      }
+      if (!['assigned', 'in_progress'].includes(processingCandidate.processingStatus)) {
+        throw new BadRequestException(
+          'Processing cancel/hold is only allowed while processing is active',
+        );
+      }
     }
 
     const existingPending =
@@ -1963,7 +2014,9 @@ export class CandidateProjectsService {
       );
     }
 
-    const canDirectApply = await this.userCanDirectApplyStatusChange(userId);
+    const canDirectApply = isProcessingStatusChangeRequestType(dto.requestType)
+      ? await this.userCanDirectApplyProcessingStatusChange(userId)
+      : await this.userCanDirectApplyStatusChange(userId);
     if (canDirectApply) {
       return this.directApplyStatusChange(
         candidateProjectMapId,
@@ -1986,6 +2039,9 @@ export class CandidateProjectsService {
           requestedStatus: dto.requestedStatus || '',
           reason: dto.reason,
           requestedBy: userId,
+          processingStepId: dto.processingStepId ?? null,
+          stepKey: dto.stepKey ?? null,
+          processingCandidateId: dto.processingCandidateId ?? null,
         },
         include: {
           requester: { select: { id: true, name: true, email: true } },
@@ -2005,6 +2061,11 @@ export class CandidateProjectsService {
           requestedBy: userId,
           requesterName: requester?.name ?? 'Recruiter',
           reason: dto.reason,
+          processingStepId: dto.processingStepId,
+          stepKey: dto.stepKey,
+          processingCandidateId: dto.processingCandidateId,
+          countryCode: candidateProject.project.country?.code,
+          countryName: candidateProject.project.country?.name,
         },
         tx,
       );
@@ -2026,6 +2087,40 @@ export class CandidateProjectsService {
       project: { title: string };
     },
   ) {
+    if (isProcessingStatusChangeRequestType(dto.requestType)) {
+      const created = await this.prisma.candidateProjectStatusChangeRequest.create({
+        data: {
+          candidateProjectMapId,
+          requestType: dto.requestType,
+          requestedStatus: dto.requestedStatus || '',
+          reason: dto.reason,
+          requestedBy: userId,
+          status: CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.APPROVED,
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          processingStepId: dto.processingStepId ?? null,
+          stepKey: dto.stepKey ?? null,
+          processingCandidateId: dto.processingCandidateId ?? null,
+        },
+        include: {
+          requester: { select: { id: true, name: true, email: true } },
+          reviewer: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      await this.processingService.executeApprovedProcessingStatusChange(
+        {
+          requestType: dto.requestType,
+          processingStepId: dto.processingStepId!,
+          candidateProjectMapId,
+          reason: dto.reason,
+        },
+        userId,
+      );
+
+      return created;
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.candidateProjectStatusChangeRequest.create({
         data: {
@@ -2052,7 +2147,7 @@ export class CandidateProjectsService {
           reason: dto.reason,
         },
         userId,
-        dto.requestType,
+        dto.requestType as 'block' | 'reactivate',
       );
 
       return created;
@@ -2176,8 +2271,6 @@ export class CandidateProjectsService {
     dto: ReviewStatusChangeRequestDto,
     userId: string,
   ) {
-    await this.assertUserCanApproveStatusChange(userId);
-
     const request =
       await this.prisma.candidateProjectStatusChangeRequest.findUnique({
         where: { id: requestId },
@@ -2195,6 +2288,8 @@ export class CandidateProjectsService {
     if (!request) {
       throw new NotFoundException('Status change request not found');
     }
+
+    await this.assertUserCanApproveStatusChange(userId, request.requestType);
 
     if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
       throw new BadRequestException('Status change request has already been processed');
@@ -2215,17 +2310,20 @@ export class CandidateProjectsService {
         },
       });
 
-      await this.applyStatusUpdateInTransaction(
-        tx,
-        request.candidateProjectMapId,
-        {
-          subStatusName: request.requestType === 'reactivate' ? undefined : request.requestedStatus,
-          reason: request.reason,
-          notes: dto.reviewNotes,
-        },
-        userId,
-        request.requestType as 'block' | 'reactivate',
-      );
+      if (!isProcessingStatusChangeRequestType(request.requestType)) {
+        await this.applyStatusUpdateInTransaction(
+          tx,
+          request.candidateProjectMapId,
+          {
+            subStatusName:
+              request.requestType === 'reactivate' ? undefined : request.requestedStatus,
+            reason: request.reason,
+            notes: dto.reviewNotes,
+          },
+          userId,
+          request.requestType as 'block' | 'reactivate',
+        );
+      }
 
       await this.outboxService.publishCandidateProjectStatusChangeReviewed(
         {
@@ -2239,12 +2337,28 @@ export class CandidateProjectsService {
           requestedStatus: request.requestedStatus,
           requestedBy: request.requestedBy,
           outcome: 'approved',
+          reviewNotes: dto.reviewNotes,
+          processingStepId: request.processingStepId ?? undefined,
+          stepKey: request.stepKey ?? undefined,
+          processingCandidateId: request.processingCandidateId ?? undefined,
         },
         tx,
       );
 
       return updatedRequest;
     });
+
+    if (isProcessingStatusChangeRequestType(request.requestType)) {
+      await this.processingService.executeApprovedProcessingStatusChange(
+        {
+          requestType: request.requestType,
+          processingStepId: request.processingStepId!,
+          candidateProjectMapId: request.candidateProjectMapId,
+          reason: request.reason,
+        },
+        userId,
+      );
+    }
 
     return result;
   }
@@ -2254,8 +2368,6 @@ export class CandidateProjectsService {
     dto: ReviewStatusChangeRequestDto,
     userId: string,
   ) {
-    await this.assertUserCanApproveStatusChange(userId);
-
     const request =
       await this.prisma.candidateProjectStatusChangeRequest.findUnique({
         where: { id: requestId },
@@ -2272,6 +2384,8 @@ export class CandidateProjectsService {
     if (!request) {
       throw new NotFoundException('Status change request not found');
     }
+
+    await this.assertUserCanApproveStatusChange(userId, request.requestType);
 
     if (request.status !== CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES.PENDING) {
       throw new BadRequestException('Status change request has already been processed');
@@ -2304,6 +2418,10 @@ export class CandidateProjectsService {
           requestedStatus: request.requestedStatus,
           requestedBy: request.requestedBy,
           outcome: 'rejected',
+          reviewNotes: dto.reviewNotes,
+          processingStepId: request.processingStepId ?? undefined,
+          stepKey: request.stepKey ?? undefined,
+          processingCandidateId: request.processingCandidateId ?? undefined,
         },
         tx,
       );

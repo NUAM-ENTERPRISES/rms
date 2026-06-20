@@ -2928,6 +2928,10 @@ export class NotificationsProcessor extends WorkerHost {
         requestedStatus,
         requesterName,
         reason,
+        processingCandidateId,
+        stepKey,
+        countryCode,
+        countryName,
       } = payload as {
         requestId: string;
         candidateProjectMapId: string;
@@ -2939,7 +2943,69 @@ export class NotificationsProcessor extends WorkerHost {
         requestedStatus?: string;
         requesterName: string;
         reason: string;
+        processingCandidateId?: string;
+        stepKey?: string;
+        countryCode?: string;
+        countryName?: string;
       };
+
+      const isProcessingRequest =
+        requestType === 'processing_cancel' || requestType === 'processing_hold';
+
+      if (isProcessingRequest) {
+        const actionLabel =
+          requestType === 'processing_cancel' ? 'cancellation' : 'hold';
+        const countrySuffix =
+          countryName || countryCode
+            ? ` (${countryName ?? countryCode})`
+            : '';
+        const stepSuffix = stepKey ? ` at step ${stepKey.replace(/_/g, ' ')}` : '';
+
+        const targetUsers = await this.prisma.user.findMany({
+          where: withActiveAccountStatus({
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: ['Manager', 'Processing Manager'] },
+                },
+              },
+            },
+          }),
+          select: { id: true },
+        });
+
+        const link = processingCandidateId
+          ? `/processingCandidateDetails/${processingCandidateId}?reviewRequest=${requestId}`
+          : `/processing-admin?filter=awaiting_requests`;
+
+        for (const user of targetUsers) {
+          const idemKey = `${eventId}:processing_status_change_request:${requestId}:${user.id}`;
+          await this.notificationsService.createNotification({
+            userId: user.id,
+            type: 'processing_status_change_request',
+            title: `Processing ${actionLabel} request`,
+            message: `${requesterName} requested processing ${actionLabel} for ${candidateName} — ${projectTitle}${countrySuffix}${stepSuffix}. Reason: ${reason}`,
+            link,
+            meta: {
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestType,
+              requestedStatus,
+              processingCandidateId,
+              stepKey,
+              countryCode,
+            },
+            idemKey,
+          });
+        }
+
+        this.logger.log(
+          `Processing status change request notifications created for ${targetUsers.length} approvers`,
+        );
+        return;
+      }
 
       const statusLabel =
         requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
@@ -3021,6 +3087,8 @@ export class NotificationsProcessor extends WorkerHost {
         requestedStatus,
         requestedBy,
         outcome,
+        reviewNotes,
+        processingCandidateId,
       } = payload as {
         requestId: string;
         candidateProjectMapId: string;
@@ -3032,7 +3100,60 @@ export class NotificationsProcessor extends WorkerHost {
         requestedStatus?: string;
         requestedBy: string;
         outcome: 'approved' | 'rejected';
+        reviewNotes?: string | null;
+        processingCandidateId?: string;
       };
+
+      const isProcessingRequest =
+        requestType === 'processing_cancel' || requestType === 'processing_hold';
+
+      if (isProcessingRequest) {
+        const actionLabel =
+          requestType === 'processing_cancel' ? 'cancellation' : 'hold';
+        const link = processingCandidateId
+          ? `/processingCandidateDetails/${processingCandidateId}?actionOutcome=${requestId}`
+          : `/processing-admin?filter=awaiting_requests`;
+
+        const notifyUserIds = new Set<string>([requestedBy]);
+        if (processingCandidateId) {
+          const pc = await this.prisma.processingCandidate.findUnique({
+            where: { id: processingCandidateId },
+            select: { assignedProcessingTeamUserId: true },
+          });
+          if (pc?.assignedProcessingTeamUserId) {
+            notifyUserIds.add(pc.assignedProcessingTeamUserId);
+          }
+        }
+
+        for (const userId of notifyUserIds) {
+          const idemKey = `${eventId}:processing_status_change_reviewed:${requestId}:${userId}`;
+          await this.notificationsService.createNotification({
+            userId,
+            type: 'processing_status_change_reviewed',
+            title:
+              outcome === 'approved'
+                ? `Processing ${actionLabel} approved`
+                : `Processing ${actionLabel} rejected`,
+            message:
+              outcome === 'approved'
+                ? `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was approved.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`
+                : `Processing ${actionLabel} for ${candidateName} (${projectTitle}) was rejected.${reviewNotes ? ` Remarks: ${reviewNotes}` : ''}`,
+            link,
+            meta: {
+              requestId,
+              candidateProjectMapId,
+              candidateId,
+              projectId,
+              requestedStatus,
+              outcome,
+              processingCandidateId,
+              requestType,
+            },
+            idemKey,
+          });
+        }
+        return;
+      }
 
       const statusLabel =
         requestedStatus === 'on_hold' ? 'On Hold' : 'Withdrawn';
