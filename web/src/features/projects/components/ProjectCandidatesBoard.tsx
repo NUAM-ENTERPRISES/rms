@@ -1022,7 +1022,6 @@ const ProjectCandidatesBoard = ({
                 onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)
               }
               isAlreadyInProject={assignmentInfo.isAssigned}
-              eligibilityData={eligibilityMap.get(candidateId)}
             />
           );
         })}
