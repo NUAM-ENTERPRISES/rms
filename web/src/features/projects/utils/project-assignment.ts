@@ -184,3 +184,103 @@ export function getProjectDeadlineNoticeMessage(
   }
   return "Project deadline has passed.";
 }
+
+export type ProcessingAssignmentConflict = {
+  projectId: string;
+  projectTitle: string;
+} | null;
+
+export type ProcessingEligibilityData = {
+  processingConflict?: ProcessingAssignmentConflict;
+  pipelineBlockedOnThisProject?: boolean;
+  roleEligibility?: Array<{ reasons?: string[] }>;
+};
+
+export const PROCESSING_BLOCK_BADGE_LABEL = "Processing on another project";
+export const PROCESSING_PIPELINE_BADGE_LABEL = "Pipeline paused";
+
+export function buildProcessingAssignmentBlockMessage(
+  activeProjectTitle: string,
+): string {
+  return `This candidate is being processed on "${activeProjectTitle}". Assign them to another project only after processing is completed, put on hold, or cancelled on that project.`;
+}
+
+export function buildProcessingPipelineBlockMessage(
+  activeProjectTitle: string,
+  currentProjectTitle?: string,
+): string {
+  const suffix = currentProjectTitle
+    ? ` on "${currentProjectTitle}"`
+    : " on this project";
+  return `Pipeline is paused here because this candidate has Processing In Progress on "${activeProjectTitle}". Complete, hold, or cancel processing there before continuing${suffix}.`;
+}
+
+export function getProcessingConflictFromEligibility(
+  eligibilityData?: ProcessingEligibilityData | null,
+): ProcessingAssignmentConflict {
+  return eligibilityData?.processingConflict ?? null;
+}
+
+export function isPipelineBlockedByProcessingOnOtherProject(
+  processingConflict: ProcessingAssignmentConflict,
+  projectId: string,
+): boolean {
+  if (!processingConflict) {
+    return false;
+  }
+  return processingConflict.projectId !== projectId;
+}
+
+export type ProcessingBlockReason = {
+  badgeLabel: string;
+  shortMessage: string;
+  fullMessage: string;
+};
+
+export function getProcessingBlockReasonForCandidate(params: {
+  eligibilityData?: ProcessingEligibilityData | null;
+  projectId: string;
+  projectTitle?: string;
+  context: "assign" | "pipeline";
+  isAssignedOnProject?: boolean;
+}): ProcessingBlockReason | null {
+  const conflict = getProcessingConflictFromEligibility(params.eligibilityData);
+  if (!conflict) {
+    return null;
+  }
+
+  const blockedOnThisProject =
+    params.eligibilityData?.pipelineBlockedOnThisProject ??
+    isPipelineBlockedByProcessingOnOtherProject(
+      conflict,
+      params.projectId,
+    );
+
+  if (!blockedOnThisProject && params.context === "pipeline") {
+    return null;
+  }
+
+  if (
+    params.context === "assign" &&
+    conflict.projectId === params.projectId
+  ) {
+    return null;
+  }
+
+  const fullMessage =
+    params.context === "pipeline" || params.isAssignedOnProject
+      ? buildProcessingPipelineBlockMessage(
+          conflict.projectTitle,
+          params.projectTitle,
+        )
+      : buildProcessingAssignmentBlockMessage(conflict.projectTitle);
+
+  return {
+    badgeLabel:
+      params.context === "pipeline" || params.isAssignedOnProject
+        ? PROCESSING_PIPELINE_BADGE_LABEL
+        : PROCESSING_BLOCK_BADGE_LABEL,
+    shortMessage: fullMessage,
+    fullMessage,
+  };
+}

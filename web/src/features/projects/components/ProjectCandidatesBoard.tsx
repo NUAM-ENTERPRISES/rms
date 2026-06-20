@@ -39,6 +39,7 @@ import CandidateCard, {
 import {
   getCandidateAssignmentBlockReason,
   getCandidateStatusLabel,
+  getProcessingBlockReasonForCandidate,
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
   isCandidatePositiveForAssignment,
@@ -759,14 +760,22 @@ const ProjectCandidatesBoard = ({
         const anyRoleEligible = eligibilityData?.roleEligibility?.some((r: any) => r.isEligible);
         const statusLabel = getCandidateStatusLabel(candidate);
         const isPositiveStatus = isCandidatePositiveForAssignment(statusLabel);
+        const processingBlockReason = getProcessingBlockReasonForCandidate({
+          eligibilityData,
+          projectId,
+          projectTitle: project?.title,
+          context: "assign",
+          isAssignedOnProject: assignmentInfo.isAssigned,
+        });
         const isNotEligible =
           !isPositiveStatus ||
           eligibilityData?.isEligible === false ||
-          !anyRoleEligible;
+          !anyRoleEligible ||
+          Boolean(processingBlockReason);
         return { candidateId: assignmentInfo.candidateId, canSelect: !assignmentInfo.isAssigned && !isNotEligible };
       })
       .filter((c) => c.canSelect);
-  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions]);
+  }, [filteredEligible, projectId, managerAssignments, assignedToProjectIds, eligibilityMap, canUseRecruiterPipelineActions, project?.title]);
 
   const allSelectableSelected = selectableEligibleCandidates.length > 0 &&
     selectableEligibleCandidates.every((c) => selectedEligibleIds.has(c.candidateId));
@@ -806,6 +815,12 @@ const ProjectCandidatesBoard = ({
   const selectableNominatedCandidates = useMemo(() => {
     if (!isInterviewCoordinator) return [];
     return sanitizedNominated.filter((candidate) => {
+      const candidateId = candidate.candidateId || candidate.id || "";
+      const eligibilityData = eligibilityMap.get(candidateId);
+      if (eligibilityData?.pipelineBlockedOnThisProject) {
+        return false;
+      }
+
       const subStatusName =
         candidate.projectSubStatus?.name ||
         candidate.projectSubStatus?.statusName ||
@@ -822,7 +837,7 @@ const ProjectCandidatesBoard = ({
         subStatusName.startsWith("nominated_initial")
       );
     });
-  }, [sanitizedNominated, isInterviewCoordinator]);
+  }, [sanitizedNominated, isInterviewCoordinator, eligibilityMap]);
 
   const toggleSelectAllNominated = () => {
     if (selectedNominatedIds.size === selectableNominatedCandidates.length) {
@@ -903,13 +918,30 @@ const ProjectCandidatesBoard = ({
 
           const shouldSkipDocVerification = assignmentInfo.shouldSkipDocumentVerification;
 
+          const nominatedEligibilityData = eligibilityMap.get(candidateId);
+          const pipelineBlockedByProcessing = Boolean(
+            nominatedEligibilityData?.pipelineBlockedOnThisProject,
+          );
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData: nominatedEligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "pipeline",
+            isAssignedOnProject: true,
+          });
+
           const showVerifyButton =
-            pipelineOpen && subStatusName === "nominated_initial";
+            pipelineOpen &&
+            !pipelineBlockedByProcessing &&
+            subStatusName === "nominated_initial";
           const showInterviewButton =
-            pipelineOpen && subStatusName === "documents_verified";
+            pipelineOpen &&
+            !pipelineBlockedByProcessing &&
+            subStatusName === "documents_verified";
 
           const actions =
             pipelineOpen &&
+            !pipelineBlockedByProcessing &&
             requiredScreening &&
             !isAlreadyInScreening &&
             isInterviewCoordinator
@@ -935,6 +967,10 @@ const ProjectCandidatesBoard = ({
           return (
             <CandidateCard
               key={`nominated-${candidateId}`}
+              processingBlockReason={processingBlockReason}
+              pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+              assignmentBlockReason={processingBlockReason?.fullMessage}
+              eligibilityData={nominatedEligibilityData}
               showProcessingGlance={statusAccent.isProcessing}
               className={cn(
                 isSelected ? "ring-1 ring-purple-400/60" : "",
@@ -1055,15 +1091,28 @@ const ProjectCandidatesBoard = ({
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
           const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "assign",
+            isAssignedOnProject: assignmentInfo.isAssigned,
+          });
+          const pipelineBlockedByProcessing = Boolean(
+            eligibilityData?.pipelineBlockedOnThisProject,
+          );
           const isNotEligible =
             !isPositiveForAssignment ||
             eligibilityData?.isEligible === false ||
             !anyRoleEligible ||
-            isRecruiterRnrLocked;
-          const assignmentBlockReason = getCandidateAssignmentBlockReason(
-            statusLabel,
-            { isCREReassigned: candidate.isCREReassigned },
-          );
+            isRecruiterRnrLocked ||
+            Boolean(processingBlockReason);
+          const assignmentBlockReason =
+            processingBlockReason?.fullMessage ??
+            getCandidateAssignmentBlockReason(
+              statusLabel,
+              { isCREReassigned: candidate.isCREReassigned },
+            );
 
           // Only show checkbox if candidate can actually be assigned (not already assigned AND eligible)
           const canSelect =
@@ -1081,6 +1130,8 @@ const ProjectCandidatesBoard = ({
               <CandidateCard
                 key={`eligible-${assignmentInfo.candidateId}`}
                 assignmentBlockReason={assignmentBlockReason}
+                processingBlockReason={processingBlockReason}
+                pipelineBlockedByProcessing={pipelineBlockedByProcessing}
                 showProcessingGlance={statusAccent.isProcessing}
                 className={cn(
                   isSelected ? "ring-1 ring-blue-400/60" : "",
@@ -1122,7 +1173,7 @@ const ProjectCandidatesBoard = ({
                 skipDocumentVerificationMessage={
                   "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
                 }
-                showInterviewButton={showInterviewButton}
+                showInterviewButton={showInterviewButton && !pipelineBlockedByProcessing}
                 onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
                 isAlreadyInProject={assignmentInfo.isAssigned}
                 showDocumentStatus={false}
@@ -1205,15 +1256,28 @@ const ProjectCandidatesBoard = ({
           const statusLabel = getCandidateStatusLabel(candidate);
           const isPositiveForAssignment = isCandidatePositiveForAssignment(statusLabel);
           const isRecruiterRnrLocked = isRecruiterLockedRnrCandidate(candidate);
+          const processingBlockReason = getProcessingBlockReasonForCandidate({
+            eligibilityData,
+            projectId,
+            projectTitle: project?.title,
+            context: "assign",
+            isAssignedOnProject: assignmentInfo.isAssigned,
+          });
+          const pipelineBlockedByProcessing = Boolean(
+            eligibilityData?.pipelineBlockedOnThisProject,
+          );
           const isNotEligible =
             !isPositiveForAssignment ||
             eligibilityData?.isEligible === false ||
             !anyRoleEligible ||
-            isRecruiterRnrLocked;
-          const assignmentBlockReason = getCandidateAssignmentBlockReason(
-            statusLabel,
-            { isCREReassigned: candidate.isCREReassigned },
-          );
+            isRecruiterRnrLocked ||
+            Boolean(processingBlockReason);
+          const assignmentBlockReason =
+            processingBlockReason?.fullMessage ??
+            getCandidateAssignmentBlockReason(
+              statusLabel,
+              { isCREReassigned: candidate.isCREReassigned },
+            );
           const cardStatusRaw = getCardStatusRaw(candidate, assignmentInfo);
           const statusAccent = getPipelineStatusCardClass(cardStatusRaw, {
             columnId: "all",
@@ -1225,6 +1289,8 @@ const ProjectCandidatesBoard = ({
             <CandidateCard
               key={`all-${assignmentInfo.candidateId}`}
               assignmentBlockReason={assignmentBlockReason}
+              processingBlockReason={processingBlockReason}
+              pipelineBlockedByProcessing={pipelineBlockedByProcessing}
               showProcessingGlance={statusAccent.isProcessing}
               className={statusAccent.cardClass}
               candidate={candidateWithProject}
@@ -1259,7 +1325,7 @@ const ProjectCandidatesBoard = ({
               skipDocumentVerificationMessage={
                 "This candidate should skip document verification because of direct screening. Once screening is completed you should do document verification."
               }
-              showInterviewButton={showInterviewButton}
+              showInterviewButton={showInterviewButton && !pipelineBlockedByProcessing}
               onSendForInterview={(id) => onSendForInterview?.(id, `${candidate.firstName} ${candidate.lastName}`)}
               isAlreadyInProject={assignmentInfo.isAssigned}
               showDocumentStatus={false}

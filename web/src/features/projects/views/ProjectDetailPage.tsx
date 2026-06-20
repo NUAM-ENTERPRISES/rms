@@ -47,10 +47,6 @@ import {
 } from "lucide-react";
 import { ProjectStatus, type ProjectStatusType } from "@/entities/project/constants";
 import MatchScoreSummary from "@/features/projects/components/MatchScoreSummary";
-import {
-  getProjectClosureMessage,
-  isProjectOpenForPipelineActions,
-} from "@/features/projects/utils/project-assignment";
 import { SendForVerificationDocumentsChecklist } from "@/features/documents/components/SendForVerificationDocumentsChecklist";
 import DirectScreeningModal from "@/features/projects/components/DirectScreeningModal";
 import RequestAgentCandidatesModal from "@/features/projects/components/RequestAgentCandidatesModal";
@@ -89,6 +85,12 @@ import {
 import { ChangeProjectStatusDialog } from "@/features/projects/components/ChangeProjectStatusDialog";
 import { canUpdateProjectStatus } from "@/config/role-capabilities";
 import { cn } from "@/lib/utils";
+import {
+  getProjectClosureMessage,
+  getProjectDeadlineNoticeMessage,
+  getProcessingBlockReasonForCandidate,
+  isProjectOpenForPipelineActions,
+} from "@/features/projects/utils/project-assignment";
 
 // Helper function to format date
 const formatDate = (dateString?: string) => {
@@ -387,14 +389,14 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
     isRoleEditable?: boolean;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
     isRoleEditable: true,
   });
@@ -421,13 +423,13 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
   });
 
@@ -435,13 +437,13 @@ export default function ProjectDetailPage() {
     isOpen: boolean;
     candidateId: string;
     candidateName: string;
-    roleNeededId?: string;
+    roleNeededId: string;
     notes: string;
   }>({
     isOpen: false,
     candidateId: "",
     candidateName: "",
-    roleNeededId: undefined,
+    roleNeededId: "",
     notes: "",
   });
 
@@ -519,7 +521,8 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: nominatedRoleId || projectData?.data?.rolesNeeded?.[0]?.id,
+      roleNeededId:
+        nominatedRoleId || projectData?.data?.rolesNeeded?.[0]?.id || "",
       notes: "",
       // If already has nominatedRole, don't allow editing until user confirms
       isRoleEditable: nominatedRoleId ? false : true,
@@ -554,7 +557,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
     } catch (error: any) {
@@ -717,7 +720,7 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: bestRoleNeededId,
+      roleNeededId: bestRoleNeededId ?? "",
       notes: "",
     });
   };
@@ -731,7 +734,7 @@ export default function ProjectDetailPage() {
       isOpen: true,
       candidateId,
       candidateName,
-      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id,
+      roleNeededId: projectData?.data?.rolesNeeded?.[0]?.id ?? "",
       notes: "",
     });
   };
@@ -777,7 +780,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
     } catch (error: any) {
@@ -872,7 +875,7 @@ export default function ProjectDetailPage() {
         isOpen: false,
         candidateId: "",
         candidateName: "",
-        roleNeededId: undefined,
+        roleNeededId: "",
         notes: "",
       });
       try {
@@ -1790,7 +1793,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
           })
         }
@@ -1844,7 +1847,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
             isRoleEditable: true,
           })
@@ -2175,7 +2178,7 @@ export default function ProjectDetailPage() {
             isOpen: false,
             candidateId: "",
             candidateName: "",
-            roleNeededId: undefined,
+            roleNeededId: "",
             notes: "",
           })
         }
@@ -2187,6 +2190,21 @@ export default function ProjectDetailPage() {
               Are you sure you want to assign {assignConfirm.candidateName} to
               this project?
             </p>
+
+            {(() => {
+              const processingBlockReason = getProcessingBlockReasonForCandidate({
+                eligibilityData: assignEligibilityData,
+                projectId: projectId!,
+                projectTitle: project?.title,
+                context: "assign",
+              });
+              if (!processingBlockReason) return null;
+              return (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">
+                  {processingBlockReason.fullMessage}
+                </div>
+              );
+            })()}
 
             {/* Candidate Details */}
             {(() => {
@@ -2356,6 +2374,14 @@ export default function ProjectDetailPage() {
         confirmText="Assign to Project"
         cancelText="Cancel"
         isLoading={isAssigning}
+        confirmDisabled={Boolean(
+          getProcessingBlockReasonForCandidate({
+            eligibilityData: assignEligibilityData,
+            projectId: projectId!,
+            projectTitle: project?.title,
+            context: "assign",
+          }),
+        )}
         variant="default"
         icon={
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

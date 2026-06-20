@@ -17,7 +17,7 @@ describe('CandidateProjectsService - sendForInterview', () => {
     role: { findUnique: jest.fn() },
     candidateProjectMainStatus: { findUnique: jest.fn() },
     candidateProjectSubStatus: { findUnique: jest.fn() },
-    candidateProjects: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
+    candidateProjects: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn(), create: jest.fn() },
     candidateProjectStatusHistory: { findFirst: jest.fn(), create: jest.fn() },
     interviewStatusHistory: { create: jest.fn() },
     screeningTraining: { create: jest.fn() },
@@ -43,6 +43,10 @@ describe('CandidateProjectsService - sendForInterview', () => {
   });
 
   afterEach(() => jest.resetAllMocks());
+
+  beforeEach(() => {
+    (prisma.candidateProjects.findMany as any).mockResolvedValue([]);
+  });
 
   it('creates interviewStatusHistory when assigning mock interview', async () => {
     const dto = { projectId: 'p1', candidateId: 'c1', type: 'screening_assigned', notes: 'note' } as SendForInterviewDto;
@@ -235,6 +239,89 @@ describe('CandidateProjectsService - sendForInterview', () => {
 
     await expect(service.assignCandidateToProject(dto, 'u1')).rejects.toThrow(
       'Candidate must be in a positive status',
+    );
+  });
+
+  it('assignCandidateToProject blocks when processing is in progress on another project', async () => {
+    const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({
+      id: 'c1',
+      firstName: 'John',
+      lastName: 'Doe',
+      currentStatus: { statusName: 'interested' },
+    });
+    (prisma.candidateProjects.findFirst as any).mockImplementation(async (args: any) => {
+      if (args?.where?.subStatus?.name?.in) {
+        return {
+          candidateId: 'c1',
+          project: { id: 'p-other', title: 'Hospital Riyadh' },
+        };
+      }
+      return null;
+    });
+
+    await expect(service.assignCandidateToProject(dto, 'u1')).rejects.toThrow(
+      'being processed on "Hospital Riyadh"',
+    );
+  });
+
+  it('assignCandidateToProject allows assignment when other project is processing_hold', async () => {
+    const dto = { candidateId: 'c1', projectId: 'p1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({
+      id: 'c1',
+      firstName: 'John',
+      lastName: 'Doe',
+      currentStatus: { statusName: 'interested' },
+    });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'Project P',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+      requiredScreening: false,
+    });
+    (prisma.user.findUnique as any).mockResolvedValue({ id: 'u1', name: 'User 1' });
+    (prisma.candidateProjectMainStatus.findUnique as any).mockResolvedValue({ id: 'ms1', label: 'Nominated' });
+    (prisma.candidateProjectSubStatus.findUnique as any).mockResolvedValue({ id: 'ss1', label: 'Nominated Initial' });
+
+    (prisma.candidateProjects.findFirst as any).mockResolvedValue(null);
+
+    const tx = {
+      candidateProjects: { create: jest.fn().mockResolvedValue({ id: 'map1' }) },
+      candidateProjectStatusHistory: { create: jest.fn() },
+    } as any;
+
+    prisma.$transaction.mockImplementation(async (fn: any) => fn(tx));
+
+    await service.assignCandidateToProject(dto, 'u1');
+
+    expect(tx.candidateProjects.create).toHaveBeenCalled();
+  });
+
+  it('sendForVerification blocks when processing is in progress on another project', async () => {
+    const dto = { projectId: 'p1', candidateId: 'c1', notes: 'note' } as any;
+
+    (prisma.candidate.findUnique as any).mockResolvedValue({ id: 'c1', firstName: 'A' });
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'ICU Dubai',
+      status: 'IN_PROGRESS',
+      rolesNeeded: [],
+    });
+    (prisma.candidateProjects.findFirst as any).mockImplementation(async (args: any) => {
+      if (args?.where?.subStatus?.name?.in) {
+        return {
+          candidateId: 'c1',
+          project: { id: 'p-other', title: 'Hospital Riyadh' },
+        };
+      }
+      return null;
+    });
+
+    await expect(service.sendForVerification(dto, 'u1')).rejects.toThrow(
+      'Pipeline is paused here because this candidate has Processing In Progress on "Hospital Riyadh"',
     );
   });
 
@@ -436,6 +523,74 @@ describe('CandidateProjectsService - sendForInterview', () => {
       'Candidate must be in a positive status (interested, future, or on_hold) to be assigned to a project.',
     );
   });
+
+  it('checkBulkEligibility marks candidate blocked when processing is in progress on another project', async () => {
+    (prisma.project.findUnique as any).mockResolvedValue({
+      id: 'p1',
+      title: 'ICU Dubai',
+      rolesNeeded: [
+        {
+          id: 'r1',
+          designation: 'Emergency Staff Nurse',
+          genderRequirement: 'all',
+          minAge: 18,
+          maxAge: 70,
+          minExperience: 0,
+          maxExperience: null,
+          roleCatalogId: null,
+          minSalaryRange: null,
+          maxSalaryRange: null,
+          roleCatalog: null,
+        },
+      ],
+      licensingExam: null,
+      dataFlow: false,
+      eligibility: false,
+      country: null,
+    });
+
+    (prisma.candidate.findMany as any).mockResolvedValue([
+      {
+        id: 'c1',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        dateOfBirth: '1990-01-01',
+        gender: 'female',
+        totalExperience: 1,
+        currentStatus: { statusName: 'interested' },
+        workExperiences: [],
+        preferredCountries: [],
+      },
+    ]);
+
+    (prisma.candidateProjects.findMany as any).mockImplementation(async (args: any) => {
+      if (args?.where?.subStatus?.name?.in) {
+        return [
+          {
+            candidateId: 'c1',
+            project: { id: 'p-other', title: 'Hospital Riyadh' },
+          },
+        ];
+      }
+      return [];
+    });
+
+    const result = await service.checkBulkEligibility({
+      projectId: 'p1',
+      candidateIds: ['c1'],
+    } as any);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].isEligible).toBe(false);
+    expect(result[0].pipelineBlockedOnThisProject).toBe(true);
+    expect(result[0].processingConflict).toEqual({
+      projectId: 'p-other',
+      projectTitle: 'Hospital Riyadh',
+    });
+    expect(result[0].roleEligibility[0].reasons).toContain(
+      'This candidate is being processed on "Hospital Riyadh".',
+    );
+  });
 });
 
 describe('CandidateProjectsService - status change requests', () => {
@@ -511,6 +666,7 @@ describe('CandidateProjectsService - status change requests', () => {
       'map1',
       {
         candidateProjectMapId: 'map1',
+        requestType: 'block',
         requestedStatus: 'withdrawn',
         reason: 'Candidate declined offer',
       },
@@ -579,6 +735,7 @@ describe('CandidateProjectsService - status change requests', () => {
       'map1',
       {
         candidateProjectMapId: 'map1',
+        requestType: 'block',
         requestedStatus: 'withdrawn',
         reason: 'Candidate declined offer',
       },
@@ -603,6 +760,7 @@ describe('CandidateProjectsService - status change requests', () => {
         'map1',
         {
           candidateProjectMapId: 'map1',
+          requestType: 'block',
           requestedStatus: 'on_hold',
           reason: 'Waiting for documents from candidate',
         },

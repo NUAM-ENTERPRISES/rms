@@ -316,6 +316,40 @@ export const PROCESSING_STATUS_CHANGE_TARGET_STATUSES = [
   'processing_in_progress',
 ] as const;
 
+/** Sub-statuses that block new project assignment and cross-project pipeline actions. */
+export const CANDIDATE_PROJECT_ASSIGNMENT_BLOCKED_SUB_STATUSES = [
+  'processing_in_progress',
+] as const;
+
+export type ProcessingAssignmentConflict = {
+  projectId: string;
+  projectTitle: string;
+} | null;
+
+export function buildProcessingAssignmentBlockMessage(
+  activeProjectTitle: string,
+): string {
+  return `This candidate is being processed on "${activeProjectTitle}". Assign them to another project only after processing is completed, put on hold, or cancelled on that project.`;
+}
+
+export function buildProcessingPipelineBlockMessage(
+  activeProjectTitle: string,
+  currentProjectTitle?: string,
+): string {
+  const suffix = currentProjectTitle
+    ? ` on "${currentProjectTitle}"`
+    : ' on this project';
+  return `Pipeline is paused here because this candidate has Processing In Progress on "${activeProjectTitle}". Complete, hold, or cancel processing there before continuing${suffix}.`;
+}
+
+export function isPipelineBlockedOnProject(
+  conflict: ProcessingAssignmentConflict,
+  targetProjectId: string,
+): boolean {
+  if (!conflict) return false;
+  return conflict.projectId !== targetProjectId;
+}
+
 export type ProcessingStatusChangeTargetStatus =
   (typeof PROCESSING_STATUS_CHANGE_TARGET_STATUSES)[number];
 

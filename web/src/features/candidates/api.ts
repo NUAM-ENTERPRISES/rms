@@ -947,6 +947,11 @@ export interface GetCandidateProjectPipelineResponse {
       candidateProjectMapId?: string;
       isPipelineBlocked?: boolean;
       pipelineBlockedReason?: string | null;
+      processingConflict?: {
+        projectId: string;
+        projectTitle: string;
+      } | null;
+      pipelineBlockedOnThisProject?: boolean;
       pendingStatusChangeRequest?: PendingStatusChangeRequest | null;
       latestReviewedStatusChangeRequest?: ReviewedStatusChangeRequest | null;
       previousMainStatus?: { id: string; name: string; label: string };

@@ -54,6 +54,11 @@ interface ExtendedPipelineResponse {
     candidateProjectMapId?: string;
     isPipelineBlocked?: boolean;
     pipelineBlockedReason?: string | null;
+    processingConflict?: {
+        projectId: string;
+        projectTitle: string;
+    } | null;
+    pipelineBlockedOnThisProject?: boolean;
     previousMainStatus?: {
         id: string;
         name: string;
@@ -352,6 +357,8 @@ export default function CandidateProjectDetailsPage() {
     const extendedData = pipelineResponse?.data as ExtendedPipelineResponse | undefined;
     const pipelineData = extendedData; // Alias for convenience
     const isPipelineBlocked = extendedData?.isPipelineBlocked ?? false;
+    const pipelineBlockedOnThisProject =
+        extendedData?.pipelineBlockedOnThisProject ?? false;
     const pendingStatusChangeRequest = extendedData?.pendingStatusChangeRequest ?? null;
     const latestReviewedStatusChangeRequest =
         extendedData?.latestReviewedStatusChangeRequest ?? null;
@@ -369,7 +376,8 @@ export default function CandidateProjectDetailsPage() {
     // - Blocked: can request to reactivate or change blocked status
     const canRequestStatusChange =
         canManageCandidateProjects &&
-        !pendingStatusChangeRequest;
+        !pendingStatusChangeRequest &&
+        !pipelineBlockedOnThisProject;
     const canViewStatusChangeHistory =
         Boolean(candidateProjectMapId) &&
         (canManageCandidateProjects || canApproveStatusChange);
@@ -506,6 +514,7 @@ export default function CandidateProjectDetailsPage() {
                         <PipelineBlockedBanner
                             mainStatusName={extendedData?.currentStatus?.mainStatus?.name}
                             pipelineBlockedReason={extendedData?.pipelineBlockedReason}
+                            pipelineBlockedOnThisProject={pipelineBlockedOnThisProject}
                         />
                     )}
                 </div>

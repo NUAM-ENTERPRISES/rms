@@ -37,6 +37,16 @@ import {
 import { assertAgentCandidateLinkedToAgentProject } from '../common/agent-project-candidate-scope';
 import { assertProjectOpenForAssignment } from '../projects/utils/project-deadline.util';
 import {
+  assertCandidateNotBlockedForNewProjectAssignment,
+  assertNoProcessingConflictForProjectAction,
+  findProcessingInProgressAssignment,
+  findProcessingInProgressAssignmentsByCandidateIds,
+  getProcessingEligibilityHardReason,
+} from './utils/processing-assignment-guard';
+import {
+  isPipelineBlockedOnProject,
+} from '../common/constants/statuses';
+import {
   CANDIDATE_PROJECT_STATUS_CHANGE_APPROVER_ROLES,
   CANDIDATE_PROJECT_STATUS_CHANGE_DIRECT_ROLES,
   PROCESSING_STATUS_CHANGE_APPROVER_ROLES,
@@ -215,6 +225,12 @@ export class CandidateProjectsService {
     }
 
     this.ensureCandidatePositiveForProjectAssignment(candidate);
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      projectId,
+    );
 
     // -------------------------------
     // VERIFY project exists
@@ -482,6 +498,13 @@ export class CandidateProjectsService {
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
     assertProjectOpenForAssignment(project);
+
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
 
     // -------------------------------
     // AUTO MATCH ROLE
@@ -792,6 +815,13 @@ export class CandidateProjectsService {
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
     assertProjectOpenForAssignment(project);
+
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
 
     // -------------------------------
     // AUTO MATCH ROLE
@@ -3228,6 +3258,13 @@ export class CandidateProjectsService {
 
     assertProjectOpenForAssignment(project);
 
+    await assertNoProcessingConflictForProjectAction(
+      this.prisma,
+      candidateId,
+      projectId,
+      project.title,
+    );
+
     // Resolve recruiter
     // 1. Prioritize candidate's assigned recruiter from assignments table
     const activeRecruiterId = await this.getCandidateActiveRecruiter(candidateId);
@@ -3560,6 +3597,24 @@ export class CandidateProjectsService {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
+    const [processingConflict, existingOnProject] = await Promise.all([
+      findProcessingInProgressAssignment(this.prisma, candidateId),
+      this.prisma.candidateProjects.findFirst({
+        where: { candidateId, projectId },
+        select: { id: true },
+      }),
+    ]);
+    const pipelineBlockedOnThisProject = isPipelineBlockedOnProject(
+      processingConflict,
+      projectId,
+    );
+    const processingHardReason = getProcessingEligibilityHardReason(
+      processingConflict,
+      projectId,
+      project.title,
+      Boolean(existingOnProject),
+    );
+
     const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
     const candidateGender = candidate.gender?.toLowerCase();
     let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
@@ -3588,6 +3643,10 @@ export class CandidateProjectsService {
         hardReasons.push(
           `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
         );
+      }
+
+      if (processingHardReason) {
+        hardReasons.push(processingHardReason);
       }
 
       // Gender Check (Hard)
@@ -3716,6 +3775,8 @@ export class CandidateProjectsService {
       projectTitle: project.title,
       isEligible: roleEligibility.some((r) => r.isEligible),
       roleEligibility,
+      processingConflict,
+      pipelineBlockedOnThisProject,
     };
   }
 
@@ -3760,7 +3821,37 @@ export class CandidateProjectsService {
       },
     });
 
+    const [processingConflictMap, existingOnProjectRows] = await Promise.all([
+      findProcessingInProgressAssignmentsByCandidateIds(
+        this.prisma,
+        candidateIds,
+      ),
+      this.prisma.candidateProjects.findMany({
+        where: {
+          candidateId: { in: candidateIds },
+          projectId,
+        },
+        select: { candidateId: true },
+      }),
+    ]);
+    const existingOnProjectIds = new Set(
+      existingOnProjectRows.map((row) => row.candidateId),
+    );
+
     const results = candidates.map((candidate) => {
+      const processingConflict =
+        processingConflictMap.get(candidate.id) ?? null;
+      const pipelineBlockedOnThisProject = isPipelineBlockedOnProject(
+        processingConflict,
+        projectId,
+      );
+      const processingHardReason = getProcessingEligibilityHardReason(
+        processingConflict,
+        projectId,
+        project.title,
+        existingOnProjectIds.has(candidate.id),
+      );
+
       const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
       const candidateGender = candidate.gender?.toLowerCase();
       let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
@@ -3788,6 +3879,10 @@ export class CandidateProjectsService {
           hardReasons.push(
             `Candidate is currently in Ringing No Response (RNR) status and cannot be assigned to a project.`,
           );
+        }
+
+        if (processingHardReason) {
+          hardReasons.push(processingHardReason);
         }
 
         // Gender Check (Hard)
@@ -3953,6 +4048,8 @@ export class CandidateProjectsService {
         candidateName: `${candidate.firstName} ${candidate.lastName}`,
         isEligible: roleEligibility.some((r) => r.isEligible),
         roleEligibility,
+        processingConflict,
+        pipelineBlockedOnThisProject,
       };
     });
 
@@ -4124,6 +4221,20 @@ export class CandidateProjectsService {
           this.ensureCandidatePositiveForProjectAssignment(candidate);
         } catch (error: any) {
           errors.push({ candidateId, error: error.message || 'Candidate status not eligible for assignment' });
+          continue;
+        }
+
+        try {
+          await assertCandidateNotBlockedForNewProjectAssignment(
+            this.prisma,
+            candidateId,
+            projectId,
+          );
+        } catch (error: any) {
+          errors.push({
+            candidateId,
+            error: error.message || 'Candidate blocked by active processing on another project',
+          });
           continue;
         }
 

@@ -308,6 +308,12 @@ interface CandidateCardProps {
   showProcessingGlance?: boolean;
   /** Hover reason for "Cannot assign" badge (from project board status rules). */
   assignmentBlockReason?: string | null;
+  processingBlockReason?: {
+    badgeLabel: string;
+    shortMessage: string;
+    fullMessage: string;
+  } | null;
+  pipelineBlockedByProcessing?: boolean;
 }
 
 const CandidateCard = memo(function CandidateCard({
@@ -342,6 +348,8 @@ const CandidateCard = memo(function CandidateCard({
   onSelect,
   showProcessingGlance = false,
   assignmentBlockReason: assignmentBlockReasonProp,
+  processingBlockReason,
+  pipelineBlockedByProcessing: _pipelineBlockedByProcessing = false,
 }: CandidateCardProps) {
   const navigate = useNavigate();
   const candidateId = candidate.candidateId || candidate.id || "";
@@ -367,7 +375,12 @@ const CandidateCard = memo(function CandidateCard({
     getCandidateAssignmentBlockReason(currentStatusLabel, {
       isCREReassigned: candidate.isCREReassigned,
     });
-  const isNotEligible = isNonPositiveStatus || propEligibilityData?.isEligible === false || !anyRoleEligible;
+  const hasProcessingAssignmentBlock = Boolean(processingBlockReason);
+  const isNotEligible =
+    isNonPositiveStatus ||
+    propEligibilityData?.isEligible === false ||
+    !anyRoleEligible;
+  const isAssignDisabled = isNotEligible || hasProcessingAssignmentBlock;
   const eligibilityData = propEligibilityData;
 
   // Document verification logic
@@ -1353,11 +1366,11 @@ const CandidateCard = memo(function CandidateCard({
               {isRecruiter && showAssignButton && onAssignToProject && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn(isNotEligible && "cursor-not-allowed")}>
+                    <span className={cn(isAssignDisabled && "cursor-not-allowed")}>
                       <Button
                         variant="default"
                         size="sm"
-                        disabled={isNotEligible}
+                        disabled={isAssignDisabled}
                         className="h-7 text-[11px] bg-emerald-600 hover:bg-emerald-700 px-3 rounded-lg font-medium shadow-sm shadow-emerald-200 transition-all"
                         onClick={(event) => {
                           event.stopPropagation();
@@ -1369,9 +1382,11 @@ const CandidateCard = memo(function CandidateCard({
                       </Button>
                     </span>
                   </TooltipTrigger>
-                  {isNotEligible && (
+                  {isAssignDisabled && (
                     <TooltipContent className="bg-slate-900 text-white border-0 text-[10px] p-2 max-w-xs max-h-72 overflow-y-auto shadow-xl">
-                      {isNonPositiveStatus && assignmentBlockReason ? (
+                      {hasProcessingAssignmentBlock && processingBlockReason?.fullMessage ? (
+                        <p>{processingBlockReason.fullMessage}</p>
+                      ) : isNonPositiveStatus && assignmentBlockReason ? (
                         <p>{assignmentBlockReason}</p>
                       ) : (
                         <div className="space-y-2">

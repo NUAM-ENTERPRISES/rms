@@ -1,12 +1,17 @@
 import { ProjectStatus } from "@/entities/project/constants";
 import { describe, expect, it } from "vitest";
 import {
+  buildProcessingAssignmentBlockMessage,
+  buildProcessingPipelineBlockMessage,
+  getProcessingBlockReasonForCandidate,
   getCandidateAssignmentBlockReason,
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
+  isPipelineBlockedByProcessingOnOtherProject,
   isProjectDeadlineExpired,
   isProjectOpenForAssignment,
   isProjectOpenForPipelineActions,
+  PROCESSING_BLOCK_BADGE_LABEL,
   resolveProjectGateStatus,
 } from "./project-assignment";
 
@@ -71,6 +76,11 @@ describe("project-assignment", () => {
   });
 
   it("getProjectClosureMessage returns pipeline-closed copy by status", () => {
+    expect(getProjectClosureMessage({ status: ProjectStatus.COMPLETED })).toBe(
+      "This project is completed. The pipeline to this project is closed.",
+    );
+  });
+
   it("getCandidateAssignmentBlockReason explains locked RNR vs reassigned RNR", () => {
     expect(getCandidateAssignmentBlockReason("RNR")).toContain("Operations");
     expect(getCandidateAssignmentBlockReason("RNR", { isCREReassigned: true })).toContain(
@@ -115,5 +125,66 @@ describe("project-assignment", () => {
         now
       )
     ).toBeNull();
+  });
+
+  it("buildProcessingAssignmentBlockMessage includes active project title", () => {
+    expect(buildProcessingAssignmentBlockMessage("Hospital Riyadh")).toContain(
+      "Hospital Riyadh",
+    );
+  });
+
+  it("buildProcessingPipelineBlockMessage includes both project titles", () => {
+    const message = buildProcessingPipelineBlockMessage(
+      "Hospital Riyadh",
+      "ICU Dubai",
+    );
+    expect(message).toContain("Hospital Riyadh");
+    expect(message).toContain("ICU Dubai");
+  });
+
+  it("getProcessingBlockReasonForCandidate returns assign message for eligible pool", () => {
+    const reason = getProcessingBlockReasonForCandidate({
+      eligibilityData: {
+        processingConflict: {
+          projectId: "p-other",
+          projectTitle: "Hospital Riyadh",
+        },
+        pipelineBlockedOnThisProject: true,
+      },
+      projectId: "p1",
+      projectTitle: "ICU Dubai",
+      context: "assign",
+    });
+
+    expect(reason?.badgeLabel).toBe(PROCESSING_BLOCK_BADGE_LABEL);
+    expect(reason?.fullMessage).toContain("being processed on");
+  });
+
+  it("getProcessingBlockReasonForCandidate returns pipeline message for nominated cards", () => {
+    const reason = getProcessingBlockReasonForCandidate({
+      eligibilityData: {
+        processingConflict: {
+          projectId: "p-other",
+          projectTitle: "Hospital Riyadh",
+        },
+        pipelineBlockedOnThisProject: true,
+      },
+      projectId: "p1",
+      projectTitle: "ICU Dubai",
+      context: "pipeline",
+      isAssignedOnProject: true,
+    });
+
+    expect(reason?.fullMessage).toContain("Pipeline is paused here");
+    expect(reason?.fullMessage).toContain("ICU Dubai");
+  });
+
+  it("isPipelineBlockedByProcessingOnOtherProject is false on same project", () => {
+    expect(
+      isPipelineBlockedByProcessingOnOtherProject(
+        { projectId: "p1", projectTitle: "ICU Dubai" },
+        "p1",
+      ),
+    ).toBe(false);
   });
 });

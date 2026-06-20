@@ -82,6 +82,7 @@ import {
   assertAgentCandidateLinkedToAgentProject,
   agentSourceConsolidatedCandidateWhere,
 } from '../common/agent-project-candidate-scope';
+import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
 import {
   computeCandidateProfileCompletion,
   withProfileCompletion,
@@ -4064,6 +4065,12 @@ export class CandidatesService {
       );
     }
 
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      assignProjectDto.projectId,
+    );
+
     // Get next available recruiter for round-robin allocation
     const recruiters = await this.getProjectRecruiters(
       assignProjectDto.projectId,
@@ -4615,6 +4622,12 @@ export class CandidatesService {
     }
 
     await this.assertRecruiterCanManageLockedRnrCandidate(candidateId, nominatorId);
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      candidateId,
+      nominateDto.projectId,
+    );
 
     await assertAgentCandidateLinkedToAgentProject(
       this.prisma,

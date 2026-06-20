@@ -64,6 +64,7 @@ import { isCandidateProjectPipelineBlocked } from "@/features/candidates/utils/c
 import {
   getProjectClosureMessage,
   getProjectDeadlineNoticeMessage,
+  getProcessingBlockReasonForCandidate,
   isProjectOpenForPipelineActions,
 } from "@/features/projects/utils/project-assignment";
 
@@ -690,13 +691,26 @@ export default function RecruiterCandidatesTab({
                 const isPipelineBlocked =
                   isCandidateProjectPipelineBlocked(mainStatusName);
 
+                const candidateEligibility = eligibilityMap.get(candidate.id);
+                const pipelineBlockedByProcessing = Boolean(
+                  candidateEligibility?.pipelineBlockedOnThisProject,
+                );
+                const processingBlockReason = getProcessingBlockReasonForCandidate({
+                  eligibilityData: candidateEligibility,
+                  projectId,
+                  projectTitle: projectData?.data?.title,
+                  context: isAssignedToProject ? "pipeline" : "assign",
+                  isAssignedOnProject: isAssignedToProject,
+                });
+
                 // Show verify button if: in project and nominated AND not already in verification
                 const showVerifyBtn =
                   pipelineOpen &&
                   isAssignedToProject &&
                   isNominated &&
                   !isVerificationInProgress &&
-                  !isPipelineBlocked;
+                  !isPipelineBlocked &&
+                  !pipelineBlockedByProcessing;
 
                 const actions: {
                   label: string;
@@ -711,6 +725,9 @@ export default function RecruiterCandidatesTab({
                     candidate={candidate}
                     projectId={projectId}
                     isRecruiter={isRecruiter}
+                    processingBlockReason={processingBlockReason}
+                    pipelineBlockedByProcessing={pipelineBlockedByProcessing}
+                    assignmentBlockReason={processingBlockReason?.fullMessage}
                     onView={handleViewCandidate}
                     onAction={(candidateId, action) => {
                       if (action === "assign") {
@@ -930,6 +947,21 @@ export default function RecruiterCandidatesTab({
           <div className="space-y-4">
             <p>Are you sure you want to assign {assignConfirm.candidateName} to this project?</p>
 
+            {(() => {
+              const processingBlockReason = getProcessingBlockReasonForCandidate({
+                eligibilityData: assignEligibilityData,
+                projectId,
+                projectTitle: projectData?.data?.title,
+                context: "assign",
+              });
+              if (!processingBlockReason) return null;
+              return (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-900">
+                  {processingBlockReason.fullMessage}
+                </div>
+              );
+            })()}
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Role</label>
               <Select value={assignConfirm.roleNeededId} onValueChange={(v) => setAssignConfirm(prev => ({ ...prev, roleNeededId: v }))}>
@@ -1098,6 +1130,14 @@ export default function RecruiterCandidatesTab({
         confirmText="Assign to Project"
         cancelText="Cancel"
         isLoading={isAssigning}
+        confirmDisabled={Boolean(
+          getProcessingBlockReasonForCandidate({
+            eligibilityData: assignEligibilityData,
+            projectId,
+            projectTitle: projectData?.data?.title,
+            context: "assign",
+          }),
+        )}
         variant="default"
         icon={
           <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">

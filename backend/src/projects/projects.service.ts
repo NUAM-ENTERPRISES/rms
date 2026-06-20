@@ -42,6 +42,7 @@ import {
   agentSourceEligibleCandidateWhere,
   assertAgentCandidateLinkedToAgentProject,
 } from '../common/agent-project-candidate-scope';
+import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
 import { ROLE_NAMES } from '../common/constants/role-ids';
 import { CANDIDATE_ASSIGNMENT_TYPE } from '../common/constants/candidate-constants';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
@@ -1441,6 +1442,12 @@ export class ProjectsService {
     }
 
     await assertAgentCandidateLinkedToAgentProject(this.prisma, candidate, projectId);
+
+    await assertCandidateNotBlockedForNewProjectAssignment(
+      this.prisma,
+      assignCandidateDto.candidateId,
+      projectId,
+    );
 
     // Get all global recruiters for round-robin allocation
     const recruiters = await this.getAllRecruiters();

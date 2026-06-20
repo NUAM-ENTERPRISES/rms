@@ -15,6 +15,7 @@ import {
 } from '../recruiter-pool/recruiter-pool.service';
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { OutboxService } from '../notifications/outbox.service';
+import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
 
 export interface AllocationResult {
   considered: number;
@@ -102,6 +103,12 @@ export class CandidateAllocationService {
     // Process each candidate
     for (const matchedCandidate of candidatesToProcess) {
       try {
+        await assertCandidateNotBlockedForNewProjectAssignment(
+          this.prisma,
+          matchedCandidate.candidateId,
+          projectId,
+        );
+
         const recruiter = await this.roundRobinService.getNextRecruiter(
           projectId,
           roleNeededId,

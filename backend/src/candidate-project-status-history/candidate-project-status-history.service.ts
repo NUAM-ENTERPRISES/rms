@@ -4,7 +4,12 @@ import {
   CANDIDATE_PROJECT_STATUS,
   CANDIDATE_PROJECT_STATUS_CHANGE_REQUEST_STATUSES,
   isCandidateProjectPipelineBlocked,
+  isPipelineBlockedOnProject,
 } from '../common/constants/statuses';
+import {
+  findProcessingInProgressAssignment,
+  getProcessingEligibilityHardReason,
+} from '../candidate-projects/utils/processing-assignment-guard';
 
 @Injectable()
 export class CandidateProjectStatusHistoryService {
@@ -202,18 +207,38 @@ export class CandidateProjectStatusHistoryService {
         orderBy: { reviewedAt: 'desc' },
       });
 
-    const isPipelineBlocked = isCandidateProjectPipelineBlocked(currentMainName);
-    const pipelineBlockedReason = isPipelineBlocked
-      ? currentMainName === CANDIDATE_PROJECT_STATUS.WITHDRAWN
-        ? 'This candidate\'s project is currently Withdrawn. Pipeline actions are disabled.'
-        : 'This candidate\'s project is currently On Hold. Pipeline actions are disabled.'
-      : undefined;
+    const isWithdrawnOrOnHoldBlocked = isCandidateProjectPipelineBlocked(currentMainName);
+    const processingConflict = await findProcessingInProgressAssignment(
+      this.prisma,
+      candidateId,
+    );
+    const pipelineBlockedOnThisProject = isPipelineBlockedOnProject(
+      processingConflict,
+      projectId,
+    );
+    const processingBlockedReason = getProcessingEligibilityHardReason(
+      processingConflict,
+      projectId,
+      mapping.project.title,
+      true,
+    );
+
+    const isPipelineBlocked =
+      isWithdrawnOrOnHoldBlocked || pipelineBlockedOnThisProject;
+    const pipelineBlockedReason = processingBlockedReason
+      ? processingBlockedReason
+      : isWithdrawnOrOnHoldBlocked
+        ? currentMainName === CANDIDATE_PROJECT_STATUS.WITHDRAWN
+          ? 'This candidate\'s project is currently Withdrawn. Pipeline actions are disabled.'
+          : 'This candidate\'s project is currently On Hold. Pipeline actions are disabled.'
+        : undefined;
 
     // Next Step Logic
     let nextStep: { name: string; label: string; type: string } | null = null;
     const isTerminal =
       ['rejected', 'withdrawn', 'on_hold'].includes(currentMainName) ||
-      isPipelineBlocked;
+      isWithdrawnOrOnHoldBlocked ||
+      pipelineBlockedOnThisProject;
     
     if (!isTerminal) {
       const currentSubStatus = mapping.subStatus;
@@ -268,6 +293,8 @@ export class CandidateProjectStatusHistoryService {
         },
         isPipelineBlocked,
         pipelineBlockedReason,
+        processingConflict,
+        pipelineBlockedOnThisProject,
         previousMainStatus: mapping.previousMainStatus
           ? {
               id: mapping.previousMainStatus.id,
