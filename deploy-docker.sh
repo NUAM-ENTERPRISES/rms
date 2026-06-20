@@ -51,6 +51,12 @@ run git reset --hard origin/main
 COMMIT=$(git rev-parse --short HEAD)
 log "Deployed commit: $COMMIT"
 
+# Mobile app is not used in Docker prod — remove after git reset to save disk on the VM.
+if [[ -d app ]]; then
+  log "Removing app/ (React Native — not deployed on this server)..."
+  run rm -rf app
+fi
+
 compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
 }
