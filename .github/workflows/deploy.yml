@@ -10,22 +10,17 @@ deploy:
 runs-on: ubuntu-latest
 
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.VM_SSH_KEY }}
 
-  - name: Setup SSH
-    uses: webfactory/ssh-agent@v0.10.0
-    with:
-      ssh-private-key: ${{ secrets.VM_SSH_KEY }}
+      - name: Configure known hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
-  - name: Configure known hosts
-    run: |
-      mkdir -p ~/.ssh
-      echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-      chmod 644 ~/.ssh/known_hosts
-
-  - name: Deploy to VM (Docker)
-    run: |
-      ssh ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "cd /var/www/rms && ./deploy-docker.sh"
-
+      - name: Deploy to VM (Docker)
+        run: |
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_IP }} "cd /var/www/rms && ./deploy-docker.sh"
