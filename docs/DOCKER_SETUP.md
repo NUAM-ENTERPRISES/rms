@@ -84,9 +84,12 @@ In prod, code is **compiled inside the image** at build time. No bind mounts. Th
 
 ```mermaid
 flowchart LR
-  subgraph host [Server]
-    User["Browser port 80"]
-    API["API port 3000"]
+  subgraph internet [Internet]
+    User["Browser HTTPS"]
+  end
+  subgraph host [Server host]
+    HostNginx["Host Nginx :443"]
+    BackendLocal["127.0.0.1:3000 localhost only"]
   end
   subgraph rmsProd [rms-prod Docker network]
     Nginx["web:80 nginx static files"]
@@ -94,10 +97,10 @@ flowchart LR
     PostgresProd["postgres internal only"]
     RedisProd["redis internal only"]
   end
-  User --> Nginx
-  User --> API
-  Nginx --> BackendProd
-  API --> BackendProd
+  User --> HostNginx
+  HostNginx -->|"frontend"| Nginx
+  HostNginx -->|"API proxy_pass"| BackendLocal
+  BackendLocal --> BackendProd
   BackendProd --> PostgresProd
   BackendProd --> RedisProd
 ```
@@ -111,7 +114,8 @@ flowchart LR
 | **Compose file** | `docker compose up -d` (default) or `-f docker-compose.dev.yml` | `-f docker-compose.prod.yml --env-file backend/.env` |
 | **Project name** | `rms-dev` | `rms-prod` |
 | **Backend** | `npm run start:dev`, source mounted from `./backend` | Pre-built `node dist/main`, no bind mounts |
-| **Frontend** | Vite dev server on port **5173** | nginx serving static files on port **80** |
+| **Backend (host)** | Port **3000** on all interfaces | Port **3000** on **127.0.0.1 only** — host Nginx proxies API traffic |
+| **Frontend (host)** | Vite dev server on port **5173** | nginx on **8080** — host Nginx proxies frontend traffic |
 | **Postgres (host)** | Port **5433** (avoids Mac Postgres on 5432) | Not exposed — internal only |
 | **Redis (host)** | Port **6380** (avoids other Redis on 6379) | Not exposed — internal only |
 | **DB/Redis URLs** | Overridden in compose to `postgres:5432` / `redis:6379` | Same internal hostnames |
@@ -335,12 +339,13 @@ curl http://localhost:3000/health
 docker compose -f docker-compose.prod.yml --env-file backend/.env ps
 ```
 
-| What | URL (on server) |
-|------|-----------------|
-| Frontend | http://your-server:80 |
-| Backend API | http://your-server:3000/api/v1 |
+| What | URL |
+|------|-----|
+| Frontend (public) | Your public frontend URL via host Nginx → `127.0.0.1:8080` |
+| Backend API (public) | `https://api-rms.nuamenterprises.com/api/v1` (via host Nginx → `127.0.0.1:3000`) |
+| Backend health (on server only) | `http://127.0.0.1:3000/health` |
 
-In a real deployment you typically put a reverse proxy (nginx, Caddy, or a load balancer) in front with HTTPS. The Docker stack exposes ports 80 and 3000 directly for simplicity.
+The backend is **not** exposed on the server's public IP. Port `3000` is bound to `127.0.0.1` only in [`docker-compose.prod.yml`](../docker-compose.prod.yml), so direct access via `http://SERVER_IP:3000` is blocked. All external API traffic must go through host Nginx on HTTPS.
 
 ### 5. How prod images are built
 
@@ -564,7 +569,8 @@ docker compose -f docker-compose.prod.yml --env-file backend/.env up -d web
 | Environment | Frontend | Backend health | DB (from host) |
 |-------------|----------|----------------|----------------|
 | Dev | http://localhost:5173 | http://localhost:3000/health | 127.0.0.1:5433 |
-| Prod | http://localhost:80 | http://localhost:3000/health | Not exposed |
+| Prod (public) | Your public frontend URL | https://api-rms.nuamenterprises.com/health | Not exposed |
+| Prod (on server) | http://127.0.0.1:8080 | http://127.0.0.1:3000/health | Not exposed |
 
 ---
 
