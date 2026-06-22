@@ -317,6 +317,19 @@ export class CandidateProjectStatusHistoryService {
               requestedStatus: pendingStatusChangeRequest.requestedStatus,
               reason: pendingStatusChangeRequest.reason,
               createdAt: pendingStatusChangeRequest.createdAt,
+              stepKey: pendingStatusChangeRequest.stepKey,
+              restrictCountryCode: pendingStatusChangeRequest.restrictCountryCode,
+              restrictCountryName: pendingStatusChangeRequest.restrictCountryCode
+                ? (
+                    await this.prisma.country.findUnique({
+                      where: { code: pendingStatusChangeRequest.restrictCountryCode },
+                      select: { name: true },
+                    })
+                  )?.name ?? pendingStatusChangeRequest.restrictCountryCode
+                : null,
+              requestedCountryRestriction: Boolean(
+                pendingStatusChangeRequest.restrictCountryCode,
+              ),
               requester: pendingStatusChangeRequest.requester,
             }
           : null,

@@ -5,6 +5,7 @@ import { PrismaModule } from '../database/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CandidateProjectStatusModule } from '../candidate-project-status/candidate-project-status.module';
 import { ProcessingModule } from '../processing/processing.module';
+import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { ProcessingModule } from '../processing/processing.module';
     CandidateProjectStatusModule,
     forwardRef(() => NotificationsModule),
     forwardRef(() => ProcessingModule),
+    CandidateCountryRestrictionsModule,
   ],
   controllers: [CandidateProjectsController],
   providers: [CandidateProjectsService],

@@ -8,6 +8,7 @@ import { FlagIcon } from "@/shared/components/FlagIcon";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { OriginalDocumentCollectionModal } from "./OriginalDocumentCollectionModal";
+import { CandidateCountryRestrictionsIndicator } from "@/features/processing/components/CandidateCountryRestrictionsIndicator";
 
 interface ProjectCountrySummary {
   code?: string;
@@ -29,6 +30,7 @@ interface OriginalDocumentCollectionSummary {
 }
 
 interface ProcessingCandidateHeaderProps {
+  candidateId?: string;
   candidate: {
     firstName: string;
     lastName: string;
@@ -62,6 +64,7 @@ interface ProcessingCandidateHeaderProps {
 }
 
 export function ProcessingCandidateHeader({
+  candidateId,
   candidate,
   project,
   role,
@@ -147,6 +150,12 @@ export function ProcessingCandidateHeader({
             >
               {displayStatus(processingStatus)}
             </Badge>
+            {candidateId ? (
+              <CandidateCountryRestrictionsIndicator
+                candidateId={candidateId}
+                highlightCountryCode={projectCountryCode}
+              />
+            ) : null}
           </div>
 
           {showOriginalDocumentBadge ? (

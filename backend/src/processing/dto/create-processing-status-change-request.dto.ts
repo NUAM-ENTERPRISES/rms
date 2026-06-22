@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { STATUS_CHANGE_REQUEST_TYPES } from '../../common/constants/statuses';
 
 const PROCESSING_STATUS_CHANGE_REQUEST_TYPES = [
@@ -37,4 +38,22 @@ export class CreateProcessingStatusChangeRequestDto {
   @IsNotEmpty()
   @MinLength(10)
   reason!: string;
+
+  @ApiPropertyOptional({
+    description:
+      'When cancelling Data Flow, optionally restrict candidate from project destination country',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  applyCountryRestriction?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Destination country code to restrict when cancelling Data Flow (sent with applyCountryRestriction)',
+    example: 'SA',
+  })
+  @IsOptional()
+  @IsString()
+  restrictCountryCode?: string;
 }

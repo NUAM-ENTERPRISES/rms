@@ -83,6 +83,7 @@ import {
   agentSourceConsolidatedCandidateWhere,
 } from '../common/agent-project-candidate-scope';
 import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
+import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
 import {
   computeCandidateProfileCompletion,
   withProfileCompletion,
@@ -450,6 +451,7 @@ export class CandidatesService {
     private readonly callbackRemindersService: CallbackRemindersService,
     private readonly whatsAppService: WhatsAppService,
     private readonly whatsappNotificationService: WhatsAppNotificationService,
+    private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
   ) { }
 
   /**
@@ -4189,6 +4191,7 @@ export class CandidatesService {
       recruiterPoolService,
       roundRobinService,
       outboxService,
+      this.countryRestrictionsService,
     );
 
     // Get all global recruiters (not project-specific)
@@ -4627,6 +4630,18 @@ export class CandidatesService {
       this.prisma,
       candidateId,
       nominateDto.projectId,
+    );
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: nominateDto.projectId },
+      select: { countryCode: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${nominateDto.projectId} not found`);
+    }
+    await this.countryRestrictionsService.assertNotRestricted(
+      candidateId,
+      project.countryCode,
     );
 
     await assertAgentCandidateLinkedToAgentProject(

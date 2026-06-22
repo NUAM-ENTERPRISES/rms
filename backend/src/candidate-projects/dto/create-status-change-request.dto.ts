@@ -71,6 +71,14 @@ export class CreateStatusChangeRequestDto {
   @IsString()
   processingCandidateId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Destination country to restrict when processing cancel includes country restriction (derived from project)',
+  })
+  @IsOptional()
+  @IsString()
+  restrictCountryCode?: string;
+
   @ApiProperty({
     description: 'Mandatory reason / remarks for the status change request',
     example: 'Candidate declined to proceed with this project.',

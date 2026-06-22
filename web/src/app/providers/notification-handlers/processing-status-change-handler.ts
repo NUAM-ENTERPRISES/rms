@@ -29,16 +29,27 @@ export type ProcessingStatusChangeSyncPayload = {
   phase?: "requested" | "reviewed";
 };
 
+export type ProcessingStatusChangeInvalidationTag =
+  | "ProcessingSummary"
+  | "Processing"
+  | "ProcessingDetails"
+  | "ProcessingSteps"
+  | { type: "ProcessingSummary"; id: string }
+  | { type: "Processing"; id: string }
+  | { type: "ProcessingDetails"; id: string }
+  | { type: "ProcessingSteps"; id: string }
+  | { type: "Candidate"; id: string };
+
 export function buildProcessingStatusChangeInvalidationTags(meta: {
   processingCandidateId?: string;
   candidateId?: string;
   projectId?: string;
   candidateProjectMapId?: string;
-}): Array<string | { type: string; id: string }> {
+}): ProcessingStatusChangeInvalidationTag[] {
   const { processingCandidateId, candidateId, projectId, candidateProjectMapId } =
     meta;
 
-  const tags: Array<string | { type: string; id: string }> = [
+  const tags: ProcessingStatusChangeInvalidationTag[] = [
     "ProcessingSummary",
     "Processing",
     "ProcessingDetails",
@@ -58,7 +69,10 @@ export function buildProcessingStatusChangeInvalidationTags(meta: {
   }
 
   if (candidateId) {
-    tags.push({ type: "Candidate", id: candidateId });
+    tags.push(
+      { type: "Candidate", id: candidateId },
+      { type: "Candidate", id: `country-restrictions-${candidateId}` },
+    );
   }
 
   if (candidateId && projectId) {

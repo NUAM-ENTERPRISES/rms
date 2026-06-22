@@ -48,12 +48,15 @@ import type {
   PendingStatusChangeRequest,
   ReviewedStatusChangeRequest,
 } from "@/features/candidates/api";
+import { useGetCandidateCountryRestrictionsQuery } from "@/features/candidates/api";
 import { ProcessingStatusChangeOutcomeBanner } from "@/features/processing/components/ProcessingStatusChangeOutcomeBanner";
 import { UpdateProcessingStatusModal } from "@/features/processing/components/UpdateProcessingStatusModal";
 import { PreviousProcessingProjectsModal } from "@/features/processing/components/PreviousProcessingProjectsModal";
 import { useAppSelector } from "@/app/hooks";
 import { ProcessingActionLockProvider } from "@/features/processing/context/ProcessingActionLockContext";
 import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
+import { resolveCountryRestrictionFromRequest } from "@/features/processing/utils/countryRestrictionDisplay";
+import { ShieldAlert } from "lucide-react";
 import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 
 export default function ProcessingCandidateDetailsPage() {
@@ -142,6 +145,36 @@ export default function ProcessingCandidateDetailsPage() {
 
   const [verifyOfferLetter, { isLoading: isVerifying }] = useVerifyOfferLetterMutation();
   const data = apiResponse?.data;
+
+  const projectCountryCode =
+    data?.project?.country && typeof data.project.country === "object"
+      ? data.project.country.code
+      : undefined;
+  const projectCountryName =
+    data?.project?.country && typeof data.project.country === "object"
+      ? data.project.country.name
+      : undefined;
+
+  const pendingCountryRestriction = useMemo(
+    () =>
+      resolveCountryRestrictionFromRequest(pendingRequest ?? {}, {
+        code: projectCountryCode,
+        name: projectCountryName,
+      }),
+    [pendingRequest, projectCountryCode, projectCountryName],
+  );
+
+  const candidateId = data?.candidate?.id;
+  const { data: projectCountryRestrictionsData } =
+    useGetCandidateCountryRestrictionsQuery(
+      {
+        candidateId: candidateId!,
+        countryCode: projectCountryCode,
+        limit: 1,
+      },
+      { skip: !candidateId || !projectCountryCode },
+    );
+  const projectCountryRestriction = projectCountryRestrictionsData?.items[0];
 
   const showOutcomeBanner =
     !!outcomeReview &&
@@ -385,6 +418,7 @@ export default function ProcessingCandidateDetailsPage() {
       <div className="mx-auto max-w-7xl space-y-4">
         {/* Header */}
         <ProcessingCandidateHeader
+          candidateId={data.candidate.id}
           candidate={data.candidate}
           project={data.project}
           role={data.role}
@@ -417,6 +451,18 @@ export default function ProcessingCandidateDetailsPage() {
                     {getPendingRequestTitle(pendingRequest.requestType)}
                   </h3>
                   <p className="text-sm text-slate-700 mt-1">{pendingRequest.reason}</p>
+                  {pendingCountryRestriction ? (
+                    <p className="mt-2 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-100/80 px-3 py-2 text-xs font-medium text-amber-950">
+                      <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span>
+                        Requester asked to restrict this candidate from all{" "}
+                        <span className="font-semibold">
+                          {pendingCountryRestriction.countryName}
+                        </span>{" "}
+                        projects if approved.
+                      </span>
+                    </p>
+                  ) : null}
                   {pendingRequestSubmittedAt && (
                     <p className="text-xs text-slate-500 mt-2">
                       Request sent {pendingRequestSubmittedAt}
@@ -441,7 +487,12 @@ export default function ProcessingCandidateDetailsPage() {
         )}
 
         {showOutcomeBanner && outcomeReview ? (
-          <ProcessingStatusChangeOutcomeBanner request={outcomeReview} />
+          <ProcessingStatusChangeOutcomeBanner
+            request={outcomeReview}
+            projectCountryCode={projectCountryCode}
+            projectCountryName={projectCountryName}
+            projectCountryRestriction={projectCountryRestriction}
+          />
         ) : null}
 
         {showUpdateStatusButton ? (
@@ -881,11 +932,8 @@ export default function ProcessingCandidateDetailsPage() {
           projectId={data.project.id}
           candidateProjectMapId={data.candidateProjectMap?.id}
           projectTitle={data.project.title}
-          countryName={
-            data.project.country && typeof data.project.country === "object"
-              ? data.project.country.name
-              : data.project.country ?? undefined
-          }
+          countryName={projectCountryName}
+          projectCountryCode={projectCountryCode}
           stepKey={highlightedReview.stepKey}
           processingStatus={data.processingStatus}
           currentStatus={data.processingStatus}

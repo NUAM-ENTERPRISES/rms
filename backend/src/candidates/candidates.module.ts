@@ -19,6 +19,7 @@ import { RnrRemindersModule } from '../rnr-reminders/rnr-reminders.module';
 import { CallbackRemindersModule } from '../callback-reminders/callback-reminders.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { RolesModule } from '../roles/roles.module';
+import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { RolesModule } from '../roles/roles.module';
     CallbackRemindersModule,
     NotificationsModule,
     RolesModule,
+    CandidateCountryRestrictionsModule,
   ],
   controllers: [
     CandidatesController,

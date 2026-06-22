@@ -29,8 +29,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { PDFViewer } from "@/components/molecules/PDFViewer";
 import { useAppSelector } from "@/app/hooks";
-import { useUsersLookup } from "@/shared/hooks/useUsersLookup";
-import { useGetUserByIdQuery } from "@/services/usersApi";
 import { useUploadOfferLetterMutation, useUpdateOfferLetterReceivedDateMutation } from "@/services/uploadApi";
 import { ProcessingStepActionButtons } from "../../components/ProcessingStepActionButtons";
 import { ProcessingActionLockBanner } from "../../components/ProcessingActionLockBanner";
@@ -101,9 +99,7 @@ function getUploaderLabel(
   uploadedByUser?: OfferLetterUploader | null,
   uploadedBy?: string | null,
   uploadedByName?: string | null,
-  resolvedName?: string | null,
 ): string | null {
-  if (resolvedName?.trim()) return resolvedName.trim();
   if (uploadedByName?.trim() && uploadedByName.trim() !== uploadedBy?.trim()) {
     return uploadedByName.trim();
   }
@@ -130,7 +126,6 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
 }) => {
   const { isLocked } = useProcessingActionLock();
   const currentUser = useAppSelector((state) => state.auth.user);
-  const { getUserById } = useUsersLookup();
   const [notes, setNotes] = useState("");
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
@@ -154,31 +149,10 @@ export const ProcessingOfferLetterModal: React.FC<ProcessingOfferLetterModalProp
   const activeDocumentVerification = uploadedDocument || documentVerification;
   const offerLetterDoc = activeDocumentVerification?.document;
   const hasOfferLetter = !!offerLetterDoc;
-  const lookedUpUploader = offerLetterDoc?.uploadedBy
-    ? getUserById(offerLetterDoc.uploadedBy)
-    : undefined;
-  const shouldFetchUploader =
-    !!offerLetterDoc?.uploadedBy &&
-    !offerLetterDoc?.uploadedByUser?.name &&
-    !offerLetterDoc?.uploadedByUser?.email &&
-    !uploadedByName &&
-    !lookedUpUploader?.name &&
-    !lookedUpUploader?.email;
-  const { data: fetchedUploaderResponse } = useGetUserByIdQuery(
-    offerLetterDoc?.uploadedBy || "",
-    { skip: !shouldFetchUploader },
-  );
-  const fetchedUploader = (fetchedUploaderResponse as { data?: OfferLetterUploader } | undefined)
-    ?.data;
   const uploaderLabel = getUploaderLabel(
     offerLetterDoc?.uploadedByUser,
     offerLetterDoc?.uploadedBy,
     uploadedByName,
-    lookedUpUploader?.name ||
-      lookedUpUploader?.email ||
-      fetchedUploader?.name ||
-      fetchedUploader?.email ||
-      null,
   );
   const isPending = offerLetterDoc?.status === "pending";
   const isVerified = offerLetterDoc?.status === "verified";

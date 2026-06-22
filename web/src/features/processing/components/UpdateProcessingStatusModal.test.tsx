@@ -67,6 +67,56 @@ describe("UpdateProcessingStatusModal", () => {
     expect(screen.getAllByText("Processing On Hold").length).toBeGreaterThan(0);
   });
 
+  it("shows country restriction lift notice for cancelled processing with active restriction", async () => {
+    useGetContextMock.mockReturnValue({
+      data: {
+        data: {
+          processingStatus: "cancelled",
+          anchorStepId: "step-1",
+          stepKey: "data_flow",
+          stepLabel: "Data Flow",
+          availableRequestTypes: ["processing_hold", "processing_reactivate"],
+          activeCountryRestriction: {
+            countryCode: "SA",
+            countryName: "Saudi Arabia",
+          },
+        },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    const user = userEvent.setup();
+
+    render(
+      <UpdateProcessingStatusModal
+        isOpen
+        onClose={() => undefined}
+        processingId="pc-1"
+        processingStatus="cancelled"
+      />,
+    );
+
+    expect(
+      await screen.findByText(/active country restriction is in place for/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Saudi Arabia/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/will remove that restriction automatically after manager approval/i),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("radio", { name: /Reactivate Processing/i }),
+    );
+
+    expect(
+      screen.getByText("Country restriction will be removed"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/will be lifted automatically when a manager approves the reactivation request/i),
+    ).toBeInTheDocument();
+  });
+
   it("shows cancel and reactivate options when processing is on hold", async () => {
     useGetContextMock.mockReturnValue({
       data: {

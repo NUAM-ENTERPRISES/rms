@@ -911,6 +911,9 @@ export type PendingStatusChangeRequest = {
   reason: string;
   createdAt: string;
   stepKey?: string;
+  restrictCountryCode?: string | null;
+  restrictCountryName?: string | null;
+  requestedCountryRestriction?: boolean;
   processingCandidateId?: string;
   status?: string;
   reviewNotes?: string | null;
@@ -924,6 +927,41 @@ export type PendingStatusChangeRequest = {
     name: string;
     email?: string;
   };
+};
+
+export type CandidateCountryRestriction = {
+  id: string;
+  candidateId: string;
+  countryCode: string;
+  restrictionType: string;
+  reason: string;
+  sourceMeta?: {
+    stepKey?: string;
+    projectId?: string;
+    projectTitle?: string;
+    processingStepId?: string;
+    processingCandidateId?: string;
+    notes?: string;
+  } | null;
+  restrictedAt: string;
+  isActive: boolean;
+  liftedAt?: string | null;
+  liftReason?: string | null;
+  country?: { code: string; name: string };
+  restrictedBy?: { id: string; name: string };
+  liftedBy?: { id: string; name: string } | null;
+};
+
+export type CandidateCountryRestrictionsPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export type PaginatedCandidateCountryRestrictions = {
+  items: CandidateCountryRestriction[];
+  pagination: CandidateCountryRestrictionsPagination;
 };
 
 export type ReviewedStatusChangeRequest = PendingStatusChangeRequest & {
@@ -1495,6 +1533,52 @@ export const candidatesApi = baseApi.injectEndpoints({
         }),
     }),
 
+    getCandidateCountryRestrictions: builder.query<
+      PaginatedCandidateCountryRestrictions,
+      {
+        candidateId: string;
+        includeInactive?: boolean;
+        countryCode?: string;
+        page?: number;
+        limit?: number;
+      }
+    >({
+      query: ({ candidateId, includeInactive, countryCode, page, limit }) => ({
+        url: `/candidates/${candidateId}/country-restrictions`,
+        params: {
+          ...(includeInactive ? { includeInactive: "true" } : undefined),
+          ...(countryCode ? { countryCode } : undefined),
+          ...(page ? { page } : undefined),
+          ...(limit ? { limit } : undefined),
+        },
+      }),
+      transformResponse: (response: {
+        success?: boolean;
+        data?: PaginatedCandidateCountryRestrictions;
+      }) =>
+        response.data ?? {
+          items: [],
+          pagination: { page: 1, limit: 5, total: 0, totalPages: 1 },
+        },
+      providesTags: (_, __, { candidateId }) => [
+        { type: "Candidate", id: `country-restrictions-${candidateId}` },
+      ],
+    }),
+
+    liftCandidateCountryRestriction: builder.mutation<
+      { success: boolean; message: string },
+      { candidateId: string; countryCode: string; reason: string }
+    >({
+      query: ({ candidateId, countryCode, reason }) => ({
+        url: `/candidates/${candidateId}/country-restrictions/${countryCode}`,
+        method: "DELETE",
+        body: { reason },
+      }),
+      invalidatesTags: (_, __, { candidateId }) => [
+        { type: "Candidate", id: `country-restrictions-${candidateId}` },
+        { type: "Candidate", id: candidateId },
+      ],
+    }),
 
     getCandidateById: builder.query<Candidate, string>({
       query: (id) => `/candidates/${id}`,
@@ -2128,6 +2212,8 @@ export const {
   useGetCandidateProjectStatusChangeRequestHistoryQuery,
   useApproveCandidateProjectStatusChangeRequestMutation,
   useRejectCandidateProjectStatusChangeRequestMutation,
+  useGetCandidateCountryRestrictionsQuery,
+  useLiftCandidateCountryRestrictionMutation,
   useTransferCandidateMutation,
   useBulkTransferCandidatesMutation,
   useTransferBackCandidateMutation,

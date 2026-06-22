@@ -48,3 +48,31 @@ The `ProcessingCandidate` status can transition through:
 Each country has a distinct list of required documents for processing. These are managed through the `CountryDocumentRequirement` table.
 - Projects inherit requirements based on their `countryCode`.
 - Administrators can manage these requirements (CRUD) to adapt to changing regulations in countries like Saudi Arabia, Qatar, or Oman.
+
+## 7. Candidate Country Restrictions
+
+Processing can optionally block a candidate from all future projects in a destination country when Data Flow processing is cancelled.
+
+### Trigger
+- Available only when cancelling the **Data Flow** step (`data_flow`).
+- Optional checkbox in the cancel modal: *Request country restriction*.
+- Uses the **project destination country** (`Project.countryCode`), not the candidate phone country.
+
+### Approval
+- If a processing user requests a restriction, it is stored on the cancel request as `restrictCountryCode`.
+- The restriction is applied only when a **Manager** or **Processing Manager** approves the cancellation.
+- Managers who cancel directly apply the restriction immediately when the checkbox is selected.
+
+### Enforcement
+Active restrictions are stored in `candidate_country_restrictions` and block:
+- Nomination / assignment to projects with the same destination country
+- Transfer to processing for those projects
+- Eligibility checks and auto-allocation for those projects
+
+### Lift
+Managers can lift an active restriction from the candidate profile with a required reason. Lifted rows remain in the audit history.
+
+When a **cancelled** processing candidate is **reactivated** or moved to **hold** (request approved), any active restriction for that project's destination country is lifted automatically.
+
+### Reuse
+The same `candidate_country_restrictions` table supports future restriction sources (for example manual manager restrictions) via `restrictionType` and `sourceMeta` without schema changes.

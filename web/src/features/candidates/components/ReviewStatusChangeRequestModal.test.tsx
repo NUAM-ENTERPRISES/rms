@@ -11,6 +11,7 @@ vi.mock("@/features/candidates/api", async () => {
     ...actual,
     useApproveCandidateProjectStatusChangeRequestMutation: vi.fn(),
     useRejectCandidateProjectStatusChangeRequestMutation: vi.fn(),
+    useGetCandidateCountryRestrictionsQuery: vi.fn(),
   };
 });
 
@@ -39,9 +40,19 @@ describe("ReviewStatusChangeRequestModal", () => {
   const mockOnReviewed = vi.fn();
   const mockApprove = vi.fn();
   const mockReject = vi.fn();
+  const mockUseGetCountryRestrictions = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    mockUseGetCountryRestrictions.mockReturnValue({
+      data: { items: [], pagination: { page: 1, limit: 1, total: 0, totalPages: 1 } },
+      isLoading: false,
+    });
+
+    vi.mocked(candidatesApi.useGetCandidateCountryRestrictionsQuery).mockImplementation(
+      mockUseGetCountryRestrictions,
+    );
 
     vi.mocked(
       candidatesApi.useApproveCandidateProjectStatusChangeRequestMutation,
@@ -279,5 +290,146 @@ describe("ReviewStatusChangeRequestModal", () => {
       expect(mockOnClose).toHaveBeenCalled();
       expect(mockOnReviewed).toHaveBeenCalled();
     });
+  });
+
+  it("shows country restriction banner for processing cancel with restrictCountryCode", () => {
+    const processingCancelRequest: PendingStatusChangeRequest = {
+      id: "processing-cancel-id",
+      requestType: "processing_cancel",
+      requestedStatus: "processing_cancelled",
+      reason: "Data Flow verification failed for candidate documents.",
+      createdAt: "2026-06-22T10:30:00Z",
+      stepKey: "data_flow",
+      restrictCountryCode: "SA",
+      restrictCountryName: "Saudi Arabia",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingCancelRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        countryName="Saudi Arabia"
+        processingStatus="in_progress"
+      />,
+    );
+
+    expect(screen.getAllByText("Country restriction requested").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Saudi Arabia").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/SA · Data Flow/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Approving this request will cancel processing and restrict the candidate from all/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("includes country restriction in approve confirmation for processing cancel", async () => {
+    const user = userEvent.setup();
+    const processingCancelRequest: PendingStatusChangeRequest = {
+      id: "processing-cancel-id",
+      requestType: "processing_cancel",
+      requestedStatus: "processing_cancelled",
+      reason: "Data Flow verification failed for candidate documents.",
+      createdAt: "2026-06-22T10:30:00Z",
+      stepKey: "data_flow",
+      restrictCountryCode: "SA",
+      restrictCountryName: "Saudi Arabia",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={processingCancelRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        processingStatus="in_progress"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Approve Request/i }));
+
+    expect(
+      screen.getByText(
+        /This will also restrict the candidate from all Saudi Arabia projects/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows country restriction lift notice for cancelled processing reactivation review", async () => {
+    const user = userEvent.setup();
+
+    mockUseGetCountryRestrictions.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: "restriction-1",
+            candidateId: "cand-123",
+            countryCode: "SA",
+            restrictionType: "processing_step_cancel",
+            reason: "Cancelled during Data Flow",
+            restrictedAt: "2026-06-22T10:00:00.000Z",
+            isActive: true,
+            country: { code: "SA", name: "Saudi Arabia" },
+          },
+        ],
+        pagination: { page: 1, limit: 1, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+    });
+
+    const reactivationRequest: PendingStatusChangeRequest = {
+      id: "processing-reactivate-id",
+      requestType: "processing_reactivate",
+      requestedStatus: "processing_in_progress",
+      reason: "Candidate cleared to resume processing after document correction.",
+      createdAt: "2026-06-22T11:00:00Z",
+      stepKey: "data_flow",
+      requester: {
+        id: "req-123",
+        name: "Processing User",
+        email: "processing@example.com",
+      },
+    };
+
+    render(
+      <ReviewStatusChangeRequestModal
+        isOpen
+        onClose={mockOnClose}
+        request={reactivationRequest}
+        candidateId="cand-123"
+        projectId="proj-456"
+        projectCountryCode="SA"
+        countryName="Saudi Arabia"
+        processingStatus="cancelled"
+      />,
+    );
+
+    expect(
+      await screen.findByText("Review Processing Reactivation Request"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Country restriction will be removed")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Approving this request will lift that restriction automatically/i),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Approve Request/i }));
+
+    expect(
+      screen.getByText(/lift the active Saudi Arabia country restriction/i),
+    ).toBeInTheDocument();
   });
 });

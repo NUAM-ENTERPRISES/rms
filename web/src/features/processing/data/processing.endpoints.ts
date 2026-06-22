@@ -1,4 +1,5 @@
 import { baseApi } from "@/app/api/baseApi";
+import type { PendingStatusChangeRequest } from "@/features/candidates/api";
 import {
   buildProcessingStatusChangeInvalidationTags,
 } from "@/app/providers/notification-handlers/processing-status-change-handler";
@@ -606,6 +607,8 @@ export const processingApi = baseApi.injectEndpoints({
           | "processing_hold"
           | "processing_reactivate";
         reason: string;
+        applyCountryRestriction?: boolean;
+        restrictCountryCode?: string;
       }
     >({
       query: (body) => ({
@@ -637,6 +640,10 @@ export const processingApi = baseApi.injectEndpoints({
         availableRequestTypes: Array<
           "processing_cancel" | "processing_hold" | "processing_reactivate"
         >;
+        activeCountryRestriction?: {
+          countryCode: string;
+          countryName: string;
+        } | null;
       }>,
       string
     >({
@@ -647,7 +654,7 @@ export const processingApi = baseApi.injectEndpoints({
     }),
 
     getPendingProcessingStatusChangeRequestForCandidate: builder.query<
-      ApiResponse<Record<string, unknown> | null>,
+      ApiResponse<PendingStatusChangeRequest | null>,
       string
     >({
       query: (processingId) => ({

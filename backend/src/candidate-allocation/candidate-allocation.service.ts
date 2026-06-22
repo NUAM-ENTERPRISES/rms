@@ -16,6 +16,7 @@ import {
 import { RoundRobinService } from '../round-robin/round-robin.service';
 import { OutboxService } from '../notifications/outbox.service';
 import { assertCandidateNotBlockedForNewProjectAssignment } from '../candidate-projects/utils/processing-assignment-guard';
+import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
 
 export interface AllocationResult {
   considered: number;
@@ -40,6 +41,7 @@ export class CandidateAllocationService {
     private readonly recruiterPoolService: RecruiterPoolService,
     private readonly roundRobinService: RoundRobinService,
     private readonly outboxService: OutboxService,
+    private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
   ) {}
 
   /**
@@ -57,6 +59,14 @@ export class CandidateAllocationService {
 
     if (recruiters.length === 0) {
       throw new BadRequestException('No recruiters available for allocation');
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { countryCode: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Project with ID ${projectId} not found`);
     }
 
     // Get eligible candidates
@@ -107,6 +117,11 @@ export class CandidateAllocationService {
           this.prisma,
           matchedCandidate.candidateId,
           projectId,
+        );
+
+        await this.countryRestrictionsService.assertNotRestricted(
+          matchedCandidate.candidateId,
+          project.countryCode,
         );
 
         const recruiter = await this.roundRobinService.getNextRecruiter(

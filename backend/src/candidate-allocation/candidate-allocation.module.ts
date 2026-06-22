@@ -8,6 +8,7 @@ import { RoundRobinModule } from '../round-robin/round-robin.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AllocationProcessor } from '../jobs/allocation.processor';
 import { PrismaModule } from '../database/prisma.module';
+import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PrismaModule } from '../database/prisma.module';
     RecruiterPoolModule,
     RoundRobinModule,
     NotificationsModule,
+    CandidateCountryRestrictionsModule,
     BullModule.registerQueue({
       name: 'allocation',
     }),

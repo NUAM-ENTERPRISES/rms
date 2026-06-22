@@ -88,6 +88,8 @@ model User {
   transferRequestsReceived         TeamTransferRequest[]          @relation("TransferUser")
   statusChangeRequestsRequested    CandidateProjectStatusChangeRequest[] @relation("StatusChangeRequester")
   statusChangeRequestsReviewed     CandidateProjectStatusChangeRequest[] @relation("StatusChangeReviewer")
+  countryRestrictionsCreated       CandidateCountryRestriction[]         @relation("CountryRestrictionCreator")
+  countryRestrictionsLifted        CandidateCountryRestriction[]         @relation("CountryRestrictionLifter")
   userRoles                        UserRole[]
   userPermissions                  UserPermission[]
   userTeams                        UserTeam[]
@@ -343,6 +345,7 @@ model Country {
   countryDocumentRequirements   CountryDocumentRequirement[]
   processingCountrySteps        ProcessingCountryStep[]
   candidatePreferences          CandidatePreferredCountry[]
+  candidateCountryRestrictions  CandidateCountryRestriction[]
   clientsPhysicalAddress        Client[]                       @relation("PhysicalAddressCountryClient")
   usersPhysicalAddress          User[]                         @relation("PhysicalAddressCountryUser")
   candidatesPhysicalAddress     Candidate[]                    @relation("PhysicalAddressCountryCandidate")
@@ -548,6 +551,7 @@ model Candidate {
   documentForwards DocumentForwardHistory[]
   originalDocumentCollections OriginalDocumentCollection[]
   courierShipments            CourierShipment[]
+  countryRestrictions         CandidateCountryRestriction[]
   lockerFileNumber            String? @map("locker_file_number")
 
   /// Declared client projects for agent-channel candidates only (intent; not nomination / candidate_projects).
@@ -691,6 +695,32 @@ model CandidatePreferredCountry {
   @@unique([candidateId, countryCode])
   @@index([candidateId])
   @@map("candidate_preferred_countries")
+}
+
+model CandidateCountryRestriction {
+  id                    String   @id @default(cuid())
+  candidateId           String
+  countryCode           String
+  restrictionType       String
+  reason                String   @db.Text
+  sourceMeta            Json?
+  statusChangeRequestId String?
+  restrictedById        String
+  restrictedAt          DateTime @default(now())
+  isActive              Boolean  @default(true)
+  liftedAt              DateTime?
+  liftedById            String?
+  liftReason            String?  @db.Text
+
+  candidate           Candidate                          @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  country             Country                            @relation(fields: [countryCode], references: [code])
+  restrictedBy        User                               @relation("CountryRestrictionCreator", fields: [restrictedById], references: [id], onDelete: Cascade)
+  liftedBy            User?                              @relation("CountryRestrictionLifter", fields: [liftedById], references: [id], onDelete: SetNull)
+  statusChangeRequest CandidateProjectStatusChangeRequest? @relation(fields: [statusChangeRequestId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, isActive])
+  @@index([countryCode, isActive])
+  @@map("candidate_country_restrictions")
 }
 
 model CandidateFacilityPreference {
@@ -1290,9 +1320,11 @@ model CandidateProjectStatusChangeRequest {
   processingStepId      String?
   stepKey               String?
   processingCandidateId String?
+  restrictCountryCode   String?
 
   processingStep      ProcessingStep?      @relation(fields: [processingStepId], references: [id], onDelete: SetNull)
   processingCandidate ProcessingCandidate? @relation(fields: [processingCandidateId], references: [id], onDelete: SetNull)
+  countryRestrictions CandidateCountryRestriction[]
 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt

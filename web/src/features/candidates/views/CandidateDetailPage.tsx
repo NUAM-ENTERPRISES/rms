@@ -62,6 +62,8 @@ import type {
 
 // Tab Components
 import { CandidateOverview } from "../components/tabs/CandidateOverview";
+import { CandidateCountryRestrictionsCard } from "../components/CandidateCountryRestrictionsCard";
+import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 import { CandidateProjects } from "../components/tabs/CandidateProjects";
 import { CandidateDocuments } from "../components/tabs/CandidateDocuments";
 import { CandidateCollectionHistory } from "@/features/original-document-collections/components/CandidateCollectionHistory";
@@ -646,6 +648,10 @@ export default function CandidateDetailPage() {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
+          <CandidateCountryRestrictionsCard
+            candidateId={candidate.id}
+            canLiftRestrictions={canDirectApplyProcessingStatusChange(user?.roles)}
+          />
           <CandidateOverview
             candidate={candidate}
             isCandidateLoading={isLoading}

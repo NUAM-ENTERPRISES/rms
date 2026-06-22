@@ -32,6 +32,7 @@ import {
 } from "@/features/processing/data/processing.endpoints";
 import { formatProcessingStepLabel } from "@/features/processing/utils/formatProcessingStepLabel";
 import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
+import { FlagIcon } from "@/shared";
 
 export type ProcessingStatusUpdateRequestType =
   | "processing_cancel"
@@ -123,6 +124,62 @@ interface UpdateProcessingStatusModalProps {
 }
 
 type ConfirmStep = "form" | "confirm";
+
+function liftsCountryRestriction(
+  requestType: ProcessingStatusUpdateRequestType | null,
+): requestType is "processing_hold" | "processing_reactivate" {
+  return (
+    requestType === "processing_hold" || requestType === "processing_reactivate"
+  );
+}
+
+function CountryRestrictionLiftNotice({
+  countryCode,
+  countryName,
+  selectedType,
+  isDirectAction,
+}: {
+  countryCode: string;
+  countryName: string;
+  selectedType: ProcessingStatusUpdateRequestType | null;
+  isDirectAction: boolean;
+}) {
+  if (!liftsCountryRestriction(selectedType)) {
+    return null;
+  }
+
+  const actionLabel =
+    selectedType === "processing_reactivate"
+      ? "reactivation"
+      : "move to hold";
+  const timingLabel = isDirectAction
+    ? "will be lifted immediately when you apply this change"
+    : `will be lifted automatically when a manager approves the ${actionLabel} request`;
+
+  return (
+    <div
+      className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50/80 px-4 py-3 text-sm text-emerald-950"
+      role="note"
+    >
+      <div className="flex items-start gap-3">
+        <FlagIcon
+          countryCode={countryCode}
+          size="md"
+          className="mt-0.5 shrink-0 rounded shadow-sm"
+          aria-label={`Flag of ${countryName}`}
+        />
+        <div className="min-w-0 space-y-1">
+          <p className="font-semibold">Country restriction will be removed</p>
+          <p className="leading-relaxed text-emerald-900/85">
+            This candidate is currently restricted from{" "}
+            <span className="font-semibold">{countryName}</span> projects. The
+            active restriction {timingLabel}.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatusTransitionPreview({
   currentLabel,
@@ -245,6 +302,12 @@ export function UpdateProcessingStatusModal({
   const selectedTargetLabel = selectedType
     ? TARGET_STATUS_LABELS[selectedType]
     : null;
+  const activeCountryRestriction = context?.activeCountryRestriction ?? null;
+  const showCountryRestrictionLiftNotice = Boolean(
+    activeCountryRestriction &&
+      resolvedProcessingStatus === "cancelled" &&
+      liftsCountryRestriction(selectedType),
+  );
 
   const handleClose = () => {
     if (isSubmitting) return;
@@ -344,6 +407,26 @@ export function UpdateProcessingStatusModal({
                     </div>
                   </div>
 
+                  {activeCountryRestriction &&
+                  resolvedProcessingStatus === "cancelled" ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50/70 px-4 py-3 text-sm text-red-950">
+                      <div className="flex items-start gap-2">
+                        <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                        <p className="leading-relaxed">
+                          An active country restriction is in place for{" "}
+                          <span className="font-semibold">
+                            {activeCountryRestriction.countryName}
+                          </span>
+                          . Choosing <span className="font-semibold">Move to Hold</span>{" "}
+                          or <span className="font-semibold">Reactivate Processing</span>{" "}
+                          {isDirectAction
+                            ? "will remove that restriction immediately once applied."
+                            : "will remove that restriction automatically after manager approval."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="space-y-3">
                     <Label className="text-sm font-semibold">
                       Choose new status type
@@ -407,6 +490,15 @@ export function UpdateProcessingStatusModal({
                       })}
                     </div>
                   </div>
+
+                  {showCountryRestrictionLiftNotice && activeCountryRestriction ? (
+                    <CountryRestrictionLiftNotice
+                      countryCode={activeCountryRestriction.countryCode}
+                      countryName={activeCountryRestriction.countryName}
+                      selectedType={selectedType}
+                      isDirectAction={isDirectAction}
+                    />
+                  ) : null}
 
                   <Separator />
 
@@ -516,6 +608,15 @@ export function UpdateProcessingStatusModal({
                   </div>
                 ) : null}
               </div>
+
+              {showCountryRestrictionLiftNotice && activeCountryRestriction ? (
+                <CountryRestrictionLiftNotice
+                  countryCode={activeCountryRestriction.countryCode}
+                  countryName={activeCountryRestriction.countryName}
+                  selectedType={selectedType}
+                  isDirectAction={isDirectAction}
+                />
+              ) : null}
 
               <div className="rounded-xl border border-border bg-background px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">

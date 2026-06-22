@@ -30,11 +30,16 @@ import { cn } from "@/lib/utils";
 import {
   useApproveCandidateProjectStatusChangeRequestMutation,
   useRejectCandidateProjectStatusChangeRequestMutation,
+  useGetCandidateCountryRestrictionsQuery,
   type PendingStatusChangeRequest,
 } from "@/features/candidates/api";
 import { formatProcessingStepLabel } from "@/features/processing/utils/formatProcessingStepLabel";
 import { getProcessingStatusChangeTransition } from "@/features/processing/utils/processingStatusChangeDisplay";
 import { getStatusChangeTargetLabel } from "@/features/candidates/utils/candidateProjectPipelineBlocked";
+import { isProcessingStatusChangeRequestType } from "@/features/candidates/utils/statusChangeRequestDisplay";
+import { CountryRestrictionReviewCard } from "@/features/processing/components/CountryRestrictionReviewCard";
+import { CountryRestrictionLiftOnApprovalNote } from "@/features/processing/components/CountryRestrictionLiftOnApprovalNote";
+import { resolveCountryRestrictionFromRequest } from "@/features/processing/utils/countryRestrictionDisplay";
 
 interface ReviewStatusChangeRequestModalProps {
   isOpen: boolean;
@@ -45,6 +50,7 @@ interface ReviewStatusChangeRequestModalProps {
   candidateProjectMapId?: string;
   projectTitle?: string;
   countryName?: string;
+  projectCountryCode?: string;
   stepKey?: string;
   currentStatus?: string;
   processingStatus?: string;
@@ -170,6 +176,7 @@ export function ReviewStatusChangeRequestModal({
   candidateProjectMapId,
   projectTitle,
   countryName,
+  projectCountryCode,
   stepKey,
   currentStatus,
   processingStatus,
@@ -183,10 +190,9 @@ export function ReviewStatusChangeRequestModal({
   const [rejectRequest, { isLoading: isRejecting }] =
     useRejectCandidateProjectStatusChangeRequestMutation();
 
-  const isProcessingRequest =
-    request.requestType === "processing_cancel" ||
-    request.requestType === "processing_hold" ||
-    request.requestType === "processing_reactivate";
+  const isProcessingRequest = isProcessingStatusChangeRequestType(
+    request.requestType,
+  );
   const isReactivate = request.requestType === "reactivate";
   const processingStepKey = stepKey ?? request.stepKey;
   const resolvedProjectTitle = projectTitle;
@@ -195,7 +201,9 @@ export function ReviewStatusChangeRequestModal({
   const isProcessingHold = request.requestType === "processing_hold";
   const isProcessingReactivate = request.requestType === "processing_reactivate";
   const resolvedProcessingStatus = processingStatus ?? currentStatus;
-  const processingTransition = isProcessingRequest
+  const processingTransition = isProcessingStatusChangeRequestType(
+    request.requestType,
+  )
     ? getProcessingStatusChangeTransition(
         request.requestType,
         resolvedProcessingStatus,
@@ -204,6 +212,57 @@ export function ReviewStatusChangeRequestModal({
   const formattedStepLabel = processingStepKey
     ? formatProcessingStepLabel(processingStepKey)
     : null;
+  const countryRestriction = resolveCountryRestrictionFromRequest(request, {
+    code: projectCountryCode,
+    name: countryName,
+  });
+  const hasCountryRestrictionRequest = Boolean(countryRestriction);
+  const restrictionCountryCode = countryRestriction?.countryCode ?? null;
+  const restrictionCountryName = countryRestriction?.countryName ?? null;
+
+  const countryRestrictionApprovalNote =
+    hasCountryRestrictionRequest && restrictionCountryName
+      ? ` This will also restrict the candidate from all ${restrictionCountryName} projects.`
+      : "";
+
+  const recoversCancelledProcessingWithRestrictionLift =
+    resolvedProcessingStatus === "cancelled" &&
+    (isProcessingReactivate || isProcessingHold);
+
+  const { data: activeProjectRestrictionData } =
+    useGetCandidateCountryRestrictionsQuery(
+      {
+        candidateId,
+        countryCode: projectCountryCode,
+        limit: 1,
+      },
+      {
+        skip:
+          !isOpen ||
+          !candidateId ||
+          !projectCountryCode ||
+          !recoversCancelledProcessingWithRestrictionLift,
+      },
+    );
+
+  const activeProjectCountryRestriction =
+    activeProjectRestrictionData?.items[0] ?? null;
+  const willLiftCountryRestrictionOnApproval = Boolean(
+    activeProjectCountryRestriction,
+  );
+  const liftRestrictionCountryCode =
+    activeProjectCountryRestriction?.countryCode ??
+    projectCountryCode ??
+    null;
+  const liftRestrictionCountryName =
+    activeProjectCountryRestriction?.country?.name ??
+    countryName ??
+    liftRestrictionCountryCode;
+
+  const countryRestrictionLiftApprovalNote =
+    willLiftCountryRestrictionOnApproval && liftRestrictionCountryName
+      ? ` Approving will also lift the active ${liftRestrictionCountryName} country restriction.`
+      : "";
 
   const statusLabel =
     processingTransition?.reviewTitle ??
@@ -218,13 +277,13 @@ export function ReviewStatusChangeRequestModal({
   const impactMessage = isProcessingRequest && processingTransition
     ? `Approving will change processing from ${processingTransition.fromLabel} to ${processingTransition.toLabel}${
         formattedStepLabel ? ` at ${formattedStepLabel}` : ""
-      }.`
+      }.${countryRestrictionApprovalNote}${countryRestrictionLiftApprovalNote}`
     : isProcessingCancel
-    ? "Approving will cancel this candidate's processing for the project. All processing steps will be locked until reactivated."
+    ? `Approving will cancel this candidate's processing for the project. All processing steps will be locked until reactivated.${countryRestrictionApprovalNote}`
     : isProcessingHold
-      ? "Approving will put this candidate's processing on hold. Processing actions will be locked until the hold is lifted."
+      ? `Approving will put this candidate's processing on hold. Processing actions will be locked until the hold is lifted.${countryRestrictionLiftApprovalNote}`
       : isProcessingReactivate
-        ? "Approving will reactivate processing in progress at the step where it was stopped."
+        ? `Approving will reactivate processing in progress at the step where it was stopped.${countryRestrictionLiftApprovalNote}`
         : isReactivate
           ? "Approving will reactivate this candidate for the project."
           : `Approving will change the candidate's status to ${statusLabel}.`;
@@ -405,6 +464,27 @@ export function ReviewStatusChangeRequestModal({
             </div>
 
             <div className="space-y-3 px-5 py-4">
+              {willLiftCountryRestrictionOnApproval &&
+              liftRestrictionCountryCode &&
+              liftRestrictionCountryName ? (
+                <CountryRestrictionLiftOnApprovalNote
+                  countryCode={liftRestrictionCountryCode}
+                  countryName={liftRestrictionCountryName}
+                  compact
+                />
+              ) : null}
+
+              {hasCountryRestrictionRequest &&
+              restrictionCountryCode &&
+              restrictionCountryName ? (
+                <CountryRestrictionReviewCard
+                  countryCode={restrictionCountryCode}
+                  countryName={restrictionCountryName}
+                  stepKey={processingStepKey}
+                  compact
+                />
+              ) : null}
+
               {processingTransition ? (
                 <ProcessingStatusTransitionCard
                   fromLabel={processingTransition.fromLabel}
@@ -496,6 +576,22 @@ export function ReviewStatusChangeRequestModal({
                       <Badge variant="outline" className={cn("text-xs", theme.badge)}>
                         Pending review
                       </Badge>
+                      {hasCountryRestrictionRequest ? (
+                        <Badge
+                          variant="outline"
+                          className="border-amber-300 bg-amber-100 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                        >
+                          Country restriction requested
+                        </Badge>
+                      ) : null}
+                      {willLiftCountryRestrictionOnApproval ? (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-300 bg-emerald-100 text-[10px] font-semibold uppercase tracking-wide text-emerald-900"
+                        >
+                          Country restriction active
+                        </Badge>
+                      ) : null}
                     </div>
                     <DialogDescription className="text-xs">
                       Review the details below, then approve or reject.
@@ -506,6 +602,25 @@ export function ReviewStatusChangeRequestModal({
             </div>
 
             <div className="space-y-3 px-5 py-4">
+              {willLiftCountryRestrictionOnApproval &&
+              liftRestrictionCountryCode &&
+              liftRestrictionCountryName ? (
+                <CountryRestrictionLiftOnApprovalNote
+                  countryCode={liftRestrictionCountryCode}
+                  countryName={liftRestrictionCountryName}
+                />
+              ) : null}
+
+              {hasCountryRestrictionRequest &&
+              restrictionCountryCode &&
+              restrictionCountryName ? (
+                <CountryRestrictionReviewCard
+                  countryCode={restrictionCountryCode}
+                  countryName={restrictionCountryName}
+                  stepKey={processingStepKey}
+                />
+              ) : null}
+
               {processingTransition ? (
                 <ProcessingStatusTransitionCard
                   fromLabel={processingTransition.fromLabel}

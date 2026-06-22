@@ -780,6 +780,17 @@ export function DataFlowModal({ isOpen, onClose, processingId, candidateProjectM
                 <ProcessingStepActionButtons
                   processingStepId={activeStep?.id}
                   show={!isDataFlowCompleted && !isStepCancelled}
+                  stepKey="data_flow"
+                  projectCountry={
+                    candidate?.project?.countryCode
+                      ? {
+                          code: candidate.project.countryCode,
+                          name:
+                            candidate.project.countryName ||
+                            candidate.project.countryCode,
+                        }
+                      : undefined
+                  }
                   onSubmitted={async () => {
                     await refetch();
                     if (onComplete) await onComplete();

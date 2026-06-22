@@ -14,6 +14,7 @@ import { useProcessingActionLock } from "@/features/processing/context/Processin
 import { canDirectApplyProcessingStatusChange } from "@/features/processing/utils/processingStatusChangeRoles";
 import RequestProcessingActionModal, {
   type ProcessingActionType,
+  type ProcessingActionConfirmPayload,
 } from "./RequestProcessingActionModal";
 
 interface ProcessingStepActionButtonsProps {
@@ -22,6 +23,8 @@ interface ProcessingStepActionButtonsProps {
   hasPendingRequest?: boolean;
   onSubmitted?: () => void | Promise<void>;
   size?: "sm" | "default";
+  stepKey?: string;
+  projectCountry?: { code: string; name: string };
 }
 
 function LockedActionButton({
@@ -63,6 +66,8 @@ export function ProcessingStepActionButtons({
   hasPendingRequest = false,
   onSubmitted,
   size = "sm",
+  stepKey,
+  projectCountry,
 }: ProcessingStepActionButtonsProps) {
   const { user } = useAppSelector((state) => state.auth);
   const isDirectAction = canDirectApplyProcessingStatusChange(user?.roles);
@@ -85,7 +90,11 @@ export function ProcessingStepActionButtons({
     setModalOpen(true);
   };
 
-  const handleConfirm = async (reason: string) => {
+  const handleConfirm = async ({
+    reason,
+    applyCountryRestriction,
+    restrictCountryCode,
+  }: ProcessingActionConfirmPayload) => {
     if (!processingStepId) return;
     try {
       const requestType =
@@ -94,6 +103,8 @@ export function ProcessingStepActionButtons({
         processingStepId,
         requestType,
         reason,
+        applyCountryRestriction,
+        restrictCountryCode,
       }).unwrap();
 
       const isPending = result?.data?.status === "pending";
@@ -163,6 +174,8 @@ export function ProcessingStepActionButtons({
           onConfirm={handleConfirm}
           isSubmitting={isLoading}
           isDirectAction={isDirectAction}
+          stepKey={stepKey}
+          projectCountry={projectCountry}
         />
       </React.Suspense>
     </>

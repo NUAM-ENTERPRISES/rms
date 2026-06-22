@@ -500,6 +500,15 @@ export default function CandidateProjectDetailsPage() {
                             candidateId={candidateId}
                             projectId={projectId}
                             candidateProjectMapId={candidateProjectMapId}
+                            projectTitle={projectTitle}
+                            countryName={
+                                pipelineResponse?.data?.project?.country?.name ??
+                                pipelineResponse?.data?.project?.countryCode
+                            }
+                            projectCountryCode={
+                                pipelineResponse?.data?.project?.countryCode ??
+                                pipelineResponse?.data?.project?.country?.code
+                            }
                             currentStatus={pipelineData?.currentStatus?.mainStatus?.name}
                             previousStatus={pipelineData?.previousMainStatus}
                             defaultExpanded={shouldExpandPendingBanner}

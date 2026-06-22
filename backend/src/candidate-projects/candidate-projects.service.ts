@@ -43,6 +43,8 @@ import {
   findProcessingInProgressAssignmentsByCandidateIds,
   getProcessingEligibilityHardReason,
 } from './utils/processing-assignment-guard';
+import { getCountryRestrictionEligibilityHardReason } from '../candidate-country-restrictions/utils/country-restriction-guard';
+import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
 import {
   isPipelineBlockedOnProject,
 } from '../common/constants/statuses';
@@ -135,6 +137,7 @@ export class CandidateProjectsService {
     private readonly notificationsGateway: NotificationsGateway,
     @Inject(forwardRef(() => ProcessingService))
     private readonly processingService: ProcessingService,
+    private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
   ) {}
 
   private async ensureInterviewCoordinator(userId: string) {
@@ -246,6 +249,11 @@ export class CandidateProjectsService {
     }
 
     assertProjectOpenForAssignment(project);
+
+    await this.countryRestrictionsService.assertNotRestricted(
+      candidateId,
+      project.countryCode,
+    );
 
     // -------------------------------
     // AUTO-MATCH ROLE
@@ -2078,6 +2086,7 @@ export class CandidateProjectsService {
           processingStepId: dto.processingStepId ?? null,
           stepKey: dto.stepKey ?? null,
           processingCandidateId: dto.processingCandidateId ?? null,
+          restrictCountryCode: dto.restrictCountryCode ?? null,
         },
         include: {
           requester: { select: { id: true, name: true, email: true } },
@@ -2100,8 +2109,9 @@ export class CandidateProjectsService {
           processingStepId: dto.processingStepId,
           stepKey: dto.stepKey,
           processingCandidateId: dto.processingCandidateId,
-          countryCode: candidateProject.project.country?.code,
+          countryCode: dto.restrictCountryCode ?? candidateProject.project.country?.code,
           countryName: candidateProject.project.country?.name,
+          restrictCountryCode: dto.restrictCountryCode ?? undefined,
         },
         tx,
       );
@@ -2109,7 +2119,7 @@ export class CandidateProjectsService {
       return created;
     });
 
-    return request;
+    return this.enrichStatusChangeRequestWithRestrictionCountry(request);
   }
 
   private async directApplyStatusChange(
@@ -2137,6 +2147,7 @@ export class CandidateProjectsService {
           processingStepId: dto.processingStepId ?? null,
           stepKey: dto.stepKey ?? null,
           processingCandidateId: dto.processingCandidateId ?? null,
+          restrictCountryCode: dto.restrictCountryCode ?? null,
         },
         include: {
           requester: { select: { id: true, name: true, email: true } },
@@ -2150,6 +2161,8 @@ export class CandidateProjectsService {
           processingStepId: dto.processingStepId!,
           candidateProjectMapId,
           reason: dto.reason,
+          restrictCountryCode: dto.restrictCountryCode,
+          statusChangeRequestId: created.id,
         },
         userId,
       );
@@ -2232,6 +2245,31 @@ export class CandidateProjectsService {
     // If already blocked, don't overwrite previousStatus
   }
 
+  private async enrichStatusChangeRequestWithRestrictionCountry<
+    T extends { restrictCountryCode?: string | null },
+  >(request: T): Promise<T & { restrictCountryName?: string | null }>;
+  private async enrichStatusChangeRequestWithRestrictionCountry<
+    T extends { restrictCountryCode?: string | null },
+  >(request: T | null): Promise<(T & { restrictCountryName?: string | null }) | null>;
+  private async enrichStatusChangeRequestWithRestrictionCountry<
+    T extends { restrictCountryCode?: string | null },
+  >(request: T | null): Promise<(T & { restrictCountryName?: string | null }) | null> {
+    if (!request?.restrictCountryCode) {
+      return request;
+    }
+
+    const country = await this.prisma.country.findUnique({
+      where: { code: request.restrictCountryCode },
+      select: { name: true },
+    });
+
+    return {
+      ...request,
+      restrictCountryName: country?.name ?? request.restrictCountryCode,
+      requestedCountryRestriction: true,
+    };
+  }
+
   async getPendingStatusChangeRequest(candidateProjectMapId: string) {
     const candidateProject = await this.prisma.candidateProjects.findUnique({
       where: { id: candidateProjectMapId },
@@ -2255,7 +2293,7 @@ export class CandidateProjectsService {
         orderBy: { createdAt: 'desc' },
       });
 
-    return pending;
+    return this.enrichStatusChangeRequestWithRestrictionCountry(pending);
   }
 
   async getStatusChangeRequestHistory(
@@ -2391,6 +2429,8 @@ export class CandidateProjectsService {
           processingStepId: request.processingStepId!,
           candidateProjectMapId: request.candidateProjectMapId,
           reason: request.reason,
+          restrictCountryCode: request.restrictCountryCode ?? undefined,
+          statusChangeRequestId: request.id,
         },
         userId,
       );
@@ -3615,6 +3655,14 @@ export class CandidateProjectsService {
       Boolean(existingOnProject),
     );
 
+    const countryRestriction =
+      await this.countryRestrictionsService.getActiveRestrictionForCountry(
+        candidateId,
+        project.countryCode,
+      );
+    const countryRestrictionReason =
+      getCountryRestrictionEligibilityHardReason(countryRestriction);
+
     const age = candidate.dateOfBirth ? this.calculateAge(new Date(candidate.dateOfBirth)) : null;
     const candidateGender = candidate.gender?.toLowerCase();
     let candidateExp = candidate.totalExperience ?? candidate.experience ?? 0;
@@ -3647,6 +3695,10 @@ export class CandidateProjectsService {
 
       if (processingHardReason) {
         hardReasons.push(processingHardReason);
+      }
+
+      if (countryRestrictionReason) {
+        hardReasons.push(countryRestrictionReason);
       }
 
       // Gender Check (Hard)
@@ -4234,6 +4286,19 @@ export class CandidateProjectsService {
           errors.push({
             candidateId,
             error: error.message || 'Candidate blocked by active processing on another project',
+          });
+          continue;
+        }
+
+        try {
+          await this.countryRestrictionsService.assertNotRestricted(
+            candidateId,
+            project.countryCode,
+          );
+        } catch (error: any) {
+          errors.push({
+            candidateId,
+            error: error.message || 'Candidate is restricted for this project country',
           });
           continue;
         }

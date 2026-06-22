@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { TransferToProcessingDto } from './dto/transfer-to-processing.dto';
 import { QueryCandidatesToTransferDto } from './dto/query-candidates-to-transfer.dto';
@@ -28,6 +29,8 @@ import {
   isProcessingStatusTransitionAllowed,
 } from '../common/constants/statuses';
 import { PROCESSING_STATUS_CHANGE_DIRECT_ROLES } from '../common/constants/role-ids';
+import { CandidateCountryRestrictionsService } from '../candidate-country-restrictions/candidate-country-restrictions.service';
+import { COUNTRY_RESTRICTION_TYPES } from '../common/constants/country-restriction-types';
 
 const COLLECTION_TYPE_LABELS: Record<string, string> = {
   direct: 'Direct',
@@ -53,7 +56,145 @@ export class ProcessingService {
     private readonly processingRemindersService: ProcessingRemindersService,
     @Inject(forwardRef(() => CandidateProjectsService))
     private readonly candidateProjectsService: CandidateProjectsService,
+    private readonly countryRestrictionsService: CandidateCountryRestrictionsService,
   ) {}
+
+  private resolveProjectDestinationCountryCode(
+    project:
+      | {
+          countryCode?: string | null;
+          country?: { code?: string | null } | null;
+        }
+      | null
+      | undefined,
+  ): string | undefined {
+    const code = project?.countryCode ?? project?.country?.code ?? undefined;
+    return code?.trim() || undefined;
+  }
+
+  private resolveDataFlowCountryRestriction(
+    stepKey: string,
+    applyCountryRestriction: boolean | undefined,
+    projectCountryCode: string | null | undefined,
+    explicitCountryCode?: string | null,
+  ): string | undefined {
+    const requestedCountryCode = explicitCountryCode?.trim() || undefined;
+    const wantsRestriction = Boolean(applyCountryRestriction || requestedCountryCode);
+    if (!wantsRestriction) {
+      return undefined;
+    }
+    if (stepKey !== 'data_flow') {
+      throw new BadRequestException(
+        'Country restriction is only supported when cancelling Data Flow',
+      );
+    }
+    const countryCode =
+      requestedCountryCode ?? (projectCountryCode?.trim() || undefined);
+    if (!countryCode) {
+      throw new BadRequestException(
+        'Project country is required to apply a country restriction',
+      );
+    }
+    return countryCode;
+  }
+
+  private async enrichStatusChangeRequestWithRestrictionCountry<
+    T extends { restrictCountryCode?: string | null },
+  >(request: T | null): Promise<
+    (T & { restrictCountryName?: string | null }) | null
+  > {
+    if (!request?.restrictCountryCode) {
+      return request;
+    }
+
+    const country = await this.prisma.country.findUnique({
+      where: { code: request.restrictCountryCode },
+      select: { name: true },
+    });
+
+    return {
+      ...request,
+      restrictCountryName: country?.name ?? request.restrictCountryCode,
+      requestedCountryRestriction: true,
+    };
+  }
+
+  private async applyCountryRestrictionAfterCancel(
+    step: {
+      id: string;
+      template: { key: string };
+      processingCandidate: {
+        id: string;
+        candidateId: string;
+        projectId: string;
+        project: { countryCode: string | null; title: string } | null;
+      } | null;
+    },
+    userId: string,
+    reason: string,
+    restrictCountryCode: string | undefined,
+    statusChangeRequestId?: string,
+  ): Promise<void> {
+    if (!restrictCountryCode || !step.processingCandidate) {
+      return;
+    }
+
+    await this.countryRestrictionsService.applyRestriction({
+      candidateId: step.processingCandidate.candidateId,
+      countryCode: restrictCountryCode,
+      restrictionType: COUNTRY_RESTRICTION_TYPES.PROCESSING_STEP_CANCEL,
+      reason,
+      sourceMeta: this.countryRestrictionsService.buildProcessingStepCancelSourceMeta({
+        stepKey: step.template.key,
+        projectId: step.processingCandidate.projectId,
+        projectTitle: step.processingCandidate.project?.title,
+        processingStepId: step.id,
+        processingCandidateId: step.processingCandidate.id,
+      }) as unknown as Prisma.InputJsonValue,
+      restrictedById: userId,
+      statusChangeRequestId,
+    });
+  }
+
+  private async liftProjectCountryRestrictionAfterCancelledRecovery(
+    processingCandidate:
+      | {
+          candidateId: string;
+          project: {
+            countryCode?: string | null;
+            country?: { code?: string | null } | null;
+            title?: string | null;
+          } | null;
+        }
+      | null
+      | undefined,
+    userId: string,
+    reason: string,
+    recoveryAction: 'reactivation' | 'hold',
+  ): Promise<void> {
+    if (!processingCandidate) {
+      return;
+    }
+
+    const countryCode = this.resolveProjectDestinationCountryCode(
+      processingCandidate.project,
+    );
+    if (!countryCode) {
+      return;
+    }
+
+    const actionLabel =
+      recoveryAction === 'reactivation'
+        ? 'processing reactivation'
+        : 'moving processing to hold';
+
+    await this.countryRestrictionsService.liftRestrictionIfActive(
+      processingCandidate.candidateId,
+      countryCode,
+      userId,
+      `Automatically lifted after ${actionLabel}${reason ? `: ${reason}` : ''}`,
+    );
+  }
 
   /** Progress + merge with processingStatus completed → 100% (matches previous list behavior). */
   private async mergeSectorAwareProgress(candidatesWithCountry: any[]): Promise<any[]> {
@@ -117,10 +258,18 @@ export class ProcessingService {
     // 1. Verify project exists
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
+      select: { id: true, countryCode: true },
     });
 
     if (!project) {
       throw new NotFoundException(`Project with ID ${projectId} not found`);
+    }
+
+    for (const candidateId of candidateIds) {
+      await this.countryRestrictionsService.assertNotRestricted(
+        candidateId,
+        project.countryCode,
+      );
     }
 
     // Resolve RoleNeeded:
@@ -2767,7 +2916,7 @@ export class ProcessingService {
       where: { id: processingCandidateId },
       include: {
         candidate: true,
-        project: true,
+        project: { include: { country: true } },
         role: { include: { roleCatalog: true } },
       },
     });
@@ -2958,6 +3107,7 @@ export class ProcessingService {
           id: pc.project?.id || null,
           title: pc.project?.title || null,
           countryCode: pc.project?.countryCode || null,
+          countryName: pc.project?.country?.name || null,
           description: pc.project?.description || null,
           clientId: pc.project?.clientId || null,
           teamId: pc.project?.teamId || null,
@@ -3673,12 +3823,32 @@ export class ProcessingService {
    * Cancel a processing step
    * Marks the step as cancelled and records history (includes recruiterId when available)
    */
-  async cancelProcessingStep(stepId: string, userId: string, reason?: string) {
+  async cancelProcessingStep(
+    stepId: string,
+    userId: string,
+    reason?: string,
+    options?: {
+      applyCountryRestriction?: boolean;
+      restrictCountryCode?: string;
+      statusChangeRequestId?: string;
+    },
+  ) {
     const step = await this.prisma.processingStep.findUnique({
       where: { id: stepId },
       include: {
         template: true,
-        processingCandidate: { include: { candidate: true, project: true } },
+        processingCandidate: {
+          include: {
+            candidate: true,
+            project: {
+              select: {
+                countryCode: true,
+                title: true,
+                country: { select: { code: true, name: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -3686,6 +3856,15 @@ export class ProcessingService {
     if (step.status === 'cancelled') {
       return { success: true, message: 'Step already cancelled' };
     }
+
+    const restrictCountryCode = this.resolveDataFlowCountryRestriction(
+      step.template.key,
+      options?.applyCountryRestriction,
+      this.resolveProjectDestinationCountryCode(
+        step.processingCandidate?.project,
+      ),
+      options?.restrictCountryCode,
+    );
 
     const txResult = await this.prisma.$transaction(async (tx) => {
       // 1. Mark selected step as cancelled (store provided reason in rejectionReason)
@@ -3779,6 +3958,14 @@ export class ProcessingService {
         reason || 'cancelled',
       );
     }
+
+    await this.applyCountryRestrictionAfterCancel(
+      step,
+      userId,
+      reason || 'cancelled',
+      restrictCountryCode,
+      options?.statusChangeRequestId,
+    );
 
     // After transaction: cancel reminders for this step and for any other steps belonging to the processingCandidate
     try {
@@ -5142,11 +5329,18 @@ export class ProcessingService {
           requestType: true,
           reason: true,
           createdAt: true,
+          stepKey: true,
+          restrictCountryCode: true,
           processingCandidateId: true,
         },
       });
-      pendingForPage.forEach((req) => {
-        if (req.processingCandidateId) {
+      const enrichedPending = await Promise.all(
+        pendingForPage.map((req) =>
+          this.enrichStatusChangeRequestWithRestrictionCountry(req),
+        ),
+      );
+      enrichedPending.forEach((req) => {
+        if (req?.processingCandidateId) {
           pendingRequestMap.set(req.processingCandidateId, req);
         }
       });
@@ -6062,6 +6256,13 @@ export class ProcessingService {
         processingCandidate: {
           include: {
             candidateProjectMap: true,
+            project: {
+              select: {
+                countryCode: true,
+                title: true,
+                country: { select: { code: true, name: true } },
+              },
+            },
           },
         },
       },
@@ -6107,7 +6308,14 @@ export class ProcessingService {
 
     const requestedStatus = resolveProcessingRequestedStatus(dto.requestType);
 
-    return this.candidateProjectsService.createStatusChangeRequest(
+    const restrictCountryCode = this.resolveDataFlowCountryRestriction(
+      step.template.key,
+      dto.applyCountryRestriction,
+      this.resolveProjectDestinationCountryCode(processingCandidate.project),
+      dto.restrictCountryCode,
+    );
+
+    const request = await this.candidateProjectsService.createStatusChangeRequest(
       candidateProjectMap.id,
       {
         candidateProjectMapId: candidateProjectMap.id,
@@ -6117,15 +6325,28 @@ export class ProcessingService {
         processingStepId: dto.processingStepId,
         stepKey: step.template.key,
         processingCandidateId: processingCandidate.id,
+        restrictCountryCode,
       },
       userId,
     );
+
+    return this.enrichStatusChangeRequestWithRestrictionCountry(request);
   }
 
   async getProcessingStatusUpdateContext(processingId: string) {
     const processingCandidate = await this.prisma.processingCandidate.findUnique({
       where: { id: processingId },
-      select: { id: true, processingStatus: true },
+      select: {
+        id: true,
+        processingStatus: true,
+        candidateId: true,
+        project: {
+          select: {
+            countryCode: true,
+            country: { select: { code: true, name: true } },
+          },
+        },
+      },
     });
 
     if (!processingCandidate) {
@@ -6133,6 +6354,16 @@ export class ProcessingService {
     }
 
     const { processingStatus } = processingCandidate;
+    const projectCountryCode = this.resolveProjectDestinationCountryCode(
+      processingCandidate.project,
+    );
+    const activeCountryRestriction =
+      processingStatus === 'cancelled' && projectCountryCode
+        ? await this.resolveActiveCountryRestrictionSummary(
+            processingCandidate.candidateId,
+            projectCountryCode,
+          )
+        : null;
 
     if (processingStatus === 'cancelled') {
       const anchorStep = await this.resolveAnchorStepForStatusUpdate(
@@ -6148,6 +6379,7 @@ export class ProcessingService {
           STATUS_CHANGE_REQUEST_TYPES.PROCESSING_HOLD,
           STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
         ],
+        activeCountryRestriction,
       };
     }
 
@@ -6165,12 +6397,33 @@ export class ProcessingService {
           STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL,
           STATUS_CHANGE_REQUEST_TYPES.PROCESSING_REACTIVATE,
         ],
+        activeCountryRestriction: null,
       };
     }
 
     throw new BadRequestException(
       'Processing status update is only available for cancelled or on-hold candidates',
     );
+  }
+
+  private async resolveActiveCountryRestrictionSummary(
+    candidateId: string,
+    countryCode: string,
+  ): Promise<{ countryCode: string; countryName: string } | null> {
+    const restriction =
+      await this.countryRestrictionsService.getActiveRestrictionForCountry(
+        candidateId,
+        countryCode,
+      );
+
+    if (!restriction) {
+      return null;
+    }
+
+    return {
+      countryCode: restriction.countryCode,
+      countryName: restriction.country?.name ?? restriction.countryCode,
+    };
   }
 
   private async resolveAnchorStepForStatusUpdate(
@@ -6272,6 +6525,8 @@ export class ProcessingService {
       processingStepId: string;
       candidateProjectMapId: string;
       reason: string;
+      restrictCountryCode?: string;
+      statusChangeRequestId?: string;
     },
     userId: string,
   ) {
@@ -6289,7 +6544,10 @@ export class ProcessingService {
     const processingStatus = step.processingCandidate.processingStatus;
 
     if (input.requestType === STATUS_CHANGE_REQUEST_TYPES.PROCESSING_CANCEL) {
-      await this.cancelProcessingStep(input.processingStepId, userId, input.reason);
+      await this.cancelProcessingStep(input.processingStepId, userId, input.reason, {
+        restrictCountryCode: input.restrictCountryCode,
+        statusChangeRequestId: input.statusChangeRequestId,
+      });
       return;
     }
 
@@ -6519,6 +6777,13 @@ export class ProcessingService {
       reason,
     );
 
+    await this.liftProjectCountryRestrictionAfterCancelledRecovery(
+      anchorStep.processingCandidate,
+      userId,
+      reason,
+      'reactivation',
+    );
+
     return { success: true };
   }
 
@@ -6596,6 +6861,13 @@ export class ProcessingService {
         err,
       );
     }
+
+    await this.liftProjectCountryRestrictionAfterCancelledRecovery(
+      anchorStep.processingCandidate,
+      userId,
+      reason,
+      'hold',
+    );
 
     return { success: true };
   }
@@ -6795,7 +7067,11 @@ export class ProcessingService {
     ]);
 
     return {
-      data: requests,
+      data: await Promise.all(
+        requests.map((request) =>
+          this.enrichStatusChangeRequestWithRestrictionCountry(request),
+        ),
+      ).then((rows) => rows.filter(Boolean)),
       meta: {
         total,
         page,
@@ -6819,11 +7095,11 @@ export class ProcessingService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return request;
+    return this.enrichStatusChangeRequestWithRestrictionCountry(request);
   }
 
   async getLatestReviewedProcessingStatusChangeRequest(processingId: string) {
-    return this.prisma.candidateProjectStatusChangeRequest.findFirst({
+    const request = await this.prisma.candidateProjectStatusChangeRequest.findFirst({
       where: {
         processingCandidateId: processingId,
         status: {
@@ -6842,6 +7118,7 @@ export class ProcessingService {
       },
       orderBy: { reviewedAt: 'desc' },
     });
+    return this.enrichStatusChangeRequestWithRestrictionCountry(request);
   }
 
   async countPendingProcessingStatusChangeRequests(baseWhere: any = {}) {

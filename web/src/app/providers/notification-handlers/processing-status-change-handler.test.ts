@@ -86,6 +86,7 @@ describe("processing-status-change-handler", () => {
         { type: "ProcessingDetails", id: "pc-1" },
         { type: "ProcessingSteps", id: "pc-1" },
         { type: "Candidate", id: "cand-1" },
+        { type: "Candidate", id: "country-restrictions-cand-1" },
         { type: "Candidate", id: "pipeline-cand-1-proj-1" },
       ]),
     );

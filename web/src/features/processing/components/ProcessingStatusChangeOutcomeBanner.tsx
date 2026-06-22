@@ -1,11 +1,51 @@
-import { AlertCircle, CheckCircle2, FileText, PauseCircle, RefreshCw, XCircle } from "lucide-react";
+import { AlertCircle, FileText, PauseCircle, RefreshCw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { ReviewedStatusChangeRequest } from "@/features/candidates/api";
+import type {
+  CandidateCountryRestriction,
+  ReviewedStatusChangeRequest,
+} from "@/features/candidates/api";
 import { formatProcessingStatusChangeRequestDate } from "@/features/processing/utils/processingActionLock";
+import { resolveCountryRestrictionFromRequest } from "@/features/processing/utils/countryRestrictionDisplay";
+import { CountryRestrictionAppliedNote } from "@/features/processing/components/CountryRestrictionAppliedNote";
 
 interface ProcessingStatusChangeOutcomeBannerProps {
   request: ReviewedStatusChangeRequest;
+  projectCountryCode?: string;
+  projectCountryName?: string;
+  projectCountryRestriction?: CandidateCountryRestriction;
+}
+
+function resolveAppliedCountryRestriction(
+  request: ReviewedStatusChangeRequest,
+  projectCountry?: { code?: string; name?: string },
+  projectCountryRestriction?: CandidateCountryRestriction,
+) {
+  if (request.status !== "approved" || request.requestType !== "processing_cancel") {
+    return null;
+  }
+
+  const fromRequest = resolveCountryRestrictionFromRequest(request, projectCountry);
+  if (fromRequest) {
+    return {
+      countryCode: fromRequest.countryCode,
+      countryName: fromRequest.countryName,
+      stepKey: request.stepKey ?? projectCountryRestriction?.sourceMeta?.stepKey,
+    };
+  }
+
+  if (!projectCountryRestriction) {
+    return null;
+  }
+
+  return {
+    countryCode: projectCountryRestriction.countryCode,
+    countryName:
+      projectCountryRestriction.country?.name ??
+      projectCountryRestriction.countryCode,
+    stepKey:
+      projectCountryRestriction.sourceMeta?.stepKey ?? request.stepKey ?? null,
+  };
 }
 
 function getOutcomeCopy(request: ReviewedStatusChangeRequest) {
@@ -123,6 +163,9 @@ function getOutcomeCopy(request: ReviewedStatusChangeRequest) {
 
 export function ProcessingStatusChangeOutcomeBanner({
   request,
+  projectCountryCode,
+  projectCountryName,
+  projectCountryRestriction,
 }: ProcessingStatusChangeOutcomeBannerProps) {
   const copy = getOutcomeCopy(request);
   const ThemeIcon = copy.Icon;
@@ -130,6 +173,11 @@ export function ProcessingStatusChangeOutcomeBanner({
     request.reviewedAt ?? undefined,
   );
   const reviewerLabel = request.reviewer?.name?.trim() || "Unknown reviewer";
+  const appliedCountryRestriction = resolveAppliedCountryRestriction(
+    request,
+    { code: projectCountryCode, name: projectCountryName },
+    projectCountryRestriction,
+  );
 
   return (
     <div
@@ -191,6 +239,14 @@ export function ProcessingStatusChangeOutcomeBanner({
             {request.reason}
           </p>
         </div>
+
+        {appliedCountryRestriction ? (
+          <CountryRestrictionAppliedNote
+            countryCode={appliedCountryRestriction.countryCode}
+            countryName={appliedCountryRestriction.countryName}
+            stepKey={appliedCountryRestriction.stepKey}
+          />
+        ) : null}
 
         {request.reviewNotes?.trim() ? (
           <div className="rounded-lg border border-white/80 bg-white/90 p-3 shadow-sm">

@@ -700,7 +700,10 @@ export class ProcessingController {
 
     const canDirect = await this.processingService.userCanDirectApplyProcessingStatusChange(req.user.id);
     if (canDirect) {
-      const data = await this.processingService.cancelProcessingStep(stepId, req.user.id, reason);
+      const data = await this.processingService.cancelProcessingStep(stepId, req.user.id, reason, {
+        applyCountryRestriction: body?.applyCountryRestriction,
+        restrictCountryCode: body?.restrictCountryCode,
+      });
       return { success: true, data, message: 'Processing step and processing cancelled' };
     }
 
@@ -709,6 +712,8 @@ export class ProcessingController {
         processingStepId: stepId,
         requestType: 'processing_cancel',
         reason,
+        applyCountryRestriction: body?.applyCountryRestriction,
+        restrictCountryCode: body?.restrictCountryCode,
       },
       req.user.id,
     );

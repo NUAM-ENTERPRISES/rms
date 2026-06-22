@@ -55,6 +55,7 @@ import { AgentsModule } from './agents/agents.module';
 import { IntroductionVideosModule } from './introduction-videos/introduction-videos.module';
 import { OriginalDocumentCollectionsModule } from './original-document-collections/original-document-collections.module';
 import { CourierShipmentsModule } from './courier-shipments/courier-shipments.module';
+import { CandidateCountryRestrictionsModule } from './candidate-country-restrictions/candidate-country-restrictions.module';
 
 @Module({
   imports: [
@@ -115,6 +116,7 @@ import { CourierShipmentsModule } from './courier-shipments/courier-shipments.mo
     IntroductionVideosModule,
     OriginalDocumentCollectionsModule,
     CourierShipmentsModule,
+    CandidateCountryRestrictionsModule,
   ],
   controllers: [AppController],
   providers: [

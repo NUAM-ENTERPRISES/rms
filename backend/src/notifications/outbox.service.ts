@@ -851,6 +851,7 @@ export class OutboxService {
       processingCandidateId?: string;
       countryCode?: string;
       countryName?: string;
+      restrictCountryCode?: string;
     },
     tx?: any,
   ): Promise<void> {

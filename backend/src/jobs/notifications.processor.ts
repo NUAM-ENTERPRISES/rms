@@ -2938,6 +2938,7 @@ export class NotificationsProcessor extends WorkerHost {
         stepKey,
         countryCode,
         countryName,
+        restrictCountryCode,
       } = payload as {
         requestId: string;
         candidateProjectMapId: string;
@@ -2953,6 +2954,7 @@ export class NotificationsProcessor extends WorkerHost {
         stepKey?: string;
         countryCode?: string;
         countryName?: string;
+        restrictCountryCode?: string;
       };
 
       const isProcessingRequest =
@@ -2965,6 +2967,9 @@ export class NotificationsProcessor extends WorkerHost {
             ? ` (${countryName ?? countryCode})`
             : '';
         const stepSuffix = stepKey ? ` at step ${stepKey.replace(/_/g, ' ')}` : '';
+        const restrictionSuffix = restrictCountryCode
+          ? ` Country restriction requested for ${countryName ?? restrictCountryCode}.`
+          : '';
 
         const targetUsers = await this.prisma.user.findMany({
           where: withActiveAccountStatus({
@@ -2989,7 +2994,7 @@ export class NotificationsProcessor extends WorkerHost {
             userId: user.id,
             type: 'processing_status_change_request',
             title: `Processing ${actionLabel} request`,
-            message: `${requesterName} requested processing ${actionLabel} for ${candidateName} — ${projectTitle}${countrySuffix}${stepSuffix}. Reason: ${reason}`,
+            message: `${requesterName} requested processing ${actionLabel} for ${candidateName} — ${projectTitle}${countrySuffix}${stepSuffix}.${restrictionSuffix} Reason: ${reason}`,
             link,
             meta: {
               requestId,
@@ -3001,6 +3006,8 @@ export class NotificationsProcessor extends WorkerHost {
               processingCandidateId,
               stepKey,
               countryCode,
+              restrictCountryCode,
+              requestedCountryRestriction: Boolean(restrictCountryCode),
             },
             idemKey,
           });

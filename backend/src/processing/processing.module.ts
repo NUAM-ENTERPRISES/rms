@@ -6,6 +6,7 @@ import { AuthModule } from '../auth/auth.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ProcessingRemindersModule } from '../processing-reminders/processing-reminders.module';
 import { CandidateProjectsModule } from '../candidate-projects/candidate-projects.module';
+import { CandidateCountryRestrictionsModule } from '../candidate-country-restrictions/candidate-country-restrictions.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { CandidateProjectsModule } from '../candidate-projects/candidate-project
     forwardRef(() => NotificationsModule),
     ProcessingRemindersModule,
     forwardRef(() => CandidateProjectsModule),
+    CandidateCountryRestrictionsModule,
   ],
   controllers: [ProcessingController],
   providers: [ProcessingService],
