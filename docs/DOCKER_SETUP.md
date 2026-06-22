@@ -117,7 +117,7 @@ flowchart LR
 | **Backend (host)** | Port **3000** on all interfaces | Port **3000** on **127.0.0.1 only** — host Nginx proxies API traffic |
 | **Frontend (host)** | Vite dev server on port **5173** | nginx on **8080** — host Nginx proxies frontend traffic |
 | **Postgres (host)** | Port **5433** (avoids Mac Postgres on 5432) | Not exposed — internal only |
-| **Redis (host)** | Port **6380** (avoids other Redis on 6379) | Not exposed — internal only |
+| **Redis (host)** | Port **6380** (avoids other Redis on 6379) | Not exposed — internal only, **password required** (`REDIS_PASSWORD`) |
 | **DB/Redis URLs** | Overridden in compose to `postgres:5432` / `redis:6379` | Same internal hostnames |
 | **Migrations** | Auto via entrypoint on every backend start | Same |
 | **Health checks** | postgres, redis, backend | Same pattern, longer backend `start_period` (90s) |
@@ -298,6 +298,8 @@ cp backend/.env.example backend/.env
 | `POSTGRES_USER` | `rms_prod` | Required — no default in prod compose |
 | `POSTGRES_PASSWORD` | strong random password | Required |
 | `POSTGRES_DB` | `affiniks_rms` | Optional, defaults to `affiniks_rms` |
+| `REDIS_PASSWORD` | strong random password | Required in prod — Redis runs with `requirepass`; generate with `openssl rand -base64 32 \| tr -d '/+='` |
+| `REDIS_URL` | `redis://:PASSWORD@redis:6379` | Must match `REDIS_PASSWORD`; compose also overrides this at runtime |
 | `JWT_SECRET` | long random string | Must differ from dev |
 | `JWT_REFRESH_SECRET` | long random string | Must differ from dev |
 | `CORS_ORIGIN` | `https://rms.affiniks.com` | Your public frontend URL |
