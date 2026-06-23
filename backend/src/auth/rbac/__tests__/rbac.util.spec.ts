@@ -527,6 +527,54 @@ describe('RbacUtil', () => {
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(2);
     });
 
+    it('should evict stale cache entries after TTL expires', async () => {
+      const mockUserRoles = [
+        {
+          role: {
+            name: 'Manager',
+            rolePermissions: [
+              {
+                permission: { key: 'read:users' },
+              },
+            ],
+          },
+        },
+      ];
+
+      const mockUserTeams = [{ teamId: 'team1' }];
+      const mockUser = { updatedAt: new Date() };
+
+      mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
+      mockPrismaService.userTeam.findMany.mockResolvedValue(mockUserTeams);
+      mockPrismaService.userPermission.findMany.mockResolvedValue([]);
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      const staleEntry = {
+        data: {
+          roles: ['Recruiter'],
+          permissions: ['read:candidates'],
+          teamIds: ['team1'],
+          userVersion: 1,
+        },
+        timestamp: Date.now() - 61_000,
+      };
+
+      (service as any).cache.set('stale-user', staleEntry);
+      (service as any).cache.set('fresh-user', {
+        ...staleEntry,
+        timestamp: Date.now(),
+      });
+
+      await service.getUserRolesAndPermissions('fresh-user');
+
+      expect((service as any).cache.has('stale-user')).toBe(false);
+      expect((service as any).cache.has('fresh-user')).toBe(true);
+      expect(mockPrismaService.userRole.findMany).not.toHaveBeenCalled();
+
+      await service.getUserRolesAndPermissions('stale-user');
+      expect(mockPrismaService.userRole.findMany).toHaveBeenCalledTimes(1);
+    });
+
     it('should clear all cache', async () => {
       const mockUserRoles = [
         {

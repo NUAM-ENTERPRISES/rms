@@ -4,7 +4,7 @@
  * Following FE_GUIDELINES.md molecules pattern
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,6 +73,18 @@ export function CandidateResumeList({
   const [roleSelections, setRoleSelections] = useState<ResumeRoleSelection[]>([
     { id: crypto.randomUUID() },
   ]);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewBlobUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewBlobUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
 
   // Fetch documents for this candidate, filtering for resume type
   const { data: documentsData, isLoading: documentsLoading, refetch } =
@@ -590,9 +602,9 @@ export function CandidateResumeList({
       />
 
       {/* PDF Preview for new uploads */}
-      {selectedFile && (
+      {selectedFile && previewBlobUrl && (
         <PDFViewer
-          fileUrl={URL.createObjectURL(selectedFile)}
+          fileUrl={previewBlobUrl}
           fileName={selectedFile.name}
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}

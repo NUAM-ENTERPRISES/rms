@@ -46,6 +46,10 @@ import { WhatsAppNotificationService } from './whatsapp-notification.service';
     }),
     BullModule.registerQueue({
       name: 'notifications',
+      defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      },
     }),
     BullModule.registerQueue({
       name: 'document-forward',

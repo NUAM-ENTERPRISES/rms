@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 const CandidateUploadDocumentModal = React.lazy(
   () => import("../../recruiter-docs/components/CandidateUploadDocumentModal")
@@ -284,6 +284,24 @@ export function DocumentUploadSection({
     { id: crypto.randomUUID() },
   ]);
   const [isResumeUploading, setIsResumeUploading] = useState(false);
+
+  const closePreviewDoc = useCallback(() => {
+    setPreviewDoc((current) => {
+      if (current?.fileUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(current.fileUrl);
+      }
+      return null;
+    });
+    setIsPDFViewerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewDoc?.fileUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewDoc.fileUrl);
+      }
+    };
+  }, [previewDoc?.fileUrl]);
 
   // If external data is provided, use it. Otherwise fetch (for backward compatibility if needed, though we're refactoring)
   const {
@@ -1066,9 +1084,14 @@ export function DocumentUploadSection({
     }}
     onPreview={() => {
       if (!selectedResumeFile) return;
-      setPreviewDoc({
-        fileUrl: URL.createObjectURL(selectedResumeFile),
-        fileName: selectedResumeFile.name,
+      setPreviewDoc((current) => {
+        if (current?.fileUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(current.fileUrl);
+        }
+        return {
+          fileUrl: URL.createObjectURL(selectedResumeFile),
+          fileName: selectedResumeFile.name,
+        };
       });
       setIsPDFViewerOpen(true);
     }}
@@ -1117,10 +1140,7 @@ export function DocumentUploadSection({
       fileUrl={previewDoc.fileUrl}
       fileName={previewDoc.fileName}
       isOpen={isPDFViewerOpen}
-      onClose={() => {
-        setIsPDFViewerOpen(false);
-        setPreviewDoc(null);
-      }}
+      onClose={closePreviewDoc}
       showDownload={true}
       showZoomControls={true}
       showRotationControls={true}

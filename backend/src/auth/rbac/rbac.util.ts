@@ -24,6 +24,8 @@ export class RbacUtil {
   async getUserRolesAndPermissions(
     userId: string,
   ): Promise<UserRolesAndPermissions> {
+    this.evictStaleCacheEntries();
+
     // Check cache first
     const cached = this.cache.get(userId);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -100,8 +102,18 @@ export class RbacUtil {
       data: result,
       timestamp: Date.now(),
     });
+    this.evictStaleCacheEntries();
 
     return result;
+  }
+
+  private evictStaleCacheEntries(): void {
+    const now = Date.now();
+    for (const [cachedUserId, entry] of this.cache) {
+      if (now - entry.timestamp >= this.CACHE_TTL) {
+        this.cache.delete(cachedUserId);
+      }
+    }
   }
 
   async getEffectiveScope(

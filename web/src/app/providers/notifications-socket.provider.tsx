@@ -112,6 +112,18 @@ export default function NotificationsSocketProvider({ children }: { children: Re
     return () => window.removeEventListener('click', unlock);
   }, []);
 
+  // Disconnect socket when the provider unmounts (e.g. logout shell teardown).
+  useEffect(() => {
+    return () => {
+      if (sessionInvalidateTimerRef.current) {
+        clearTimeout(sessionInvalidateTimerRef.current);
+        sessionInvalidateTimerRef.current = null;
+      }
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     // Ensure previous socket is cleaned up properly before creating a new one.
     // This prevents multiple sockets from being created in development mode
@@ -127,10 +139,21 @@ export default function NotificationsSocketProvider({ children }: { children: Re
       return;
     }
 
+    // Drop a stale disconnected socket before creating a replacement.
+    if (socketRef.current && !socketRef.current.connected) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
     // If a socket already exists and is connected, just update the token if necessary
     if (socketRef.current && socketRef.current.connected) {
       updateSocketAuthToken(accessToken);
-      return;
+      return () => {
+        if (sessionInvalidateTimerRef.current) {
+          clearTimeout(sessionInvalidateTimerRef.current);
+          sessionInvalidateTimerRef.current = null;
+        }
+      };
     }
 
     // Determine the base WebSocket URL based on environment and current location

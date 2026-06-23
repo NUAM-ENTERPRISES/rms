@@ -12,7 +12,8 @@ import { PrismaService } from '../database/prisma.service';
 @Injectable()
 export class OutboxProcessor implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OutboxProcessor.name);
-  private interval: NodeJS.Timeout;
+  private interval?: NodeJS.Timeout;
+  private processing = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -34,8 +35,8 @@ export class OutboxProcessor implements OnModuleInit, OnModuleDestroy {
       `Starting outbox processor with poll interval: ${pollMs}ms, batch size: ${batchSize}`,
     );
 
-    this.interval = setInterval(async () => {
-      await this.processOutboxEvents(batchSize);
+    this.interval = setInterval(() => {
+      void this.processOutboxEvents(batchSize);
     }, pollMs);
   }
 
@@ -46,6 +47,11 @@ export class OutboxProcessor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async processOutboxEvents(batchSize: number) {
+    if (this.processing) {
+      return;
+    }
+
+    this.processing = true;
     try {
       // Get unprocessed events, oldest first
       const events = await this.prisma.outboxEvent.findMany({
@@ -80,6 +86,8 @@ export class OutboxProcessor implements OnModuleInit, OnModuleDestroy {
               'queue.notifications.maxRetries',
               3,
             ),
+            removeOnComplete: 100,
+            removeOnFail: 50,
             backoff: {
               type: 'exponential',
               delay: this.configService.get<number>(
@@ -130,6 +138,8 @@ export class OutboxProcessor implements OnModuleInit, OnModuleDestroy {
         `Outbox processor error: ${error.message}`,
         error.stack,
       );
+    } finally {
+      this.processing = false;
     }
   }
 }

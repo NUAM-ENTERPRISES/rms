@@ -93,6 +93,7 @@ export function PDFViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const ownsPreviewBlobRef = useRef(false);
   
   // Get access token for authenticated PDF fetches
   const accessToken = useAppSelector((state) => state.auth.accessToken);
@@ -133,9 +134,9 @@ export function PDFViewer({
     [accessToken],
   );
 
-  const clearPreviewUrl = useCallback((url: string | null) => {
-    if (isBlobUrl(url)) {
-      URL.revokeObjectURL(url!);
+  const releasePreviewUrl = useCallback((url: string | null) => {
+    if (url && isBlobUrl(url) && ownsPreviewBlobRef.current) {
+      URL.revokeObjectURL(url);
     }
   }, []);
 
@@ -143,7 +144,8 @@ export function PDFViewer({
   useEffect(() => {
     if (!fileUrl || !isOpen) {
       setPreviewUrl((previous) => {
-        clearPreviewUrl(previous);
+        releasePreviewUrl(previous);
+        ownsPreviewBlobRef.current = false;
         return null;
       });
       return;
@@ -156,10 +158,22 @@ export function PDFViewer({
 
     const versionKey = cacheKey ?? fileUrl;
 
+    // Parent-owned blob URLs are used directly; parent is responsible for revocation.
+    if (isBlobUrl(fileUrl)) {
+      ownsPreviewBlobRef.current = false;
+      setPreviewUrl((previous) => {
+        releasePreviewUrl(previous);
+        return fileUrl;
+      });
+      setIsLoading(false);
+      return;
+    }
+
     // CDN / Spaces URLs: iframe can load cross-origin PDFs; fetch() is blocked by CORS
     if (isExternalUrl(fileUrl)) {
+      ownsPreviewBlobRef.current = false;
       setPreviewUrl((previous) => {
-        clearPreviewUrl(previous);
+        releasePreviewUrl(previous);
         return appendCacheBust(fileUrl, versionKey);
       });
       return;
@@ -169,11 +183,13 @@ export function PDFViewer({
     fetchPdfAsBlob(fileUrl, versionKey).then((url) => {
       if (isMounted) {
         if (url) {
+          ownsPreviewBlobRef.current = true;
           setPreviewUrl((previous) => {
-            clearPreviewUrl(previous);
+            releasePreviewUrl(previous);
             return url;
           });
         } else {
+          ownsPreviewBlobRef.current = false;
           setError("Failed to load PDF. Please try again.");
           setIsLoading(false);
         }
@@ -185,14 +201,15 @@ export function PDFViewer({
     return () => {
       isMounted = false;
     };
-  }, [fileUrl, isOpen, cacheKey, fetchPdfAsBlob, clearPreviewUrl]);
+  }, [fileUrl, isOpen, cacheKey, fetchPdfAsBlob, releasePreviewUrl]);
 
-  // Cleanup blob URL on unmount
+  // Cleanup internally-owned blob URL on unmount
   useEffect(() => {
     return () => {
-      clearPreviewUrl(previewUrl);
+      releasePreviewUrl(previewUrl);
+      ownsPreviewBlobRef.current = false;
     };
-  }, [previewUrl, clearPreviewUrl]);
+  }, [previewUrl, releasePreviewUrl]);
 
   const displayUrl = previewUrl;
 
@@ -251,7 +268,8 @@ export function PDFViewer({
     setZoom(100);
     setRotation(0);
     setPreviewUrl((previous) => {
-      clearPreviewUrl(previous);
+      releasePreviewUrl(previous);
+      ownsPreviewBlobRef.current = false;
       return null;
     });
     onClose();
